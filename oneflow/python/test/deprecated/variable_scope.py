@@ -1,5 +1,6 @@
-import oneflow as of
 import numpy as np
+import oneflow as of
+
 
 @flow.function
 def variable_scope_test_job_1(a=of.FixedTensorDef((1, 3, 6, 6))):
@@ -21,9 +22,7 @@ def variable_scope_test_job_1(a=of.FixedTensorDef((1, 3, 6, 6))):
                 initializer=of.random_uniform_initializer(),
                 trainable=True,
             )
-            fc = of.matmul(
-                of.reshape(conv, (conv.shape[0], -1)), fcw, name="fc"
-            )
+            fc = of.matmul(of.reshape(conv, (conv.shape[0], -1)), fcw, name="fc")
             fcb = of.get_variable(
                 "fc_bias",
                 shape=(10,),
@@ -52,6 +51,7 @@ def variable_scope_test_job_1(a=of.FixedTensorDef((1, 3, 6, 6))):
 
     return fc2
 
+
 @flow.function
 def variable_scope_test_job_2(a=of.FixedTensorDef((2, 5))):
     with of.deprecated.variable_scope("job2_scope1"):
@@ -67,6 +67,7 @@ def variable_scope_test_job_2(a=of.FixedTensorDef((2, 5))):
     print("indices op name: ", indices.op_name)
     print("gather op name: ", output.op_name)
     return output
+
 
 a1 = np.random.rand(1, 3, 6, 6).astype(np.float32)
 a2 = np.arange(10, dtype=np.float32).reshape(2, 5)

@@ -1,14 +1,16 @@
-import oneflow as flow
-import numpy as np
-import tensorflow as tf
 import os
-
 from collections import OrderedDict
+
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
 import test_global_storage
-from test_util import GenArgList
-from test_util import GenArgDict
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
+from test_util import (
+    GenArgDict,
+    GenArgList,
+    type_name_to_flow_type,
+    type_name_to_np_type,
+)
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -23,20 +25,22 @@ def RunOneflowOp(device_type, flow_op, x, y, data_type):
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     flow_type = type_name_to_flow_type[data_type]
-    
+
     @flow.function(func_config)
-    def FlowJob(x=flow.FixedTensorDef(x.shape, dtype=flow_type), 
-                y=flow.FixedTensorDef(y.shape, dtype=flow_type)):
+    def FlowJob(
+        x=flow.FixedTensorDef(x.shape, dtype=flow_type),
+        y=flow.FixedTensorDef(y.shape, dtype=flow_type),
+    ):
         with flow.device_prior_placement(device_type, "0:0"):
             x += flow.get_variable(
-                name='x',
+                name="x",
                 shape=x.shape,
                 dtype=flow_type,
                 initializer=flow.zeros_initializer(),
                 trainable=True,
             )
             y += flow.get_variable(
-                name='y',
+                name="y",
                 shape=y.shape,
                 dtype=flow_type,
                 initializer=flow.zeros_initializer(),
@@ -69,32 +73,51 @@ def RunTensorFlowOp(tf_op, x, y):
     return out.numpy(), x_diff.numpy(), y_diff.numpy()
 
 
-def compare_with_tensorflow_grad(device_type, flow_op, tf_op, x_shape, y_shape, data_type,
-                            input_minval=-10, input_maxval=10, out_rtol=1e-5,
-                            out_atol=1e-5, diff_rtol=1e-5, diff_atol=1e-5):
+def compare_with_tensorflow_grad(
+    device_type,
+    flow_op,
+    tf_op,
+    x_shape,
+    y_shape,
+    data_type,
+    input_minval=-10,
+    input_maxval=10,
+    out_rtol=1e-5,
+    out_atol=1e-5,
+    diff_rtol=1e-5,
+    diff_atol=1e-5,
+):
     assert device_type in ["gpu", "cpu"]
 
     np_type = type_name_to_np_type[data_type]
-    x = np.random.uniform(low=input_minval, high=input_maxval,
-                        size=x_shape).astype(np_type)
-    y = np.random.uniform(low=input_minval, high=input_maxval,
-                        size=y_shape).astype(np_type)
+    x = np.random.uniform(low=input_minval, high=input_maxval, size=x_shape).astype(
+        np_type
+    )
+    y = np.random.uniform(low=input_minval, high=input_maxval, size=y_shape).astype(
+        np_type
+    )
 
     of_out, of_x_diff, of_y_diff, = RunOneflowOp(device_type, flow_op, x, y, data_type)
     tf_out, tf_x_diff, tf_y_diff = RunTensorFlowOp(tf_op, x, y)
 
     assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol)
-    assert np.allclose(
-        of_x_diff, tf_x_diff, rtol=diff_rtol, atol=diff_atol
-    )
-    assert np.allclose(
-        of_y_diff, tf_y_diff, rtol=diff_rtol, atol=diff_atol
-    )
+    assert np.allclose(of_x_diff, tf_x_diff, rtol=diff_rtol, atol=diff_atol)
+    assert np.allclose(of_y_diff, tf_y_diff, rtol=diff_rtol, atol=diff_atol)
     flow.clear_default_session()
 
 
-def compare_with_tensorflow(device_type, flow_op, tf_op, x_shape, y_shape, data_type,
-                            input_minval=-10, input_maxval=10, out_rtol=1e-5, out_atol=1e-5):
+def compare_with_tensorflow(
+    device_type,
+    flow_op,
+    tf_op,
+    x_shape,
+    y_shape,
+    data_type,
+    input_minval=-10,
+    input_maxval=10,
+    out_rtol=1e-5,
+    out_atol=1e-5,
+):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -103,22 +126,28 @@ def compare_with_tensorflow(device_type, flow_op, tf_op, x_shape, y_shape, data_
     flow_type = type_name_to_flow_type[data_type]
 
     @flow.function(func_config)
-    def FlowJob(x=flow.FixedTensorDef(x_shape, dtype=flow_type), 
-                y=flow.FixedTensorDef(y_shape, dtype=flow_type)):
+    def FlowJob(
+        x=flow.FixedTensorDef(x_shape, dtype=flow_type),
+        y=flow.FixedTensorDef(y_shape, dtype=flow_type),
+    ):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow_op(x, y)
 
     np_type = type_name_to_np_type[data_type]
     if np_type in (np.int8, np.int32, np.int64):
-        x = np.random.randint(low=input_minval, high=input_maxval,
-                        size=x_shape).astype(np_type)
-        y = np.random.randint(low=input_minval, high=input_maxval,
-                            size=y_shape).astype(np_type)
-    else:   
-        x = np.random.uniform(low=input_minval, high=input_maxval,
-                            size=x_shape).astype(np_type)
-        y = np.random.uniform(low=input_minval, high=input_maxval,
-                            size=y_shape).astype(np_type)
+        x = np.random.randint(low=input_minval, high=input_maxval, size=x_shape).astype(
+            np_type
+        )
+        y = np.random.randint(low=input_minval, high=input_maxval, size=y_shape).astype(
+            np_type
+        )
+    else:
+        x = np.random.uniform(low=input_minval, high=input_maxval, size=x_shape).astype(
+            np_type
+        )
+        y = np.random.uniform(low=input_minval, high=input_maxval, size=y_shape).astype(
+            np_type
+        )
     if isinstance(flow_op, (type(flow.math.divide), type(flow.math.mod))):
         y[np.where(y == 0)] += 1
 
@@ -128,7 +157,7 @@ def compare_with_tensorflow(device_type, flow_op, tf_op, x_shape, y_shape, data_
     tf_out = tf_op(x, y).numpy()
     assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol)
     flow.clear_default_session()
-    
+
 
 def test_broadcast_add(test_case):
     arg_dict = OrderedDict()

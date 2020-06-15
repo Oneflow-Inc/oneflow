@@ -1,6 +1,6 @@
-import oneflow as flow
-import numpy as np
 import cv2
+import numpy as np
+import oneflow as flow
 
 
 def _of_image_flip(images, image_shape, flip_code):
@@ -34,7 +34,9 @@ def _get_images_static_shape(images):
     image_static_shape = np.amax(image_shapes, axis=0)
     assert isinstance(
         image_static_shape, np.ndarray
-    ), "image_shapes: {}, image_static_shape: {}".format(str(image_shapes), str(image_static_shape))
+    ), "image_shapes: {}, image_static_shape: {}".format(
+        str(image_shapes), str(image_static_shape)
+    )
     image_static_shape = image_static_shape.tolist()
     assert image_static_shape[0] == 1, str(image_static_shape)
     image_static_shape[0] = len(image_shapes)
