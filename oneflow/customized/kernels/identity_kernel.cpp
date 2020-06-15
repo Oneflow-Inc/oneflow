@@ -15,8 +15,12 @@ class IdentityKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const DataType in_data_type = in->data_type();
+    const ShapeView& in_shape = in->shape();
+    CHECK_EQ(out->data_type(), in_data_type);
+    CHECK_EQ(out->shape(), in_shape);
     Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
-                        in->shape().elem_cnt() * GetSizeOfDataType(in->data_type()));
+                        in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
