@@ -23,7 +23,9 @@ class JobBuilder final {
 
   const Job& job() const { return *job_; }
   JobHelperConf* mutable_helper() { return job_->mutable_helper(); }
-  SbpConf* mutable_sbp_conf() { return job_->mutable_sbp_conf(); }
+  JobParallelViewConf* mutable_job_parallel_view_conf() {
+    return job_->mutable_job_parallel_view_conf();
+  }
 
   const OperatorConf& OpConf4OpName(const std::string& op_name) const;
   OperatorConf* MutableOpConf4OpName(const std::string& op_name);
