@@ -169,7 +169,7 @@ def kaiming_initializer(
         mode: 'fan_in', 'fan_out' or 'fan_avg'
         nonlinearity: None, 'tanh', 'sigmoid', 'relu' or 'leaky_relu'
         negative_slope: the negative slope of leaky_relu
-        data_format: 'NCHW', 'NHW'
+        data_format: 'NCHW', 'NHWC'
     """
     assert isinstance(shape, tuple)
     # Kaiming Initialization only deals with FC, Conv and Deconv's weight
