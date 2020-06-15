@@ -1,12 +1,11 @@
 import os
-import numpy as np
-import tensorflow as tf
-import oneflow as flow
-from collections import OrderedDict 
+from collections import OrderedDict
 
-from test_util import GenArgList
-from test_util import type_name_to_flow_type
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
 import test_global_storage
+from test_util import GenArgList, type_name_to_flow_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -64,12 +63,8 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, dtype, axis):
     tf_y_diff = tape.gradient(tf_out, y, loss_diff)
 
     assert np.array_equal(of_out.ndarray(), tf_out.numpy())
-    assert np.array_equal(
-        test_global_storage.Get("x_diff"), tf_x_diff.numpy()
-    )
-    assert np.array_equal(
-        test_global_storage.Get("y_diff"), tf_y_diff.numpy()
-    )
+    assert np.array_equal(test_global_storage.Get("x_diff"), tf_x_diff.numpy())
+    assert np.array_equal(test_global_storage.Get("y_diff"), tf_y_diff.numpy())
 
 
 def test_concat(test_case):

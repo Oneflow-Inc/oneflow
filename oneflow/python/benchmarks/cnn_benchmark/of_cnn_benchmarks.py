@@ -1,20 +1,16 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
+import argparse
 import os
 import time
-import argparse
 from datetime import datetime
 
-import oneflow as flow
-
-import data_loader
-import vgg_model
-import resnet_model
 import alexnet_model
 import benchmark_util
-
+import data_loader
+import oneflow as flow
+import resnet_model
+import vgg_model
 
 parser = argparse.ArgumentParser(description="flags for cnn benchmark")
 
