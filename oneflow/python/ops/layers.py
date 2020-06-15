@@ -381,6 +381,8 @@ def batch_normalization(
     # Float32 required to avoid precision-loss when using fp16 input/output
     params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
 
+    assert trainable == flow.current_global_function_desc().IsTrainable()
+
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
 
