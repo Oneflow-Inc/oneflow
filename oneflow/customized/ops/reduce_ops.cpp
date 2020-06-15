@@ -26,11 +26,14 @@ Maybe<void> InferBatchAxisFn(user_op::BatchAxisContext* ctx) {
   HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
   const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("input_tensor", 0);
   auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("output_tensor", 0);
-  out_batch_axis->clear_value();
   if (in_batch_axis->has_value()) {
     if (keepdims || conf_axes.find(in_batch_axis->value()) == conf_axes.end()) {
       *out_batch_axis = *in_batch_axis;
+    } else {
+      out_batch_axis->clear_value();
     }
+  } else {
+    out_batch_axis->clear_value();
   }
   return Maybe<void>::Ok();
 }
