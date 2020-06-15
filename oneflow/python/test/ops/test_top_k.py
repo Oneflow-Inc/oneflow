@@ -1,11 +1,9 @@
-import numpy as np
-import tensorflow as tf
-import oneflow as flow
 from collections import OrderedDict
 
-from test_util import GenArgList
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -22,7 +20,8 @@ def compare_with_tensorflow(device_type, in_shape, k, data_type, sorted):
     @flow.function(func_config)
     def TopKJob(
         input=flow.MirroredTensorDef(
-            tuple([dim + 10 for dim in in_shape]), dtype=type_name_to_flow_type[data_type]
+            tuple([dim + 10 for dim in in_shape]),
+            dtype=type_name_to_flow_type[data_type],
         )
     ):
         with flow.fixed_placement(device_type, "0:0"):
