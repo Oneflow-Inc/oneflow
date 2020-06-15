@@ -1,5 +1,4 @@
 class BoolFunctor(object):
-
     def debug_str(self, display_result=True):
         raise NotImplementedError
 
@@ -15,8 +14,8 @@ class BoolFunctor(object):
     def __invert__(self):
         return _NotBoolFunctor(self)
 
-class HighOrderBool(BoolFunctor):
 
+class HighOrderBool(BoolFunctor):
     def __init__(self, debug_str, function):
         self.debug_str_ = debug_str
         self.function_ = function
@@ -30,11 +29,12 @@ class HighOrderBool(BoolFunctor):
     def __call__(self):
         return self.function_()
 
+
 always_true = HighOrderBool("Always true", lambda: True)
 always_false = HighOrderBool("Always false", lambda: False)
 
-class _AndBoolFunctor(BoolFunctor):
 
+class _AndBoolFunctor(BoolFunctor):
     def __init__(self, lhs, rhs):
         assert isinstance(lhs, BoolFunctor)
         assert isinstance(rhs, BoolFunctor)
@@ -43,7 +43,7 @@ class _AndBoolFunctor(BoolFunctor):
 
     def debug_str(self, display_result=True):
         left_display = self.lhs_.debug_str(display_result)
-        display_result = (display_result and self.lhs_())
+        display_result = display_result and self.lhs_()
         right_display = self.rhs_.debug_str(display_result)
         return "(%s and %s)" % (left_display, right_display)
 
@@ -52,7 +52,6 @@ class _AndBoolFunctor(BoolFunctor):
 
 
 class _OrBoolFunctor(BoolFunctor):
-
     def __init__(self, lhs, rhs):
         assert isinstance(lhs, BoolFunctor)
         assert isinstance(rhs, BoolFunctor)
@@ -61,15 +60,15 @@ class _OrBoolFunctor(BoolFunctor):
 
     def debug_str(self, display_result=True):
         left_display = self.lhs_.debug_str(display_result)
-        display_result = (display_result and (not self.lhs_()))
+        display_result = display_result and (not self.lhs_())
         right_display = self.rhs_.debug_str(display_result)
         return "(%s or %s)" % (left_display, right_display)
 
     def __call__(self):
         return self.lhs_() or self.rhs_()
 
-class _NotBoolFunctor(BoolFunctor):
 
+class _NotBoolFunctor(BoolFunctor):
     def __init__(self, x):
         assert isinstance(x, BoolFunctor)
         self.x_ = x

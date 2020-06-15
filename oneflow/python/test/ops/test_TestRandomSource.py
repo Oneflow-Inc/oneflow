@@ -1,11 +1,18 @@
-import oneflow as flow
 import numpy as np
+import oneflow as flow
+
 
 def my_test_source(name, seed):
-    return flow.user_op_builder(name).Op("TestRandomSource")\
-            .Output("out")\
-            .Attr("seed", seed, "AttrTypeInt64")\
-            .Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name)
+        .Op("TestRandomSource")
+        .Output("out")
+        .Attr("seed", seed, "AttrTypeInt64")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
 
 def test_testsource(test_case):
     func_config = flow.FunctionConfig()
@@ -24,4 +31,3 @@ def test_testsource(test_case):
     y = TestSourceJob().get().ndarray()
     rand_5_9 = np.array([0.85794574, 0.54488325, 0.84725183, 0.42365485, 0.62356377])
     test_case.assertTrue(np.allclose(y, rand_5_9, atol=1e-5, rtol=1e-5))
-

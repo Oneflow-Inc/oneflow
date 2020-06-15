@@ -1,10 +1,8 @@
-import oneflow as flow
-import numpy as np
 from collections import OrderedDict
 
-from test_util import GenArgList
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
+import numpy as np
+import oneflow as flow
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
 def TestListDataTypeAndListShapeAttr(input, out_shapes, out_types):
@@ -29,9 +27,13 @@ def RunTest(out_shapes, out_types):
     func_config.default_data_type(flow.float)
 
     @flow.function(func_config)
-    def TestListDataTypeAndListShapeAttrJob(input=flow.FixedTensorDef((10, 10), dtype=flow.float)):
+    def TestListDataTypeAndListShapeAttrJob(
+        input=flow.FixedTensorDef((10, 10), dtype=flow.float)
+    ):
         return TestListDataTypeAndListShapeAttr(
-            input, out_shapes, [type_name_to_flow_type[data_type] for data_type in out_types]
+            input,
+            out_shapes,
+            [type_name_to_flow_type[data_type] for data_type in out_types],
         )
 
     input = np.random.random_sample((10, 10)).astype(np.float32)

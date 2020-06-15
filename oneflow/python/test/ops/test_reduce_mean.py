@@ -1,11 +1,11 @@
 import os
-import numpy as np
-import tensorflow as tf
-import oneflow as flow
-from collections import OrderedDict 
+from collections import OrderedDict
 
-from test_util import GenArgList
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
 import test_global_storage
+from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
