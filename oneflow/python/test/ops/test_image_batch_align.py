@@ -1,6 +1,6 @@
-import oneflow as flow
-import numpy as np
 import cv2
+import numpy as np
+import oneflow as flow
 
 
 def _of_image_batch_align(images, input_shape, output_shape, alignment):
@@ -33,7 +33,9 @@ def _get_images_static_shape(images):
     image_static_shape = np.amax(image_shapes, axis=0)
     assert isinstance(
         image_static_shape, np.ndarray
-    ), "image_shapes: {}, image_static_shape: {}".format(str(image_shapes), str(image_static_shape))
+    ), "image_shapes: {}, image_static_shape: {}".format(
+        str(image_shapes), str(image_static_shape)
+    )
     image_static_shape = image_static_shape.tolist()
     assert image_static_shape[0] == 1, str(image_static_shape)
     image_static_shape[0] = len(image_shapes)
@@ -44,7 +46,9 @@ def _roundup(x, n):
     return int((x + n - 1) / n) * n
 
 
-def _compare_image_batch_align(test_case, image_files, alignment, print_debug_info=False):
+def _compare_image_batch_align(
+    test_case, image_files, alignment, print_debug_info=False
+):
     images = _read_images_by_cv(image_files)
     image_shape = _get_images_static_shape(images)
     assert len(image_shape) == 4
@@ -67,7 +71,7 @@ def _compare_image_batch_align(test_case, image_files, alignment, print_debug_in
     empty_image_array = np.zeros(aligned_image_shape, np.single)
     for empty_image, image in zip(empty_image_array, images):
         image = image.squeeze()
-        empty_image[0:image.shape[0], 0:image.shape[1], :] = image
+        empty_image[0 : image.shape[0], 0 : image.shape[1], :] = image
 
     test_case.assertTrue(np.array_equal(image_tensor, empty_image_array))
 

@@ -1,5 +1,5 @@
-import oneflow as flow
 import numpy as np
+import oneflow as flow
 
 flow.config.gpu_device_num(1)
 
@@ -7,7 +7,8 @@ func_config = flow.FunctionConfig()
 func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 func_config.default_data_type(flow.float)
 
-data_dir="/dataset/imagenet_16_same_pics/ofrecord"
+data_dir = "/dataset/imagenet_16_same_pics/ofrecord"
+
 
 @flow.function(func_config)
 def DataLoaderJob():
@@ -29,6 +30,7 @@ def DataLoaderJob():
     print(normal.shape)
     return rsz, normal, label, rng
 
+
 @flow.function(func_config)
 def DataLoaderEvalJob():
     batch_size = 8
@@ -47,14 +49,14 @@ def DataLoaderEvalJob():
     return normal, label
 
 
-rsz, normal, label, rng= DataLoaderJob().get()
+rsz, normal, label, rng = DataLoaderJob().get()
 print("resized image: ", rsz)
 print("normalized image output: ", normal)
 print("label: ", label)
 print("mirror:", rng)
-np.save('output/oneflow_train_data_0.npy', normal.ndarray())
+np.save("output/oneflow_train_data_0.npy", normal.ndarray())
 
-rsz, normal, label, rng= DataLoaderJob().get()
+rsz, normal, label, rng = DataLoaderJob().get()
 print("resized image: ", rsz)
 print("normalized image output: ", normal)
 print("label: ", label)

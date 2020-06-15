@@ -1,11 +1,14 @@
 from __future__ import absolute_import
+
 import oneflow.python.framework.input_blob_def as input_blob_util
+
 
 def AsyncPush(session, job_func, *arg):
     job_name = job_func.__name__
     assert len(arg) == len(job_func.__oneflow_input_blob_defs__)
     for i in range(len(arg)):
         _AsyncPushArg(session, job_func.__oneflow_input_blob_defs__[i], arg[i])
+
 
 def _AsyncPushArg(session, arg_blob_def, arg_ndarray):
     if isinstance(arg_blob_def, (list, tuple)):

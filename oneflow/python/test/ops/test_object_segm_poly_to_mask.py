@@ -1,8 +1,9 @@
-import oneflow as flow
-import numpy as np
-import random
 import os
+import random
+
 import cv2
+import numpy as np
+import oneflow as flow
 
 coco_dict = dict()
 
@@ -45,7 +46,9 @@ def _random_sample_image_ids(coco, batch_size):
 
 
 def _read_images_with_cv(coco, image_dir, image_ids):
-    image_files = [os.path.join(image_dir, coco.imgs[img_id]["file_name"]) for img_id in image_ids]
+    image_files = [
+        os.path.join(image_dir, coco.imgs[img_id]["file_name"]) for img_id in image_ids
+    ]
     return [cv2.imread(image_file).astype(np.single) for image_file in image_files]
 
 
@@ -63,7 +66,9 @@ def _get_images_segm_poly(coco, image_ids):
             segm = anno["segmentation"]
             assert isinstance(segm, list)
             assert len(segm) > 0, str(len(segm))
-            assert all([len(poly) > 0 for poly in segm]), str([len(poly) for poly in segm])
+            assert all([len(poly) > 0 for poly in segm]), str(
+                [len(poly) for poly in segm]
+            )
             segm_poly_list.append(segm)
 
         img_segm_poly_list.append(segm_poly_list)
@@ -113,7 +118,9 @@ def _get_images_static_shape(images):
     image_static_shape = np.amax(image_shapes, axis=0)
     assert isinstance(
         image_static_shape, np.ndarray
-    ), "image_shapes: {}, image_static_shape: {}".format(str(image_shapes), str(image_static_shape))
+    ), "image_shapes: {}, image_static_shape: {}".format(
+        str(image_shapes), str(image_static_shape)
+    )
     image_static_shape = image_static_shape.tolist()
     image_static_shape.insert(0, len(image_shapes))
     return image_static_shape
@@ -139,7 +146,9 @@ def _of_poly_to_mask_pipline(
     assert len(images) == len(poly_list)
     assert len(poly_list) == len(poly_index_list)
     image_shape = _get_images_static_shape(images)
-    poly_shape, poly_index_shape = _get_segm_poly_static_shape(poly_list, poly_index_list)
+    poly_shape, poly_index_shape = _get_segm_poly_static_shape(
+        poly_list, poly_index_list
+    )
     max_num_segms = max(num_segms_list)
 
     flow.clear_default_session()
@@ -148,9 +157,13 @@ def _of_poly_to_mask_pipline(
 
     @flow.function(func_config)
     def poly_to_mask_job(
-        image_def=flow.MirroredTensorListDef(shape=tuple(image_shape), dtype=flow.float),
+        image_def=flow.MirroredTensorListDef(
+            shape=tuple(image_shape), dtype=flow.float
+        ),
         poly_def=flow.MirroredTensorListDef(shape=tuple(poly_shape), dtype=flow.float),
-        poly_index_def=flow.MirroredTensorListDef(shape=tuple(poly_index_shape), dtype=flow.int32),
+        poly_index_def=flow.MirroredTensorListDef(
+            shape=tuple(poly_index_shape), dtype=flow.int32
+        ),
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(image_def)
         resized_images_buffer, new_size, scale = flow.image_target_resize(
@@ -172,7 +185,9 @@ def _of_poly_to_mask_pipline(
 
     input_image_list = [np.expand_dims(image, axis=0) for image in images]
     input_poly_list = [np.expand_dims(poly, axis=0) for poly in poly_list]
-    input_poly_index_list = [np.expand_dims(poly_index, axis=0) for poly_index in poly_index_list]
+    input_poly_index_list = [
+        np.expand_dims(poly_index, axis=0) for poly_index in poly_index_list
+    ]
     output_mask_list, output_poly_list = poly_to_mask_job(
         [input_image_list], [input_poly_list], [input_poly_index_list]
     ).get()
@@ -224,7 +239,8 @@ def _poly_to_mask_with_cv(img_segm_poly_list, image_size_list):
         for poly_list in segm_poly_list:
             segm_mask = np.zeros(size, dtype=np.int8)
             poly_array_list = [
-                np.int32(np.round(np.asarray(poly)).reshape(-1, 2)) for poly in poly_list
+                np.int32(np.round(np.asarray(poly)).reshape(-1, 2))
+                for poly in poly_list
             ]
             cv2.fillPoly(segm_mask, poly_array_list, 1, lineType=8)
             segm_mask_list.append(segm_mask)
@@ -281,13 +297,20 @@ def _poly_to_mask_with_of_and_cv(
         new_image_size_list.append(new_size)
         scale_list.append(scale)
     scaled_img_segm_poly_list = _scale_poly_list(img_segm_poly_list, scale_list)
-    scaled_poly_list, scaled_poly_index_list = _segm_poly_to_tensor(scaled_img_segm_poly_list)
-    img_segm_mask_list = _poly_to_mask_with_cv(scaled_img_segm_poly_list, new_image_size_list)
+    scaled_poly_list, scaled_poly_index_list = _segm_poly_to_tensor(
+        scaled_img_segm_poly_list
+    )
+    img_segm_mask_list = _poly_to_mask_with_cv(
+        scaled_img_segm_poly_list, new_image_size_list
+    )
     assert len(img_segm_mask_list) == len(of_mask_list)
 
     if test_case is not None:
         for of_scaled_poly, scaled_poly, poly_index, scaled_poly_index in zip(
-            of_scaled_poly_list, scaled_poly_list, poly_index_list, scaled_poly_index_list
+            of_scaled_poly_list,
+            scaled_poly_list,
+            poly_index_list,
+            scaled_poly_index_list,
         ):
             test_case.assertTrue(np.allclose(of_scaled_poly, scaled_poly))
             test_case.assertTrue(np.array_equal(poly_index, scaled_poly_index))
@@ -331,7 +354,9 @@ def _vis_img_segm_mask_cmp(mask_list, cmp_mask_list):
 
         ax1.clear()
         ax2.clear()
-        fig.suptitle("img_idx:{}, mask_idx:{}".format(cur_img_idx, cur_mask_idx), fontsize=10)
+        fig.suptitle(
+            "img_idx:{}, mask_idx:{}".format(cur_img_idx, cur_mask_idx), fontsize=10
+        )
         ax1.imshow(mask)
         ax2.imshow(cmp_mask)
 
