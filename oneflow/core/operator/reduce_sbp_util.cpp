@@ -18,11 +18,7 @@ std::function<bool(int32_t)> ReduceSbpUtil::MakePredicatorIsReducedAxis(const Pb
 std::function<bool(int32_t)> ReduceSbpUtil::MakePredicatorIsReducedAxis(
     const HashSet<int32_t>& axes, int32_t num_axes) {
   auto axis_set = std::make_shared<HashSet<int32_t>>(axes);
-  if (axis_set->empty()) {
-    return [](int32_t axis) { return true; };
-  } else {
-    return [axis_set](int32_t axis) -> bool { return axis_set->find(axis) != axis_set->end(); };
-  }
+  return [axis_set](int32_t axis) -> bool { return axis_set->find(axis) != axis_set->end(); };
 }
 
 }  // namespace oneflow
