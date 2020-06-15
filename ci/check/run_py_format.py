@@ -37,7 +37,7 @@ if __name__ == "__main__":
     if arguments.fix:
         cmd_line = arguments.python_bin + " -m {} " + arguments.source_dir
     else:
-        cmd_line = arguments.python_bin + " -m {} " + arguments.source_dir + " --check"
+        cmd_line = arguments.python_bin + " -m {} " + arguments.source_dir + " --check -v"
 
     command_proc = Popen(cmd_line.format("black"), shell=True)
     command_proc.communicate()
