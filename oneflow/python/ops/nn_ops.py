@@ -755,6 +755,8 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
         return remote_blob_util.RemoteBlob(lbi)
 
     assert rate is not None and rate >= 0.0 and rate < 1.0
+    if not flow.current_global_function_desc().IsTrainable() or rate == 0.0:
+        return x
     mask = random_mask_like(x, rate, seed, noise_shape)
     return (
         flow.user_op_builder(

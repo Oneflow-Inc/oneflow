@@ -13,8 +13,9 @@ Maybe<void> GenerateBackwardOpConf(
   CHECK(op.op_conf().has_user_conf());
   const UserOpConf& user_conf = op.op_conf().user_conf();
   const user_op::GradRegistrationVal* val = user_op::LookUpInGradRegistry(user_conf.op_type_name());
-  CHECK_OR_RETURN(val != nullptr) << " Cannot find op_type: " << user_conf.op_type_name()
-                                  << " 's grad func in GradRegistration!";
+  if (val == nullptr) {
+    return Error::GradientFunctionNotFound() << PbMessage2TxtString(op.op_conf());
+  }
   user_op::UserOpWrapper user_op(op.op_conf(), LogicalBlobDesc4BnInOp, DiffLbi4BnInOp);
   auto AddOp = [&](const user_op::UserOpConfWrapper& wrapper) {
     op_confs->push_back(wrapper.op_conf());
@@ -24,11 +25,10 @@ Maybe<void> GenerateBackwardOpConf(
 
   for (const std::string& ibn : op.input_bns()) {
     LogicalBlobId* lbi = DiffLbi4BnInOp(ibn);
-    if (lbi != nullptr) {
-      CHECK(lbi->has_op_name() && lbi->has_blob_name())
-          << " user_op: " << op.op_name() << " op_type_name: " << user_conf.op_type_name()
-          << " 's input blob " << ibn << " has not generate input diff blob !";
-    }
+    if (lbi == nullptr || (lbi->has_op_name() && lbi->has_blob_name())) { continue; }
+    LOG(ERROR) << "[REQUIRES_GRAD] user_op: " << op.op_name()
+               << " op_type_name: " << user_conf.op_type_name() << " 's input blob " << ibn
+               << " has not generate input diff blob !";
   }
   return Maybe<void>::Ok();
 }

@@ -497,14 +497,21 @@ Maybe<void> Operator::NaiveInferBatchAxis(
 
 Symbol<OperatorConf> Operator::GetOpConfWithoutOpNameAndLbn() const {
   OperatorConf op_conf(this->op_conf());
-  op_conf.set_name("");
+  op_conf.set_name("undefined-op-name");
   PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf, op_conf.op_type_case());
   for (const auto& ibn : input_bns()) {
     if (!HasStrFieldInPbFdOrPbRpf(*op_type_conf, ibn)) { continue; }
     const std::string& lbn = GetInputLbnInOpCustomizedConf(*op_type_conf, ibn);
-    ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn, "");
+    ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn, "undefined-op-name/undefined-ibn");
   }
   return SymbolOf(op_conf);
+}
+
+std::shared_ptr<const OpAttribute> Operator::GetOpAttributeWithoutOpNameAndLbn() const {
+  auto op_attribute = std::make_shared<const OpAttribute>(op_attribute_);
+  auto* mut_op_attribute = const_cast<OpAttribute*>(op_attribute.get());
+  *mut_op_attribute->mutable_op_conf() = *GetOpConfWithoutOpNameAndLbn();
+  return op_attribute;
 }
 
 LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
