@@ -13,6 +13,7 @@ void BroadcastLikeKernel<device_type, T>::ForwardDataContent(
   Blob* y_blob = BnInOp2Blob("y");
   const int64_t num_axes = y_blob->shape().NumAxes();
   const BroadcastLikeOpConf& conf = this->op_conf().broadcast_like_conf();
+  CHECK(!conf.reduced_axis().empty());
   const Shape& reduced_shape = CreateReducedShapeOrOnesShape(
       like_blob->shape(), {conf.reduced_axis().begin(), conf.reduced_axis().end()});
   NdarrayUtil<device_type, T>::BroadcastTo(

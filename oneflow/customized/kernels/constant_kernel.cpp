@@ -29,7 +29,6 @@ class ConstantKernel final : public OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* const_state = dynamic_cast<ConstState*>(state);
-    CHECK(ctx->all_outputs_constant());
     if (const_state->is_inited()) { return; }
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->Attr<bool>("is_floating_value");

@@ -48,7 +48,7 @@ void Kernel::Launch(const KernelCtx& ctx,
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
-  return op_attribute().bn_in_op2lbi().at(bn_in_op);
+  return op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
 }
 
 void Kernel::CheckSameDim0ValidNum(
