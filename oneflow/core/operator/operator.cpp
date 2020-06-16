@@ -58,6 +58,13 @@ const std::string& Operator::SoleTbn() const {
   return tmp_bns().Get(0);
 }
 
+Maybe<const std::string*> Operator::obn4lbi(const LogicalBlobId& lbi) const {
+  const auto& iter = lbi2obn_.find(lbi);
+  CHECK_OR_RETURN(iter != lbi2obn_.end())
+      << "no logical blob id found. lbn: " << lbi.op_name() << "/" << lbi.blob_name();
+  return &iter->second;
+}
+
 Maybe<void> Operator::InferBlobDescsIf(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
@@ -161,17 +168,17 @@ void Operator::ForEachBnInOp(std::function<void(const std::string&)> Handler) co
 }
 
 Maybe<void> Operator::InferSbpSignatureIf(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
-    const ParallelDesc& parallel_desc) const {
+    const ParallelDesc& parallel_desc) {
   if (parallel_desc.parallel_num() == 1) {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    auto* bn2sbp = mut_sbp_signature()->mutable_bn_in_op2sbp_parallel();
     for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0); }
     for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0); }
   } else if (parallel_desc.parallel_num() > 1) {
-    return InferSbpSignature(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
-                             parallel_desc);
+    return InferSbpSignature(mut_sbp_signature(), sbp_sig_conf, CalcOrderValue4SbpSig,
+                             SbpInferHint4Ibn, parallel_desc);
   } else {
     UNIMPLEMENTED();
   }
@@ -211,17 +218,15 @@ Maybe<void> Operator::InferSbpSignature(
 }
 
 Maybe<void> Operator::InferMirroredSignatureIf(
-    MirroredSignature* mirrored_signature, bool is_mirrored_parallel_view_conf,
     std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
-    const ParallelDesc& parallel_desc) const {
-  return InferMirroredSignature(mirrored_signature, is_mirrored_parallel_view_conf,
-                                MirroredSigInferHint4Ibn, parallel_desc);
+    bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc) {
+  return InferMirroredSignature(MirroredSigInferHint4Ibn, is_mirrored_parallel_view_conf,
+                                parallel_desc);
 }
 
 Maybe<void> Operator::InferMirroredSignature(
-    MirroredSignature* mirrored_signature, bool is_mirrored_parallel_view_conf,
     std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
-    const ParallelDesc& parallel_desc) const {
+    bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc) {
   HashSet<bool> is_mirrored_parallel_view_values;
   for (const auto& ibn : input_bns()) {
     const auto* infer_hint = JUST(MirroredSigInferHint4Ibn(ibn));
@@ -233,17 +238,43 @@ Maybe<void> Operator::InferMirroredSignature(
     is_mirrored_parallel_view_conf = *is_mirrored_parallel_view_values.begin();
   }
   const auto SetIsMirroredParallel = [&](const std::string& bn_in_op) {
-    auto* opt_mirrored_parallel =
-        &(*mirrored_signature->mutable_bn_in_op2opt_mirrored_parallel())[bn_in_op];
     if (is_mirrored_parallel_view_conf) {
-      opt_mirrored_parallel->mutable_mirrored_parallel();
+      MutOptMirroredParallel(bn_in_op)->mutable_mirrored_parallel();
     } else {
-      opt_mirrored_parallel->clear_mirrored_parallel();
+      MutOptMirroredParallel(bn_in_op)->clear_mirrored_parallel();
     }
   };
   for (const auto& ibn : input_bns()) { SetIsMirroredParallel(ibn); }
   for (const auto& obn : output_bns()) { SetIsMirroredParallel(obn); }
   return Maybe<void>::Ok();
+}
+
+Maybe<const SbpSignature*> Operator::sbp_signature() const {
+  CHECK_OR_RETURN(op_attribute_.has_sbp_signature()) << "sbp signature not infered";
+  return &op_attribute_.sbp_signature();
+}
+
+Maybe<const SbpParallel*> Operator::SbpParallel4BnInOp(const std::string& bn_in_op) const {
+  CHECK_OR_RETURN(op_attribute_.has_sbp_signature()) << "sbp signature not infered";
+  const auto& map = op_attribute_.sbp_signature().bn_in_op2sbp_parallel();
+  const auto& iter = map.find(bn_in_op);
+  CHECK_OR_RETURN(iter != map.end()) << "blob_name " << bn_in_op << " not found in sbp signature";
+  return &iter->second;
+}
+
+Maybe<const OptMirroredParallel*> Operator::OptMirroredParallel4BnInOp(
+    const std::string& bn_in_op) const {
+  CHECK_OR_RETURN(op_attribute_.has_mirrored_signature()) << "mirrored signature not infered";
+  const auto& map = op_attribute_.mirrored_signature().bn_in_op2opt_mirrored_parallel();
+  const auto& iter = map.find(bn_in_op);
+  CHECK_OR_RETURN(iter != map.end())
+      << "blob_name " << bn_in_op << " not found in mirrored signature";
+  return &iter->second;
+}
+
+OptMirroredParallel* Operator::MutOptMirroredParallel(const std::string& bn_in_op) {
+  auto* map = op_attribute_.mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel();
+  return &(*map)[bn_in_op];
 }
 
 namespace {
@@ -399,8 +430,13 @@ void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix) {
   EnrollRepeatedInputBn(ibn_prefix, true);
 }
 
+void Operator::EmplaceLbi2Obn(const LogicalBlobId& lbi, const std::string& obn) {
+  CHECK(lbi2obn_.emplace(lbi, obn).second);
+}
+
 OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   LogicalBlobId lbi = obn2lbi(obn);
+  EmplaceLbi2Obn(lbi, obn);
   auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_obn2output_blob_modifier();
   CHECK(map->insert({obn, OutputBlobModifier()}).second);
   *(mut_output_bns()->Add()) = obn;
@@ -563,10 +599,9 @@ Maybe<bool> ParseDisableBoxingFlag(const std::string& lbn_with_hint, bool* disab
 }
 
 Maybe<void> InferOpSbpSignature(
-    const Operator& op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
+    Operator* op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
     const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
-    std::function<const OptInt64&(const LogicalBlobId&)> GetBatchAxis4Lbi,
-    SbpSignature* sbp_sig_to_infer) {
+    std::function<const OptInt64&(const LogicalBlobId&)> GetBatchAxis4Lbi) {
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
     auto it = ibn2sbp_infer_hint.find(ibn);
     if (it == ibn2sbp_infer_hint.end()) {
@@ -578,7 +613,7 @@ Maybe<void> InferOpSbpSignature(
   std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
   auto OrderValue4HasBatchAxis = [&](const std::string& bn,
                                      const SbpParallel& sbp_parallel) -> int32_t {
-    const auto& batch_axis = GetBatchAxis4Lbi(op.BnInOp2Lbi(bn));
+    const auto& batch_axis = GetBatchAxis4Lbi(op->BnInOp2Lbi(bn));
     return -1
            * (batch_axis.has_value() && sbp_parallel.has_split_parallel()
               && sbp_parallel.split_parallel().axis() == batch_axis.value());
@@ -586,7 +621,7 @@ Maybe<void> InferOpSbpSignature(
   auto OrderValue4HasNoBatchAxis = [&](const std::string& ibn,
                                        const SbpParallel& sbp_parallel) -> int32_t {
     return -2
-           * (GetBatchAxis4Lbi(op.BnInOp2Lbi(ibn)).has_value() == false
+           * (GetBatchAxis4Lbi(op->BnInOp2Lbi(ibn)).has_value() == false
               && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
               && sbp_parallel.has_split_parallel() == false);
   };
@@ -597,14 +632,14 @@ Maybe<void> InferOpSbpSignature(
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
     CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
       int32_t order_value = 0;
-      for (const auto& ibn : op.input_bns()) {
+      for (const auto& ibn : op->input_bns()) {
         const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
         CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
         order_value += OrderValue4HasBatchAxis(ibn, sbp_parallel_it->second);
         order_value += OrderValue4HasNoBatchAxis(ibn, sbp_parallel_it->second);
         order_value += OrderValue4SbpHint(ibn, sbp_parallel_it->second);
       }
-      for (const auto& obn : op.output_bns()) {
+      for (const auto& obn : op->output_bns()) {
         const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);
         CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
         order_value += OrderValue4HasBatchAxis(obn, sbp_parallel_it->second);
@@ -614,8 +649,8 @@ Maybe<void> InferOpSbpSignature(
   } else {
     CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
   }
-  JUST(op.InferSbpSignatureIf(sbp_sig_to_infer, sbp_sig_conf, CalcOrderValue4SbpSig,
-                              SbpInferHint4Ibn, parallel_desc));
+  JUST(op->InferSbpSignatureIf(sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
+                               parallel_desc));
   return Maybe<void>::Ok();
 }
 
