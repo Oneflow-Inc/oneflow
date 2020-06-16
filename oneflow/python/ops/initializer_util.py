@@ -116,7 +116,7 @@ def glorot_uniform_initializer(data_format=""):
 
 
 @oneflow_export("glorot_normal_initializer", "xavier_normal_initializer")
-def glorot_uniform_initializer(data_format=""):
+def glorot_normal_initializer(data_format=""):
     return variance_scaling_initializer(1.0, "fan_avg", "random_normal", data_format)
 
 
