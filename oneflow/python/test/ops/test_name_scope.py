@@ -1,5 +1,5 @@
-import oneflow as flow
 import numpy as np
+import oneflow as flow
 
 
 def test_name_scope(test_case):

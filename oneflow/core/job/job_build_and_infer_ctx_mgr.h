@@ -51,6 +51,18 @@ class LazyJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
   JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
 };
 
+class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EagerJobBuildAndInferCtxMgr);
+  EagerJobBuildAndInferCtxMgr() : JobBuildAndInferCtxMgr() {}
+  ~EagerJobBuildAndInferCtxMgr() override = default;
+
+ private:
+  friend class Global<EagerJobBuildAndInferCtxMgr>;
+
+  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CXT_MGR_H_

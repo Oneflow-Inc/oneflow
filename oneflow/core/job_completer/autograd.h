@@ -19,8 +19,10 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
                         HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
                   HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const ClipConf& clip_conf);
-Maybe<void> GenerateBackwardOpConfIf(const Operator&, std::vector<OperatorConf>*,
-                                     const std::function<LogicalBlobId*(const std::string&)>&);
+Maybe<void> GenerateBackwardOpConfIf(
+    const Operator& op, std::vector<OperatorConf>* op_confs,
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp);
 void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes);
 
 class GenerateBackwardOpConfWrapperStruct final {

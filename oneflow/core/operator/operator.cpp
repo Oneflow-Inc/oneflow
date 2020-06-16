@@ -2,6 +2,7 @@
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/job/mirrored_sig_infer_hint.h"
 
 namespace oneflow {
 
@@ -206,6 +207,39 @@ Maybe<void> Operator::InferSbpSignature(
   SortSbpSignatureListByCopyCost(filtered_sbp_sigs_by_conf, input_bns(), SbpInferHint4Ibn,
                                  CalcOrderValue4SbpSig, &sorted_sbp_signatures);
   *sbp_signature = *sorted_sbp_signatures.at(0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> Operator::InferMirroredSignatureIf(
+    MirroredSignature* mirrored_signature, bool is_mirrored_parallel_view_conf,
+    std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  return InferMirroredSignature(mirrored_signature, is_mirrored_parallel_view_conf,
+                                MirroredSigInferHint4Ibn, parallel_desc);
+}
+
+Maybe<void> Operator::InferMirroredSignature(
+    MirroredSignature* mirrored_signature, bool is_mirrored_parallel_view_conf,
+    std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  const auto SetIsMirroredParallel = [&](const std::string& bn_in_op) {
+    auto* opt_mirrored_parallel =
+        &(*mirrored_signature->mutable_bn_in_op2opt_mirrored_parallel())[bn_in_op];
+    if (is_mirrored_parallel_view_conf) {
+      opt_mirrored_parallel->mutable_mirrored_parallel();
+    } else {
+      opt_mirrored_parallel->clear_mirrored_parallel();
+    }
+  };
+  for (const auto& ibn : input_bns()) {
+    const auto* infer_hint = JUST(MirroredSigInferHint4Ibn(ibn));
+    if (is_mirrored_parallel_view_conf) {
+      CHECK_OR_RETURN(infer_hint->is_mirrored_parallel_view());
+      CHECK_EQ_OR_RETURN(infer_hint->parallel_desc().parallel_num(), parallel_desc.parallel_num());
+    }
+    SetIsMirroredParallel(ibn);
+  }
+  for (const auto& obn : output_bns()) { SetIsMirroredParallel(obn); }
   return Maybe<void>::Ok();
 }
 
@@ -463,14 +497,21 @@ Maybe<void> Operator::NaiveInferBatchAxis(
 
 Symbol<OperatorConf> Operator::GetOpConfWithoutOpNameAndLbn() const {
   OperatorConf op_conf(this->op_conf());
-  op_conf.set_name("");
+  op_conf.set_name("undefined-op-name");
   PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf, op_conf.op_type_case());
   for (const auto& ibn : input_bns()) {
     if (!HasStrFieldInPbFdOrPbRpf(*op_type_conf, ibn)) { continue; }
     const std::string& lbn = GetInputLbnInOpCustomizedConf(*op_type_conf, ibn);
-    ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn, "");
+    ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn, "undefined-op-name/undefined-ibn");
   }
   return SymbolOf(op_conf);
+}
+
+std::shared_ptr<const OpAttribute> Operator::GetOpAttributeWithoutOpNameAndLbn() const {
+  auto op_attribute = std::make_shared<const OpAttribute>(op_attribute_);
+  auto* mut_op_attribute = const_cast<OpAttribute*>(op_attribute.get());
+  *mut_op_attribute->mutable_op_conf() = *GetOpConfWithoutOpNameAndLbn();
+  return op_attribute;
 }
 
 LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
