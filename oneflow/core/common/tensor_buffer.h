@@ -93,10 +93,10 @@ class TensorBuffer {
     }
   }
 
-  void CopyTo(TensorBuffer* dst) const {
-    if (dst == this) { return; }
-    dst->Resize(shape(), data_type());
-    memcpy(dst->mut_data(), data(), nbytes());
+  void CopyFrom(const TensorBuffer& src) {
+    if (&src == this) { return; }
+    Resize(src.shape(), src.data_type());
+    memcpy(mut_data(), src.data(), nbytes());
   }
 
  private:
