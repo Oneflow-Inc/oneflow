@@ -450,7 +450,7 @@ Maybe<LogicalBlobId> JobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleC
   return mirrored_lbi;
 }
 
-Maybe<const OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(
+Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(
     const OperatorConf& op_conf, const ParallelConf& origin_parallel_conf) {
   auto op = ConstructOp(op_conf, &GlobalJobDesc());
   JUST(CheckAllInputsConvertableToMirroredBlob(*op));
@@ -460,7 +460,7 @@ Maybe<const OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(
   auto GetSubOpName = [&](int index) { return GetMirroredOpName(op_conf.name(), index); };
   OperatorConf sub_op_conf(op_conf);
   int64_t sub_op_list_size = SizeOfSubConsistentOpList(parallel_num);
-  std::shared_ptr<const OpAttribute> last_op_attribute;
+  std::shared_ptr<OpAttribute> last_op_attribute;
   FOR_RANGE(int32_t, i, 0, sub_op_list_size) {
     ResetOpConfName(&sub_op_conf, GetSubOpName(i));
     for (const auto& ibn : op->input_bns()) {
@@ -499,15 +499,15 @@ Maybe<const LogicalBlobId*> JobBuildAndInferCtx::GetSubLbi(const LogicalBlobId& 
   return &lbi_vec_iter->second.at(index);
 }
 
-Maybe<const OpAttribute> JobBuildAndInferCtx::AddAndInferConsistentOp(
+Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferConsistentOp(
     const OperatorConf& op_conf, const ParallelConf& origin_parallel_conf) {
   return AddAndInferOp(op_conf, origin_parallel_conf, false);
 }
 
 // TODO(): add handle error of same interface op blob between jobs
-Maybe<const OpAttribute> JobBuildAndInferCtx::AddAndInferOp(
-    const OperatorConf& op_conf, const ParallelConf& origin_parallel_conf,
-    bool is_mirrored_parallel_view) {
+Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
+                                                      const ParallelConf& origin_parallel_conf,
+                                                      bool is_mirrored_parallel_view) {
   CHECK_OR_RETURN(has_job_conf_) << JobBuildAndInferError::kJobConfNotSet;
   if (!is_job_conf_frozen_) { is_job_conf_frozen_ = true; }
   const std::string& op_name = op_conf.name();

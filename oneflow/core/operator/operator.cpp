@@ -549,10 +549,9 @@ Symbol<OperatorConf> Operator::GetOpConfWithoutOpNameAndLbn() const {
   return SymbolOf(op_conf);
 }
 
-std::shared_ptr<const OpAttribute> Operator::GetOpAttributeWithoutOpNameAndLbn() const {
-  auto op_attribute = std::make_shared<const OpAttribute>(op_attribute_);
-  auto* mut_op_attribute = const_cast<OpAttribute*>(op_attribute.get());
-  *mut_op_attribute->mutable_op_conf() = *GetOpConfWithoutOpNameAndLbn();
+std::shared_ptr<OpAttribute> Operator::GetOpAttributeWithoutOpNameAndLbn() const {
+  auto op_attribute = std::make_shared<OpAttribute>(op_attribute_);
+  *op_attribute->mutable_op_conf() = *GetOpConfWithoutOpNameAndLbn();
   return op_attribute;
 }
 

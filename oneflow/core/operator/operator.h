@@ -171,7 +171,7 @@ class Operator {
   void ForEachBnInOp(std::function<void(const std::string&)>) const;
 
   virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
-  std::shared_ptr<const OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
+  std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
 
   Maybe<const SbpSignature*> sbp_signature() const;
   // TODO(lixinqi) It's dangerous to expose mut_sbp_signature()
