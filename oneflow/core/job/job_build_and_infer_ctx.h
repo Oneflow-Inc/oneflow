@@ -19,10 +19,10 @@ class JobBuildAndInferCtx {
   virtual ~JobBuildAndInferCtx() = default;
 
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
-  Maybe<const OpAttribute> AddAndInferConsistentOp(const OperatorConf& op_conf,
-                                                   const ParallelConf& parallel_conf);
-  Maybe<const OpAttribute> AddAndInferMirroredOp(const OperatorConf& op_conf,
-                                                 const ParallelConf& parallel_conf);
+  Maybe<OpAttribute> AddAndInferConsistentOp(const OperatorConf& op_conf,
+                                             const ParallelConf& parallel_conf);
+  Maybe<OpAttribute> AddAndInferMirroredOp(const OperatorConf& op_conf,
+                                           const ParallelConf& parallel_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
 
   bool HasJobConf() const;
@@ -110,9 +110,8 @@ class JobBuildAndInferCtx {
   virtual void VirtualInferOp(const Operator& op);
   void UpdateOpName2AncestorsNeedNoGrad(const Operator& op);
   void Updatelbi2ConsumedByGradientOp(const Operator& op);
-  Maybe<const OpAttribute> AddAndInferOp(const OperatorConf& op_conf,
-                                         const ParallelConf& parallel_conf,
-                                         bool is_mirrored_parallel_view);
+  Maybe<OpAttribute> AddAndInferOp(const OperatorConf& op_conf, const ParallelConf& parallel_conf,
+                                   bool is_mirrored_parallel_view);
 
   Job* job_;
   int64_t job_id_;
