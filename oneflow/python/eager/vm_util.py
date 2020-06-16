@@ -320,7 +320,8 @@ class InstructionsBuilder(object):
         assert callable(blob_object4ibn)
         const_operand_blob_objects = []
         for ibn in op_attribute.input_bns:
-            if op_attribute.ibn2input_blob_modifier[ibn].is_mutable:
+            ibn2modifier = op_attribute.arg_modifier_signature.ibn2input_blob_modifier
+            if ibn2modifier[ibn].is_mutable:
                 continue
             ibn_sym = self.GetSymbol4String(ibn)
             in_object = blob_object4ibn(ibn)
@@ -332,19 +333,19 @@ class InstructionsBuilder(object):
     ):
         mut1_operand_blob_objects = []
         for ibn in op_attribute.input_bns:
-            if not op_attribute.ibn2input_blob_modifier[ibn].is_mutable:
+            ibn2modifier = op_attribute.arg_modifier_signature.ibn2input_blob_modifier
+            if not ibn2modifier[ibn].is_mutable:
                 continue
             ibn_sym = self.GetSymbol4String(ibn)
             ref_blob_object = bn_in_op2blob_object[ibn]
             mut1_operand_blob_objects.append((ibn_sym, ref_blob_object))
         for obn in op_attribute.output_bns:
-            if not op_attribute.obn2output_blob_modifier[
-                obn
-            ].header_infered_before_compute:
+            obn2modifier = op_attribute.arg_modifier_signature.obn2output_blob_modifier
+            if not obn2modifier[obn].header_infered_before_compute:
                 continue
             obn_sym = self.GetSymbol4String(obn)
             out_blob_object = self._NewBlobObject(parallel_desc_sym)
-            lbi = op_attribute.bn_in_op2lbi[obn]
+            lbi = op_attribute.arg_signature.bn_in_op2lbi[obn]
             bn_in_op2blob_object[obn] = out_blob_object
             mut1_operand_blob_objects.append((obn_sym, out_blob_object))
         return mut1_operand_blob_objects
@@ -353,7 +354,8 @@ class InstructionsBuilder(object):
         self, op_attribute, op_parallel_desc_sym, bn_in_op2blob_object={}
     ):
         for ibn in op_attribute.input_bns:
-            if not op_attribute.ibn2input_blob_modifier[ibn].is_mutable:
+            ibn2modifier = op_attribute.arg_modifier_signature.ibn2input_blob_modifier
+            if not ibn2modifier[ibn].is_mutable:
                 continue
             ref_blob_object = bn_in_op2blob_object[ibn]
             assert op_parallel_desc_sym == ref_blob_object.parallel_desc_symbol
@@ -363,7 +365,8 @@ class InstructionsBuilder(object):
     ):
         mut2_operand_blob_objects = []
         for obn in op_attribute.output_bns:
-            if op_attribute.obn2output_blob_modifier[obn].header_infered_before_compute:
+            obn2modifier = op_attribute.arg_modifier_signature.obn2output_blob_modifier
+            if obn2modifier[obn].header_infered_before_compute:
                 continue
             obn_sym = self.GetSymbol4String(obn)
             out_blob_object = self._NewBlobObject(parallel_desc_sym)

@@ -45,13 +45,13 @@ def SetObject4BlobName(blob_name, obj):
 def BnInOp2BlobObjectScope(op_attribute):
     bn_in_op2blob_object = {}
     for ibn in op_attribute.input_bns:
-        lbi = op_attribute.bn_in_op2lbi[ibn]
+        lbi = op_attribute.arg_signature.bn_in_op2lbi[ibn]
         bn_in_op2blob_object[ibn] = GetObject4BlobName(
             "%s/%s" % (lbi.op_name, lbi.blob_name)
         )
     yield bn_in_op2blob_object
     for obn in op_attribute.output_bns:
-        lbi = op_attribute.bn_in_op2lbi[obn]
+        lbi = op_attribute.arg_signature.bn_in_op2lbi[obn]
         SetObject4BlobName(
             "%s/%s" % (lbi.op_name, lbi.blob_name), bn_in_op2blob_object[obn]
         )

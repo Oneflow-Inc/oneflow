@@ -192,7 +192,11 @@ Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
   std::shared_ptr<Operator> op = ConstructOp(op_conf, &GlobalJobDesc());
-  return PbMessage2TxtString(*op->GetOpAttributeWithoutOpNameAndLbn());
+  std::shared_ptr<OpAttribute> op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
+  auto* map = op_attribute->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel();
+  for (const auto& ibn : op_attribute->input_bns()) { (*map)[ibn].mutable_mirrored_parallel(); }
+  for (const auto& obn : op_attribute->output_bns()) { (*map)[obn].mutable_mirrored_parallel(); }
+  return PbMessage2TxtString(*op_attribute);
 }
 
 Maybe<void> RunLogicalInstruction(const std::string& instruction_list_str,
