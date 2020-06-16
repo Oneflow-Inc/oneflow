@@ -40,6 +40,8 @@ struct OpRegistrationVal {
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistrationVal since it is more about
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;
+  bool cpu_only_supported = false;
+  int32_t same_output_regst_num = -1;
 };
 
 struct OpRegistryWrapper final {
@@ -66,7 +68,8 @@ class OpRegistryWrapperBuilder final {
   OpRegistryWrapperBuilder& OptionalOutput(const std::string& name, int32_t num);
   OpRegistryWrapperBuilder& OptionalOutputWithMinimum(const std::string& name, int32_t min_num);
 
-  OpRegistryWrapperBuilder& AllOutputsConstant();
+  OpRegistryWrapperBuilder& SupportCpuOnly();
+  OpRegistryWrapperBuilder& SetOutputBufferNum(int32_t num);
 
   OpRegistryWrapperBuilder& Attr(const std::string& name, UserOpAttrType type);
   template<typename T>
@@ -101,5 +104,7 @@ static const std::string kUserSourceOpTickInputArgName = "UserSourceOpTickInput"
 #define REGISTER_USER_OP(name)                                                                  \
   static ::oneflow::user_op::Registrar<::oneflow::user_op::OpRegistryWrapperBuilder> OF_PP_CAT( \
       g_registrar, __COUNTER__) = ::oneflow::user_op::OpRegistryWrapperBuilder(name)
+
+#define REGISTER_CPU_ONLY_USER_OP(name) REGISTER_USER_OP(name).SupportCpuOnly()
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_REGISTRATION_H_
