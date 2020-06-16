@@ -499,7 +499,8 @@ void ConnectCriticalSectionEndToReentrantLockEnd(Plan* main_plan,
 
   auto* op_attribute = reentrant_exec_node->mutable_kernel_conf()->mutable_op_attribute();
   op_attribute->add_input_bns("end");
-  (*op_attribute->mutable_bn_in_op2lbi())["end"] = critical_section_sink_lbi;
+  (*op_attribute->mutable_arg_signature()->mutable_bn_in_op2lbi())["end"] =
+      critical_section_sink_lbi;
 
   auto* reentrant_lock_conf = op_attribute->mutable_op_conf()->mutable_reentrant_lock_conf();
   reentrant_lock_conf->set_end(GenLogicalBlobName(critical_section_sink_lbi));
