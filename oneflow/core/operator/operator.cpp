@@ -2,6 +2,7 @@
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/job/mirrored_sig_infer_hint.h"
 
 namespace oneflow {
 
@@ -32,12 +33,12 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
 LogicalNode* Operator::NewProperLogicalNode() const { return new NormalForwardLogicalNode; }
 
 const LogicalBlobId& Operator::BnInOp2Lbi(const std::string& bn_in_op) const {
-  return op_attribute_.bn_in_op2lbi().at(bn_in_op);
+  return op_attribute_.arg_signature().bn_in_op2lbi().at(bn_in_op);
 }
 
 LogicalBlobId* Operator::MutBnInOp2Lbi(const std::string& bn_in_op) {
-  auto it = op_attribute_.mutable_bn_in_op2lbi()->find(bn_in_op);
-  if (it == op_attribute_.mutable_bn_in_op2lbi()->end()) {
+  auto it = op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi()->find(bn_in_op);
+  if (it == op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi()->end()) {
     return nullptr;
   } else {
     return &(it->second);
@@ -209,6 +210,42 @@ Maybe<void> Operator::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Operator::InferMirroredSignatureIf(
+    MirroredSignature* mirrored_signature, bool is_mirrored_parallel_view_conf,
+    std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  return InferMirroredSignature(mirrored_signature, is_mirrored_parallel_view_conf,
+                                MirroredSigInferHint4Ibn, parallel_desc);
+}
+
+Maybe<void> Operator::InferMirroredSignature(
+    MirroredSignature* mirrored_signature, bool is_mirrored_parallel_view_conf,
+    std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  HashSet<bool> is_mirrored_parallel_view_values;
+  for (const auto& ibn : input_bns()) {
+    const auto* infer_hint = JUST(MirroredSigInferHint4Ibn(ibn));
+    is_mirrored_parallel_view_values.insert(infer_hint->is_mirrored_parallel_view());
+  }
+  CHECK_LE_OR_RETURN(is_mirrored_parallel_view_values.size(), 1)
+      << "mixed parallel_views are disallowed";
+  if (is_mirrored_parallel_view_values.size() == 1) {
+    is_mirrored_parallel_view_conf = *is_mirrored_parallel_view_values.begin();
+  }
+  const auto SetIsMirroredParallel = [&](const std::string& bn_in_op) {
+    auto* opt_mirrored_parallel =
+        &(*mirrored_signature->mutable_bn_in_op2opt_mirrored_parallel())[bn_in_op];
+    if (is_mirrored_parallel_view_conf) {
+      opt_mirrored_parallel->mutable_mirrored_parallel();
+    } else {
+      opt_mirrored_parallel->clear_mirrored_parallel();
+    }
+  };
+  for (const auto& ibn : input_bns()) { SetIsMirroredParallel(ibn); }
+  for (const auto& obn : output_bns()) { SetIsMirroredParallel(obn); }
+  return Maybe<void>::Ok();
+}
+
 namespace {
 
 bool HasBlobDescWithField(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -318,7 +355,8 @@ void Operator::EnrollTmpBn(const std::string& tbn) {
 
 InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
   LogicalBlobId lbi = ibn2lbi(ibn);
-  CHECK(op_attribute_.mutable_ibn2input_blob_modifier()->insert({ibn, InputBlobModifier()}).second);
+  auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_ibn2input_blob_modifier();
+  CHECK(map->insert({ibn, InputBlobModifier()}).second);
   *(mut_input_bns()->Add()) = ibn;
   CHECK(mut_bn_in_op2lbi()->insert({ibn, lbi}).second);
   auto* ret = MutInputBlobModifier4Ibn(ibn);
@@ -327,19 +365,21 @@ InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff
 }
 
 const InputBlobModifier& Operator::InputBlobModifier4Ibn(const std::string& ibn) const {
-  return op_attribute_.ibn2input_blob_modifier().at(ibn);
+  return op_attribute_.arg_modifier_signature().ibn2input_blob_modifier().at(ibn);
 }
 
 const OutputBlobModifier& Operator::OutputBlobModifier4Obn(const std::string& obn) const {
-  return op_attribute_.obn2output_blob_modifier().at(obn);
+  return op_attribute_.arg_modifier_signature().obn2output_blob_modifier().at(obn);
 }
 
 InputBlobModifier* Operator::MutInputBlobModifier4Ibn(const std::string& ibn) {
-  return &op_attribute_.mutable_ibn2input_blob_modifier()->at(ibn);
+  auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_ibn2input_blob_modifier();
+  return &map->at(ibn);
 }
 
 OutputBlobModifier* Operator::MutOutputBlobModifier4Obn(const std::string& obn) {
-  return &op_attribute_.mutable_obn2output_blob_modifier()->at(obn);
+  auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_obn2output_blob_modifier();
+  return &map->at(obn);
 }
 
 void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff) {
@@ -361,8 +401,8 @@ void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix) {
 
 OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   LogicalBlobId lbi = obn2lbi(obn);
-  CHECK(
-      op_attribute_.mutable_obn2output_blob_modifier()->insert({obn, OutputBlobModifier()}).second);
+  auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_obn2output_blob_modifier();
+  CHECK(map->insert({obn, OutputBlobModifier()}).second);
   *(mut_output_bns()->Add()) = obn;
   CHECK(mut_bn_in_op2lbi()->insert({obn, lbi}).second);
   auto* ret = MutOutputBlobModifier4Obn(obn);
@@ -463,14 +503,21 @@ Maybe<void> Operator::NaiveInferBatchAxis(
 
 Symbol<OperatorConf> Operator::GetOpConfWithoutOpNameAndLbn() const {
   OperatorConf op_conf(this->op_conf());
-  op_conf.set_name("");
+  op_conf.set_name("undefined-op-name");
   PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf, op_conf.op_type_case());
   for (const auto& ibn : input_bns()) {
     if (!HasStrFieldInPbFdOrPbRpf(*op_type_conf, ibn)) { continue; }
     const std::string& lbn = GetInputLbnInOpCustomizedConf(*op_type_conf, ibn);
-    ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn, "");
+    ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn, "undefined-op-name/undefined-ibn");
   }
   return SymbolOf(op_conf);
+}
+
+std::shared_ptr<const OpAttribute> Operator::GetOpAttributeWithoutOpNameAndLbn() const {
+  auto op_attribute = std::make_shared<const OpAttribute>(op_attribute_);
+  auto* mut_op_attribute = const_cast<OpAttribute*>(op_attribute.get());
+  *mut_op_attribute->mutable_op_conf() = *GetOpConfWithoutOpNameAndLbn();
+  return op_attribute;
 }
 
 LogicalBlobId GenLogicalBlobId(const std::string& lbn) {

@@ -1,7 +1,7 @@
+from collections import OrderedDict
+
 import numpy as np
 import oneflow as flow
-
-from collections import OrderedDict
 from test_util import GenArgDict
 
 flow_to_np_dtype_dict = {
