@@ -63,11 +63,20 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
 
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \
   template<>                                                                                       \
-  cpp_type UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {                 \
+  const cpp_type& UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {          \
+    auto it = attr_cache_.find(attr_name);                                                         \
+    if (it != attr_cache_.end()) {                                                                 \
+      return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();                 \
+    }                                                                                              \
     CHECK(op_conf_.user_conf().attr().find(attr_name) != op_conf_.user_conf().attr().end());       \
     UserOpAttrVal val = op_conf_.user_conf().attr().at(attr_name);                                 \
     CHECK(val.has_##field());                                                                      \
-    return AttrValAccessor<cpp_type>::Attr(val);                                                   \
+                                                                                                   \
+    auto typed_attr_val =                                                                          \
+        std::make_shared<TypedAttrVal<cpp_type>>(AttrValAccessor<cpp_type>::Attr(val));            \
+    CHECK(attr_cache_.emplace(attr_name, std::dynamic_pointer_cast<AttrVal>(typed_attr_val))       \
+              .second);                                                                            \
+    return typed_attr_val->val();                                                                  \
   }                                                                                                \
                                                                                                    \
   template<>                                                                                       \
