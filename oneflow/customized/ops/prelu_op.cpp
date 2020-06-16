@@ -115,6 +115,15 @@ REGISTER_USER_OP("prelu_alpha_grad")
       *ctx->TensorDesc4ArgNameAndIndex("alpha_diff", 0) = *alpha_desc;
       return Maybe<void>::Ok();
     })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
+      CHECK_NOTNULL(dy_modifier);
+      dy_modifier->set_requires_grad(false);
+      user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
+      CHECK_NOTNULL(x_modifier);
+      x_modifier->set_requires_grad(false);
+    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("alpha_diff", 0) =
           *ctx->BatchAxis4ArgNameAndIndex("alpha", 0);

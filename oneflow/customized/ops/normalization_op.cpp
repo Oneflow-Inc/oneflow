@@ -136,6 +136,24 @@ REGISTER_USER_OP("normalization_grad")
     .Attr("axis", UserOpAttrType::kAtInt32)
     .Attr("epsilon", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn(NormalizationGradTensorDescInfer)
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper& conf) {
+      user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
+      CHECK_NOTNULL(x_modifier);
+      x_modifier->set_requires_grad(false);
+      user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
+      CHECK_NOTNULL(dy_modifier);
+      dy_modifier->set_requires_grad(false);
+      user_op::InputArgModifier* mean_modifier = GetInputArgModifierFn("mean", 0);
+      CHECK_NOTNULL(mean_modifier);
+      mean_modifier->set_requires_grad(false);
+      user_op::InputArgModifier* inv_variance_modifier = GetInputArgModifierFn("inv_variance", 0);
+      CHECK_NOTNULL(inv_variance_modifier);
+      inv_variance_modifier->set_requires_grad(false);
+      user_op::InputArgModifier* gamma_modifier = GetInputArgModifierFn("gamma", 0);
+      CHECK_NOTNULL(gamma_modifier);
+      gamma_modifier->set_requires_grad(false);
+    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
       ctx->BatchAxis4ArgNameAndIndex("gamma_diff", 0)->clear_value();
