@@ -10,7 +10,6 @@ def _of_object_bbox_flip(bbox_list, image_size, flip_code):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
     @flow.function(func_config)

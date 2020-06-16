@@ -42,7 +42,6 @@ class Operator {
   LogicalBlobId* MutBnInOp2Lbi(const std::string& bn_in_op);
 
   // Getters
-  const OpAttribute& op_attribute() const { return op_attribute_; }
   const std::string& op_name() const { return op_conf().name(); }
   DeviceType device_type() const { return op_attribute_.op_conf().device_type(); }
   bool EnableCudnn() const { return op_conf().enable_cudnn(); }
@@ -169,6 +168,7 @@ class Operator {
   void ForEachBnInOp(std::function<void(const std::string&)>) const;
 
   virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
+  std::shared_ptr<const OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
 
  protected:
   virtual Maybe<void> GetSbpSignatures(
@@ -283,7 +283,7 @@ class Operator {
   virtual LogicalBlobId cbbn2lbi(const std::string& const_buf_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
-    return op_attribute_.mutable_bn_in_op2lbi();
+    return op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi();
   }
 
   friend std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc*);
