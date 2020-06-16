@@ -19,8 +19,7 @@ class ReduceKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     const Shape& reduced_shape =
-        axis.empty() ? Shape::Ones(input_tensor->shape().NumAxes())
-                     : CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
+        CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
     NdarrayReduce<device_type, T, BinaryFunc>::Reduce(
         ctx->device_ctx(), XpuVarNdarray<T>(reduced_shape, output_tensor->mut_dptr<T>()),
         XpuVarNdarray<const T>(input_tensor->shape(), input_tensor->dptr<T>()),
@@ -65,13 +64,6 @@ REGISTER_REDUCE_KERNEL(float)
 REGISTER_REDUCE_KERNEL(double)
 REGISTER_REDUCE_KERNEL(int32_t)
 REGISTER_REDUCE_KERNEL(int64_t)
-
-REGISTER_USER_KERNEL("reduce_sum")
-    .SetCreateFn<ReduceKernel<BinaryFuncSum, DeviceType::kGPU, float16>>()
-    .SetIsMatchedPred(IsMatchedPred<DeviceType::kGPU, float16>)
-    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);
-      return in_shape->elem_cnt() * sizeof(float16);
-    });
+REGISTER_REDUCE_XPU_KERNEL("reduce_sum", BinaryFuncSum, DeviceType::kGPU, float16)
 
 }  // namespace oneflow
