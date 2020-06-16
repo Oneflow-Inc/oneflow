@@ -88,8 +88,9 @@ class JobBuildAndInferCtx {
   void AddOpAndUpdateJobParallelViewConf(const OperatorConf& operator_conf,
                                          const SbpSignature& sbp_signature,
                                          bool is_mirrored_parallel_view) const;
-  Maybe<void> InferOpOutSbpParallel(Operator*, const SbpSignature&, const ParallelDesc&,
-                                    SbpSignature*);
+  Maybe<void> InferMirroredSignature(Operator*, bool is_mirrored_parallel_view_conf,
+                                     const ParallelDesc&);
+  Maybe<void> InferOpOutSbpParallel(Operator*, const SbpSignature&, const ParallelDesc&);
   Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
   Maybe<void> CheckOpBlobSplitability(Operator*, const SbpSignature&, int64_t parallel_num);
   Maybe<void> CheckPlacement() const;

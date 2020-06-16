@@ -3,6 +3,7 @@
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/job/mirrored_sig_infer_hint.h"
 
 namespace oneflow {
 
@@ -152,10 +153,38 @@ void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(const OperatorConf& 
   job_->mutable_net()->add_op()->CopyFrom(operator_conf);
 }
 
+Maybe<void> JobBuildAndInferCtx::InferMirroredSignature(Operator* op,
+                                                        bool is_mirrored_parallel_view_conf,
+                                                        const ParallelDesc& parallel_desc) {
+  HashMap<std::string, MirroredSigInferHint> ibn2mirrored_sig_infer_hint;
+  for (const std::string& ibn : op->input_bns()) {
+    const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
+    CHECK_OR_RETURN(lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end())
+        << JobBuildAndInferError::kLogicalBlobNameNotExist
+        << "infer blob desc not found, when infer op_name: \"" << op->op_name()
+        << "\", consumed op_name: \"" << lbi.op_name() << "\", blob_name: \"" << lbi.blob_name();
+    const ParallelDesc* pd = &lbi2parallel_desc_from_producer_view_.at(lbi);
+    const auto* producer_op = op_name2op_.at(lbi.op_name()).get();
+    const auto& producer_obn = *CHECK_JUST(producer_op->obn4lbi(lbi));
+    const auto& opt_mirrored_parallel =
+        *CHECK_JUST(producer_op->OptMirroredParallel4BnInOp(producer_obn));
+    ibn2mirrored_sig_infer_hint.emplace(
+        ibn, MirroredSigInferHint(pd, opt_mirrored_parallel.has_mirrored_parallel()));
+  }
+  const auto& MirroredSigInferHint4Ibn =
+      [&](const std::string& ibn) -> Maybe<const MirroredSigInferHint*> {
+    const auto& iter = ibn2mirrored_sig_infer_hint.find(ibn);
+    CHECK_OR_RETURN(iter != ibn2mirrored_sig_infer_hint.end())
+        << "input blob not found. ibn: " << ibn;
+    return &iter->second;
+  };
+  return op->InferMirroredSignatureIf(MirroredSigInferHint4Ibn, is_mirrored_parallel_view_conf,
+                                      parallel_desc);
+}
+
 Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
                                                        const SbpSignature& sbp_sig_conf,
-                                                       const ParallelDesc& parallel_desc,
-                                                       SbpSignature* sbp_sig_to_infer) {
+                                                       const ParallelDesc& parallel_desc) {
   HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
@@ -179,10 +208,10 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
     return lbi2batch_axis_.at(lbi);
   };
 
-  CHECK_JUST(InferOpSbpSignature(*op, sbp_sig_conf, parallel_desc, ibn2sbp_infer_hint,
-                                 GetBatchAxis4Lbi, sbp_sig_to_infer));
+  CHECK_JUST(
+      InferOpSbpSignature(op, sbp_sig_conf, parallel_desc, ibn2sbp_infer_hint, GetBatchAxis4Lbi));
 
-  const auto& bn2sbp_parallel = sbp_sig_to_infer->bn_in_op2sbp_parallel();
+  const auto& bn2sbp_parallel = JUST(op->sbp_signature())->bn_in_op2sbp_parallel();
   for (const auto& obn : op->output_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(obn);
     CHECK_OR_RETURN(bn2sbp_parallel.find(obn) != bn2sbp_parallel.end())
@@ -512,9 +541,10 @@ Maybe<const OpAttribute> JobBuildAndInferCtx::AddAndInferOp(
   JUST(op->InferBatchAxisIf(GetConstBlobDescBnInOp, BatchAxis4BnInOp));
 
   ParallelDesc parallel_desc(*parallel_conf);
-  // infer sbp
-  SbpSignature sbp_sig_to_infer;
-  JUST(InferOpOutSbpParallel(op, sbp_sig_conf, parallel_desc, &sbp_sig_to_infer));
+  // infer mirrored signature
+  JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
+  // infer sbp signature
+  JUST(InferOpOutSbpParallel(op, sbp_sig_conf, parallel_desc));
 
   // infer logical blob desc
   JUST(GenOpProducedEmptyLogicalBlobDesc(op));
@@ -528,7 +558,7 @@ Maybe<const OpAttribute> JobBuildAndInferCtx::AddAndInferOp(
   ParallelContext parallel_ctx;
   parallel_ctx.set_parallel_id(0);
   parallel_ctx.set_parallel_num(1);
-  JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, &sbp_sig_to_infer,
+  JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, CHECK_JUST(op->sbp_signature()),
                                [](OpContext*) {}));
   auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
     const auto& lbi = op->BnInOp2Lbi(obn);
@@ -539,11 +569,11 @@ Maybe<const OpAttribute> JobBuildAndInferCtx::AddAndInferOp(
     return &iter->second;
   };
   JUST(op->InferOutParallelDescIf(ParallelDesc4Obn, GetBlobDesc4BnInOp, parallel_desc,
-                                  &sbp_sig_to_infer));
+                                  JUST(op->sbp_signature())));
   JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));
   VirtualInferOp(*op);
   // check splitability
-  JUST(CheckOpBlobSplitability(op, sbp_sig_to_infer, parallel_desc.parallel_num()));
+  JUST(CheckOpBlobSplitability(op, *JUST(op->sbp_signature()), parallel_desc.parallel_num()));
 
   return op->GetOpAttributeWithoutOpNameAndLbn();
 }
