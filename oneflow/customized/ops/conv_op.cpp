@@ -291,16 +291,9 @@ REGISTER_USER_OP("conv_data_grad")
     .SetCheckAttrFn(CheckAttr<0>)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
-      CHECK_NOTNULL(dy_modifier);
-      dy_modifier->set_requires_grad(false);
-      user_op::InputArgModifier* filter_modifier = GetInputArgModifierFn("filter", 0);
-      CHECK_NOTNULL(filter_modifier);
-      filter_modifier->set_requires_grad(false);
-      user_op::InputArgModifier* x_like_modifier = GetInputArgModifierFn("x_like", 0);
-      CHECK_NOTNULL(x_like_modifier);
-      x_like_modifier->set_use_header_only(true);
-      x_like_modifier->set_requires_grad(false);
+      user_op::InputArgModifier* x_like = GetInputArgModifierFn("x_like", 0);
+      CHECK_NOTNULL(x_like);
+      x_like->set_use_header_only(true);
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
@@ -388,15 +381,6 @@ REGISTER_USER_OP("conv_filter_grad")
 
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
-      CHECK_NOTNULL(dy_modifier);
-      dy_modifier->set_requires_grad(false);
-      user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-      CHECK_NOTNULL(x_modifier);
-      x_modifier->set_requires_grad(false);
-    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       auto BatchAxis4BnInOp = [&ctx](const std::string& arg_name) -> OptInt64* {
         return ctx->BatchAxis4ArgNameAndIndex(arg_name, 0);
@@ -427,12 +411,6 @@ REGISTER_USER_OP("conv_bias_grad")
       }
       return oneflow::Error::CheckFailed() << "Illegal value for " << conf.op_type_name() << " op "
                                            << conf.op_name() << ": data_format:" << data_format;
-    })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
-      CHECK_NOTNULL(dy_modifier);
-      dy_modifier->set_requires_grad(false);
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);

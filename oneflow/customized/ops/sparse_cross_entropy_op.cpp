@@ -63,12 +63,6 @@ REGISTER_USER_OP("sparse_cross_entropy_grad")
       *ctx->TensorDesc4ArgNameAndIndex("prediction_diff", 0) = *prediction_desc;
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* prediction_modifier = GetInputArgModifierFn("prediction", 0);
-      CHECK_NOTNULL(prediction_modifier);
-      prediction_modifier->set_requires_grad(false);
-    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("prediction_diff", 0) =
           *ctx->BatchAxis4ArgNameAndIndex("dy", 0);

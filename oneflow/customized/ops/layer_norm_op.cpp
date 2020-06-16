@@ -121,21 +121,6 @@ REGISTER_USER_OP("layer_norm_grad")
       *dx = *dy;
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
-      CHECK_NOTNULL(dy_modifier);
-      dy_modifier->set_requires_grad(false);
-      user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-      CHECK_NOTNULL(x_modifier);
-      x_modifier->set_requires_grad(false);
-      user_op::InputArgModifier* mean_modifier = GetInputArgModifierFn("mean", 0);
-      CHECK_NOTNULL(mean_modifier);
-      mean_modifier->set_requires_grad(false);
-      user_op::InputArgModifier* inv_variance_modifier = GetInputArgModifierFn("inv_variance", 0);
-      CHECK_NOTNULL(inv_variance_modifier);
-      inv_variance_modifier->set_requires_grad(false);
-    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       for (const auto& ob : ctx->outputs()) {
         *ctx->BatchAxis4ArgNameAndIndex(ob.first, ob.second) =
@@ -236,16 +221,6 @@ REGISTER_USER_OP("layer_norm_param_grad")
             *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
       }
       return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
-      CHECK_NOTNULL(dy_modifier);
-      dy_modifier->set_requires_grad(false);
-      user_op::InputArgModifier* normalized_modifier = GetInputArgModifierFn("normalized", 0);
-      if (normalized_modifier) { normalized_modifier->set_requires_grad(false); }
-      user_op::InputArgModifier* gamma_modifier = GetInputArgModifierFn("gamma", 0);
-      if (gamma_modifier) { gamma_modifier->set_requires_grad(false); }
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
