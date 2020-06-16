@@ -2,12 +2,6 @@ from __future__ import absolute_import
 
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.ops.user_op_builder as user_op_builder
 
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.remote_blob import BlobDef
@@ -161,7 +155,7 @@ def CropMirrorNormalize(
 def CoinFlip(batch_size=1, seed=None, probability=0.5, name=None):
     if name is None:
         name = id_util.UniqueStr("CoinFlip_")
-        
+
     return (
         flow.user_op_builder(name)
         .Op("coin_flip")
@@ -190,7 +184,7 @@ def image_decode(images_bytes_buffer, dtype=flow.uint8, color_space="BGR", name=
         .Attr("data_type", dtype, "AttrTypeDataType")
         .Build()
     )
-    return op.InferAndTryRun().RemoteBlobList()[0]
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("image.target_resize", "image_target_resize")
@@ -228,7 +222,7 @@ def image_batch_align(images, shape, dtype, alignment, name=None):
         .Attr("alignment", alignment, "AttrTypeInt32")
         .Build()
     )
-    return op.InferAndTryRun().RemoteBlobList()[0]
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("image.normalize", "image_normalize")
@@ -248,7 +242,7 @@ def image_normalize(image, std, mean, name=None):
         .Attr("mean", mean, "AttrTypeListFloat")
         .Build()
     )
-    return op.InferAndTryRun().RemoteBlobList()[0]
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("image.flip", "image_flip")
@@ -261,7 +255,10 @@ def image_flip(image, flip_code, name=None):
     if not isinstance(flip_code, BlobDef):
         assert isinstance(flip_code, int)
         flip_code = flow.constant(
-            flip_code, shape=(image.shape[0],), dtype=flow.int8, name="{}_FlipCode_".format(name)
+            flip_code,
+            shape=(image.shape[0],),
+            dtype=flow.int8,
+            name="{}_FlipCode_".format(name),
         )
     else:
         assert image.shape[0] == flip_code.shape[0]
@@ -274,7 +271,7 @@ def image_flip(image, flip_code, name=None):
         .Output("out")
         .Build()
     )
-    return op.InferAndTryRun().RemoteBlobList()[0]
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("detection.object_bbox_flip", "object_bbox_flip")
@@ -289,7 +286,10 @@ def object_bbox_flip(bbox, image_size, flip_code, name=None):
     if not isinstance(flip_code, BlobDef):
         assert isinstance(flip_code, int)
         flip_code = flow.constant(
-            flip_code, shape=(bbox.shape[0],), dtype=flow.int8, name="{}_FlipCode".format(name)
+            flip_code,
+            shape=(bbox.shape[0],),
+            dtype=flow.int8,
+            name="{}_FlipCode".format(name),
         )
     else:
         assert bbox.shape[0] == flip_code.shape[0]
@@ -303,7 +303,7 @@ def object_bbox_flip(bbox, image_size, flip_code, name=None):
         .Output("out")
         .Build()
     )
-    return op.InferAndTryRun().RemoteBlobList()[0]
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("detection.object_bbox_scale", "object_bbox_scale")
@@ -323,10 +323,12 @@ def object_bbox_scale(bbox, scale, name=None):
         .Output("out")
         .Build()
     )
-    return op.InferAndTryRun().RemoteBlobList()[0]
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("detection.object_segmentation_polygon_flip", "object_segmentation_polygon_flip")
+@oneflow_export(
+    "detection.object_segmentation_polygon_flip", "object_segmentation_polygon_flip"
+)
 def object_segm_poly_flip(poly, image_size, flip_code, name=None):
     assert isinstance(poly, BlobDef)
     assert isinstance(image_size, BlobDef)
@@ -338,7 +340,10 @@ def object_segm_poly_flip(poly, image_size, flip_code, name=None):
     if not isinstance(flip_code, BlobDef):
         assert isinstance(flip_code, int)
         flip_code = flow.constant(
-            flip_code, shape=(poly.shape[0],), dtype=flow.int8, name="{}_FlipCode".format(name)
+            flip_code,
+            shape=(poly.shape[0],),
+            dtype=flow.int8,
+            name="{}_FlipCode".format(name),
         )
     else:
         assert poly.shape[0] == flip_code.shape[0]
@@ -352,10 +357,12 @@ def object_segm_poly_flip(poly, image_size, flip_code, name=None):
         .Output("out")
         .Build()
     )
-    return op.InferAndTryRun().RemoteBlobList()[0]
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("detection.object_segmentation_polygon_scale", "object_segmentation_polygon_scale")
+@oneflow_export(
+    "detection.object_segmentation_polygon_scale", "object_segmentation_polygon_scale"
+)
 def object_segm_poly_scale(poly, scale, name=None):
     assert isinstance(poly, BlobDef)
     assert isinstance(scale, BlobDef)
@@ -372,10 +379,13 @@ def object_segm_poly_scale(poly, scale, name=None):
         .Output("out")
         .Build()
     )
-    return op.InferAndTryRun().RemoteBlobList()[0]
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("detection.object_segmentation_polygon_to_mask", "object_segmentation_polygon_to_mask")
+@oneflow_export(
+    "detection.object_segmentation_polygon_to_mask",
+    "object_segmentation_polygon_to_mask",
+)
 def object_segm_poly_to_mask(poly, poly_index, image_size, name=None):
     assert isinstance(poly, BlobDef)
     assert isinstance(poly_index, BlobDef)
@@ -395,7 +405,7 @@ def object_segm_poly_to_mask(poly, poly_index, image_size, name=None):
         .Output("out")
         .Build()
     )
-    return op.InferAndTryRun().RemoteBlobList()[0]
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("data.coco_reader")

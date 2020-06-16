@@ -6,7 +6,9 @@ import time
 
 class COCODataLoadConfig(object):
     def __init__(self):
-        self.annotation_file = "/dataset/mscoco_2017/annotations/instances_train2017.json"
+        self.annotation_file = (
+            "/dataset/mscoco_2017/annotations/instances_train2017.json"
+        )
         self.image_dir = "/dataset/mscoco_2017/train2017"
         # self.annotation_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
         # self.image_dir = "/dataset/mscoco_2017/val2017"
@@ -56,7 +58,9 @@ def coco_data_load(cfg, machine_id, nrank):
         flip_code = flow.random.coin_flip(cfg.batch_size)
         image = flow.image.flip(image, flip_code)
         bbox = flow.detection.object_bbox_flip(bbox, new_size, flip_code)
-        segm_poly = flow.detection.object_segmentation_polygon_flip(segm_poly, new_size, flip_code)
+        segm_poly = flow.detection.object_segmentation_polygon_flip(
+            segm_poly, new_size, flip_code
+        )
         # image normalize
         image = flow.image.normalize(image, cfg.image_normal_std, cfg.image_normal_mean)
         # batch collate
@@ -113,8 +117,14 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
 
         if verbose:
             print("==== iter {} ====".format(i))
-            print("image: {}\n".format(image.ndarray_list()[0].shape), image.ndarray_list()[0])
-            print("image_size: {}\n".format(image_size.ndarray().shape), image_size.ndarray())
+            print(
+                "image: {}\n".format(image.ndarray_list()[0].shape),
+                image.ndarray_list()[0],
+            )
+            print(
+                "image_size: {}\n".format(image_size.ndarray().shape),
+                image_size.ndarray(),
+            )
             print("gt_bbox:\n", gt_bbox.ndarray_lists()[0])
             print("gt_label:\n", gt_label.ndarray_lists()[0])
             print("gt_mask:\n", gt_mask.ndarray_lists()[0])
