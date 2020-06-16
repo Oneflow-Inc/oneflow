@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-REGISTER_USER_OP("OFRecordReader")
+REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
     .Output("out")
     .Attr("data_dir", UserOpAttrType::kAtString)
     .Attr("data_part_num", UserOpAttrType::kAtInt32)

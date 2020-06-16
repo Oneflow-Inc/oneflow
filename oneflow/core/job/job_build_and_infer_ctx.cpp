@@ -136,12 +136,18 @@ Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
   return op_conf_without_split_hint;
 }
 
-void JobBuildAndInferCtx::AddOp7AddSbpSigConf2Job(const OperatorConf& operator_conf,
-                                                  const SbpSignature& sbp_signature) const {
+void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(const OperatorConf& operator_conf,
+                                                            const SbpSignature& sbp_signature,
+                                                            bool is_mirrored_parallel_view) const {
   auto* op_name2sbp_sig =
       job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
   if (sbp_signature.bn_in_op2sbp_parallel().size() > 0) {
     (*op_name2sbp_sig)[operator_conf.name()] = sbp_signature;
+  }
+  auto* op_name2is_mirrored_parallel_view =
+      job_->mutable_job_parallel_view_conf()->mutable_op_name2is_mirrored_parallel_view();
+  if (is_mirrored_parallel_view) {
+    (*op_name2is_mirrored_parallel_view)[operator_conf.name()] = true;
   }
   job_->mutable_net()->add_op()->CopyFrom(operator_conf);
 }
@@ -432,8 +438,9 @@ Maybe<const OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(
       const auto& lbi = *JUST(GetSubLbi(op->BnInOp2Lbi(ibn), i));
       ResetOpConfIbn(&sub_op_conf, ibn, GenLogicalBlobName(lbi));
     }
-    last_op_attribute =
-        JUST(AddAndInferConsistentOp(sub_op_conf, GetMirroredOpParallelConf(parallel_desc, i)));
+    const ParallelConf& parallel_conf = GetMirroredOpParallelConf(parallel_desc, i);
+    bool is_mirrored_parallel_view = GetIsMirroredParallelView();
+    last_op_attribute = JUST(AddAndInferOp(sub_op_conf, parallel_conf, is_mirrored_parallel_view));
   }
   bool is_broadcast = JUST(AllInputsBroadcastParallel(*op));
   for (const auto& obn : op->output_bns()) {
@@ -463,9 +470,15 @@ Maybe<const LogicalBlobId*> JobBuildAndInferCtx::GetSubLbi(const LogicalBlobId& 
   return &lbi_vec_iter->second.at(index);
 }
 
-// TODO(): add handle error of same interface op blob between jobs
 Maybe<const OpAttribute> JobBuildAndInferCtx::AddAndInferConsistentOp(
     const OperatorConf& op_conf, const ParallelConf& origin_parallel_conf) {
+  return AddAndInferOp(op_conf, origin_parallel_conf, false);
+}
+
+// TODO(): add handle error of same interface op blob between jobs
+Maybe<const OpAttribute> JobBuildAndInferCtx::AddAndInferOp(
+    const OperatorConf& op_conf, const ParallelConf& origin_parallel_conf,
+    bool is_mirrored_parallel_view) {
   CHECK_OR_RETURN(has_job_conf_) << JobBuildAndInferError::kJobConfNotSet;
   if (!is_job_conf_frozen_) { is_job_conf_frozen_ = true; }
   const std::string& op_name = op_conf.name();
@@ -483,7 +496,7 @@ Maybe<const OpAttribute> JobBuildAndInferCtx::AddAndInferConsistentOp(
   HashMap<std::string, bool> ibn2disable_boxing;
   InitIbn2DisableBoxing(*op, &ibn2disable_boxing);
   auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf, &ibn2disable_boxing));
-  AddOp7AddSbpSigConf2Job(*new_op_conf, sbp_sig_conf);
+  AddOpAndUpdateJobParallelViewConf(*new_op_conf, sbp_sig_conf, is_mirrored_parallel_view);
   auto parallel_conf = JUST(InferOpParallelConf(*op, origin_parallel_conf, ibn2disable_boxing));
   JUST(AddOpNameParallelConf2Placement(op_name, *parallel_conf));
   UpdateLbi2DisableBoxing(*op, ibn2disable_boxing);
