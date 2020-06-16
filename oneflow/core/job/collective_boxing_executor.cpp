@@ -61,19 +61,6 @@ void CollectiveBoxingExecutorBackend::GroupRequests(
   }
 }
 
-class NcclCollectiveBoxingDeviceCtx : public DeviceCtx {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveBoxingDeviceCtx);
-  explicit NcclCollectiveBoxingDeviceCtx(cudaStream_t cuda_stream) : cuda_stream_(cuda_stream) {}
-  ~NcclCollectiveBoxingDeviceCtx() override = default;
-
- private:
-  const cudaStream_t& cuda_stream() const override { return cuda_stream_; }
-  void AddCallBack(std::function<void()>) const override { UNIMPLEMENTED(); }
-
-  cudaStream_t cuda_stream_;
-};
-
 class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBackend {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveBoxingExecutorBackend)
