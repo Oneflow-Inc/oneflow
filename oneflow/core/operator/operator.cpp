@@ -33,12 +33,12 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
 LogicalNode* Operator::NewProperLogicalNode() const { return new NormalForwardLogicalNode; }
 
 const LogicalBlobId& Operator::BnInOp2Lbi(const std::string& bn_in_op) const {
-  return op_attribute_.bn_in_op2lbi().at(bn_in_op);
+  return op_attribute_.arg_signature().bn_in_op2lbi().at(bn_in_op);
 }
 
 LogicalBlobId* Operator::MutBnInOp2Lbi(const std::string& bn_in_op) {
-  auto it = op_attribute_.mutable_bn_in_op2lbi()->find(bn_in_op);
-  if (it == op_attribute_.mutable_bn_in_op2lbi()->end()) {
+  auto it = op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi()->find(bn_in_op);
+  if (it == op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi()->end()) {
     return nullptr;
   } else {
     return &(it->second);
@@ -355,7 +355,8 @@ void Operator::EnrollTmpBn(const std::string& tbn) {
 
 InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
   LogicalBlobId lbi = ibn2lbi(ibn);
-  CHECK(op_attribute_.mutable_ibn2input_blob_modifier()->insert({ibn, InputBlobModifier()}).second);
+  auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_ibn2input_blob_modifier();
+  CHECK(map->insert({ibn, InputBlobModifier()}).second);
   *(mut_input_bns()->Add()) = ibn;
   CHECK(mut_bn_in_op2lbi()->insert({ibn, lbi}).second);
   auto* ret = MutInputBlobModifier4Ibn(ibn);
@@ -364,19 +365,21 @@ InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff
 }
 
 const InputBlobModifier& Operator::InputBlobModifier4Ibn(const std::string& ibn) const {
-  return op_attribute_.ibn2input_blob_modifier().at(ibn);
+  return op_attribute_.arg_modifier_signature().ibn2input_blob_modifier().at(ibn);
 }
 
 const OutputBlobModifier& Operator::OutputBlobModifier4Obn(const std::string& obn) const {
-  return op_attribute_.obn2output_blob_modifier().at(obn);
+  return op_attribute_.arg_modifier_signature().obn2output_blob_modifier().at(obn);
 }
 
 InputBlobModifier* Operator::MutInputBlobModifier4Ibn(const std::string& ibn) {
-  return &op_attribute_.mutable_ibn2input_blob_modifier()->at(ibn);
+  auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_ibn2input_blob_modifier();
+  return &map->at(ibn);
 }
 
 OutputBlobModifier* Operator::MutOutputBlobModifier4Obn(const std::string& obn) {
-  return &op_attribute_.mutable_obn2output_blob_modifier()->at(obn);
+  auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_obn2output_blob_modifier();
+  return &map->at(obn);
 }
 
 void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff) {
@@ -398,8 +401,8 @@ void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix) {
 
 OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   LogicalBlobId lbi = obn2lbi(obn);
-  CHECK(
-      op_attribute_.mutable_obn2output_blob_modifier()->insert({obn, OutputBlobModifier()}).second);
+  auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_obn2output_blob_modifier();
+  CHECK(map->insert({obn, OutputBlobModifier()}).second);
   *(mut_output_bns()->Add()) = obn;
   CHECK(mut_bn_in_op2lbi()->insert({obn, lbi}).second);
   auto* ret = MutOutputBlobModifier4Obn(obn);

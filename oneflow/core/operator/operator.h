@@ -283,7 +283,7 @@ class Operator {
   virtual LogicalBlobId cbbn2lbi(const std::string& const_buf_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
-    return op_attribute_.mutable_bn_in_op2lbi();
+    return op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi();
   }
 
   friend std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc*);
