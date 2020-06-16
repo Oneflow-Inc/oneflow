@@ -16,6 +16,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow as flow
 import ctypes
 
+
 def lr_lbn_from_train_conf(var_op_conf, train_conf):
     lr_lbn = None
     if var_op_conf.variable_conf.model_name == "weight":
@@ -28,18 +29,31 @@ def lr_lbn_from_train_conf(var_op_conf, train_conf):
     assert lr_lbn != ""
     return lr_lbn
 
+
 class Base(oneflow_internal.OptimizerBase):
     def __init__(self):
         self.build_func_ = None
         oneflow_internal.OptimizerBase.__init__(self)
 
-    def Build(self, var_op_conf_txt, parallel_conf_txt, diff_lbi_of_var_out_txt, train_conf_txt):
+    def Build(
+        self,
+        var_op_conf_txt,
+        parallel_conf_txt,
+        diff_lbi_of_var_out_txt,
+        train_conf_txt,
+    ):
         try:
             assert self.build_func_ is not None
             with rt_mode.ModeScope(rt_mode.GLOBAL_MODE):
-                var_op_conf = text_format.Parse(var_op_conf_txt, op_conf_util.OperatorConf())
-                parallel_conf = text_format.Parse(parallel_conf_txt, placment_util.ParallelConf())
-                diff_lbi = text_format.Parse(diff_lbi_of_var_out_txt, logical_blob_id_util.LogicalBlobId())
+                var_op_conf = text_format.Parse(
+                    var_op_conf_txt, op_conf_util.OperatorConf()
+                )
+                parallel_conf = text_format.Parse(
+                    parallel_conf_txt, placment_util.ParallelConf()
+                )
+                diff_lbi = text_format.Parse(
+                    diff_lbi_of_var_out_txt, logical_blob_id_util.LogicalBlobId()
+                )
                 train_conf = text_format.Parse(train_conf_txt, TrainConf())
 
                 job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
@@ -56,6 +70,7 @@ class Base(oneflow_internal.OptimizerBase):
         except Exception:
             traceback.print_exc()
 
+
 @oneflow_export("register_optimizer")
 def register_optimizer(name):
     def decorator_(func):
@@ -67,7 +82,9 @@ def register_optimizer(name):
         error = text_format.Parse(error_str, error_util.ErrorProto())
         if error.HasField("error_type"):
             raise JobBuildAndInferError(error)
+
     return decorator_
+
 
 @register_optimizer("sgd")
 def build_sgd(var, var_diff, lr, var_op_conf, parallel_conf):

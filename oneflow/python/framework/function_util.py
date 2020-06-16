@@ -352,16 +352,18 @@ def set_enable_keep_header_only(func_desc, value=True):
 def set_concurrency_width(func_desc, value):
     func_desc.job_config_proto.concurrency_width = value
 
-@oneflow_function_config('train.optimizer')
+
+@oneflow_function_config("train.optimizer")
 def set_optimizer(func_desc, value):
     func_desc.job_config_proto.train_conf.optimizer = value
+
 
 @oneflow_function_config("train.model_update_conf")
 def set_model_update_conf(func_desc, value):
     assert type(value) is dict
     pb_msg = func_desc.job_config_proto.train_conf.model_update_conf
     pb_util.PythonDict2PbMessage(value, pb_msg)
-    if os.getenv("ENABLE_USER_OP") == 'True':
+    if os.getenv("ENABLE_USER_OP") == "True":
         if "naive_conf" in value:
             set_optimizer(func_desc, "sgd")
 
