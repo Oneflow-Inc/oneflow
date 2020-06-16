@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-REGISTER_USER_OP("ofrecord_raw_decoder")
+REGISTER_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
     .Input("in")
     .Output("out")
     .Attr("name", UserOpAttrType::kAtString)
@@ -38,7 +38,7 @@ REGISTER_USER_OP("ofrecord_raw_decoder")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("ofrecord_image_decoder")
+REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder")
     .Input("in")
     .Output("out")
     .Attr("name", UserOpAttrType::kAtString)
@@ -65,7 +65,7 @@ REGISTER_USER_OP("ofrecord_image_decoder")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("ofrecord_image_decoder_random_crop")
+REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder_random_crop")
     .Input("in")
     .Output("out")
     .Attr("name", UserOpAttrType::kAtString)
