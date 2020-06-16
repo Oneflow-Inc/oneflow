@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-REGISTER_USER_OP("image_target_resize")
+REGISTER_CPU_ONLY_USER_OP("image_target_resize")
     .Input("in")
     .Output("out")
     .Output("size")
