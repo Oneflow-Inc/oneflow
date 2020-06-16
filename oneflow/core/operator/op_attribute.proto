@@ -17,6 +17,6 @@ message OpAttribute {
 
   required ArgSignature arg_signature = 100;
   required ArgModifierSignature arg_modifier_signature = 101;
-  required SbpSignature sbp_signature = 102;
-  required MirroredSignature mirrored_signature = 103;
+  optional SbpSignature sbp_signature = 102;
+  optional MirroredSignature mirrored_signature = 103;
 }
