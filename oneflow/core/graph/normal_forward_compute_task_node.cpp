@@ -26,11 +26,11 @@ std::string GetOutRegstNameByObn(const std::string& obn) {
 
 bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() { return false; }
 
-bool NormalForwardCompTaskNode::IsMultiOutRegst() const {
-  return logical_node()->SoleOp()->output_bns().size() > 1 && IsAllOut121();
+bool NormalForwardCompTaskNode::CanProduceSeperatedRegstsForEachOutBlob() const {
+  return logical_node()->SoleOp()->output_bns().size() > 1 && IsAllOutNodeNormalForward();
 }
 
-bool NormalForwardCompTaskNode::IsAllOut121() const {
+bool NormalForwardCompTaskNode::IsAllOutNodeNormalForward() const {
   bool ret = true;
   ForEachNodeOnOutDataEdge([&](TaskNode* node) {
     auto* fw_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
@@ -42,6 +42,7 @@ bool NormalForwardCompTaskNode::IsAllOut121() const {
 void NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum(const std::string& name,
                                                                  size_t mem_block_num) {
   if (mem_block_num != -1) {
+    CHECK_GT(mem_block_num, 0);
     ProduceRegst(name, false, mem_block_num, mem_block_num);
   } else {
     ProduceRegst(name, true);
@@ -61,7 +62,7 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   }
   // when output blob num > 1 and task node on out edge is all NormalForwardCompTaskNode ,
   // create multi out regst by output blob name in op
-  if (IsMultiOutRegst()) {
+  if (CanProduceSeperatedRegstsForEachOutBlob()) {
     HashMap<LogicalBlobId, std::string> lbi2out_regst_name;
     for (const std::string& obn : op.output_bns()) {
       const LogicalBlobId& lbi = op.BnInOp2Lbi(obn);
@@ -74,15 +75,15 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
       auto* dst_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
       CHECK(dst_node != nullptr) << "1regst1blob ONLY support normal fw comp task node 121";
       const Operator& dst_op = *dst_node->logical_node()->SoleOp();
-      bool is_find = false;
+      bool is_found = false;
       for (const std::string& ibn : dst_op.input_bns()) {
         const LogicalBlobId& dst_in_lbi = dst_op.BnInOp2Lbi(ibn);
         if (lbi2out_regst_name.find(dst_in_lbi) != lbi2out_regst_name.end()) {
-          is_find = true;
+          is_found = true;
           BindEdgeWithProducedRegst(edge, lbi2out_regst_name.at(dst_in_lbi));
         }
       }
-      CHECK(is_find) << "Cannot find comsumed blob in dst op: " << dst_op.op_name();
+      CHECK(is_found) << "Cannot find comsumed blob in dst op: " << dst_op.op_name();
     });
   } else {
     ProduceOutRegstByNameAndBlockNum("out", mem_block_num);
@@ -141,7 +142,7 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
 }
 
 void NormalForwardCompTaskNode::BuildOutRegst() {
-  if (IsMultiOutRegst()) {
+  if (CanProduceSeperatedRegstsForEachOutBlob()) {
     ExecNode* exec_node = mut_exec_gph().SoleNode();
     for (const std::string& obn : exec_node->op()->output_bns()) {
       std::string out_regst_name = GetOutRegstNameByObn(obn);
