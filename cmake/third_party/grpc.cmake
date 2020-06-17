@@ -4,7 +4,7 @@ set(GRPC_INCLUDE_DIR ${THIRD_PARTY_DIR}/grpc/include)
 set(GRPC_LIBRARY_DIR ${THIRD_PARTY_DIR}/grpc/lib)
 
 set(GRPC_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
-set(GRPC_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/grpc/src/grpc)
+set(GRPC_URL ${THIRD_PARTY_SUBMODULE_DIR}/grpc/src/grpc)
 
 if(WIN32)
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})

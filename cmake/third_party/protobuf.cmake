@@ -8,7 +8,7 @@ set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
 if(WITH_XLA)
   set(PROTOBUF_URL "https://storage.googleapis.com/mirror.tensorflow.org/github.com/protocolbuffers/protobuf/archive/310ba5ee72661c081129eb878c1bbcec936b20f0.tar.gz")
 else()
-  set(PROTOBUF_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/protobuf/src/protobuf)
+  set(PROTOBUF_URL ${THIRD_PARTY_SUBMODULE_DIR}/protobuf/src/protobuf)
 endif()
 
 if(WIN32)
