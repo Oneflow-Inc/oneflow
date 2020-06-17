@@ -245,8 +245,20 @@ class AddAllReduceGroupPass final : public OpGraphPass {
   AddAllReduceGroupPass() = default;
   ~AddAllReduceGroupPass() = default;
   bool IsEnabled() const override {
-    return GlobalJobDesc().IsTrain() && !GlobalJobDesc().enable_non_distributed_optimizer()
-           && GlobalJobDesc().enable_all_reduce_group();
+    if (GlobalJobDesc().IsTrain() && GlobalJobDesc().enable_all_reduce_group()) {
+      if (GlobalJobDesc().use_boxing_v2()) {
+        LOG(WARNING) << "AddAllReduceGroupPass will be disabled when use_boxing_v2 is true";
+        return false;
+      } else if (GlobalJobDesc().enable_non_distributed_optimizer()) {
+        LOG(WARNING) << "AddAllReduceGroupPass will be disabled when "
+                        "enable_non_distributed_optimizer is true";
+        return false;
+      } else {
+        return true;
+      }
+    } else {
+      return false;
+    }
   }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };

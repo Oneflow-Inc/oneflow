@@ -47,6 +47,9 @@ class JobDesc final {
     return job_conf_.use_nccl_inter_node_communication();
   }
   bool use_boxing_v2() const { return job_conf_.use_boxing_v2(); }
+  bool do_parallel_cast_before_widening_type_cast() const {
+    return job_conf_.do_parallel_cast_before_widening_type_cast();
+  };
   bool enable_all_reduce_group() const { return job_conf_.enable_all_reduce_group(); }
   bool enable_non_distributed_optimizer() const {
     return job_conf_.enable_non_distributed_optimizer();
