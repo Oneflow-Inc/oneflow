@@ -9,7 +9,6 @@ void CollectiveBoxingDeviceCtx::SetCheckPoint(std::shared_ptr<std::atomic<bool>>
 }
 
 void CollectiveBoxingDeviceCtx::AddCallBack(std::function<void()> callback) const {
-  // TODO(liujuncheng): improve performance when build type is DEBUG
   CHECK(current_ready_flag_);
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Get()->Enqueue(current_ready_flag_,
                                                                               callback);
