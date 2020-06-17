@@ -90,10 +90,6 @@ REGISTER_KERNEL(OperatorConf::kNcclReduceScatterConf, NcclReduceScatterKernel);
 REGISTER_KERNEL(OperatorConf::kNcclAllGatherConf, NcclAllGatherKernel);
 REGISTER_KERNEL(OperatorConf::kNcclAllReduceConf, NcclAllReduceKernel);
 
-REGISTER_KERNEL(OperatorConf::kNcclBoxingReduceScatterConf, NcclReduceScatterKernel);
-REGISTER_KERNEL(OperatorConf::kNcclBoxingAllGatherConf, NcclAllGatherKernel);
-REGISTER_KERNEL(OperatorConf::kNcclBoxingAllReduceConf, NcclAllReduceKernel);
-
 #endif  // WITH_CUDA
 
 }  // namespace oneflow
