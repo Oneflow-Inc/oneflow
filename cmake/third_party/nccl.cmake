@@ -3,7 +3,7 @@ include (ExternalProject)
 set(NCCL_INCLUDE_DIR ${THIRD_PARTY_DIR}/nccl/include)
 set(NCCL_LIBRARY_DIR ${THIRD_PARTY_DIR}/nccl/lib)
 
-set(NCCL_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/nccl/src/nccl)
+set(NCCL_URL ${THIRD_PARTY_SUBMODULE_DIR}/nccl/src/nccl)
 set(NCCL_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/nccl/src/nccl/build)
 
 if(WIN32)
