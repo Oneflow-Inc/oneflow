@@ -72,9 +72,9 @@ REGISTER_USER_OP("softmax_cross_entropy_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const auto num_label_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("label", 0).shape().NumAxes();
-      FOR_RANGE(int64_t, i, 0, num_label_axes) {
+      const auto num_dy_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0).shape().NumAxes();
+      FOR_RANGE(int64_t, i, 0, num_dy_axes) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("dy", 0), i)
             .Split(user_op::OpArg("label", 0), i)
