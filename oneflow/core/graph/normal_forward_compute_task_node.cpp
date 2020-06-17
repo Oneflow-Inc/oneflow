@@ -2,6 +2,7 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/operator/variable_op.h"
+#include "oneflow/core/framework/op_registration.h"
 
 namespace oneflow {
 
@@ -50,10 +51,14 @@ void NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum(const std::stri
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   const Operator& op = *logical_node()->SoleOp();
   size_t mem_block_num = RegstNum4OpSameOutputBlob(op.op_conf().op_type_case());
-  bool all_outputs_constant =
-      (op.op_conf().has_user_conf() && op.op_conf().user_conf().all_outputs_constant());
-  if (all_outputs_constant) { mem_block_num = 1; }
-
+  if (op.op_conf().has_user_conf()) {
+    const std::string& op_type_name = op.op_conf().user_conf().op_type_name();
+    const auto* op_reg_val = user_op::LookUpInOpRegistry(op_type_name);
+    CHECK(op_reg_val != nullptr) << "op_type_name " << op_type_name << " not register";
+    if (op_reg_val->same_output_regst_num > 0) {
+      mem_block_num = op_reg_val->same_output_regst_num;
+    }
+  }
   // when output blob num > 1 and task node on out edge is all NormalForwardCompTaskNode ,
   // create multi out regst by output blob name in op
   if (IsMultiOutRegst()) {
