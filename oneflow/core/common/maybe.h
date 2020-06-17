@@ -17,6 +17,8 @@ template<typename T>
 class Maybe<
     T, typename std::enable_if<!(std::is_same<T, void>::value || std::is_scalar<T>::value)>::type>
     final {
+  static_assert(!std::is_reference<T>::value, "reference type not supported");
+
  public:
   Maybe(const T& data) : data_or_error_(std::make_shared<T>(data)) {}
   Maybe(const Error& error) : data_or_error_(error.error_proto()) {}

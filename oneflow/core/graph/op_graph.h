@@ -29,9 +29,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   bool IsTimeShapeIdentity() const;
   const Operator& op() const { return *op_; }
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
-  const SbpSignature& sbp_signature() const { return sbp_signature_; }
+  const SbpSignature& sbp_signature() const { return *CHECK_JUST(op().sbp_signature()); }
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
-  bool IsMirroredParallelView4Lbi(const LogicalBlobId& lbi) const;
   const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const OptInt64& BatchAxis4Lbi(const LogicalBlobId& lbi) const;
@@ -49,9 +48,9 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
 
   // Setters
+  Operator* mut_op() { return op_.get(); }
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
-  SbpSignature* mut_sbp_signature() { return &sbp_signature_; }
-  MirroredSignature* mut_mirrored_signature() { return &mirrored_signature_; }
+  SbpSignature* mut_sbp_signature() { return mut_op()->mut_sbp_signature(); }
   Shape* mut_out_blob_time_shape();
   HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
@@ -85,15 +84,12 @@ class OpNode final : public Node<OpNode, OpEdge> {
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   std::unique_ptr<Shape> out_blob_time_shape_;
-  SbpSignature sbp_signature_;
   HashMap<LogicalBlobId, OptInt64> lbi2batch_axis_;
   HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
   std::unique_ptr<Shape> input_blob_fastest_time_shape_;
   HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
-  MirroredSignature mirrored_signature_;
-  HashMap<LogicalBlobId, bool> lbi2is_mirrored_parallel_view_;
 };
 
 class OpEdge final : public Edge<OpNode, OpEdge> {
