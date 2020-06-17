@@ -19,10 +19,10 @@ class JobBuildAndInferCtx {
   virtual ~JobBuildAndInferCtx() = default;
 
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
-  Maybe<const OpAttribute> AddAndInferConsistentOp(const OperatorConf& op_conf,
-                                                   const ParallelConf& parallel_conf);
-  Maybe<const OpAttribute> AddAndInferMirroredOp(const OperatorConf& op_conf,
-                                                 const ParallelConf& parallel_conf);
+  Maybe<OpAttribute> AddAndInferConsistentOp(const OperatorConf& op_conf,
+                                             const ParallelConf& parallel_conf);
+  Maybe<OpAttribute> AddAndInferMirroredOp(const OperatorConf& op_conf,
+                                           const ParallelConf& parallel_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
 
   bool HasJobConf() const;
@@ -63,13 +63,23 @@ class JobBuildAndInferCtx {
   virtual ParallelConf GetMirroredOpParallelConf(const ParallelDesc&,
                                                  int64_t parallel_id) const = 0;
   virtual bool GetIsMirroredParallelView() const = 0;
+  virtual Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
+      const LogicalBlobId& lbn) = 0;
 
   Job* mut_job() const { return job_; }
   int64_t job_id() const { return job_id_; }
   const HashMap<LogicalBlobId, std::vector<LogicalBlobId>>& mirrored_lbi2sub_lbis() const {
     return mirrored_lbi2sub_lbis_;
   }
+  HashMap<LogicalBlobId, std::vector<LogicalBlobId>>* mut_mirrored_lbi2sub_lbis() {
+    return &mirrored_lbi2sub_lbis_;
+  }
   Maybe<const ParallelDesc*> ParallelDesc4Lbi(const LogicalBlobId& lbi) const;
+  HashMap<LogicalBlobId, LogicalBlobId>* mut_consistent_lbi2mirrored_lbi() {
+    return &consistent_lbi2mirrored_lbi_;
+  }
+  Maybe<const SbpParallel*> SbpParallel4Lbi(const LogicalBlobId& lbi) const;
+  bool IsVariableLbi(const LogicalBlobId& lbi) const;
 
  private:
   Maybe<ParallelConf> InferOpParallelConf(
@@ -88,8 +98,9 @@ class JobBuildAndInferCtx {
   void AddOpAndUpdateJobParallelViewConf(const OperatorConf& operator_conf,
                                          const SbpSignature& sbp_signature,
                                          bool is_mirrored_parallel_view) const;
-  Maybe<void> InferOpOutSbpParallel(Operator*, const SbpSignature&, const ParallelDesc&,
-                                    SbpSignature*);
+  Maybe<void> InferMirroredSignature(Operator*, bool is_mirrored_parallel_view_conf,
+                                     const ParallelDesc&);
+  Maybe<void> InferOpOutSbpParallel(Operator*, const SbpSignature&, const ParallelDesc&);
   Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
   Maybe<void> CheckOpBlobSplitability(Operator*, const SbpSignature&, int64_t parallel_num);
   Maybe<void> CheckPlacement() const;
@@ -98,20 +109,15 @@ class JobBuildAndInferCtx {
   Maybe<LogicalBlobId> GetMirroredLbi(const std::string& lbn_with_hint) const;
   bool HasAnyMirroredBlobInput(const Operator& op) const;
   Maybe<void> CheckAllInputsConvertableToMirroredBlob(const Operator& op) const;
-  Maybe<const SbpParallel*> SbpParallel4Lbi(const LogicalBlobId& lbi) const;
-  Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
-      const LogicalBlobId& lbn);
   Maybe<void> AddLossConsistentBlobName(const std::string& lbn);
   Maybe<void> AddLossMirroredBlobName(const std::string& lbn);
   Maybe<const LogicalBlobId*> GetSubLbi(const LogicalBlobId& lbi, int32_t index);
   Maybe<bool> AllInputsBroadcastParallel(const Operator& op) const;
-  bool IsVariableLbi(const LogicalBlobId& lbi) const;
   virtual void VirtualInferOp(const Operator& op);
   void UpdateOpName2AncestorsNeedNoGrad(const Operator& op);
   void Updatelbi2ConsumedByGradientOp(const Operator& op);
-  Maybe<const OpAttribute> AddAndInferOp(const OperatorConf& op_conf,
-                                         const ParallelConf& parallel_conf,
-                                         bool is_mirrored_parallel_view);
+  Maybe<OpAttribute> AddAndInferOp(const OperatorConf& op_conf, const ParallelConf& parallel_conf,
+                                   bool is_mirrored_parallel_view);
 
   Job* job_;
   int64_t job_id_;
@@ -146,6 +152,8 @@ class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
   int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return parallel_num; }
   ParallelConf GetMirroredOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
   bool GetIsMirroredParallelView() const override { return false; }
+  Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
+      const LogicalBlobId& lbn) override;
   Maybe<void> Complete() override;
 };
 
@@ -162,6 +170,8 @@ class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
   int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return 1; }
   ParallelConf GetMirroredOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
   bool GetIsMirroredParallelView() const override { return true; }
+  Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
+      const LogicalBlobId& lbn) override;
   Maybe<void> Complete() override;
 
   Job fw_job_;
