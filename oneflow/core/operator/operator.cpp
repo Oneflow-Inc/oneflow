@@ -229,13 +229,19 @@ Maybe<void> Operator::InferMirroredSignature(
     bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc) {
   HashSet<bool> is_mirrored_parallel_view_values;
   for (const auto& ibn : input_bns()) {
-    const auto* infer_hint = JUST(MirroredSigInferHint4Ibn(ibn));
-    is_mirrored_parallel_view_values.insert(infer_hint->is_mirrored_parallel_view());
+    const auto& infer_hint = *JUST(MirroredSigInferHint4Ibn(ibn));
+    is_mirrored_parallel_view_values.insert(infer_hint.is_mirrored_parallel_view());
   }
   CHECK_LE_OR_RETURN(is_mirrored_parallel_view_values.size(), 1)
       << "mixed parallel_views are disallowed";
   if (is_mirrored_parallel_view_values.size() == 1) {
     is_mirrored_parallel_view_conf = *is_mirrored_parallel_view_values.begin();
+  }
+  if (is_mirrored_parallel_view_conf) {
+    for (const auto& ibn : input_bns()) {
+      const auto& infer_hint = *JUST(MirroredSigInferHint4Ibn(ibn));
+      CHECK_EQ_OR_RETURN(infer_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
+    }
   }
   const auto SetIsMirroredParallel = [&](const std::string& bn_in_op) {
     if (is_mirrored_parallel_view_conf) {
