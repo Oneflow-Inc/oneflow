@@ -619,6 +619,7 @@ def softmax_cross_entropy_with_logits(labels=None, logits=None, name=None):
     assert logits is not None
 
     assert labels.shape == logits.shape
+    assert labels.dtype == logits.dtype
 
     prob, out = (
         flow.user_op_builder(

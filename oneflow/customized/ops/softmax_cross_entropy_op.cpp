@@ -61,7 +61,12 @@ REGISTER_USER_OP("softmax_cross_entropy_grad")
       const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       CHECK_EQ_OR_RETURN(prob_desc->is_dynamic(), label_desc->is_dynamic());
       CHECK_GE_OR_RETURN(prob_desc->shape().NumAxes(), 2);
+      CHECK_EQ_OR_RETURN(dy_desc->shape().NumAxes(), prob_desc->shape().NumAxes() - 1);
+      FOR_RANGE(int64_t, i, 0, dy_desc->shape().NumAxes()) {
+        CHECK_EQ_OR_RETURN(dy_desc->shape().At(i), label_desc->shape().At(i));
+      }
       CHECK_EQ_OR_RETURN(label_desc->shape(), prob_desc->shape());
+      CHECK_EQ_OR_RETURN(label_desc->data_type(), prob_desc->data_type());
       CHECK_EQ_OR_RETURN(dy_desc->data_type(), prob_desc->data_type());
       *ctx->TensorDesc4ArgNameAndIndex("prediction_diff", 0) = *prob_desc;
       return Maybe<void>::Ok();
