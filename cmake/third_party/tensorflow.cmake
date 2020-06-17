@@ -28,7 +28,7 @@ set(TENSORFLOW_PROJECT  tensorflow)
 set(TENSORFLOW_GIT_URL  https://github.com/tensorflow/tensorflow.git)
 #set(TENSORFLOW_GIT_TAG  master)
 set(TENSORFLOW_GIT_TAG  80c04b80ad66bf95aa3f41d72a6bba5e84a99622)
-set(TENSORFLOW_SOURCES_DIR ${CMAKE_CURRENT_BINARY_DIR}/third_party/tensorflow)
+set(TENSORFLOW_SOURCES_DIR ${THIRD_PARTY_SUBMODULE_DIR}/tensorflow)
 set(TENSORFLOW_SRCS_DIR ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 set(TENSORFLOW_INC_DIR  ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 
