@@ -54,34 +54,6 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LazyJobBuildAndInferCtx::Complete() {
-  CHECK_NOTNULL(Global<JobDesc>::Get());
-  Global<JobDesc>::Delete();
-  auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
-  auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    return FunctionPass(pass_name)(mut_job());
-  };
-  if (GlobalJobDesc().Bool("__is_user_function__")) {
-    JUST(DoPass("CompleteOfrecordDecoder"));
-    JUST(DoPass("SetDefaultVariableConf"));
-    JUST(DoPass("AutoMixedPrecision"));
-    JUST(DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps"));
-    JUST(DoPass("NonDistributedOptimizerPass"));
-    JUST(DoPass("AutoTrainStep"));
-    JUST(DoPass("AutoLearningRate"));
-    JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
-    JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
-    JUST(DoPass("SequentializeNcclTupleBroadcastReducePass"));
-    JUST(DoPass("AddAllReduceGroupPass"));
-    JUST(DoPass("AddLbiDiffWatcherOpConfs"));
-    JUST(DoPass("SequentializeAllReduceGroupPass"));
-    JUST(DoPass("PruneParallelCastOpsPass"));
-    JUST(DoPass("DumpVariableInfoPass"));
-  }
-  JUST(DoPass("DumpTimeShapeAndBlobParallelConfPass"));
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> JobBuildAndInferCtx::AddOpNameParallelConf2Placement(
     const std::string& op_name, const ParallelConf& parallel_conf) {
   ParallelDesc parallel_desc(parallel_conf);
@@ -397,57 +369,6 @@ Maybe<void> EagerJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(
         << "is not equals to op' parallel_num";
   }
   return Maybe<void>::Ok();
-}
-
-Maybe<LogicalBlobId> JobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
-    const LogicalBlobId& lbi) {
-  const std::string& lbn = GenLogicalBlobName(lbi);
-  const auto& sbn_it = consistent_lbi2mirrored_lbi_.find(lbi);
-  if (sbn_it != consistent_lbi2mirrored_lbi_.end()) { return sbn_it->second; }
-  const SbpParallel& sbp = *CHECK_JUST(SbpParallel4Lbi(lbi));
-  const ParallelDesc& parallel_desc = *CHECK_JUST(ParallelDesc4Lbi(lbi));
-  LogicalBlobId mirrored_lbi;
-  mirrored_lbi.set_op_name(kAutoMirroredBlobNamePrefix + NewUniqueId());
-  mirrored_lbi.set_blob_name("out");
-  consistent_lbi2mirrored_lbi_[lbi] = mirrored_lbi;
-  auto* lbi_vec = &mirrored_lbi2sub_lbis_[mirrored_lbi];
-  lbi_vec->reserve(parallel_desc.parallel_num());
-  auto PushBackSubLbi = [&](const std::string& op_name, const std::string& blob_name) {
-    LogicalBlobId sub_lbi;
-    sub_lbi.set_op_name(op_name);
-    sub_lbi.set_blob_name(blob_name);
-    lbi_vec->push_back(sub_lbi);
-  };
-  OperatorConf op_conf;
-  op_conf.set_device_type(parallel_desc.device_type());
-  if (sbp.has_broadcast_parallel()) {
-    op_conf.set_name(kAutoMirroredBlobNamePrefix + "-DistributeClone-" + NewUniqueId());
-    auto* distribute_clone = op_conf.mutable_distribute_clone_conf();
-    distribute_clone->set_in(lbn);
-    FOR_RANGE(int32_t, i, 0, parallel_desc.parallel_num()) {
-      const std::string& blob_name = "out_" + std::to_string(i);
-      distribute_clone->add_out(blob_name);
-      distribute_clone->set_is_variable_ref(IsVariableLbi(lbi));
-      PushBackSubLbi(op_conf.name(), blob_name);
-    }
-  } else if (sbp.has_split_parallel()) {
-    CHECK_EQ_OR_RETURN(sbp.split_parallel().axis(), 0)
-        << "only `S(0)' consistent blob is compatible to mirrored blob";
-    op_conf.set_name(kAutoMirroredBlobNamePrefix + "-DistributeSplit-" + NewUniqueId());
-    auto* distribute_split = op_conf.mutable_distribute_split_conf();
-    distribute_split->set_in(lbn);
-    distribute_split->set_axis(0);
-    distribute_split->set_is_variable_ref(IsVariableLbi(lbi));
-    FOR_RANGE(int32_t, i, 0, parallel_desc.parallel_num()) {
-      const std::string& blob_name = "out_" + std::to_string(i);
-      distribute_split->add_out(blob_name);
-      PushBackSubLbi(op_conf.name(), blob_name);
-    }
-  } else {
-    OF_UNIMPLEMENTED() << "`P' consistant blob is not compatible to mirrored blob";
-  }
-  JUST(AddAndInferConsistentOp(op_conf, parallel_desc.parallel_conf()));
-  return mirrored_lbi;
 }
 
 Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(
@@ -817,6 +738,109 @@ ParallelConf LazyJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelDe
 ParallelConf EagerJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelDesc& parallel_desc,
                                                                  int64_t parallel_id) const {
   return parallel_desc.parallel_conf();
+}
+
+Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
+    const LogicalBlobId& lbi) {
+  const std::string& lbn = GenLogicalBlobName(lbi);
+  const auto& sbn_it = mut_consistent_lbi2mirrored_lbi()->find(lbi);
+  if (sbn_it != mut_consistent_lbi2mirrored_lbi()->end()) { return sbn_it->second; }
+  const SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
+  const ParallelDesc& parallel_desc = *JUST(ParallelDesc4Lbi(lbi));
+  LogicalBlobId mirrored_lbi;
+  mirrored_lbi.set_op_name(kAutoMirroredBlobNamePrefix + NewUniqueId());
+  mirrored_lbi.set_blob_name("out");
+  (*mut_consistent_lbi2mirrored_lbi())[lbi] = mirrored_lbi;
+  auto* lbi_vec = &(*mut_mirrored_lbi2sub_lbis())[mirrored_lbi];
+  lbi_vec->reserve(parallel_desc.parallel_num());
+  auto PushBackSubLbi = [&](const std::string& op_name, const std::string& blob_name) {
+    LogicalBlobId sub_lbi;
+    sub_lbi.set_op_name(op_name);
+    sub_lbi.set_blob_name(blob_name);
+    lbi_vec->push_back(sub_lbi);
+  };
+  OperatorConf op_conf;
+  op_conf.set_device_type(parallel_desc.device_type());
+  if (sbp.has_broadcast_parallel()) {
+    op_conf.set_name(kAutoMirroredBlobNamePrefix + "-DistributeClone-" + NewUniqueId());
+    auto* distribute_clone = op_conf.mutable_distribute_clone_conf();
+    distribute_clone->set_in(lbn);
+    FOR_RANGE(int32_t, i, 0, parallel_desc.parallel_num()) {
+      const std::string& blob_name = "out_" + std::to_string(i);
+      distribute_clone->add_out(blob_name);
+      distribute_clone->set_is_variable_ref(IsVariableLbi(lbi));
+      PushBackSubLbi(op_conf.name(), blob_name);
+    }
+  } else if (sbp.has_split_parallel()) {
+    CHECK_EQ_OR_RETURN(sbp.split_parallel().axis(), 0)
+        << "only `S(0)' consistent blob is compatible to mirrored blob";
+    op_conf.set_name(kAutoMirroredBlobNamePrefix + "-DistributeSplit-" + NewUniqueId());
+    auto* distribute_split = op_conf.mutable_distribute_split_conf();
+    distribute_split->set_in(lbn);
+    distribute_split->set_axis(0);
+    distribute_split->set_is_variable_ref(IsVariableLbi(lbi));
+    FOR_RANGE(int32_t, i, 0, parallel_desc.parallel_num()) {
+      const std::string& blob_name = "out_" + std::to_string(i);
+      distribute_split->add_out(blob_name);
+      PushBackSubLbi(op_conf.name(), blob_name);
+    }
+  } else {
+    OF_UNIMPLEMENTED() << "`P' consistant blob is not compatible to mirrored blob";
+  }
+  JUST(AddAndInferConsistentOp(op_conf, parallel_desc.parallel_conf()));
+  return mirrored_lbi;
+}
+
+Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
+    const LogicalBlobId& lbi) {
+  const std::string& lbn = GenLogicalBlobName(lbi);
+  const auto& sbn_it = mut_consistent_lbi2mirrored_lbi()->find(lbi);
+  if (sbn_it != mut_consistent_lbi2mirrored_lbi()->end()) { return sbn_it->second; }
+  const SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
+  CHECK_OR_RETURN(sbp.has_partial_sum_parallel())
+      << "`P' consistant blob is not compatible to mirrored blob";
+  const ParallelDesc& parallel_desc = *JUST(ParallelDesc4Lbi(lbi));
+  OperatorConf op_conf;
+  op_conf.set_device_type(parallel_desc.device_type());
+  op_conf.set_name(kAutoMirroredBlobNamePrefix + "-CastToMirrored-" + NewUniqueId());
+  auto* cast_to_mirrored_conf = op_conf.mutable_cast_to_mirrored_conf();
+  cast_to_mirrored_conf->set_out("out");
+  *cast_to_mirrored_conf->mutable_sbp_parallel() = sbp;
+  LogicalBlobId mirrored_lbi;
+  mirrored_lbi.set_op_name(op_conf.name());
+  mirrored_lbi.set_blob_name("out");
+  (*mut_consistent_lbi2mirrored_lbi())[lbi] = mirrored_lbi;
+  (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].push_back(mirrored_lbi);
+  JUST(AddAndInferConsistentOp(op_conf, parallel_desc.parallel_conf()));
+  return mirrored_lbi;
+}
+
+Maybe<void> LazyJobBuildAndInferCtx::Complete() {
+  CHECK_NOTNULL(Global<JobDesc>::Get());
+  Global<JobDesc>::Delete();
+  auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
+  auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
+    return FunctionPass(pass_name)(mut_job());
+  };
+  if (GlobalJobDesc().Bool("__is_user_function__")) {
+    JUST(DoPass("CompleteOfrecordDecoder"));
+    JUST(DoPass("SetDefaultVariableConf"));
+    JUST(DoPass("AutoMixedPrecision"));
+    JUST(DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps"));
+    JUST(DoPass("NonDistributedOptimizerPass"));
+    JUST(DoPass("AutoTrainStep"));
+    JUST(DoPass("AutoLearningRate"));
+    JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+    JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
+    JUST(DoPass("SequentializeNcclTupleBroadcastReducePass"));
+    JUST(DoPass("AddAllReduceGroupPass"));
+    JUST(DoPass("AddLbiDiffWatcherOpConfs"));
+    JUST(DoPass("SequentializeAllReduceGroupPass"));
+    JUST(DoPass("PruneParallelCastOpsPass"));
+    JUST(DoPass("DumpVariableInfoPass"));
+  }
+  JUST(DoPass("DumpTimeShapeAndBlobParallelConfPass"));
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerJobBuildAndInferCtx::Complete() {
