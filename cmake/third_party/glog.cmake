@@ -3,7 +3,7 @@ include (ExternalProject)
 set(GLOG_INCLUDE_DIR ${THIRD_PARTY_DIR}/glog/include)
 set(GLOG_LIBRARY_DIR ${THIRD_PARTY_DIR}/glog/lib)
 
-set(glog_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/glog/src/glog)
+set(glog_URL ${THIRD_PARTY_SUBMODULE_DIR}/glog/src/glog)
 
 if(WIN32)
     set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE})

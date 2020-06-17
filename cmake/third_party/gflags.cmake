@@ -5,7 +5,7 @@ set(GFLAGS_LIBRARY_DIR ${THIRD_PARTY_DIR}/gflags/lib)
 
 set(gflags_HEADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include)
 set(gflags_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/lib)
-set(gflags_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/gflags/src/gflags)
+set(gflags_URL ${THIRD_PARTY_SUBMODULE_DIR}/gflags/src/gflags)
 
 if(WIN32)
     set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR}/${CMAKE_BUILD_TYPE})
