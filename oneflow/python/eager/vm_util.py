@@ -221,6 +221,12 @@ class InstructionsBuilder(object):
         )
         return physical_blob_objects
 
+    def MakeReferenceBlobObject(self, blob_object):
+        parallel_desc_symbol = blob_object.parallel_desc_symbol
+        ref_blob_object = self._NewBlobObject(parallel_desc_symbol)
+        self._ReplaceMirrored(parallel_desc_symbol, [ref_blob_object], [blob_object])
+        return ref_blob_object
+
     def GetSymbol4String(self, string):
         if symbol_cache.HasSymbol4String(string):
             return symbol_cache.GetSymbol4String(string)

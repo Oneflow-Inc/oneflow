@@ -97,6 +97,12 @@ bool JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const std::st
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
+bool JobBuildAndInferCtx_ConsumedByGradientOp(const std::string& job_name, const std::string& lbn,
+                                              std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_ConsumedByGradientOp(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
 std::string JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name, const std::string& lbn,
                                              std::string* error_str) {
   return oneflow::JobBuildAndInferCtx_GetBatchAxis(job_name, lbn)

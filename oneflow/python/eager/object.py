@@ -20,7 +20,12 @@ class Object(object):
 class BlobObject(Object):
     def __init__(self, object_id, parallel_desc_symbol, release):
         Object.__init__(self, object_id, parallel_desc_symbol)
-        self.release_ = release
+        self.release_ = [release]
+
+    def add_releaser(self, release):
+        self.release_.append(release)
 
     def __del__(self):
-        self.release_(self)
+        for release in self.release_:
+            release(self)
+        self.release_ = []

@@ -15,6 +15,7 @@ import oneflow.python.framework.job_instance as job_instance_util
 import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.python.eager.object_cache as object_cache
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.framework.pull_util import FutureRemoteBlobs
@@ -145,6 +146,8 @@ class Session(object):
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
         self.Sync()
+        for key in list(self.job_name2var_name2var_blob_.keys()):
+            del self.job_name2var_name2var_blob_[key]
         del self.job_name2var_name2var_blob_
         c_api_util.StopGlobalSession()
         c_api_util.DestroyGlobalSession()
@@ -237,11 +240,9 @@ class Session(object):
             yield
         finally:
             self.eager_global_function_desc_stack_.pop(0)
-            # assert len(self.eager_unique_name2bw_used_blob_object_) == 0, (
-            #         self.eager_unique_name2bw_used_blob_object_.keys())
             keys = list(self.eager_unique_name2bw_used_blob_object_.keys())
             for key in keys:
-                del self.eager_unique_name2bw_used_blob_object_[key]
+                self.eager_unique_name2bw_used_blob_object_[key].__del__()
 
     def _IncRunningJobCnt(self):
         assert self.status_ is SessionStatus.RUNNING

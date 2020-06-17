@@ -60,6 +60,7 @@ def BnInOp2BlobObjectScope(op_attribute):
 def ClearObject4BlobName(blob_name):
     assert HasObject4BlobName(blob_name)
     global blob_name2object
+    blob_name2object[blob_name].__del__()
     del blob_name2object[blob_name]
 
 

@@ -4,7 +4,7 @@ import oneflow.core.common.data_type_pb2 as dtype_util
 import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.job.env_pb2 as env_pb2
 import oneflow.core.job.job_set_pb2 as job_set_pb
-import oneflow.core.job.placement_pb2 as placment_util
+import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -26,6 +26,13 @@ def RegisterWatcherOnlyOnce(watcher):
 
 def RegisterWorkerCallbackOnlyOnce(callback):
     error_str = oneflow_internal.RegisterWorkerCallbackOnlyOnce(callback)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+
+
+def RegisterForeignCallbackOnlyOnce(callback):
+    error_str = oneflow_internal.RegisterForeignCallbackOnlyOnce(callback)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
@@ -347,6 +354,17 @@ def JobBuildAndInferCtx_MirroredBlobIsTensorList(job_name, lbn):
     return ret
 
 
+def JobBuildAndInferCtx_ConsumedByGradientOp(job_name, lbn):
+    job_name = str(job_name)
+    lbn = str(lbn)
+    IsConsumedByGradientOp = oneflow_internal.JobBuildAndInferCtx_ConsumedByGradientOp
+    ret, error_str = IsConsumedByGradientOp(job_name, lbn)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return ret
+
+
 def JobBuildAndInferCtx_MirroredBlobConsumedByGradientOp(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
@@ -400,11 +418,11 @@ def JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(job_name, lb
     GetParallelConf = (
         oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView
     )
-    parallel_conf, error_str = GetParallelConf(job_name, lbn)
+    parallel_conf_str, error_str = GetParallelConf(job_name, lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
-    return text_format.Parse(parallel_conf, placment_util.ParallelConf())
+    return text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
 
 
 def JobBuildAndInferCtx_GetStaticShape(job_name, lbn):
@@ -504,7 +522,7 @@ def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
-    return text_format.Parse(parallel_conf, placment_util.ParallelConf())
+    return text_format.Parse(parallel_conf, placement_pb.ParallelConf())
 
 
 def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):

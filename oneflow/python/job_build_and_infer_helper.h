@@ -123,6 +123,12 @@ Maybe<bool> JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const 
   return ctx->IsTensorList(lbn);
 }
 
+Maybe<bool> JobBuildAndInferCtx_ConsumedByGradientOp(const std::string& job_name,
+                                                     const std::string& lbn) {
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
+  return ctx->ConsumedByGradientOp(lbn);
+}
+
 Maybe<std::string> JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
                                                     const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));

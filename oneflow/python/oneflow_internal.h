@@ -2,6 +2,11 @@
 #include "oneflow/python/oneflow_internal_helper.h"
 #include "oneflow/core/job/resource_desc.h"
 
+void RegisterForeignCallbackOnlyOnce(oneflow::ForeignCallback* callback, std::string* error_str) {
+  return oneflow::RegisterForeignCallbackOnlyOnce(callback).GetDataAndSerializedErrorProto(
+      error_str);
+}
+
 void RegisterWorkerCallbackOnlyOnce(oneflow::ForeignWorkerCallback* callback,
                                     std::string* error_str) {
   return oneflow::RegisterWorkerCallbackOnlyOnce(callback).GetDataAndSerializedErrorProto(

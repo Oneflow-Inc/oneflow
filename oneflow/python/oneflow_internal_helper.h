@@ -18,6 +18,7 @@
 #include "oneflow/core/control/cluster_control.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/foreign_watcher.h"
+#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/user_op_conf.h"
@@ -30,17 +31,21 @@
 
 namespace oneflow {
 
+Maybe<void> RegisterForeignCallbackOnlyOnce(ForeignCallback* callback) {
+  CHECK_ISNULL_OR_RETURN(Global<ForeignCallback>::Get()) << "foreign callback registered";
+  Global<ForeignCallback>::SetAllocated(callback);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> RegisterWorkerCallbackOnlyOnce(ForeignWorkerCallback* callback) {
   CHECK_ISNULL_OR_RETURN(Global<ForeignWorkerCallback>::Get())
       << "foreign woker callback registered";
-  // no delete
   Global<ForeignWorkerCallback>::SetAllocated(callback);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
-  // no delete
   Global<ForeignWatcher>::SetAllocated(watcher);
   return Maybe<void>::Ok();
 }

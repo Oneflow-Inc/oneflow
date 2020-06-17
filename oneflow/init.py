@@ -13,6 +13,9 @@ for x in dir(dtype):
 del x
 del dtype
 
+import oneflow.python.framework.python_callback as python_callback
+del python_callback
+
 import traceback
 try:
     from oneflow.generated import *

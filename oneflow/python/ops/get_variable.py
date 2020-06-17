@@ -212,7 +212,7 @@ def _CreateVariableBlob(op_conf, parallel_conf):
 
 
 def _CreateEagerVariableBlob(op_conf, parallel_conf):
-    op_attribute = compile_context.CurJobAddMirroredOp(op_conf, parallel_conf)
+    op_attribute = compile_context.CurJobAddConsistentOp(op_conf, parallel_conf)
     bn_in_op2blob_object = {}
 
     def BuildInstruction(builder):

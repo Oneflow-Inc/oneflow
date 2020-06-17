@@ -25,7 +25,7 @@ def EagerLogicalBlob(lbi, **kw):
     if c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
         return EagerMirroredBlob(lbi, **kw)
     else:
-        raise NotImplementedError("EagerConsistentBlob not supported yet")
+        return EagerConsistentBlob(lbi, **kw)
 
 
 @enable_if.condition(~hob.eager_execution_enabled)
@@ -238,6 +238,112 @@ class EagerMirroredBlob(MirroredBlob):
         ConsumedByGradientOp = (
             c_api_util.JobBuildAndInferCtx_MirroredBlobConsumedByGradientOp
         )
+        if ConsumedByGradientOp(
+            self.job_name_, self.lbn_
+        ) and not gradient_util.HasBwUsedBlobObject4UniqueName(self.unique_name):
+            gradient_util.SetBwUsedBlobObject4UniqueName(
+                self.unique_name, self.blob_object_
+            )
+
+    @property
+    def blob_object(self):
+        return self.blob_object_
+
+    def numpy_mirrored_list(self):
+        assert not self.is_tensor_list
+        blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object_)
+        box = [[]]
+
+        def UnpackLogicalBlobToPhysicalBlobs(builder):
+            physical_objects = builder.UnpackLogicalBlobToPhysicalBlobs(
+                self.blob_object_
+            )
+            for i in range(len(physical_objects)):
+                name = "%s/%d" % (self.unique_name, i)
+                box[0].append(name)
+                if not object_cache.HasObject4BlobName(name):
+                    object_cache.SetObject4BlobName(name, physical_objects[i])
+
+        def Fetch(blob_object):
+            vm_util.LogicalRun(UnpackLogicalBlobToPhysicalBlobs)
+            sub_blob_names = box[0]
+            return [
+                eager_blob_util.EagerPhysicalBlob(name).numpy()
+                for name in sub_blob_names
+            ]
+
+        return blob_cache.GetCachedNumpyMirroredList(Fetch)
+
+    @property
+    def sub_consistent_blob_list(self):
+        raise NotImplementedError
+
+    @property
+    def shape(self):
+        return self.shape_
+
+    @property
+    def dtype(self):
+        return self.dtype_
+
+    @property
+    def batch_axis(self):
+        return self.batch_axis_
+
+    @property
+    def split_axis(self):
+        return self.split_axis_
+
+    @property
+    def is_dynamic(self):
+        return True
+
+    @property
+    def disable_boxing(self):
+        return True
+
+    @property
+    def is_tensor_list(self):
+        return self.is_tensor_list_
+
+    @property
+    def parallel_conf(self):
+        return self.parallel_conf_
+
+    def __del__(self):
+        blob_cache_util.TryDisableBlobCache(self.blob_object_)
+        object_cache.ClearObject4BlobName(self.unique_name)
+
+
+class EagerConsistentBlob(ConsistentBlob):
+    def __init__(self, lbi, blob_object=None, **kw):
+        ConsistentBlob.__init__(self, lbi, **kw)
+        if blob_object is None:
+            self.blob_object_ = object_cache.GetObject4BlobName(self.unique_name)
+        else:
+            object_cache.SetObject4BlobName(self.unique_name, blob_object)
+            self.blob_object_ = blob_object
+        self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        self.sub_consistent_blob_list_ = []
+        self.shape_ = c_api_util.JobBuildAndInferCtx_GetStaticShape(
+            self.job_name_, self.lbn_
+        )
+        self.dtype_ = c_api_util.JobBuildAndInferCtx_GetDataType(
+            self.job_name_, self.lbn_
+        )
+        self.batch_axis_ = c_api_util.JobBuildAndInferCtx_GetBatchAxis(
+            self.job_name_, self.lbn_
+        )
+        self.split_axis_ = c_api_util.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
+            self.job_name_, self.lbn_
+        )
+        self.is_tensor_list_ = c_api_util.JobBuildAndInferCtx_IsTensorList(
+            self.job_name_, self.lbn_
+        )
+        self.parallel_conf_ = c_api_util.JobBuildAndInferCtx_GetParallelConfFromProducerView(
+            self.job_name_, self.lbn_
+        )
+        ConsumedByGradientOp = c_api_util.JobBuildAndInferCtx_ConsumedByGradientOp
         if ConsumedByGradientOp(
             self.job_name_, self.lbn_
         ) and not gradient_util.HasBwUsedBlobObject4UniqueName(self.unique_name):

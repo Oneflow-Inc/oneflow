@@ -19,11 +19,13 @@
 %feature("director") oneflow::ForeignJobInstance;
 %feature("director") oneflow::ForeignWatcher;
 %feature("director") oneflow::ForeignWorkerCallback;
+%feature("director") oneflow::ForeignCallback;
 %feature("director:except") {
   if ($error != NULL) { LOG(FATAL) << "Swig::DirectorMethodException"; }
 }
 %include "oneflow/core/job/foreign_job_instance.h"
 %include "oneflow/core/job/foreign_watcher.h"
+%include "oneflow/core/job/foreign_callback.h"
 %include "oneflow/python/oneflow_internal.h"
 %include "oneflow/python/oneflow_internal.e.h.expanded.h"
 
