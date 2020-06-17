@@ -631,8 +631,6 @@ def softmax_cross_entropy_with_logits(
 
     """
 
-    assert os.getenv("ENABLE_USER_OP") == 'True'
-
     assert labels is not None
     assert logits is not None
 

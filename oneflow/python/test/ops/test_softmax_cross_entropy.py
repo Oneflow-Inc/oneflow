@@ -69,8 +69,6 @@ def compare_with_tensorflow(device_type, data_type, num_classes, batch_size):
 
 
 def test_softmax_cross_entropy_with_logits(test_case):
-    if os.getenv("ENABLE_USER_OP") != 'True':
-        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["data_type"] = ["double", "float32"]

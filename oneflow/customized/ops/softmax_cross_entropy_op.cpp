@@ -13,6 +13,7 @@ REGISTER_USER_OP("softmax_cross_entropy")
       CHECK_EQ_OR_RETURN(prediction_desc->is_dynamic(), label_desc->is_dynamic());
       CHECK_GE_OR_RETURN(prediction_desc->shape().NumAxes(), 2);
       CHECK_EQ_OR_RETURN(label_desc->shape(), prediction_desc->shape());
+      CHECK_EQ_OR_RETURN(label_desc->data_type(), prediction_desc->data_type());
       const int64_t num_out_axes = prediction_desc->shape().NumAxes() - 1;
       DimVector out_dim_vector;
       FOR_RANGE(int64_t, i, 0, num_out_axes) {

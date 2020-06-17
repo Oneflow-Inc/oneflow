@@ -29,7 +29,7 @@ __global__ void ComputeEntropyGpuHalf(const int64_t num_instances, const int64_t
 #else
   printf("use half softmax cross entropy need nvcc arch >= 700 and cuda >= 10.0");
   assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
+#endif /* defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000 */
 }
 
 template<typename T>
@@ -78,6 +78,7 @@ template<>
 struct CrossEntropyKernelUtil<DeviceType::kGPU, float16> {
   static void ComputeEntropy(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
                              const float16* x, const float16* labels, float16* y) {
+    cudaMemset(y, 0, sizeof(float16) * num_instances);
     ComputeEntropyGpuHalf<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
                             ctx->cuda_stream()>>>(
         num_instances, num_classes, reinterpret_cast<const half*>(x),
