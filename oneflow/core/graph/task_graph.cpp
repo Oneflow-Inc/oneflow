@@ -15,9 +15,12 @@
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_context.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
-#include "oneflow/core/graph/boxing/nccl_boxing_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/collective_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/slice_boxing_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/naive_b2b_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/one_to_one_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+#include "oneflow/core/graph/boxing_identity_compute_task_node.h"
 
 namespace oneflow {
 
@@ -150,6 +153,15 @@ bool IsInplaceAllowed(
 
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   logical_gph_ = std::move(logical_gph);
+  if (GlobalJobDesc().use_boxing_v2()) {
+    sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
+    std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
+    builders.emplace_back(new OneToOneSubTskGphBuilder());
+    builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
+    builders.emplace_back(new SliceBoxingSubTskGphBuilder());
+    builders.emplace_back(new NaiveB2BSubTskGphBuilder());
+    sub_tsk_gph_builder_.reset(new ChainSubTskGphBuilder(builders));
+  }
   HashMap<const LogicalNode*, std::vector<CompTaskNode*>> logical2sorted_comp_tasks;
   HashMap<const LogicalNode*, std::vector<TaskNode*>> logical2sorted_in_box;
   HashMap<const LogicalNode*, std::vector<TaskNode*>> logical2sorted_out_box;
@@ -638,16 +650,18 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV1) {
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
   const std::vector<LogicalBlobId> lbis = src_logical->GetLbisTo(dst_logical);
-  const auto Fallback = [&]() {
-    BldSubTskGphByBoxingV1(src_logical, dst_logical, sorted_src_comp_tasks, sorted_dst_comp_tasks,
-                           logical2sorted_in_box, logical2sorted_out_box, std::move(MutBufTask),
-                           std::move(AllocateCpuThrdIdEvenly));
-  };
-  if (lbis.size() > 1) {
-    Fallback();
-  } else {
-    CHECK_EQ(lbis.size(), 1);
-    const LogicalBlobId& lbi = lbis.front();
+  for (const LogicalBlobId& lbi : lbis) {
+    std::vector<CompTaskNode*> src_nodes;
+    if (lbis.size() == 1) {
+      src_nodes = sorted_src_comp_tasks;
+    } else {
+      for (CompTaskNode* src_node : sorted_src_comp_tasks) {
+        auto* identity_node = NewNode<BoxingIdentityCompTaskNode>();
+        identity_node->Init(src_node, lbi);
+        Connect<TaskNode>(src_node, NewEdge(), identity_node);
+        src_nodes.push_back(identity_node);
+      }
+    }
     const SbpParallel& src_sbp_parallel =
         Global<OpGraph>::Get()->GetSbpParallel(src_logical->SoleOp()->op_name(), lbi);
     const SbpParallel& dst_sbp_parallel =
@@ -655,20 +669,10 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
     const std::shared_ptr<const ParallelDesc>& src_parallel_desc = src_logical->parallel_desc();
     const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
-    SubTskGphBuilderCtx ctx(this);
-    std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
-    builders.emplace_back(new NcclBoxingSubTskGphBuilder());
-    builders.emplace_back(new SliceBoxingSubTskGphBuilder());
-    Maybe<void> status = TRY(ChainSubTskGphBuilder(builders).Build(
-        &ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, *src_parallel_desc, *dst_parallel_desc,
-        lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
-    if (!status.IsOk()) {
-      if (SubTskGphBuilderUtil::IsErrorBoxingNotSupported(*status.error())) {
-        Fallback();
-      } else {
-        UNIMPLEMENTED();
-      }
-    }
+    Maybe<void> status = TRY(sub_tsk_gph_builder_->Build(
+        sub_tsk_gph_builder_ctx_.get(), src_nodes, sorted_dst_comp_tasks, *src_parallel_desc,
+        *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
+    CHECK(status.IsOk());
   }
 }
 
@@ -803,16 +807,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
         BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, true);
-      }
-    }
-  }
-}
-
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByConnectNodeOnSameGpuDevice) {
-  for (CompTaskNode* src : sorted_src_comp_tasks) {
-    for (CompTaskNode* dst : sorted_dst_comp_tasks) {
-      if (src->machine_id() == dst->machine_id() && src->GpuPhyId() == dst->GpuPhyId()) {
-        Connect<TaskNode>(src, NewEdge(), dst);
       }
     }
   }

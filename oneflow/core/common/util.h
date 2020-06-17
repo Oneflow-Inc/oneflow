@@ -219,6 +219,10 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
 
 bool IsKernelSafeInt32(int64_t n);
 
+inline void HashCombine(size_t* seed, size_t hash) {
+  *seed ^= (hash + 0x9e3779b9 + (*seed << 6U) + (*seed >> 2U));
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

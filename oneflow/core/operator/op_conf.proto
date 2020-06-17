@@ -10,6 +10,7 @@ import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/framework/user_op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
+import "oneflow/core/graph/boxing/collective_boxing.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -1025,23 +1026,6 @@ message NcclReduceScatterOpConf {
 message NcclAllGatherOpConf {
 }
 
-message NcclTupleBroadcastOpConf {
-  optional string tick = 1;
-  repeated string in = 2;
-  repeated string out = 3;
-  repeated int64 root = 4;
-  repeated DataType data_type = 5;
-  repeated ShapeProto shape = 6;
-  optional int64 nccl_order_hint = 7 [default = 0];
-}
-
-message NcclTupleReduceOpConf {
-  repeated string in = 1;
-  repeated string out = 2;
-  repeated int64 root = 3;
-  optional int64 nccl_order_hint = 4 [default = 0];
-}
-
 message ReduceSplitOpConf {
   required string in = 1;
   repeated string out = 2;
@@ -1606,18 +1590,6 @@ message XrtLaunchOpConf {
   optional bool model_update = 9 [default = false];
 }
 
-message NcclBoxingReduceScatterOpConf {
-  required LogicalBlobId lbi = 1;
-}
-
-message NcclBoxingAllGatherOpConf {
-  required LogicalBlobId lbi = 1;
-}
-
-message NcclBoxingAllReduceOpConf {
-  required LogicalBlobId lbi = 1;
-}
-
 message ParallelCastOpConf {
   required string in = 1;
   required string out = 2;
@@ -1780,6 +1752,15 @@ message TensorListToTensorBufferOpConf {
   required string out = 2;
 }
 
+message CollectiveBoxingGenericOpConf {
+  required LogicalBlobId lbi = 1;
+  required boxing.collective.RankDesc rank_desc = 2;
+}
+
+message BoxingIdentityOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1831,14 +1812,9 @@ message OperatorConf {
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
     ReturnOpConf return_conf = 146;
-    NcclTupleBroadcastOpConf nccl_tuple_broadcast_conf = 147;
-    NcclTupleReduceOpConf nccl_tuple_reduce_conf = 148;
     PartialTickOpConf partial_tick_conf = 149;
     LazyAdamModelUpdateOpConf lazy_adam_model_update_conf = 150;
     ForeignWatchOpConf foreign_watch_conf = 151;
-    NcclBoxingReduceScatterOpConf nccl_boxing_reduce_scatter_conf = 152;
-    NcclBoxingAllGatherOpConf nccl_boxing_all_gather_conf = 153;
-    NcclBoxingAllReduceOpConf nccl_boxing_all_reduce_conf = 154;
     DistributeConcatOpConf distribute_concat_conf = 155;
     DistributeSplitOpConf distribute_split_conf = 156;
     DistributeCloneOpConf distribute_clone_conf = 157;
@@ -1854,6 +1830,8 @@ message OperatorConf {
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
     TensorBufferToTensorListOpConf tensor_buffer_to_tensor_list_conf = 168;
     TensorListToTensorBufferOpConf tensor_list_to_tensor_buffer_conf = 169;
+    CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
+    BoxingIdentityOpConf boxing_identity_conf = 171;
     UserOpConf user_conf = 199;
     
     // domain op
