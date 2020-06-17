@@ -326,4 +326,18 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAttr")
       return Maybe<void>::Ok();
     });
 
+REGISTER_CPU_ONLY_USER_OP("cpu_only_relu_test")
+    .Input("in")
+    .Output("out")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const auto* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      auto* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_desc = *in_desc;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace oneflow
