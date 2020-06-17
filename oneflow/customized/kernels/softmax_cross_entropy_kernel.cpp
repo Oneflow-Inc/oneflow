@@ -13,7 +13,6 @@ struct CrossEntropyKernelUtil<DeviceType::kCPU, T> {
       FOR_RANGE(int64_t, j, 0, num_classes) {
         T label = labels[i * num_classes + j];
         T prob = x[i * num_classes + j];
-        // CPU SafeLog crashes on my side
         // tmp -= label * SafeLog(prob);
         tmp -= label * logf((prob > 1e-20) ? prob : 1e-20);
       }

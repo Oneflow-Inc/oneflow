@@ -7,6 +7,11 @@ REGISTER_USER_OP("softmax_cross_entropy")
     .Input("label")
     .Output("prob")  //'prob' is just for compute prediction's grad, prob's grad will be ignored
     .Output("out")
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("label", 0);
+      cond_arg_modifier->set_requires_grad(false);
+    })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
       const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);

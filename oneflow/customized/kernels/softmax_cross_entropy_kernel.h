@@ -26,9 +26,9 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t num_instances = label->shape().At(0);
-    CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
-    const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
+    const auto num_axes = label->shape().NumAxes();
+    const int64_t num_instances = label->shape().Count(0, num_axes - 1);
+    const int64_t num_classes = label->shape().At(num_axes - 1);
     SoftmaxKernelUtil<device_type, T>::ComputeProb(
         ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), out->mut_dptr<T>(),
         prob->mut_dptr<T>(), tmp_buffer->mut_dptr(), tmp_buffer->shape().elem_cnt() * sizeof(T));

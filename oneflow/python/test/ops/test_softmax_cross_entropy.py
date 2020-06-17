@@ -14,7 +14,7 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(device_type, data_type, num_classes, batch_size):
+def compare_with_tensorflow(device_type, data_type, shape):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -27,12 +27,12 @@ def compare_with_tensorflow(device_type, data_type, num_classes, batch_size):
 
     @flow.function(func_config)
     def SoftmaxCrossEntropyWithLogitsJob(
-            labels=flow.FixedTensorDef((batch_size, num_classes), dtype=type_name_to_flow_type[data_type])
-        ):
+        labels=flow.FixedTensorDef(shape, dtype=type_name_to_flow_type[data_type])
+    ):
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
-                shape=(batch_size, num_classes),
+                shape=shape,
                 dtype=type_name_to_flow_type[data_type],
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
@@ -47,7 +47,9 @@ def compare_with_tensorflow(device_type, data_type, num_classes, batch_size):
         return loss
 
     # fake labels
-    labels = np_softmax(np.random.uniform(size=(batch_size, num_classes))).astype(type_name_to_np_type[data_type])
+    labels = np_softmax(np.random.uniform(size=shape)).astype(
+        type_name_to_np_type[data_type]
+    )
 
     # OneFlow
     check_point = flow.train.CheckPoint()
@@ -72,8 +74,6 @@ def test_softmax_cross_entropy_with_logits(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["data_type"] = ["double", "float32"]
-    arg_dict["num_classes"] = [1000]
-    arg_dict["batch_size"] = [64]
+    arg_dict["shape"] = [(64, 1000), (5, 5, 1000)]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
-
