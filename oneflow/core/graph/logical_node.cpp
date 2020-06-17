@@ -19,8 +19,6 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/graph/nccl_tuple_broadcast_compute_task_node.h"
-#include "oneflow/core/graph/nccl_tuple_reduce_compute_task_node.h"
 
 namespace oneflow {
 
@@ -288,7 +286,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       && IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
-  if (IsProducedLbisAllBroadcastParallel(src_node, dst_node)) {
+  if (IsProducedLbisAllBroadcastParallel(src_node, dst_node) && !GlobalJobDesc().use_boxing_v2()) {
     return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
   } else {
     return &TaskGraph::BldSubTskGphByBoxing;
@@ -343,21 +341,6 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
                               "ReduceSplit",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
-                              "NcclTupleBroadcast",
-                              &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleBroadcast"
-                              "NormalForward",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
-                              "NcclTupleReduce",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
-                              "NormalForward",
-                              &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
-                              "Optimizer",
-                              &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
                               "ReduceScatter",
                               &TaskGraph::BldSubTskGphByOneToOne);
@@ -439,20 +422,5 @@ int32_t ReduceSplitLogicalNode::order_in_logical_graph() const {
     return order_in_logical_graph_;
   }
 }
-std::string NcclTupleBroadcastLogicalNode::TypeName() const { return "NcclTupleBroadcast"; }
-
-CompTaskNode* NcclTupleBroadcastLogicalNode::NewCompTaskNode() const {
-  return new NcclTupleBroadcastCompTaskNode;
-}
-
-int64_t NcclTupleBroadcastLogicalNode::GetAreaId() const { return kMdUpdtArea; }
-
-std::string NcclTupleReduceLogicalNode::TypeName() const { return "NcclTupleReduce"; }
-
-CompTaskNode* NcclTupleReduceLogicalNode::NewCompTaskNode() const {
-  return new NcclTupleReduceCompTaskNode;
-}
-
-int64_t NcclTupleReduceLogicalNode::GetAreaId() const { return kMdUpdtArea; }
 
 }  // namespace oneflow

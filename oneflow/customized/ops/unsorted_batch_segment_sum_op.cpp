@@ -28,6 +28,12 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
       *out->mut_data_type() = data->data_type();
       return Maybe<void>::Ok();
     })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* segment_ids_modifier = GetInputArgModifierFn("segment_ids", 0);
+      CHECK_NOTNULL(segment_ids_modifier);
+      segment_ids_modifier->set_requires_grad(false);
+    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("data", 0);
       return Maybe<void>::Ok();
