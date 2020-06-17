@@ -1,6 +1,5 @@
-import oneflow as flow
 import numpy as np
-
+import oneflow as flow
 from PIL import Image
 
 
@@ -14,7 +13,6 @@ def _of_image_decode(images):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
     @flow.function(func_config)
@@ -27,7 +25,9 @@ def _of_image_decode(images):
             decoded_images_buffer, shape=(640, 640, 3), dtype=flow.uint8
         )
 
-    images_np_arr = [np.frombuffer(bys, dtype=np.byte).reshape(1, -1) for bys in images_bytes]
+    images_np_arr = [
+        np.frombuffer(bys, dtype=np.byte).reshape(1, -1) for bys in images_bytes
+    ]
     decoded_images = image_decode_job([images_np_arr]).get().ndarray_lists()
     return decoded_images[0]
 
@@ -42,7 +42,9 @@ def _compare_jpg_decode_with_pil(test_case, images, print_debug_info=False):
     # convert image to BGR
     pil_decoded_images = [np.array(image)[:, :, ::-1] for image in pil_images]
 
-    for of_decoded_image, pil_decoded_image in zip(of_decoded_images, pil_decoded_images):
+    for of_decoded_image, pil_decoded_image in zip(
+        of_decoded_images, pil_decoded_images
+    ):
         of_decoded_image = of_decoded_image.squeeze()
         test_case.assertTrue(len(of_decoded_image.shape) == 3)
         test_case.assertTrue(len(pil_decoded_image.shape) == 3)
@@ -56,8 +58,14 @@ def _compare_jpg_decode_with_pil(test_case, images, print_debug_info=False):
             print("pil_decoded_image:\n", pil_decoded_image, pil_decoded_image.shape)
             print("diff_index:\n", diff_index)
             print("diff_abs_values:\n", diff_abs_values)
-            print("of_decoded_image diff:\n", of_decoded_image[diff_index[0], diff_index[1]])
-            print("pil_decoded_image diff:\n", pil_decoded_image[diff_index[0], diff_index[1]])
+            print(
+                "of_decoded_image diff:\n",
+                of_decoded_image[diff_index[0], diff_index[1]],
+            )
+            print(
+                "pil_decoded_image diff:\n",
+                pil_decoded_image[diff_index[0], diff_index[1]],
+            )
 
         # only green channel has difference of 1
         test_case.assertTrue(np.all(diff_index[-1] == 1))

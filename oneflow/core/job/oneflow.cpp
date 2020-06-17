@@ -337,8 +337,11 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
   ParallelBlobConf ret;
   *blob_conf->mutable_parallel_conf() = job_builder.ParallelConf4OpName(op_name);
   *blob_conf->mutable_logical_blob_desc_conf() = job.helper().lbn2logical_blob_desc().at(lbn);
-  *blob_conf->mutable_sbp_conf() =
-      job.sbp_conf().op_name2sbp_signature_conf().at(op_name).bn_in_op2sbp_parallel().at(obn);
+  *blob_conf->mutable_sbp_conf() = job.job_parallel_view_conf()
+                                       .op_name2sbp_signature_conf()
+                                       .at(op_name)
+                                       .bn_in_op2sbp_parallel()
+                                       .at(obn);
   *blob_conf->mutable_batch_axis() = job.helper().lbn2batch_axis().at(lbn);
 }
 
@@ -497,7 +500,8 @@ void ConnectCriticalSectionEndToReentrantLockEnd(Plan* main_plan,
 
   auto* op_attribute = reentrant_exec_node->mutable_kernel_conf()->mutable_op_attribute();
   op_attribute->add_input_bns("end");
-  (*op_attribute->mutable_bn_in_op2lbi())["end"] = critical_section_sink_lbi;
+  (*op_attribute->mutable_arg_signature()->mutable_bn_in_op2lbi())["end"] =
+      critical_section_sink_lbi;
 
   auto* reentrant_lock_conf = op_attribute->mutable_op_conf()->mutable_reentrant_lock_conf();
   reentrant_lock_conf->set_end(GenLogicalBlobName(critical_section_sink_lbi));

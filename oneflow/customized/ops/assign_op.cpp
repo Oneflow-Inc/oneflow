@@ -8,7 +8,9 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* ref_desc = ctx->TensorDesc4ArgNameAndIndex("ref", 0);
   user_op::TensorDesc* value_desc = ctx->TensorDesc4ArgNameAndIndex("value", 0);
   CHECK_OR_RETURN(!ref_desc->is_dynamic());
-  CHECK_OR_RETURN(*ref_desc == *value_desc);
+  CHECK_OR_RETURN(ref_desc->shape() == value_desc->shape());
+  CHECK_OR_RETURN(ref_desc->data_type() == value_desc->data_type());
+  CHECK_OR_RETURN(ref_desc->is_tensor_list() == value_desc->is_tensor_list());
   return Maybe<void>::Ok();
 }
 

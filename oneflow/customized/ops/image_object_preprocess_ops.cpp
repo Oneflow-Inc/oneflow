@@ -20,7 +20,7 @@ std::function<Maybe<void>(user_op::BatchAxisContext* ctx)> MakeInferBatchAxisFn(
 
 }  // namespace
 
-REGISTER_USER_OP("image_flip")
+REGISTER_CPU_ONLY_USER_OP("image_flip")
     .Input("in")
     .Input("flip_code")
     .Output("out")
@@ -41,7 +41,7 @@ REGISTER_USER_OP("image_flip")
     .SetGetSbpFn(GetSbp)
     .SetBatchAxisInferFn(MakeInferBatchAxisFn("in"));
 
-REGISTER_USER_OP("object_bbox_flip")
+REGISTER_CPU_ONLY_USER_OP("object_bbox_flip")
     .Input("bbox")
     .Input("image_size")
     .Input("flip_code")
@@ -67,7 +67,7 @@ REGISTER_USER_OP("object_bbox_flip")
     .SetGetSbpFn(GetSbp)
     .SetBatchAxisInferFn(MakeInferBatchAxisFn("bbox"));
 
-REGISTER_USER_OP("object_bbox_scale")
+REGISTER_CPU_ONLY_USER_OP("object_bbox_scale")
     .Input("bbox")
     .Input("scale")
     .Output("out")
@@ -88,7 +88,7 @@ REGISTER_USER_OP("object_bbox_scale")
     .SetGetSbpFn(GetSbp)
     .SetBatchAxisInferFn(MakeInferBatchAxisFn("bbox"));
 
-REGISTER_USER_OP("object_segmentation_polygon_flip")
+REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_flip")
     .Input("poly")
     .Input("image_size")
     .Input("flip_code")
@@ -114,7 +114,7 @@ REGISTER_USER_OP("object_segmentation_polygon_flip")
     .SetGetSbpFn(GetSbp)
     .SetBatchAxisInferFn(MakeInferBatchAxisFn("poly"));
 
-REGISTER_USER_OP("object_segmentation_polygon_scale")
+REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_scale")
     .Input("poly")
     .Input("scale")
     .Output("out")
@@ -135,7 +135,7 @@ REGISTER_USER_OP("object_segmentation_polygon_scale")
     .SetGetSbpFn(GetSbp)
     .SetBatchAxisInferFn(MakeInferBatchAxisFn("poly"));
 
-REGISTER_USER_OP("image_normalize")
+REGISTER_CPU_ONLY_USER_OP("image_normalize")
     .Input("in")
     .Attr("std", UserOpAttrType::kAtListFloat)
     .Attr("mean", UserOpAttrType::kAtListFloat)
@@ -151,7 +151,7 @@ REGISTER_USER_OP("image_normalize")
     .SetGetSbpFn(GetSbp)
     .SetBatchAxisInferFn(MakeInferBatchAxisFn("in"));
 
-REGISTER_USER_OP("object_segmentation_polygon_to_mask")
+REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_to_mask")
     .Input("poly")
     .Input("poly_index")
     .Input("image_size")
