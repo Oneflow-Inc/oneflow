@@ -36,8 +36,9 @@ REGISTER_USER_OP("softmax_cross_entropy")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      // ctx->LogicalTensorDesc4InputArgNameAndIndex("out", 0) is not initialized here
       const auto num_out_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("out", 0).shape().NumAxes();
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0).shape().NumAxes() - 1;
       FOR_RANGE(int64_t, i, 0, num_out_axes) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("prediction", 0), i)
