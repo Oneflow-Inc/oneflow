@@ -36,12 +36,16 @@ REGISTER_USER_OP("softmax_cross_entropy")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("prediction", 0), 0)
-          .Split(user_op::OpArg("label", 0), 0)
-          .Split(user_op::OpArg("prob", 0), 0)
-          .Split(user_op::OpArg("out", 0), 0)
-          .Build();
+      const auto num_out_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("out", 0).shape().NumAxes();
+      FOR_RANGE(int64_t, i, 0, num_out_axes) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("prediction", 0), i)
+            .Split(user_op::OpArg("label", 0), i)
+            .Split(user_op::OpArg("prob", 0), i)
+            .Split(user_op::OpArg("out", 0), i)
+            .Build();
+      }
       return Maybe<void>::Ok();
     });
 
@@ -67,12 +71,16 @@ REGISTER_USER_OP("softmax_cross_entropy_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("dy", 0), 0)
-          .Split(user_op::OpArg("label", 0), 0)
-          .Split(user_op::OpArg("prob", 0), 0)
-          .Split(user_op::OpArg("prediction_diff", 0), 0)
-          .Build();
+      const auto num_label_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("label", 0).shape().NumAxes();
+      FOR_RANGE(int64_t, i, 0, num_label_axes) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("dy", 0), i)
+            .Split(user_op::OpArg("label", 0), i)
+            .Split(user_op::OpArg("prob", 0), i)
+            .Split(user_op::OpArg("prediction_diff", 0), i)
+            .Build();
+      }
       return Maybe<void>::Ok();
     });
 
