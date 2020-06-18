@@ -608,6 +608,35 @@ def sparse_cross_entropy(labels=None, prediction=None, name=None):
         return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export("nn.softmax_cross_entropy_with_logits")
+def softmax_cross_entropy_with_logits(labels=None, logits=None, name=None):
+    r"""
+    Analogous to `tf.nn.softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/softmax_cross_entropy_with_logits>`_
+
+    """
+
+    assert labels is not None
+    assert logits is not None
+
+    assert labels.shape == logits.shape
+    assert labels.dtype == logits.dtype
+
+    prob, out = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SoftmaxCrossEntropy_")
+        )
+        .Op("softmax_cross_entropy")
+        .Input("prediction", [logits])
+        .Input("label", [labels])
+        .Output("prob")
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    return out
+
+
 @oneflow_export("nn.sparse_softmax_cross_entropy_with_logits")
 def sparse_softmax_cross_entropy_with_logits(labels=None, logits=None, name=None):
     r"""
