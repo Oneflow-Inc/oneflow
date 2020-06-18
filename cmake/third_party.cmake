@@ -65,7 +65,7 @@ if (BUILD_CUDA)
   else()
     message(FATAL_ERROR "cuda lib not found: ${cublas_lib_dir}/libcublas_static.a or ${cuda_lib_dir}/libcublas_static.a")
   endif()
-  find_package(CuDNN REQUIRED)
+  find_package(CUDNN REQUIRED)
 endif()
 
 if (NOT WIN32)

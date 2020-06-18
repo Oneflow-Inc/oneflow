@@ -401,6 +401,7 @@ void OpGraph::CheckIsDAG() const {
 void OpGraph::InitNodes(const Job& job) {
   auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job.placement());
   for (const auto& op_conf : job.net().op()) {
+    op_names_.push_back(op_conf.name());
     OpNode* node = new OpNode(ParallelDesc(*ParallelConf4OpName(op_conf.name())), op_conf);
     AddAllocatedNode(node);
   }
@@ -446,6 +447,19 @@ void OpGraph::InitProducerOpName2CtrlConsumerOpNames(const Job& job) {
       auto* consumer_op_names = &producer_op_name2ctrl_consumer_op_names_[ctrl_in_op_name];
       CHECK(consumer_op_names->emplace(op_conf.name()).second);
     }
+  }
+}
+
+void OpGraph::InferBlobLastUsed() const {
+  HashSet<LogicalBlobId> visisted_lbi;
+  for (auto iter = op_names_.rbegin(); iter != op_names_.rend(); iter++) {
+    Operator* op = op_name2op_node_.at(*iter)->mut_op();
+    auto* map = op->mut_blob_last_used_signature()->mutable_bn_in_op2blob_last_used();
+    const auto InferLastUsed = [&](const std::string& bn_in_op) {
+      (*map)[bn_in_op] = visisted_lbi.insert(op->BnInOp2Lbi(bn_in_op)).second;
+    };
+    for (const auto& obn : op->output_bns()) { InferLastUsed(obn); }
+    for (const auto& ibn : op->input_bns()) { InferLastUsed(ibn); }
   }
 }
 
