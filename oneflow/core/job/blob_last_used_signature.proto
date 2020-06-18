@@ -1,0 +1,6 @@
+syntax = "proto2";
+package oneflow;
+
+message BlobLastUsedSignature {
+  map<string, bool> bn_in_op2blob_last_used = 1;
+}
