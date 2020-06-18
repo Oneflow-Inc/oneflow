@@ -19,12 +19,17 @@ inline ncclDataType_t GetNcclDataType(const DataType& dt) {
     NCCL_DATA_TYPE_CASE(Double);
     NCCL_DATA_TYPE_CASE(Int8);
     NCCL_DATA_TYPE_CASE(Int32);
+    NCCL_DATA_TYPE_CASE(Int64);
     NCCL_DATA_TYPE_CASE(Float16);
     default: UNIMPLEMENTED();
   }
 }
 
 void NcclCheck(ncclResult_t error);
+
+std::string NcclUniqueIdToString(const ncclUniqueId& unique_id);
+
+void NcclUniqueIdFromString(const std::string& str, ncclUniqueId* unique_id);
 
 #endif  // WITH_CUDA
 

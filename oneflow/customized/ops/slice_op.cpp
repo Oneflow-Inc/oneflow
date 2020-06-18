@@ -111,9 +111,13 @@ REGISTER_USER_OP("slice_grad_v2")
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
-      CHECK(like_arg_modifier != nullptr);
-      like_arg_modifier->set_use_header_only(true);
+      user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
+      CHECK_NOTNULL(dy_modifier);
+      dy_modifier->set_requires_grad(false);
+      user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
+      CHECK_NOTNULL(like_modifier);
+      like_modifier->set_use_header_only(true);
+      like_modifier->set_requires_grad(false);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& like_tensor =

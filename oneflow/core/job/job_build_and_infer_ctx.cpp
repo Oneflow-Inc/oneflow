@@ -4,6 +4,7 @@
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/job/foreign_callback.h"
 
 namespace oneflow {
 
@@ -150,8 +151,9 @@ Maybe<void> JobBuildAndInferCtx::InferMirroredSignature(Operator* op,
         << "input blob not found. ibn: " << ibn;
     return &iter->second;
   };
-  return op->InferMirroredSignatureIf(MirroredSigInferHint4Ibn, is_mirrored_parallel_view_conf,
-                                      parallel_desc);
+  JUST(op->InferMirroredSignatureIf(MirroredSigInferHint4Ibn, is_mirrored_parallel_view_conf,
+                                    parallel_desc));
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
@@ -797,13 +799,14 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   const auto& sbn_it = mut_consistent_lbi2mirrored_lbi()->find(lbi);
   if (sbn_it != mut_consistent_lbi2mirrored_lbi()->end()) { return sbn_it->second; }
   const SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
-  CHECK_OR_RETURN(sbp.has_partial_sum_parallel())
+  CHECK_OR_RETURN(!sbp.has_partial_sum_parallel())
       << "`P' consistant blob is not compatible to mirrored blob";
   const ParallelDesc& parallel_desc = *JUST(ParallelDesc4Lbi(lbi));
   OperatorConf op_conf;
   op_conf.set_device_type(parallel_desc.device_type());
   op_conf.set_name(kAutoMirroredBlobNamePrefix + "-CastToMirrored-" + NewUniqueId());
   auto* cast_to_mirrored_conf = op_conf.mutable_cast_to_mirrored_conf();
+  cast_to_mirrored_conf->set_in(lbn);
   cast_to_mirrored_conf->set_out("out");
   *cast_to_mirrored_conf->mutable_sbp_parallel() = sbp;
   LogicalBlobId mirrored_lbi;
@@ -811,7 +814,11 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   mirrored_lbi.set_blob_name("out");
   (*mut_consistent_lbi2mirrored_lbi())[lbi] = mirrored_lbi;
   (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].push_back(mirrored_lbi);
-  JUST(AddAndInferConsistentOp(op_conf, parallel_desc.parallel_conf()));
+  const auto& parallel_conf = parallel_desc.parallel_conf();
+  const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf, parallel_conf));
+  const std::string& op_attribute_str = PbMessage2TxtString(*op_attribute);
+  const std::string& parallel_conf_str = PbMessage2TxtString(parallel_conf);
+  JUST(GlobalMaybe<ForeignCallback>())->EagerCastToMirrored(op_attribute_str, parallel_conf_str);
   return mirrored_lbi;
 }
 
@@ -832,7 +839,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("AutoLearningRate"));
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
     JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
-    JUST(DoPass("SequentializeNcclTupleBroadcastReducePass"));
+    JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
     JUST(DoPass("AddAllReduceGroupPass"));
     JUST(DoPass("AddLbiDiffWatcherOpConfs"));
     JUST(DoPass("SequentializeAllReduceGroupPass"));

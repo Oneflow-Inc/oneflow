@@ -17,6 +17,12 @@ REGISTER_USER_OP("smooth_l1_loss")
       *ctx->Dtype4ArgNameAndIndex("loss", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
       return Maybe<void>::Ok();
     })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0);
+      CHECK(label_modifier != nullptr);
+      label_modifier->set_requires_grad(false);
+    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("loss", 0) = *ctx->BatchAxis4ArgNameAndIndex("prediction", 0);
       return Maybe<void>::Ok();
