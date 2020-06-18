@@ -22,6 +22,12 @@ REGISTER_USER_OP("sparse_cross_entropy")
       *out_desc->mut_shape() = label_desc->shape();
       return Maybe<void>::Ok();
     })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0);
+      CHECK(label_modifier != nullptr);
+      label_modifier->set_requires_grad(false);
+    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("label", 0);
       return Maybe<void>::Ok();
