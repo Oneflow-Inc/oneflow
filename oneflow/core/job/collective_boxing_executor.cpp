@@ -547,7 +547,7 @@ void CollectiveBoxingExecutor::Enqueue(const RankDesc& rank_desc,
       break;
     }
   }
-  if (current_group_idx_in_job_ == group_ids.size()) {
+  if (current_group_idx_in_job_ == 0) {
     current_job_id_ = -1;
     current_group_idx_in_job_ = -1;
   }
