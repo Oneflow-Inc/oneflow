@@ -356,5 +356,5 @@ def nccl_fusion_broadcast(val):
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
 def do_nothing(*args, **kwargs):
-    print("Nothing happened because session running")
+    print("Nothing happened because the session is running")
     return False
