@@ -176,6 +176,9 @@ class Operator {
   Maybe<const SbpSignature*> sbp_signature() const;
   // TODO(lixinqi) It's dangerous to expose mut_sbp_signature()
   SbpSignature* mut_sbp_signature() { return op_attribute_.mutable_sbp_signature(); }
+  BlobLastUsedSignature* mut_blob_last_used_signature() {
+    return op_attribute_.mutable_blob_last_used_signature();
+  }
 
  protected:
   virtual Maybe<void> GetSbpSignatures(
