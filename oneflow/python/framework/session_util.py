@@ -97,7 +97,8 @@ class Session(object):
 
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
-        assert c_api_util.IsEnvInited()
+        if not c_api_util.IsEnvInited():
+            oneflow.env.init()
         _TryCompleteConfigProto(self.config_proto_)
         c_api_util.InitGlobalSession(self.config_proto_)
         for job_name, func_desc in self.job_name2function_desc_.items():
