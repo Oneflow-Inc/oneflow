@@ -22,6 +22,8 @@
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/vm/oneflow_vm.h"
+#include "oneflow/core/graph/plan_task_graph.h"
+#include "oneflow/core/graph/boxing/collective_boxing_util.h"
 
 namespace std {
 
@@ -52,6 +54,10 @@ std::string cluster_thrd_ids_key(const std::string& plan_name) {
 std::string net_topo_key(const std::string& plan_name) { return plan_name + "_net_topo"; }
 
 std::string job_id2job_conf(const std::string& plan_name) { return plan_name + "_job_id2job_conf"; }
+
+std::string GetCollectiveBoxingPlanKey(const std::string& plan_name) {
+  return plan_name + "_collective_boxing_plan";
+}
 
 std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64_t thrd_id) {
   return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
@@ -101,6 +107,8 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
 
   Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
   Global<CtrlClient>::Get()->PushKV(job_id2job_conf(plan_name), plan.job_confs());
+  Global<CtrlClient>::Get()->PushKV(GetCollectiveBoxingPlanKey(plan_name),
+                                    plan.collective_boxing_plan());
 }
 
 void PullPlan(const std::string& plan_name, Plan* plan) {
@@ -124,9 +132,140 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   JobConfs job_confs;
   Global<CtrlClient>::Get()->PullKV(job_id2job_conf(plan_name), &job_confs);
   *(plan->mutable_job_confs()) = job_confs;
+  Global<CtrlClient>::Get()->PullKV(GetCollectiveBoxingPlanKey(plan_name),
+                                    plan->mutable_collective_boxing_plan());
   MemBlockAndChunkList block7chunk;
   Global<CtrlClient>::Get()->PullKV(block7chunk_key(plan_name, machine_id), &block7chunk);
   plan->mutable_block_chunk_list()->CopyFrom(block7chunk);
+}
+
+bool IsCollectiveBoxingNode(const PlanTaskNode* node) {
+  const TaskType task_type = node->task_proto()->task_type();
+  return task_type == TaskType::kCollectiveBoxingGeneric;
+}
+
+const boxing::collective::RankDesc& GetRankDesc(const OperatorConf& conf) {
+  if (conf.has_collective_boxing_generic_conf()) {
+    return conf.collective_boxing_generic_conf().rank_desc();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+const boxing::collective::RankDesc& GetRankDesc(const TaskProto& task_proto) {
+  CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
+  return GetRankDesc(
+      task_proto.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf());
+}
+
+void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* device_desc) {
+  device_desc->set_machine_id(task_proto->machine_id());
+  const int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task_proto->task_id());
+  device_desc->set_device_type(Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(thrd_id));
+  if (device_desc->device_type() == DeviceType::kGPU) {
+    device_desc->set_device_id(Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id));
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
+  using namespace boxing::collective;
+
+  struct RequestInfo {
+    OpDesc op_desc;
+    std::map<int64_t, const PlanTaskNode*> rank2node;
+    int64_t order;
+    int64_t dependency_depth;
+  };
+
+  PlanTaskGraph plan_task_graph(*plan);
+  int64_t dependency_depth = 0;
+  int64_t order = 0;
+  RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
+                                   ->mutable_job_id2request_set())[GlobalJobDesc().job_id()];
+  HashSet<const PlanTaskNode*> all_visited;
+  while (true) {
+    std::list<const PlanTaskNode*> src_nodes;
+    plan_task_graph.ForEachNode([&](const PlanTaskNode* node) {
+      if (all_visited.count(node) != 0) { return; }
+      int64_t in_cnt = 0;
+      node->ForEachNodeOnInEdge([&](const PlanTaskNode* node_on_in_edge) {
+        if (all_visited.count(node_on_in_edge) != 0) { return; }
+        in_cnt += 1;
+      });
+      if (in_cnt == 0) { src_nodes.push_back(node); }
+    });
+    if (src_nodes.empty()) { break; }
+    auto ForEachNodeOnInEdge = [&](const PlanTaskNode* node,
+                                   const std::function<void(const PlanTaskNode*)>& Handler) {
+      node->ForEachNodeOnInEdge([&](const PlanTaskNode* node_on_in_edge) {
+        if (all_visited.count(node_on_in_edge) == 0) { Handler(node_on_in_edge); }
+      });
+    };
+    auto ForEachNodeOnOutEdge = [&](const PlanTaskNode* node,
+                                    const std::function<void(const PlanTaskNode*)>& Handler) {
+      if (!IsCollectiveBoxingNode(node)) {
+        node->ForEachNodeOnOutEdge(
+            [&](const PlanTaskNode* node_on_out_edge) { Handler(node_on_out_edge); });
+      }
+    };
+    HashSet<const PlanTaskNode*> visited;
+    std::vector<const PlanTaskNode*> collective_boxing_nodes;
+    plan_task_graph.TopoForEachNode(src_nodes, ForEachNodeOnInEdge, ForEachNodeOnOutEdge,
+                                    [&](const PlanTaskNode* node) {
+                                      visited.insert(node);
+                                      if (IsCollectiveBoxingNode(node)) {
+                                        collective_boxing_nodes.push_back(node);
+                                      }
+                                    });
+    if (collective_boxing_nodes.empty()) { break; }
+    HashMap<std::string, RequestInfo> name2request_info;
+    for (const PlanTaskNode* node : collective_boxing_nodes) {
+      const TaskProto* task_proto = node->task_proto();
+      const RankDesc& rank_desc = GetRankDesc(*task_proto);
+      CHECK_GE(rank_desc.rank(), 0);
+      CHECK_LT(rank_desc.rank(), rank_desc.op_desc().num_ranks());
+      const std::string& name = rank_desc.op_desc().name();
+      boxing::collective::DeviceDesc device_desc;
+      GetDeviceDesc(task_proto, &device_desc);
+      auto it = name2request_info.find(name);
+      if (it == name2request_info.end()) {
+        RequestInfo request_info{
+            .op_desc = rank_desc.op_desc(),
+            .rank2node = {std::make_pair(rank_desc.rank(), node)},
+            .order = order,
+            .dependency_depth = dependency_depth,
+        };
+        name2request_info.emplace(std::make_pair(name, std::move(request_info)));
+        order += 1;
+      } else {
+        CHECK(it->second.op_desc == rank_desc.op_desc());
+        CHECK(it->second.rank2node.emplace(std::make_pair(rank_desc.rank(), node)).second);
+      }
+    }
+    int64_t collected = 0;
+    for (const auto& name7request_info : name2request_info) {
+      const RequestInfo& info = name7request_info.second;
+      if (info.rank2node.size() == info.op_desc.num_ranks()) {
+        collected += 1;
+        boxing::collective::RequestDesc* request_desc = request_set->mutable_request()->Add();
+        *request_desc->mutable_op_desc() = info.op_desc;
+        for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
+          GetDeviceDesc(info.rank2node.at(i)->task_proto(),
+                        request_desc->mutable_device_set()->mutable_device()->Add());
+        }
+        request_desc->set_order(info.order);
+        request_desc->set_dependency_depth(info.dependency_depth);
+      } else {
+        CHECK_LT(info.rank2node.size(), info.op_desc.num_ranks());
+        for (const auto& pair : info.rank2node) { visited.erase(pair.second); }
+      }
+    }
+    CHECK_GT(collected, 0);
+    all_visited.insert(visited.begin(), visited.end());
+    ++dependency_depth;
+  }
 }
 
 void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
@@ -167,14 +306,20 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
   } else {
     *improved_plan = complete_plan;
   }
+  GenCollectiveBoxingPlan(job, improved_plan);
   LOG(INFO) << "compile and improve time: " << GetCurTime() - start;
 }
 
 void MergePlanWithoutGenNetTopo(Plan* plan, const Plan& other) {
   plan->mutable_task()->MergeFrom(other.task());
   plan->mutable_block_chunk_list()->MergeFrom(other.block_chunk_list());
+
   for (const auto& pair : other.job_confs().job_id2job_conf()) {
     CHECK(plan->mutable_job_confs()->mutable_job_id2job_conf()->insert(pair).second);
+  }
+  for (const auto& pair : other.collective_boxing_plan().job_id2request_set()) {
+    CHECK(
+        plan->mutable_collective_boxing_plan()->mutable_job_id2request_set()->insert(pair).second);
   }
 }
 
@@ -361,6 +506,39 @@ void FilterOpName2ParallelBlobConf(
         ParallelBlobConf parallel_blob_conf;
         GetMemSharingOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
         CHECK(parallel_blob_conf == iter->second);
+      }
+    }
+  }
+}
+
+void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>>& jobs) {
+  bool has_job_enable_non_distributed_optimizer;
+  FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
+    if (jobs.at(job_id)->job_conf().enable_non_distributed_optimizer()) {
+      has_job_enable_non_distributed_optimizer = true;
+      break;
+    }
+  }
+  if (!has_job_enable_non_distributed_optimizer) { return; }
+
+  HashSet<std::string> var_names;
+  FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
+    if (!jobs.at(job_id)->job_conf().enable_non_distributed_optimizer()) { continue; }
+    for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
+      if (op_conf.op_type_case() == OperatorConf::kVariableConf) { continue; }
+      if (var_names.find(op_conf.name()) == var_names.end()) {
+        var_names.emplace(op_conf.name());
+      } else {
+        LOG(FATAL) << "Only support non_distribute_optimizer when jobs not sharing same variable";
+      }
+    }
+  }
+  FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
+    if (jobs.at(job_id)->job_conf().enable_non_distributed_optimizer()) { continue; }
+    for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
+      if (op_conf.op_type_case() == OperatorConf::kVariableConf) { continue; }
+      if (var_names.find(op_conf.name()) != var_names.end()) {
+        LOG(FATAL) << "Only support non_distribute_optimizer when jobs not sharing same variable";
       }
     }
   }
@@ -685,6 +863,7 @@ REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defin
 void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   std::vector<std::shared_ptr<Job>> jobs(conf_jobs.size());
   FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(conf_jobs.Get(i))); }
+  if (jobs.size() > 1) { CheckNonDistributeOptimizerAvailable(jobs); }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
     FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,

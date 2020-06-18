@@ -47,7 +47,7 @@ class ResizeToStaticShapeKernel final : public user_op::OpKernel {
     int C = out_shape.At(3);
     CHECK(C == 3 || C == 1);
     int channel_flag = C == 3 ? CV_8UC3 : CV_8UC1;
-    std::string interp_type = ctx->Attr<std::string>("interp_type");
+    const std::string& interp_type = ctx->Attr<std::string>("interp_type");
     int64_t one_sample_elem_cnt = rsz_h * rsz_w * C;
     int opencv_inter_type = GetOpencvInterp(interp_type);
 
@@ -114,7 +114,7 @@ class ResizeShorterToTensorBufferKernel final : public user_op::OpKernel {
       Shape out_shape({rsz_h, rsz_w, C});
       out_buffer->Resize(out_shape, DataType::kUInt8);
       int channel_flag = C == 3 ? CV_8UC3 : CV_8UC1;
-      std::string interp_type = ctx->Attr<std::string>("interp_type");
+      const std::string& interp_type = ctx->Attr<std::string>("interp_type");
       int opencv_inter_type = GetOpencvInterp(interp_type);
 
       const cv::Mat image = CreateMatWithPtr(H, W, channel_flag, in_buffer->data<uint8_t>());
@@ -212,8 +212,8 @@ class CMNAttr final : public user_op::OpKernelState {
  public:
   CMNAttr(user_op::KernelInitContext* ctx) {
     mean_vec_ = ctx->Attr<std::vector<float>>("mean");
-    std::vector<float> std_vec = ctx->Attr<std::vector<float>>("std");
-    std::string color_space = ctx->Attr<std::string>("color_space");
+    const std::vector<float>& std_vec = ctx->Attr<std::vector<float>>("std");
+    const std::string& color_space = ctx->Attr<std::string>("color_space");
     int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
     CHECK(mean_vec_.size() == 1 || mean_vec_.size() == C);
     CHECK(std_vec.size() == 1 || std_vec.size() == C);
@@ -252,11 +252,11 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     std::vector<int8_t> mirror = GetMirrorVec(ctx);
     int64_t record_num = in_blob->shape().At(0);
-    std::string color_space = ctx->Attr<std::string>("color_space");
+    const std::string& color_space = ctx->Attr<std::string>("color_space");
     int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
     float crop_pos_y = ctx->Attr<float>("crop_pos_y");
     float crop_pos_x = ctx->Attr<float>("crop_pos_x");
-    std::string output_layout = ctx->Attr<std::string>("output_layout");
+    const std::string& output_layout = ctx->Attr<std::string>("output_layout");
     float* out_dptr = out_blob->mut_dptr<float>();
 
     const uint8_t* in_dptr = in_blob->dptr<uint8_t>();
@@ -339,11 +339,11 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     std::vector<int8_t> mirror = GetMirrorVec(ctx);
     int64_t record_num = in_blob->shape().At(0);
-    std::string color_space = ctx->Attr<std::string>("color_space");
+    const std::string& color_space = ctx->Attr<std::string>("color_space");
     int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
     float crop_pos_y = ctx->Attr<float>("crop_pos_y");
     float crop_pos_x = ctx->Attr<float>("crop_pos_x");
-    std::string output_layout = ctx->Attr<std::string>("output_layout");
+    const std::string& output_layout = ctx->Attr<std::string>("output_layout");
     float* out_dptr = out_blob->mut_dptr<float>();
 
     const TensorBuffer* in_buffers = in_blob->dptr<TensorBuffer>();

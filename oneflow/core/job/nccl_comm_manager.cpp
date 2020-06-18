@@ -61,9 +61,7 @@ ncclComm_t NcclCommMgr::NcclComm4ActorId(int64_t actor_id) const {
 
 bool NcclCommMgr::IsNcclTaskType(const TaskType& tt) const {
   return tt == TaskType::kNcclAllGather || tt == TaskType::kNcclAllReduce
-         || tt == TaskType::kNcclReduceScatter || tt == TaskType::kNcclBoxingAllGather
-         || tt == TaskType::kNcclBoxingAllReduce || tt == TaskType::kNcclBoxingReduceScatter
-         || tt == TaskType::kNcclTupleBroadcast || tt == TaskType::kNcclTupleReduce;
+         || tt == TaskType::kNcclReduceScatter;
 }
 
 int32_t NcclCommMgr::GetDeviceId4Task(const TaskProto& task) {
@@ -98,13 +96,13 @@ void NcclCommMgr::NcclGetUniqueId4Tasks(const std::vector<TaskProto>& tasks,
         "nccl_unique_id_" + std::to_string(tasks.front().parallel_ctx().rank_ctx().rank_set_id());
     if (should_create_unique_id) {
       NcclCheck(ncclGetUniqueId(nccl_unique_id));
-      Global<CtrlClient>::Get()->PushKV(
-          nccl_unique_id_rpc_key, std::string(nccl_unique_id->internal, NCCL_UNIQUE_ID_BYTES));
+      Global<CtrlClient>::Get()->PushKV(nccl_unique_id_rpc_key,
+                                        NcclUniqueIdToString(*nccl_unique_id));
     } else {
-      Global<CtrlClient>::Get()->PullKV(
-          nccl_unique_id_rpc_key, [&nccl_unique_id](const std::string& val) {
-            memcpy(nccl_unique_id->internal, val.data(), NCCL_UNIQUE_ID_BYTES);
-          });
+      Global<CtrlClient>::Get()->PullKV(nccl_unique_id_rpc_key,
+                                        [&nccl_unique_id](const std::string& val) {
+                                          NcclUniqueIdFromString(val, nccl_unique_id);
+                                        });
     }
   }
 }

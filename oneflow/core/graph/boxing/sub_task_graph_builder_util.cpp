@@ -74,12 +74,33 @@ bool SubTskGphBuilderUtil::IsBoxingB2B(const SbpParallel& src, const SbpParallel
   return src.has_broadcast_parallel() && dst.has_broadcast_parallel();
 }
 
+bool SubTskGphBuilderUtil::IsBoxingB2S(const SbpParallel& src, const SbpParallel& dst) {
+  return src.has_broadcast_parallel() && dst.has_split_parallel();
+}
+
 bool SubTskGphBuilderUtil::BlobHasDynamicShape(const BlobDesc& blob_desc) {
   return blob_desc.is_dynamic();
 }
 
 bool SubTskGphBuilderUtil::IsErrorBoxingNotSupported(const ErrorProto& error) {
   return error.has_boxing_error() && error.boxing_error() == BoxingError::kNotSupported;
+}
+
+int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* dst) {
+  if (src->machine_id() != dst->machine_id()) {
+    return kDistanceDiffMachine;
+  } else if (src->device_type() != dst->device_type()) {
+    return kDistanceSameMachine;
+  } else if (src->device_type() == DeviceType::kCPU) {
+    return kDistanceSameDevice;
+  } else {
+    if (Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(src->thrd_id())
+        == Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(dst->thrd_id())) {
+      return kDistanceSameDevice;
+    } else {
+      return kDistanceSameMachine;
+    }
+  }
 }
 
 }  // namespace oneflow

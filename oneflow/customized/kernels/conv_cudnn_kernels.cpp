@@ -351,7 +351,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
     CHECK_GE(dy->shape().NumAxes(), 3);
     CHECK_LE(dy->shape().NumAxes(), 5);
 
-    std::string data_format = ctx->Attr<std::string>("data_format");
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
 
     std::unique_ptr<CudnnTensorDesc> dy_desc;
     dy_desc.reset(new CudnnTensorDesc(dy->data_type(), dy->shape(), data_format));
