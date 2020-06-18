@@ -162,6 +162,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InitEdges();
   void InitProducerOpName2CtrlConsumerOpNames(const Job& job);
   void CheckIsDAG() const;
+  void InferBlobLastUsed() const;
   void InferTimeShape() const;
   void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
   void InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_parallel_view_conf) const;
@@ -175,6 +176,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   std::list<OpNode*> DataOrCtrlSourceNodes() const;
 
   HashMap<std::string, OpNode*> op_name2op_node_;
+  std::list<std::string> op_names_;
   HashMap<std::string, HashSet<std::string>> producer_op_name2ctrl_consumer_op_names_;
 };
 
