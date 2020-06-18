@@ -19,6 +19,8 @@
 #include "oneflow/core/job/foreign_watcher.h"
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
@@ -35,6 +37,12 @@ Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   CHECK_OR_RETURN(IsClassRegistered<OnlyCpuSupport>(op_type_case))
       << ": op_type_case = " << op_type_case;
   return static_cast<bool>(*std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case)));
+}
+
+Maybe<bool> IsOpTypeNameCpuSupportOnly(const std::string& op_type_name) {
+  const user_op::OpRegistrationVal* val = user_op::LookUpInOpRegistry(op_type_name);
+  CHECK_OR_RETURN(val != nullptr) << "op_type_name " << op_type_name << " not register";
+  return val->cpu_only_supported;
 }
 
 Maybe<std::string> CurrentResource() {
@@ -159,6 +167,12 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
   CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
       << "parallel conf parse failed";
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
+}
+
+Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
+  return PbMessage2TxtString(*JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
 }
 
 Maybe<long long> CurrentMachineId() {

@@ -1,15 +1,16 @@
 from __future__ import absolute_import
 
+import os
+
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 
-import os
 
 @oneflow_export("layers.dense")
 def dense(
@@ -34,9 +35,7 @@ def dense(
     assert in_num_axes >= 2
 
     name_prefix = name if name is not None else id_util.UniqueStr("Dense_")
-    inputs = (
-        flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
-    )
+    inputs = flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
 
     assert (
         model_distribute is distribute_util.auto()
@@ -45,9 +44,7 @@ def dense(
     )
 
     if model_distribute is distribute_util.split(0):
-        assert (
-            in_num_axes is 2
-        )  # model distribute is hard for reshape split dim 1
+        assert in_num_axes is 2  # model distribute is hard for reshape split dim 1
 
     weight = flow.get_variable(
         name="{}-weight".format(name_prefix),
@@ -66,10 +63,7 @@ def dense(
     weight = weight.with_distribute(model_distribute)
 
     out = flow.matmul(
-        a=inputs,
-        b=weight,
-        transpose_b=True,
-        name="{}_matmul".format(name_prefix),
+        a=inputs, b=weight, transpose_b=True, name="{}_matmul".format(name_prefix),
     )
     if use_bias:
         bias = flow.get_variable(
@@ -87,17 +81,13 @@ def dense(
             distribute=model_distribute,
         )
         bias = bias.with_distribute(model_distribute)
-        out = flow.nn.bias_add(
-            out, bias, name="{}_bias_add".format(name_prefix)
-        )
+        out = flow.nn.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
     out = (
         activation(out, name="{}_activation".format(name_prefix))
         if activation is not None
         else out
     )
-    out = (
-        flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
-    )
+    out = flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
 
     return out
 
@@ -131,7 +121,7 @@ def conv2d(
         kernel_size = tuple(kernel_size)
 
     assert isinstance(groups, int)
-    assert groups > 0    
+    assert groups > 0
     assert groups <= filters
     assert filters % groups == 0
     if data_format.upper() == "NCHW":
@@ -142,7 +132,12 @@ def conv2d(
         assert groups == 1
         assert groups <= inputs.shape[3]
         assert inputs.shape[3] % groups == 0
-        weight_shape = (filters, kernel_size[0], kernel_size[1], inputs.shape[3] // groups)
+        weight_shape = (
+            filters,
+            kernel_size[0],
+            kernel_size[1],
+            inputs.shape[3] // groups,
+        )
     else:
         raise ValueError("data_format must be in NCHW or NHWC")
 
@@ -159,7 +154,14 @@ def conv2d(
     )
 
     output = flow.nn.conv2d(
-        inputs, weight, strides, padding, data_format, dilation_rate, groups=groups, name=name
+        inputs,
+        weight,
+        strides,
+        padding,
+        data_format,
+        dilation_rate,
+        groups=groups,
+        name=name,
     )
     if use_bias:
         bias = flow.get_variable(
@@ -238,12 +240,7 @@ def layer_norm(
         op.Attr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
         op.Attr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
         op.Attr("epsilon", epsilon, "AttrTypeDouble")
-        return (
-            op
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
+        return op.Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         name = name if name is not None else id_util.UniqueStr("LayerNorm_")
@@ -292,18 +289,13 @@ def layer_norm(
         setattr(out_lbi, "blob_name", "out")
         return remote_blob_util.RemoteBlob(out_lbi)
 
+
 @oneflow_export("layers.layer_norm_grad")
 def layer_norm_grad(
-    dy,
-    x,
-    mean,
-    inv_variance,
-    begin_norm_axis=1,
-    name=None,
+    dy, x, mean, inv_variance, begin_norm_axis=1, name=None,
 ):
     op_conf = op_conf_util.OperatorConf()
-    name = name if name is not None else id_util.UniqueStr(
-        "LayerNormGrad_")
+    name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
     setattr(op_conf, "name", name)
     setattr(op_conf.layer_norm_grad_conf, "dy", dy.unique_name)
     setattr(op_conf.layer_norm_grad_conf, "x", x.unique_name)
@@ -318,17 +310,13 @@ def layer_norm_grad(
     setattr(out_lbi, "blob_name", "dx")
     return remote_blob_util.RemoteBlob(out_lbi)
 
+
 @oneflow_export("layers.layer_norm_param_grad")
 def layer_norm_param_grad(
-    dy,
-    norm,
-    gamma,
-    begin_params_axis=-1,
-    name=None,
+    dy, norm, gamma, begin_params_axis=-1, name=None,
 ):
     op_conf = op_conf_util.OperatorConf()
-    name = name if name is not None else id_util.UniqueStr(
-        "LayerNormParamGrad_")
+    name = name if name is not None else id_util.UniqueStr("LayerNormParamGrad_")
     setattr(op_conf, "name", name)
     setattr(op_conf.layer_norm_param_grad_conf, "dy", dy.unique_name)
     setattr(op_conf.layer_norm_param_grad_conf, "normalized", norm.unique_name)
@@ -349,9 +337,12 @@ def layer_norm_param_grad(
     setattr(beta_diff_lbi, "blob_name", "beta_diff")
     setattr(gamma_diff_lbi, "blob_name", "gamma_diff")
 
-    return (remote_blob_util.RemoteBlob(normalized_diff_lbi),
-            remote_blob_util.RemoteBlob(beta_diff_lbi),
-            remote_blob_util.RemoteBlob(gamma_diff_lbi))
+    return (
+        remote_blob_util.RemoteBlob(normalized_diff_lbi),
+        remote_blob_util.RemoteBlob(beta_diff_lbi),
+        remote_blob_util.RemoteBlob(gamma_diff_lbi),
+    )
+
 
 @oneflow_export("layers.batch_normalization")
 def batch_normalization(
@@ -376,47 +367,49 @@ def batch_normalization(
 
     """
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
-    if axis < 0: axis += len(inputs.shape)
+    if axis < 0:
+        axis += len(inputs.shape)
     params_shape = [inputs.shape[axis]]
+    # Float32 required to avoid precision-loss when using fp16 input/output
+    params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
+
+    if not flow.current_global_function_desc().IsTrainable() or not trainable:
+        training = False
 
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
 
-    if not trainable and training:
-        raise ValueError('"training" of normalization cannot be True \
-                when "trainable" is False')
-
-    if os.getenv("ENABLE_USER_OP") == 'True':
+    if os.getenv("ENABLE_USER_OP") == "True":
         if center:
             beta = flow.get_variable(
                 name=name + "-beta",
                 shape=params_shape,
-                dtype=inputs.dtype,
+                dtype=params_dtype,
                 initializer=beta_initializer or flow.zeros_initializer(),
                 regularizer=beta_regularizer,
                 trainable=trainable,
                 distribute=distribute_util.broadcast(),
             )
         else:
-            beta = flow.constant(0, dtype=inputs.dtype, shape=params_shape)
+            beta = flow.constant(0, dtype=params_dtype, shape=params_shape)
 
         if scale:
             gamma = flow.get_variable(
                 name=name + "-gamma",
                 shape=params_shape,
-                dtype=inputs.dtype,
+                dtype=params_dtype,
                 initializer=gamma_initializer or flow.ones_initializer(),
                 regularizer=gamma_regularizer,
                 trainable=trainable,
                 distribute=distribute_util.broadcast(),
             )
         else:
-            gamma = flow.constant(1, dtype=inputs.dtype, shape=params_shape)
+            gamma = flow.constant(1, dtype=params_dtype, shape=params_shape)
 
         moving_mean = flow.get_variable(
             name=name + "-moving_mean",
             shape=params_shape,
-            dtype=inputs.dtype,
+            dtype=params_dtype,
             initializer=moving_mean_initializer or flow.zeros_initializer(),
             trainable=False,
             distribute=distribute_util.broadcast(),
@@ -425,13 +418,14 @@ def batch_normalization(
         moving_variance = flow.get_variable(
             name=name + "-moving_variance",
             shape=params_shape,
-            dtype=inputs.dtype,
+            dtype=params_dtype,
             initializer=moving_variance_initializer or flow.ones_initializer(),
             trainable=False,
             distribute=distribute_util.broadcast(),
         )
 
-        builder = (flow.user_op_builder(name)
+        builder = (
+            flow.user_op_builder(name)
             .Op("normalization")
             .Input("x", [inputs])
             .Input("moving_mean", [moving_mean])
@@ -443,22 +437,17 @@ def batch_normalization(
             .Attr("epsilon", epsilon, "AttrTypeFloat")
             .Attr("training", training, "AttrTypeBool")
             .Attr("momentum", momentum, "AttrTypeFloat")
-            )
+        )
         if trainable and training:
-            builder = (builder
-                        .Output("mean")
-                        .Output("inv_variance"))
-        return (builder
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0])
+            builder = builder.Output("mean").Output("inv_variance")
+        return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
     else:
         if center:
             beta = flow.get_variable(
                 name=name + "-beta",
                 shape=params_shape,
-                dtype=inputs.dtype,
+                dtype=params_dtype,
                 initializer=beta_initializer or flow.zeros_initializer(),
                 regularizer=beta_regularizer,
                 trainable=trainable,
@@ -469,7 +458,7 @@ def batch_normalization(
             gamma = flow.get_variable(
                 name=name + "-gamma",
                 shape=params_shape,
-                dtype=inputs.dtype,
+                dtype=params_dtype,
                 initializer=gamma_initializer or flow.ones_initializer(),
                 regularizer=gamma_regularizer,
                 trainable=trainable,
@@ -479,7 +468,7 @@ def batch_normalization(
         moving_mean = flow.get_variable(
             name=name + "-moving_mean",
             shape=params_shape,
-            dtype=inputs.dtype,
+            dtype=params_dtype,
             initializer=moving_mean_initializer or flow.zeros_initializer(),
             trainable=trainable,
             distribute=distribute_util.broadcast(),
@@ -488,7 +477,7 @@ def batch_normalization(
         moving_variance = flow.get_variable(
             name=name + "-moving_variance",
             shape=params_shape,
-            dtype=inputs.dtype,
+            dtype=params_dtype,
             initializer=moving_variance_initializer or flow.ones_initializer(),
             trainable=trainable,
             distribute=distribute_util.broadcast(),
@@ -503,21 +492,19 @@ def batch_normalization(
         setattr(op_conf.normalization_conf, "epsilon", epsilon)
         setattr(op_conf.normalization_conf, "center", center)
         setattr(op_conf.normalization_conf, "scale", scale)
+        setattr(op_conf.normalization_conf, "moving_mean", moving_mean.unique_name)
         setattr(
-            op_conf.normalization_conf, "moving_mean", moving_mean.unique_name
-        )
-        setattr(
-            op_conf.normalization_conf,
-            "moving_variance",
-            moving_variance.unique_name,
+            op_conf.normalization_conf, "moving_variance", moving_variance.unique_name,
         )
         if center:
             setattr(op_conf.normalization_conf, "beta", beta.unique_name)
         if scale:
             setattr(op_conf.normalization_conf, "gamma", gamma.unique_name)
-        if trainable:
+        if trainable and flow.current_global_function_desc().IsTrainable():
             if not training:
-                raise ValueError("training == False && trainable == True doesn't work in non-user-op mode")
+                raise ValueError(
+                    "training == False && trainable == True doesn't work in non-user-op mode"
+                )
             setattr(op_conf.normalization_conf, "mean", "mean")
             setattr(op_conf.normalization_conf, "inv_variance", "inv_variance")
             setattr(op_conf.normalization_conf, "is_training", training)

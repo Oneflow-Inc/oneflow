@@ -12,10 +12,9 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   Blob* fw_tmp_blob = BnInOp2Blob("fw_tmp");
   const ReduceSumOpConf& conf = this->op_conf().reduce_sum_conf();
+  CHECK(!conf.axis().empty());
   const Shape& reduced_shape =
-      conf.axis().empty()
-          ? Shape::Ones(in_blob->shape().NumAxes())
-          : CreateReducedShape(in_blob->shape(), {conf.axis().begin(), conf.axis().end()});
+      CreateReducedShape(in_blob->shape(), {conf.axis().begin(), conf.axis().end()});
   NdarrayUtil<device_type, T>::ReduceSum(
       ctx.device_ctx, XpuVarNdarray<T>(reduced_shape, out_blob->mut_dptr<T>()),
       XpuVarNdarray<const T>(in_blob, in_blob->shape().NumAxes()),

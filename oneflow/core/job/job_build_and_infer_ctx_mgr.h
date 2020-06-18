@@ -10,18 +10,9 @@
 
 namespace oneflow {
 
-class EagerExecutionOption {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(EagerExecutionOption);
-  explicit EagerExecutionOption() : enable_eager_execution_(false) {}
-  ~EagerExecutionOption() {}
-
-  bool enable_eager_execution() const { return enable_eager_execution_; }
-  void set_enable_eager_execution(bool val) { enable_eager_execution_ = val; }
-
- private:
-  bool enable_eager_execution_;
-};
+// Definition is unnecessary.
+// Only used in Global<bool, EagerExecutionOption>
+class EagerExecutionOption;
 
 class JobBuildAndInferCtxMgr {
  public:
@@ -55,6 +46,18 @@ class LazyJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
 
  private:
   friend class Global<LazyJobBuildAndInferCtxMgr>;
+
+  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
+};
+
+class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EagerJobBuildAndInferCtxMgr);
+  EagerJobBuildAndInferCtxMgr() : JobBuildAndInferCtxMgr() {}
+  ~EagerJobBuildAndInferCtxMgr() override = default;
+
+ private:
+  friend class Global<EagerJobBuildAndInferCtxMgr>;
 
   JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
 };

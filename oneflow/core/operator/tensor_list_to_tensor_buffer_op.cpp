@@ -52,6 +52,6 @@ class TensorListToTensorBufferOp final : public Operator {
   }
 };
 
-REGISTER_OP(OperatorConf::kTensorListToTensorBufferConf, TensorListToTensorBufferOp);
+REGISTER_CPU_OP(OperatorConf::kTensorListToTensorBufferConf, TensorListToTensorBufferOp);
 
 }  // namespace oneflow

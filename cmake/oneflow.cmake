@@ -142,13 +142,9 @@ endforeach()
 
 # clang format
 add_custom_target(of_format
-            python3
-            ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py
-            --clang_format_binary
-            clang-format
-            --source_dir
-            ${CMAKE_CURRENT_SOURCE_DIR}/oneflow
-            --fix)
+  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
+  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow/python --fix
+  )
 
 # generate version
 if(BUILD_GIT_VERSION)
@@ -250,7 +246,7 @@ set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 file(REMOVE_RECURSE "${of_pyscript_dir}/oneflow/python")
 add_custom_target(of_pyscript_copy ALL
     COMMAND "${CMAKE_COMMAND}" -E copy
-        "${PROJECT_SOURCE_DIR}/oneflow/__init__.py" "${of_pyscript_dir}/oneflow/__init__.py"
+        "${PROJECT_SOURCE_DIR}/oneflow/init.py" "${of_pyscript_dir}/oneflow/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/__init__.py"

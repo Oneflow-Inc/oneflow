@@ -76,7 +76,7 @@ class GenerateBackwardAndOptimizerOpConfs final : public OpGraphPass {
   GenerateBackwardAndOptimizerOpConfs() = default;
   ~GenerateBackwardAndOptimizerOpConfs() override = default;
 
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
 void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
@@ -92,11 +92,11 @@ void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
   }
 }
 
-void GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
-                                                JobBuilder* job_builder) const {
+Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
+                                                       JobBuilder* job_builder) const {
   LogicalBlobId total_loss_instance_num;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-  AutoGrad(op_graph, job_builder, &lbi2diff_lbi);
+  JUST(AutoGrad(op_graph, job_builder, &lbi2diff_lbi));
   HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
   FilterModelLbi2DiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
   AddDiffParallelCast(op_graph, job_builder, &model_lbi2model_diff_lbi);
@@ -111,6 +111,7 @@ void GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
   AddOptimizerOpConf(op_graph, job_builder, model_lbi2model_diff_lbi);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder);
   UpdateOpSbpSignatureHint(op_graph, job_builder);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_FUNCTION_PASS("GenerateBackwardAndOptimizerOpConfs", GenerateBackwardAndOptimizerOpConfs);

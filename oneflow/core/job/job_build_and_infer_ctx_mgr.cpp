@@ -24,6 +24,11 @@ JobBuildAndInferCtx* LazyJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job
   return new LazyJobBuildAndInferCtx(job, job_id);
 }
 
+JobBuildAndInferCtx* EagerJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job,
+                                                                         int64_t job_id) const {
+  return new EagerJobBuildAndInferCtx(job, job_id);
+}
+
 Maybe<JobBuildAndInferCtx*> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
     const std::string& job_name) {
   CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) != job_name2infer_ctx_.end())
@@ -33,7 +38,8 @@ Maybe<JobBuildAndInferCtx*> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
 
 Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() const {
   CHECK_OR_RETURN(has_cur_job_) << JobBuildAndInferError::kNoJobBuildAndInferCtx
-                                << "current has not job name";
+                                << "current JobBuildAndInferCtx was closed, job name: "
+                                << cur_job_name_;
   return cur_job_name_;
 }
 
@@ -65,6 +71,6 @@ void JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
   Global<JobDesc>::Delete();
 }
 
-COMMAND(Global<EagerExecutionOption>::SetAllocated(new EagerExecutionOption()));
+COMMAND(Global<bool, EagerExecutionOption>::SetAllocated(new bool(false)));
 
 }  // namespace oneflow

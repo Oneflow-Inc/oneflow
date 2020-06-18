@@ -1,31 +1,46 @@
-import tensorflow as tf
-import oneflow as flow
+from collections import OrderedDict
+
 import numpy as np
-from collections import OrderedDict 
-from test_util import GenArgList
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
+import oneflow as flow
+import tensorflow as tf
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
+
 def _check(test_case, x, y, depth, on_value, off_value, axis):
     out = tf.one_hot(x, depth=depth, axis=axis, on_value=on_value, off_value=off_value)
     test_case.assertTrue(np.array_equal(out.numpy(), y))
 
-def _run_test(test_case, device_type, x_shape, depth, dtype, out_dtype, on_value, off_value, axis):
+
+def _run_test(
+    test_case, device_type, x_shape, depth, dtype, out_dtype, on_value, off_value, axis
+):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
+
     @flow.function(func_config)
-    def one_hot_job(x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[dtype])):
+    def one_hot_job(
+        x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[dtype])
+    ):
         with flow.fixed_placement(device_type, "0:0"):
-            return flow.one_hot(x, depth=depth, on_value=on_value, off_value=off_value, axis=axis, dtype=type_name_to_flow_type[out_dtype])
+            return flow.one_hot(
+                x,
+                depth=depth,
+                on_value=on_value,
+                off_value=off_value,
+                axis=axis,
+                dtype=type_name_to_flow_type[out_dtype],
+            )
+
     x = np.random.randint(0, depth, x_shape).astype(type_name_to_np_type[dtype])
     y = one_hot_job(x).get()
     _check(test_case, x, y.ndarray(), depth, on_value, off_value, axis)
-   
+
+
 def test_one_hot(test_case):
     arg_dict = OrderedDict()
     arg_dict["test_case"] = [test_case]

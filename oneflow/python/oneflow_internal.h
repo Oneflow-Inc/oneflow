@@ -11,18 +11,23 @@ bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case, std::string* error_str) {
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
+bool IsOpTypeNameCpuSupportOnly(const std::string& op_type_name, std::string* error_str) {
+  return oneflow::IsOpTypeNameCpuSupportOnly(op_type_name)
+      .GetDataAndSerializedErrorProto(error_str, false);
+}
+
 std::string CurrentResource(std::string* error_str) {
   return oneflow::CurrentResource().GetDataAndSerializedErrorProto(error_str, "");
 }
 
 void EnableEagerExecution(bool enable_eager_execution) {
   using namespace oneflow;
-  return Global<EagerExecutionOption>::Get()->set_enable_eager_execution(enable_eager_execution);
+  *Global<bool, EagerExecutionOption>::Get() = enable_eager_execution;
 }
 
 bool EagerExecutionEnabled() {
   using namespace oneflow;
-  return Global<EagerExecutionOption>::Get()->enable_eager_execution();
+  return *Global<bool, EagerExecutionOption>::Get();
 }
 
 bool IsEnvInited() {
@@ -81,6 +86,12 @@ long DeviceType4DeviceTag(const std::string& device_tag, std::string* error_str)
 std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& parallel_conf,
                                                             std::string* error_str) {
   return oneflow::GetSerializedMachineId2DeviceIdListOFRecord(parallel_conf)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
+                                       std::string* error_str) {
+  return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf)
       .GetDataAndSerializedErrorProto(error_str, "");
 }
 

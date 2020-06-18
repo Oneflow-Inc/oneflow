@@ -81,6 +81,10 @@
   ```
 
 - #### Generate Pip Package
+  Please make sure pip package `wheel` is installed:
+  ```
+  pip3 install wheel --user
+  ```
 
   In the root path of OneFlow repo, run:
   ```

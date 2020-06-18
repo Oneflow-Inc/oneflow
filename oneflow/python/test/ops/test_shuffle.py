@@ -1,10 +1,10 @@
-import oneflow as flow
-import numpy as np
-from collections import OrderedDict
 import uuid
-from test_util import GenArgList
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
+from collections import OrderedDict
+
+import numpy as np
+import oneflow as flow
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+
 
 def test_shuffle(_):
     arg_dict = OrderedDict()

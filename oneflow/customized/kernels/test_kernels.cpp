@@ -39,6 +39,22 @@ class ReluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+template<typename T>
+class ReluCpuKernel final : public user_op::OpKernel {
+ public:
+  ReluCpuKernel() = default;
+  ~ReluCpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    NewKernelUtil<DeviceType::kCPU>::Relu(ctx->device_ctx(), in->shape().elem_cnt(), in->dptr<T>(),
+                                          out->mut_dptr<T>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
 REGISTER_USER_KERNEL("ccrelu")
     .SetCreateFn<ReluKernel>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; })
@@ -47,6 +63,14 @@ REGISTER_USER_KERNEL("ccrelu")
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));
       return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_KERNEL("cpu_only_relu_test")
+    .SetCreateFn<ReluCpuKernel<float>>()
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
+      const auto* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);
+      const auto* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);
+      return in_desc->data_type() == DataType::kFloat && out_desc->data_type() == DataType::kFloat;
     });
 
 REGISTER_USER_KERNEL("ccrelu_grad")

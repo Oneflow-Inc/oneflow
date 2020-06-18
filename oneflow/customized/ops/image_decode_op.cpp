@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-REGISTER_USER_OP("image_decode")
+REGISTER_CPU_ONLY_USER_OP("image_decode")
     .Input("in")
     .Output("out")
     .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")

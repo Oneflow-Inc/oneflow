@@ -646,6 +646,10 @@ void Improver::ForEachInferredMemBlockCriticalSection(
               [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
                 int64_t lhs_order_in_graph = OrderInGraph4TaskId(lhs->producer_task_id());
                 int64_t rhs_order_in_graph = OrderInGraph4TaskId(rhs->producer_task_id());
+                if (lhs_order_in_graph == rhs_order_in_graph) {
+                  CHECK_NE(lhs->mem_block_offset(), rhs->mem_block_offset());
+                  return lhs->mem_block_offset() < rhs->mem_block_offset();
+                }
                 CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
                 return lhs_order_in_graph < rhs_order_in_graph;
               });
