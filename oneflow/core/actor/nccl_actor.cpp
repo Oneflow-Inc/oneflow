@@ -24,11 +24,6 @@ void NcclActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
 REGISTER_ACTOR(TaskType::kNcclAllReduce, NcclActor);
 REGISTER_ACTOR(TaskType::kNcclReduceScatter, NcclActor);
 REGISTER_ACTOR(TaskType::kNcclAllGather, NcclActor);
-REGISTER_ACTOR(TaskType::kNcclTupleBroadcast, NcclActor);
-REGISTER_ACTOR(TaskType::kNcclTupleReduce, NcclActor);
-REGISTER_ACTOR(TaskType::kNcclBoxingAllReduce, NcclActor);
-REGISTER_ACTOR(TaskType::kNcclBoxingReduceScatter, NcclActor);
-REGISTER_ACTOR(TaskType::kNcclBoxingAllGather, NcclActor);
 
 #endif  // WITH_CUDA
 

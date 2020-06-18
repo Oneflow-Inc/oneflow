@@ -35,7 +35,9 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
     const SbpParallel& parallel_cast_sbp_parallel = op_node->SbpParallel4Lbi(parallel_cast_in_lbi);
     const SbpParallel& producer_sbp_parallel = producer->SbpParallel4Lbi(parallel_cast_in_lbi);
     if (op_node->parallel_desc() != producer->parallel_desc()) { return; }
-    if (parallel_cast_sbp_parallel != producer_sbp_parallel) { return; }
+    if (parallel_cast_sbp_parallel != producer_sbp_parallel && op_node->out_edges().size() > 1) {
+      return;
+    }
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       if (consumer->op().op_conf().has_parallel_cast_conf()) { return; }
