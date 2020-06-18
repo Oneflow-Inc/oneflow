@@ -7,60 +7,91 @@ import oneflow.python.framework.distribute as distribute_util
 
 import oneflow as flow
 
+
 @oneflow_export("math.two_stage_reduce_max")
 def two_stage_reduce_max(x, axis=None, keepdims=False, name=None):
     name = name if name is not None else id_util.UniqueStr("ReduceMax_")
-    return two_stage_reduce(x, axis, keepdims, "reduce_max",name)
+    return two_stage_reduce(x, axis, keepdims, "reduce_max", name)
+
 
 @oneflow_export("math.two_stage_reduce_min")
 def two_stage_reduce_min(x, axis=None, keepdims=False, name=None):
     name = name if name is not None else id_util.UniqueStr("ReduceMin_")
     return two_stage_reduce(x, axis, keepdims, "reduce_min", name)
 
+
 def two_stage_reduce(x, axis=None, keepdims=False, op_type_name=None, name=None):
 
     assert check_x_dictribute(x, axis)
 
-    device_stage_out_list=[]
-    device_stage_count_list=[]
+    device_stage_out_list = []
+    device_stage_count_list = []
     distribute_axis = x.distribute.axis
     x_list = flow.advanced.distribute_split(x, axis=distribute_axis)
     for i in range(len(x_list)):
-      with flow.device_prior_placement("gpu", "0:" + str(i)):
-          device_stage_out, device_stage_count = reduce_device_stage(x_list[i], axis, op_type_name+"_device_stage", name+"_device_stage"+str(i))
-          device_stage_out_list.append(device_stage_out)
-          device_stage_count_list.append(device_stage_count)
+        with flow.device_prior_placement("gpu", "0:" + str(i)):
+            device_stage_out, device_stage_count = reduce_device_stage(
+                x_list[i],
+                axis,
+                op_type_name + "_device_stage",
+                name + "_device_stage" + str(i),
+            )
+            device_stage_out_list.append(device_stage_out)
+            device_stage_count_list.append(device_stage_count)
 
-    device_stage_out = flow.advanced.distribute_concat(device_stage_out_list, axis=distribute_axis)
-    device_stage_count = flow.advanced.distribute_concat(device_stage_count_list, axis=distribute_axis)
+    device_stage_out = flow.advanced.distribute_concat(
+        device_stage_out_list, axis=distribute_axis
+    )
+    device_stage_count = flow.advanced.distribute_concat(
+        device_stage_count_list, axis=distribute_axis
+    )
 
     device_stage_out = device_stage_out.with_distribute(flow.distribute.broadcast())
     device_stage_count = device_stage_count.with_distribute(flow.distribute.broadcast())
-    
-    out = reduce_global_stage(device_stage_out, device_stage_count, axis, keepdims, op_type_name+"_global_stage", name+"_global_stage")
+
+    out = reduce_global_stage(
+        device_stage_out,
+        device_stage_count,
+        axis,
+        keepdims,
+        op_type_name + "_global_stage",
+        name + "_global_stage",
+    )
     return out
 
 
 def reduce_device_stage(x, axis, op_name, name):
-    out, mask, count = (flow.user_op_builder(name).Op(op_name)
+    out, mask, count = (
+        flow.user_op_builder(name)
+        .Op(op_name)
         .Input("in", [x])
         .Output("out")
         .Output("mask")
         .Output("count")
         .Attr("axis", axis, "AttrTypeListInt32")
-        .Build().InferAndTryRun().RemoteBlobList())
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
     return out, count
 
+
 def reduce_global_stage(x, device_count, axis, keepdims, op_name, name):
-    out, mask = (flow.user_op_builder(name).Op(op_name)
+    out, mask = (
+        flow.user_op_builder(name)
+        .Op(op_name)
         .Input("in", [x])
         .Input("device_count", [device_count])
         .Output("out")
         .Output("mask")
         .Attr("axis", axis, "AttrTypeListInt32")
         .Attr("keepdims", keepdims, "AttrTypeBool")
-        .Build().InferAndTryRun().RemoteBlobList())
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
     return out
+
 
 def check_x_dictribute(x, axis):
     for i in axis:
