@@ -79,10 +79,8 @@ class InstructionsBuilder(object):
             bn_in_op2blob_object=bn_in_op2blob_object,
         )
 
-        def GetDelegateBlobObject(blob_object, op_parallel_desc_symbol):
-            return _FindOrCreateDelegateBlobObject(
-                self, blob_object, op_parallel_desc_symbol
-            )
+        def GetDelegateBlobObject(blob_object, op_arg_attribute):
+            return _FindOrCreateDelegateBlobObject(self, blob_object, op_arg_attribute)
 
         self._StatelessCall(
             "compute",
@@ -106,7 +104,7 @@ class InstructionsBuilder(object):
             bn_in_op2blob_object=bn_in_op2blob_object,
         )
 
-        def GetDirectBlobObject(blob_object, op_parallel_desc_symbol):
+        def GetDirectBlobObject(blob_object, op_arg_attribute):
             return blob_object
 
         self._StatelessCall(
@@ -128,7 +126,7 @@ class InstructionsBuilder(object):
             bn_in_op2blob_object=bn_in_op2blob_object,
         )
 
-        def GetDirectBlobObject(blob_object, op_parallel_desc_symbol):
+        def GetDirectBlobObject(blob_object, op_arg_attribute):
             return blob_object
 
         self._StatelessCall(
@@ -153,9 +151,10 @@ class InstructionsBuilder(object):
         assert op_parallel_desc_sym is not None
 
         def DelegateBlobObject4Ibn(ibn):
-            return get_delegate_blob_object(
-                bn_in_op2blob_object[ibn], op_parallel_desc_sym
+            op_arg_attribute = op_arg_util.GetOpArgAttribute(
+                op_parallel_desc_sym, op_attribute, ibn
             )
+            return get_delegate_blob_object(bn_in_op2blob_object[ibn], op_arg_attribute)
 
         job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
         op_conf_sym = self._GetOpConfSymbol(op_attribute.op_conf)
@@ -621,27 +620,36 @@ def _SetAllMirroredOperand(operand, val):
     operand.all_mirrored_object.SetInParent()
 
 
-def _FindOrCreateDelegateBlobObject(builder, x_blob_object, op_parallel_desc_symbol):
-    if x_blob_object.parallel_desc_symbol == op_parallel_desc_symbol:
+def _FindOrCreateDelegateBlobObject(builder, x_blob_object, op_arg_attribute):
+    if x_blob_object.op_arg_attribute == op_arg_attribute:
         return x_blob_object
     blob_cache = blob_cache_util.FindOrCreateBlobCache(x_blob_object)
 
-    def Fetch(x_blob_object, op_parallel_desc_symbol):
-        return _FetchDelegateBlobObject(builder, x_blob_object, op_parallel_desc_symbol)
+    def Fetch(x_blob_object, op_arg_attribute):
+        return _FetchDelegateBlobObject(builder, x_blob_object, op_arg_attribute)
 
-    return blob_cache.GetCachedDelegateBlobObject(op_parallel_desc_symbol, Fetch)
+    return blob_cache.GetCachedDelegateBlobObject(op_arg_attribute, Fetch)
 
 
-def _FetchDelegateBlobObject(builder, x_blob_object, op_parallel_desc_symbol):
+def _FetchDelegateBlobObject(builder, x_blob_object, op_arg_attribute):
+    assert (
+        x_blob_object.op_arg_attribute.opt_mirrored_parallel
+        == op_arg_attribute.opt_mirrored_parallel
+    )
     blob_device_ids = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
-    op_device_ids = op_parallel_desc_symbol.machine_id2device_id_list
+    arg_parallel_desc_symbol = op_arg_attribute.parallel_desc_symbol
+    op_device_ids = arg_parallel_desc_symbol.machine_id2device_id_list
     prompt = "\nboxing is not supported yet."
     assert blob_device_ids == op_device_ids, (
         "%s blob_device_ids: %s\nop_device_ids: %s"
         % (prompt, blob_device_ids, op_device_ids)
     )
     blob_device_tag = x_blob_object.parallel_desc_symbol.device_tag
-    op_device_tag = op_parallel_desc_symbol.device_tag
+    op_device_tag = arg_parallel_desc_symbol.device_tag
+    assert blob_device_tag != op_device_tag, (
+        "\nx_arg_attribute: %s\nop_arg_attribute: %s"
+        % (x_blob_object.op_arg_attribute, op_arg_attribute)
+    )
     assert (
         blob_device_tag != op_device_tag
     ), "\nblob_device_tag: %s\nop_device_tag: %s" % (blob_device_tag, op_device_tag)

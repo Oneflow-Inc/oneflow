@@ -23,6 +23,7 @@ class BlobObject(Object):
         self.op_arg_attribute_ = op_arg_attribute
         self.release_ = [release]
 
+    @property
     def op_arg_attribute(self):
         return self.op_arg_attribute_
 
