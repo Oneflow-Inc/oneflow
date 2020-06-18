@@ -18,6 +18,7 @@ import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.physical_blob_callback as physical_blob_callback
 import oneflow.python.eager.boxing_util as boxing_util
+import oneflow.python.framework.op_arg_util as op_arg_util
 import re
 import oneflow
 
@@ -209,7 +210,8 @@ class InstructionsBuilder(object):
                 "%d:%s:%d" % (machine_id, device_tag, device_id)
             )
             parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
-            pyhsical_blob_object = self._NewBlobObject(parallel_desc_sym)
+            op_arg_attribute = op_arg_util.MakeMirroredOpArgAttribute(parallel_desc_sym)
+            pyhsical_blob_object = self._NewBlobObject(op_arg_attribute)
             return pyhsical_blob_object
 
         physical_blob_objects = []
@@ -221,9 +223,10 @@ class InstructionsBuilder(object):
         )
         return physical_blob_objects
 
-    def MakeReferenceBlobObject(self, blob_object):
+    def MakeReferenceBlobObject(self, blob_object, op_arg_attribute):
         parallel_desc_symbol = blob_object.parallel_desc_symbol
-        ref_blob_object = self._NewBlobObject(parallel_desc_symbol)
+        assert parallel_desc_symbol == op_arg_attribute.parallel_desc_symbol
+        ref_blob_object = self._NewBlobObject(op_arg_attribute)
         self._ReplaceMirrored(parallel_desc_symbol, [ref_blob_object], [blob_object])
         return ref_blob_object
 
@@ -284,8 +287,9 @@ class InstructionsBuilder(object):
         object_id = self._BroadcastObjectReference(
             sole_mirrored_blob_object, parallel_desc_sym
         )
+        op_arg_attribute = op_arg_util.MakeBroadcastOpArgAttribute(parallel_desc_sym)
         return object_util.BlobObject(
-            object_id, parallel_desc_sym, self.release_blob_object_
+            object_id, op_arg_attribute, self.release_blob_object_
         )
 
     def _CudaHostRegisterBlob(self, blob_object):
@@ -350,7 +354,10 @@ class InstructionsBuilder(object):
             if not obn2modifier[obn].header_infered_before_compute:
                 continue
             obn_sym = self.GetSymbol4String(obn)
-            out_blob_object = self._NewBlobObject(parallel_desc_sym)
+            op_arg_attribute = op_arg_util.GetOpArgAttribute(
+                parallel_desc_sym, op_attribute, obn
+            )
+            out_blob_object = self._NewBlobObject(op_arg_attribute)
             lbi = op_attribute.arg_signature.bn_in_op2lbi[obn]
             bn_in_op2blob_object[obn] = out_blob_object
             mut1_operand_blob_objects.append((obn_sym, out_blob_object))
@@ -375,15 +382,18 @@ class InstructionsBuilder(object):
             if obn2modifier[obn].header_infered_before_compute:
                 continue
             obn_sym = self.GetSymbol4String(obn)
-            out_blob_object = self._NewBlobObject(parallel_desc_sym)
+            op_arg_attribute = op_arg_util.GetOpArgAttribute(
+                parallel_desc_sym, op_attribute, obn
+            )
+            out_blob_object = self._NewBlobObject(op_arg_attribute)
             bn_in_op2blob_object[obn] = out_blob_object
             mut2_operand_blob_objects.append((obn_sym, out_blob_object))
         return mut2_operand_blob_objects
 
-    def _NewBlobObject(self, parallel_desc_sym):
-        object_id = self._NewObjectId(parallel_desc_sym)
+    def _NewBlobObject(self, op_arg_attribute):
+        object_id = self._NewObjectId(op_arg_attribute.parallel_desc_symbol)
         return object_util.BlobObject(
-            object_id, parallel_desc_sym, self.release_blob_object_
+            object_id, op_arg_attribute, self.release_blob_object_
         )
 
     def _NewSymbolId4String(self, string):

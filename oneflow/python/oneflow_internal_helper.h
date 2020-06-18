@@ -198,9 +198,15 @@ Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
   std::shared_ptr<Operator> op = ConstructOp(op_conf, &GlobalJobDesc());
   std::shared_ptr<OpAttribute> op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
-  auto* map = op_attribute->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel();
-  for (const auto& ibn : op_attribute->input_bns()) { (*map)[ibn].mutable_mirrored_parallel(); }
-  for (const auto& obn : op_attribute->output_bns()) { (*map)[obn].mutable_mirrored_parallel(); }
+  auto* mirrored_map =
+      op_attribute->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel();
+  auto* sbp_map = op_attribute->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
+  const auto SetSignature = [&](const std::string& bn_in_op) {
+    (*mirrored_map)[bn_in_op].mutable_mirrored_parallel();
+    (*sbp_map)[bn_in_op] = SbpParallel();  // nothing set
+  };
+  for (const auto& ibn : op_attribute->input_bns()) { SetSignature(ibn); }
+  for (const auto& obn : op_attribute->output_bns()) { SetSignature(obn); }
   return PbMessage2TxtString(*op_attribute);
 }
 

@@ -18,9 +18,13 @@ class Object(object):
 
 
 class BlobObject(Object):
-    def __init__(self, object_id, parallel_desc_symbol, release):
-        Object.__init__(self, object_id, parallel_desc_symbol)
+    def __init__(self, object_id, op_arg_attribute, release):
+        Object.__init__(self, object_id, op_arg_attribute.parallel_desc_symbol)
+        self.op_arg_attribute_ = op_arg_attribute
         self.release_ = [release]
+
+    def op_arg_attribute(self):
+        return self.op_arg_attribute_
 
     def add_releaser(self, release):
         self.release_.append(release)

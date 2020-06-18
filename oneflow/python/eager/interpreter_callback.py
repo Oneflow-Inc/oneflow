@@ -5,6 +5,7 @@ import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.job.placement_pb2 as placement_pb
+import oneflow.python.framework.op_arg_util as op_arg_util
 from google.protobuf import text_format
 
 
@@ -28,7 +29,13 @@ def CastToMirrored(op_attribute_str, parallel_conf_str):
     def BuildInstruction(builder):
         with object_cache.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
             in_blob_object = bn_in_op2blob_object["in"]
-            out_blob_object = builder.MakeReferenceBlobObject(in_blob_object)
+            parallel_desc_symbol = in_blob_object.parallel_desc_symbol
+            op_arg_attribute = op_arg_util.MakeMirroredOpArgAttribute(
+                parallel_desc_symbol
+            )
+            out_blob_object = builder.MakeReferenceBlobObject(
+                in_blob_object, op_arg_attribute
+            )
             bn_in_op2blob_object["out"] = out_blob_object
         in_blob_object.add_releaser(MakeReleaser4MirroredBlobObject(op_attribute))
 
