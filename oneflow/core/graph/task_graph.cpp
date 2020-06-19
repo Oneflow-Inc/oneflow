@@ -7,6 +7,7 @@
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/thrd_id_generator.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/operator/constant_op.h"
@@ -168,17 +169,20 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   HashMap<CompTaskNode*, HashMap<int64_t, std::vector<TaskNode*>>> buf_task;
   auto MutBufTask = [&](CompTaskNode* task_node, int64_t machine_id, int32_t mem_zone_id) {
     auto& buf_vec = buf_task[task_node][machine_id];
-    if (buf_vec.empty()) { buf_vec.assign(Global<ResourceDesc>::Get()->MemZoneNum(), nullptr); }
+    if (buf_vec.empty()) {
+      buf_vec.assign(Global<ResourceDesc, ForSession>::Get()->MemZoneNum(), nullptr);
+    }
     return &(buf_vec.at(mem_zone_id));
   };
 
-  std::vector<int64_t> cpu_device_offset(Global<ResourceDesc>::Get()->TotalMachineNum(), 0);
+  std::vector<int64_t> cpu_device_offset(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum(),
+                                         0);
   auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) {
     CHECK(!task_node->IsIndependent());
     int64_t ret = -1;
     int64_t& offset = cpu_device_offset.at(task_node->machine_id());
     ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
-    offset = (offset + 1) % Global<ResourceDesc>::Get()->CpuDeviceNum();
+    offset = (offset + 1) % Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
     return ret;
   };
 
@@ -210,7 +214,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
       });
 
   MergeChainAndSetOrderInGraphForEachNode();
-  if (Global<ResourceDesc>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
 void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
@@ -496,7 +500,7 @@ void TaskGraph::GetSafeInplaceOpBlobArgList(
   InplaceLbiGraph origin_graph(obas_info, Op4OpName);
   InplaceLbiGraph safe_graph(*safe_obas_info, Op4OpName);
   origin_graph.ComputeSafeInplaceObns(safe_obas_info, IsLbiAllConsumersReachable);
-  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     origin_graph.ToDotWithFilePath(
         JoinPath("dot", "InplaceLbiGraph", GlobalJobDesc().job_name() + "_origin.dot"));
     safe_graph.ToDotWithFilePath(
