@@ -1,4 +1,5 @@
 #include "oneflow/core/job_completer/op_graph_pass.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -8,7 +9,9 @@ class DumpVariableInfoPass final : public OpGraphPass {
  public:
   DumpVariableInfoPass() = default;
   ~DumpVariableInfoPass() override = default;
-  bool IsEnabled() const override { return Global<ResourceDesc>::Get()->enable_debug_mode(); }
+  bool IsEnabled() const override {
+    return Global<ResourceDesc, ForSession>::Get()->enable_debug_mode();
+  }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
