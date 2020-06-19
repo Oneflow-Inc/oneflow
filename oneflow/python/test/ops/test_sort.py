@@ -17,7 +17,7 @@ def compare_with_tensorflow(device_type, in_shape, direction, data_type):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def SortJob(
         input=flow.MirroredTensorDef(
             tuple([dim + 10 for dim in in_shape]),

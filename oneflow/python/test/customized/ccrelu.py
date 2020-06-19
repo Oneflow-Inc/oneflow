@@ -20,7 +20,7 @@ def ccrelu(x, name):
     )
 
 
-@flow.function(func_config)
+@flow.global_function(func_config)
 def ReluJob(x=flow.FixedTensorDef((10, 2))):
     return ccrelu(x, "my_cc_relu_op")
 

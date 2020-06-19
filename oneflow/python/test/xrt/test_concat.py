@@ -10,7 +10,7 @@ def make_job(a_shape, b_shape, axis, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def concat_job(
         x=flow.FixedTensorDef(a_shape, dtype=dtype),
         y=flow.FixedTensorDef(b_shape, dtype=dtype),
@@ -24,7 +24,7 @@ def make_trt_job(a_shape, b_shape, axis, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(True)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def trt_concat_job(
         x=flow.FixedTensorDef(a_shape, dtype=dtype),
         y=flow.FixedTensorDef(b_shape, dtype=dtype),

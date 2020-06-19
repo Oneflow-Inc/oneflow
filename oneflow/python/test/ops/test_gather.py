@@ -47,7 +47,7 @@ def _make_gather_fn(
 
     if mirrored:
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def gather_fn(
             params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
             indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
@@ -56,7 +56,7 @@ def _make_gather_fn(
 
     else:
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def gather_fn(
             params_def=flow.FixedTensorDef(params.shape, dtype=flow.float),
             indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),

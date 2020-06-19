@@ -20,7 +20,7 @@ def my_test_source(name):
         )
 
 
-@flow.function(func_config)
+@flow.global_function(func_config)
 def TestSourceJob():
     return my_test_source("my_test_source")
 

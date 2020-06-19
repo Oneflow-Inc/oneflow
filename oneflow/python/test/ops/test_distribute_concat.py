@@ -7,7 +7,7 @@ def test_deadlock(test_case):
     func_config = flow.FunctionConfig()
     func_config.enable_inplace(False)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def DistributeConcat():
         with flow.device_prior_placement("gpu", "0:0"):
             w = flow.get_variable(

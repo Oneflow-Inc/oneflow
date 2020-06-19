@@ -22,7 +22,7 @@ class TestGather(unittest.TestCase):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def gather_job(
             x=flow.FixedTensorDef(input_shape, dtype=dtype),
             indices=flow.FixedTensorDef(indices_shape, dtype=flow.int32),
@@ -35,7 +35,7 @@ class TestGather(unittest.TestCase):
         config.use_xla_jit(True)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def xla_gather_job(
             x=flow.FixedTensorDef(input_shape, dtype=dtype),
             indices=flow.FixedTensorDef(indices_shape, dtype=flow.int32),
@@ -76,7 +76,7 @@ class TestBatchGather(TestGather):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def batch_gather_job(
             x=flow.FixedTensorDef(input_shape, dtype=dtype),
             indices=flow.FixedTensorDef(indices_shape, dtype=flow.int32),
@@ -89,7 +89,7 @@ class TestBatchGather(TestGather):
         config.use_xla_jit(True)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def xla_batch_gather_job(
             x=flow.FixedTensorDef(input_shape, dtype=dtype),
             indices=flow.FixedTensorDef(indices_shape, dtype=flow.int32),

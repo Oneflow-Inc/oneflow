@@ -9,7 +9,7 @@ def test_naive(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ModJob(a=flow.FixedTensorDef((5, 2)), b=flow.FixedTensorDef((5, 2))):
         return a == b
 
@@ -25,7 +25,7 @@ def test_broadcast(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ModJob(a=flow.FixedTensorDef((5, 2)), b=flow.FixedTensorDef((1, 2))):
         return a == b
 
@@ -86,12 +86,12 @@ def GenerateTest(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(dtype)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ModJob1(a=flow.FixedTensorDef(a_shape, dtype=dtype)):
         with flow.device_prior_placement(device_type, "0:0"):
             return func(a, a)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ModJob2(
         a=flow.FixedTensorDef(a_shape, dtype=dtype),
         b=flow.FixedTensorDef(b_shape, dtype=dtype),

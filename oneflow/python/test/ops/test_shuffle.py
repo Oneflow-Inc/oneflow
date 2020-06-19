@@ -23,7 +23,7 @@ def test_shuffle(_):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
 
-        @flow.function(flow.FunctionConfig())
+        @flow.global_function(flow.FunctionConfig())
         def TestJob(
             x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
         ):
@@ -43,7 +43,7 @@ def test_shuffle(_):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
 
-        @flow.function(flow.FunctionConfig())
+        @flow.global_function(flow.FunctionConfig())
         def TestJob1(
             x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
         ):

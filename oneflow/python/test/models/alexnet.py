@@ -222,7 +222,7 @@ def main(args):
     func_config.cudnn_conv_force_bwd_filter_algo(1)
     func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def alexnet_train_job():
         (labels, images) = _data_load_layer(args, args.train_dir)
         loss = alexnet(args, images, labels)
@@ -233,7 +233,7 @@ def main(args):
     func_config.default_data_type(flow.float)
     func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
     #  print(func_config.function_desc.job_config_proto)
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def alexnet_eval_job():
         with flow.distribute.consistent_strategy():
             (labels, images) = _data_load_layer(args, args.eval_dir)

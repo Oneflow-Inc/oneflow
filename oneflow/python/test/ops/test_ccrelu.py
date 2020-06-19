@@ -17,7 +17,7 @@ def ccrelu(x, name):
 def fixed_tensor_def_test(test_case, func_config):
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReluJob(a=flow.FixedTensorDef((5, 2))):
         return ccrelu(a, "my_cc_relu_op")
 
@@ -29,7 +29,7 @@ def fixed_tensor_def_test(test_case, func_config):
 def mirrored_tensor_def_test(test_case, func_config):
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReluJob(a=flow.MirroredTensorDef((5, 2))):
         return ccrelu(a, "my_cc_relu_op")
 
@@ -54,7 +54,7 @@ def test_1n2c_mirror_dynamic_ccrelu(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReluJob(a=flow.MirroredTensorDef((5, 2))):
         return ccrelu(a, "my_cc_relu_op")
 

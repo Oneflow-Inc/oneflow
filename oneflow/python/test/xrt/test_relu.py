@@ -10,7 +10,7 @@ def make_job(input_shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def relu_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.keras.activations.relu(x)
 
@@ -21,7 +21,7 @@ def make_xla_job(input_shape, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def xla_relu_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.keras.activations.relu(x)
 
@@ -32,7 +32,7 @@ def make_trt_job(input_shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(True)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def trt_relu_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.keras.activations.relu(x)
 

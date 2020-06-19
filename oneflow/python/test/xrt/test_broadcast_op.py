@@ -50,7 +50,7 @@ class TestBroadcastAddOp(TestBroadcastOp):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def broadcast_add_job(
             x=flow.FixedTensorDef(x_shape, dtype=dtype),
             y=flow.FixedTensorDef(y_shape, dtype=dtype),
@@ -63,7 +63,7 @@ class TestBroadcastAddOp(TestBroadcastOp):
         config.use_xla_jit(True)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def xla_broadcast_add_job(
             x=flow.FixedTensorDef(x_shape, dtype=dtype),
             y=flow.FixedTensorDef(y_shape, dtype=dtype),
@@ -80,7 +80,7 @@ class TestBroadcastMulOp(TestBroadcastOp):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def broadcast_mul_job(
             x=flow.FixedTensorDef(x_shape, dtype=dtype),
             y=flow.FixedTensorDef(y_shape, dtype=dtype),
@@ -93,7 +93,7 @@ class TestBroadcastMulOp(TestBroadcastOp):
         config.use_xla_jit(True)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def xla_broadcast_mul_job(
             x=flow.FixedTensorDef(x_shape, dtype=dtype),
             y=flow.FixedTensorDef(y_shape, dtype=dtype),
@@ -110,7 +110,7 @@ class TestBroadcastDivOp(TestBroadcastOp):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def broadcast_div_job(
             x=flow.FixedTensorDef(x_shape, dtype=dtype),
             y=flow.FixedTensorDef(y_shape, dtype=dtype),
@@ -123,7 +123,7 @@ class TestBroadcastDivOp(TestBroadcastOp):
         config.use_xla_jit(True)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def xla_broadcast_div_job(
             x=flow.FixedTensorDef(x_shape, dtype=dtype),
             y=flow.FixedTensorDef(y_shape, dtype=dtype),

@@ -48,7 +48,7 @@ class TestScalarAddOp(TestScalarOp):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def scalar_add_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.add(x, scalar)
 
@@ -58,7 +58,7 @@ class TestScalarAddOp(TestScalarOp):
         config.use_xla_jit(True)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def xla_scalar_add_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.add(x, scalar)
 
@@ -72,7 +72,7 @@ class TestScalarMulOp(TestScalarOp):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def scalar_mul_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.multiply(x, scalar)
 
@@ -82,7 +82,7 @@ class TestScalarMulOp(TestScalarOp):
         config.use_xla_jit(True)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def xla_scalar_mul_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.multiply(x, scalar)
 

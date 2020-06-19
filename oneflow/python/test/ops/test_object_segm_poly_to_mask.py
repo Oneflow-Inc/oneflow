@@ -155,7 +155,7 @@ def _of_poly_to_mask_pipline(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def poly_to_mask_job(
         image_def=flow.MirroredTensorListDef(
             shape=tuple(image_shape), dtype=flow.float
