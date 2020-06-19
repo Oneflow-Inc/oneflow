@@ -16,6 +16,10 @@ def Interpret(op_attribute_str, parallel_conf_str):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
     blob_register = blob_register_util.GetDefaultBlobRegister()
     _Interpret(op_attribute, parallel_conf_str, blob_register)
+    bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
+    gradient_util.TrySetBackwardUsedBlobObject(
+        op_attribute, blob_register, bw_blob_register
+    )
 
 
 def BackwardInterpret(op_attribute_str, parallel_conf_str):
@@ -48,14 +52,22 @@ def CastToMirrored(op_attribute_str, parallel_conf_str):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
     assert op_attribute.op_conf.HasField("cast_to_mirrored_conf")
     blob_register = blob_register_util.GetDefaultBlobRegister()
-    return _MirroredCast(op_attribute, blob_register)
+    _MirroredCast(op_attribute, blob_register)
+    bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
+    gradient_util.TrySetBackwardUsedBlobObject(
+        op_attribute, blob_register, bw_blob_register
+    )
 
 
 def CastFromMirrored(op_attribute_str, parallel_conf_str):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
     assert op_attribute.op_conf.HasField("cast_from_mirrored_conf")
     blob_register = blob_register_util.GetDefaultBlobRegister()
-    return _MirroredCast(op_attribute, blob_register)
+    _MirroredCast(op_attribute, blob_register)
+    bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
+    gradient_util.TrySetBackwardUsedBlobObject(
+        op_attribute, blob_register, bw_blob_register
+    )
 
 
 def _MirroredCast(op_attribute, blob_register):

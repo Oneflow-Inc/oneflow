@@ -140,10 +140,70 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 endforeach()
 
+if(PY3)
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+  find_package(Python3 COMPONENTS Development NumPy)
+  if (Python3_Development_FOUND AND Python3_INCLUDE_DIRS)
+    set(Python_INCLUDE_DIRS ${Python3_INCLUDE_DIRS})
+  endif()
+  if (Python3_NumPy_FOUND AND Python3_NumPy_INCLUDE_DIRS)
+    set(Python_NumPy_INCLUDE_DIRS ${Python3_NumPy_INCLUDE_DIRS})
+  endif()
+
+  message("-- Python3 specified. Version found: " ${Python3_VERSION})
+  set(Python_EXECUTABLE ${Python3_EXECUTABLE})
+else()
+  find_package(Python2 COMPONENTS Interpreter REQUIRED)
+  find_package(Python2 COMPONENTS Development NumPy)
+  if (Python2_Development_FOUND AND Python2_INCLUDE_DIRS)
+    set(Python_INCLUDE_DIRS ${Python2_INCLUDE_DIRS})
+  endif()
+  if (Python2_NumPy_FOUND AND Python2_NumPy_INCLUDE_DIRS)
+    set(Python_NumPy_INCLUDE_DIRS ${Python2_NumPy_INCLUDE_DIRS})
+  endif()
+  message("-- Python2 specified. Version found: " ${Python2_VERSION})
+  set(Python_EXECUTABLE ${Python2_EXECUTABLE})
+endif()
+if (NOT Python_INCLUDE_DIRS)
+  message(STATUS "Getting python include directory from sysconfig..")
+  execute_process(
+    COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_paths()['include'])" 
+    OUTPUT_VARIABLE Python_INCLUDE_DIRS
+    RESULT_VARIABLE ret_code)
+  string(STRIP ${Python_INCLUDE_DIRS} Python_INCLUDE_DIRS)
+  if ((NOT (ret_code EQUAL "0")) OR (NOT IS_DIRECTORY ${Python_INCLUDE_DIRS})
+    OR (NOT EXISTS ${Python_INCLUDE_DIRS}/Python.h))
+    set(Python_INCLUDE_DIRS "")
+  endif()
+endif()
+if (NOT Python_INCLUDE_DIRS)
+  message(FATAL_ERROR "Cannot find python include directory")
+endif()
+message(STATUS "Found python include directory ${Python_INCLUDE_DIRS}")
+
+if (NOT Python_NumPy_INCLUDE_DIRS)
+  message(STATUS "Getting numpy include directory by numpy.get_include()..")
+  execute_process(
+    COMMAND ${Python_EXECUTABLE} -c "import numpy; print(numpy.get_include())" 
+    OUTPUT_VARIABLE Python_NumPy_INCLUDE_DIRS
+    RESULT_VARIABLE ret_code)
+  string(STRIP ${Python_NumPy_INCLUDE_DIRS} Python_NumPy_INCLUDE_DIRS)
+  if ((NOT ret_code EQUAL 0) OR (NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS}) 
+    OR (NOT EXISTS ${Python_NumPy_INCLUDE_DIRS}/numpy/arrayobject.h))
+    set(Python_NumPy_INCLUDE_DIRS "")
+  endif()
+endif()
+if (NOT Python_NumPy_INCLUDE_DIRS)
+  message(FATAL_ERROR "Cannot find numpy include directory")
+endif()
+message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
+
+include_directories(${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+
 # clang format
 add_custom_target(of_format
-  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
-  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow/python --fix
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow/python --fix
   )
 
 # generate version
@@ -217,26 +277,6 @@ endforeach()
 RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
                               ${PROJECT_SOURCE_DIR}
                               ${of_all_rel_swigs})
-if(${CMAKE_VERSION} VERSION_LESS "3.14") 
-  find_package(PythonLibs)
-  if(NOT PYTHONLIBS_FOUND)
-    message(FATAL_ERROR "python include files and libraries not found")
-  endif()
-  message("-- Python Version: " ${PYTHONLIBS_VERSION_STRING})
-  message("You can set PYTHON_INCLUDE_DIR and PYTHON_LIBRARY to specify Python version, run \"sysconfig.get_paths()\" in python")
-  if(NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS})
-    message(FATAL_ERROR "Python_NumPy_INCLUDE_DIRS not set. You could get it by running \"numpy.get_include()\" in python")
-  endif()
-  include_directories(${PYTHON_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
-elseif(PY3)
-  find_package (Python3 COMPONENTS Development NumPy)
-  message("-- Python3 specified. Version found: " ${Python3_VERSION})
-  include_directories(${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-else()
-  find_package (Python2 COMPONENTS Development NumPy)
-  message("-- Python2 specified. Version found: " ${Python2_VERSION})
-  include_directories(${Python2_INCLUDE_DIRS} ${Python2_NumPy_INCLUDE_DIRS})
-endif()
 oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
@@ -252,14 +292,14 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python"
-    COMMAND python3 "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
+    COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
 file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
 copy_files("${oneflow_all_python_file}" "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}" of_pyscript_copy)
 add_dependencies(of_pyscript_copy of_protoobj)
 add_custom_target(generate_api ALL
   COMMAND rm -rf ${of_pyscript_dir}/oneflow/generated
-  COMMAND export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH && python3 ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow/generated)
+  COMMAND export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH && ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow/generated)
 add_dependencies(generate_api of_pyscript_copy)
 add_dependencies(generate_api oneflow_internal)
 # get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)

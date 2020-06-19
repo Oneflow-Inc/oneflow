@@ -6,6 +6,7 @@
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 

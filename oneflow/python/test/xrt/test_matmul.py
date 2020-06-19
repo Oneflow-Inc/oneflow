@@ -10,7 +10,7 @@ def make_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32)
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def matmul_job(
         a=flow.FixedTensorDef(a_shape, dtype=dtype),
         b=flow.FixedTensorDef(b_shape, dtype=dtype),
@@ -24,7 +24,7 @@ def make_xla_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.floa
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def xla_matmul_job(
         a=flow.FixedTensorDef(a_shape, dtype=dtype),
         b=flow.FixedTensorDef(b_shape, dtype=dtype),

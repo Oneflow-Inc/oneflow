@@ -6,7 +6,7 @@ func_config.default_data_type(flow.float)
 
 
 def test_naive(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def AddJob(xs=[flow.FixedTensorDef((5, 2))] * 3):
         return flow.math.add_n(xs)
 
@@ -80,7 +80,7 @@ def test_100_inputs(test_case):
 
 
 def GenerateTest(test_case, shape, num_inputs):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def AddJob(xs=[flow.FixedTensorDef(shape)] * num_inputs):
         return flow.math.add_n(xs)
 

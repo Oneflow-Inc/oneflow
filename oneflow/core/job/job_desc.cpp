@@ -9,6 +9,7 @@
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 

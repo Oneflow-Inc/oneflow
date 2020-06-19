@@ -22,7 +22,7 @@ def Watch(blob_watched, handler_or_prompt=None):
         handler_or_prompt: a function has an argument of a `Blob`
     """
     handler = _MakeHandler(handler_or_prompt)
-    if type(blob_watched) is ConsistentBlob:
+    if isinstance(blob_watched, ConsistentBlob):
         handler_uuid = str(uuid.uuid1())
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = id_util.UniqueStr("ForeignWatch_")
@@ -30,12 +30,12 @@ def Watch(blob_watched, handler_or_prompt=None):
         op_conf.foreign_watch_conf.handler_uuid = handler_uuid
         compile_context.CurJobAddOp(op_conf, blob_watched.parallel_conf)
         watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
-    elif type(blob_watched) is MirroredBlob:
+    elif isinstance(blob_watched, MirroredBlob):
         handlers = _MakeSubConsistentBlobHandlers(blob_watched, handler)
         for consistent_blob, sub_handler in zip(
             blob_watched.sub_consistent_blob_list, handlers
         ):
-            assert type(consistent_blob) is ConsistentBlob
+            assert isinstance(consistent_blob, ConsistentBlob)
             Watch(consistent_blob, sub_handler)
     else:
         raise NotImplementedError
@@ -50,19 +50,19 @@ def WatchDiff(blob_watched, handler_or_prompt=None):
         handler_or_prompt: a function has an argument of a `Blob`
     """
     handler = _MakeHandler(handler_or_prompt)
-    if type(blob_watched) is ConsistentBlob:
+    if isinstance(blob_watched, ConsistentBlob):
         handler_uuid = str(uuid.uuid1())
         lbi_and_uuid = LbiAndDiffWatcherUuidPair()
         lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
         lbi_and_uuid.watcher_uuid = handler_uuid
         c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
         watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
-    elif type(blob_watched) is MirroredBlob:
+    elif isinstance(blob_watched, MirroredBlob):
         handlers = _MakeSubConsistentBlobHandlers(blob_watched, handler)
         for consistent_blob, sub_handler in zip(
             blob_watched.sub_consistent_blob_list, handlers
         ):
-            assert type(consistent_blob) is ConsistentBlob
+            assert isinstance(consistent_blob, ConsistentBlob)
             WatchDiff(consistent_blob, sub_handler)
     else:
         raise NotImplementedError
@@ -82,7 +82,7 @@ def _MakeHandler(handler_or_prompt):
 
 
 def _MakeSubConsistentBlobHandlers(blob_watched, handler):
-    assert type(blob_watched) is MirroredBlob
+    assert isinstance(blob_watched, MirroredBlob)
     handler4parallel_id_and_local_blob = _MakeHandler4ParallelIdAndLocalBlob(
         blob_watched, handler
     )

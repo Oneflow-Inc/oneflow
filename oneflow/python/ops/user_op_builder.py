@@ -22,6 +22,7 @@ import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import random
+import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.blob_register as blob_register_util
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
@@ -106,15 +107,18 @@ class EagerLogicalUserOp(UserOp):
         op_attribute = compile_context.CurJobAddOp(self.op_conf_)
 
         def BuildInstruction(builder):
-            with blob_register.BnInOp2BlobObjectScope(
-                op_attribute
-            ) as bn_in_op2blob_object:
+            get_scope = blob_register.BnInOp2BlobObjectScope
+            with get_scope(op_attribute) as bn_in_op2blob_object:
                 parallel_conf = oneflow.placement.current_scope().default_parallel_conf
                 builder.StatelessCall(
                     op_attribute,
                     parallel_conf,
                     bn_in_op2blob_object=bn_in_op2blob_object,
                 )
+            bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
+            gradient_util.TrySetBackwardUsedBlobObject(
+                op_attribute, blob_register, bw_blob_register
+            )
 
         vm_util.LogicalRun(BuildInstruction)
         return self

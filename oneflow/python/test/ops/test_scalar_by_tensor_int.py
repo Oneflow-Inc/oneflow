@@ -23,7 +23,7 @@ def _run_test(test_case, x, y, case, dtype=None, device="gpu"):
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ScalarByTensorJob(
         x=flow.FixedTensorDef(x.shape, dtype=dtype),
         y=flow.FixedTensorDef(y.shape, dtype=dtype),

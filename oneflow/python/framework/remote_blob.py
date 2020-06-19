@@ -4,6 +4,8 @@ import oneflow
 import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.python.framework.watch_scope_util as watch_scope_util
 import oneflow.python.framework.blob_trait as blob_trait
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
@@ -237,13 +239,6 @@ class EagerMirroredBlob(MirroredBlob):
         self.parallel_conf_ = c_api_util.JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(
             self.job_name_, self.lbn_
         )
-        ConsumedByGradientOp = (
-            c_api_util.JobBuildAndInferCtx_MirroredBlobConsumedByGradientOp
-        )
-        if ConsumedByGradientOp(self.job_name_, self.lbn_):
-            gradient_util.GetDefaultBackwardBlobRegister().TrySetObject4BlobName(
-                self.unique_name, self.blob_object_
-            )
 
     @property
     def blob_object(self):
@@ -343,13 +338,6 @@ class EagerConsistentBlob(ConsistentBlob):
         self.parallel_conf_ = c_api_util.JobBuildAndInferCtx_GetParallelConfFromProducerView(
             self.job_name_, self.lbn_
         )
-        ConsumedByGradientOp = c_api_util.JobBuildAndInferCtx_ConsumedByGradientOp
-        if ConsumedByGradientOp(
-            self.job_name_, self.lbn_
-        ) and not gradient_util.HasBwUsedBlobObject4UniqueName(self.unique_name):
-            gradient_util.SetBwUsedBlobObject4UniqueName(
-                self.unique_name, self.blob_object_
-            )
 
     @property
     def blob_object(self):

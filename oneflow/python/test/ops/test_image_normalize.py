@@ -9,7 +9,7 @@ def _of_image_normalize(images, image_shape, std, mean):
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def image_normalize_job(
         images_def=flow.MirroredTensorListDef(shape=image_shape, dtype=flow.float)
     ):

@@ -20,6 +20,7 @@
 #include "oneflow/core/job/foreign_watcher.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/cluster.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/op_registration.h"

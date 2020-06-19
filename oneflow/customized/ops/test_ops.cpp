@@ -173,7 +173,7 @@ REGISTER_USER_OP("TestMultiOutputOrder")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 

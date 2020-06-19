@@ -10,7 +10,7 @@ def make_job(input_shape, dtype=flow.float32, target_dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def cast_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.cast(x, dtype=target_dtype)
 
@@ -21,7 +21,7 @@ def make_xla_job(input_shape, dtype=flow.float32, target_dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def xla_cast_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.cast(x, dtype=target_dtype)
 

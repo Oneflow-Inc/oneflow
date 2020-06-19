@@ -8,6 +8,7 @@
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/profiler.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/regst_lifetime_graph.h"
 #include "oneflow/core/graph/sharable_mem_block_graph.h"

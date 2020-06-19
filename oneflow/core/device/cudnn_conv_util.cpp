@@ -6,6 +6,7 @@
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 

@@ -10,7 +10,7 @@ def make_job(x_shape, b_shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def bias_add_job(
         x=flow.FixedTensorDef(x_shape, dtype=dtype),
         bias=flow.FixedTensorDef(b_shape, dtype=dtype),
@@ -24,7 +24,7 @@ def make_xla_job(x_shape, b_shape, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def xla_bias_add_job(
         x=flow.FixedTensorDef(x_shape, dtype=dtype),
         bias=flow.FixedTensorDef(b_shape, dtype=dtype),
@@ -38,7 +38,7 @@ def make_trt_job(x_shape, b_shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(True)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def trt_bias_add_job(
         x=flow.FixedTensorDef(x_shape, dtype=dtype),
         bias=flow.FixedTensorDef(b_shape, dtype=dtype),

@@ -21,7 +21,7 @@ def test_reshape(x, shape, name):
     )
 
 
-@flow.function(func_config)
+@flow.global_function(func_config)
 def ReshapeJob(x=flow.FixedTensorDef((10, 2))):
     return test_reshape(x, [5, 4], "xx_test_reshape")
 

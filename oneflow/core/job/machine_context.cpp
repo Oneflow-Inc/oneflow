@@ -3,6 +3,7 @@
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/env_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
