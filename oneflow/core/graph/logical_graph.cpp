@@ -3,6 +3,7 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -10,7 +11,7 @@ LogicalGraph::LogicalGraph(const Job& job) : job_(job) {
   BuildFwStruct();
   MergeEdge();
   SetNodeDataLbi();
-  if (Global<ResourceDesc>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
 template<typename LogicalNodeType>

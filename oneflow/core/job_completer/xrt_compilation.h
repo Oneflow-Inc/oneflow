@@ -3,6 +3,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 #if defined(WITH_XLA) || defined(WITH_TENSORRT)
 #include "oneflow/xrt/api.h"
@@ -14,7 +15,7 @@ namespace oneflow {
 inline void RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
 #ifdef OF_WITH_XRT
   const auto& job_desc = GlobalJobDesc();
-  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_without_xrt_" + std::to_string(job_desc.job_id()))
         ->Write(*job);
   }
@@ -22,7 +23,7 @@ inline void RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
   // and `RebuildCompiledJob`.
   xrt::RunCompilationTimeXrtPasses(op_graph, job, job_desc.IsTrain());
 
-  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_with_xrt_" + std::to_string(job_desc.job_id()))
         ->Write(*job);
   }
