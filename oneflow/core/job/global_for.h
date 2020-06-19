@@ -5,9 +5,8 @@
 
 namespace oneflow {
 
-// no definition needed
-class ForSession;
-class ForEnv;
+class ForSession {};
+class ForEnv {};
 
 }  // namespace oneflow
 

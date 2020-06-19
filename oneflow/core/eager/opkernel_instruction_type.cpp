@@ -40,8 +40,6 @@ class InitOpKernelObjectInstructionType final : public vm::InstructionType {
       const auto& op_conf_object =
           instruction->operand_type(view->op_conf(i)).Get<vm::ObjectWrapper<OperatorConf>>();
       CHECK(op_conf_object->has_user_conf());
-      CHECK(op_conf_object->user_conf().input().empty());
-      CHECK(op_conf_object->user_conf().output().empty());
       vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(view->op(i));
       const auto& parallel_desc = instruction->parallel_desc();
       CHECK(static_cast<bool>(parallel_desc));
