@@ -10,17 +10,17 @@ from google.protobuf import text_format
 
 import oneflow.python.eager.blob_register as blob_register_util
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
-
 
 def Interpret(op_attribute_str, parallel_conf_str):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
+
+    blob_register = blob_register_util.GetDefaultBlobRegister()
     if op_attribute.op_conf.HasField("cast_to_mirrored_conf"):
-        return _MirroredCast(op_attribute)
+        return _MirroredCast(op_attribute, blob_register)
     if op_attribute.op_conf.HasField("cast_from_mirrored_conf"):
-        return _MirroredCast(op_attribute)
+        return _MirroredCast(op_attribute, blob_register)
     parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
-    return _Interpret(op_attribute, parallel_conf)
+    return _Interpret(op_attribute, parallel_conf, blob_register)
 
 
 def BackwardInterpret(op_attribute_str, parallel_conf_str):
@@ -33,7 +33,7 @@ def BackwardInterpret(op_attribute_str, parallel_conf_str):
     return _Interpret(op_attribute, parallel_conf)
 
 
-def _Interpret(op_attribute, parallel_conf):
+def _Interpret(op_attribute, parallel_conf, blob_register):
     def BuildInstruction(builder):
         with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
             builder.StatelessCall(
@@ -46,16 +46,18 @@ def _Interpret(op_attribute, parallel_conf):
 def CastToMirrored(op_attribute_str, parallel_conf_str):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
     assert op_attribute.op_conf.HasField("cast_to_mirrored_conf")
-    return _MirroredCast(op_attribute)
+    blob_register = blob_register_util.GetDefaultBlobRegister()
+    return _MirroredCast(op_attribute, blob_register)
 
 
 def CastFromMirrored(op_attribute_str, parallel_conf_str):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
     assert op_attribute.op_conf.HasField("cast_from_mirrored_conf")
-    return _MirroredCast(op_attribute)
+    blob_register = blob_register_util.GetDefaultBlobRegister()
+    return _MirroredCast(op_attribute, blob_register)
 
 
-def _MirroredCast(op_attribute):
+def _MirroredCast(op_attribute, blob_register):
     def BuildInstruction(builder):
         with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
             in_blob_object = bn_in_op2blob_object["in"]
@@ -67,12 +69,13 @@ def _MirroredCast(op_attribute):
                 in_blob_object, op_arg_attribute
             )
             bn_in_op2blob_object["out"] = out_blob_object
-        in_blob_object.add_releaser(_MakeReleaser4MirroredCastBlobObject(op_attribute))
+        release = _MakeReleaser4MirroredCastBlobObject(op_attribute, blob_register)
+        in_blob_object.add_releaser(release)
 
     vm_util.LogicalRun(BuildInstruction)
 
 
-def _MakeReleaser4MirroredCastBlobObject(op_attribute):
+def _MakeReleaser4MirroredCastBlobObject(op_attribute, blob_register):
     def ReleaseMirroredBlobObject(*args):
         for obn in op_attribute.output_bns:
             lbi = op_attribute.arg_signature.bn_in_op2lbi[obn]
