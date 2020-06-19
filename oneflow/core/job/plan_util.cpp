@@ -1,4 +1,5 @@
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/memory/memory_case_util.h"
@@ -155,8 +156,8 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
 }
 
 void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
-  size_t machine_num = Global<ResourceDesc>::Get()->TotalMachineNum();
-  size_t gpu_device_num = Global<ResourceDesc>::Get()->GpuDeviceNum();
+  size_t machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
+  size_t gpu_device_num = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
   std::vector<std::vector<std::vector<std::string>>> machine_id2device_id2node_list(machine_num);
   for (size_t i = 0; i < machine_num; ++i) {
     machine_id2device_id2node_list[i].resize(gpu_device_num);
