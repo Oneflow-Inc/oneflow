@@ -5,7 +5,6 @@
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/copy_instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/cuda_instruction_status_querier.h"

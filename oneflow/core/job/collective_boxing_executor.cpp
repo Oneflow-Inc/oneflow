@@ -6,6 +6,7 @@
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -106,7 +107,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
 };
 
 NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
-    : collective_boxing_conf_(Global<ResourceDesc>::Get()->collective_boxing_conf()),
+    : collective_boxing_conf_(Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf()),
       shutdown_(false) {
   CHECK_GT(collective_boxing_conf_.nccl_num_streams(), 0);
   num_streams_ = collective_boxing_conf_.nccl_num_streams();
@@ -442,7 +443,7 @@ CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan)
 void CollectiveBoxingExecutor::Init() {
   for (const auto& job_id7request_set : collective_boxing_plan_.job_id2request_set()) {
     const CollectiveBoxingConf collective_boxing_conf =
-        Global<ResourceDesc>::Get()->collective_boxing_conf();
+        Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
     const int64_t job_id = job_id7request_set.first;
     const RequestSet& request_set = job_id7request_set.second;
     std::vector<const RequestDesc*> requests;
@@ -497,7 +498,7 @@ void CollectiveBoxingExecutor::Init() {
 }
 
 void CollectiveBoxingExecutor::DumpSummary() const {
-  if (!Global<ResourceDesc>::Get()->enable_debug_mode()) { return; }
+  if (!Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { return; }
   auto group_ls = TeePersistentLogStream::Create("boxing/collective/group");
   for (int64_t group_id = 0; group_id < group_id2group_state_.size(); ++group_id) {
     group_ls << "group id: " << std::to_string(group_id) << "\n";
