@@ -46,7 +46,7 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ConvJob():
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(

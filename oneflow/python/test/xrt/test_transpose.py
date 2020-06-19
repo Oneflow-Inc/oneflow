@@ -10,7 +10,7 @@ def make_job(input_shape, permute, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def transpose_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.transpose(x, perm=permute)
 
@@ -21,7 +21,7 @@ def make_xla_job(input_shape, permute, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def xla_transpose_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.transpose(x, perm=permute)
 
@@ -32,7 +32,7 @@ def make_trt_job(input_shape, permute, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(True)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def trt_transpose_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.transpose(x, perm=permute)
 

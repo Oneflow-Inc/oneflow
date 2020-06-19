@@ -9,7 +9,7 @@ func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
 
 def test_categorical_ordinal_encoder_gpu(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def test_job(x=flow.FixedTensorDef((10000,), dtype=flow.int64)):
         return flow.layers.categorical_ordinal_encoder(x, capacity=320000)
 

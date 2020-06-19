@@ -25,7 +25,7 @@ def compare_with_tensorflow(device_type, data_type, shape):
     def np_softmax(x):
         return np.exp(x) / np.sum(np.exp(x), axis=1, keepdims=True)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def SoftmaxCrossEntropyWithLogitsJob(
         labels=flow.FixedTensorDef(shape, dtype=type_name_to_flow_type[data_type])
     ):

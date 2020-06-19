@@ -19,7 +19,7 @@ def test_loss_inplace(test_case):
 
 
 def test_inplace_variable(test_case):
-    @flow.function(MakeFuncConfig(True))
+    @flow.global_function(MakeFuncConfig(True))
     def InplaceVariable():
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(1))
         y = flow.math.relu(w)
@@ -32,7 +32,7 @@ def test_inplace_variable(test_case):
 
 
 def test_deadlock(test_case):
-    @flow.function(MakeFuncConfig(True))
+    @flow.global_function(MakeFuncConfig(True))
     def Foo(x=flow.FixedTensorDef((10,))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
@@ -41,7 +41,7 @@ def test_deadlock(test_case):
 
 
 def test_nodeadlock_with_return(test_case):
-    @flow.function(MakeFuncConfig(True))
+    @flow.global_function(MakeFuncConfig(True))
     def Foo(x=flow.FixedTensorDef((10,))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
@@ -51,7 +51,7 @@ def test_nodeadlock_with_return(test_case):
 
 
 def test_reentrant_lock_check_failed(test_case):
-    @flow.function(MakeFuncConfig(True))
+    @flow.global_function(MakeFuncConfig(True))
     def Foo(x=flow.FixedTensorDef((10,))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
@@ -60,7 +60,7 @@ def test_reentrant_lock_check_failed(test_case):
 
 
 def test_const_inplace_variable(test_case):
-    @flow.function(MakeFuncConfig(True))
+    @flow.global_function(MakeFuncConfig(True))
     def InplaceVariable():
         w = flow.get_variable("w", (2, 5), initializer=flow.constant_initializer(1))
         y = flow.reshape(w, (10,))
@@ -77,13 +77,13 @@ def TrainCompare(test_case, func):
     func_config.train.primary_lr(5)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def EnableInplace():
         return func("w0")
 
     func_config.enable_inplace(False)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def DisableInplace():
         return func("w1")
 

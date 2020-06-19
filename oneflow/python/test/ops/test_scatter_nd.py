@@ -69,7 +69,7 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
 
     if mirrored:
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def scatter_nd_fn(
             indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
             updates_def=flow.MirroredTensorDef(updates.shape, dtype=flow.float),
@@ -78,7 +78,7 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
 
     else:
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def scatter_nd_fn(
             indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
             updates_def=flow.FixedTensorDef(updates.shape, dtype=flow.float),
@@ -181,7 +181,7 @@ def _compare_scatter_nd_update_with_tf(
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def scatter_nd_update_grad_fn(
         x_def=flow.FixedTensorDef(params.shape, dtype=flow.float),
         indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
@@ -265,7 +265,7 @@ def _of_tensor_scatter_nd_add(
     if mirrored:
         func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def tensor_scatter_nd_add_fn(
             params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
             indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
@@ -284,7 +284,7 @@ def _of_tensor_scatter_nd_add(
     else:
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def tensor_scatter_nd_add_fn(
             params_def=flow.FixedTensorDef(params.shape, dtype=flow.float),
             indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
@@ -353,7 +353,7 @@ def _of_scatter_nd_dynamic_indices(
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def scatter_nd_fn(
         indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
         updates_def=flow.MirroredTensorDef(updates_static_shape, dtype=flow.float),
@@ -392,7 +392,7 @@ def _of_tensor_scatter_nd_update_dynamic_indices(
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def tensor_scatter_nd_update_fn(
         params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
         indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
@@ -439,7 +439,7 @@ def _of_tensor_scatter_nd_add_dynamic_indices(
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def tensor_scatter_nd_add_fn(
         params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
         indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),

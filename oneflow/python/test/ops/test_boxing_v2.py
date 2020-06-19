@@ -15,7 +15,7 @@ def _test_split_to_split(
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.use_boxing_v2(True)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def split_to_split_job(x=flow.FixedTensorDef((96, 96))):
         with flow.fixed_placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(x.with_distribute(flow.distribute.split(src_axis)))
@@ -50,7 +50,7 @@ def _test_split_to_broadcast(
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.use_boxing_v2(True)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def split_to_broadcast_job(x=flow.FixedTensorDef((96, 96))):
         with flow.fixed_placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(x.with_distribute(flow.distribute.split(src_axis)))
@@ -84,7 +84,7 @@ def _test_broadcast_to_split(
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.use_boxing_v2(True)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def broadcast_to_split_job(x=flow.FixedTensorDef((96, 96))):
         with flow.fixed_placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(x.with_distribute(flow.distribute.broadcast()))
@@ -118,7 +118,7 @@ def _test_partial_sum_to_split(
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.use_boxing_v2(True)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def partial_sum_to_split_job(x=flow.FixedTensorDef((96, 96, 96))):
         with flow.fixed_placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(x.with_distribute(flow.distribute.split(0)))
@@ -153,7 +153,7 @@ def _test_partial_sum_to_broadcast(
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.use_boxing_v2(True)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def partial_sum_to_broadcast_job(x=flow.FixedTensorDef((96, 96, 96))):
         with flow.fixed_placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(x.with_distribute(flow.distribute.split(0)))
@@ -187,7 +187,7 @@ def _test_broadcast_to_broadcast(
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.use_boxing_v2(True)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def broadcast_to_broadcast_job(x=flow.FixedTensorDef((96, 96, 96))):
         with flow.fixed_placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(x.with_distribute(flow.distribute.broadcast()))
@@ -218,7 +218,7 @@ def _test_multi_lbi(src_device_type, dst_device_type, src_device_num, dst_device
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.use_boxing_v2(True)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def multi_lbi_job(x=flow.FixedTensorDef((96, 96, 96))):
         with flow.fixed_placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src_s0 = flow.identity(x.with_distribute(flow.distribute.split(0)))

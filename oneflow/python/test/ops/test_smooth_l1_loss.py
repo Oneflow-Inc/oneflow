@@ -75,7 +75,7 @@ def test_smooth_l1_loss(_):
                 b.ndarray(),
             )
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def TestJob(
             prediction=flow.FixedTensorDef(
                 prediction_shape, dtype=type_name_to_flow_type[data_type]

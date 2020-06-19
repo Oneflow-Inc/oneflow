@@ -19,7 +19,7 @@ def compare_with_tensorflow(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReduceSumJob(x=flow.FixedTensorDef(input_shape)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
@@ -86,7 +86,7 @@ def test_batch_axis_reduced(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):
         y = flow.math.reduce_sum(x)
         test_case.assertTrue(y.split_axis is None)

@@ -47,7 +47,7 @@ def _test_unsorted_segment_sum_model_parallel_fw(
         out_shape, segment_ids_shape, axis
     )
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def unsorted_segment_sum_job(
         data=flow.FixedTensorDef(data_arr.shape, dtype=flow.float),
         segment_ids=flow.FixedTensorDef(segment_ids_arr.shape, dtype=flow.int32),

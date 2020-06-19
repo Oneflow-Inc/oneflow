@@ -12,7 +12,7 @@ def _of_object_bbox_flip(bbox_list, image_size, flip_code):
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def object_bbox_flip_job(
         bbox_def=flow.MirroredTensorListDef(shape=tuple(bbox_shape), dtype=flow.float),
         image_size_def=flow.MirroredTensorDef(shape=image_size.shape, dtype=flow.int32),

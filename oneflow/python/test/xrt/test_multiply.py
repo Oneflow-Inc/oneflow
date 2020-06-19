@@ -10,7 +10,7 @@ def make_job(x_shape, y_shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def multiply_job(
         x=flow.FixedTensorDef(x_shape, dtype=dtype),
         y=flow.FixedTensorDef(y_shape, dtype=dtype),
@@ -24,7 +24,7 @@ def make_trt_job(x_shape, y_shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(True)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def trt_multiply_job(
         x=flow.FixedTensorDef(x_shape, dtype=dtype),
         y=flow.FixedTensorDef(y_shape, dtype=dtype),
