@@ -30,7 +30,7 @@ def _of_assign_and_relu(value, dtype, device_type):
     func_config.default_placement_scope(flow.fixed_placement(device_type, "0:0"))
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def assign_fn(value_def=flow.FixedTensorDef(value.shape, dtype=dtype)):
         var = flow.get_variable(
             name="var",
@@ -40,7 +40,7 @@ def _of_assign_and_relu(value, dtype, device_type):
         )
         flow.assign(var, value_def)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def relu_fn():
         var = flow.get_variable(
             name="var",

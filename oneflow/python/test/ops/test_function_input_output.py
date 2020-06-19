@@ -3,7 +3,7 @@ import oneflow as flow
 
 
 def test_FixedTensorDef(test_case):
-    @flow.function()
+    @flow.global_function()
     def Foo(x=flow.FixedTensorDef((2, 5))):
         return x
 
@@ -15,7 +15,7 @@ def test_FixedTensorDef(test_case):
 
 
 def test_FixedTensorDef_batch_axis(test_case):
-    @flow.function()
+    @flow.global_function()
     def Foo(x=flow.FixedTensorDef((2, 5), batch_axis=1)):
         test_case.assertEqual(x.batch_axis, 1)
         return x
@@ -25,7 +25,7 @@ def test_FixedTensorDef_batch_axis(test_case):
 
 
 def test_FixedTensorDef_no_batch_axis(test_case):
-    @flow.function()
+    @flow.global_function()
     def Foo(x=flow.FixedTensorDef((2, 5), batch_axis=None)):
         test_case.assertTrue(x.batch_axis is None)
         return x
@@ -37,7 +37,7 @@ def test_FixedTensorDef_no_batch_axis(test_case):
 def test_FixedTensorDef_2_device(test_case):
     flow.config.gpu_device_num(2)
 
-    @flow.function()
+    @flow.global_function()
     def Foo(x=flow.FixedTensorDef((2, 5))):
         return x
 
@@ -49,7 +49,7 @@ def test_FixedTensorDef_2_device(test_case):
 
 
 def test_MirroredTensorDef(test_case):
-    @flow.function()
+    @flow.global_function()
     def Foo(x=flow.MirroredTensorDef((2, 5))):
         return x
 
@@ -60,7 +60,7 @@ def test_MirroredTensorDef(test_case):
 
 
 def test_MirroredTensorListDef(test_case):
-    @flow.function()
+    @flow.global_function()
     def Foo(x=flow.MirroredTensorListDef((2, 5))):
         return x
 
@@ -78,7 +78,7 @@ def test_MirroredTensorDef_4_device(test_case):
     image_shape = (64, 3, 224, 224)
     label_shape = (64, 1)
 
-    @flow.function()
+    @flow.global_function()
     def Foo(
         image_label=[
             flow.MirroredTensorDef(image_shape),

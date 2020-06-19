@@ -20,7 +20,7 @@ def GenerateTest(test_case, shape):
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def TestMultiOutputOrderJob(x=flow.FixedTensorDef(shape)):
         return TestMultiOutputOrder(x, "my_2_output_op")
 

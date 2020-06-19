@@ -224,7 +224,7 @@ def main(args):
     train_config.train.model_update_conf(dict(naive_conf={}))
     train_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 
-    @flow.function(train_config)
+    @flow.global_function(train_config)
     def vgg_train_job():
         (labels, images) = _data_load_layer(args, args.train_dir)
         to_return = vgg(images, labels)
@@ -237,7 +237,7 @@ def main(args):
     eval_config.default_data_type(flow.float)
     eval_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 
-    @flow.function(eval_config)
+    @flow.global_function(eval_config)
     def vgg_eval_job():
         (labels, images) = _data_load_layer(args, args.eval_dir)
         return vgg(images, labels, False)

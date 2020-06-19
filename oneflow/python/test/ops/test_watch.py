@@ -9,7 +9,7 @@ def test_simple(test_case):
     def EqOnes(x):
         test_case.assertTrue(np.allclose(data, x.ndarray()))
 
-    @flow.function()
+    @flow.global_function()
     def ReluJob(x=flow.FixedTensorDef((10,))):
         flow.watch(x, EqOnes)
 
@@ -23,7 +23,7 @@ def test_two_device(test_case):
     def EqOnes(x):
         test_case.assertTrue(np.allclose(data, x.ndarray()))
 
-    @flow.function()
+    @flow.global_function()
     def ReluJob(x=flow.FixedTensorDef((10,))):
         flow.watch(flow.math.relu(x), EqOnes)
 

@@ -599,7 +599,7 @@ def main(args):
     func_config.train.model_update_conf(dict(naive_conf={}))
     func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def TrainNet():
         (images, labels) = _data_load_layer(args, args.train_dir)
         loss = InceptionV3(images, labels)

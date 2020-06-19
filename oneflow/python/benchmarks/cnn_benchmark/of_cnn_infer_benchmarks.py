@@ -127,7 +127,7 @@ if args.precision == "float16":
         func_config.tensorrt.use_fp16()
 
 
-@flow.function(func_config)
+@flow.global_function(func_config)
 def InferenceNet():
 
     total_device_num = args.node_num * args.gpu_num_per_node

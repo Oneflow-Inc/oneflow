@@ -157,7 +157,7 @@ if args.weight_l2:
 flow.config.gpu_device_num(args.gpu_num_per_node)
 
 
-@flow.function(func_config)
+@flow.global_function(func_config)
 def TrainNet():
 
     total_device_num = args.node_num * args.gpu_num_per_node

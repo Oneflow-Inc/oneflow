@@ -26,7 +26,7 @@ def RunOneflowOp(device_type, flow_op, x, y, data_type):
 
     flow_type = type_name_to_flow_type[data_type]
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def FlowJob(
         x=flow.FixedTensorDef(x.shape, dtype=flow_type),
         y=flow.FixedTensorDef(y.shape, dtype=flow_type),
@@ -125,7 +125,7 @@ def compare_with_tensorflow(
 
     flow_type = type_name_to_flow_type[data_type]
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def FlowJob(
         x=flow.FixedTensorDef(x_shape, dtype=flow_type),
         y=flow.FixedTensorDef(y_shape, dtype=flow_type),

@@ -10,7 +10,7 @@ def _check(test_case, a, b, out):
 
 
 def _run_test(test_case, a, b, dtype, device):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def BroadcastMaximum(
         a=flow.FixedTensorDef(a.shape, dtype=dtype),
         b=flow.FixedTensorDef(b.shape, dtype=dtype),

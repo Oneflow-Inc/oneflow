@@ -26,7 +26,7 @@ def RunTest(out_shapes, out_types):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def TestListDataTypeAndListShapeAttrJob(
         input=flow.FixedTensorDef((10, 10), dtype=flow.float)
     ):
