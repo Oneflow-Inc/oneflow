@@ -11,6 +11,7 @@
 #include <sys/time.h>
 #include <time.h>
 
+
 namespace oneflow {
 
 class EventsWriter {
@@ -32,6 +33,9 @@ class EventsWriter {
   Maybe<void> Flush();
   Maybe<void> Close();
 
+  void AppendQueue(std::unique_ptr<Event> event);
+  void InternalFlush();
+
   inline static void PopulateHeader(char* header, const char* data, size_t n);
   inline static void PopulateFooter(char* footer, const char* data, size_t n);
 
@@ -44,11 +48,15 @@ class EventsWriter {
   }
 
   const std::string file_prefix_;
+  std::string log_dir_;
   std::string file_suffix_;
   std::string filename_;
   std::unique_ptr<fs::FileSystem> file_system_;
   std::unique_ptr<fs::WritableFile> writable_file_;
-  // std::unique_ptr<io::RecordWriter> recordio_writer_;
+  const int max_queue_;
+  const int flush_millis_;
+  uint64_t last_flush_;
+  std::vector<std::unique_ptr<Event>> queue_;
   // int num_outstanding_events_;
   OF_DISALLOW_COPY(EventsWriter);
 };
