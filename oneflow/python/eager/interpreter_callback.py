@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import oneflow.python.eager.vm_util as vm_util
 
 import oneflow.python.eager.blob_cache as blob_cache_util
+import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.framework.op_arg_util as op_arg_util
@@ -12,28 +13,26 @@ import oneflow.python.eager.blob_register as blob_register_util
 
 
 def Interpret(op_attribute_str, parallel_conf_str):
-    op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
-
     blob_register = blob_register_util.GetDefaultBlobRegister()
-    if op_attribute.op_conf.HasField("cast_to_mirrored_conf"):
-        return _MirroredCast(op_attribute, blob_register)
-    if op_attribute.op_conf.HasField("cast_from_mirrored_conf"):
-        return _MirroredCast(op_attribute, blob_register)
-    parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
-    return _Interpret(op_attribute, parallel_conf, blob_register)
+    return _Interpret(op_attribute_str, parallel_conf_str, blob_register)
 
 
 def BackwardInterpret(op_attribute_str, parallel_conf_str):
+    blob_register = gradient_util.GetDefaultBackwardBlobRegister()
+    return _Interpret(op_attribute_str, parallel_conf_str, blob_register)
+
+
+def _Interpret(op_attribute_str, parallel_conf_str, blob_register):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
     if op_attribute.op_conf.HasField("cast_to_mirrored_conf"):
-        return _MirroredCast(op_attribute)
+        return _MirroredCast(op_attribute, blob_register)
     if op_attribute.op_conf.HasField("cast_from_mirrored_conf"):
-        return _MirroredCast(op_attribute)
+        return _MirroredCast(op_attribute, blob_register)
     parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
-    return _Interpret(op_attribute, parallel_conf)
+    return _NaiveInterpret(op_attribute, parallel_conf, blob_register)
 
 
-def _Interpret(op_attribute, parallel_conf, blob_register):
+def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
     def BuildInstruction(builder):
         with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
             builder.StatelessCall(
