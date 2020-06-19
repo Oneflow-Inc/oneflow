@@ -35,6 +35,23 @@ void ResetOpConfName(OperatorConf* op_conf, const std::string& new_op_name) {
   }
 }
 
+void UpdateOpName2AncestorsNeedNoGrad(
+    const Operator& op, const std::function<const Operator*(const std::string&)>& Op2OpName,
+    HashMap<std::string, bool>* op_name2ancestors_need_no_grad) {
+  bool no_grad = op.job_desc().IsPredict();
+  auto IsTrainableVariableLbi = [&](const LogicalBlobId& lbi) {
+    const auto& op_conf = Op2OpName(lbi.op_name())->op_conf();
+    return op_conf.has_variable_conf() && op_conf.trainable();
+  };
+  for (const auto& ibn : op.input_bns()) {
+    const auto& lbi = op.BnInOp2Lbi(ibn);
+    no_grad = no_grad && !IsTrainableVariableLbi(lbi);
+    no_grad = no_grad && !op.InputBlobModifier4Ibn(ibn).requires_grad();
+    no_grad = no_grad && (*op_name2ancestors_need_no_grad)[lbi.op_name()];
+  }
+  (*op_name2ancestors_need_no_grad)[op.op_name()] = no_grad;
+}
+
 }  // namespace
 
 JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
@@ -494,8 +511,9 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   JUST(op->InferOutParallelDescIf(ParallelDesc4Obn, GetBlobDesc4BnInOp, parallel_desc,
                                   JUST(op->sbp_signature())));
   JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));
-  VirtualInferOp(*op);
-  // check splitability
+  // Infer whether input/output blobs are backward used
+  InferBlobBackwardSignature(op);
+  // Check splitability
   JUST(CheckOpBlobSplitability(op, *JUST(op->sbp_signature()), parallel_desc.parallel_num()));
 
   return op->GetOpAttributeWithoutOpNameAndLbn();
@@ -535,13 +553,6 @@ Maybe<bool> JobBuildAndInferCtx::IsDynamic(const std::string& lbn) const {
 Maybe<bool> JobBuildAndInferCtx::IsTensorList(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->is_tensor_list();
-}
-
-Maybe<bool> JobBuildAndInferCtx::ConsumedByGradientOp(const std::string& lbn) const {
-  JUST(CheckLbnValidAndExist(lbn));
-  const auto& iter = lbi2consumed_by_gradient_op_.find(GenLogicalBlobId(lbn));
-  if (iter == lbi2consumed_by_gradient_op_.end()) { return false; }
-  return iter->second;
 }
 
 Maybe<bool> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) const {
@@ -630,14 +641,6 @@ Maybe<bool> JobBuildAndInferCtx::MirroredBlobIsDynamic(const std::string& lbn_wi
 Maybe<bool> JobBuildAndInferCtx::MirroredBlobIsTensorList(const std::string& lbn_with_hint) const {
   const auto& lbi = *JUST(MirroredBlobGetSubLbi(lbn_with_hint, 0));
   return lbi2logical_blob_desc_.at(lbi)->is_tensor_list();
-}
-
-Maybe<bool> JobBuildAndInferCtx::MirroredBlobConsumedByGradientOp(
-    const std::string& lbn_with_hint) const {
-  const auto& lbi = *JUST(MirroredBlobGetSubLbi(lbn_with_hint, 0));
-  const auto& iter = lbi2consumed_by_gradient_op_.find(lbi);
-  if (iter == lbi2consumed_by_gradient_op_.end()) { return false; }
-  return iter->second;
 }
 
 Maybe<OptInt64> JobBuildAndInferCtx::MirroredBlobGetBatchAxis(
@@ -864,29 +867,25 @@ Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   return Maybe<void>::Ok();
 }
 
-void JobBuildAndInferCtx::VirtualInferOp(const Operator& op) {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    UpdateOpName2AncestorsNeedNoGrad(op);
-    Updatelbi2ConsumedByGradientOp(op);
-  }
-}
-
-void JobBuildAndInferCtx::UpdateOpName2AncestorsNeedNoGrad(const Operator& op) {
-  bool no_grad = Global<JobDesc>::Get()->IsPredict();
-  auto IsTrainableVariableLbi = [&](const LogicalBlobId& lbi) {
-    const auto& op_conf = op_name2op_.at(lbi.op_name())->op_conf();
-    return op_conf.has_variable_conf() && op_conf.trainable();
+void JobBuildAndInferCtx::InferBlobBackwardSignature(Operator* op) {
+  std::function<bool(const LogicalBlobId&)> IsLbiBackwardUsed;
+  InferBlobBackwardSignature(*op, &IsLbiBackwardUsed);
+  auto* map = op->mut_blob_backward_used_signature()->mutable_bn_in_op2blob_backward_used();
+  const auto SetIsBlobBackwardUsed = [&](const std::string& bn_in_op) {
+    (*map)[bn_in_op] = IsLbiBackwardUsed(op->BnInOp2Lbi(bn_in_op));
   };
-  for (const auto& ibn : op.input_bns()) {
-    const auto& lbi = op.BnInOp2Lbi(ibn);
-    no_grad = no_grad && !IsTrainableVariableLbi(lbi);
-    no_grad = no_grad && !op.InputBlobModifier4Ibn(ibn).requires_grad();
-    no_grad = no_grad && op_name2ancestors_need_no_grad_[lbi.op_name()];
-  }
-  op_name2ancestors_need_no_grad_[op.op_name()] = no_grad;
+  for (const auto& ibn : op->input_bns()) { SetIsBlobBackwardUsed(ibn); }
+  for (const auto& obn : op->output_bns()) { SetIsBlobBackwardUsed(obn); }
 }
 
-void JobBuildAndInferCtx::Updatelbi2ConsumedByGradientOp(const Operator& op) {
+void JobBuildAndInferCtx::InferBlobBackwardSignature(
+    const Operator& op, std::function<bool(const LogicalBlobId&)>* IsLbiBackwardUsed) {
+  if (op.job_desc().IsPredict()) {
+    *IsLbiBackwardUsed = [](const LogicalBlobId&) { return false; };
+    return;
+  }
+  const auto& Op4OpName = [&](const std::string& op_name) { return op_name2op_.at(op_name).get(); };
+  UpdateOpName2AncestorsNeedNoGrad(op, Op4OpName, &op_name2ancestors_need_no_grad_);
   std::vector<OperatorConf> bw_op_confs;
   LogicalBlobId fake_diff_lbi;
   fake_diff_lbi.set_op_name("fake_op_name");
@@ -921,13 +920,18 @@ void JobBuildAndInferCtx::Updatelbi2ConsumedByGradientOp(const Operator& op) {
   const auto& maybe_ok =
       TRY(GenerateBackwardOpConfIf(op, &bw_op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
   CHECK(maybe_ok.IsOk() || maybe_ok.error()->has_gradient_function_not_found_error());
+  // find backward used logical blob ids
+  auto backward_used_lbis = std::make_shared<HashSet<LogicalBlobId>>();
   for (const auto& bw_op_conf : bw_op_confs) {
-    const auto bw_op = ConstructOp(bw_op_conf, op.device_type(), Global<JobDesc>::Get());
+    const auto& bw_op = ConstructOp(bw_op_conf, op.device_type(), Global<JobDesc>::Get());
     for (const auto& ibn : bw_op->input_bns()) {
       const auto& lbi = bw_op->BnInOp2Lbi(ibn);
-      if (FwLogicalBlobDescPtr4Lbi(lbi) != nullptr) { lbi2consumed_by_gradient_op_[lbi] = true; }
+      if (FwLogicalBlobDescPtr4Lbi(lbi) != nullptr) { backward_used_lbis->insert(lbi); }
     }
   }
+  *IsLbiBackwardUsed = [backward_used_lbis](const LogicalBlobId& lbi) {
+    return backward_used_lbis->find(lbi) != backward_used_lbis->end();
+  };
 }
 
 }  // namespace oneflow
