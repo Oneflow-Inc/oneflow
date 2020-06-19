@@ -2,7 +2,7 @@
 #include "oneflow/core/register/tensor_slice_copier.h"
 #include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/kernel_common.hpp"
+#include "oneflow/core/kernel/slice_boxing_kernel_util.h"
 
 namespace oneflow {
 
@@ -113,22 +113,24 @@ void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(
               && out->mem_case().device_cuda_mem().device_id()
                      == in_i->mem_case().device_cuda_mem().device_id());
       if (in_i->shape() == out->shape() && can_direct_access) {
-        KernelUtil<device_type, T>::Axpy(ctx.device_ctx, out->shape().elem_cnt(), GetOneVal<T>(),
-                                         in_i->dptr<T>(), 1, out->mut_dptr<T>(), 1);
+        SliceBoxingKernelUtil<device_type, T>::Add(ctx.device_ctx, out->shape().elem_cnt(),
+                                                   in_i->dptr<T>(), out->dptr<T>(),
+                                                   out->mut_dptr<T>());
       } else {
         Blob* buf = BnInOp2Blob("buf");
         this->tensor_slice_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), buf,
                                                     in_i);
-        KernelUtil<device_type, T>::Axpy(ctx.device_ctx, out->shape().elem_cnt(), GetOneVal<T>(),
-                                         buf->dptr<T>(), 1, out->mut_dptr<T>(), 1);
+        SliceBoxingKernelUtil<device_type, T>::Add(ctx.device_ctx, out->shape().elem_cnt(),
+                                                   buf->dptr<T>(), out->dptr<T>(),
+                                                   out->mut_dptr<T>());
       }
     }
   }
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSliceBoxingCopyConf, SliceBoxingCopyKernel,
-                           POD_DATA_TYPE_SEQ)
+                           POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSliceBoxingAddConf, SliceBoxingAddKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ)
+                           ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

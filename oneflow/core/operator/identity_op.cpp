@@ -108,6 +108,7 @@ class CastToMirroredOp : public MirroredCastOp {
     CHECK_EQ_OR_RETURN(in_infer_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
     MutOptMirroredParallel("in")->clear_mirrored_parallel();
     MutOptMirroredParallel("out")->mutable_mirrored_parallel();
+    return Maybe<void>::Ok();
   }
 };
 
@@ -150,6 +151,7 @@ class CastFromMirroredOp : public MirroredCastOp {
     CHECK_EQ_OR_RETURN(in_infer_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
     MutOptMirroredParallel("in")->mutable_mirrored_parallel();
     MutOptMirroredParallel("out")->clear_mirrored_parallel();
+    return Maybe<void>::Ok();
   }
 };
 

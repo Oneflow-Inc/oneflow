@@ -268,6 +268,11 @@ def set_use_boxing_v2(func_desc, value=True):
     func_desc.job_config_proto.use_boxing_v2 = value
 
 
+@oneflow_function_config("do_parallel_cast_before_widening_type_cast")
+def set_do_parallel_cast_before_widening_type_cast(func_desc, value=True):
+    func_desc.job_config_proto.do_parallel_cast_before_widening_type_cast = value
+
+
 @oneflow_function_config("enable_all_reduce_group")
 def set_enable_all_reduce_group(func_desc, value=True):
     func_desc.job_config_proto.enable_all_reduce_group = value
