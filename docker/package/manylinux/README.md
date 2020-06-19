@@ -18,7 +18,7 @@ docker run --runtime=nvidia --rm -it -v `pwd`:/oneflow oneflow:manylinux2014-cud
     docker run --runtime=nvidia --rm -it -v `pwd`:/oneflow oneflow:manylinux2014-cuda10.2 /oneflow/docker/package/manylinux/build_wheel.sh --skip-third-party
     ```
 
-这会给 build_wheel.sh 传一个 `--skip-third-party` 参数，跳过第三方库的编译
+   这会给 build_wheel.sh 传一个 `--skip-third-party` 参数，跳过第三方库的编译
 
 3. 如果想自定义 oneflow 编译时的 cmake 参数，可以直接把 cmake 参数写出来，如：
 
