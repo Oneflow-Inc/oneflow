@@ -20,9 +20,11 @@ import oneflow.python.vm.id_util as id_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import oneflow.python.eager.eager_blob_util as eager_blob_util
-import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.lib.core.enable_if as enable_if
 import random
+import oneflow.python.eager.blob_register as blob_register_util
+
+blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
 class UserOp(object):
@@ -104,7 +106,7 @@ class EagerLogicalUserOp(UserOp):
         op_attribute = compile_context.CurJobAddOp(self.op_conf_)
 
         def BuildInstruction(builder):
-            with object_cache.BnInOp2BlobObjectScope(
+            with blob_register.BnInOp2BlobObjectScope(
                 op_attribute
             ) as bn_in_op2blob_object:
                 parallel_conf = oneflow.placement.current_scope().default_parallel_conf
@@ -138,7 +140,7 @@ class EagerPhysicalUserOp(UserOp):
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
 
         def BuildInstruction(builder):
-            with object_cache.BnInOp2BlobObjectScope(
+            with blob_register.BnInOp2BlobObjectScope(
                 op_attribute
             ) as bn_in_op2blob_object:
                 parallel_conf = oneflow.placement.current_scope().default_parallel_conf
@@ -191,7 +193,7 @@ class NonTraceableEagerLogicalUserOp(UserOp):
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
 
         def BuildInstruction(builder):
-            with object_cache.BnInOp2BlobObjectScope(
+            with blob_register.BnInOp2BlobObjectScope(
                 op_attribute
             ) as bn_in_op2blob_object:
                 parallel_conf = oneflow.placement.current_scope().default_parallel_conf

@@ -8,10 +8,12 @@ import oneflow.python.framework.blob_trait as blob_trait
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 import oneflow.python.eager.eager_blob_util as eager_blob_util
-import oneflow.python.eager.object_cache as object_cache
+import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.gradient_util as gradient_util
+
+blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
 def RemoteBlob(lbi, **kw):
@@ -211,9 +213,9 @@ class EagerMirroredBlob(MirroredBlob):
     def __init__(self, lbi, blob_object=None, **kw):
         MirroredBlob.__init__(self, lbi, **kw)
         if blob_object is None:
-            self.blob_object_ = object_cache.GetObject4BlobName(self.unique_name)
+            self.blob_object_ = blob_register.GetObject4BlobName(self.unique_name)
         else:
-            object_cache.SetObject4BlobName(self.unique_name, blob_object)
+            blob_register.SetObject4BlobName(self.unique_name, blob_object)
             self.blob_object_ = blob_object
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         self.sub_consistent_blob_list_ = []
@@ -261,8 +263,8 @@ class EagerMirroredBlob(MirroredBlob):
             for i in range(len(physical_objects)):
                 name = "%s/%d" % (self.unique_name, i)
                 box[0].append(name)
-                if not object_cache.HasObject4BlobName(name):
-                    object_cache.SetObject4BlobName(name, physical_objects[i])
+                if not blob_register.HasObject4BlobName(name):
+                    blob_register.SetObject4BlobName(name, physical_objects[i])
 
         def Fetch(blob_object):
             vm_util.LogicalRun(UnpackLogicalBlobToPhysicalBlobs)
@@ -312,16 +314,16 @@ class EagerMirroredBlob(MirroredBlob):
 
     def __del__(self):
         blob_cache_util.TryDisableBlobCache(self.blob_object_)
-        object_cache.ClearObject4BlobName(self.unique_name)
+        blob_register.ClearObject4BlobName(self.unique_name)
 
 
 class EagerConsistentBlob(ConsistentBlob):
     def __init__(self, lbi, blob_object=None, **kw):
         ConsistentBlob.__init__(self, lbi, **kw)
         if blob_object is None:
-            self.blob_object_ = object_cache.GetObject4BlobName(self.unique_name)
+            self.blob_object_ = blob_register.GetObject4BlobName(self.unique_name)
         else:
-            object_cache.SetObject4BlobName(self.unique_name, blob_object)
+            blob_register.SetObject4BlobName(self.unique_name, blob_object)
             self.blob_object_ = blob_object
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         self.sub_consistent_blob_list_ = []
@@ -367,8 +369,8 @@ class EagerConsistentBlob(ConsistentBlob):
             for i in range(len(physical_objects)):
                 name = "%s/%d" % (self.unique_name, i)
                 box[0].append(name)
-                if not object_cache.HasObject4BlobName(name):
-                    object_cache.SetObject4BlobName(name, physical_objects[i])
+                if not blob_register.HasObject4BlobName(name):
+                    blob_register.SetObject4BlobName(name, physical_objects[i])
 
         def Fetch(blob_object):
             vm_util.LogicalRun(UnpackLogicalBlobToPhysicalBlobs)
@@ -418,4 +420,4 @@ class EagerConsistentBlob(ConsistentBlob):
 
     def __del__(self):
         blob_cache_util.TryDisableBlobCache(self.blob_object_)
-        object_cache.ClearObject4BlobName(self.unique_name)
+        blob_register.ClearObject4BlobName(self.unique_name)

@@ -1,17 +1,19 @@
 from __future__ import absolute_import
 
 import oneflow.python.framework.blob_trait as blob_trait
-import oneflow.python.eager.object_cache as object_cache
+import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.physical_blob_callback as physical_blob_callback
 import oneflow.python.lib.core.async_util as async_util
 
+blob_register = blob_register_util.GetDefaultBlobRegister()
+
 
 class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait):
     def __init__(self, blob_name):
         self.blob_name_ = blob_name
-        self.blob_object_ = object_cache.GetObject4BlobName(blob_name)
+        self.blob_object_ = blob_register.GetObject4BlobName(blob_name)
 
     @property
     def logical_blob_name(self):
@@ -54,7 +56,7 @@ class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 
     def __del__(self):
         blob_cache_util.TryDisableBlobCache(self.blob_object_)
-        object_cache.ClearObject4BlobName(self.unique_name)
+        blob_register.ClearObject4BlobName(self.unique_name)
 
 
 def FetchTensorBlobAsNumpyList(parallel_size, blob_object):

@@ -1,12 +1,16 @@
 from __future__ import absolute_import
 
 import oneflow.python.eager.vm_util as vm_util
-import oneflow.python.eager.object_cache as object_cache
+
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.framework.op_arg_util as op_arg_util
 from google.protobuf import text_format
+
+import oneflow.python.eager.blob_register as blob_register_util
+
+blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
 def Interpret(op_attribute_str, parallel_conf_str):
@@ -31,7 +35,7 @@ def BackwardInterpret(op_attribute_str, parallel_conf_str):
 
 def _Interpret(op_attribute, parallel_conf):
     def BuildInstruction(builder):
-        with object_cache.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
             builder.StatelessCall(
                 op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object,
             )
@@ -53,7 +57,7 @@ def CastFromMirrored(op_attribute_str, parallel_conf_str):
 
 def _MirroredCast(op_attribute):
     def BuildInstruction(builder):
-        with object_cache.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
             in_blob_object = bn_in_op2blob_object["in"]
             parallel_desc_symbol = in_blob_object.parallel_desc_symbol
             op_arg_attribute = op_arg_util.GetOpArgAttribute(
@@ -73,8 +77,8 @@ def _MakeReleaser4MirroredCastBlobObject(op_attribute):
         for obn in op_attribute.output_bns:
             lbi = op_attribute.arg_signature.bn_in_op2lbi[obn]
             lbn = "%s/%s" % (lbi.op_name, lbi.blob_name)
-            blob_object = object_cache.GetObject4BlobName(lbn)
+            blob_object = blob_register.GetObject4BlobName(lbn)
             blob_cache_util.TryDisableBlobCache(blob_object)
-            object_cache.ClearObject4BlobName(lbn)
+            blob_register.ClearObject4BlobName(lbn)
 
     return ReleaseMirroredBlobObject
