@@ -35,13 +35,10 @@ class CpuSortKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_SORT_KERNEL(dtype)                                                 \
-  REGISTER_USER_KERNEL("sort").SetCreateFn<CpuSortKernel<dtype>>().SetIsMatchedPred(    \
-      [](const user_op::KernelRegContext& ctx) {                                        \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                    \
-               && out_desc->data_type() == GetDataType<dtype>::value;                   \
-      });
+#define REGISTER_CPU_SORT_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("sort").SetCreateFn<CpuSortKernel<dtype>>().SetIsMatchedHob( \
+      user_op::HobDeviceType() == DeviceType::kCPU                                  \
+      & user_op::HobDataType("out", 0) == GetDataType<dtype>::value);
 
 REGISTER_CPU_SORT_KERNEL(float)
 REGISTER_CPU_SORT_KERNEL(double)

@@ -47,20 +47,18 @@ class KernelRegContext {
 };
 
 using CreateFn = std::function<const OpKernel*()>;
-using IsMatchedPredicator = std::function<bool(const KernelRegContext&)>;
 using InferTmpSizeFn = std::function<size_t(InferContext*)>;
 using AddInplaceArgPair = std::function<Maybe<void>(
     const std::string& out_arg_name, int32_t out_arg_index, const std::string& in_arg_name,
     int32_t in_arg_index, bool is_mutable)>;
 using InplaceProposalFn = std::function<Maybe<void>(const InferContext&, AddInplaceArgPair)>;
-using IsMatchedPredicatorHob = hob::BoolFunctorPtr<user_op::KernelRegContext>;
+using IsMatchedHob = hob::BoolFunctorPtr<user_op::KernelRegContext>;
 
 struct KernelRegistrationVal {
   CreateFn create_fn;
-  IsMatchedPredicator is_matched_fn;
   InferTmpSizeFn infer_tmp_size_fn;
   InplaceProposalFn inplace_proposal_fn;
-  IsMatchedPredicatorHob is_mathed_hob;
+  IsMatchedHob is_matched_hob;
 };
 
 struct KernelRegistryWrapper final {
@@ -77,8 +75,7 @@ class KernelRegistryWrapperBuilder final {
   KernelRegistryWrapperBuilder& SetCreateFn() {
     return SetCreateFn([]() -> const OpKernel* { return new T(); });
   }
-  KernelRegistryWrapperBuilder& SetIsMatchedPred(IsMatchedPredicator fn);
-  KernelRegistryWrapperBuilder& SetIsMatchedPredHob(IsMatchedPredicatorHob hob);
+  KernelRegistryWrapperBuilder& SetIsMatchedHob(IsMatchedHob hob);
   KernelRegistryWrapperBuilder& SetInferTmpSizeFn(InferTmpSizeFn fn);
   KernelRegistryWrapperBuilder& SetInplaceProposalFn(InplaceProposalFn fn);
 

@@ -28,14 +28,20 @@ class BoolFunctorPtr final {
   BoolFunctorPtr(BoolFunctorPtr&&) = default;
   ~BoolFunctorPtr(){};
   BoolFunctorPtr(const std::shared_ptr<const BoolFunctor<T>>& ptr) : ptr_(ptr) {}
-  std::string DebugStr(const T& ctx, bool display_result = true) const;
-  bool operator()(const T& ctx) const;
+
   BoolFunctorPtr operator&(const BoolFunctorPtr& ptr) const;
   BoolFunctorPtr operator|(const BoolFunctorPtr& ptr) const;
   BoolFunctorPtr operator~() const;
+
   BoolFunctorPtr& operator=(BoolFunctorPtr& ptr) {
     this->ptr_ = ptr.ptr_;
     return *this;
+  }
+
+  bool operator()(const T& ctx) const { return (*this->ptr_)(ctx); }
+
+  std::string DebugStr(const T& ctx, bool display_result = true) const {
+    return this->ptr_->DebugStr(ctx, display_result);
   }
 
  private:
@@ -47,7 +53,9 @@ class AndBoolFunctor final : public BoolFunctor<T> {
  public:
   AndBoolFunctor() = delete;
   AndBoolFunctor(const BoolFunctorPtr<T> lhs, const BoolFunctorPtr<T> rhs) : lhs_(lhs), rhs_(rhs) {}
-  ~AndBoolFunctor() override = default;
+  ~AndBoolFunctor() {}
+
+  bool operator()(const T& ctx) const override { return lhs_(ctx) && rhs_(ctx); }
 
   std::string DebugStr(const T& ctx, bool display_result) const override {
     std::string l_str = lhs_.DebugStr(ctx, display_result);
@@ -57,8 +65,6 @@ class AndBoolFunctor final : public BoolFunctor<T> {
     string_stream << "(" << l_str << " and " << r_str << ")";
     return string_stream.str();
   }
-
-  bool operator()(const T& ctx) const override { return lhs_(ctx) && rhs_(ctx); }
 
  private:
   const BoolFunctorPtr<T> lhs_;
@@ -70,7 +76,9 @@ class OrBoolFunctor final : public BoolFunctor<T> {
  public:
   OrBoolFunctor() = delete;
   OrBoolFunctor(const BoolFunctorPtr<T> lhs, const BoolFunctorPtr<T> rhs) : lhs_(lhs), rhs_(rhs) {}
-  ~OrBoolFunctor() override = default;
+  ~OrBoolFunctor() {}
+
+  bool operator()(const T& ctx) const override { return lhs_(ctx) || rhs_(ctx); }
 
   std::string DebugStr(const T& ctx, bool display_result) const override {
     std::string l_str = lhs_.DebugStr(ctx, display_result);
@@ -80,8 +88,6 @@ class OrBoolFunctor final : public BoolFunctor<T> {
     string_stream << "(" << l_str << " or " << r_str << ")";
     return string_stream.str();
   }
-
-  bool operator()(const T& ctx) const override { return lhs_(ctx) || rhs_(ctx); }
 
  private:
   const BoolFunctorPtr<T> lhs_;
@@ -93,7 +99,9 @@ class NotBoolFunctor final : public BoolFunctor<T> {
  public:
   NotBoolFunctor() = delete;
   NotBoolFunctor(const BoolFunctorPtr<T> hs) : hs_(hs) {}
-  ~NotBoolFunctor() override = default;
+  ~NotBoolFunctor() {}
+
+  bool operator()(const T& ctx) const override { return !hs_(ctx); }
 
   std::string DebugStr(const T& ctx, bool display_result) const override {
     std::ostringstream string_stream;
@@ -101,8 +109,6 @@ class NotBoolFunctor final : public BoolFunctor<T> {
                   << "not " << hs_.DebugStr(ctx, display_result) << ")";
     return string_stream.str();
   }
-
-  bool operator()(const T& ctx) const override { return !hs_(ctx); }
 
  private:
   const BoolFunctorPtr<T> hs_;
@@ -130,14 +136,64 @@ BoolFunctorPtr<T> BoolFunctorPtr<T>::operator~() const {
 }
 
 template<typename T>
-std::string BoolFunctorPtr<T>::DebugStr(const T& ctx, bool display_result) const {
-  return this->ptr_->DebugStr(ctx, display_result);
-}
+class HighOrderBoolFunctor final : public hob::BoolFunctor<T> {
+ public:
+  HighOrderBoolFunctor() = delete;
+  HighOrderBoolFunctor(const std::string& debug_str, const std::function<bool(const T&)>& bool_fn)
+      : debug_str_(debug_str), bool_fn_(bool_fn) {}
+  ~HighOrderBoolFunctor() {}
 
-template<typename T>
-bool BoolFunctorPtr<T>::operator()(const T& ctx) const {
-  return (*this->ptr_)(ctx);
-}
+  bool operator()(const T& ctx) const override { return bool_fn_(ctx); }
+
+  std::string DebugStr(const T& ctx, bool display_result) const override {
+    std::ostringstream string_stream;
+    string_stream << "\"" << debug_str_ << "\"";
+    if (display_result) {
+      std::string boolResult = bool_fn_(ctx) ? "True" : "False";
+      string_stream << "[" << boolResult << "]";
+    }
+    return string_stream.str();
+  }
+
+ private:
+  std::string debug_str_;
+  std::function<bool(const T&)> bool_fn_;
+};
+
+template<typename ContextT, typename T>
+class HobContextGetter final {
+ public:
+  HobContextGetter(const T& const_value)
+      : debug_str_(std::to_string(const_value)),
+        context_getter_([const_value](const ContextT&) { return const_value; }) {}
+  HobContextGetter(const std::string& debug_str,
+                   const std::function<T(const ContextT&)>& context_getter)
+      : debug_str_(debug_str), context_getter_(context_getter) {}
+
+#define GENERATE_OVERLOAD_OPERATOR_FUNC(op)                                        \
+  BoolFunctorPtr<ContextT> operator op(const HobContextGetter& other) const {      \
+    std::ostringstream string_stream;                                              \
+    string_stream << debug_str_ << " " << #op << " " << other.debug_str_;          \
+    std::function<T(const ContextT&)> l_fn = this->context_getter_;                \
+    std::function<T(const ContextT&)> r_fn = other.context_getter_;                \
+    std::shared_ptr<const BoolFunctor<ContextT>> krbf_ptr =                        \
+        std::make_shared<const HighOrderBoolFunctor<ContextT>>(                    \
+            string_stream.str(),                                                   \
+            [l_fn, r_fn](const ContextT& ctx) { return l_fn(ctx) op r_fn(ctx); }); \
+    return krbf_ptr;                                                               \
+  }
+  GENERATE_OVERLOAD_OPERATOR_FUNC(==)
+  GENERATE_OVERLOAD_OPERATOR_FUNC(!=)
+  GENERATE_OVERLOAD_OPERATOR_FUNC(>=)
+  GENERATE_OVERLOAD_OPERATOR_FUNC(<=)
+  GENERATE_OVERLOAD_OPERATOR_FUNC(>)
+  GENERATE_OVERLOAD_OPERATOR_FUNC(<)
+#undef GENERATE_OVERLOAD_OPERATOR_FUNC
+
+ private:
+  std::string debug_str_;
+  std::function<T(const ContextT&)> context_getter_;
+};
 
 }  // namespace hob
 

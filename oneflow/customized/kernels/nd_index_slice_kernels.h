@@ -105,41 +105,23 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(
                                            updates->dptr<T>(), out->mut_dptr<T>());
 }
 
-namespace {
-
-template<DeviceType device_type, typename T, typename I>
-std::function<bool(const oneflow::user_op::KernelRegContext&)>
-MakeNdIndexSliceKernelMatchedPredictor() {
-  return [](const oneflow::user_op::KernelRegContext& ctx) {
-    const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0);
-    const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-    if (ctx.device_type() == device_type && indices_desc->data_type() == GetDataType<I>::value
-        && out_desc->data_type() == GetDataType<T>::value) {
-      return true;
-    }
-    return false;
-  };
-}
-
-}  // namespace
-
 #define REGISTER_GATHER_SCATTER_ND_KERNELS(op_type_name, op, device_type_v, dtype_pair,            \
                                            itype_pair)                                             \
   REGISTER_USER_KERNEL(#op_type_name)                                                              \
       .SetCreateFn<                                                                                \
           op##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
-      .SetIsMatchedPred(                                                                           \
-          MakeNdIndexSliceKernelMatchedPredictor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),      \
-                                                 OF_PP_PAIR_FIRST(itype_pair)>());
+      .SetIsMatchedHob(user_op::HobDeviceType() == device_type_v                                   \
+                       & user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(itype_pair)       \
+                       & user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair));
 
 #define REGISTER_TENSOR_SCATTER_ND_OPT_KERNELS(op_type_name, opt, device_type_v, dtype_pair,    \
                                                itype_pair)                                      \
   REGISTER_USER_KERNEL(#op_type_name)                                                           \
       .SetCreateFn<TensorScatterNd##opt##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),    \
                                                 OF_PP_PAIR_FIRST(itype_pair)>>()                \
-      .SetIsMatchedPred(                                                                        \
-          MakeNdIndexSliceKernelMatchedPredictor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),   \
-                                                 OF_PP_PAIR_FIRST(itype_pair)>())               \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device_type_v                                \
+                       & user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(itype_pair)    \
+                       & user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair))       \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "params", 0, true));                   \

@@ -1,46 +1,35 @@
 #ifndef ONEFLOW_CORE_FRAMEWORK_USER_OP_HOB_H_
 #define ONEFLOW_CORE_FRAMEWORK_USER_OP_HOB_H_
 
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/high_order_bool.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/framework/kernel_registration.h"
 
 namespace oneflow {
 
 namespace user_op {
 
-class KernelRegContext;
+hob::BoolFunctorPtr<KernelRegContext> HobTrue();
 
-class KernelRegBoolFunctor final : public hob::BoolFunctor<KernelRegContext> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelRegBoolFunctor)
-  KernelRegBoolFunctor() = delete;
-  KernelRegBoolFunctor(std::string debug_str, std::function<bool(const KernelRegContext&)> match_fn)
-      : debug_str_(debug_str), match_fn_(match_fn) {}
-  ~KernelRegBoolFunctor() {}
+hob::BoolFunctorPtr<KernelRegContext> HobFalse();
 
-  bool operator()(const KernelRegContext& ctx) const override;
-  std::string DebugStr(const KernelRegContext& ctx, bool display_result) const override;
+hob::HobContextGetter<KernelRegContext, DeviceType> HobDeviceType();
 
- private:
-  std::string debug_str_;
-  std::function<bool(const KernelRegContext&)> match_fn_;
-};
+hob::HobContextGetter<KernelRegContext, DataType> HobDataType(const std::string& tensor_name,
+                                                              int tensor_idx);
 
-hob::BoolFunctorPtr<KernelRegContext> HobDeviceTypeEq(DeviceType device_type);
-
-template<DeviceType device_type>
-hob::BoolFunctorPtr<KernelRegContext> HobDeviceTypeEq() {
-  return HobDeviceTypeEq(device_type);
+template<typename T>
+hob::HobContextGetter<user_op::KernelRegContext, T> HobCtxGetter(
+    const std::string& debug_str,
+    const std::function<T(const user_op::KernelRegContext&)> hob_func) {
+  return hob::HobContextGetter<user_op::KernelRegContext, T>(debug_str, hob_func);
 }
 
-hob::BoolFunctorPtr<KernelRegContext> HobDataTypeEq(const std::string& tensor_name, int tensor_idx,
-                                                    DataType date_type);
-
-template<typename dtype>
-hob::BoolFunctorPtr<KernelRegContext> HobDataTypeEq(const std::string& tensor_name,
-                                                    int tensor_idx) {
-  return HobDataTypeEq(tensor_name, tensor_idx, GetDataType<dtype>::value);
+template<typename T>
+hob::HobContextGetter<user_op::KernelRegContext, T> HobAttr(const std::string& attr_name) {
+  return user_op::HobCtxGetter<T>(attr_name, [attr_name](const user_op::KernelRegContext& ctx) {
+    return ctx.Attr<T>(attr_name);
+  });
 }
 
 }  // namespace user_op

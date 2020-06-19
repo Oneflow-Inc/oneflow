@@ -52,11 +52,8 @@ class GpuPReluKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_PRELU_KERNEL(dtype)                                            \
   REGISTER_USER_KERNEL("prelu")                                                     \
       .SetCreateFn<GpuPReluKernel<dtype>>()                                         \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
-        return ctx.device_type() == DeviceType::kGPU                                \
-               && y_desc->data_type() == GetDataType<dtype>::value;                 \
-      })                                                                            \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                 \
+                       & user_op::HobDataType("y", 0) == GetDataType<dtype>::value) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                           \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);                 \
         return GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(dtype));            \
@@ -91,17 +88,14 @@ class GpuPReluXGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_PRELU_X_GRAD_KERNEL(dtype)                                       \
-  REGISTER_USER_KERNEL("prelu_x_grad")                                                \
-      .SetCreateFn<GpuPReluXGradKernel<dtype>>()                                      \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
-        return ctx.device_type() == DeviceType::kGPU                                  \
-               && dx_desc->data_type() == GetDataType<dtype>::value;                  \
-      })                                                                              \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);                   \
-        return GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(dtype));              \
+#define REGISTER_GPU_PRELU_X_GRAD_KERNEL(dtype)                                      \
+  REGISTER_USER_KERNEL("prelu_x_grad")                                               \
+      .SetCreateFn<GpuPReluXGradKernel<dtype>>()                                     \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                  \
+                       & user_op::HobDataType("dx", 0) == GetDataType<dtype>::value) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                            \
+        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);                  \
+        return GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(dtype));             \
       });
 
 REGISTER_GPU_PRELU_X_GRAD_KERNEL(float)
@@ -136,19 +130,15 @@ class GpuPReluAlphaGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_PRELU_ALPHA_GRAD_KERNEL(dtype)                          \
-  REGISTER_USER_KERNEL("prelu_alpha_grad")                                   \
-      .SetCreateFn<GpuPReluAlphaGradKernel<dtype>>()                         \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {           \
-        const user_op::TensorDesc* alpha_diff_desc =                         \
-            ctx.TensorDesc4ArgNameAndIndex("alpha_diff", 0);                 \
-        return ctx.device_type() == DeviceType::kGPU                         \
-               && alpha_diff_desc->data_type() == GetDataType<dtype>::value; \
-      })                                                                     \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                    \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);          \
-        return GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(dtype))      \
-               + GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(dtype));   \
+#define REGISTER_GPU_PRELU_ALPHA_GRAD_KERNEL(dtype)                                          \
+  REGISTER_USER_KERNEL("prelu_alpha_grad")                                                   \
+      .SetCreateFn<GpuPReluAlphaGradKernel<dtype>>()                                         \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                          \
+                       & user_op::HobDataType("alpha_diff", 0) == GetDataType<dtype>::value) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                    \
+        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);                          \
+        return GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(dtype))                      \
+               + GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(dtype));                   \
       });
 
 REGISTER_GPU_PRELU_ALPHA_GRAD_KERNEL(float)

@@ -37,15 +37,11 @@ class CpuOneHotKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_ONE_HOT_KERNEL(dtype, itype)                                                \
-  REGISTER_USER_KERNEL("one_hot").SetCreateFn<CpuOneHotKernel<dtype, itype>>().SetIsMatchedPred( \
-      [](const user_op::KernelRegContext& ctx) {                                                 \
-        const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0);  \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);          \
-        return ctx.device_type() == DeviceType::kCPU                                             \
-               && out_desc->data_type() == GetDataType<dtype>::value                             \
-               && indices_desc->data_type() == GetDataType<itype>::value;                        \
-      });
+#define REGISTER_CPU_ONE_HOT_KERNEL(dtype, itype)                                               \
+  REGISTER_USER_KERNEL("one_hot").SetCreateFn<CpuOneHotKernel<dtype, itype>>().SetIsMatchedHob( \
+      user_op::HobDeviceType() == DeviceType::kCPU                                              \
+      & user_op::HobDataType("indices", 0) == GetDataType<itype>::value                         \
+      & user_op::HobDataType("out", 0) == GetDataType<dtype>::value);
 
 REGISTER_CPU_ONE_HOT_KERNEL(int32_t, int32_t)
 REGISTER_CPU_ONE_HOT_KERNEL(int32_t, int64_t)
