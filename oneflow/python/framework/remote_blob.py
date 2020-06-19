@@ -306,7 +306,6 @@ class EagerMirroredBlob(MirroredBlob):
         return self.parallel_conf_
 
     def __del__(self):
-        blob_cache_util.TryDisableBlobCache(self.blob_object_)
         blob_register.ClearObject4BlobName(self.unique_name)
 
 
@@ -405,5 +404,4 @@ class EagerConsistentBlob(ConsistentBlob):
         return self.parallel_conf_
 
     def __del__(self):
-        blob_cache_util.TryDisableBlobCache(self.blob_object_)
         blob_register.ClearObject4BlobName(self.unique_name)

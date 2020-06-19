@@ -103,7 +103,7 @@ def get_eager_variable(
         _InitVariableBlob(op_conf, var_blob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
     bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
-    bw_blob_register.SetObject4BlobName(name, var_blob.blob_object)
+    bw_blob_register.SetObject4BlobName(var_blob.unique_name, var_blob.blob_object)
     assert var_blob.shape == shape
     assert var_blob.dtype == dtype
     return var_blob

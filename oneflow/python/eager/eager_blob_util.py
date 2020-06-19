@@ -55,7 +55,6 @@ class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
         )
 
     def __del__(self):
-        blob_cache_util.TryDisableBlobCache(self.blob_object_)
         blob_register.ClearObject4BlobName(self.unique_name)
 
 

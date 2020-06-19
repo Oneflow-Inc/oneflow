@@ -15,7 +15,8 @@ def ReleaseUnusedBlobObject(op_attribute, blob_register):
         if not is_blob_last_used:
             continue
         lbi = bn_in_op2lbi[bn_in_op]
-        blob_register.ClearObject4BlobName("%s/%s" % (lbi.op_name, lbi.blob_name))
+        lbn = "%s/%s" % (lbi.op_name, lbi.blob_name)
+        blob_register.ClearObject4BlobName(lbn)
 
 
 def TrySetBackwardUsedBlobObject(op_attribute, fw_blob_register, bw_blob_register):

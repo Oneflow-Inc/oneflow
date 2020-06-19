@@ -25,7 +25,7 @@ def Interpret(op_attribute_str, parallel_conf_str):
 def BackwardInterpret(op_attribute_str, parallel_conf_str):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
     blob_register = gradient_util.GetDefaultBackwardBlobRegister()
-    _Interpret(op_attribute, parallel_conf_str, blob_register)
+    _BackwardInterpret(op_attribute, parallel_conf_str, blob_register)
     gradient_util.ReleaseUnusedBlobObject(op_attribute, blob_register)
 
 
@@ -34,6 +34,15 @@ def _Interpret(op_attribute, parallel_conf_str, blob_register):
         return _MirroredCast(op_attribute, blob_register)
     if op_attribute.op_conf.HasField("cast_from_mirrored_conf"):
         return _MirroredCast(op_attribute, blob_register)
+    parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
+    return _NaiveInterpret(op_attribute, parallel_conf, blob_register)
+
+
+def _BackwardInterpret(op_attribute, parallel_conf_str, blob_register):
+    if op_attribute.op_conf.HasField("cast_to_mirrored_conf"):
+        return _BackwardMirroredCast(op_attribute, blob_register)
+    if op_attribute.op_conf.HasField("cast_from_mirrored_conf"):
+        return _BackwardMirroredCast(op_attribute, blob_register)
     parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
     return _NaiveInterpret(op_attribute, parallel_conf, blob_register)
 
@@ -88,13 +97,28 @@ def _MirroredCast(op_attribute, blob_register):
     vm_util.LogicalRun(BuildInstruction)
 
 
+def _BackwardMirroredCast(op_attribute, blob_register):
+    def BuildInstruction(builder):
+        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+            in_blob_object = bn_in_op2blob_object["in"]
+            parallel_desc_symbol = in_blob_object.parallel_desc_symbol
+            op_arg_attribute = op_arg_util.GetOpArgAttribute(
+                parallel_desc_symbol, op_attribute, "out"
+            )
+            out_blob_object = builder.MakeReferenceBlobObject(
+                in_blob_object, op_arg_attribute
+            )
+            bn_in_op2blob_object["out"] = out_blob_object
+
+    vm_util.LogicalRun(BuildInstruction)
+
+
 def _MakeReleaser4MirroredCastBlobObject(op_attribute, blob_register):
     def ReleaseMirroredBlobObject(*args):
         for obn in op_attribute.output_bns:
             lbi = op_attribute.arg_signature.bn_in_op2lbi[obn]
             lbn = "%s/%s" % (lbi.op_name, lbi.blob_name)
             blob_object = blob_register.GetObject4BlobName(lbn)
-            blob_cache_util.TryDisableBlobCache(blob_object)
             blob_register.ClearObject4BlobName(lbn)
 
     return ReleaseMirroredBlobObject

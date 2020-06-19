@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import oneflow.python.eager.blob_cache as blob_cache_util
 from contextlib import contextmanager
 
 
@@ -32,6 +33,7 @@ class BlobRegister(object):
 
     def ClearObject4BlobName(self, blob_name):
         assert self.HasObject4BlobName(blob_name)
+        blob_cache_util.TryDisableBlobCache(self.blob_name2object[blob_name])
         del self.blob_name2object[blob_name]
 
     @contextmanager
