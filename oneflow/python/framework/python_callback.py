@@ -18,9 +18,23 @@ class _PythonCallback(oneflow_internal.ForeignCallback):
             print(traceback.format_exc())
             raise e
 
+    def EagerBackwardInterpret(self, op_attribute_str, parallel_conf_str):
+        try:
+            interpreter_callback.BackwardInterpret(op_attribute_str, parallel_conf_str)
+        except Exception as e:
+            print(traceback.format_exc())
+            raise e
+
     def EagerCastToMirrored(self, op_attribute_str, parallel_conf_str):
         try:
             interpreter_callback.CastToMirrored(op_attribute_str, parallel_conf_str)
+        except Exception as e:
+            print(traceback.format_exc())
+            raise e
+
+    def EagerCastFromMirrored(self, op_attribute_str, parallel_conf_str):
+        try:
+            interpreter_callback.CastFromMirrored(op_attribute_str, parallel_conf_str)
         except Exception as e:
             print(traceback.format_exc())
             raise e

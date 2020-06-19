@@ -16,6 +16,14 @@ class ForeignCallback {
                                    const std::string& parallel_conf_str) const {
     UNIMPLEMENTED();
   }
+  virtual void EagerCastFromMirrored(const std::string& op_attribute_str,
+                                     const std::string& parallel_conf_str) const {
+    UNIMPLEMENTED();
+  }
+  virtual void EagerBackwordInterpret(const std::string& op_attribute_str,
+                                      const std::string& parallel_conf_str) const {
+    UNIMPLEMENTED();
+  }
 };
 
 }  // namespace oneflow

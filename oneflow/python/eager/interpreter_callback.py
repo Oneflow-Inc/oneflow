@@ -19,6 +19,16 @@ def Interpret(op_attribute_str, parallel_conf_str):
     return _Interpret(op_attribute, parallel_conf)
 
 
+def BackwardInterpret(op_attribute_str, parallel_conf_str):
+    op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
+    if op_attribute.op_conf.HasField("cast_to_mirrored_conf"):
+        return _MirroredCast(op_attribute)
+    if op_attribute.op_conf.HasField("cast_from_mirrored_conf"):
+        return _MirroredCast(op_attribute)
+    parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
+    return _Interpret(op_attribute, parallel_conf)
+
+
 def _Interpret(op_attribute, parallel_conf):
     def BuildInstruction(builder):
         with object_cache.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
@@ -32,6 +42,12 @@ def _Interpret(op_attribute, parallel_conf):
 def CastToMirrored(op_attribute_str, parallel_conf_str):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
     assert op_attribute.op_conf.HasField("cast_to_mirrored_conf")
+    return _MirroredCast(op_attribute)
+
+
+def CastFromMirrored(op_attribute_str, parallel_conf_str):
+    op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
+    assert op_attribute.op_conf.HasField("cast_from_mirrored_conf")
     return _MirroredCast(op_attribute)
 
 
