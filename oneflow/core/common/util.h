@@ -24,7 +24,7 @@
 #include <utility>
 
 #include "oneflow/core/common/meta_util.hpp"
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/global.h"
 
 DECLARE_string(log_dir);
 
@@ -60,45 +60,6 @@ namespace oneflow {
 #define UNIMPLEMENTED() LOG(FATAL) << "UNIMPLEMENTED"
 
 #define TODO() LOG(FATAL) << "TODO"
-
-template<typename T, typename Kind = void>
-class Global final {
- public:
-  static T* Get() { return *GetPPtr(); }
-  static void SetAllocated(T* val) { *GetPPtr() = val; }
-  template<typename... Args>
-  static void New(Args&&... args) {
-    CHECK(Get() == nullptr);
-    LOG(INFO) << "NewGlobal " << typeid(T).name();
-    *GetPPtr() = new T(std::forward<Args>(args)...);
-  }
-  static void Delete() {
-    if (Get() != nullptr) {
-      LOG(INFO) << "DeleteGlobal " << typeid(T).name();
-      delete Get();
-      *GetPPtr() = nullptr;
-    }
-  }
-
- private:
-  static T** GetPPtr() {
-    CheckKind();
-    static T* ptr = nullptr;
-    return &ptr;
-  }
-  static void CheckKind() {
-    if (!std::is_same<Kind, void>::value) {
-      CHECK(Global<T>::Get() == nullptr)
-          << typeid(Global<T>).name() << " are disable for avoiding misuse";
-    }
-  }
-};
-
-template<typename T>
-Maybe<T*> GlobalMaybe() {
-  CHECK_NOTNULL_OR_RETURN(Global<T>::Get()) << " typeid: " << typeid(T).name();
-  return Global<T>::Get();
-}
 
 #define OF_COMMA ,
 

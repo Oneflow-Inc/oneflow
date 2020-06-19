@@ -173,9 +173,9 @@ struct IndependentThreadNum4TaskType final {
   std::function<size_t()> get_num_;
 };
 
-#define REGISTER_INDEPENDENT_THREAD_NUM(task_type, num)            \
+#define REGISTER_INDEPENDENT_THREAD_NUM(task_type, ...)            \
   REGISTER_CLASS_CREATOR(task_type, IndependentThreadNum4TaskType, \
-                         ([] { return new IndependentThreadNum4TaskType(num); }))
+                         ([] { return new IndependentThreadNum4TaskType(__VA_ARGS__); }))
 
 struct TickTockTaskType final {};
 
