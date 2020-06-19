@@ -103,10 +103,12 @@ TEST(OpkernelInstructionType, call_opkernel) {
   {
     auto op_conf = std::make_shared<OperatorConf>();
     op_conf->set_name("test_source_op_name");
-    op_conf->mutable_user_conf()->set_op_type_name("TestSource");
+    auto* user_conf = op_conf->mutable_user_conf();
+    user_conf->set_op_type_name("TestSource");
+    (*user_conf->mutable_output())["out"].add_s("test_source_op_name/out_0");
     opkernel_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
   }
-  int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out");
+  int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
   int64_t parallel_desc_id = 0;
   int64_t output_blob_id = vm::TestUtil::NewObject(&list, "0:gpu:0", &parallel_desc_id);
   list.EmplaceBack(vm::NewInstruction("gpu.CallOpKernel")
@@ -115,7 +117,6 @@ TEST(OpkernelInstructionType, call_opkernel) {
                        ->add_separator()
                        ->add_separator()
                        ->add_symbol_operand(obn_id)
-                       ->add_int64_operand(0)
                        ->add_mut_operand(output_blob_id)
                        ->add_separator());
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
@@ -133,13 +134,15 @@ TEST(OpkernelInstructionType, call_opkernel) {
 TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   vm::TestResourceDescScope scope(1, 1);
   InstructionMsgList list;
-  int64_t in_id = vm::TestUtil::NewStringSymbol(&list, "in");
-  int64_t out_id = vm::TestUtil::NewStringSymbol(&list, "out");
+  int64_t in_id = vm::TestUtil::NewStringSymbol(&list, "in_0");
+  int64_t out_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
   int64_t test_source_id = 0;
   {
     auto op_conf = std::make_shared<OperatorConf>();
     op_conf->set_name("test_source_op_name");
-    op_conf->mutable_user_conf()->set_op_type_name("TestSource");
+    auto* user_conf = op_conf->mutable_user_conf();
+    user_conf->set_op_type_name("TestSource");
+    (*user_conf->mutable_output())["out"].add_s("test_source_op_name/out_0");
     test_source_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
   }
   int64_t x = 0;
@@ -152,7 +155,6 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
                          ->add_separator()
                          ->add_separator()
                          ->add_symbol_operand(out_id)
-                         ->add_int64_operand(0)
                          ->add_mut_operand(x)
                          ->add_separator());
   }
@@ -160,7 +162,10 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   {
     auto op_conf = std::make_shared<OperatorConf>();
     op_conf->set_name("ccrelu_op_name");
-    op_conf->mutable_user_conf()->set_op_type_name("ccrelu");
+    auto* user_conf = op_conf->mutable_user_conf();
+    user_conf->set_op_type_name("ccrelu");
+    (*user_conf->mutable_input())["in"].add_s("ccrelu_op_name/in_0");
+    (*user_conf->mutable_output())["out"].add_s("ccrelu_op_name/out_0");
     ccrelu_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
   }
   int64_t y = 0;
@@ -172,11 +177,9 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
                          ->add_mut_operand(ccrelu_id)
                          ->add_separator()
                          ->add_symbol_operand(in_id)
-                         ->add_int64_operand(0)
                          ->add_const_operand(x)
                          ->add_separator()
                          ->add_symbol_operand(out_id)
-                         ->add_int64_operand(0)
                          ->add_mut_operand(y)
                          ->add_separator());
   }
@@ -202,10 +205,12 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   {
     auto op_conf = std::make_shared<OperatorConf>();
     op_conf->set_name("test_source_op_name");
-    op_conf->mutable_user_conf()->set_op_type_name("TestSource");
+    auto* user_conf = op_conf->mutable_user_conf();
+    user_conf->set_op_type_name("TestSource");
+    (*user_conf->mutable_output())["out"].add_s("test_source_op_name/out_0");
     op_conf_id = NewOpConfSymbol(&list, op_conf);
   }
-  int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out");
+  int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
   int64_t output_blob_id = vm::TestUtil::NewObject(&list, "0:gpu:0");
   list.EmplaceBack(vm::NewInstruction("gpu.compute.UserStatelessCallOpKernel")
                        ->add_parallel_desc(parallel_desc_id)
@@ -215,7 +220,6 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
                        ->add_separator()
                        ->add_separator()
                        ->add_symbol_operand(obn_id)
-                       ->add_int64_operand(0)
                        ->add_mut_operand(output_blob_id)
                        ->add_separator());
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
@@ -236,12 +240,14 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   int64_t job_desc_id = NewJobDescSymbol(&list, std::make_shared<JobConfigProto>());
   int64_t parallel_desc_id = 0;
   int64_t opkernel_id = vm::TestUtil::NewObject(&list, "0:gpu:0", &parallel_desc_id);
-  int64_t out_id = vm::TestUtil::NewStringSymbol(&list, "out");
+  int64_t out_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
   int64_t test_source_id = 0;
   {
     auto op_conf = std::make_shared<OperatorConf>();
     op_conf->set_name("test_source_op_name");
-    op_conf->mutable_user_conf()->set_op_type_name("TestSource");
+    auto* user_conf = op_conf->mutable_user_conf();
+    user_conf->set_op_type_name("TestSource");
+    (*user_conf->mutable_output())["out"].add_s("test_source_op_name/out_0");
     test_source_id = NewOpConfSymbol(&list, op_conf);
   }
   int64_t x = vm::TestUtil::NewObject(&list, "0:gpu:0");
@@ -253,15 +259,17 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
                        ->add_separator()
                        ->add_separator()
                        ->add_symbol_operand(out_id)
-                       ->add_int64_operand(0)
                        ->add_mut_operand(x)
                        ->add_separator());
-  int64_t in_id = vm::TestUtil::NewStringSymbol(&list, "in");
+  int64_t in_id = vm::TestUtil::NewStringSymbol(&list, "in_0");
   int64_t ccrelu_id = 0;
   {
     auto op_conf = std::make_shared<OperatorConf>();
     op_conf->set_name("ccrelu_op_name");
-    op_conf->mutable_user_conf()->set_op_type_name("ccrelu");
+    auto* user_conf = op_conf->mutable_user_conf();
+    user_conf->set_op_type_name("ccrelu");
+    (*user_conf->mutable_input())["in"].add_s("ccrelu_op_name/in_0");
+    (*user_conf->mutable_output())["out"].add_s("ccrelu_op_name/out_0");
     ccrelu_id = NewOpConfSymbol(&list, op_conf);
   }
   int64_t y = vm::TestUtil::NewObject(&list, "0:gpu:0");
@@ -272,11 +280,9 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
                        ->add_mut_operand(opkernel_id)
                        ->add_separator()
                        ->add_symbol_operand(in_id)
-                       ->add_int64_operand(0)
                        ->add_const_operand(x)
                        ->add_separator()
                        ->add_symbol_operand(out_id)
-                       ->add_int64_operand(0)
                        ->add_mut_operand(y)
                        ->add_separator());
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
