@@ -1,0 +1,19 @@
+Patch from https://github.com/NixOS/patchelf/pull/171
+diff --git a/src/patchelf.cc b/src/patchelf.cc
+index 0b4965a..592799d 100644
+--- a/src/patchelf.cc
++++ b/src/patchelf.cc
+@@ -1074,13 +1074,6 @@ void ElfFile<ElfFileParamNames>::modifySoname(sonameMode op, const std::string &
+         return;
+     }
+ 
+-    /* Zero out the previous SONAME */
+-    unsigned int sonameSize = 0;
+-    if (soname) {
+-        sonameSize = strlen(soname);
+-        memset(soname, 'X', sonameSize);
+-    }
+-
+     debug("new SONAME is '%s'\n", newSoname.c_str());
+ 
+     /* Grow the .dynstr section to make room for the new SONAME. */

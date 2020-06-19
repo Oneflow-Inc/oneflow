@@ -1,0 +1,14 @@
+# pip requirements for cpython 3.7
+# NOTE: certifi has GPG signatures; could download and verify independently.
+certifi==2020.4.5.2 \
+    --hash=sha256:9cd41137dc19af6a5e03b630eefe7d1f458d964d406342dd3edf625839b944cc \
+    --hash=sha256:5ad7e9a056d25ffa5082862e36f119f7f7cec6457fa07ee2f8c339814b80c9b1
+auditwheel==3.1.1 \
+    --hash=sha256:032a5c8407f7a7edf4921780e8523e1b30c1a08245389db1a80a34e753f58881 \
+    --hash=sha256:a5b0ad475c7631edd46cd7c2ced9b99e26f9a2e3e2ef4f380b1b032eb8e52310
+# these packages required for auditwheel
+pyelftools==0.26 \
+    --hash=sha256:cc0ea0de82b240a73ef4056fce44acbb4727dca7d66759371aff2bad457ed711
+wheel==0.34.2 \
+    --hash=sha256:df277cb51e61359aba502208d680f90c0493adec6f0e848af94948778aed386e \
+    --hash=sha256:8788e9155fe14f54164c1b9eb0a319d98ef02c160725587ad60f14ddc57b6f96
