@@ -10,7 +10,7 @@ def make_job(x_shape, shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def reshape_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
         return flow.reshape(x, shape)
 
@@ -21,7 +21,7 @@ def make_xla_job(x_shape, shape, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def xla_reshape_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
         return flow.reshape(x, shape)
 
@@ -32,7 +32,7 @@ def make_trt_job(x_shape, shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(True)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def trt_reshape_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
         return flow.reshape(x, shape)
 

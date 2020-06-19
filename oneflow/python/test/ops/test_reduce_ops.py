@@ -16,7 +16,7 @@ def compare_reduce_any_with_tensorflow(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReduceAnyJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_any(x, axis=axis, keepdims=keepdims)
@@ -74,7 +74,7 @@ def test_reduce_any_batch_axis_reduced(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):
         y = flow.math.reduce_any(x)
         test_case.assertTrue(y.split_axis is None)
@@ -91,7 +91,7 @@ def compare_reduce_prod_with_tensorflow(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReduceProdJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_prod(x, axis=axis, keepdims=keepdims)
@@ -149,7 +149,7 @@ def test_reduce_prod_batch_axis_reduced(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):
         y = flow.math.reduce_prod(x)
         test_case.assertTrue(y.split_axis is None)
@@ -166,7 +166,7 @@ def compare_reduce_min_with_tensorflow(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReduceMinJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_min(x, axis=axis, keepdims=keepdims)
@@ -224,7 +224,7 @@ def test_reduce_min_batch_axis_reduced(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):
         y = flow.math.reduce_min(x)
         test_case.assertTrue(y.split_axis is None)
@@ -241,7 +241,7 @@ def compare_reduce_all_with_tensorflow(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReduceAllJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_all(x, axis=axis, keepdims=keepdims)
@@ -299,7 +299,7 @@ def test_reduce_all_batch_axis_reduced(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):
         y = flow.math.reduce_all(x)
         test_case.assertTrue(y.split_axis is None)
@@ -316,7 +316,7 @@ def compare_reduce_sum_with_tensorflow(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReduceSumJob(x=flow.FixedTensorDef(input_shape, dtype=data_type_util.kFloat)):
         with flow.device_prior_placement(device_type, "0:0"):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
@@ -374,7 +374,7 @@ def test_reduce_sum_batch_axis_reduced(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):
         y = flow.math.reduce_sum(x)
         test_case.assertTrue(y.split_axis is None)

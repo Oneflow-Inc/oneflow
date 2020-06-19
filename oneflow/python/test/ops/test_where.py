@@ -73,7 +73,7 @@ def _of_where(
         )
         func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def where_fn(
             condition_def=flow.MirroredTensorDef(condition.shape, dtype=flow.int32),
             x_def=flow.MirroredTensorDef(x.shape, dtype=flow.float),
@@ -91,7 +91,7 @@ def _of_where(
         )
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def where_fn(
             condition_def=flow.FixedTensorDef(condition.shape, dtype=flow.int32),
             x_def=flow.FixedTensorDef(x.shape, dtype=flow.float),
@@ -185,14 +185,14 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
     if input_shape is None:
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def where_fn(input_def=flow.FixedTensorDef(input.shape, dtype=flow.float)):
             return flow.where(input_def)
 
     else:
         func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def where_fn(input_def=flow.MirroredTensorDef(input_shape, dtype=flow.float)):
             return flow.where(input_def)
 

@@ -10,7 +10,7 @@ def make_job(shape, mean_shape, norm_axis, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def layer_norm_grad_job(
         dy=flow.FixedTensorDef(shape, dtype=dtype),
         x=flow.FixedTensorDef(shape, dtype=dtype),
@@ -28,7 +28,7 @@ def make_xla_job(shape, mean_shape, norm_axis, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
-    @flow.function(config)
+    @flow.global_function(config)
     def xla_layer_norm_grad_job(
         dy=flow.FixedTensorDef(shape, dtype=dtype),
         x=flow.FixedTensorDef(shape, dtype=dtype),

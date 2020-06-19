@@ -192,7 +192,7 @@ def GetSeveralLossesAsNumpy(enable_inplace, num_iters=10):
     train_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
     train_config.enable_inplace(enable_inplace)
 
-    @flow.function(train_config)
+    @flow.global_function(train_config)
     def PretrainJob():
         loss = BuildPreTrainNet(
             batch_size=FLAGS.batch_size,

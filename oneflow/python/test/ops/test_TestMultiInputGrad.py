@@ -32,7 +32,7 @@ def test_TestMultiInput_grad_mirrored_inplace(test_case):
         3,
     )
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def TestMultiInputJob():
         with flow.device_prior_placement("gpu", "0:0"):
             x1 = flow.get_variable(

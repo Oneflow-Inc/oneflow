@@ -14,7 +14,7 @@ def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dt
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def cast_forward(
         input_def=flow.FixedTensorDef(
             shape=input_shape, dtype=type_name_to_flow_type[dtype]
@@ -39,7 +39,7 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def CastJob():
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(

@@ -23,7 +23,7 @@ def NaiveTest(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def AddJob(a=flow.FixedTensorDef(shape), b=flow.FixedTensorDef(shape)):
         return a + b + b
 

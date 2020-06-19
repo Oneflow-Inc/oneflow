@@ -2,7 +2,7 @@ import numpy as np
 import oneflow as of
 
 
-@flow.function
+@flow.global_function
 def variable_scope_test_job_1(a=of.FixedTensorDef((1, 3, 6, 6))):
     with of.deprecated.variable_scope("job1_scope1"):
         convw = of.get_variable(
@@ -52,7 +52,7 @@ def variable_scope_test_job_1(a=of.FixedTensorDef((1, 3, 6, 6))):
     return fc2
 
 
-@flow.function
+@flow.global_function
 def variable_scope_test_job_2(a=of.FixedTensorDef((2, 5))):
     with of.deprecated.variable_scope("job2_scope1"):
         indices = of.get_variable(

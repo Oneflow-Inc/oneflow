@@ -12,7 +12,7 @@ def test_watch_scope(test_case):
 
     blob_watched = {}
 
-    @flow.function(flow.FunctionConfig())
+    @flow.global_function(flow.FunctionConfig())
     def ReluJob(x=flow.FixedTensorDef((2, 5))):
         with flow.watch_scope(blob_watched):
             y = flow.nn.relu(x)
