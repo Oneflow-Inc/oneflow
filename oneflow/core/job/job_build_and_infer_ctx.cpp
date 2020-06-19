@@ -871,7 +871,7 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(Operator* op) {
   std::function<bool(const LogicalBlobId&)> IsLbiBackwardUsed;
   InferBlobBackwardSignature(*op, &IsLbiBackwardUsed);
   auto* map = op->mut_blob_backward_used_signature()->mutable_bn_in_op2blob_backward_used();
-  const auto SetIsBlobBackwardUsed = [&](const std::string& bn_in_op) {
+  const auto& SetIsBlobBackwardUsed = [&](const std::string& bn_in_op) {
     (*map)[bn_in_op] = IsLbiBackwardUsed(op->BnInOp2Lbi(bn_in_op));
   };
   for (const auto& ibn : op->input_bns()) { SetIsBlobBackwardUsed(ibn); }
@@ -891,7 +891,7 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(
   fake_diff_lbi.set_op_name("fake_op_name");
   fake_diff_lbi.set_blob_name("fake_blob_name");
   HashMap<std::string, LogicalBlobId> in_diff2lbi;
-  const auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
+  const auto& DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
     const auto& input_bns = op.input_bns();
     const auto& output_bns = op.output_bns();
     if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
@@ -906,12 +906,12 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(
     }
     return nullptr;
   };
-  const auto FwLogicalBlobDescPtr4Lbi = [&](const LogicalBlobId& lbi) -> const BlobDesc* {
+  const auto& FwLogicalBlobDescPtr4Lbi = [&](const LogicalBlobId& lbi) -> const BlobDesc* {
     const auto& iter = lbi2logical_blob_desc_.find(lbi);
     if (iter != lbi2logical_blob_desc_.end()) { return iter->second.get(); }
     return nullptr;
   };
-  const auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
+  const auto& LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
     const LogicalBlobId& lbi = op.BnInOp2Lbi(bn);
     const auto* logical_blob_desc = FwLogicalBlobDescPtr4Lbi(lbi);
     CHECK_NOTNULL(logical_blob_desc);
