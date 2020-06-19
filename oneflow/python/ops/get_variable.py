@@ -15,6 +15,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.ops.user_op_builder as user_op_builder_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
+import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
@@ -101,6 +102,8 @@ def get_eager_variable(
         var_blob = _CreateEagerVariableBlob(op_conf, parallel_conf)
         _InitVariableBlob(op_conf, var_blob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
+    bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
+    bw_blob_register.SetObject4BlobName(name, var_blob.blob_object)
     assert var_blob.shape == shape
     assert var_blob.dtype == dtype
     return var_blob
