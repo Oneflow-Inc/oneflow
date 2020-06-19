@@ -26,6 +26,10 @@ class BlobRegister(object):
         assert not self.HasObject4BlobName(blob_name), blob_name
         self.blob_name2object[blob_name] = obj
 
+    def TrySetObject4BlobName(self, blob_name, obj):
+        if not self.HasObject4BlobName(blob_name):
+            self.SetObject4BlobName(blob_name, obj)
+
     def ClearObject4BlobName(self, blob_name):
         assert self.HasObject4BlobName(blob_name)
         del self.blob_name2object[blob_name]

@@ -22,6 +22,7 @@ from oneflow.python.framework.pull_util import FutureRemoteBlobs
 from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
+from oneflow.python.eager.blob_register import BlobRegister
 from contextlib import contextmanager
 
 import oneflow
@@ -45,7 +46,7 @@ class Session(object):
         self._UpdateFunctionFlagName2DefaultVal()
         self.instruction_list_ = instr_util.InstructionListProto()
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
-        self.eager_unique_name2bw_used_blob_object_ = {}
+        self.backward_blob_register_ = BlobRegister()
 
     @property
     def status(self):
@@ -98,8 +99,8 @@ class Session(object):
         return self.eager_symbol_list_
 
     @property
-    def eager_unique_name2bw_used_blob_object(self):
-        return self.eager_unique_name2bw_used_blob_object_
+    def backward_blob_register(self):
+        return self.backward_blob_register_
 
     def GetLazyFunctionDesc(self, job_name):
         if job_name in self.job_name2function_desc_:
@@ -234,15 +235,15 @@ class Session(object):
 
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):
-        assert len(self.eager_unique_name2bw_used_blob_object_) == 0
+        assert len(self.backward_blob_register.blob_name2object) == 0
         self.eager_global_function_desc_stack_.insert(0, function_desc)
         try:
             yield
         finally:
             self.eager_global_function_desc_stack_.pop(0)
-            keys = list(self.eager_unique_name2bw_used_blob_object_.keys())
+            keys = list(self.backward_blob_register.blob_name2object.keys())
             for key in keys:
-                self.eager_unique_name2bw_used_blob_object_[key].__del__()
+                del self.backward_blob_register.blob_name2object[key]
 
     def _IncRunningJobCnt(self):
         assert self.status_ is SessionStatus.RUNNING
