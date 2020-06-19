@@ -179,6 +179,9 @@ class Operator {
   BlobLastUsedSignature* mut_blob_last_used_signature() {
     return op_attribute_.mutable_blob_last_used_signature();
   }
+  BlobBackwardUsedSignature* mut_blob_backward_used_signature() {
+    return op_attribute_.mutable_blob_backward_used_signature();
+  }
 
  protected:
   virtual Maybe<void> GetSbpSignatures(

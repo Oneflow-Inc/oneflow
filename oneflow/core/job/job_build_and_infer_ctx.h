@@ -31,7 +31,6 @@ class JobBuildAndInferCtx {
   Maybe<bool> IsDynamic(const std::string& lbn) const;
   Maybe<bool> DisableBoxing(const std::string& lbn) const;
   Maybe<bool> IsTensorList(const std::string& lbn) const;
-  Maybe<bool> ConsumedByGradientOp(const std::string& lbn_with_hint) const;
   Maybe<OptInt64> GetBatchAxis(const std::string& lbn) const;
   Maybe<OptInt64> GetSplitAxisFromProducerView(const std::string& lbn) const;
   Maybe<const ParallelDesc*> GetParallelDescFromProducerView(const std::string& lbn) const;
@@ -44,7 +43,6 @@ class JobBuildAndInferCtx {
   Maybe<DataType> MirroredBlobGetDataType(const std::string& lbn_with_hint) const;
   Maybe<bool> MirroredBlobIsDynamic(const std::string& lbn_with_hint) const;
   Maybe<bool> MirroredBlobIsTensorList(const std::string& lbn_with_hint) const;
-  Maybe<bool> MirroredBlobConsumedByGradientOp(const std::string& lbn_with_hint) const;
   Maybe<OptInt64> MirroredBlobGetBatchAxis(const std::string& lbn_with_hint) const;
   Maybe<OptInt64> MirroredBlobGetSplitAxisFromProducerView(const std::string& lbn_with_hint) const;
   Maybe<const ParallelDesc*> MirroredBlobGetParallelDescFromProducerView(
@@ -113,9 +111,9 @@ class JobBuildAndInferCtx {
   Maybe<void> AddLossMirroredBlobName(const std::string& lbn);
   Maybe<const LogicalBlobId*> GetSubLbi(const LogicalBlobId& lbi, int32_t index);
   Maybe<bool> AllInputsBroadcastParallel(const Operator& op) const;
-  virtual void VirtualInferOp(const Operator& op);
-  void UpdateOpName2AncestorsNeedNoGrad(const Operator& op);
-  void Updatelbi2ConsumedByGradientOp(const Operator& op);
+  void InferBlobBackwardSignature(Operator* op);
+  void InferBlobBackwardSignature(const Operator& op,
+                                  std::function<bool(const LogicalBlobId&)>* IsLbiBackwardUsed);
   Maybe<OpAttribute> AddAndInferOp(const OperatorConf& op_conf, const ParallelConf& parallel_conf,
                                    bool is_mirrored_parallel_view);
 
@@ -135,7 +133,6 @@ class JobBuildAndInferCtx {
   HashMap<LogicalBlobId, SbpParallel> mirrored_lbi2sbp_parallel_;
   bool is_job_conf_frozen_;
   bool has_job_conf_;
-  HashMap<LogicalBlobId, bool> lbi2consumed_by_gradient_op_;
   HashMap<std::string, bool> op_name2ancestors_need_no_grad_;
 };
 
