@@ -174,7 +174,7 @@ class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
       const LogicalBlobId& lbn) override;
   Maybe<void> Complete() override;
 
-  Job fw_job_;
+  HashSet<std::string> executed_op_names_;
 };
 
 }  // namespace oneflow

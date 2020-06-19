@@ -8,7 +8,7 @@ def GetDefaultBackwardBlobRegister():
 
 
 def ReleaseUnusedBlobObject(op_attribute, blob_register):
-    assert op_attribute.HasField("blob_last_used_signature")
+    assert op_attribute.HasField("blob_last_used_signature"), op_attribute
     signature_map = op_attribute.blob_last_used_signature.bn_in_op2blob_last_used
     bn_in_op2lbi = op_attribute.arg_signature.bn_in_op2lbi
     for bn_in_op, is_blob_last_used in signature_map.items():

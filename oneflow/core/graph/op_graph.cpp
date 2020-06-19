@@ -382,6 +382,7 @@ void OpGraph::Init(const Job& job) {
   InitProducerOpName2CtrlConsumerOpNames(job);
   CheckIsDAG();
   ForEachNode([](OpNode* node) { node->InitLbi2SourceNode(); });
+  InferBlobLastUsed();
   InferTimeShape();
   InferLogicalBlobDesc(job);
   ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
@@ -839,6 +840,11 @@ void OpGraph::DumpBatchAxisLbi(Job* job) const {
       CHECK(lbn2batch_axis->insert(pair).first->second == batch_axis);
     }
   });
+}
+
+Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&)>& DoEach) const {
+  for (const auto& op_name : op_names_) { JUST(DoEach(*op_name2op_node_.at(op_name))); }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
