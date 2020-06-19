@@ -1,5 +1,6 @@
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -8,7 +9,8 @@ namespace boxing {
 namespace collective {
 
 CollectiveBoxingDeviceCtxPoller::CollectiveBoxingDeviceCtxPoller() : shutdown_(false), counter_(0) {
-  num_threads_ = Global<ResourceDesc>::Get()->collective_boxing_conf().num_callback_threads();
+  num_threads_ =
+      Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf().num_callback_threads();
   mutex_vec_.reserve(num_threads_);
   for (int64_t tid = 0; tid < num_threads_; ++tid) { mutex_vec_.emplace_back(new std::mutex()); }
   poller_thread_vec_.resize(num_threads_);
