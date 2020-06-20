@@ -22,27 +22,30 @@ def Interpret(op_attribute_str, parallel_conf_str):
     )
 
 
-def BackwardInterpret(op_attribute_str, parallel_conf_str):
+def InterpretCompletedOp(op_attribute_str, parallel_conf_str):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
     blob_register = gradient_util.GetDefaultBackwardBlobRegister()
-    _BackwardInterpret(op_attribute, parallel_conf_str, blob_register)
+    _InterpretCompletedOp(op_attribute, parallel_conf_str, blob_register)
     gradient_util.ReleaseUnusedBlobObject(op_attribute, blob_register)
 
 
 def _Interpret(op_attribute, parallel_conf_str, blob_register):
     if op_attribute.op_conf.HasField("cast_to_mirrored_conf"):
-        return _MirroredCast(op_attribute, blob_register)
-    if op_attribute.op_conf.HasField("cast_from_mirrored_conf"):
-        return _MirroredCast(op_attribute, blob_register)
-    parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
-    return _NaiveInterpret(op_attribute, parallel_conf, blob_register)
+        _MirroredCastAndAddOutputBlobReleaser(op_attribute, blob_register)
+    elif op_attribute.op_conf.HasField("cast_from_mirrored_conf"):
+        _MirroredCastAndAddOutputBlobReleaser(op_attribute, blob_register)
+    else:
+        parallel_conf = text_format.Parse(
+            parallel_conf_str, placement_pb.ParallelConf()
+        )
+        _NaiveInterpret(op_attribute, parallel_conf, blob_register)
 
 
-def _BackwardInterpret(op_attribute, parallel_conf_str, blob_register):
+def _InterpretCompletedOp(op_attribute, parallel_conf_str, blob_register):
     if op_attribute.op_conf.HasField("cast_to_mirrored_conf"):
-        return _BackwardMirroredCast(op_attribute, blob_register)
+        return _MirroredCast(op_attribute, blob_register)
     if op_attribute.op_conf.HasField("cast_from_mirrored_conf"):
-        return _BackwardMirroredCast(op_attribute, blob_register)
+        return _MirroredCast(op_attribute, blob_register)
     parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
     return _NaiveInterpret(op_attribute, parallel_conf, blob_register)
 
@@ -57,26 +60,22 @@ def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
     vm_util.LogicalRun(BuildInstruction)
 
 
-def CastToMirrored(op_attribute_str, parallel_conf_str):
+def MirroredCast(op_attribute_str, parallel_conf_str):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
-    assert op_attribute.op_conf.HasField("cast_to_mirrored_conf")
     blob_register = blob_register_util.GetDefaultBlobRegister()
-    _MirroredCast(op_attribute, blob_register)
+    is_cast_to_mirrored = op_attribute.op_conf.HasField("cast_to_mirrored_conf")
+    is_cast_from_mirrored = op_attribute.op_conf.HasField("cast_from_mirrored_conf")
+    assert is_cast_to_mirrored or is_cast_from_mirrored
+    _MirroredCastAndAddOutputBlobReleaser(op_attribute, blob_register)
     bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
     gradient_util.TrySetBackwardUsedBlobObject(
         op_attribute, blob_register, bw_blob_register
     )
 
 
-def CastFromMirrored(op_attribute_str, parallel_conf_str):
-    op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
-    assert op_attribute.op_conf.HasField("cast_from_mirrored_conf")
-    blob_register = blob_register_util.GetDefaultBlobRegister()
+def _MirroredCastAndAddOutputBlobReleaser(op_attribute, blob_register):
     _MirroredCast(op_attribute, blob_register)
-    bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
-    gradient_util.TrySetBackwardUsedBlobObject(
-        op_attribute, blob_register, bw_blob_register
-    )
+    _AddOutputBlobObjectReleaser4InputBlobObject(op_attribute, blob_register)
 
 
 def _MirroredCast(op_attribute, blob_register):
@@ -91,26 +90,16 @@ def _MirroredCast(op_attribute, blob_register):
                 in_blob_object, op_arg_attribute
             )
             bn_in_op2blob_object["out"] = out_blob_object
-        release = _MakeReleaser4MirroredCastBlobObject(op_attribute, blob_register)
-        in_blob_object.add_releaser(release)
 
     vm_util.LogicalRun(BuildInstruction)
 
 
-def _BackwardMirroredCast(op_attribute, blob_register):
-    def BuildInstruction(builder):
-        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
-            in_blob_object = bn_in_op2blob_object["in"]
-            parallel_desc_symbol = in_blob_object.parallel_desc_symbol
-            op_arg_attribute = op_arg_util.GetOpArgAttribute(
-                parallel_desc_symbol, op_attribute, "out"
-            )
-            out_blob_object = builder.MakeReferenceBlobObject(
-                in_blob_object, op_arg_attribute
-            )
-            bn_in_op2blob_object["out"] = out_blob_object
-
-    vm_util.LogicalRun(BuildInstruction)
+def _AddOutputBlobObjectReleaser4InputBlobObject(op_attribute, blob_register):
+    in_lbi = op_attribute.arg_signature.bn_in_op2lbi["in"]
+    in_lbn = "%s/%s" % (in_lbi.op_name, in_lbi.blob_name)
+    in_blob_object = blob_register.GetObject4BlobName(in_lbn)
+    release = _MakeReleaser4MirroredCastBlobObject(op_attribute, blob_register)
+    in_blob_object.add_releaser(release)
 
 
 def _MakeReleaser4MirroredCastBlobObject(op_attribute, blob_register):

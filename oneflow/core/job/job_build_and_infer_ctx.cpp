@@ -842,7 +842,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf, parallel_conf));
   const std::string& op_attribute_str = PbMessage2TxtString(*op_attribute);
   const std::string& parallel_conf_str = PbMessage2TxtString(parallel_conf);
-  JUST(GlobalMaybe<ForeignCallback>())->EagerCastToMirrored(op_attribute_str, parallel_conf_str);
+  JUST(GlobalMaybe<ForeignCallback>())->EagerMirroredCast(op_attribute_str, parallel_conf_str);
   return mirrored_lbi;
 }
 
@@ -885,7 +885,7 @@ Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   JUST(DoPass("AutoTrainStep"));
   JUST(DoPass("AutoLearningRate"));
   JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
-  JUST(EagerRunOps(job(), &executed_op_names_, &ForeignCallback::EagerBackwardInterpret));
+  JUST(EagerRunOps(job(), &executed_op_names_, &ForeignCallback::EagerInterpretCompletedOp));
   return Maybe<void>::Ok();
 }
 
