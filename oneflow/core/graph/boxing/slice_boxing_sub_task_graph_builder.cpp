@@ -20,6 +20,14 @@ bool ContainsEmptySlice(const std::vector<TensorSliceView>& slices) {
                      [](const TensorSliceView& slice) { return slice.IsEmpty(); });
 }
 
+bool IsCopyContiguous(const TensorSliceView& src, const TensorSliceView& dst) {
+  CHECK_EQ(src.range_vec().size(), dst.range_vec().size());
+  FOR_RANGE(int64_t, i, 1, src.range_vec().size()) {
+    if (src.range_vec().at(i) != dst.range_vec().at(i)) { return false; }
+  }
+  return true;
+}
+
 }  // namespace
 
 Maybe<void> SliceBoxingSubTskGphBuilder::Build(
@@ -161,15 +169,17 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
                   CreateBoxingNodeToHost(in_node, in_slice, intersection);
               out_node->ConnectToSrcNodeWithSlice(copy_to_host, NewEdge(), intersection);
             } else {
-              if (in_id == out_id) {
+              if (in_id == out_id || (IsCopyContiguous(in_slice, out_slice))) {
                 out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
-              } else if (out_sbp.split_parallel().axis() == 0) {  // in contiguous
+              } else if (IsCopyContiguous(in_slice, intersection)
+                         && !IsCopyContiguous(intersection, out_slice)) {
                 SliceBoxingTaskNode* copy_to_out_continuous =
                     CreateBoxingNode121(out_pd, out_id, intersection, kSliceBoxingTaskModeCopy);
                 copy_to_out_continuous->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
                 out_node->ConnectToSrcNodeWithSlice(copy_to_out_continuous, NewEdge(),
                                                     intersection);
-              } else if (in_sbp.split_parallel().axis() == 0) {  // out contiguous
+              } else if (!IsCopyContiguous(in_slice, intersection)
+                         && IsCopyContiguous(intersection, out_slice)) {
                 SliceBoxingTaskNode* in_copy_to_continuous =
                     CreateBoxingNode121(in_pd, in_id, intersection, kSliceBoxingTaskModeCopy);
                 in_copy_to_continuous->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
