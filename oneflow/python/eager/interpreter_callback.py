@@ -12,10 +12,13 @@ from google.protobuf import text_format
 import oneflow.python.eager.blob_register as blob_register_util
 
 
-def Interpret(op_attribute_str, parallel_conf_str):
+def MirroredCast(op_attribute_str, parallel_conf_str):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
     blob_register = blob_register_util.GetDefaultBlobRegister()
-    _Interpret(op_attribute, parallel_conf_str, blob_register)
+    is_cast_to_mirrored = op_attribute.op_conf.HasField("cast_to_mirrored_conf")
+    is_cast_from_mirrored = op_attribute.op_conf.HasField("cast_from_mirrored_conf")
+    assert is_cast_to_mirrored or is_cast_from_mirrored
+    _MirroredCastAndAddOutputBlobReleaser(op_attribute, blob_register)
     bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
     gradient_util.TrySetBackwardUsedBlobObject(
         op_attribute, blob_register, bw_blob_register
@@ -27,18 +30,6 @@ def InterpretCompletedOp(op_attribute_str, parallel_conf_str):
     blob_register = gradient_util.GetDefaultBackwardBlobRegister()
     _InterpretCompletedOp(op_attribute, parallel_conf_str, blob_register)
     gradient_util.ReleaseUnusedBlobObject(op_attribute, blob_register)
-
-
-def _Interpret(op_attribute, parallel_conf_str, blob_register):
-    if op_attribute.op_conf.HasField("cast_to_mirrored_conf"):
-        _MirroredCastAndAddOutputBlobReleaser(op_attribute, blob_register)
-    elif op_attribute.op_conf.HasField("cast_from_mirrored_conf"):
-        _MirroredCastAndAddOutputBlobReleaser(op_attribute, blob_register)
-    else:
-        parallel_conf = text_format.Parse(
-            parallel_conf_str, placement_pb.ParallelConf()
-        )
-        _NaiveInterpret(op_attribute, parallel_conf, blob_register)
 
 
 def _InterpretCompletedOp(op_attribute, parallel_conf_str, blob_register):
@@ -58,19 +49,6 @@ def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
             )
 
     vm_util.LogicalRun(BuildInstruction)
-
-
-def MirroredCast(op_attribute_str, parallel_conf_str):
-    op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
-    blob_register = blob_register_util.GetDefaultBlobRegister()
-    is_cast_to_mirrored = op_attribute.op_conf.HasField("cast_to_mirrored_conf")
-    is_cast_from_mirrored = op_attribute.op_conf.HasField("cast_from_mirrored_conf")
-    assert is_cast_to_mirrored or is_cast_from_mirrored
-    _MirroredCastAndAddOutputBlobReleaser(op_attribute, blob_register)
-    bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
-    gradient_util.TrySetBackwardUsedBlobObject(
-        op_attribute, blob_register, bw_blob_register
-    )
 
 
 def _MirroredCastAndAddOutputBlobReleaser(op_attribute, blob_register):

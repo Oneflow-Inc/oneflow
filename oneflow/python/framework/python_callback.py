@@ -11,13 +11,6 @@ class _PythonCallback(oneflow_internal.ForeignCallback):
     def __init__(self):
         oneflow_internal.ForeignCallback.__init__(self)
 
-    def EagerInterpret(self, op_attribute_str, parallel_conf_str):
-        try:
-            interpreter_callback.Interpret(op_attribute_str, parallel_conf_str)
-        except Exception as e:
-            print(traceback.format_exc())
-            raise e
-
     def EagerInterpretCompletedOp(self, op_attribute_str, parallel_conf_str):
         try:
             interpreter_callback.InterpretCompletedOp(

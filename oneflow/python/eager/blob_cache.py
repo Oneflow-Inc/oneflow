@@ -13,7 +13,6 @@ def TryDisableBlobCache(blob_object):
     global object_id2blob_cache
     if blob_object.object_id not in object_id2blob_cache:
         return
-    object_id2blob_cache[blob_object.object_id].__del__()
     del object_id2blob_cache[blob_object.object_id]
 
 
@@ -51,8 +50,8 @@ class BlobCache(object):
         return self.numpy_mirrored_list_
 
     def __del__(self):
-        for key, blob_object in self.delegate_blob_object_.items():
-            blob_object.__del__()
+        for key in list(self.delegate_blob_object_.keys()):
+            del self.delegate_blob_object_[key]
 
 
 object_id2blob_cache = {}
