@@ -49,7 +49,7 @@ def _make_unsorted_segment_sum_fn(
 
     if mirrored:
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def unsorted_segment_sum_fn(
             data_def=flow.MirroredTensorDef(data.shape, dtype=flow.float),
             segment_ids_def=flow.MirroredTensorDef(segment_ids.shape, dtype=flow.int32),
@@ -58,7 +58,7 @@ def _make_unsorted_segment_sum_fn(
 
     else:
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def unsorted_segment_sum_fn(
             data_def=flow.FixedTensorDef(data.shape, dtype=flow.float),
             segment_ids_def=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),

@@ -46,7 +46,7 @@ def _run_test(test_case, device, out_shape, axis, segment_ids_shape):
     segment_ids = _gen_segment_ids(out_shape, axis, segment_ids_shape)
     data = _gen_data(out_shape, axis, segment_ids_shape)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def unsorted_segment_sum_job(
         data=flow.FixedTensorDef(data.shape, dtype=flow.float),
         segment_ids=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),
@@ -59,7 +59,7 @@ def _run_test(test_case, device, out_shape, axis, segment_ids_shape):
                 axis=axis,
             )
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def unsorted_segment_sum_like_job(
         data=flow.FixedTensorDef(data.shape, dtype=flow.float),
         segment_ids=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),

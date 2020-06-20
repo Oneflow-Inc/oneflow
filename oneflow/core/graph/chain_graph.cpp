@@ -5,6 +5,7 @@
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -218,7 +219,7 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   InitChainEdge(chains);
   CheckNoCycle();
   SetChainId4ChainNode();
-  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     ToDotWithFilePath(JoinPath("dot", TypeName(), GlobalJobDesc().job_name() + ".dot"));
   }
 }

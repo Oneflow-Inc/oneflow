@@ -22,7 +22,7 @@ def test_sync_dynamic_resize(_):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def TestJob(
             x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type]),
             size=flow.FixedTensorDef((1,), dtype=type_name_to_flow_type[size_type]),

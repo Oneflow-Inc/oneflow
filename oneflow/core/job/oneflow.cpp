@@ -20,6 +20,7 @@
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/operator/interface_op_util.h"
 #include "oneflow/core/job/critical_section_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 
@@ -276,7 +277,7 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
     LOG(INFO) << "compile time: " << GetCurTime() - start;
     complete_plan =
         Improver().GenAndInferMemBlockIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan);
-    if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
       TeePersistentLogStream::Create("complete_plan")->Write(complete_plan);
     }
@@ -921,14 +922,14 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
     PlanUtil::CleanUselessMemBlockAndCheckValid(plan);
-    if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
       PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
     }
     PushPlan("merged_plan", *plan);
   } else {
     PullPlan("merged_plan", plan);
-    if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
     }
   }

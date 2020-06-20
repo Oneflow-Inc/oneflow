@@ -17,7 +17,7 @@ def do_test(test_case, mirrored):
     else:
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def Foo():
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(1))
         flow.losses.add_loss(w)

@@ -170,7 +170,7 @@ def alexnet(images, labels):
 
 
 # train job
-@flow.function
+@flow.global_function
 def alexnet_train_job():
     # set hyper parameter
     flow.config.train.primary_lr(0.00001)
@@ -189,7 +189,7 @@ def alexnet_train_job():
 
 
 # inference job
-@flow.function
+@flow.global_function
 def alexnet_eval_job():
     # load data
     (labels, images) = _data_load_layer(args.eval_dir)

@@ -18,7 +18,7 @@ def TestReshape(x, shape, name):
 def fixed_tensor_def_test(test_case, func_config):
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReshapeJob(x=flow.FixedTensorDef((10, 2))):
         return TestReshape(x, [5, 4], "xx_test_reshape")
 
@@ -32,7 +32,7 @@ def fixed_tensor_def_test(test_case, func_config):
 def mirrored_tensor_def_test(test_case, func_config):
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReshapeJob(x=flow.MirroredTensorDef((10, 2))):
         return TestReshape(x, [5, 4], "xx_test_reshape")
 
@@ -59,7 +59,7 @@ def test_mirrored_TestReshape_1n2c(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReshapeJob(x=flow.MirroredTensorDef((10, 2))):
         return TestReshape(x, [5, 4], "xx_test_reshape")
 

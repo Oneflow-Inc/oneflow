@@ -65,7 +65,7 @@ class TestReduceSum(TestReduce):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def reduce_sum_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
 
@@ -75,7 +75,7 @@ class TestReduceSum(TestReduce):
         config.use_xla_jit(True)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def xla_reduce_sum_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
 
@@ -85,7 +85,7 @@ class TestReduceSum(TestReduce):
         config.use_xla_jit(False)
         config.use_tensorrt(True)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def trt_reduce_sum_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
 
@@ -100,7 +100,7 @@ class TestReduceMean(TestReduce):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def reduce_mean_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
 
@@ -110,7 +110,7 @@ class TestReduceMean(TestReduce):
         config.use_xla_jit(True)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def xla_reduce_mean_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
 
@@ -120,7 +120,7 @@ class TestReduceMean(TestReduce):
         config.use_xla_jit(False)
         config.use_tensorrt(True)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def trt_reduce_mean_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
 

@@ -51,7 +51,7 @@ def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
 
     if mirrored:
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def gather_nd_fn(
             params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
             indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
@@ -60,7 +60,7 @@ def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
 
     else:
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def gather_nd_fn(
             params_def=flow.FixedTensorDef(params.shape, dtype=flow.float),
             indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
@@ -78,7 +78,7 @@ def _of_dynamic_params_gather_nd(params, indices, static_params_shape, compare_f
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def gather_nd_fn(
         params_def=flow.MirroredTensorDef(static_params_shape, dtype=flow.float),
         indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
@@ -180,7 +180,7 @@ def _of_gather_nd_dynamic_indices(params, indices, indices_static_shape, device_
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def gather_nd_fn(
         params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
         indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
