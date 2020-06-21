@@ -108,6 +108,14 @@ Maybe<void> Operator::InferOutBlobDescs(
   return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
 }
 
+Maybe<void> Operator::FillLogicalBlobDescSignature(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& BlobDesc4BnInOp) {
+  auto* map = op_attribute_.mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc();
+  for (const auto& ibn : input_bns()) { JUST(BlobDesc4BnInOp(ibn))->ToProto(&(*map)[ibn]); }
+  for (const auto& obn : output_bns()) { JUST(BlobDesc4BnInOp(obn))->ToProto(&(*map)[obn]); }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> Operator::InferOutParallelDescIf(
     std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
     std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
