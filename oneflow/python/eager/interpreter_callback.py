@@ -76,11 +76,11 @@ def _MirroredCast(op_attribute, blob_register):
         with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
             in_blob_object = bn_in_op2blob_object["in"]
             parallel_desc_symbol = in_blob_object.parallel_desc_symbol
-            op_arg_attribute = op_arg_util.GetOpArgParallelAttribute(
+            op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
                 parallel_desc_symbol, op_attribute, "out"
             )
             out_blob_object = builder.MakeReferenceBlobObject(
-                in_blob_object, op_arg_attribute
+                in_blob_object, op_arg_parallel_attr
             )
             bn_in_op2blob_object["out"] = out_blob_object
 

@@ -38,11 +38,11 @@ class BlobCache(object):
             self.body_cache_ = fetch(self.blob_object_)
         return self.body_cache_
 
-    def GetCachedDelegateBlobObject(self, op_arg_attribute, fetch):
-        if op_arg_attribute not in self.delegate_blob_object_:
-            delegate_blob_object = fetch(self.blob_object, op_arg_attribute)
-            self.delegate_blob_object_[op_arg_attribute] = delegate_blob_object
-        return self.delegate_blob_object_[op_arg_attribute]
+    def GetCachedDelegateBlobObject(self, op_arg_parallel_attr, fetch):
+        if op_arg_parallel_attr not in self.delegate_blob_object_:
+            delegate_blob_object = fetch(self.blob_object, op_arg_parallel_attr)
+            self.delegate_blob_object_[op_arg_parallel_attr] = delegate_blob_object
+        return self.delegate_blob_object_[op_arg_parallel_attr]
 
     def GetCachedNumpyMirroredList(self, fetch):
         if self.numpy_mirrored_list_ is None:

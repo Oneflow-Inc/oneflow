@@ -79,8 +79,10 @@ class InstructionsBuilder(object):
             bn_in_op2blob_object=bn_in_op2blob_object,
         )
 
-        def GetDelegateBlobObject(blob_object, op_arg_attribute):
-            return _FindOrCreateDelegateBlobObject(self, blob_object, op_arg_attribute)
+        def GetDelegateBlobObject(blob_object, op_arg_parallel_attr):
+            return _FindOrCreateDelegateBlobObject(
+                self, blob_object, op_arg_parallel_attr
+            )
 
         self._StatelessCall(
             "compute",
@@ -104,7 +106,7 @@ class InstructionsBuilder(object):
             bn_in_op2blob_object=bn_in_op2blob_object,
         )
 
-        def GetDirectBlobObject(blob_object, op_arg_attribute):
+        def GetDirectBlobObject(blob_object, op_arg_parallel_attr):
             return blob_object
 
         self._StatelessCall(
@@ -126,7 +128,7 @@ class InstructionsBuilder(object):
             bn_in_op2blob_object=bn_in_op2blob_object,
         )
 
-        def GetDirectBlobObject(blob_object, op_arg_attribute):
+        def GetDirectBlobObject(blob_object, op_arg_parallel_attr):
             return blob_object
 
         self._StatelessCall(
@@ -151,10 +153,12 @@ class InstructionsBuilder(object):
         assert op_parallel_desc_sym is not None
 
         def DelegateBlobObject4Ibn(ibn):
-            op_arg_attribute = op_arg_util.GetOpArgParallelAttribute(
+            op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
                 op_parallel_desc_sym, op_attribute, ibn
             )
-            return get_delegate_blob_object(bn_in_op2blob_object[ibn], op_arg_attribute)
+            return get_delegate_blob_object(
+                bn_in_op2blob_object[ibn], op_arg_parallel_attr
+            )
 
         job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
         op_conf_sym = self._GetOpConfSymbol(op_attribute.op_conf)
@@ -209,10 +213,12 @@ class InstructionsBuilder(object):
                 "%d:%s:%d" % (machine_id, device_tag, device_id)
             )
             parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
-            op_arg_attribute = op_arg_util.MakeMirroredOpArgParallelAttribute(
+            op_arg_parallel_attr = op_arg_util.MakeMirroredOpArgParallelAttribute(
                 parallel_desc_sym
             )
-            pyhsical_blob_object = self._NewBlobObject(op_arg_attribute)
+            pyhsical_blob_object = self._NewBlobObject(
+                op_arg_parallel_attr, blob_object.op_arg_blob_attr
+            )
             return pyhsical_blob_object
 
         physical_blob_objects = []
@@ -224,10 +230,12 @@ class InstructionsBuilder(object):
         )
         return physical_blob_objects
 
-    def MakeReferenceBlobObject(self, blob_object, op_arg_attribute):
+    def MakeReferenceBlobObject(self, blob_object, op_arg_parallel_attr):
         parallel_desc_symbol = blob_object.parallel_desc_symbol
-        assert parallel_desc_symbol == op_arg_attribute.parallel_desc_symbol
-        ref_blob_object = self._NewBlobObject(op_arg_attribute)
+        assert parallel_desc_symbol == op_arg_parallel_attr.parallel_desc_symbol
+        ref_blob_object = self._NewBlobObject(
+            op_arg_parallel_attr, blob_object.op_arg_blob_attr
+        )
         self._ReplaceMirrored(parallel_desc_symbol, [ref_blob_object], [blob_object])
         return ref_blob_object
 
@@ -288,11 +296,14 @@ class InstructionsBuilder(object):
         object_id = self._BroadcastObjectReference(
             sole_mirrored_blob_object, parallel_desc_sym
         )
-        op_arg_attribute = op_arg_util.MakeBroadcastOpArgParallelAttribute(
+        op_arg_parallel_attr = op_arg_util.MakeBroadcastOpArgParallelAttribute(
             parallel_desc_sym
         )
         return object_util.BlobObject(
-            object_id, op_arg_attribute, self.release_blob_object_
+            object_id=object_id,
+            op_arg_parallel_attr=op_arg_parallel_attr,
+            op_arg_blob_attr=sole_mirrored_blob_object.op_arg_blob_attr,
+            release=self.release_blob_object_,
         )
 
     def _CudaHostRegisterBlob(self, blob_object):
@@ -357,10 +368,13 @@ class InstructionsBuilder(object):
             if not obn2modifier[obn].header_infered_before_compute:
                 continue
             obn_sym = self.GetSymbol4String(obn)
-            op_arg_attribute = op_arg_util.GetOpArgParallelAttribute(
+            op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
                 parallel_desc_sym, op_attribute, obn
             )
-            out_blob_object = self._NewBlobObject(op_arg_attribute)
+            op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
+            out_blob_object = self._NewBlobObject(
+                op_arg_parallel_attr, op_arg_blob_attr
+            )
             lbi = op_attribute.arg_signature.bn_in_op2lbi[obn]
             bn_in_op2blob_object[obn] = out_blob_object
             mut1_operand_blob_objects.append((obn_sym, out_blob_object))
@@ -385,18 +399,24 @@ class InstructionsBuilder(object):
             if obn2modifier[obn].header_infered_before_compute:
                 continue
             obn_sym = self.GetSymbol4String(obn)
-            op_arg_attribute = op_arg_util.GetOpArgParallelAttribute(
+            op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
                 parallel_desc_sym, op_attribute, obn
             )
-            out_blob_object = self._NewBlobObject(op_arg_attribute)
+            op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
+            out_blob_object = self._NewBlobObject(
+                op_arg_parallel_attr, op_arg_blob_attr
+            )
             bn_in_op2blob_object[obn] = out_blob_object
             mut2_operand_blob_objects.append((obn_sym, out_blob_object))
         return mut2_operand_blob_objects
 
-    def _NewBlobObject(self, op_arg_attribute):
-        object_id = self._NewObjectId(op_arg_attribute.parallel_desc_symbol)
+    def _NewBlobObject(self, op_arg_parallel_attr, op_arg_blob_attr):
+        object_id = self._NewObjectId(op_arg_parallel_attr.parallel_desc_symbol)
         return object_util.BlobObject(
-            object_id, op_arg_attribute, self.release_blob_object_
+            object_id=object_id,
+            op_arg_parallel_attr=op_arg_parallel_attr,
+            op_arg_blob_attr=op_arg_blob_attr,
+            release=self.release_blob_object_,
         )
 
     def _NewSymbolId4String(self, string):
@@ -624,24 +644,24 @@ def _SetAllMirroredOperand(operand, val):
     operand.all_mirrored_object.SetInParent()
 
 
-def _FindOrCreateDelegateBlobObject(builder, x_blob_object, op_arg_attribute):
-    if x_blob_object.op_arg_attribute == op_arg_attribute:
+def _FindOrCreateDelegateBlobObject(builder, x_blob_object, op_arg_parallel_attr):
+    if x_blob_object.op_arg_parallel_attr == op_arg_parallel_attr:
         return x_blob_object
     blob_cache = blob_cache_util.FindOrCreateBlobCache(x_blob_object)
 
-    def Fetch(x_blob_object, op_arg_attribute):
-        return _FetchDelegateBlobObject(builder, x_blob_object, op_arg_attribute)
+    def Fetch(x_blob_object, op_arg_parallel_attr):
+        return _FetchDelegateBlobObject(builder, x_blob_object, op_arg_parallel_attr)
 
-    return blob_cache.GetCachedDelegateBlobObject(op_arg_attribute, Fetch)
+    return blob_cache.GetCachedDelegateBlobObject(op_arg_parallel_attr, Fetch)
 
 
-def _FetchDelegateBlobObject(builder, x_blob_object, op_arg_attribute):
+def _FetchDelegateBlobObject(builder, x_blob_object, op_arg_parallel_attr):
     assert (
-        x_blob_object.op_arg_attribute.opt_mirrored_parallel
-        == op_arg_attribute.opt_mirrored_parallel
+        x_blob_object.op_arg_parallel_attr.opt_mirrored_parallel
+        == op_arg_parallel_attr.opt_mirrored_parallel
     )
     blob_device_ids = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
-    arg_parallel_desc_symbol = op_arg_attribute.parallel_desc_symbol
+    arg_parallel_desc_symbol = op_arg_parallel_attr.parallel_desc_symbol
     op_device_ids = arg_parallel_desc_symbol.machine_id2device_id_list
     prompt = "\nboxing is not supported yet."
     assert blob_device_ids == op_device_ids, (
@@ -651,8 +671,8 @@ def _FetchDelegateBlobObject(builder, x_blob_object, op_arg_attribute):
     blob_device_tag = x_blob_object.parallel_desc_symbol.device_tag
     op_device_tag = arg_parallel_desc_symbol.device_tag
     assert blob_device_tag != op_device_tag, (
-        "\nx_arg_attribute: %s\nop_arg_attribute: %s"
-        % (x_blob_object.op_arg_attribute, op_arg_attribute)
+        "\nx_arg_attribute: %s\nop_arg_parallel_attr: %s"
+        % (x_blob_object.op_arg_parallel_attr, op_arg_parallel_attr)
     )
     assert (
         blob_device_tag != op_device_tag

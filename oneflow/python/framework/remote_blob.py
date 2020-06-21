@@ -211,35 +211,7 @@ class LazyMirroredBlob(MirroredBlob):
         )
 
 
-class EagerMirroredBlob(MirroredBlob):
-    def __init__(self, lbi, blob_object=None, **kw):
-        MirroredBlob.__init__(self, lbi, **kw)
-        if blob_object is None:
-            self.blob_object_ = blob_register.GetObject4BlobName(self.unique_name)
-        else:
-            blob_register.SetObject4BlobName(self.unique_name, blob_object)
-            self.blob_object_ = blob_object
-        self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-        self.sub_consistent_blob_list_ = []
-        self.shape_ = c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
-            self.job_name_, self.lbn_
-        )
-        self.dtype_ = c_api_util.JobBuildAndInferCtx_MirroredBlobGetDataType(
-            self.job_name_, self.lbn_
-        )
-        self.batch_axis_ = c_api_util.JobBuildAndInferCtx_MirroredBlobGetBatchAxis(
-            self.job_name_, self.lbn_
-        )
-        self.split_axis_ = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
-            self.job_name_, self.lbn_
-        )
-        self.is_tensor_list_ = c_api_util.JobBuildAndInferCtx_MirroredBlobIsTensorList(
-            self.job_name_, self.lbn_
-        )
-        self.parallel_conf_ = c_api_util.JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(
-            self.job_name_, self.lbn_
-        )
-
+class EagerBlobMixin(object):
     @property
     def blob_object(self):
         return self.blob_object_
@@ -275,19 +247,29 @@ class EagerMirroredBlob(MirroredBlob):
 
     @property
     def shape(self):
-        return self.shape_
+        return self.blob_object_.op_arg_blob_attr.shape
 
     @property
     def dtype(self):
-        return self.dtype_
+        return self.blob_object_.op_arg_blob_attr.dtype
 
     @property
     def batch_axis(self):
-        return self.batch_axis_
+        opt_batch_axis = self.blob_object_.op_arg_blob_attr.batch_axis
+        if opt_batch_axis.HasField("batch_axis"):
+            return opt_batch_axis.value
+        else:
+            return None
 
     @property
     def split_axis(self):
-        return self.split_axis_
+        sbp_parallel = self.blob_object_.op_arg_parallel_attr.sbp_parallel
+        if sbp_parallel.HasField("split_parallel"):
+            return sbp_parallel.split_parallel.axis
+        elif sbp_parallel.HasField("broadcast_parallel"):
+            return None
+        else:
+            raise NotImplementedError
 
     @property
     def is_dynamic(self):
@@ -299,109 +281,31 @@ class EagerMirroredBlob(MirroredBlob):
 
     @property
     def is_tensor_list(self):
-        return self.is_tensor_list_
+        return self.blob_object_.op_arg_blob_attr.is_tensor_list
 
     @property
     def parallel_conf(self):
-        return self.parallel_conf_
+        return self.blob_object_.parallel_desc_symbol.parallel_conf
 
     def __del__(self):
         blob_register.ClearObject4BlobName(self.unique_name)
 
+    def _Init(self, blob_object):
+        if blob_object is None:
+            self.blob_object_ = blob_register.GetObject4BlobName(self.unique_name)
+        else:
+            blob_register.SetObject4BlobName(self.unique_name, blob_object)
+            self.blob_object_ = blob_object
+        self.sub_consistent_blob_list_ = []
 
-class EagerConsistentBlob(ConsistentBlob):
+
+class EagerConsistentBlob(EagerBlobMixin, ConsistentBlob):
     def __init__(self, lbi, blob_object=None, **kw):
         ConsistentBlob.__init__(self, lbi, **kw)
-        if blob_object is None:
-            self.blob_object_ = blob_register.GetObject4BlobName(self.unique_name)
-        else:
-            blob_register.SetObject4BlobName(self.unique_name, blob_object)
-            self.blob_object_ = blob_object
-        job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-        self.sub_consistent_blob_list_ = []
-        self.shape_ = c_api_util.JobBuildAndInferCtx_GetStaticShape(
-            job_name, self.lbn_
-        )
-        self.dtype_ = c_api_util.JobBuildAndInferCtx_GetDataType(
-            job_name, self.lbn_
-        )
-        self.batch_axis_ = c_api_util.JobBuildAndInferCtx_GetBatchAxis(
-            job_name, self.lbn_
-        )
-        self.split_axis_ = c_api_util.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
-            job_name, self.lbn_
-        )
-        self.is_tensor_list_ = c_api_util.JobBuildAndInferCtx_IsTensorList(
-            job_name, self.lbn_
-        )
-        self.parallel_conf_ = c_api_util.JobBuildAndInferCtx_GetParallelConfFromProducerView(
-            job_name, self.lbn_
-        )
+        self._Init(blob_object)
 
-    @property
-    def blob_object(self):
-        return self.blob_object_
 
-    def numpy_mirrored_list(self):
-        assert not self.is_tensor_list
-        blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object_)
-        box = [[]]
-
-        def UnpackLogicalBlobToPhysicalBlobs(builder):
-            physical_objects = builder.UnpackLogicalBlobToPhysicalBlobs(
-                self.blob_object_
-            )
-            for i in range(len(physical_objects)):
-                name = "%s/%d" % (self.unique_name, i)
-                box[0].append(name)
-                if not blob_register.HasObject4BlobName(name):
-                    blob_register.SetObject4BlobName(name, physical_objects[i])
-
-        def Fetch(blob_object):
-            vm_util.LogicalRun(UnpackLogicalBlobToPhysicalBlobs)
-            sub_blob_names = box[0]
-            return [
-                eager_blob_util.EagerPhysicalBlob(name).numpy()
-                for name in sub_blob_names
-            ]
-
-        return blob_cache.GetCachedNumpyMirroredList(Fetch)
-
-    @property
-    def sub_consistent_blob_list(self):
-        raise NotImplementedError
-
-    @property
-    def shape(self):
-        return self.shape_
-
-    @property
-    def dtype(self):
-        return self.dtype_
-
-    @property
-    def batch_axis(self):
-        return self.batch_axis_
-
-    @property
-    def split_axis(self):
-        return self.split_axis_
-
-    @property
-    def is_dynamic(self):
-        return True
-
-    @property
-    def disable_boxing(self):
-        return True
-
-    @property
-    def is_tensor_list(self):
-        return self.is_tensor_list_
-
-    @property
-    def parallel_conf(self):
-        return self.parallel_conf_
-
-    def __del__(self):
-        blob_register.ClearObject4BlobName(self.unique_name)
+class EagerMirroredBlob(EagerBlobMixin, MirroredBlob):
+    def __init__(self, lbi, blob_object=None, **kw):
+        MirroredBlob.__init__(self, lbi, **kw)
+        self._Init(blob_object)

@@ -4,6 +4,33 @@ import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow.core.job.mirrored_parallel_pb2 as mirrored_parallel_pb
 
 
+class OpArgBlobAttribute(object):
+    def __init__(self, batch_axis, blob_desc):
+        self.batch_axis_ = batch_axis
+        self.blob_desc_ = blob_desc
+        self.shape_ = tuple(self.blob_desc_.body.shape.dim)
+
+    @property
+    def shape(self):
+        return self.shape_
+
+    @property
+    def dtype(self):
+        return self.blob_desc_.body.data_type
+
+    @property
+    def batch_axis(self):
+        return self.batch_axis_
+
+    @property
+    def is_tensor_list(self):
+        return self.blob_desc_.is_tensor_list
+
+    @property
+    def is_dynamic(self):
+        return self.blob_desc_.is_dynamic
+
+
 class OpArgParallelAttribute(object):
     def __init__(self, parallel_desc_symbol, sbp_parallel, opt_mirrored_parallel):
         self.parallel_desc_symbol_ = parallel_desc_symbol
@@ -56,6 +83,21 @@ class OpArgParallelAttribute(object):
             ^ hash(str(self.opt_mirrored_parallel_))
             ^ sbp_hash
         )
+
+
+def GetOpArgBlobAttribute(op_attribute, bn_in_op):
+    if not op_attribute.HasField("batch_axis_signature"):
+        return None
+    if not op_attribute.HasField("logical_blob_desc_signature"):
+        return None
+    batch_axis_signature_map = op_attribute.batch_axis_signature.bn_in_op2batch_axis
+    blob_desc_signature_map = (
+        op_attribute.logical_blob_desc_signature.bn_in_op2blob_desc
+    )
+    return OpArgBlobAttribute(
+        batch_axis=batch_axis_signature_map[bn_in_op],
+        blob_desc=blob_desc_signature_map[bn_in_op],
+    )
 
 
 def GetOpArgParallelAttribute(parallel_desc_symbol, op_attribute, bn_in_op):
