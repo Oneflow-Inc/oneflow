@@ -108,6 +108,14 @@ Maybe<void> Operator::InferOutBlobDescs(
   return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
 }
 
+Maybe<void> Operator::FillLogicalBlobDescSignature(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& BlobDesc4BnInOp) {
+  auto* map = op_attribute_.mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc();
+  for (const auto& ibn : input_bns()) { JUST(BlobDesc4BnInOp(ibn))->ToProto(&(*map)[ibn]); }
+  for (const auto& obn : output_bns()) { JUST(BlobDesc4BnInOp(obn))->ToProto(&(*map)[obn]); }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> Operator::InferOutParallelDescIf(
     std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
     std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
@@ -265,6 +273,15 @@ Maybe<const SbpParallel*> Operator::SbpParallel4BnInOp(const std::string& bn_in_
   const auto& map = op_attribute_.sbp_signature().bn_in_op2sbp_parallel();
   const auto& iter = map.find(bn_in_op);
   CHECK_OR_RETURN(iter != map.end()) << "blob_name " << bn_in_op << " not found in sbp signature";
+  return &iter->second;
+}
+
+Maybe<const OptInt64*> Operator::BatchAxis4BnInOp(const std::string& bn_in_op) const {
+  CHECK_OR_RETURN(op_attribute_.has_batch_axis_signature()) << "batch axis signature not infered";
+  const auto& map = op_attribute_.batch_axis_signature().bn_in_op2batch_axis();
+  const auto& iter = map.find(bn_in_op);
+  CHECK_OR_RETURN(iter != map.end())
+      << "blob_name " << bn_in_op << " not found in batch axis signature";
   return &iter->second;
 }
 
@@ -522,6 +539,15 @@ void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlo
   bns->erase(bns->begin() + idx_available, bns->end());
 }
 
+Maybe<void> Operator::InferBatchAxisIf(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4Ibn) {
+  auto* map = op_attribute_.mutable_batch_axis_signature()->mutable_bn_in_op2batch_axis();
+  for (const auto& ibn : input_bns()) { (*map)[ibn] = *JUST(BatchAxis4Ibn(ibn)); }
+  const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) { return &(*map)[bn_in_op]; };
+  return InferBatchAxis(LogicalBlobDesc4Ibn, BatchAxis4BnInOp);
+}
+
 Maybe<void> Operator::NaiveInferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   if (output_bns().empty()) { return Maybe<void>::Ok(); }
@@ -606,7 +632,7 @@ Maybe<bool> ParseDisableBoxingFlag(const std::string& lbn_with_hint, bool* disab
 Maybe<void> InferOpSbpSignature(
     Operator* op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
     const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
-    std::function<const OptInt64&(const LogicalBlobId&)> GetBatchAxis4Lbi) {
+    std::function<Maybe<const OptInt64*>(const LogicalBlobId&)> BatchAxis4Lbi) {
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
     auto it = ibn2sbp_infer_hint.find(ibn);
     if (it == ibn2sbp_infer_hint.end()) {
@@ -618,15 +644,16 @@ Maybe<void> InferOpSbpSignature(
   std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
   auto OrderValue4HasBatchAxis = [&](const std::string& bn,
                                      const SbpParallel& sbp_parallel) -> int32_t {
-    const auto& batch_axis = GetBatchAxis4Lbi(op->BnInOp2Lbi(bn));
+    const auto& batch_axis = *CHECK_JUST(BatchAxis4Lbi(op->BnInOp2Lbi(bn)));
     return -1
            * (batch_axis.has_value() && sbp_parallel.has_split_parallel()
               && sbp_parallel.split_parallel().axis() == batch_axis.value());
   };
   auto OrderValue4HasNoBatchAxis = [&](const std::string& ibn,
                                        const SbpParallel& sbp_parallel) -> int32_t {
+    const auto& batch_axis = *CHECK_JUST(BatchAxis4Lbi(op->BnInOp2Lbi(ibn)));
     return -2
-           * (GetBatchAxis4Lbi(op->BnInOp2Lbi(ibn)).has_value() == false
+           * (batch_axis.has_value() == false
               && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
               && sbp_parallel.has_split_parallel() == false);
   };
