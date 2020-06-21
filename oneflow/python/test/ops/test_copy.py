@@ -5,7 +5,7 @@ import numpy as np
 def test_naive_copy(test_case):
     flow.enable_eager_execution()
 
-    @flow.function()
+    @flow.global_function()
     def Foo():
         x = flow.get_variable(
             "x", shape=(10,), dtype=flow.float, initializer=flow.constant_initializer(0)
@@ -20,7 +20,7 @@ def test_naive_copy(test_case):
 def test_copy_d2h(test_case):
     flow.enable_eager_execution()
 
-    @flow.function()
+    @flow.global_function()
     def Foo():
         with flow.fixed_placement("gpu", "0:0"):
             x = flow.get_variable(
@@ -40,7 +40,7 @@ def test_copy_d2h(test_case):
 def test_copy_h2d(test_case):
     flow.enable_eager_execution()
 
-    @flow.function()
+    @flow.global_function()
     def Foo():
         with flow.fixed_placement("cpu", "0:0"):
             x = flow.get_variable(
