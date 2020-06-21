@@ -47,7 +47,8 @@ def InterpretScope(function_desc, config_proto):
 
     with _JobBuildAndInferCtx(job_conf.job_name), placement_scope, distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
-        yield
+        with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
+            yield
 
 
 def _CompileJob(function_desc):
@@ -57,8 +58,7 @@ def _CompileJob(function_desc):
     kwarg = dict(
         allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
     )
-    with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
-        ret = func(*inputs)
+    ret = func(*inputs)
     func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(ret, kwarg)
 
 

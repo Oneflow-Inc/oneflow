@@ -9,7 +9,6 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.experimental.name_scope as name_scope
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.ops.user_op_builder as user_op_builder_util
@@ -100,7 +99,7 @@ def get_eager_variable(
         )
         op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
         var_blob = _CreateEagerVariableBlob(op_conf, parallel_conf)
-        _InitVariableBlob(op_conf, var_blob)
+        InitVariableBlob(op_conf, var_blob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
     bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
     bw_blob_register.SetObject4BlobName(var_blob.unique_name, var_blob.blob_object)
@@ -233,7 +232,7 @@ def _CreateEagerVariableBlob(op_conf, parallel_conf):
     )
 
 
-def _InitVariableBlob(var_op_conf, var_blob):
+def InitVariableBlob(var_op_conf, var_blob):
     with oneflow.fixed_placement("cpu", "0:0"):
         _Assign(var_blob.blob_object, _ModelInit(var_op_conf))
 
