@@ -521,6 +521,13 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   parallel_ctx.set_parallel_num(1);
   JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, CHECK_JUST(op->sbp_signature()),
                                [](OpContext*) {}));
+  // Fill logical blob_desc signature.
+  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc*> {
+    const auto* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
+    CHECK_NOTNULL_OR_RETURN(blob_desc);
+    return blob_desc;
+  }));
+  // Infer ParallelDesc for output blobs.
   auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
     const auto& lbi = op->BnInOp2Lbi(obn);
     auto iter = lbi2parallel_desc_from_producer_view_.find(lbi);
