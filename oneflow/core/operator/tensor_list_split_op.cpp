@@ -51,6 +51,6 @@ class TensorListSplitOp final : public Operator {
   }
 };
 
-REGISTER_CPU_OP(OperatorConf::kTensorListSplitConf, TensorListSplitOp);
+REGISTER_OP(OperatorConf::kTensorListSplitConf, TensorListSplitOp);
 
 }  // namespace oneflow
