@@ -48,6 +48,8 @@ class Kernel {
                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     ForwardDataContent(ctx, BnInOp2Blob);
   }
+  virtual void Forward(const KernelCtx& ctx,
+                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
  protected:
   Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
@@ -58,8 +60,6 @@ class Kernel {
 
   virtual void InitConstBufBlobs(DeviceCtx* ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void Forward(const KernelCtx& ctx,
-                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardHeader(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardShape(const KernelCtx& ctx,

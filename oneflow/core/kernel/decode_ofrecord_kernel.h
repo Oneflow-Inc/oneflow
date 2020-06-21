@@ -17,9 +17,10 @@ class DecodeOFRecordKernel final : public KernelIf<DeviceType::kCPU> {
   DecodeOFRecordKernel() = default;
   ~DecodeOFRecordKernel() = default;
 
- private:
   void Forward(const KernelCtx& ctx,
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+ private:
   void VirtualKernelInit() override;
   int32_t NextRandomInt() const;
 

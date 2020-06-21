@@ -18,10 +18,11 @@ class RecordLoadKernel final : public KernelIf<DeviceType::kCPU> {
   RecordLoadKernel() = default;
   ~RecordLoadKernel() override = default;
 
- private:
-  void VirtualKernelInit() override;
   void Forward(const KernelCtx& ctx,
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+ private:
+  void VirtualKernelInit() override;
 
   std::unique_ptr<PersistentInStream> in_stream_;
   std::unique_ptr<OFRecordReader> record_reader_;
