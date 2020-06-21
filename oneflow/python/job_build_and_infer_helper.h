@@ -43,7 +43,7 @@ Maybe<std::string> JobBuildAndInferCtx_GetCurrentJobName() {
 
 Maybe<void> JobBuildAndInferCtx_Close() {
   auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
-  mgr->CloseCurrentJobBuildAndInferCtx();
+  JUST(mgr->CloseCurrentJobBuildAndInferCtx());
   return Maybe<void>::Ok();
 }
 

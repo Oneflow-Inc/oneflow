@@ -83,9 +83,9 @@ def get_eager_variable(
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_context.GetDefaultSession()
-    var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
+    var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
 
-    if var_blob is None:
+    if job_var_blob is None:
         op_conf = _GenerateVariableOpConf(
             name=name,
             shape=shape,
@@ -98,11 +98,15 @@ def get_eager_variable(
             distribute=distribute,
         )
         op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
-        var_blob = _CreateEagerVariableBlob(op_conf, parallel_conf)
-        InitVariableBlob(op_conf, var_blob)
+        op_attribute = compile_context.CurJobAddConsistentOp(op_conf, parallel_conf)
+        if var_blob is None:
+            var_blob = _CreateEagerVariableBlob(op_attribute)
+            InitVariableBlob(op_conf, var_blob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
+    else:
+        assert var_blob is not None
     bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
-    bw_blob_register.SetObject4BlobName(var_blob.unique_name, var_blob.blob_object)
+    bw_blob_register.TrySetObject4BlobName(var_blob.unique_name, var_blob.blob_object)
     assert var_blob.shape == shape
     assert var_blob.dtype == dtype
     return var_blob
@@ -128,7 +132,7 @@ def get_lazy_variable(
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_context.GetDefaultSession()
-    var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
+    var_blob, _ = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
 
     if var_blob is not None:
         assert var_blob.shape == shape
@@ -213,8 +217,7 @@ def _CreateVariableBlob(op_conf, parallel_conf):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-def _CreateEagerVariableBlob(op_conf, parallel_conf):
-    op_attribute = compile_context.CurJobAddConsistentOp(op_conf, parallel_conf)
+def _CreateEagerVariableBlob(op_attribute):
     bn_in_op2blob_object = {}
 
     def BuildInstruction(builder):
@@ -225,8 +228,8 @@ def _CreateEagerVariableBlob(op_conf, parallel_conf):
 
     vm_util.LogicalRun(BuildInstruction)
     lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = op_conf.variable_conf.out
+    lbi.op_name = op_attribute.op_conf.name
+    lbi.blob_name = op_attribute.op_conf.variable_conf.out
     return remote_blob_util.EagerLogicalBlob(
         lbi, blob_object=bn_in_op2blob_object["out"]
     )

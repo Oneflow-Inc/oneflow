@@ -42,6 +42,7 @@ class Session(object):
         self.is_mirrored_strategy_enabled_stack_ = []
         self.function_flag_name2default_val_ = {}
         self.job_name2var_name2var_blob_ = {}
+        self.var_name2var_blob_ = {}
         self.job_name2name_scope_stack_ = {}
         self.eager_global_function_desc_stack_ = []
         self._UpdateFunctionFlagName2DefaultVal()
@@ -82,10 +83,6 @@ class Session(object):
     @property
     def inter_user_job_info(self):
         return self.inter_user_job_info_
-
-    @property
-    def job_name2var_name2var_blob(self):
-        return self.job_name2var_name2var_blob_
 
     @property
     def job_name2name_scope_stack(self):
@@ -136,6 +133,7 @@ class Session(object):
         if not c_api_util.EagerExecutionEnabled():
             for job_name, func_desc in self.job_name2function_desc_.items():
                 compiler.Compile(func_desc, self.config_proto)
+            self.job_name2var_name2var_blob_ = dict()
             assert len(self.job_name2function_desc_.items()) > 0
             c_api_util.StartGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
@@ -148,9 +146,8 @@ class Session(object):
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
         self.Sync()
-        for key in list(self.job_name2var_name2var_blob_.keys()):
-            del self.job_name2var_name2var_blob_[key]
-        del self.job_name2var_name2var_blob_
+        assert len(self.job_name2var_name2var_blob_) == 0
+        del self.var_name2var_blob_
         c_api_util.StopGlobalSession()
         c_api_util.DestroyGlobalSession()
         self.status_ = SessionStatus.CLOSED
@@ -214,20 +211,26 @@ class Session(object):
         return len(self.uuid2watch_handler) > 0
 
     def StashVariableBlob4Job(self, job_name, var_name, var_blob):
-        if job_name not in self.job_name2var_name2var_blob:
-            self.job_name2var_name2var_blob[job_name] = dict()
-        assert var_name not in self.job_name2var_name2var_blob[job_name]
-        self.job_name2var_name2var_blob[job_name][var_name] = var_blob
+        if var_name not in self.var_name2var_blob_:
+            self.var_name2var_blob_[var_name] = var_blob
+        if job_name not in self.job_name2var_name2var_blob_:
+            self.job_name2var_name2var_blob_[job_name] = dict()
+        assert var_name not in self.job_name2var_name2var_blob_[job_name]
+        self.job_name2var_name2var_blob_[job_name][var_name] = var_blob
 
+    # return global_variable_blob, job_variable_blob
     def TryGetVariableBlobOfJobFromStash(self, job_name, var_name):
-        if job_name not in self.job_name2var_name2var_blob:
-            return None
+        if var_name not in self.var_name2var_blob_:
+            return None, None
+        global_variable_blob = self.var_name2var_blob_[var_name]
+        if job_name not in self.job_name2var_name2var_blob_:
+            return global_variable_blob, None
 
-        var_name2var_blob = self.job_name2var_name2var_blob[job_name]
+        var_name2var_blob = self.job_name2var_name2var_blob_[job_name]
         if var_name not in var_name2var_blob:
-            return None
-
-        return var_name2var_blob[var_name]
+            return global_variable_blob, None
+        assert global_variable_blob is var_name2var_blob[var_name]
+        return global_variable_blob, var_name2var_blob[var_name]
 
     def CurrentEagerGlobalFunctionDesc(self):
         if len(self.eager_global_function_desc_stack_) == 0:
@@ -237,10 +240,12 @@ class Session(object):
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):
         assert len(self.backward_blob_register.blob_name2object) == 0
+        assert len(self.job_name2var_name2var_blob_) == 0
         self.eager_global_function_desc_stack_.insert(0, function_desc)
         try:
             yield
         finally:
+            self.job_name2var_name2var_blob_ = dict()
             self.eager_global_function_desc_stack_.pop(0)
             keys = list(self.backward_blob_register.blob_name2object.keys())
             for key in keys:
