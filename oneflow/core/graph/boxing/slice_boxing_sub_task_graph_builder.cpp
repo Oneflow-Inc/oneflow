@@ -172,19 +172,19 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
                        && out_pd.device_type() == DeviceType::kCPU) {
               out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
             } else {
+              bool in_contiguous = IsCopyContiguous(in_slice, intersection);
+              bool out_contiguous = IsCopyContiguous(intersection, out_slice);
               if (((in_pd.device_type() == out_pd.device_type())
                    && (in_pd.DeviceIdForParallelId(in_id) == out_pd.DeviceIdForParallelId(out_id)))
                   || (IsCopyContiguous(in_slice, out_slice))) {
                 out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
-              } else if (IsCopyContiguous(in_slice, intersection)
-                         && !IsCopyContiguous(intersection, out_slice)) {
+              } else if (in_contiguous && !out_contiguous) {
                 SliceBoxingTaskNode* copy_to_out_continuous =
                     CreateBoxingNode121(out_pd, out_id, intersection, kSliceBoxingTaskModeCopy);
                 copy_to_out_continuous->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
                 out_node->ConnectToSrcNodeWithSlice(copy_to_out_continuous, NewEdge(),
                                                     intersection);
-              } else if (!IsCopyContiguous(in_slice, intersection)
-                         && IsCopyContiguous(intersection, out_slice)) {
+              } else if (!in_contiguous && out_contiguous) {
                 SliceBoxingTaskNode* in_copy_to_continuous =
                     CreateBoxingNode121(in_pd, in_id, intersection, kSliceBoxingTaskModeCopy);
                 in_copy_to_continuous->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
