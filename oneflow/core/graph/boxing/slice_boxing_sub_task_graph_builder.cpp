@@ -168,8 +168,13 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
               SliceBoxingTaskNode* copy_to_host =
                   CreateBoxingNodeToHost(in_node, in_slice, intersection);
               out_node->ConnectToSrcNodeWithSlice(copy_to_host, NewEdge(), intersection);
+            } else if (in_pd.device_type() == DeviceType::kCPU
+                       && out_pd.device_type() == DeviceType::kCPU) {
+              out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
             } else {
-              if (in_id == out_id || (IsCopyContiguous(in_slice, out_slice))) {
+              if (((in_pd.device_type() == out_pd.device_type())
+                   && (in_pd.DeviceIdForParallelId(in_id) == out_pd.DeviceIdForParallelId(out_id)))
+                  || (IsCopyContiguous(in_slice, out_slice))) {
                 out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
               } else if (IsCopyContiguous(in_slice, intersection)
                          && !IsCopyContiguous(intersection, out_slice)) {
