@@ -622,28 +622,6 @@ def where(condition, x=None, y=None, name=None):
         raise ValueError("it is not supported when exactly one of x or y is non-None")
 
 
-@oneflow_export("tensor_list_split")
-def tensor_list_split(input_tensor_list, name=None):
-    if name is None:
-        name = id_util.UniqueStr("TensorListSplit_")
-
-    output_size = input_tensor_list.shape[0]
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name)
-    setattr(op_conf.tensor_list_split_conf, "in", input_tensor_list.unique_name)
-    op_conf.tensor_list_split_conf.out.extend(
-        ["out_{}".format(i) for i in range(output_size)]
-    )
-    compile_context.CurJobAddOp(op_conf)
-    ret = []
-    for i in range(output_size):
-        out_lbi = logical_blob_id_util.LogicalBlobId()
-        setattr(out_lbi, "op_name", op_conf.name)
-        setattr(out_lbi, "blob_name", "out_{}".format(i))
-        ret.append(remote_blob_util.RemoteBlob(out_lbi))
-    return tuple(ret)
-
-
 @oneflow_export("elem_cnt")
 def elem_cnt(inputs, dtype=None, name=None):
     op_conf = op_conf_util.OperatorConf()
