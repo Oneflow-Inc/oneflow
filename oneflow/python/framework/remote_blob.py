@@ -317,25 +317,25 @@ class EagerConsistentBlob(ConsistentBlob):
         else:
             blob_register.SetObject4BlobName(self.unique_name, blob_object)
             self.blob_object_ = blob_object
-        self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         self.sub_consistent_blob_list_ = []
         self.shape_ = c_api_util.JobBuildAndInferCtx_GetStaticShape(
-            self.job_name_, self.lbn_
+            job_name, self.lbn_
         )
         self.dtype_ = c_api_util.JobBuildAndInferCtx_GetDataType(
-            self.job_name_, self.lbn_
+            job_name, self.lbn_
         )
         self.batch_axis_ = c_api_util.JobBuildAndInferCtx_GetBatchAxis(
-            self.job_name_, self.lbn_
+            job_name, self.lbn_
         )
         self.split_axis_ = c_api_util.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
-            self.job_name_, self.lbn_
+            job_name, self.lbn_
         )
         self.is_tensor_list_ = c_api_util.JobBuildAndInferCtx_IsTensorList(
-            self.job_name_, self.lbn_
+            job_name, self.lbn_
         )
         self.parallel_conf_ = c_api_util.JobBuildAndInferCtx_GetParallelConfFromProducerView(
-            self.job_name_, self.lbn_
+            job_name, self.lbn_
         )
 
     @property

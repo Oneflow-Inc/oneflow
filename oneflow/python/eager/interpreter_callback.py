@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import oneflow.python.eager.vm_util as vm_util
 
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
@@ -45,6 +46,7 @@ def _InterpretCompletedOp(op_attribute, parallel_conf_str, blob_register):
 
 
 def _FindOrCreateVarBlobObject(op_attribute, parallel_conf, blob_register):
+    return _NaiveInterpret(op_attribute, parallel_conf, blob_register)
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     sess = session_ctx.GetDefaultSession()
     var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
@@ -74,7 +76,7 @@ def _MirroredCast(op_attribute, blob_register):
         with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
             in_blob_object = bn_in_op2blob_object["in"]
             parallel_desc_symbol = in_blob_object.parallel_desc_symbol
-            op_arg_attribute = op_arg_util.GetOpArgAttribute(
+            op_arg_attribute = op_arg_util.GetOpArgParallelAttribute(
                 parallel_desc_symbol, op_attribute, "out"
             )
             out_blob_object = builder.MakeReferenceBlobObject(

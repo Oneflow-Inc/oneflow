@@ -151,7 +151,7 @@ class InstructionsBuilder(object):
         assert op_parallel_desc_sym is not None
 
         def DelegateBlobObject4Ibn(ibn):
-            op_arg_attribute = op_arg_util.GetOpArgAttribute(
+            op_arg_attribute = op_arg_util.GetOpArgParallelAttribute(
                 op_parallel_desc_sym, op_attribute, ibn
             )
             return get_delegate_blob_object(bn_in_op2blob_object[ibn], op_arg_attribute)
@@ -209,7 +209,9 @@ class InstructionsBuilder(object):
                 "%d:%s:%d" % (machine_id, device_tag, device_id)
             )
             parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
-            op_arg_attribute = op_arg_util.MakeMirroredOpArgAttribute(parallel_desc_sym)
+            op_arg_attribute = op_arg_util.MakeMirroredOpArgParallelAttribute(
+                parallel_desc_sym
+            )
             pyhsical_blob_object = self._NewBlobObject(op_arg_attribute)
             return pyhsical_blob_object
 
@@ -286,7 +288,9 @@ class InstructionsBuilder(object):
         object_id = self._BroadcastObjectReference(
             sole_mirrored_blob_object, parallel_desc_sym
         )
-        op_arg_attribute = op_arg_util.MakeBroadcastOpArgAttribute(parallel_desc_sym)
+        op_arg_attribute = op_arg_util.MakeBroadcastOpArgParallelAttribute(
+            parallel_desc_sym
+        )
         return object_util.BlobObject(
             object_id, op_arg_attribute, self.release_blob_object_
         )
@@ -353,7 +357,7 @@ class InstructionsBuilder(object):
             if not obn2modifier[obn].header_infered_before_compute:
                 continue
             obn_sym = self.GetSymbol4String(obn)
-            op_arg_attribute = op_arg_util.GetOpArgAttribute(
+            op_arg_attribute = op_arg_util.GetOpArgParallelAttribute(
                 parallel_desc_sym, op_attribute, obn
             )
             out_blob_object = self._NewBlobObject(op_arg_attribute)
@@ -381,7 +385,7 @@ class InstructionsBuilder(object):
             if obn2modifier[obn].header_infered_before_compute:
                 continue
             obn_sym = self.GetSymbol4String(obn)
-            op_arg_attribute = op_arg_util.GetOpArgAttribute(
+            op_arg_attribute = op_arg_util.GetOpArgParallelAttribute(
                 parallel_desc_sym, op_attribute, obn
             )
             out_blob_object = self._NewBlobObject(op_arg_attribute)
