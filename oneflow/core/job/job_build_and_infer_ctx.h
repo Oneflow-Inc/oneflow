@@ -116,10 +116,10 @@ class JobBuildAndInferCtx {
                                   std::function<bool(const LogicalBlobId&)>* IsLbiBackwardUsed);
   Maybe<OpAttribute> AddAndInferOp(const OperatorConf& op_conf, const ParallelConf& parallel_conf,
                                    bool is_mirrored_parallel_view);
+  Maybe<Operator*> Op4OpName(const std::string& op_name) const;
 
   Job* job_;
   int64_t job_id_;
-  HashMap<LogicalBlobId, OptInt64> lbi2batch_axis_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_from_producer_view_;
   HashMap<LogicalBlobId, ParallelDesc> lbi2parallel_desc_from_producer_view_;
