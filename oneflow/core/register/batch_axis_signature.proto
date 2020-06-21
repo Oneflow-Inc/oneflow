@@ -3,6 +3,6 @@ package oneflow;
 
 import "oneflow/core/common/data_type.proto";
 
-message BlobBatchAxisSignature {
+message BatchAxisSignature {
   map<string, OptInt64> bn_in_op2batch_axis = 1;
 }

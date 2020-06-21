@@ -2,7 +2,7 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/register/logical_blob_id.proto";
-import "oneflow/core/register/blob_batch_axis_signature.proto";
+import "oneflow/core/register/batch_axis_signature.proto";
 import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/operator/arg_modifier_signature.proto";
@@ -25,5 +25,5 @@ message OpAttribute {
   optional BlobLastUsedSignature blob_last_used_signature = 104;
   optional BlobBackwardUsedSignature blob_backward_used_signature = 105;
   optional BlobDescSignature logical_blob_desc_signature = 106;
-  optional BlobBatchAxisSignature blob_batch_axis_signature = 107;
+  optional BatchAxisSignature batch_axis_signature = 107;
 }

@@ -277,9 +277,8 @@ Maybe<const SbpParallel*> Operator::SbpParallel4BnInOp(const std::string& bn_in_
 }
 
 Maybe<const OptInt64*> Operator::BatchAxis4BnInOp(const std::string& bn_in_op) const {
-  CHECK_OR_RETURN(op_attribute_.has_blob_batch_axis_signature())
-      << "batch axis signature not infered";
-  const auto& map = op_attribute_.blob_batch_axis_signature().bn_in_op2batch_axis();
+  CHECK_OR_RETURN(op_attribute_.has_batch_axis_signature()) << "batch axis signature not infered";
+  const auto& map = op_attribute_.batch_axis_signature().bn_in_op2batch_axis();
   const auto& iter = map.find(bn_in_op);
   CHECK_OR_RETURN(iter != map.end())
       << "blob_name " << bn_in_op << " not found in batch axis signature";
@@ -543,7 +542,7 @@ void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlo
 Maybe<void> Operator::InferBatchAxisIf(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4Ibn) {
-  auto* map = op_attribute_.mutable_blob_batch_axis_signature()->mutable_bn_in_op2batch_axis();
+  auto* map = op_attribute_.mutable_batch_axis_signature()->mutable_bn_in_op2batch_axis();
   for (const auto& ibn : input_bns()) { (*map)[ibn] = *JUST(BatchAxis4Ibn(ibn)); }
   const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) { return &(*map)[bn_in_op]; };
   return InferBatchAxis(LogicalBlobDesc4Ibn, BatchAxis4BnInOp);
