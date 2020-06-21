@@ -68,7 +68,7 @@ def test_layer_norm(_):
         func_config.train.primary_lr(1e-4)
         func_config.train.model_update_conf(dict(naive_conf={}))
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def test_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             v = flow.get_variable(
                 "x",

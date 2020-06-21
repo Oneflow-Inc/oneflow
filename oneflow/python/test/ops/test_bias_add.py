@@ -19,7 +19,7 @@ def RunOneflowBiasAdd(device_type, value, bias, flow_args):
     func_config.train.primary_lr(0)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def FlowJob(
         value=flow.FixedTensorDef(value.shape), bias=flow.FixedTensorDef(bias.shape)
     ):

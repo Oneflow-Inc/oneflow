@@ -49,7 +49,7 @@ def _make_unsoted_segment_sum_fn(device, data, segment_ids, num_segments):
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def unsorted_batch_segment_sum_job(
         data=flow.FixedTensorDef(data.shape, dtype=flow.float),
         segment_ids=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),

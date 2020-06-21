@@ -41,7 +41,7 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
         #        "gelu": tfa.activations.gelu,
     }
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ActivationJob():
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(

@@ -53,7 +53,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
     if dynamic:
         func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def clip_fn(values_def=flow.MirroredTensorDef(values.shape, dtype=data_type)):
             return clip(values_def)
 
@@ -64,7 +64,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
     else:
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def clip_fn(values_def=flow.FixedTensorDef(values.shape, dtype=data_type)):
             return clip(values_def)
 

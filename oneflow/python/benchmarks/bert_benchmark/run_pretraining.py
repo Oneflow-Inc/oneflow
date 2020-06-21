@@ -235,7 +235,7 @@ func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 flow.config.gpu_device_num(args.gpu_num_per_node)
 
 
-@flow.function(func_config)
+@flow.global_function(func_config)
 def PretrainJob():
     total_device_num = args.node_num * args.gpu_num_per_node
     batch_size = total_device_num * args.batch_size_per_device

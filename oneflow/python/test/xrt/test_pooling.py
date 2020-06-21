@@ -94,7 +94,7 @@ class TestMaxPooling(TestPooling):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def max_pooling_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.nn.max_pool2d(
                 x,
@@ -112,7 +112,7 @@ class TestMaxPooling(TestPooling):
         config.use_xla_jit(False)
         config.use_tensorrt(True)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def trt_max_pooling_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.nn.max_pool2d(
                 x,
@@ -134,7 +134,7 @@ class TestAveragePooling(TestPooling):
         config.use_xla_jit(False)
         config.use_tensorrt(False)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def avg_pooling_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.nn.avg_pool2d(
                 x,
@@ -152,7 +152,7 @@ class TestAveragePooling(TestPooling):
         config.use_xla_jit(False)
         config.use_tensorrt(True)
 
-        @flow.function(config)
+        @flow.global_function(config)
         def trt_avg_pooling_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.nn.avg_pool2d(
                 x,
