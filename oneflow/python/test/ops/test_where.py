@@ -277,17 +277,16 @@ def test_where_grad_case_2(test_case):
         _compare_with_tf(test_case, **arg)
 
 
-# open this test case when PR https://github.com/Oneflow-Inc/oneflow/pull/2989 has merged
-# def test_where_grad_4card(test_case):
-#     arg_dict = OrderedDict()
-#     arg_dict["cond_shape"] = [[10]]
-#     arg_dict["x_shape"] = [[10]]
-#     arg_dict["y_shape"] = [[10]]
-#     arg_dict["device_type"] = ["gpu"]
-#     arg_dict["machine_device_ids"] = ["0:0-3"]
-#     arg_dict["dynamic"] = [False]
-#     for arg in GenArgDict(arg_dict):
-#         _compare_with_tf(test_case, **arg)
+def test_where_grad_4card(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["cond_shape"] = [[10]]
+    arg_dict["x_shape"] = [[10]]
+    arg_dict["y_shape"] = [[10]]
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["machine_device_ids"] = ["0:0-3"]
+    arg_dict["dynamic"] = [False]
+    for arg in GenArgDict(arg_dict):
+        _compare_with_tf(test_case, **arg)
 
 
 def test_where_argwhere(test_case):
