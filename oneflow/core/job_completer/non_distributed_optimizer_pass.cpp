@@ -80,7 +80,8 @@ Maybe<void> NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuild
       if (cur_node->op().output_bns().size() != 1) { break; }
       const std::string& sole_obn = cur_node->op().output_bns().Get(0);
       if (!cur_node->SbpParallel4BnInOp(sole_obn).has_broadcast_parallel()) { break; }
-      if (cur_node->BatchAxis4Lbi(cur_node->op().BnInOp2Lbi(sole_obn)).has_value()) { break; }
+      const auto& lbi = cur_node->op().BnInOp2Lbi(sole_obn);
+      if (CHECK_JUST(cur_node->BatchAxis4Lbi(lbi))->has_value()) { break; }
       op_seq_without_batch_dim.push_back(cur_node);
       if (cur_node->out_edges().size() == 1) {
         cur_node = cur_node->SoleOutEdge()->dst_node();
