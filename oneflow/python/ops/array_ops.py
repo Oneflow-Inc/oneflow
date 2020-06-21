@@ -489,6 +489,47 @@ def concat(values, axis, name=None):
         return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export("dynamic_concat")
+def dynamic_concat(inputs, axis, max_dims=None, name=None):
+    if name is None:
+        name = id_util.UniqueStr("DynamicConcat_")
+
+    assert isinstance(inputs, (list, tuple)), "inputs must be list/tuple of BlobDef"
+    assert isinstance(axis, int)
+    first_input_shape = inputs[0].shape
+    if axis < 0:
+        axis += len(first_input_shape)
+    assert axis >= 0 and axis < len(
+        first_input_shape
+    ), "axis must be in range [0, num_axes of inputs)"
+    max_dims_on_axis = first_input_shape[axis] if max_dims is None else int(max_dims)
+    for input in inputs:
+        assert len(input.shape) == len(first_input_shape)
+        for i in range(len(input.shape)):
+            if i == axis:
+                if max_dims is None:
+                    max_dims_on_axis = max(max_dims_on_axis, input.shape[i])
+                else:
+                    assert (
+                        input.shape[i] <= max_dims_on_axis
+                    ), "input shape {} do not match max_dims {}".format(
+                        input.shape, max_dims
+                    )
+            else:
+                assert input.shape[i] == first_input_shape[i]
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("dynamic_concat")
+        .Input("in", inputs)
+        .Output("out")
+        .Attr("axis", axis, "AttrTypeInt64")
+        .Attr("max_dims", max_dims_on_axis, "AttrTypeInt64")
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
+
+
 @oneflow_export("gather_nd")
 def gather_nd(params, indices, name=None):
     if name is None:
