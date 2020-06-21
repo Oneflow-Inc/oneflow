@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import oneflow.python.eager.vm_util as vm_util
 
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
@@ -38,7 +39,19 @@ def _InterpretCompletedOp(op_attribute, parallel_conf_str, blob_register):
     if op_attribute.op_conf.HasField("cast_from_mirrored_conf"):
         return _MirroredCast(op_attribute, blob_register)
     parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
+    if op_attribute.op_conf.HasField("variable_conf"):
+        return _FindOrCreateVarBlobObject(op_attribute, parallel_conf, blob_register)
     return _NaiveInterpret(op_attribute, parallel_conf, blob_register)
+
+
+def _FindOrCreateVarBlobObject(op_attribute, parallel_conf, blob_register):
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    sess = session_ctx.GetDefaultSession()
+    var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
+    if var_blob is not None:
+        blob_register.SetObject4BlobName(var_blob.unique_name, var_blob.blob_object)
+        return
+    TODO()
 
 
 def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
