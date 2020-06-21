@@ -12,9 +12,13 @@ class ForeignInputKernel final : public KernelIf<DeviceType::kCPU> {
   ~ForeignInputKernel() = default;
 
   void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    ForwardDataContent(ctx, BnInOp2Blob);
+  }
 
  private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 }  // namespace oneflow

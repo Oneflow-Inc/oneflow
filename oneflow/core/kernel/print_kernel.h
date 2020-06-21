@@ -11,7 +11,12 @@ class PrintKernel final : public KernelIf<DeviceType::kCPU> {
   PrintKernel() = default;
   ~PrintKernel() = default;
 
-  void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
+  void Forward(const KernelCtx& ctx,
+               std::function<Blob*(const std::string&)> Blob4BnInOp) const override {
+    ForwardDataContent(ctx, Blob4BnInOp);
+  }
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
 
  private:
   void VirtualKernelInit() override;

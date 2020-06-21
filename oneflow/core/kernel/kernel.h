@@ -67,7 +67,7 @@ class Kernel {
   void NaiveForwardShape(std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   // TODO(niuchong) : rename ForwardDataContent to ForwardBody
   virtual void ForwardDataContent(const KernelCtx& ctx,
-                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void ForwardPackedHeader(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();

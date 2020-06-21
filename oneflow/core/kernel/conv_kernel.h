@@ -183,6 +183,11 @@ class ConvKernel<DeviceType::kCPU, float16> final : public Kernel {
   OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
   ConvKernel() = default;
   ~ConvKernel() = default;
+
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    UNIMPLEMENTED();
+  }
 };
 
 template<typename T>
