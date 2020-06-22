@@ -27,4 +27,6 @@ RUN /opt/python/cp35-cp35m/bin/pip install -U cmake && ln -s /opt/_internal/cpyt
 # overwrite patchelf to fix "maximum size exceed" problem
 RUN curl -L -o 0.11.zip https://github.com/NixOS/patchelf/archive/0.11.zip && unzip 0.11.zip && cd patchelf-0.11 && sed -i 's/32/64/g' src/patchelf.cc && ./bootstrap.sh && ./configure && make -j`nproc` && make install && cd .. && rm -rf patchelf-0.11 0.11.zip
 
+RUN /opt/python/cp35-cp35m/bin/pip install numpy protobuf && /opt/python/cp36-cp36m/bin/pip install numpy protobuf && /opt/python/cp37-cp37m/bin/pip install numpy protobuf && /opt/python/cp38-cp38/bin/pip install numpy protobuf
+
 CMD ["/oneflow/docker/package/manylinux/build_wheel.sh"]

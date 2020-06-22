@@ -31,7 +31,9 @@ if [[ $SKIP_THIRD_PARTY != 1 ]]; then
     mkdir -p build-manylinux2014-third-party
     cd build-manylinux2014-third-party
 
-    cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release .. 
+    cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release \
+        -DTHIRD_PARTY_DIR=`pwd`   \
+        .. 
     make -j`nproc`
 
     cd ..
@@ -50,10 +52,10 @@ do
     fi
     PY_ROOT=/opt/python/${PY_ABI}
     PY_BIN=${PY_ROOT}/bin/python
-    $PY_BIN -m pip install numpy protobuf
     cmake -DTHIRD_PARTY=OFF         \
         -DPython3_ROOT_DIR=$PY_ROOT \
         -DCMAKE_BUILD_TYPE=Release  \
+        -DTHIRD_PARTY_DIR=$DIR/build-manylinux2014-third-party   \
         $EXTRA_ONEFLOW_CMAKE_ARGS   \
         ..
     cmake --build . -j `nproc`
