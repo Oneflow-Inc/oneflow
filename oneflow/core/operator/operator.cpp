@@ -380,10 +380,10 @@ std::string Operator::Bn2ConfName(const std::string& bn) const {
   return GetStrValInPbFdOrPbRpf(GetCustomizedConf(), bn);
 }
 
-LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
+LogicalBlobId Operator::lbi4ibn(const std::string& input_bn) const {
   return GenLogicalBlobId(Bn2ConfName(input_bn));
 }
-LogicalBlobId Operator::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId Operator::lbi4obn(const std::string& output_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
   ret.set_blob_name(Bn2ConfName(output_bn));
@@ -408,7 +408,7 @@ void Operator::EnrollTmpBn(const std::string& tbn) {
 }
 
 InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
-  LogicalBlobId lbi = ibn2lbi(ibn);
+  LogicalBlobId lbi = lbi4ibn(ibn);
   auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_ibn2input_blob_modifier();
   CHECK(map->insert({ibn, InputBlobModifier()}).second);
   *(mut_input_bns()->Add()) = ibn;
@@ -458,7 +458,7 @@ void Operator::EmplaceLbi2Obn(const LogicalBlobId& lbi, const std::string& obn) 
 }
 
 OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
-  LogicalBlobId lbi = obn2lbi(obn);
+  LogicalBlobId lbi = lbi4obn(obn);
   EmplaceLbi2Obn(lbi, obn);
   auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_obn2output_blob_modifier();
   CHECK(map->insert({obn, OutputBlobModifier()}).second);
