@@ -93,7 +93,27 @@ class InstructionsBuilder(object):
             get_delegate_blob_object=GetDelegateBlobObject,
         )
 
-    def CudaD2HStatelessCall(
+    def BoxingStatelessCall(self, op_attribute, parallel_conf, bn_in_op2blob_object={}):
+        op_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
+        self._CheckRefInBlobObjectParallelDesc(
+            op_attribute,
+            op_parallel_desc_sym,
+            bn_in_op2blob_object=bn_in_op2blob_object,
+        )
+
+        def GetDirectBlobObject(blob_object, op_arg_parallel_attr):
+            return blob_object
+
+        self._StatelessCall(
+            "compute",
+            op_attribute,
+            op_parallel_desc_sym=op_parallel_desc_sym,
+            blob_parallel_desc_sym=op_parallel_desc_sym,
+            bn_in_op2blob_object=bn_in_op2blob_object,
+            get_delegate_blob_object=GetDirectBlobObject,
+        )
+
+    def BoxingCudaD2HStatelessCall(
         self, op_attribute, in_parallel_conf, bn_in_op2blob_object={}
     ):
         op_parallel_desc_sym = self.GetParallelDescSymbol(in_parallel_conf)
@@ -118,7 +138,7 @@ class InstructionsBuilder(object):
             get_delegate_blob_object=GetDirectBlobObject,
         )
 
-    def CudaH2DStatelessCall(
+    def BoxingCudaH2DStatelessCall(
         self, op_attribute, out_parallel_conf, bn_in_op2blob_object={}
     ):
         op_parallel_desc_sym = self.GetParallelDescSymbol(out_parallel_conf)
@@ -650,34 +670,9 @@ def _FindOrCreateDelegateBlobObject(builder, x_blob_object, op_arg_parallel_attr
     blob_cache = blob_cache_util.FindOrCreateBlobCache(x_blob_object)
 
     def Fetch(x_blob_object, op_arg_parallel_attr):
-        return _FetchDelegateBlobObject(builder, x_blob_object, op_arg_parallel_attr)
+        return boxing_util.BoxingTo(builder, x_blob_object, op_arg_parallel_attr)
 
     return blob_cache.GetCachedDelegateBlobObject(op_arg_parallel_attr, Fetch)
-
-
-def _FetchDelegateBlobObject(builder, x_blob_object, op_arg_parallel_attr):
-    assert (
-        x_blob_object.op_arg_parallel_attr.opt_mirrored_parallel
-        == op_arg_parallel_attr.opt_mirrored_parallel
-    )
-    blob_device_ids = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
-    arg_parallel_desc_symbol = op_arg_parallel_attr.parallel_desc_symbol
-    op_device_ids = arg_parallel_desc_symbol.machine_id2device_id_list
-    prompt = "\nboxing is not supported yet."
-    assert blob_device_ids == op_device_ids, (
-        "%s blob_device_ids: %s\nop_device_ids: %s"
-        % (prompt, blob_device_ids, op_device_ids)
-    )
-    blob_device_tag = x_blob_object.parallel_desc_symbol.device_tag
-    op_device_tag = arg_parallel_desc_symbol.device_tag
-    assert blob_device_tag != op_device_tag, (
-        "\nx_arg_attribute: %s\nop_arg_parallel_attr: %s"
-        % (x_blob_object.op_arg_parallel_attr, op_arg_parallel_attr)
-    )
-    assert (
-        blob_device_tag != op_device_tag
-    ), "\nblob_device_tag: %s\nop_device_tag: %s" % (blob_device_tag, op_device_tag)
-    return boxing_util.BuildCopyHdInstruction(builder, x_blob_object, op_device_tag)
 
 
 def _GetOpConfBlobNameAttr(pb_message, field):

@@ -9,6 +9,59 @@ import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow
 
 
+def BoxingTo(builder, x_blob_object, op_arg_parallel_attr):
+    ret_blob_object = TryBroadcastOneToMany(
+        builder, x_blob_object, op_arg_parallel_attr
+    )
+    if ret_blob_object is not None:
+        return ret_blob_object
+    assert (
+        x_blob_object.op_arg_parallel_attr.opt_mirrored_parallel
+        == op_arg_parallel_attr.opt_mirrored_parallel
+    ), (
+        "\nx_arg_attribute: %s\nop_arg_parallel_attr: %s"
+        % (x_blob_object.op_arg_parallel_attr, op_arg_parallel_attr)
+    )
+    blob_device_ids = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
+    arg_parallel_desc_symbol = op_arg_parallel_attr.parallel_desc_symbol
+    op_device_ids = arg_parallel_desc_symbol.machine_id2device_id_list
+    prompt = "\nboxing is not supported yet."
+    assert blob_device_ids == op_device_ids, (
+        "\nx_arg_attribute: %s\nop_arg_parallel_attr: %s"
+        % (x_blob_object.op_arg_parallel_attr, op_arg_parallel_attr)
+    )
+    blob_device_tag = x_blob_object.parallel_desc_symbol.device_tag
+    op_device_tag = arg_parallel_desc_symbol.device_tag
+    assert blob_device_tag != op_device_tag, (
+        "\nx_arg_attribute: %s\nop_arg_parallel_attr: %s"
+        % (x_blob_object.op_arg_parallel_attr, op_arg_parallel_attr)
+    )
+    assert (
+        blob_device_tag != op_device_tag
+    ), "\nblob_device_tag: %s\nop_device_tag: %s" % (blob_device_tag, op_device_tag)
+    return BuildCopyHdInstruction(builder, x_blob_object, op_device_tag)
+
+
+def TryBroadcastOneToMany(builder, x_blob_object, op_arg_parallel_attr):
+    if len(x_blob_object.parallel_desc_symbol.machine_id2device_id_list) != 1:
+        return None
+    if len(x_blob_object.parallel_desc_symbol.machine_id2device_id_list[0]) != 1:
+        return None
+    if not op_arg_parallel_attr.sbp_parallel.HasField("broadcast_parallel"):
+        return None
+    tmp_blob_object = OneToManyBroadcastBlobReference(
+        builder, x_blob_object, op_arg_parallel_attr.parallel_desc_symbol
+    )
+    if (
+        tmp_blob_object.parallel_desc_symbol
+        == op_arg_parallel_attr.parallel_desc_symbol
+    ):
+        return tmp_blob_object
+    return BuildCopyHdInstruction(
+        builder, x_blob_object, op_arg_parallel_attr.parallel_desc_symbol.device_tag
+    )
+
+
 def Assign(builder, ref_blob_object, value_blob_object):
     return BuildAssignInstruction(
         builder, ref_blob_object, value_blob_object, _AssignOpConf()
@@ -58,7 +111,7 @@ def _BuildCopyInstruction(builder, x_blob_object, op_conf, to_device_tag):
     assert to_device_tag != x_device_tag, (to_device_tag, x_device_tag)
     if to_device_tag == "cpu" and x_device_tag == "gpu":
         x_parallel_conf = x_blob_object.parallel_desc_symbol.parallel_conf
-        builder.CudaD2HStatelessCall(
+        builder.BoxingCudaD2HStatelessCall(
             op_attribute, x_parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
         )
     elif to_device_tag == "gpu" and x_device_tag == "cpu":
@@ -67,7 +120,7 @@ def _BuildCopyInstruction(builder, x_blob_object, op_conf, to_device_tag):
         )
         out_parallel_conf = out_parallel_desc_symbol.parallel_conf
         with builder.CudaHostPinBlob(x_blob_object):
-            builder.CudaH2DStatelessCall(
+            builder.BoxingCudaH2DStatelessCall(
                 op_attribute,
                 out_parallel_conf,
                 bn_in_op2blob_object=bn_in_op2blob_object,
@@ -102,19 +155,19 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
     bn_in_op2blob_object = {"ref": ref_blob_object, "value": value_blob_object}
     op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
     if ref_device_tag == value_device_tag:
-        builder.StatelessCall(
+        builder.BoxingStatelessCall(
             op_attribute,
             parallel_conf=ref_parallel_conf,
             bn_in_op2blob_object=bn_in_op2blob_object,
         )
     elif ref_device_tag == "cpu" and value_device_tag == "gpu":
         value_parallel_conf = value_blob_object.parallel_desc_symbol.parallel_conf
-        builder.CudaD2HStatelessCall(
+        builder.BoxingCudaD2HStatelessCall(
             op_attribute, value_parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
         )
     elif ref_device_tag == "gpu" and value_device_tag == "cpu":
         with builder.CudaHostPinBlob(value_blob_object):
-            builder.CudaH2DStatelessCall(
+            builder.BoxingCudaH2DStatelessCall(
                 op_attribute,
                 ref_parallel_conf,
                 bn_in_op2blob_object=bn_in_op2blob_object,

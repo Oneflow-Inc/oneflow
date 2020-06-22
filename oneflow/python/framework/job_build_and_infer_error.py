@@ -2,6 +2,9 @@ from __future__ import absolute_import
 
 from google.protobuf import text_format
 
+import traceback
+import os
+
 
 class JobBuildAndInferError(Exception):
     def __init__(self, error_proto):
