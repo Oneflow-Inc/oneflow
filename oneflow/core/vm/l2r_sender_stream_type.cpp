@@ -73,11 +73,12 @@ void MakeSendRequests(Instruction* instruction,
     data_token->mutable_mirrored_token()->set_logical_token(view->logical_token());
     data_token->mutable_mirrored_token()->set_global_device_id(stream.global_device_id());
     data_size = view->size();
-    const auto& src_buffer_type = instruction->operand_type(view->src()).Get<MemBufferObjectType>();
+    const auto& src_buffer_type =
+        instruction->operand_type(view->src())->Get<MemBufferObjectType>();
     CHECK_LE(data_size, src_buffer_type.size());
     CHECK(src_buffer_type.mem_case().has_host_mem());
     const auto& src_buffer_value =
-        instruction->operand_value(view->src()).Get<MemBufferObjectValue>();
+        instruction->operand_value(view->src())->Get<MemBufferObjectValue>();
     data_ptr = src_buffer_value.data();
   }
   std::atomic<int64_t>* incomplete_cnt = nullptr;

@@ -104,12 +104,12 @@ OBJECT_MSG_BEGIN(Instruction);
   PUBLIC const StreamType& stream_type() const;
 
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
-      const RwMutexedObject& operand_type(const Operand& operand) const {
+      const RwMutexedObject* operand_type(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);
     return operand_type(operand, GetOperandDefaultGlobalDeviceId());
   }
   PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
-      const RwMutexedObject& operand_value(const Operand& operand) const {
+      const RwMutexedObject* operand_value(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);
     return operand_value(operand, GetOperandDefaultGlobalDeviceId());
   }
@@ -125,12 +125,12 @@ OBJECT_MSG_BEGIN(Instruction);
   }
 
   PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
-  const RwMutexedObject& operand_type(
+  const RwMutexedObject* operand_type(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) const {
     return operand_type<mem_zone_modifier>(operand.operand());
   }
   PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
-  const RwMutexedObject& operand_value(
+  const RwMutexedObject* operand_value(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) const {
     return operand_value<mem_zone_modifier>(operand.operand());
   }
@@ -165,9 +165,9 @@ OBJECT_MSG_BEGIN(Instruction);
   PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
           const MirroredObject* GetMirroredObject(const Operand& operand,
                                                   int64_t default_global_device_id) const;
-  PRIVATE const RwMutexedObject& operand_type(const Operand& operand,
+  PRIVATE const RwMutexedObject* operand_type(const Operand& operand,
                                               int64_t default_global_device_id) const;
-  PRIVATE const RwMutexedObject& operand_value(const Operand& operand,
+  PRIVATE const RwMutexedObject* operand_value(const Operand& operand,
                                                int64_t default_global_device_id) const;
   PRIVATE RwMutexedObject* mut_operand_type(const Operand& operand,
                                             int64_t default_global_device_id);

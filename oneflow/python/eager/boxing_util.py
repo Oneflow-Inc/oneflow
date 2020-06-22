@@ -57,9 +57,10 @@ def TryBroadcastOneToMany(builder, x_blob_object, op_arg_parallel_attr):
         == op_arg_parallel_attr.parallel_desc_symbol
     ):
         return tmp_blob_object
-    return BuildCopyHdInstruction(
-        builder, x_blob_object, op_arg_parallel_attr.parallel_desc_symbol.device_tag
+    ret = BuildCopyHdInstruction(
+        builder, tmp_blob_object, op_arg_parallel_attr.parallel_desc_symbol.device_tag
     )
+    return ret
 
 
 def Assign(builder, ref_blob_object, value_blob_object):

@@ -185,19 +185,23 @@ void CheckOperand<kDeviceMemZoneModifier>(const Operand& operand) {
   CHECK(IdUtil::IsObjectId(operand.logical_object_id()));
 }
 
-const RwMutexedObject& Instruction::operand_type(const Operand& operand,
+const RwMutexedObject* Instruction::operand_type(const Operand& operand,
                                                  int64_t default_global_device_id) const {
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
-  return GetMirroredObject<&IdUtil::GetTypeId>(operand, default_global_device_id)
-      ->rw_mutexed_object();
+  const auto* mirrored_object =
+      GetMirroredObject<&IdUtil::GetTypeId>(operand, default_global_device_id);
+  if (mirrored_object == nullptr) { return nullptr; }
+  return &mirrored_object->rw_mutexed_object();
 }
 
-const RwMutexedObject& Instruction::operand_value(const Operand& operand,
+const RwMutexedObject* Instruction::operand_value(const Operand& operand,
                                                   int64_t default_global_device_id) const {
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
-  return GetMirroredObject<&IdUtil::GetValueId>(operand, default_global_device_id)
-      ->rw_mutexed_object();
+  const auto* mirrored_object =
+      GetMirroredObject<&IdUtil::GetValueId>(operand, default_global_device_id);
+  if (mirrored_object == nullptr) { return nullptr; }
+  return &mirrored_object->rw_mutexed_object();
 }
 
 RwMutexedObject* Instruction::mut_operand_type(const Operand& operand,

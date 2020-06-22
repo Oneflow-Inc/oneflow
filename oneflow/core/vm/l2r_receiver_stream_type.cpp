@@ -73,7 +73,8 @@ void MakeReceiveRequests(Instruction* instruction,
     data_token->mutable_mirrored_token()->set_logical_token(view->logical_token());
     data_token->mutable_mirrored_token()->set_global_device_id(stream.global_device_id());
     data_size = view->size();
-    const auto& dst_buffer_type = instruction->operand_type(view->dst()).Get<MemBufferObjectType>();
+    const auto& dst_buffer_type =
+        instruction->operand_type(view->dst())->Get<MemBufferObjectType>();
     CHECK_LE(data_size, dst_buffer_type.size());
     CHECK(dst_buffer_type.mem_case().has_host_mem());
     auto* dst_buffer_value =

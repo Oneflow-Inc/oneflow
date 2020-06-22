@@ -12,6 +12,9 @@ class JobBuildAndInferError(Exception):
         self.error_proto_ = error_proto
         self.msg_ = self.error_proto_.msg
         self.error_proto_.ClearField("msg")
+        print("".join(traceback.format_list(traceback.extract_stack())))
+        print(self)
+        os._exit(-1)
 
     def __str__(self):
         ret = "\nmsg: %s" % self.msg_

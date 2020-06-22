@@ -78,6 +78,7 @@ class SystemOpKernelObject : public vm::Object {
   const JobDesc& job_desc() const { return *job_desc_; }
 
   const std::string& op_name() const { return op_conf_.name(); }
+  const OperatorConf& op_conf() const { return op_conf_; }
 
   const Kernel& kernel() const { return *kernel_; }
 
