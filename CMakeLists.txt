@@ -19,19 +19,19 @@ else ()
   set(CUDNN_STATIC OFF CACHE BOOL "")
 endif()
 
-if (NOT DEFINED USE_CXX11_ABI)
-  if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5)
-    set(USE_CXX11_ABI OFF)
-  else()
-    set(USE_CXX11_ABI ON)
-  endif()
-endif()
-
 # Project
 if(THIRD_PARTY)
   project(third_party C CXX)
 else()
   project(oneflow C CXX)
+endif()
+
+if (NOT DEFINED USE_CXX11_ABI)
+    if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5))
+    set(USE_CXX11_ABI OFF)
+  else()
+    set(USE_CXX11_ABI ON)
+  endif()
 endif()
 
 if (WITH_XLA)
