@@ -17,7 +17,9 @@ class TensorBuffer {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TensorBuffer);
   TensorBuffer()
-      : shape_(Shape()), data_(nullptr), data_type_(DataType::kInvalidDataType), num_bytes_(0) {}
+      : shape_(Shape()), data_(nullptr), data_type_(DataType::kInvalidDataType), num_bytes_(0) {
+    mem_case_.mutable_host_mem();
+  };
   virtual ~TensorBuffer() = default;
 
   const Shape& shape() const { return shape_; }
@@ -54,13 +56,16 @@ class TensorBuffer {
     data_.reset();
     data_type_ = DataType::kInvalidDataType;
     num_bytes_ = 0;
+    mem_case_.Clear();
+    mem_case_.mutable_host_mem();
   }
 
   void reserve(size_t new_num_bytes) {
     if (new_num_bytes <= num_bytes_) { return; }
+
     data_.reset();
-    data_.reset(MemoryAllocatorImpl::AllocateUnPinnedHostMem(new_num_bytes),
-                MemoryAllocatorImpl::DeallocateUnPinnedHostMem);
+    data_.reset(MemoryAllocatorImpl::Allocate(mem_case_, new_num_bytes),
+                std::bind(MemoryAllocatorImpl::Deallocate, std::placeholders::_1, mem_case_));
     num_bytes_ = new_num_bytes;
   }
 
@@ -69,6 +74,17 @@ class TensorBuffer {
   size_t nbytes() const { return elem_cnt() * GetSizeOfDataType(data_type_); }
 
   size_t capacity() const { return num_bytes_; }
+
+  const MemoryCase& mem_case() const { return mem_case_; }
+
+  void set_mem_case(const MemoryCase& new_mem_case) {
+    if (mem_case_ == new_mem_case) { return; }
+    // set new mem case will reset() original data
+    DataType original_data_type = data_type_;
+    reset();
+    mem_case_ = new_mem_case;
+    data_type_ = original_data_type;
+  }
 
   void Resize(const Shape& new_shape) { Resize(new_shape, data_type_); }
 
@@ -86,17 +102,12 @@ class TensorBuffer {
       new_num_bytes =
           std::max(new_num_bytes, RoundUp(num_bytes_ * growth_factor_, kTensorBufferAlignedSize));
       reserve(new_num_bytes);
-    } else if (new_num_bytes < num_bytes_ * shrink_threshold_) {
+    } else if (MemoryCaseUtil::IsHostUnPinnedMemoryCase(mem_case_)
+               && new_num_bytes < num_bytes_ * shrink_threshold_) {
       data_.reset();
       num_bytes_ = 0;
       reserve(new_num_bytes);
     }
-  }
-
-  void CopyFrom(const TensorBuffer& src) {
-    if (&src == this) { return; }
-    Resize(src.shape(), src.data_type());
-    memcpy(mut_data(), src.data(), nbytes());
   }
 
  private:
@@ -109,6 +120,7 @@ class TensorBuffer {
   std::shared_ptr<void> data_;
   DataType data_type_;
   size_t num_bytes_;
+  MemoryCase mem_case_;
 };
 
 #define BUFFER_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(TensorBuffer, DataType::kTensorBuffer)
