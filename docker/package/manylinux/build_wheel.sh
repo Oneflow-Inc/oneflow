@@ -9,10 +9,10 @@ PY_VERS=()
 while [[ "$#" > 0 ]]; do 
     case $1 in
         --skip-third-party) SKIP_THIRD_PARTY=1; ;;
-        --py3.5) PY_VERS+=( "35" ) ;;
-        --py3.6) PY_VERS+=( "36" ) ;;
-        --py3.7) PY_VERS+=( "37" ) ;;
-        --py3.8) PY_VERS+=( "38" ) ;;
+        --python3.5) PY_VERS+=( "35" ) ;;
+        --python3.6) PY_VERS+=( "36" ) ;;
+        --python3.7) PY_VERS+=( "37" ) ;;
+        --python3.8) PY_VERS+=( "38" ) ;;
         *) EXTRA_ONEFLOW_CMAKE_ARGS="${EXTRA_ONEFLOW_CMAKE_ARGS} $1" ;;
     esac;
     shift;
