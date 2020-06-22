@@ -23,11 +23,11 @@ class CollectiveBoxingGenericOp : public Operator {
     return op_conf().collective_boxing_generic_conf();
   }
 
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override {
+  LogicalBlobId lbi4ibn(const std::string& input_bn) const override {
     return this->op_conf().collective_boxing_generic_conf().lbi();
   }
 
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override {
+  LogicalBlobId lbi4obn(const std::string& output_bn) const override {
     return this->op_conf().collective_boxing_generic_conf().lbi();
   }
 

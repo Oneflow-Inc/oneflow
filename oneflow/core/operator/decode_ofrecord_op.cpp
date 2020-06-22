@@ -58,7 +58,7 @@ Maybe<void> DecodeOFRecordOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-LogicalBlobId DecodeOFRecordOp::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId DecodeOFRecordOp::lbi4obn(const std::string& output_bn) const {
   CHECK_STREQ(output_bn.substr(0, 4).c_str(), "out_");
   LogicalBlobId ret;
   ret.set_op_name(op_name());
