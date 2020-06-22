@@ -21,8 +21,8 @@ class BoxingIdentityOp : public Operator {
   virtual void VirtualInitFromOpConf(){};
 
  private:
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
+  LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
+  LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };
 
 void BoxingIdentityOp::InitFromOpConf() {
@@ -30,11 +30,11 @@ void BoxingIdentityOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-LogicalBlobId BoxingIdentityOp::ibn2lbi(const std::string& input_bn) const {
+LogicalBlobId BoxingIdentityOp::lbi4ibn(const std::string& input_bn) const {
   return this->op_conf().boxing_identity_conf().lbi();
 }
 
-LogicalBlobId BoxingIdentityOp::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId BoxingIdentityOp::lbi4obn(const std::string& output_bn) const {
   return this->op_conf().boxing_identity_conf().lbi();
 }
 
