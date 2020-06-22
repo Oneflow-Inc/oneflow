@@ -22,8 +22,8 @@ class ReduceGatherOp final : public Operator {
  private:
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
+  LogicalBlobId lbi4ibn(const std::string& input_bn) const override { return GenPackedLbi(); }
+  LogicalBlobId lbi4obn(const std::string& output_bn) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 };
 
