@@ -31,8 +31,10 @@ class DynamicConcatKernel final : public user_op::OpKernel {
         }
       }
     }
-    ctx->MutShapeView4ArgNameAndIndex("out", 0)->set_shape(Shape(dim_vec));
-    // TODO(wenxiao): check concated axis length is less than static length
+    Shape dynamic_shape(dim_vec);
+    CHECK_LE(dynamic_shape.elem_cnt(),
+             ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().elem_cnt());
+    ctx->MutShapeView4ArgNameAndIndex("out", 0)->set_shape(dynamic_shape);
   }
 
   void Compute(user_op::KernelComputeContext* ctx) const override {

@@ -310,6 +310,11 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   }
   ~UserKernelComputeContext() = default;
 
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
+    return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_.end()) { return nullptr; }

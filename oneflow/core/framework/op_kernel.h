@@ -92,6 +92,8 @@ class KernelComputeContext {
   virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
   virtual DeviceCtx* device_ctx() = 0;
 
+  virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                       int32_t index) const = 0;
   virtual DeviceType device_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
   virtual const JobDesc& job_desc() const = 0;
