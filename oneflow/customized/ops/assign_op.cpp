@@ -27,6 +27,9 @@ void InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
   user_op::InputArgModifier* ref_modifier = GetInputArgModifierFn("ref", 0);
   CHECK(ref_modifier != nullptr);
   ref_modifier->set_is_mutable(true);
+  user_op::InputArgModifier* value_modifier = GetInputArgModifierFn("value", 0);
+  CHECK(value_modifier != nullptr);
+  value_modifier->set_requires_grad(false);
 }
 
 }  // namespace
