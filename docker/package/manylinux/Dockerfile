@@ -31,4 +31,4 @@ RUN mkdir -p /tmp && curl -L -o 0.11.zip https://github.com/NixOS/patchelf/archi
 
 RUN /opt/python/cp35-cp35m/bin/pip install numpy protobuf && /opt/python/cp36-cp36m/bin/pip install numpy protobuf && /opt/python/cp37-cp37m/bin/pip install numpy protobuf && /opt/python/cp38-cp38/bin/pip install numpy protobuf
 
-CMD ["/oneflow/docker/package/manylinux/build_wheel.sh"]
+CMD ["/oneflow-src/docker/package/manylinux/build_wheel.sh"]
