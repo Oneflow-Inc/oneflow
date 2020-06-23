@@ -22,8 +22,8 @@ class SliceBoxingOp : public Operator {
   virtual void VirtualInitFromOpConf(){};
 
  private:
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
+  LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
+  LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };
 
 class SliceBoxingCopyOp final : public SliceBoxingOp {
@@ -57,11 +57,11 @@ void SliceBoxingOp::InitFromOpConf() {
   VirtualInitFromOpConf();
 }
 
-LogicalBlobId SliceBoxingOp::ibn2lbi(const std::string& input_bn) const {
+LogicalBlobId SliceBoxingOp::lbi4ibn(const std::string& input_bn) const {
   return GetCustomizedBoxingConf().lbi();
 }
 
-LogicalBlobId SliceBoxingOp::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId SliceBoxingOp::lbi4obn(const std::string& output_bn) const {
   return GetCustomizedBoxingConf().lbi();
 }
 

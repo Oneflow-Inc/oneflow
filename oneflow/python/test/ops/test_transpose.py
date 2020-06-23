@@ -1,10 +1,12 @@
 import os
-import oneflow as flow
-import numpy as np
-import tensorflow as tf
 from collections import OrderedDict
-from test_util import GenArgList
+
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
 import test_global_storage
+from test_util import GenArgList
+
 
 def compare_with_tensorflow(device_type, input_shape, perm):
     assert device_type in ["gpu", "cpu"]
@@ -15,15 +17,14 @@ def compare_with_tensorflow(device_type, input_shape, perm):
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def TransposeJob():
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(
                 "input",
                 shape=input_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(
-                    minval=2, maxval=5),
+                initializer=flow.random_uniform_initializer(minval=2, maxval=5),
                 trainable=True,
             )
 
@@ -37,7 +38,7 @@ def compare_with_tensorflow(device_type, input_shape, perm):
 
             return loss
 
-     # OneFlow
+    # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
     of_out = TransposeJob().get()
@@ -49,7 +50,9 @@ def compare_with_tensorflow(device_type, input_shape, perm):
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+    )
 
 
 def test_transpose(test_case):
@@ -60,18 +63,20 @@ def test_transpose(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
+
 def test_transpose2(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(10, 11, 12)]
-    arg_dict["perm"] = [(2, 0, 1), (1, 0, 2), (2, 1, 0),  (1, 2, 0)]
+    arg_dict["perm"] = [(2, 0, 1), (1, 0, 2), (2, 1, 0), (1, 2, 0)]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
+
 
 def test_transpose3(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["input_shape"] = [(10, 11)]
-    arg_dict["perm"] = [(1, 0),  (0, 1)]
+    arg_dict["perm"] = [(1, 0), (0, 1)]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)

@@ -1,17 +1,17 @@
-import oneflow as flow
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.distribute as distribute
-import oneflow.python.framework.hob as hob
-import oneflow.python.experimental.name_scope as name_scope
-import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.core.common.shape_pb2 as shape_util
 import random
 
+import oneflow as flow
+import oneflow.core.common.shape_pb2 as shape_util
+import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.python.experimental.name_scope as name_scope
+import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.distribute as distribute
+import oneflow.python.framework.hob as hob
+import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -106,7 +106,9 @@ class UserOpConfBuilder(object):
 
     def Build(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name != ""
-        self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(self.user_op_.op_conf_)
+        self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(
+            self.user_op_.op_conf_
+        )
         return self.user_op_
 
     def Op(self, op_type_name):
@@ -117,7 +119,9 @@ class UserOpConfBuilder(object):
         assert isinstance(input_blob_list, (tuple, list))
         for input_blob in input_blob_list:
             # assert type(input_blob) is blob_desc.BlobDesc
-            self.user_op_.op_conf_.user_conf.input[input_name].s.append(input_blob.unique_name)
+            self.user_op_.op_conf_.user_conf.input[input_name].s.append(
+                input_blob.unique_name
+            )
         return self
 
     def Output(self, output_name, num=1):
@@ -196,7 +200,9 @@ class UserOpConfBuilder(object):
             if seed is None:
                 seed = -1
         else:
-            raise ValueError("Unknow distirbute strategy when set random seed to user op")
+            raise ValueError(
+                "Unknow distirbute strategy when set random seed to user op"
+            )
 
         return self.Attr("has_seed", (seed is not None), "AttrTypeBool").Attr(
             "seed", seed, "AttrTypeInt64"

@@ -1,5 +1,5 @@
-import oneflow as flow
 import numpy as np
+import oneflow as flow
 
 
 def test_name_scope(test_case):
@@ -15,7 +15,7 @@ def test_name_scope(test_case):
             initializer=flow.random_uniform_initializer(),
         )
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def test_name_scope_job():
         with flow.experimental.name_scope("backbone"):
             with flow.experimental.name_scope("branch"):

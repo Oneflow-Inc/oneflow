@@ -3,7 +3,7 @@
 namespace oneflow {
 REGISTER_USER_OP("constant")
     .Output("out")
-    .AllOutputsConstant()
+    .SetOutputBufferNum(1)
     .Attr("floating_value", UserOpAttrType::kAtDouble)
     .Attr("integer_value", UserOpAttrType::kAtInt64)
     .Attr("is_floating_value", UserOpAttrType::kAtBool)

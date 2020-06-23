@@ -23,7 +23,7 @@ class ReduceSumOp final : public Operator {
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override {
+  LogicalBlobId lbi4ibn(const std::string& input_bn) const override {
     const ReduceSumOpConf& conf = op_conf().reduce_sum_conf();
     if (conf.has_in_sys()) {
       CHECK_EQ(conf.axis_size(), 1);

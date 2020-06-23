@@ -1,6 +1,7 @@
-import oneflow as flow
-import numpy as np
 import sys
+
+import numpy as np
+import oneflow as flow
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -8,14 +9,16 @@ func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
 
 def test_categorical_ordinal_encoder_gpu(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def test_job(x=flow.FixedTensorDef((10000,), dtype=flow.int64)):
         return flow.layers.categorical_ordinal_encoder(x, capacity=320000)
 
     check_point = flow.train.CheckPoint()
     check_point.init()
 
-    tokens = np.random.randint(-sys.maxsize, sys.maxsize, size=[200000]).astype(np.int64)
+    tokens = np.random.randint(-sys.maxsize, sys.maxsize, size=[200000]).astype(
+        np.int64
+    )
 
     k_set = set()
     v_set = set()

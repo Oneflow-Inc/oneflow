@@ -1,6 +1,7 @@
+from collections import OrderedDict
+
 import numpy as np
 import oneflow as flow
-from collections import OrderedDict
 from test_util import GenArgList
 
 
@@ -41,7 +42,7 @@ def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
     if dynamic is True:
         func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def argwhere_fn(x_def=flow.MirroredTensorDef(x.shape, dtype=data_type)):
             return do_argwhere(x_def)
 
@@ -50,7 +51,7 @@ def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
     else:
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def argwhere_fn(x_def=flow.FixedTensorDef(x.shape, dtype=data_type)):
             return do_argwhere(x_def)
 

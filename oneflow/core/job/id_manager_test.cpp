@@ -1,4 +1,5 @@
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -30,13 +31,13 @@ Resource GetResource() {
 
 void New() {
   Global<EnvDesc>::New(GetEnvProto());
-  Global<ResourceDesc>::New(GetResource());
+  Global<ResourceDesc, ForSession>::New(GetResource());
   Global<IDMgr>::New();
 }
 
 void Delete() {
   Global<IDMgr>::Delete();
-  Global<ResourceDesc>::Delete();
+  Global<ResourceDesc, ForSession>::Delete();
   Global<EnvDesc>::Delete();
 }
 

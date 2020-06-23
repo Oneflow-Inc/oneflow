@@ -5,6 +5,7 @@
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -156,6 +157,35 @@ bool IsNonSoleKeepHeaderOnlyEdge(TaskNode* src_task, TaskNode* dst_task) {
   return src_op.op_conf().has_keep_header_only_conf();
 }
 
+void CollectIgnoreTaskEdgesInFirstMergedChains(const std::vector<std::vector<TaskNode*>>& chains,
+                                               HashSet<TaskEdge*>* ignore_edges) {
+  auto HasGpuVariableOpInChain = [&](const std::vector<TaskNode*>& chain) -> bool {
+    for (TaskNode* node : chain) {
+      auto* fw_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+      if (fw_node == nullptr) { continue; }
+      if (fw_node->logical_node()->op_vec().size() != 1) { continue; }
+      const auto& src_op = *fw_node->logical_node()->SoleOp();
+      if (src_op.op_conf().has_variable_conf()
+          && src_op.op_conf().device_type() == DeviceType::kGPU) {
+        return true;
+      }
+    }
+    return false;
+  };
+  for (auto& chain : chains) {
+    if (HasGpuVariableOpInChain(chain)) {
+      HashSet<TaskNode*> nodes_in_chain(chain.begin(), chain.end());
+      for (TaskNode* node : chain) {
+        for (TaskEdge* out_edge : node->out_edges()) {
+          if (nodes_in_chain.find(out_edge->dst_node()) == nodes_in_chain.end()) {
+            ignore_edges->insert(out_edge);
+          }
+        }
+      }
+    }
+  }
+}
+
 }  // namespace
 
 std::string ChainNode::VisualStr() const {
@@ -169,14 +199,27 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   HashMap<int64_t, std::vector<TaskNode*>> machine2tasks;
   HashMap<TaskNode*, HashSet<TaskNode*>> node2ancestors;
   std::vector<std::vector<TaskNode*>> chains;
-  GroupTaskNodesByMachineAndCollectAncestors(task_gph, &machine2tasks, &node2ancestors);
+  GroupTaskNodesByMachine(task_gph, &machine2tasks);
+  // do first merge
+  CollectTaskNodeAncestors(task_gph, &node2ancestors, nullptr);
   MergeTaskNodes(machine2tasks, node2ancestors, &chains);
+  // collect ignore task edges (variable chain out edges)
+  HashSet<TaskEdge*> ignore_edges;
+  CollectIgnoreTaskEdgesInFirstMergedChains(chains, &ignore_edges);
+  if (!ignore_edges.empty()) {
+    // do second merge
+    node2ancestors.clear();
+    chains.clear();
+    CollectTaskNodeAncestors(task_gph, &node2ancestors, &ignore_edges);
+    MergeTaskNodes(machine2tasks, node2ancestors, &chains);
+  }
+
   for (auto& task_nodes : chains) { PrioritizeUntrainableTaskNode(&task_nodes); }
   InitChainNode(chains);
   InitChainEdge(chains);
   CheckNoCycle();
   SetChainId4ChainNode();
-  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     ToDotWithFilePath(JoinPath("dot", TypeName(), GlobalJobDesc().job_name() + ".dot"));
   }
 }
@@ -202,21 +245,28 @@ void ChainGraph::CheckNoCycle() const {
   }
 }
 
-void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
-    const TaskGraph& task_gph, HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks,
-    HashMap<TaskNode*, HashSet<TaskNode*>>* node2ancestors) const {
+void ChainGraph::GroupTaskNodesByMachine(
+    const TaskGraph& task_gph, HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks) const {
+  task_gph.AcyclicTopoForEachNode(
+      [&](TaskNode* node) { (*machine2tasks)[node->machine_id()].emplace_back(node); });
+}
+
+void ChainGraph::CollectTaskNodeAncestors(const TaskGraph& task_gph,
+                                          HashMap<TaskNode*, HashSet<TaskNode*>>* node2ancestors,
+                                          HashSet<TaskEdge*>* ignore_edges) const {
   task_gph.AcyclicTopoForEachNode([&](TaskNode* node) {
-    (*machine2tasks)[node->machine_id()].emplace_back(node);
     CHECK(node2ancestors->emplace(node, HashSet<TaskNode*>()).second);
     // to reduce memory consumption
     if (node->GetTaskType() == TaskType::kTick) { return; }
-    node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
-      if (in_node->GetTaskType() == TaskType::kTick) { return; }
-      if (IsNonSoleKeepHeaderOnlyEdge(in_node, node)) { return; }
+    for (TaskEdge* in_edge : node->in_edges()) {
+      if (ignore_edges && ignore_edges->find(in_edge) != ignore_edges->end()) { continue; }
+      TaskNode* in_node = in_edge->src_node();
+      if (in_node->GetTaskType() == TaskType::kTick) { continue; }
+      if (IsNonSoleKeepHeaderOnlyEdge(in_node, node)) { continue; }
       (*node2ancestors)[node].insert(in_node);
       (*node2ancestors)[node].insert((*node2ancestors)[in_node].begin(),
                                      (*node2ancestors)[in_node].end());
-    });
+    }
   });
 }
 

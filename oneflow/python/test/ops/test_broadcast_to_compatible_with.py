@@ -1,5 +1,5 @@
-import oneflow as flow
 import numpy as np
+import oneflow as flow
 
 
 def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):
@@ -12,7 +12,7 @@ def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def broadcast_to_compatible_with_fn(
         x_def=flow.MirroredTensorDef(shape=x_shape, dtype=flow.float)
     ):
@@ -31,7 +31,9 @@ def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):
     return broadcast_to_compatible_with_fn([x]).get().ndarray_list()[0]
 
 
-def _of_broadcast_to_compatible_with_dynamic(x, a, b, x_shape=None, a_shape=None, b_shape=None):
+def _of_broadcast_to_compatible_with_dynamic(
+    x, a, b, x_shape=None, a_shape=None, b_shape=None
+):
     if x_shape is None:
         x_shape = x.shape
 
@@ -46,7 +48,7 @@ def _of_broadcast_to_compatible_with_dynamic(x, a, b, x_shape=None, a_shape=None
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def broadcast_to_compatible_with_fn(
         x_def=flow.MirroredTensorDef(x_shape, dtype=flow.float),
         a_def=flow.MirroredTensorDef(a_shape, dtype=flow.float),
@@ -70,8 +72,10 @@ def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
-    def broadcast_to_compatible_with_fn(x_def=flow.FixedTensorDef(x.shape, dtype=flow.float)):
+    @flow.global_function(func_config)
+    def broadcast_to_compatible_with_fn(
+        x_def=flow.FixedTensorDef(x.shape, dtype=flow.float)
+    ):
         x_var = flow.get_variable(
             "x_var",
             shape=x.shape,

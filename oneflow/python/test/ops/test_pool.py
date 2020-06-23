@@ -1,12 +1,11 @@
-import oneflow as flow
-import numpy as np
-from collections import OrderedDict
-from test_util import GenArgList
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
-import tensorflow as tf
 import collections
 import os
+from collections import OrderedDict
+
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -182,7 +181,7 @@ def test_pool(_):
         else:
             tensor_def = flow.FixedTensorDef
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def pooling_job(x=tensor_def(x_shape, dtype=dtype)):
             v = flow.get_variable(
                 "x",
