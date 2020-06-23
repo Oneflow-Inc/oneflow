@@ -5,8 +5,8 @@
 
 namespace oneflow {
 
-void ForeignInputKernel::Forward(const KernelCtx& ctx,
-                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void ForeignInputKernel::ForwardDataContent(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto& buffer_name = op_conf().foreign_input_conf().ofblob_buffer_name();
   std::shared_ptr<ForeignJobInstance> foreign_job_instance;
   BufferStatus buffer_status = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get()

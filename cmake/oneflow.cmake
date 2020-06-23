@@ -164,6 +164,7 @@ else()
   message("-- Python2 specified. Version found: " ${Python2_VERSION})
   set(Python_EXECUTABLE ${Python2_EXECUTABLE})
 endif()
+message("-- Using Python executable: " ${Python_EXECUTABLE})
 if (NOT Python_INCLUDE_DIRS)
   message(STATUS "Getting python include directory from sysconfig..")
   execute_process(

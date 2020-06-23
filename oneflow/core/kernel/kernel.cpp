@@ -22,11 +22,16 @@ Kernel::~Kernel() {
   if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
 }
 
-void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
+void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
+  if (!(job_desc_ == nullptr || shape_infer_helper_ == nullptr)) { return; }
   job_desc_ = job_desc;
   kernel_conf_ = kernel_conf;
   shape_infer_helper_ =
       new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
+}
+
+void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
+  InitBase(job_desc, kernel_conf);
   VirtualKernelInit(device_ctx);
 }
 

@@ -6,9 +6,9 @@ namespace oneflow {
 
 namespace {
 
-void LogError(const std::string& log_str, const Error& error) {
+void LogError(const Error& error) {
   // gdb break point
-  LOG(ERROR) << log_str << error->msg();
+  LOG(ERROR) << error->msg();
 }
 
 }  // namespace
@@ -71,8 +71,12 @@ Error Error::GradientFunctionNotFound() {
   return error;
 }
 
-Error&& operator<=(const std::string& log_str, Error&& error) {
-  LogError(log_str, error);
+Error&& operator<=(const std::pair<std::string, std::string>& loc_and_func, Error&& error) {
+  LogError(error);
+  CHECK(error.error_proto()->stack_frame().empty());
+  auto* stack_frame = error.error_proto()->add_stack_frame();
+  stack_frame->set_location(loc_and_func.first);
+  stack_frame->set_function(loc_and_func.second);
   return std::move(error);
 }
 
