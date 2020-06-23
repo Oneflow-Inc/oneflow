@@ -82,7 +82,7 @@
         CMakeFiles/generate_api.dir/build.make:57: recipe for target 'CMakeFiles/generate_api' failed
         make[2]: *** [CMakeFiles/generate_api] Error 1
         ```
-    - Install development dependencies and linter tools, run:
+    - Install development dependencies by running:
         ```
         pip3 install -r dev-requirements.txt
         ```
