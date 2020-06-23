@@ -448,3 +448,45 @@ def api_coco_reader(
         .Build()
     )
     return op.InferAndTryRun().RemoteBlobList()
+
+
+@oneflow_export("data.OneRecDecoder", "data.onerec_decoder")
+def OneRecDecoder(
+    input_blob,
+    key,
+    dtype,
+    shape,
+    is_dynamic=False,
+    reshape=None,
+    batch_padding=None,
+    name=None,
+):
+    if name is None:
+        name = id_util.UniqueStr("OneRecDecoder_")
+    if reshape is not None:
+        has_reshape = True
+    else:
+        has_reshape = False
+        reshape = shape
+    if batch_padding is not None:
+        has_batch_padding = True
+    else:
+        has_batch_padding = False
+        batch_padding = shape
+    return (
+        flow.user_op_builder(name)
+        .Op("onerec_decoder")
+        .Input("in", [input_blob])
+        .Output("out")
+        .Attr("key", key, "AttrTypeString")
+        .Attr("data_type", dtype, "AttrTypeDataType")
+        .Attr("static_shape", shape, "AttrTypeShape")
+        .Attr("is_dynamic", is_dynamic, "AttrTypeBool")
+        .Attr("has_reshape", has_reshape, "AttrTypeBool")
+        .Attr("reshape", reshape, "AttrTypeShape")
+        .Attr("has_batch_padding", has_batch_padding, "AttrTypeBool")
+        .Attr("batch_padding", batch_padding, "AttrTypeShape")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
