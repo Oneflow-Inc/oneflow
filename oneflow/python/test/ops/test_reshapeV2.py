@@ -1,11 +1,12 @@
 import os
-import oneflow as flow
-import numpy as np
-import tensorflow as tf
 from collections import OrderedDict
+
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
+import test_global_storage
 from test_util import GenArgList
 
-import test_global_storage
 
 def compare_with_tensorflow(device_type, input_shape, shape):
     assert device_type in ["gpu", "cpu"]
@@ -16,15 +17,14 @@ def compare_with_tensorflow(device_type, input_shape, shape):
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReshapeJob():
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(
                 "in",
                 shape=input_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(
-                    minval=2, maxval=5),
+                initializer=flow.random_uniform_initializer(minval=2, maxval=5),
                 trainable=True,
             )
 
@@ -38,7 +38,7 @@ def compare_with_tensorflow(device_type, input_shape, shape):
 
             return loss
 
-     # OneFlow
+    # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
     of_out = ReshapeJob().get()
@@ -50,7 +50,9 @@ def compare_with_tensorflow(device_type, input_shape, shape):
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+    )
 
 
 def test_reshape(test_case):
@@ -60,4 +62,3 @@ def test_reshape(test_case):
     arg_dict["shape"] = [[2, -1], [-1], [3, -1]]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
-

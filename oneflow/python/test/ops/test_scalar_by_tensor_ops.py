@@ -1,11 +1,11 @@
 import os
-import numpy as np
-import tensorflow as tf
-import oneflow as flow
-from collections import OrderedDict 
+from collections import OrderedDict
 
-from test_util import GenArgList
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
 import test_global_storage
+from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -20,7 +20,7 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ScalarAddByTensorJob():
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -84,6 +84,7 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
         test_global_storage.Get("y_diff"), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5
     )
 
+
 def test_add(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
@@ -92,6 +93,7 @@ def test_add(test_case):
     arg_dict["case"] = ["add"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
+
 
 def test_sub(test_case):
     arg_dict = OrderedDict()
@@ -102,6 +104,7 @@ def test_sub(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
+
 def test_mul(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
@@ -110,6 +113,7 @@ def test_mul(test_case):
     arg_dict["case"] = ["mul"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
+
 
 def test_div(test_case):
     arg_dict = OrderedDict()

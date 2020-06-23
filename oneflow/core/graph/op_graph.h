@@ -4,6 +4,7 @@
 #include "oneflow/core/graph/graph.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/mirrored_parallel.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
@@ -28,14 +29,13 @@ class OpNode final : public Node<OpNode, OpEdge> {
   bool IsTimeShapeIdentity() const;
   const Operator& op() const { return *op_; }
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
-  const SbpSignature& sbp_signature() const { return sbp_signature_; }
+  const SbpSignature& sbp_signature() const { return *CHECK_JUST(op().sbp_signature()); }
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
-  const OptInt64& BatchAxis4Lbi(const LogicalBlobId& lbi) const;
+  Maybe<const OptInt64*> BatchAxis4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
-  const OpNode& SrcNode4InputBnInOp(const std::string& bn_in_op) const;
-  const OpNode& ProducerOpNode4BnInOp(const std::string& bn_in_op) const;
+  const OpNode& SrcNode4Ibn(const std::string& bn_in_op) const;
   const ParallelDesc& BlobParallelDesc4Obn(const std::string& obn) const;
 
   std::string VisualStr() const override;
@@ -47,18 +47,16 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
 
   // Setters
+  Operator* mut_op() { return op_.get(); }
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
-  SbpSignature* mut_sbp_signature() { return &sbp_signature_; }
+  SbpSignature* mut_sbp_signature() { return mut_op()->mut_sbp_signature(); }
   Shape* mut_out_blob_time_shape();
   HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
   }
-  OptInt64* MutBatchAxis4Lbi(const LogicalBlobId& lbi);
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
-  OpNode* MutSrcNode4InputBnInOp(const std::string& bn_in_op) const;
-  OpNode* MutProducerOpNode4BnInOp(const std::string& bn_in_op);
+  OpNode* MutSrcNode4Ibn(const std::string& bn_in_op) const;
   OpNode* MutSrcNode4InputLbi(const LogicalBlobId& lbi) const;
-  OpNode* MutProducerOpNode4Lbi(const LogicalBlobId& lbi);
   void ForEachSplitOrBroadcastBlobDesc(const BlobDesc& blob_desc, const SbpParallel& sbp_parallel,
                                        const std::function<void(const BlobDesc&)>& Handler) const;
 
@@ -75,14 +73,13 @@ class OpNode final : public Node<OpNode, OpEdge> {
   void InitLbi2SourceNode();
   void InitInputBlobFastestTimeShape();
   void InitLbi2SbpParallel();
+  void InitLbi2MirroredParallel();
 
   ParallelDesc parallel_desc_;
   HashMap<std::string, ParallelDesc> obn2blob_parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   std::unique_ptr<Shape> out_blob_time_shape_;
-  SbpSignature sbp_signature_;
-  HashMap<LogicalBlobId, OptInt64> lbi2batch_axis_;
   HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
@@ -160,8 +157,10 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InitEdges();
   void InitProducerOpName2CtrlConsumerOpNames(const Job& job);
   void CheckIsDAG() const;
+  void InferBlobLastUsed() const;
   void InferTimeShape() const;
   void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
+  void InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_parallel_view_conf) const;
   void InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
   void InferLogicalBlobDesc(const Job& job) const;
   bool IsBatchAxisBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
@@ -172,6 +171,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   std::list<OpNode*> DataOrCtrlSourceNodes() const;
 
   HashMap<std::string, OpNode*> op_name2op_node_;
+  std::list<std::string> op_names_;
   HashMap<std::string, HashSet<std::string>> producer_op_name2ctrl_consumer_op_names_;
 };
 

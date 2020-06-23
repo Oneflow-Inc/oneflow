@@ -22,7 +22,9 @@ struct CudnnConvArgsAndAlgo final {
              y->shape(), user_op_conf.attr<std::string>("data_format"), buf->shape().elem_cnt(),
              job_desc.job_conf().cudnn_conv_heuristic_search_algo(),
              job_desc.job_conf().cudnn_conv_use_deterministic_algo_only(),
-             job_desc.job_conf().cudnn_conv_enable_pseudo_half()) {
+             job_desc.job_conf().cudnn_conv_enable_pseudo_half()
+                 || (user_op_conf.attr<std::string>("data_format") == "channels_last"
+                     && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value)) {
     size_t byte_size_of_buf = buf->shape().elem_cnt();
     AllocatedCudnnConvResource res(device_ctx->cudnn_handle(), const_cast<void*>(x->dptr()),
                                    const_cast<void*>(w->dptr()), const_cast<void*>(y->dptr()),
@@ -59,7 +61,9 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
                        user_op_conf.attr<std::string>("data_format"), workspace_size,
                        job_desc.job_conf().cudnn_conv_heuristic_search_algo(),
                        job_desc.job_conf().cudnn_conv_use_deterministic_algo_only(),
-                       job_desc.job_conf().cudnn_conv_enable_pseudo_half());
+                       job_desc.job_conf().cudnn_conv_enable_pseudo_half()
+                           || (user_op_conf.attr<std::string>("data_format") == "channels_last"
+                               && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value));
     PerfT algo_perf;
     if (has_forced_algo) {
       algo_perf = GetCudnnConvAlgorithmPerference<PerfT>(&args, static_cast<AlgoT>(forced_algo));
@@ -124,7 +128,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
     const auto& data_format = ctx->Attr<std::string>("data_format");
     int32_t filters = ctx->Attr<int32_t>("filters");
 
-    std::shared_ptr<ConvCudnnOpKernelState> state;
+    std::shared_ptr<ConvCudnnOpKernelState> state(new ConvCudnnOpKernelState());
 
     const user_op::TensorDesc* bias = ctx->TensorDesc4ArgNameAndIndex("bias", 0);
     if (bias != nullptr) {
@@ -324,7 +328,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
     const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
     const auto& data_format = ctx->Attr<std::string>("data_format");
 
-    std::shared_ptr<ConvBiasGradState> state;
+    std::shared_ptr<ConvBiasGradState> state(new ConvBiasGradState());
     if (data_format == "channels_first") {
       CHECK_EQ(dy->shape().At(1), bias_diff->shape().At(0));
       state->bias_diff_desc.reset(
@@ -346,7 +350,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
     CHECK_GE(dy->shape().NumAxes(), 3);
     CHECK_LE(dy->shape().NumAxes(), 5);
 
-    std::string data_format = ctx->Attr<std::string>("data_format");
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
 
     std::unique_ptr<CudnnTensorDesc> dy_desc;
     dy_desc.reset(new CudnnTensorDesc(dy->data_type(), dy->shape(), data_format));

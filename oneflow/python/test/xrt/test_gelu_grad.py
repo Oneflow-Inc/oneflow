@@ -1,28 +1,36 @@
 import unittest
-import numpy as np
 
+import numpy as np
 import oneflow as flow
 
 config = flow.function_config()
+
 
 def make_job(shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
-    @flow.function(config)
-    def gelu_grad_job(x = flow.FixedTensorDef(shape, dtype=dtype),
-                      dy = flow.FixedTensorDef(shape, dtype=dtype)):
+    @flow.global_function(config)
+    def gelu_grad_job(
+        x=flow.FixedTensorDef(shape, dtype=dtype),
+        dy=flow.FixedTensorDef(shape, dtype=dtype),
+    ):
         return flow.keras.activations.gelu_grad(x, dy)
+
     return gelu_grad_job
+
 
 def make_xla_job(shape, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
-    @flow.function(config)
-    def xla_gelu_grad_job(x = flow.FixedTensorDef(shape, dtype=dtype),
-                          dy = flow.FixedTensorDef(shape, dtype=dtype)):
+    @flow.global_function(config)
+    def xla_gelu_grad_job(
+        x=flow.FixedTensorDef(shape, dtype=dtype),
+        dy=flow.FixedTensorDef(shape, dtype=dtype),
+    ):
         return flow.keras.activations.gelu_grad(x, dy)
+
     return xla_gelu_grad_job
 
 
@@ -60,5 +68,6 @@ class TestGeluGrad(unittest.TestCase):
         self._test_random_body((2, 10, 2))
         self._test_random_body((2, 5, 2, 2))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

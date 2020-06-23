@@ -8,7 +8,9 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* ref_desc = ctx->TensorDesc4ArgNameAndIndex("ref", 0);
   user_op::TensorDesc* value_desc = ctx->TensorDesc4ArgNameAndIndex("value", 0);
   CHECK_OR_RETURN(!ref_desc->is_dynamic());
-  CHECK_OR_RETURN(*ref_desc == *value_desc);
+  CHECK_OR_RETURN(ref_desc->shape() == value_desc->shape());
+  CHECK_OR_RETURN(ref_desc->data_type() == value_desc->data_type());
+  CHECK_OR_RETURN(ref_desc->is_tensor_list() == value_desc->is_tensor_list());
   return Maybe<void>::Ok();
 }
 
@@ -25,6 +27,9 @@ void InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
   user_op::InputArgModifier* ref_modifier = GetInputArgModifierFn("ref", 0);
   CHECK(ref_modifier != nullptr);
   ref_modifier->set_is_mutable(true);
+  user_op::InputArgModifier* value_modifier = GetInputArgModifierFn("value", 0);
+  CHECK(value_modifier != nullptr);
+  value_modifier->set_requires_grad(false);
 }
 
 }  // namespace
