@@ -316,9 +316,11 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAttr")
     .Output("out", 3)
     .Attr("out_shapes", UserOpAttrType::kAtListShape)
     .Attr("out_types", UserOpAttrType::kAtListDataType)
+    .Attr("files", UserOpAttrType::kAtListString)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto& out_shapes = ctx->Attr<std::vector<Shape>>("out_shapes");
       const auto& out_types = ctx->Attr<std::vector<DataType>>("out_types");
+      const auto& files = ctx->Attr<std::vector<std::string>>("files");
       FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
         *ctx->Shape4ArgNameAndIndex("out", i) = out_shapes.at(i);
         *ctx->Dtype4ArgNameAndIndex("out", i) = out_types.at(i);

@@ -331,6 +331,7 @@ class TestListDataTypeAndShapeAttrKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& out_shapes = ctx->Attr<std::vector<Shape>>("out_shapes");
     const auto& out_types = ctx->Attr<std::vector<DataType>>("out_types");
+    const auto& files = ctx->Attr<std::vector<std::string>>("files");
     FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
       Shape out_shape_i;
       ctx->Tensor4ArgNameAndIndex("out", i)->shape().ToShape(&out_shape_i);
