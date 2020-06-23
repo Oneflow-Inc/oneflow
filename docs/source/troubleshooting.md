@@ -64,3 +64,10 @@
         ```
 
     - You should upgrade your GNU Binutils. Version 2.33.1 is recommended. If you are using conda, you could install it by running `conda install -c conda-forge binutils`
+
+- failed to compile because C++ 17 is enabled
+    - In some cases, environment variable `CXXFLAGS` is not empty and contains `--std c++17`.
+    - Check if it is empty by running `echo $CXXFLAGS` and clear it with `unset CXXFLAGS`.
+
+- cmake outputs error `No CMAKE_ASM_NASM_COMPILER could be found.`
+    - Install `nasm`. For instance, run `sudo yum install nasm` if you are on centos.
