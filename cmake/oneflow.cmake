@@ -164,6 +164,7 @@ else()
   message("-- Python2 specified. Version found: " ${Python2_VERSION})
   set(Python_EXECUTABLE ${Python2_EXECUTABLE})
 endif()
+message("-- Using Python executable: " ${Python_EXECUTABLE})
 if (NOT Python_INCLUDE_DIRS)
   message(STATUS "Getting python include directory from sysconfig..")
   execute_process(
@@ -197,8 +198,6 @@ if (NOT Python_NumPy_INCLUDE_DIRS)
   message(FATAL_ERROR "Cannot find numpy include directory")
 endif()
 message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
-
-include_directories(${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 # clang format
 add_custom_target(of_format
@@ -281,6 +280,7 @@ oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
 target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
+target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 file(REMOVE_RECURSE "${of_pyscript_dir}/oneflow/python")
