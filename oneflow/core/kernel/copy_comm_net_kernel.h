@@ -14,6 +14,10 @@ class CopyCommNetKernel final : public KernelIf<DeviceType::kCPU> {
   void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override {
     UNIMPLEMENTED();
   }
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override {
+    UNIMPLEMENTED();
+  }
 
  private:
 };

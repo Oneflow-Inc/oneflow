@@ -12,8 +12,8 @@ void DecodeOFRecordKernel::VirtualKernelInit() {
 
 int32_t DecodeOFRecordKernel::NextRandomInt() const { return (*distribution_)(*random_seed_gen_); }
 
-void DecodeOFRecordKernel::Forward(const KernelCtx& ctx,
-                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void DecodeOFRecordKernel::ForwardDataContent(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(ctx.other);
   auto status = static_cast<DecodeStatus*>(ctx.other);
   Blob* in_blob = BnInOp2Blob("in");
