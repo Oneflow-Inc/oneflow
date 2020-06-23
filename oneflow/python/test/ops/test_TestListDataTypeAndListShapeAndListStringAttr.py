@@ -5,17 +5,19 @@ import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
-def TestListDataTypeAndListShapeAttr(input, out_shapes, out_types, files):
+def TestListDataTypeAndListShapeAndListStringAttr(
+    input, out_shapes, out_types, string_list
+):
     assert isinstance(out_shapes, list)
     assert isinstance(out_types, list)
     return (
-        flow.user_op_builder("TestListDataTypeAndListShapeAttr")
-        .Op("TestListDataTypeAndListShapeAttr")
+        flow.user_op_builder("TestListDataTypeAndListShapeAndListStringAttr")
+        .Op("TestListDataTypeAndListShapeAndListStringAttr")
         .Input("in", [input])
         .Output("out", 3)
         .Attr("out_shapes", out_shapes, "AttrTypeListShape")
         .Attr("out_types", out_types, "AttrTypeListDataType")
-        .Attr("files", files, "AttrTypeListString")
+        .Attr("string_list", string_list, "AttrTypeListString")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()
@@ -35,7 +37,7 @@ def RunTest(out_shapes, out_types):
             input,
             out_shapes,
             [type_name_to_flow_type[data_type] for data_type in out_types],
-            ["filename1", "filename2", "filename3"],
+            ["string1", "string2", "string3"],
         )
 
     input = np.random.random_sample((10, 10)).astype(np.float32)
