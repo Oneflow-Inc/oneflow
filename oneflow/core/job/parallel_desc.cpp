@@ -172,6 +172,13 @@ int64_t ParallelDesc::DeviceIdForParallelId(int64_t parallel_id) const {
   return parallel_id2device_id_.at(parallel_id);
 }
 
+bool ParallelDesc::Containing(int64_t machine_id, int64_t device_id) const {
+  const auto& machine_iter = machine_id2sorted_dev_phy_ids_.find(machine_id);
+  if (machine_iter == machine_id2sorted_dev_phy_ids_.end()) { return false; }
+  const auto& vec = machine_iter->second;
+  return std::find(vec.begin(), vec.end(), device_id) != vec.end();
+}
+
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
     const ParallelContext* parallel_ctx) {
   return std::make_tuple(parallel_ctx->parallel_id(), parallel_ctx->parallel_num());
