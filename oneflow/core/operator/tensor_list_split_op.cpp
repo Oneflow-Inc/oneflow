@@ -12,7 +12,7 @@ class TensorListSplitOp final : public Operator {
   void InitFromOpConf() override {
     CHECK(op_conf().has_tensor_list_split_conf());
     EnrollInputBn("in", false);
-    EnrollRepeatedOutputBn("out");
+    EnrollRepeatedOutputBn("out", false);
   }
 
   const PbMessage& GetCustomizedConf() const override { return op_conf().tensor_list_split_conf(); }
@@ -21,6 +21,7 @@ class TensorListSplitOp final : public Operator {
                              const ParallelContext* parallel_ctx) const override {
     const BlobDesc* in_desc = GetBlobDesc4BnInOp(SoleIbn());
     CHECK_OR_RETURN(in_desc->is_tensor_list());
+    CHECK_GT_OR_RETURN(in_desc->shape().NumAxes(), 1);
     const int64_t N = in_desc->shape().At(0);
     CHECK_EQ_OR_RETURN(N, output_bns().size());
     DimVector dim_vec{in_desc->shape().dim_vec().begin() + 1, in_desc->shape().dim_vec().end()};
