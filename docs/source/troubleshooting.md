@@ -72,7 +72,7 @@
 - cmake outputs error `No CMAKE_ASM_NASM_COMPILER could be found.`
     - Install `nasm`. For instance, run `sudo yum install nasm` if you are on centos.
 
-- No module named 'google.protobuf'
+- `No module named 'google.protobuf'`
     - You might see error message like this
         ```
         Scanning dependencies of target generate_api
