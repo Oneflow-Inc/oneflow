@@ -26,7 +26,8 @@ def Compile(function_desc, config_proto):
 
 def EagerRun(function_desc, config_proto, args):
     with InterpretScope(function_desc, config_proto):
-        ret = _InterpretJob(function_desc)
+        _CompileJob(function_desc)
+        ret = function_desc.job_func.__oneflow_output_remote_blobs__
         c_api_util.CurJobBuildAndInferCtx_Complete()
     return ret
 
@@ -60,10 +61,6 @@ def _CompileJob(function_desc):
     )
     ret = func(*inputs)
     func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(ret, kwarg)
-
-
-def _InterpretJob(function_desc):
-    return _CompileJob(function_desc)
 
 
 @contextmanager
@@ -108,7 +105,7 @@ def _RecursiveMakeRetRemoteBlobs(remote_blobs, kwarg):
     if remote_blobs is None:
         return None
     if isinstance(remote_blobs, remote_blob_util.BlobDef):
-        return ops.RetOpByRemoteBlob(remote_blobs, **kwarg)
+        return ops.ReturnRemoteBlob(remote_blobs, **kwarg)
     if isinstance(remote_blobs, (tuple, list)):
         return type(remote_blobs)(
             _RecursiveMakeRetRemoteBlobs(x, kwarg) for x in remote_blobs

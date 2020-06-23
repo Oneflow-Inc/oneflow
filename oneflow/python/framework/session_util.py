@@ -18,7 +18,10 @@ import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.object_cache as object_cache
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.framework.function_desc import FunctionDesc
-from oneflow.python.framework.pull_util import FutureRemoteBlobs
+from oneflow.python.framework.pull_util import (
+    LazyFutureRemoteBlobs,
+    EagerFutureRemoteBlobs,
+)
 from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
@@ -170,11 +173,14 @@ class Session(object):
         remote_blobs = self.LaunchUserJob(job_func, *arg)
         if remote_blobs is None:
             return
-        return FutureRemoteBlobs(self).SetResult(remote_blobs).Inited()
+        return LazyFutureRemoteBlobs(self).SetResult(remote_blobs).Inited()
 
     def EagerRun(self, function_desc, *arg):
         with self._EagerGlobalFunctionDescScope(function_desc):
-            return compiler.EagerRun(function_desc, self.config_proto, arg)
+            remote_blobs = compiler.EagerRun(function_desc, self.config_proto, arg)
+            if remote_blobs is None:
+                return
+            return EagerFutureRemoteBlobs().SetResult(remote_blobs).Inited()
 
     def LaunchUserJob(self, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING

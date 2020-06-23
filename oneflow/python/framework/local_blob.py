@@ -67,6 +67,14 @@ def MergeLocalBlobs(local_blob_list, mirrored_blob):
         return LocalFixedTensor(ndarray)
 
 
+def MakeLocalBlob4EagerMirrorBlob(eager_mirror_blob):
+    assert isinstance(eager_mirror_blob, remote_blob_util.EagerMirroredBlob)
+    if eager_mirror_blob.is_tensor_list:
+        raise NotImplementedError
+
+    return LocalMirroredTensor(eager_mirror_blob.numpy_mirrored_list())
+
+
 non_override_field = set(
     [
         "__class__",

@@ -32,7 +32,7 @@ class BlobRegister(object):
             self.SetObject4BlobName(blob_name, obj)
 
     def ClearObject4BlobName(self, blob_name):
-        assert self.HasObject4BlobName(blob_name)
+        assert self.HasObject4BlobName(blob_name), "blob_name %s not found" % blob_name
         blob_cache_util.TryDisableBlobCache(self.blob_name2object[blob_name])
         del self.blob_name2object[blob_name]
 

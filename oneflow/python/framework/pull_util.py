@@ -1,18 +1,35 @@
 from __future__ import absolute_import
 
 import threading
-
-import numpy as np
 import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 
 
 class FutureRemoteBlobs(object):
+    def __init__(self):
+        self.inited_ = False
+
+    def get(self):
+        raise NotImplementedError
+
+    def async_get(self, callback):
+        raise NotImplementedError
+
+    def SetResult(self, remote_blobs):
+        raise NotImplementedError
+
+    def Inited(self):
+        assert self.inited_ is False
+        self.inited_ = True
+        return self
+
+
+class LazyFutureRemoteBlobs(FutureRemoteBlobs):
     def __init__(self, session):
+        super().__init__()
         self.session_ = session
         self.cond_var_ = threading.Condition()
         self.out_remote_blob_pullers_ = []
-        self.inited_ = False
         self.finished_cnt_ = 0
         self.data_delivered_ = False
         self.async_get_callback_ = lambda: None
@@ -56,11 +73,6 @@ class FutureRemoteBlobs(object):
         self.out_remote_blob_pullers_ = pullers
         for puller in self._FlatConsistentBlobPullers(pullers):
             puller.AsyncPull(self._FinishCallback)
-        return self
-
-    def Inited(self):
-        assert self.inited_ == False
-        self.inited_ = True
         return self
 
     def _FinishCallback(self):
@@ -188,3 +200,66 @@ class _MirroredBlobPuller(_BlobPuller):
     def FlatConsistentBlobPullers(self):
         for x in self.sub_pullers_:
             yield x
+
+
+class EagerFutureRemoteBlobs(FutureRemoteBlobs):
+    def __init__(self):
+        super().__init__()
+        self.blob_pullers_ = None
+
+    def get(self):
+        return self._GetResultLocalBlob()
+
+    def async_get(self, callback):
+        assert callable(callback)
+        callback(self._GetResultLocalBlob())
+
+    def SetResult(self, remote_blobs):
+        assert self.inited_ is False
+        assert self.blob_pullers_ is None
+        self.blob_pullers_ = self._MakeRemoteBlobPullers(remote_blobs)
+        return self
+
+    def _MakeRemoteBlobPullers(self, remote_blobs):
+        if isinstance(remote_blobs, (list, tuple)):
+            return type(remote_blobs)(
+                self._MakeRemoteBlobPullers(blob) for blob in remote_blobs
+            )
+        elif isinstance(remote_blobs, dict):
+            return {k: self._MakeRemoteBlobPullers(v) for k, v in remote_blobs.items()}
+        elif isinstance(remote_blobs, remote_blob_util.EagerMirroredBlob):
+            return _EagerMirrorBlobPuller(remote_blobs)
+        else:
+            raise NotImplementedError
+
+    def _GetResultLocalBlob(self):
+        assert self.inited_
+        pullers = self.blob_pullers_
+        if isinstance(pullers, _EagerMirrorBlobPuller):
+            return pullers.result
+        elif isinstance(pullers, (list, tuple)):
+            return type(pullers)(self._GetResultLocalBlob(puller) for puller in pullers)
+        elif isinstance(pullers, dict):
+            return {k: self._GetResultLocalBlob(v) for k, v in pullers.items()}
+        else:
+            raise NotImplementedError(type(pullers))
+
+
+class _EagerMirrorBlobPuller(object):
+    def __init__(self, eager_mirror_blob):
+        assert isinstance(eager_mirror_blob, remote_blob_util.EagerMirroredBlob)
+        self.eager_mirror_blob_ = eager_mirror_blob
+        self.local_tensor_ = None
+
+    @property
+    def result(self):
+        if self.local_tensor_ is not None:
+            return self.local_tensor_
+
+        if self.eager_mirror_blob_.is_tensor_list:
+            raise NotImplementedError
+
+        self.local_tensor_ = local_blob_util.MakeLocalBlob4EagerMirrorBlob(
+            self.eager_mirror_blob_
+        )
+        return self.local_tensor_
