@@ -11,9 +11,6 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
   OF_DISALLOW_COPY_AND_MOVE(NormalMdUpdateKernel);
   virtual ~NormalMdUpdateKernel() = default;
 
-  void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-
  protected:
   NormalMdUpdateKernel() = default;
   virtual void UpdateModel(DeviceCtx* ctx, T weight_decay, const int64_t* train_step,
@@ -21,7 +18,15 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual bool IsWeightDecaySupported() { return false; }
 
+  void Forward(const KernelCtx& ctx,
+               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    ForwardDataContent(ctx, BnInOp2Blob);
+  }
+
  private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
   void VirtualKernelInit() override;
 
   T weight_decay_;

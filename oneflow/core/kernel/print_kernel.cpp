@@ -16,8 +16,8 @@ void PrintKernel::VirtualKernelInit() {
   out_stream_.reset(new PersistentOutStream(SnapshotFS(), file_path));
 }
 
-void PrintKernel::Forward(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void PrintKernel::ForwardDataContent(const KernelCtx& ctx,
+                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UNIMPLEMENTED();
 }
 
