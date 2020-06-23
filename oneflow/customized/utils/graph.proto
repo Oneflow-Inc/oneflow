@@ -1,0 +1,20 @@
+/*
+syntax = "proto2";
+package oneflow;
+
+// Represents the graph of operations
+message GraphDef {
+  repeated NodeDef node = 1;
+  required int32 version = 2 [deprecated = true];
+}
+
+
+message NodeDef {
+  required string name = 1;
+  required string op = 2;
+  repeated string input = 3;
+  optional string device = 4;
+  map<string, AttrValue> attr = 5;
+}
+
+*/

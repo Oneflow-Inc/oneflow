@@ -31,9 +31,9 @@ def create_summary_write(logdir, name=None):
 
 
 @oneflow_export("summary.histogram")
-def write_hsitogram(value, step, tag, name=None):
+def write_histogram(value, step, tag, name=None):
     if name is None:
-        name = id_util.UniqueStr("WriterHistogram_")
+        name = id_util.UniqueStr("WriteHistogram_")
     (flow.user_op_builder(name).Op("write_histogram")
      .Input("in", [value])
      .Input("step", [step])
@@ -43,9 +43,9 @@ def write_hsitogram(value, step, tag, name=None):
 
 
 @oneflow_export("summary.text")
-def write_hsitogram(value, step, tag, name=None):
+def write_text(value, step, tag, name=None):
     if name is None:
-        name = id_util.UniqueStr("WriterText_")
+        name = id_util.UniqueStr("WriteText_")
     (flow.user_op_builder(name).Op("write_text")
      .Input("in", [value])
      .Input("step", [step])
@@ -64,34 +64,4 @@ def write_pb(value, step=None, name=None):
      .Build()
      .InferAndTryRun())
 
-
-@oneflow_export("summary.hparam")
-def write_hparam(value=None, step=None, tag=None, name=None):
-    if name is None:
-        name = id_util.UniqueStr("WriteHparam_")
-    hparams = {
-        hp.HParam("learning_rate", hp.RealInterval(1e-2, 1e-1)): 0.02,
-        hp.HParam("dense_layers", hp.IntInterval(2, 7)): 5,
-        hp.HParam("optimizer", hp.Discrete(["adam", "sgd"])): "adam",
-        hp.HParam("who_knows_what"): "???",
-        hp.HParam(
-            "magic",
-            hp.Discrete([False, True]),
-            display_name="~*~ Magic ~*~",
-            description="descriptive",
-        ): True,
-        "dropout": 0.3,
-    }
-    normalized_hparams = {
-        "learning_rate": 0.02,
-        "dense_layers": 5,
-        "optimizer": "adam",
-        "who_knows_what": "???",
-        "magic": True,
-        "dropout": 0.3,
-    }
-    start_time_secs = 123.45
-    trial_id = "psl27"
-
-    hp.hparams(hparams, "psl27", 123.45)
 

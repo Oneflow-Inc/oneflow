@@ -60,6 +60,7 @@ Maybe<void> AddHistogramToSummary(const user_op::Tensor& value, const std::strin
   histogram::Histogram histo;
   for (int64_t i = 0; i < value.shape().elem_cnt(); i++) {
     double double_val = value.dptr<double>()[i];
+    // float double_val = value.dptr<float>()[i];
     // TF_RETURN_IF_ERROR(TensorValueAt<double>(t, i, &double_val));
 
     // if (Eigen::numext::isnan(double_val)) {
@@ -171,14 +172,14 @@ void ToProtoField(const user_op::Tensor& tensor, TensorProto* out) {
 }
 
 void AsProto(TensorShapeProto* proto, const ShapeView& shape) {
-  // proto->clear();
+  proto->Clear();
   DimVector dim_vec;
   shape.ToDimVector(&dim_vec);
   for (int i = 0; i < shape.NumAxes(); i++) { proto->add_dim()->set_size(dim_vec[i]); }
 }
 
 void AsProtoField(TensorProto* proto, const user_op::Tensor& tensor) {
-  // proto.clear();
+  proto->Clear();
   AsProto(proto->mutable_tensor_shape(), tensor.shape());
   proto->set_dtype(TDataType::DT_STRING);
   ToProtoField(tensor, proto);
