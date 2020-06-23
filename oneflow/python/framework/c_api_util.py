@@ -513,3 +513,11 @@ def CurrentMachineId():
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     return machine_id
+
+
+def GetJobSet():
+    job_set, error_str = oneflow_internal.GetSerializedJobSet()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return text_format.Parse(job_set, job_set_pb.JobSet())
