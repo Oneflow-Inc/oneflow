@@ -80,6 +80,10 @@ std::string GetSerializedInterUserJobInfo(std::string* error_str) {
   return oneflow::GetSerializedInterUserJobInfo().GetDataAndSerializedErrorProto(error_str, "");
 }
 
+std::string GetSerializedJobSet(std::string* error_str) {
+  return oneflow::GetSerializedJobSet().GetDataAndSerializedErrorProto(error_str, "");
+}
+
 std::string GetFunctionConfigDef(std::string* error_str) {
   return oneflow::GetFunctionConfigDef().GetDataAndSerializedErrorProto(error_str, "");
 }
