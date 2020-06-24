@@ -10,7 +10,7 @@
 
 namespace oneflow {
 
-std::string DeviceTag4DeviceType(DeviceType device_type);
+Maybe<std::string> DeviceTag4DeviceType(DeviceType device_type);
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag);
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
 
@@ -28,6 +28,9 @@ class ParallelDesc final {
 
   // Getters
   DeviceType device_type() const { return device_type_; }
+  bool HasMachineId(int64_t machine_id) const {
+    return machine_id2sorted_dev_phy_ids_.find(machine_id) != machine_id2sorted_dev_phy_ids_.end();
+  }
   const std::vector<int64_t>& sorted_machine_ids() const { return sorted_machine_ids_; }
   const std::vector<int64_t>& sorted_dev_phy_ids(int64_t machine_id) const {
     return machine_id2sorted_dev_phy_ids_.at(machine_id);
@@ -48,6 +51,7 @@ class ParallelDesc final {
   bool Equals(const ParallelDesc* rhs) const { return Equals(*rhs); }
   int64_t MachineIdForParallelId(int64_t parallel_id) const;
   int64_t DeviceIdForParallelId(int64_t parallel_id) const;
+  bool Containing(int64_t machine_id, int64_t device_id) const;
 
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);

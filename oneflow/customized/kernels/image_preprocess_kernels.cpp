@@ -69,15 +69,9 @@ class ResizeToStaticShapeKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("image_resize")
     .SetCreateFn<ResizeToStaticShapeKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device_type() == DeviceType::kCPU && in_tensor->data_type() == DataType::kTensorBuffer
-          && out_tensor->data_type() == DataType::kUInt8) {
-        return true;
-      }
-      return false;
-    });
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("out", 0) == DataType::kUInt8));
 
 class ResizeShorterToTensorBufferKernel final : public user_op::OpKernel {
  public:
@@ -127,15 +121,9 @@ class ResizeShorterToTensorBufferKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("image_resize")
     .SetCreateFn<ResizeShorterToTensorBufferKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device_type() == DeviceType::kCPU && in_tensor->data_type() == DataType::kTensorBuffer
-          && out_tensor->data_type() == DataType::kTensorBuffer) {
-        return true;
-      }
-      return false;
-    });
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 namespace {
 
@@ -310,15 +298,9 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
 
 REGISTER_USER_KERNEL("crop_mirror_normalize")
     .SetCreateFn<CropMirrorNormalizeFromStaticShapeToFloatKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device_type() == DeviceType::kCPU && in_tensor->data_type() == DataType::kUInt8
-          && out_tensor->data_type() == DataType::kFloat) {
-        return true;
-      }
-      return false;
-    });
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("in", 0) == DataType::kUInt8)
+                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::OpKernel {
  public:
@@ -406,15 +388,9 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
 
 REGISTER_USER_KERNEL("crop_mirror_normalize")
     .SetCreateFn<CropMirrorNormalizeFromTensorBufferToFloatKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device_type() == DeviceType::kCPU && in_tensor->data_type() == DataType::kTensorBuffer
-          && out_tensor->data_type() == DataType::kFloat) {
-        return true;
-      }
-      return false;
-    });
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 namespace {
 
@@ -459,12 +435,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("coin_flip")
     .SetCreateFn<CoinFlipKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kInt8) {
-        return true;
-      }
-      return false;
-    });
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("out", 0) == DataType::kInt8));
 
 }  // namespace oneflow

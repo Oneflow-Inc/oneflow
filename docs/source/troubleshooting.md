@@ -53,7 +53,7 @@
     - add cmake flag `-DCMAKE_BUILD_TYPE=RELWITHDEBINFO` or `-DCMAKE_BUILD_TYPE=DEBUG` and recompile
 
 - `libof_ccobj.a: File truncated`
-    - You might see error message like this
+    - You might see error message like this: 
 
         ```
         /usr/bin/ar: libof_ccobj.a: File truncated
@@ -64,3 +64,25 @@
         ```
 
     - You should upgrade your GNU Binutils. Version 2.33.1 is recommended. If you are using conda, you could install it by running `conda install -c conda-forge binutils`
+
+- failed to compile because C++ 17 is enabled
+    - In some cases, environment variable `CXXFLAGS` is not empty and contains `--std c++17`.
+    - Check if it is empty by running `echo $CXXFLAGS` and clear it with `unset CXXFLAGS`.
+
+- cmake outputs error `No CMAKE_ASM_NASM_COMPILER could be found.`
+    - Install `nasm`. For instance, run `sudo yum install nasm` if you are on centos.
+
+- `No module named 'google.protobuf'`
+    - You might see error message like this:
+        ```
+        Scanning dependencies of target generate_api
+        ...
+            from google.protobuf import descriptor as _descriptor
+        ModuleNotFoundError: No module named 'google.protobuf'
+        CMakeFiles/generate_api.dir/build.make:57: recipe for target 'CMakeFiles/generate_api' failed
+        make[2]: *** [CMakeFiles/generate_api] Error 1
+        ```
+    - Install development dependencies by running:
+        ```
+        pip3 install -r dev-requirements.txt
+        ```

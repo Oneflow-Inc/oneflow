@@ -622,25 +622,6 @@ def where(condition, x=None, y=None, name=None):
         raise ValueError("it is not supported when exactly one of x or y is non-None")
 
 
-@oneflow_export("piece_slice")
-def piece_slice(inputs, output_size, name=None):
-    assert inputs.shape[0] == output_size
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("PieceSlice_")
-    )
-    setattr(op_conf.piece_slice_conf, "in", inputs.unique_name)
-    op_conf.piece_slice_conf.out.extend(["out_" + str(i) for i in range(output_size)])
-    compile_context.CurJobAddOp(op_conf)
-    ret = []
-    for i in range(output_size):
-        out_lbi = logical_blob_id_util.LogicalBlobId()
-        setattr(out_lbi, "op_name", op_conf.name)
-        setattr(out_lbi, "blob_name", "out_" + str(i))
-        ret.append(remote_blob_util.RemoteBlob(out_lbi))
-    return tuple(ret)
-
-
 @oneflow_export("elem_cnt")
 def elem_cnt(inputs, dtype=None, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -778,7 +759,7 @@ def identity_n(inputs, name=None):
 @oneflow_export("squeeze")
 def squeeze(input, axis=None, name=None):
     if axis is None:
-        axis = [idx for idx, dim in enumerate(input.shape) if dim is 1]
+        axis = [idx for idx, dim in enumerate(input.shape) if dim == 1]
     else:
         assert isinstance(axis, list) or isinstance(axis, tuple)
         in_num_axes = len(input.shape)
