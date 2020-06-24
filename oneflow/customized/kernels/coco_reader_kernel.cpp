@@ -21,13 +21,13 @@ class COCOReaderKernel final : public user_op::OpKernel {
   COCOReaderKernel() = default;
   ~COCOReaderKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     std::shared_ptr<user_op::OpKernelState> reader(new COCOReaderWrapper(ctx));
     return reader;
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* reader = dynamic_cast<COCOReaderWrapper*>(state);
     reader->Read(ctx);

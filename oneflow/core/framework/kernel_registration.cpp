@@ -74,6 +74,15 @@ std::vector<std::string> GetAllUserOpInKernelRegistry() {
   return ret;
 }
 
+HashMap<std::string, bool>* IsStateless4OpTypeName() {
+  static HashMap<std::string, bool> op_type_name2is_stateless;
+  return &op_type_name2is_stateless;
+}
+
+bool IsStateless4OpTypeName(const std::string& op_type_name) {
+  return IsStateless4OpTypeName()->at(op_type_name);
+}
+
 KernelRegistryWrapperBuilder::KernelRegistryWrapperBuilder(const std::string& op_type_name) {
   wrapper_.op_type_name = op_type_name;
 }

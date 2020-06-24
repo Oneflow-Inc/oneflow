@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_FRAMEWORK_KERNEL_REGISTRATION_H_
 
 #include "oneflow/core/framework/registrar.h"
+#include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/job/placement.pb.h"
@@ -67,12 +68,16 @@ struct KernelRegistryWrapper final {
   KernelRegistrationVal reg_val;
 };
 
+bool IsStateless4OpTypeName(const std::string& op_type_name);
+
 class KernelRegistryWrapperBuilder final {
  public:
   KernelRegistryWrapperBuilder(const std::string& op_type_name);
   template<typename T>
   KernelRegistryWrapperBuilder& SetCreateFn() {
-    return SetCreateFn([]() -> const OpKernel* { return new T(); });
+    //    static_assert(sizeof(OpKernel) == sizeof(T), "no data member allowed in derived
+    //    OpKernel");
+    return SetCreateFn([]() -> const OpKernel* { return NewOpKernel<T>(); });
   }
   KernelRegistryWrapperBuilder& SetIsMatchedPred(IsMatchedPredicator fn);
   KernelRegistryWrapperBuilder& SetInferTmpSizeFn(InferTmpSizeFn fn);
