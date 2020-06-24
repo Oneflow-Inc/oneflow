@@ -25,12 +25,12 @@ class TransposeKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_TRANSPOSE_KERNEL(device, dtype)                                       \
-  REGISTER_USER_KERNEL("transpose")                                                    \
-      .SetCreateFn<TransposeKernel<device, dtype>>()                                   \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device                              \
-                       & user_op::HobDataType("input", 0) == GetDataType<dtype>::value \
-                       & user_op::HobDataType("output", 0) == GetDataType<dtype>::value);
+#define REGISTER_TRANSPOSE_KERNEL(device, dtype)                                         \
+  REGISTER_USER_KERNEL("transpose")                                                      \
+      .SetCreateFn<TransposeKernel<device, dtype>>()                                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
+                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
+                       & (user_op::HobDataType("output", 0) == GetDataType<dtype>::value));
 
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int8_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int32_t)

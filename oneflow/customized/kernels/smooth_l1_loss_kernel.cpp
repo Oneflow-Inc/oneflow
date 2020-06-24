@@ -28,11 +28,11 @@ class SmoothL1LossCPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(dtype)                   \
-  REGISTER_USER_KERNEL("smooth_l1_loss")                            \
-      .SetCreateFn<SmoothL1LossCPUKernel<dtype>>()                  \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
-                       & user_op::HobDataType("loss", 0) == GetDataType<dtype>::value);
+#define REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(dtype)                     \
+  REGISTER_USER_KERNEL("smooth_l1_loss")                              \
+      .SetCreateFn<SmoothL1LossCPUKernel<dtype>>()                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       & (user_op::HobDataType("loss", 0) == GetDataType<dtype>::value));
 
 REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(float)
 REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(double)
@@ -66,11 +66,12 @@ class SmoothL1LossGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(dtype)              \
-  REGISTER_USER_KERNEL("smooth_l1_loss_grad")                       \
-      .SetCreateFn<SmoothL1LossGradCpuKernel<dtype>>()              \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
-                       & user_op::HobDataType("prediction_grad", 0) == GetDataType<dtype>::value);
+#define REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(dtype)   \
+  REGISTER_USER_KERNEL("smooth_l1_loss_grad")            \
+      .SetCreateFn<SmoothL1LossGradCpuKernel<dtype>>()   \
+      .SetIsMatchedHob(                                  \
+          (user_op::HobDeviceType() == DeviceType::kCPU) \
+          & (user_op::HobDataType("prediction_grad", 0) == GetDataType<dtype>::value));
 
 REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(float)
 REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(double)
