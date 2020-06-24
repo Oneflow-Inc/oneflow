@@ -25,13 +25,13 @@ class SparseCrossEntropyKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SPARSE_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair, ltype_pair)        \
-  REGISTER_USER_KERNEL("sparse_cross_entropy")                                             \
-      .SetCreateFn<SparseCrossEntropyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),   \
-                                            OF_PP_PAIR_FIRST(ltype_pair)>>()               \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device_type_v                           \
-                       & user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair) \
-                       & user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair));
+#define REGISTER_SPARSE_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair, ltype_pair)          \
+  REGISTER_USER_KERNEL("sparse_cross_entropy")                                               \
+      .SetCreateFn<SparseCrossEntropyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),     \
+                                            OF_PP_PAIR_FIRST(ltype_pair)>>()                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                           \
+                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
+                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
@@ -70,10 +70,10 @@ class SparseCrossEntropyGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("sparse_cross_entropy_grad")                                          \
       .SetCreateFn<SparseCrossEntropyGradKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
                                                 OF_PP_PAIR_FIRST(ltype_pair)>>()             \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device_type_v                             \
-                       & user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair)   \
-                       & user_op::HobDataType("prediction_diff", 0)                          \
-                             == OF_PP_PAIR_SECOND(dtype_pair));
+      .SetIsMatchedHob(                                                                      \
+          (user_op::HobDeviceType() == device_type_v)                                        \
+          & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))              \
+          & (user_op::HobDataType("prediction_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,

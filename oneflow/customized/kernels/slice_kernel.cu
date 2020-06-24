@@ -164,15 +164,15 @@ class SliceGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SLICE_GPU_KERNEL(dtype)                                             \
-  REGISTER_USER_KERNEL("slice_v2")                                                   \
-      .SetCreateFn<SliceGpuKernel<dtype>>()                                          \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                  \
-                       & user_op::HobDataType("y", 0) == GetDataType<dtype>::value); \
-  REGISTER_USER_KERNEL("slice_grad_v2")                                              \
-      .SetCreateFn<SliceGradGpuKernel<dtype>>()                                      \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                  \
-                       & user_op::HobDataType("dx", 0) == GetDataType<dtype>::value);
+#define REGISTER_SLICE_GPU_KERNEL(dtype)                                               \
+  REGISTER_USER_KERNEL("slice_v2")                                                     \
+      .SetCreateFn<SliceGpuKernel<dtype>>()                                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("slice_grad_v2")                                                \
+      .SetCreateFn<SliceGradGpuKernel<dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_SLICE_GPU_KERNEL(float)
 REGISTER_SLICE_GPU_KERNEL(double)
