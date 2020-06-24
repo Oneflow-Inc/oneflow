@@ -40,9 +40,3 @@
 [submodule "build/third_party/lz4/src/lz4"]
 	path = build/third_party/lz4/src/lz4
 	url = https://github.com/lz4/lz4.git
-[submodule "flatbuffers"]
-	path = flatbuffers
-	url = https://github.com/google/flatbuffers
-[submodule "lz4"]
-	path = lz4
-	url = https://github.com/lz4/lz4
