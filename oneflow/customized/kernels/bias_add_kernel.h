@@ -44,11 +44,8 @@ class BiasAddUserKernel final : public user_op::OpKernel {
 #define REGISTER_BIAS_ADD_USER_KERNEL(op_device_type, dtype)                                    \
   REGISTER_USER_KERNEL("bias_add")                                                              \
       .SetCreateFn<BiasAddUserKernel<DeviceType::k##op_device_type, dtype>>()                   \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);         \
-        return ctx.device_type() == DeviceType::k##op_device_type                               \
-               && out_desc->data_type() == GetDataType<dtype>::value;                           \
-      })                                                                                        \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::k##op_device_type                \
+                       & user_op::HobDataType("out", 0) == GetDataType<dtype>::value)           \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "a", 0, true));                        \

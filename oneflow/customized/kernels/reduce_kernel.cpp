@@ -28,25 +28,16 @@ class ReduceKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device, typename T>
-bool IsMatchedPred(const user_op::KernelRegContext& ctx) {
-  const user_op::TensorDesc* output_tensor_desc =
-      ctx.TensorDesc4ArgNameAndIndex("output_tensor", 0);
-  if (ctx.device_type() == device && output_tensor_desc->data_type() == GetDataType<T>::value) {
-    return true;
-  }
-  return false;
-}
-
 }  // namespace
 
-#define REGISTER_REDUCE_XPU_KERNEL(op_name, binary_func, device, dtype)        \
-  REGISTER_USER_KERNEL(op_name)                                                \
-      .SetCreateFn<ReduceKernel<binary_func, device, dtype>>()                 \
-      .SetIsMatchedPred(IsMatchedPred<device, dtype>)                          \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                      \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0); \
-        return in_shape->elem_cnt() * sizeof(dtype);                           \
+#define REGISTER_REDUCE_XPU_KERNEL(op_name, binary_func, device, dtype)                         \
+  REGISTER_USER_KERNEL(op_name)                                                                 \
+      .SetCreateFn<ReduceKernel<binary_func, device, dtype>>()                                  \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device                                       \
+                       & user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
+        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);                  \
+        return in_shape->elem_cnt() * sizeof(dtype);                                            \
       });
 
 #define REGISTER_REDUCE_BY_DEVICETYPE(device, dtype)                       \

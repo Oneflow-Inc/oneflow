@@ -44,13 +44,11 @@ class ConstantKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CONSTANT_XPU_KERNEL(device, dtype)                                   \
-  REGISTER_USER_KERNEL("constant")                                                    \
-      .SetCreateFn<ConstantKernel<device, dtype>>()                                   \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const auto& data_type = ctx.Attr<DataType>("dtype");                          \
-        return ctx.device_type() == device && data_type == GetDataType<dtype>::value; \
-      });
+#define REGISTER_CONSTANT_XPU_KERNEL(device, dtype)       \
+  REGISTER_USER_KERNEL("constant")                        \
+      .SetCreateFn<ConstantKernel<device, dtype>>()       \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device \
+                       & user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value);
 
 #define REGISTER_CONSTANT_KERNEL(device, dtype_pair) \
   REGISTER_CONSTANT_XPU_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))

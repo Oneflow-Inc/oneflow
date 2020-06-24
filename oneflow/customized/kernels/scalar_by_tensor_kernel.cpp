@@ -69,11 +69,8 @@ class ScalarAddByTensorKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(scalar_by_tensor_pair))                                 \
       .SetCreateFn<ScalarAddByTensorKernel<OF_PP_PAIR_SECOND(scalar_by_tensor_pair), device,    \
                                            OF_PP_PAIR_FIRST(dtype_pair)>>()                     \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
-        const user_op::TensorDesc* x_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);             \
-        return ctx.device_type() == device                                                      \
-               && x_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                         \
-      })                                                                                        \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device                                       \
+                       & user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
