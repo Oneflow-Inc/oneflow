@@ -103,26 +103,19 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
     CHECK_NE(LZ4_XXH64_reset(state, seed), XXH_ERROR);
     CHECK_NE(XXH64_update(state, header_view.raw, kHeaderSizeWithoutDigest), XXH_ERROR);
     CHECK_EQ(ByteSwap(header_view.header.digest), LZ4_XXH64_digest(state));
-    const int32_t padded_size = RoundUp(payload_size, kPayloadAlignmentSize);
-    const int32_t body_size = padded_size + kDigestFieldSize;
-
-    char* body = reinterpret_cast<char*>(malloc(body_size));
-    // tensor.Resize(Shape({body_size}), DataType::kChar);
-    // char* body = tensor.mut_data<char>();
-
-    CHECK_EQ(in_stream_->ReadFully(body, body_size), 0);
+    const int32_t padded_size = RoundUp(payload_size, kPayloadAlignmentSize) - payload_size;
+    tensor.Resize(Shape({payload_size}), DataType::kChar);
+    char* body = tensor.mut_data<char>();
+    CHECK_EQ(in_stream_->ReadFully(body, payload_size), 0);
+    char padded[kPayloadAlignmentSize];
+    CHECK_EQ(in_stream_->ReadFully(padded, padded_size), 0);  // read padded
     static_assert(sizeof(OneRecFrameFooterView) == kDigestFieldSize, "");
     OneRecFrameFooterView footer_view{};
-    std::memcpy(&footer_view, body + padded_size, sizeof(OneRecFrameFooterView));
+    CHECK_EQ(in_stream_->ReadFully(footer_view.raw, kDigestFieldSize), 0);  // read footer
     CHECK_NE(XXH64_reset(state, seed), XXH_ERROR);
     CHECK_NE(LZ4_XXH64_update(state, body, payload_size), XXH_ERROR);
     CHECK_EQ(ByteSwap(footer_view.digest), LZ4_XXH64_digest(state));
     CHECK_NE(LZ4_XXH64_freeState(state), XXH_ERROR);
-
-    // tensor.Resize(Shape({payload_size}), DataType::kChar);
-    tensor.Resize(Shape({payload_size}), DataType::kChar);
-    std::memcpy(tensor.mut_data(), body, payload_size);
-    LOG(INFO) << "payload_size" << payload_size << "body_size" << body_size;
   }
 
   void ResetInstream() {
