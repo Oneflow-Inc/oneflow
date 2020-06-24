@@ -30,14 +30,14 @@ class ReduceKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_REDUCE_XPU_KERNEL(op_name, binary_func, device, dtype)                         \
-  REGISTER_USER_KERNEL(op_name)                                                                 \
-      .SetCreateFn<ReduceKernel<binary_func, device, dtype>>()                                  \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device                                       \
-                       & user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);                  \
-        return in_shape->elem_cnt() * sizeof(dtype);                                            \
+#define REGISTER_REDUCE_XPU_KERNEL(op_name, binary_func, device, dtype)                           \
+  REGISTER_USER_KERNEL(op_name)                                                                   \
+      .SetCreateFn<ReduceKernel<binary_func, device, dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                       \
+                       & (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
+        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);                    \
+        return in_shape->elem_cnt() * sizeof(dtype);                                              \
       });
 
 #define REGISTER_REDUCE_BY_DEVICETYPE(device, dtype)                       \
