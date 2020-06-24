@@ -18,6 +18,10 @@ void GetTensorsFromRecords(const TensorBuffer* records, const int64_t record_num
   for (int32_t i = 0; i < record_num; ++i) {
     const TensorBuffer* cur_record = records + i;
     const auto buffer = reinterpret_cast<const uint8_t*>(cur_record->data());
+
+    flatbuffers::Verifier verifier(buffer, static_cast<size_t>(cur_record->shape().elem_cnt()));
+    CHECK(onerec::example::VerifyExampleBuffer(verifier));
+
     const onerec::example::Example* example = onerec::example::GetExample(buffer);
     const auto* features = example->features();
     CHECK_NOTNULL(features);
@@ -247,16 +251,12 @@ class OneRecDecoderKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_ONEREC_DECODER_KERNEL(dtype)                                             \
-  REGISTER_USER_KERNEL("onerec_decoder")                                                  \
-      .SetCreateFn<OneRecDecoderKernel<dtype>>()                                          \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                        \
-        const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);   \
-        const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                      \
-               && in_tensor->data_type() == DataType::kTensorBuffer                       \
-               && out_tensor->data_type() == GetDataType<dtype>::value;                   \
-      });
+#define REGISTER_ONEREC_DECODER_KERNEL(dtype)                                     \
+  REGISTER_USER_KERNEL("onerec_decoder")                                          \
+      .SetCreateFn<OneRecDecoderKernel<dtype>>()                                  \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU               \
+                       & user_op::HobDataType("in", 0) == DataType::kTensorBuffer \
+                       & user_op::HobDataType("out", 0) == GetDataType<dtype>::value);
 
 REGISTER_ONEREC_DECODER_KERNEL(char)
 REGISTER_ONEREC_DECODER_KERNEL(float)

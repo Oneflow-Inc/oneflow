@@ -39,10 +39,7 @@ class OneRecReaderKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("OneRecReader")
     .SetCreateFn<OneRecReaderKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      return (ctx.device_type() == DeviceType::kCPU
-              && out_tensor->data_type() == DataType::kTensorBuffer);
-    });
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU
+                     & user_op::HobDataType("out", 0) == DataType::kTensorBuffer);
 
 }  // namespace oneflow
