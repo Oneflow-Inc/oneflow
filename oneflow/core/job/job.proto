@@ -27,8 +27,9 @@ message TrainConf {
 message PredictConf {
 }
 
-message SbpConf {
+message JobParallelViewConf {
   map<string, SbpSignature> op_name2sbp_signature_conf = 1;
+  map<string, bool> op_name2is_mirrored_parallel_view = 2;
 }
 
 message ExperimentalRunConf {
@@ -99,6 +100,7 @@ message JobConfigProto {
   optional bool enable_nccl = 400 [default = true];
   optional bool use_nccl_inter_node_communication = 401 [default = true];
   optional bool use_boxing_v2 = 402 [default = false];
+  optional bool do_parallel_cast_before_widening_type_cast = 403 [default = true];
 
   optional bool enable_all_reduce_group = 500 [default = true];
   optional int64 all_reduce_group_num = 501 [default = 8];
@@ -125,7 +127,7 @@ message JobConfigProto {
   optional bool enable_float_compute_for_half_gemm = 601 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
   
-  optional bool enable_keep_header_only = 700 [default = false];
+  optional bool enable_keep_header_only = 700 [default = true];
 
   optional int64 concurrency_width = 1000 [default = 128];
 
@@ -157,6 +159,6 @@ message Job {
   required DLNetConf net = 1;
   required Placement placement = 2;
   required JobConfigProto job_conf = 3;
-  optional SbpConf sbp_conf = 4;
+  optional JobParallelViewConf job_parallel_view_conf = 4;
   optional JobHelperConf helper = 5;
 }

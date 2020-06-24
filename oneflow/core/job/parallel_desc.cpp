@@ -1,5 +1,6 @@
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -28,11 +29,10 @@ Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id
   return Maybe<void>::Ok();
 }
 
-std::string DeviceTag4DeviceType(DeviceType device_type) {
-  if (device_type == kCPU) { return "cpu"; }
-  if (device_type == kGPU) { return "gpu"; }
-  UNIMPLEMENTED();
-  return "";
+Maybe<std::string> DeviceTag4DeviceType(DeviceType device_type) {
+  if (device_type == kCPU) { return std::string("cpu"); }
+  if (device_type == kGPU) { return std::string("gpu"); }
+  return Error::DeviceTagNotFound() << "invalid";
 }
 
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
@@ -91,7 +91,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     CHECK_LE_OR_RETURN(min_id, max_id);
     for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
       if (device_type_ == DeviceType::kGPU) {
-        CHECK_LT_OR_RETURN(dev_phy_id, Global<ResourceDesc>::Get()->GpuDeviceNum());
+        CHECK_LT_OR_RETURN(dev_phy_id, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()));
       }
       machine_id2sorted_dev_phy_ids_[mchn_id].push_back(dev_phy_id);
     }
@@ -136,9 +136,9 @@ void ParallelDesc::ClearUp() {
 void ParallelDesc::set_device_type(DeviceType device_type) {
   if (device_type == device_type_) { return; }
   device_type_ = device_type;
-  const std::string& tag = DeviceTag4DeviceType(device_type);
+  const std::shared_ptr<std::string>& tag = CHECK_JUST(DeviceTag4DeviceType(device_type));
   FOR_RANGE(int64_t, i, 0, parallel_conf_.device_name_size()) {
-    ResetDeviceTag(parallel_conf_.mutable_device_name(i), tag);
+    ResetDeviceTag(parallel_conf_.mutable_device_name(i), *tag);
   }
 }
 
@@ -156,10 +156,10 @@ Maybe<void> ParallelDesc::SanityCheck() {
 
 ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) const {
   ParallelConf parallel_conf;
-  std::string device_tag = DeviceTag4DeviceType(device_type());
+  const std::shared_ptr<std::string>& device_tag = CHECK_JUST(DeviceTag4DeviceType(device_type()));
   std::string machine_id = std::to_string(MachineIdForParallelId(parallel_id));
   std::string device_id = std::to_string(DeviceIdForParallelId(parallel_id));
-  parallel_conf.add_device_name(machine_id + ":" + device_tag + ":" + device_id);
+  parallel_conf.add_device_name(machine_id + ":" + *device_tag + ":" + device_id);
   return parallel_conf;
 }
 
@@ -169,6 +169,13 @@ int64_t ParallelDesc::MachineIdForParallelId(int64_t parallel_id) const {
 
 int64_t ParallelDesc::DeviceIdForParallelId(int64_t parallel_id) const {
   return parallel_id2device_id_.at(parallel_id);
+}
+
+bool ParallelDesc::Containing(int64_t machine_id, int64_t device_id) const {
+  const auto& machine_iter = machine_id2sorted_dev_phy_ids_.find(machine_id);
+  if (machine_iter == machine_id2sorted_dev_phy_ids_.end()) { return false; }
+  const auto& vec = machine_iter->second;
+  return std::find(vec.begin(), vec.end(), device_id) != vec.end();
 }
 
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
@@ -184,7 +191,7 @@ ParallelConf GenParallelConfOfCpuZeroOnMaster() {
 
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   ParallelConf parallel_conf;
-  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->TotalMachineNum()) {
+  FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())) {
     parallel_conf.add_device_name(std::to_string(i) + ":cpu:0");
   }
   return parallel_conf;

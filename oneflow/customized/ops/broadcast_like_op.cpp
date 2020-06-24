@@ -51,6 +51,7 @@ bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shap
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const auto& broadcast_axes = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
+  CHECK_OR_RETURN(!broadcast_axes.empty());
   const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
   const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
   Shape* out_shape = ctx->Shape4ArgNameAndIndex("y", 0);
@@ -71,9 +72,10 @@ REGISTER_USER_OP("broadcast_like")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
-      CHECK(like_arg_modifier != nullptr);
-      like_arg_modifier->set_use_header_only(true);
+      user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
+      CHECK(like_modifier != nullptr);
+      like_modifier->set_use_header_only(true);
+      like_modifier->set_requires_grad(false);
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);

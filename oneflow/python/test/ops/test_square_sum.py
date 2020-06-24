@@ -1,5 +1,5 @@
-import oneflow as flow
 import numpy as np
+import oneflow as flow
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -11,7 +11,7 @@ def _check(test_case, x, y):
 
 
 def _run_test(test_case, x, dtype, device):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def SquareSum(x=flow.FixedTensorDef(x.shape, dtype=dtype)):
         with flow.fixed_placement(device, "0:0"):
             return flow.experimental.square_sum(x)
@@ -22,9 +22,9 @@ def _run_test(test_case, x, dtype, device):
 
 def test_square_sum_random_gpu(test_case):
     x = np.random.uniform(-0.01, 0.01, (64, 64)).astype(np.float32)
-    _run_test(test_case, x, flow.float32, 'gpu')
+    _run_test(test_case, x, flow.float32, "gpu")
 
 
 def test_square_sum_small_blob_gpu(test_case):
     x = np.random.uniform(-0.01, 0.01, (64,)).astype(np.float32)
-    _run_test(test_case, x, flow.float32, 'gpu')
+    _run_test(test_case, x, flow.float32, "gpu")

@@ -24,13 +24,10 @@ class CpuGeluKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_GELU_KERNEL(dtype)                                                 \
-  REGISTER_USER_KERNEL("gelu").SetCreateFn<CpuGeluKernel<dtype>>().SetIsMatchedPred(    \
-      [](const user_op::KernelRegContext& ctx) {                                        \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                    \
-               && out_desc->data_type() == GetDataType<dtype>::value;                   \
-      });
+#define REGISTER_CPU_GELU_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("gelu").SetCreateFn<CpuGeluKernel<dtype>>().SetIsMatchedHob( \
+      user_op::HobDeviceType() == DeviceType::kCPU                                  \
+      & user_op::HobDataType("out", 0) == GetDataType<dtype>::value);
 
 REGISTER_CPU_GELU_KERNEL(float)
 REGISTER_CPU_GELU_KERNEL(double)
@@ -63,14 +60,11 @@ class CpuGeluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_GELU_GRAD_KERNEL(dtype)                                          \
-  REGISTER_USER_KERNEL("gelu_grad")                                                   \
-      .SetCreateFn<CpuGeluGradKernel<dtype>>()                                        \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                  \
-               && dx_desc->data_type() == GetDataType<dtype>::value;                  \
-      });
+#define REGISTER_CPU_GELU_GRAD_KERNEL(dtype)                        \
+  REGISTER_USER_KERNEL("gelu_grad")                                 \
+      .SetCreateFn<CpuGeluGradKernel<dtype>>()                      \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
+                       & user_op::HobDataType("dx", 0) == GetDataType<dtype>::value);
 
 REGISTER_CPU_GELU_GRAD_KERNEL(float)
 REGISTER_CPU_GELU_GRAD_KERNEL(double)

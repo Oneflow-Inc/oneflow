@@ -57,14 +57,11 @@ class SmoothL1LossGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SMOOTH_L1_LOSS_GPU_KERNEL(dtype)                                         \
-  REGISTER_USER_KERNEL("smooth_l1_loss")                                                  \
-      .SetCreateFn<SmoothL1LossGPUKernel<dtype>>()                                        \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                        \
-        const user_op::TensorDesc* loss_desc = ctx.TensorDesc4ArgNameAndIndex("loss", 0); \
-        return ctx.device_type() == DeviceType::kGPU                                      \
-               && loss_desc->data_type() == GetDataType<dtype>::value;                    \
-      });
+#define REGISTER_SMOOTH_L1_LOSS_GPU_KERNEL(dtype)                   \
+  REGISTER_USER_KERNEL("smooth_l1_loss")                            \
+      .SetCreateFn<SmoothL1LossGPUKernel<dtype>>()                  \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU \
+                       & user_op::HobDataType("loss", 0) == GetDataType<dtype>::value);
 
 REGISTER_SMOOTH_L1_LOSS_GPU_KERNEL(float)
 REGISTER_SMOOTH_L1_LOSS_GPU_KERNEL(double)
@@ -91,15 +88,11 @@ class SmoothL1LossGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SMOOTH_L1_LOSS_GRAD_GPU_KERNEL(dtype)                            \
-  REGISTER_USER_KERNEL("smooth_l1_loss_grad")                                     \
-      .SetCreateFn<SmoothL1LossGradGpuKernel<dtype>>()                            \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                \
-        const user_op::TensorDesc* prediction_grad_desc =                         \
-            ctx.TensorDesc4ArgNameAndIndex("prediction_grad", 0);                 \
-        return ctx.device_type() == DeviceType::kGPU                              \
-               && prediction_grad_desc->data_type() == GetDataType<dtype>::value; \
-      });
+#define REGISTER_SMOOTH_L1_LOSS_GRAD_GPU_KERNEL(dtype)              \
+  REGISTER_USER_KERNEL("smooth_l1_loss_grad")                       \
+      .SetCreateFn<SmoothL1LossGradGpuKernel<dtype>>()              \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU \
+                       & user_op::HobDataType("prediction_grad", 0) == GetDataType<dtype>::value);
 
 REGISTER_SMOOTH_L1_LOSS_GRAD_GPU_KERNEL(float)
 REGISTER_SMOOTH_L1_LOSS_GRAD_GPU_KERNEL(double)

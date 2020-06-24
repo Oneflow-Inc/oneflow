@@ -34,7 +34,7 @@ void GenerateBackwardOpConf(
     OperatorConf rsqrt_op;
     rsqrt_op.set_name("System-AutoGrad-" + op.op_name() + "-InvVarianceRsqrt");
     RsqrtOpConf* rsqrt_conf = rsqrt_op.mutable_rsqrt_conf();
-    rsqrt_conf->set_in(scalar_add_conf->out());
+    rsqrt_conf->set_in(scarlar_add_op.name() + "/" + scalar_add_conf->out());
     rsqrt_conf->set_out("out");
     op_confs->push_back(rsqrt_op);
     LogicalBlobId inv_variance;

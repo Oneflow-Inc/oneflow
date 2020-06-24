@@ -26,7 +26,7 @@ Maybe<void> NcclReduceScatterOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-LogicalBlobId NcclReduceScatterOp::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId NcclReduceScatterOp::lbi4obn(const std::string& output_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
   ret.set_blob_name("out");

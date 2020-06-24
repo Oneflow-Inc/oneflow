@@ -1,16 +1,15 @@
-import oneflow as flow
-import numpy as np
 import cv2
+import numpy as np
+import oneflow as flow
 
 
 def _of_image_flip(images, image_shape, flip_code):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def image_flip_job(
         images_def=flow.MirroredTensorListDef(shape=image_shape, dtype=flow.float)
     ):
@@ -34,7 +33,9 @@ def _get_images_static_shape(images):
     image_static_shape = np.amax(image_shapes, axis=0)
     assert isinstance(
         image_static_shape, np.ndarray
-    ), "image_shapes: {}, image_static_shape: {}".format(str(image_shapes), str(image_static_shape))
+    ), "image_shapes: {}, image_static_shape: {}".format(
+        str(image_shapes), str(image_static_shape)
+    )
     image_static_shape = image_static_shape.tolist()
     assert image_static_shape[0] == 1, str(image_static_shape)
     image_static_shape[0] = len(image_shapes)

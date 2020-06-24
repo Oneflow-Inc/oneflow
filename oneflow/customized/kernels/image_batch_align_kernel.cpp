@@ -32,17 +32,6 @@ struct ImageCopier final {
 #undef MAKE_COPY_FROM_TENSOR_BUFFER_SWITCH_ENTRY
 };
 
-template<typename T>
-struct ImageBatchAlignIsMatchedPred {
-  static bool Impl(const user_op::KernelRegContext& ctx) {
-    const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
-    const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-    return ctx.device_type() == DeviceType::kCPU
-           && in_tensor->data_type() == DataType::kTensorBuffer
-           && out_tensor->data_type() == GetDataType<T>::value;
-  }
-};
-
 }  // namespace
 
 template<typename T>
@@ -55,31 +44,13 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_GT(in_tensor->shape().elem_cnt(), 0);
+    CHECK_EQ(in_tensor->shape().NumAxes(), 1);
     CHECK_EQ(out_tensor->shape().NumAxes(), 4);
-    CHECK_EQ(out_tensor->shape().At(0), in_tensor->shape().elem_cnt());
-    int batch_height = out_tensor->shape().At(1);
-    int batch_width = out_tensor->shape().At(2);
-    int channels = out_tensor->shape().At(3);
-    int num_elems = batch_height * batch_width * channels;
-    memset(out_tensor->mut_dptr(), 0,
-           out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type()));
-    MultiThreadLoop(out_tensor->shape().At(0), [&](size_t i) {
-      const TensorBuffer& origin_image_buffer = in_tensor->dptr<TensorBuffer>()[i];
-      T* out_ptr = out_tensor->mut_dptr<T>() + i * num_elems;
-      ImageCopier<T>::SwitchCopyFromTensorBuffer(SwitchCase(origin_image_buffer.data_type()),
-                                                 out_ptr, origin_image_buffer, batch_height,
-                                                 batch_width, channels);
-    });
-  }
-
-  void InferShape(user_op::KernelInferContext* ctx) const override {
-    const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int num_images = in_tensor->shape().elem_cnt();
+    const int64_t num_images = in_tensor->shape().elem_cnt();
+    CHECK_GT(num_images, 0);
     int64_t max_height = 0;
     int64_t max_width = 0;
-    int64_t channels = out_tensor->shape().At(3);
+    const int64_t channels = out_tensor->shape().At(3);
     FOR_RANGE(int, i, 0, num_images) {
       const TensorBuffer& image_buffer = in_tensor->dptr<TensorBuffer>()[i];
       max_height = std::max(max_height, image_buffer.shape().At(0));
@@ -95,15 +66,25 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
     mut_shape_view->Set(2, max_width);
     // TODO(wenxiao): need to check static shape can hold dynamic shape
     // Tensor should add Capacity method
+    memset(out_tensor->mut_dptr(), 0,
+           out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type()));
+    MultiThreadLoop(num_images, [&](size_t i) {
+      const TensorBuffer& image_buffer = in_tensor->dptr<TensorBuffer>()[i];
+      T* out_ptr = out_tensor->mut_dptr<T>() + i * max_height * max_width * channels;
+      ImageCopier<T>::SwitchCopyFromTensorBuffer(SwitchCase(image_buffer.data_type()), out_ptr,
+                                                 image_buffer, max_height, max_width, channels);
+    });
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_IMAGE_BATCH_ALIGN_KERNEL(dtype)   \
-  REGISTER_USER_KERNEL("image_batch_align")        \
-      .SetCreateFn<ImageBatchAlignKernel<dtype>>() \
-      .SetIsMatchedPred(ImageBatchAlignIsMatchedPred<dtype>::Impl);
+#define REGISTER_IMAGE_BATCH_ALIGN_KERNEL(dtype)                                  \
+  REGISTER_USER_KERNEL("image_batch_align")                                       \
+      .SetCreateFn<ImageBatchAlignKernel<dtype>>()                                \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU               \
+                       & user_op::HobDataType("in", 0) == DataType::kTensorBuffer \
+                       & user_op::HobDataType("out", 0) == GetDataType<dtype>::value);
 
 REGISTER_IMAGE_BATCH_ALIGN_KERNEL(uint8_t)
 REGISTER_IMAGE_BATCH_ALIGN_KERNEL(float)

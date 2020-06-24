@@ -311,18 +311,35 @@ REGISTER_USER_OP("TestDataTypeAttr")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("TestListDataTypeAndListShapeAttr")
+REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
     .Input("in")
     .Output("out", 3)
     .Attr("out_shapes", UserOpAttrType::kAtListShape)
     .Attr("out_types", UserOpAttrType::kAtListDataType)
+    .Attr("string_list", UserOpAttrType::kAtListString)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto& out_shapes = ctx->Attr<std::vector<Shape>>("out_shapes");
       const auto& out_types = ctx->Attr<std::vector<DataType>>("out_types");
+      const auto& string_list = ctx->Attr<std::vector<std::string>>("string_list");
       FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
         *ctx->Shape4ArgNameAndIndex("out", i) = out_shapes.at(i);
         *ctx->Dtype4ArgNameAndIndex("out", i) = out_types.at(i);
       }
+      CHECK_GT_OR_RETURN(string_list.size(), 0);
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_CPU_ONLY_USER_OP("cpu_only_relu_test")
+    .Input("in")
+    .Output("out")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const auto* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      auto* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_desc = *in_desc;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 

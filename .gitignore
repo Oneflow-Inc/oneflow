@@ -1,4 +1,5 @@
 /build
+/build-*
 /dist
 /third_party/
 /examples/**/oneflow
@@ -9,3 +10,4 @@ core.*
 *.pyc
 *.ipynb
 /.vscode
+manylinux-build-cache/

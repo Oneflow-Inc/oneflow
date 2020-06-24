@@ -93,8 +93,8 @@ std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph&
     if (node->parallel_desc().device_type() != DeviceType::kGPU) { return; }
     for (const std::string& obn : node->op().output_bns()) {
       LogicalBlobId lbi = node->op().BnInOp2Lbi(obn);
-      // TODO(niuchong): this ain't right for fw-bw-opgraph, but right for fw-opgraph
-      if (node->BatchAxis4Lbi(lbi).has_value()) {
+      // TODO(niuchong): this isn't right for fw-bw-opgraph, but right for fw-opgraph
+      if (CHECK_JUST(node->BatchAxis4Lbi(lbi))->has_value()) {
         INSERT_CHECK(allowed_set->insert(node));
         return;
       }

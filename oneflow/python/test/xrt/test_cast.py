@@ -1,27 +1,32 @@
 import unittest
-import numpy as np
 
+import numpy as np
 import oneflow as flow
 
 config = flow.function_config()
+
 
 def make_job(input_shape, dtype=flow.float32, target_dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
-    @flow.function(config)
-    def cast_job(x = flow.FixedTensorDef(input_shape, dtype=dtype)):
+    @flow.global_function(config)
+    def cast_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.cast(x, dtype=target_dtype)
+
     return cast_job
+
 
 def make_xla_job(input_shape, dtype=flow.float32, target_dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
-    @flow.function(config)
-    def xla_cast_job(x = flow.FixedTensorDef(input_shape, dtype=dtype)):
+    @flow.global_function(config)
+    def xla_cast_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.cast(x, dtype=target_dtype)
+
     return xla_cast_job
+
 
 class TestCast(unittest.TestCase):
     def _test_body(self, x, dtype=flow.float32, target_dtype=flow.float32):
@@ -55,5 +60,6 @@ class TestCast(unittest.TestCase):
         self._test_random_body((1), flow.float32, flow.int32)
         self._test_random_body((1, 10), flow.int32, flow.float32)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

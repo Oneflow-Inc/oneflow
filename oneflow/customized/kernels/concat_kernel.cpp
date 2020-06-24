@@ -36,21 +36,16 @@ class ConcatKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_CONCAT_KERNEL(device_type_v, dtype_pair)                               \
-  REGISTER_USER_KERNEL("concat")                                                        \
-      .SetCreateFn<ConcatKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>()         \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                      \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        return ctx.device_type() == device_type_v                                       \
-               && out_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);               \
-      });
+#define REGISTER_CONCAT_KERNEL(device_type_v, dtype_pair)                       \
+  REGISTER_USER_KERNEL("concat")                                                \
+      .SetCreateFn<ConcatKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>() \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device_type_v                \
+                       & user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CONCAT_KERNEL, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
 
 REGISTER_USER_KERNEL("concat")
     .SetCreateFn<ConcatKernel<DeviceType::kGPU, float16>>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      return ctx.device_type() == DeviceType::kGPU && out_desc->data_type() == DataType::kFloat16;
-    });
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU
+                     & user_op::HobDataType("out", 0) == DataType::kFloat16);
 }  // namespace oneflow
