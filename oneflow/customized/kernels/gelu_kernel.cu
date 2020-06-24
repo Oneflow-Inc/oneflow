@@ -106,13 +106,10 @@ class GpuGeluKernel<float16> final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_GELU_KERNEL(dtype)                                               \
-  REGISTER_USER_KERNEL("gelu").SetCreateFn<GpuGeluKernel<dtype>>().SetIsMatchedPred(  \
-      [](const user_op::KernelRegContext& ctx) {                                      \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        return ctx.device_type() == DeviceType::kGPU                                  \
-               && y_desc->data_type() == GetDataType<dtype>::value;                   \
-      });
+#define REGISTER_GPU_GELU_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("gelu").SetCreateFn<GpuGeluKernel<dtype>>().SetIsMatchedHob( \
+      user_op::HobDeviceType() == DeviceType::kGPU                                  \
+      & user_op::HobDataType("out", 0) == GetDataType<dtype>::value);
 
 REGISTER_GPU_GELU_KERNEL(float)
 REGISTER_GPU_GELU_KERNEL(double)
@@ -162,14 +159,11 @@ class GpuGeluGradKernel<float16> final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_GELU_GRAD_KERNEL(dtype)                                          \
-  REGISTER_USER_KERNEL("gelu_grad")                                                   \
-      .SetCreateFn<GpuGeluGradKernel<dtype>>()                                        \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
-        return ctx.device_type() == DeviceType::kGPU                                  \
-               && dx_desc->data_type() == GetDataType<dtype>::value;                  \
-      });
+#define REGISTER_GPU_GELU_GRAD_KERNEL(dtype)                        \
+  REGISTER_USER_KERNEL("gelu_grad")                                 \
+      .SetCreateFn<GpuGeluGradKernel<dtype>>()                      \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU \
+                       & user_op::HobDataType("dx", 0) == GetDataType<dtype>::value);
 
 REGISTER_GPU_GELU_GRAD_KERNEL(float)
 REGISTER_GPU_GELU_GRAD_KERNEL(double)

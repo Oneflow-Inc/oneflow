@@ -39,11 +39,8 @@ class GpuSortKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_SORT_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("sort")                                                              \
       .SetCreateFn<GpuSortKernel<dtype>>()                                                  \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                          \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);     \
-        return ctx.device_type() == DeviceType::kGPU                                        \
-               && out_desc->data_type() == GetDataType<dtype>::value;                       \
-      })                                                                                    \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                         \
+                       & user_op::HobDataType("out", 0) == GetDataType<dtype>::value)       \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                        \
         const int32_t instance_size = in_shape->dim_vec().back();                           \

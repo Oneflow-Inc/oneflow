@@ -30,10 +30,8 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
 #define REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(device, proto_type, cpp_type) \
   REGISTER_USER_KERNEL("CategoricalOrdinalEncode")                               \
       .SetCreateFn<CategoricalOrdinalEncodeKernel<device, cpp_type>>()           \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {               \
-        const user_op::TensorDesc* in = ctx.TensorDesc4ArgNameAndIndex("in", 0); \
-        return ctx.device_type() == device && in->data_type() == proto_type;     \
-      });
+      .SetIsMatchedHob(user_op::HobDeviceType() == device                        \
+                       & user_op::HobDataType("in", 0) == proto_type);
 
 REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCPU, DataType::kInt32, int32_t);
 REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCPU, DataType::kInt64, int64_t);
