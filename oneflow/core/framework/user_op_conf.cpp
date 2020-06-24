@@ -11,6 +11,22 @@ namespace user_op {
 
 UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) : op_conf_(op_conf) {
   CHECK(op_conf_.has_user_conf());
+  for (const auto& kv : op_conf_.user_conf().attr()) {
+    UserOpAttrVal::ValueCase value_case = kv.second.value_case();
+    switch (value_case) {
+#define CASE_ENTRY(field, cpp_type, attr_type)                                              \
+  /* UserOpAttrVal::ValueCase has the same order and naming convention as UserOpAttrType */ \
+  case (static_cast<UserOpAttrVal::ValueCase>(attr_type)):                                  \
+    CHECK(attr_cache_                                                                       \
+              .emplace(kv.first, std::make_shared<TypedAttrVal<cpp_type>>(                  \
+                                     AttrValAccessor<cpp_type>::Attr(kv.second)))           \
+              .second);                                                                     \
+    break;
+      OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
+#undef CASE_ENTRY
+      default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
+    };
+  }
 }
 
 const OperatorConf& UserOpConfWrapper::op_conf() const { return op_conf_; }
@@ -67,16 +83,10 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
     auto it = attr_cache_.find(attr_name);                                                         \
     if (it != attr_cache_.end()) {                                                                 \
       return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();                 \
+    } else {                                                                                       \
+      LOG(FATAL) << "Cannot find the attr: " << attr_name                                          \
+                 << " with UserOpAttrType: " << static_cast<int32_t>(attr_type);                   \
     }                                                                                              \
-    CHECK(op_conf_.user_conf().attr().find(attr_name) != op_conf_.user_conf().attr().end());       \
-    UserOpAttrVal val = op_conf_.user_conf().attr().at(attr_name);                                 \
-    CHECK(val.has_##field());                                                                      \
-                                                                                                   \
-    auto typed_attr_val =                                                                          \
-        std::make_shared<TypedAttrVal<cpp_type>>(AttrValAccessor<cpp_type>::Attr(val));            \
-    CHECK(attr_cache_.emplace(attr_name, std::dynamic_pointer_cast<AttrVal>(typed_attr_val))       \
-              .second);                                                                            \
-    return typed_attr_val->val();                                                                  \
   }                                                                                                \
                                                                                                    \
   template<>                                                                                       \

@@ -60,7 +60,7 @@ class UserOpConfWrapper final {
   friend class UserOpConfWrapperBuilder;
 
   OperatorConf op_conf_;
-  mutable HashMap<std::string, std::shared_ptr<AttrVal>> attr_cache_;
+  HashMap<std::string, std::shared_ptr<AttrVal>> attr_cache_;
 };
 
 class UserOpWrapper final {

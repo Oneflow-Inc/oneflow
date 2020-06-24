@@ -11,6 +11,7 @@ namespace user_op {
 #define BASIC_AND_ENUM_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                          \
   template<>                                                                               \
   cpp_type AttrValAccessor<cpp_type>::Attr(const UserOpAttrVal& val) {                     \
+    CHECK(val.has_##field());                                                              \
     return val.field();                                                                    \
   }                                                                                        \
   template<>                                                                               \
