@@ -43,6 +43,14 @@ void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
   }
 }
 
+void* MemoryAllocatorImpl::AllocateUnPinnedHostMem(size_t size) {
+  void* ptr = malloc(size);
+  CHECK_NOTNULL(ptr);
+  return ptr;
+}
+
+void MemoryAllocatorImpl::DeallocateUnPinnedHostMem(void* ptr) { free(ptr); }
+
 MemoryAllocator::~MemoryAllocator() {
   for (std::function<void()> deleter : deleters_) { deleter(); }
 }
