@@ -76,11 +76,11 @@ class CpuL2NormalizeKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_L2_NORMALIZE_KERNEL(dtype)                     \
-  REGISTER_USER_KERNEL("l2_normalize")                              \
-      .SetCreateFn<CpuL2NormalizeKernel<dtype>>()                   \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
-                       & user_op::HobDataType("y", 0) == GetDataType<dtype>::value);
+#define REGISTER_CPU_L2_NORMALIZE_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("l2_normalize")                                \
+      .SetCreateFn<CpuL2NormalizeKernel<dtype>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_L2_NORMALIZE_KERNEL(float)
 
@@ -107,11 +107,11 @@ class CpuL2NormalizeGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_L2_NORMALIZE_GRAD_KERNEL(dtype)                \
-  REGISTER_USER_KERNEL("l2_normalize_grad")                         \
-      .SetCreateFn<CpuL2NormalizeGradKernel<dtype>>()               \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
-                       & user_op::HobDataType("dx", 0) == GetDataType<dtype>::value);
+#define REGISTER_CPU_L2_NORMALIZE_GRAD_KERNEL(dtype)                  \
+  REGISTER_USER_KERNEL("l2_normalize_grad")                           \
+      .SetCreateFn<CpuL2NormalizeGradKernel<dtype>>()                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_L2_NORMALIZE_GRAD_KERNEL(float)
 

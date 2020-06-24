@@ -42,8 +42,8 @@ class CpuAddNKernel : public user_op::OpKernel {
 #define REGISTER_CPU_ADDN_KERNEL(cpp_type, dtype)                                               \
   REGISTER_USER_KERNEL("add_n")                                                                 \
       .SetCreateFn<CpuAddNKernel<cpp_type>>()                                                   \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                             \
-                       & user_op::HobDataType("in", 0) == dtype)                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+                       & (user_op::HobDataType("in", 0) == dtype))                              \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
