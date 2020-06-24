@@ -39,7 +39,7 @@ class OFRecordReaderKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("OFRecordReader")
     .SetCreateFn<OFRecordReaderKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU
-                     & user_op::HobDataType("out", 0) == DataType::kOFRecord);
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("out", 0) == DataType::kOFRecord));
 
 }  // namespace oneflow

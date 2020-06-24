@@ -88,8 +88,8 @@ class PadKernel final : public user_op::OpKernel {
 
 #define REGISTER_PAD_KERNEL(dev, dtype)                                             \
   REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel<dev, dtype>>().SetIsMatchedHob( \
-      user_op::HobDeviceType() == dev                                               \
-      & user_op::HobDataType("y", 0) == GetDataType<dtype>::value);
+      (user_op::HobDeviceType() == dev)                                             \
+      & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_PAD_KERNEL(DeviceType::kGPU, double)
 REGISTER_PAD_KERNEL(DeviceType::kGPU, float)
@@ -141,11 +141,11 @@ class PadGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_PAD_GRAD_KERNEL(dev, dtype)           \
-  REGISTER_USER_KERNEL("pad_grad")                     \
-      .SetCreateFn<PadGradKernel<dev, dtype>>()        \
-      .SetIsMatchedHob(user_op::HobDeviceType() == dev \
-                       & user_op::HobDataType("dx", 0) == GetDataType<dtype>::value);
+#define REGISTER_PAD_GRAD_KERNEL(dev, dtype)             \
+  REGISTER_USER_KERNEL("pad_grad")                       \
+      .SetCreateFn<PadGradKernel<dev, dtype>>()          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == dev) \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, double)
 REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, float)
