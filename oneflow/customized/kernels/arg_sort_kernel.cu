@@ -93,11 +93,8 @@ class GpuArgSortKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_ARG_SORT_KERNEL(dtype)                                                        \
   REGISTER_USER_KERNEL("arg_sort")                                                                 \
       .SetCreateFn<GpuArgSortKernel<dtype>>()                                                      \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);              \
-        return ctx.device_type() == DeviceType::kGPU                                               \
-               && in_desc->data_type() == GetDataType<dtype>::value;                               \
-      })                                                                                           \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                                \
+                       & user_op::HobDataType("in", 0) == GetDataType<dtype>::value)               \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                               \
         const int32_t elem_cnt = in_shape->elem_cnt();                                             \

@@ -99,9 +99,7 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
 
 REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")
     .SetCreateFn<GenerateRandomBatchPermutationIndicesGPUKernel>()
-    .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {
-      return ctx.device_type() == DeviceType::kGPU;
-    })
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU)
     .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {
       const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       const int32_t batch_size = y_shape->At(0);

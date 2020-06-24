@@ -10,7 +10,7 @@
 
 namespace oneflow {
 
-std::string DeviceTag4DeviceType(DeviceType device_type);
+Maybe<std::string> DeviceTag4DeviceType(DeviceType device_type);
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag);
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
 
