@@ -19,12 +19,12 @@ class OneRecParser final : public Parser<TensorBuffer> {
   void Parse(std::shared_ptr<LoadTargetPtrList> batch_data,
              user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    MultiThreadLoop(batch_data->size(), [&](size_t i) {
+    FOR_RANGE(int32_t, i, 0, batch_data->size()) {
       TensorBuffer* out = out_tensor->mut_dptr<TensorBuffer>() + i;
       TensorBuffer* tensor = batch_data->at(i).get();
       out->Resize(tensor->shape(), tensor->data_type());
       std::memcpy(out->mut_data(), tensor->data(), out->nbytes());
-    });
+    }
   }
 };
 
