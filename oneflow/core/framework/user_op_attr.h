@@ -46,14 +46,21 @@ namespace user_op {
   LIST_MESSAGE_ATTR_SEQ \
   LIST_STRING_ATTR_SEQ
 
-// Type Trait: GetAttrType
+// Type Trait: GetAttrType, GetCppType
 
 template<typename T>
 struct GetAttrType;
 
-#define SPECIALIZE_GET_ATTR_TYPE(field, type_cpp, type_proto) \
-  template<>                                                  \
-  struct GetAttrType<type_cpp> : std::integral_constant<UserOpAttrType, type_proto> {};
+template<UserOpAttrType AttrT>
+struct GetCppType;
+
+#define SPECIALIZE_GET_ATTR_TYPE(field, type_cpp, type_proto)                           \
+  template<>                                                                            \
+  struct GetAttrType<type_cpp> : std::integral_constant<UserOpAttrType, type_proto> {}; \
+  template<>                                                                            \
+  struct GetCppType<type_proto> {                                                       \
+    typedef type_cpp type;                                                              \
+  };
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_ATTR_TYPE, ATTR_SEQ);
 #undef SPECIALIZE_GET_ATTR_TYPE
 

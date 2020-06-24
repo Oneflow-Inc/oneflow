@@ -37,6 +37,7 @@ message UserOpAttrVal {
   message ListShape {
     repeated ShapeProto val = 1;
   }
+  // order and naming convention of the oneof field must be consistent with the enum UserOpAttrType
   message ListString {
     repeated string val = 1;
   }
