@@ -30,10 +30,10 @@ def RunTest(out_shapes, out_types):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
-    def TestListDataTypeAndListShapeAttrJob(
+    def TestListDataTypeAndListShapeAndListStringAttrJob(
         input=flow.FixedTensorDef((10, 10), dtype=flow.float)
     ):
-        return TestListDataTypeAndListShapeAttr(
+        return TestListDataTypeAndListShapeAndListStringAttr(
             input,
             out_shapes,
             [type_name_to_flow_type[data_type] for data_type in out_types],
@@ -41,7 +41,10 @@ def RunTest(out_shapes, out_types):
         )
 
     input = np.random.random_sample((10, 10)).astype(np.float32)
-    outputs = [x.ndarray() for x in TestListDataTypeAndListShapeAttrJob(input).get()]
+    outputs = [
+        x.ndarray()
+        for x in TestListDataTypeAndListShapeAndListStringAttrJob(input).get()
+    ]
     for i in range(len(outputs)):
         assert outputs[i].shape == out_shapes[i]
         assert outputs[i].dtype == type_name_to_np_type[out_types[i]]
