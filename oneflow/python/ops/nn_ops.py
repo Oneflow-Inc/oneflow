@@ -212,9 +212,7 @@ def tf_conv2d(
     if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
         raise ValueError('data_format must be "NHWC" or "NCHW".')
 
-    channel_pos = (
-        "channels_first" if data_format.startswith("NC") else "channels_last"
-    )
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
 
     if dilations is None:
         dilations = [1, 1]
@@ -227,8 +225,8 @@ def tf_conv2d(
             dilations = [dilations, dilations]
         else:
             raise ValueError("dilations must be an int or a list.")
- 
-    assert os.getenv("ENABLE_USER_OP") == 'True'
+
+    assert os.getenv("ENABLE_USER_OP") == "True"
     if channel_pos == "channels_first":
         input_size = input.static_shape[2:4]
         kernel_size_list = filters.static_shape[2:4]
@@ -238,23 +236,32 @@ def tf_conv2d(
     else:
         raise ValueError("invalid data_format")
     # add pad op if needs odd padding
-    if padding.upper() == 'SAME':
+    if padding.upper() == "SAME":
         padding_left = [0] * NDims
         padding_right = [0] * NDims
         for i in range(NDims):
             effective_filter_size = (kernel_size_list[i] - 1) * dilations[i] + 1
             tmp_output_size = (input_size[i] + strides[i] - 1) // strides[i]
-            padding_needed = max(0, (tmp_output_size - 1) * strides[i] + 
-                                    effective_filter_size - input_size[i])
+            padding_needed = max(
+                0,
+                (tmp_output_size - 1) * strides[i]
+                + effective_filter_size
+                - input_size[i],
+            )
             padding_left[i] = padding_needed // 2
             padding_right[i] = padding_needed - padding_needed // 2
         if padding_left != padding_right:
             assert data_format.upper() == "NCHW"
-            input =  flow.pad(input,
-                                [(0, 0), (0, 0),
-                                (padding_left[0], padding_right[0]), 
-                                (padding_left[1], padding_right[1])],
-                                name=name + '_pad' if name is not None else None)
+            input = flow.pad(
+                input,
+                [
+                    (0, 0),
+                    (0, 0),
+                    (padding_left[0], padding_right[0]),
+                    (padding_left[1], padding_right[1]),
+                ],
+                name=name + "_pad" if name is not None else None,
+            )
             padding = "VALID"
     assert isinstance(kernel_size_list, (list, tuple))
     assert isinstance(groups, int)
@@ -271,22 +278,23 @@ def tf_conv2d(
         else:
             raise ValueError("invalid data_format")
     return (
-            flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
-            .Op("conv2d")
-            .Input("in", [input])
-            .Input("weight", [filters])
-            .Output("out")
-            .Attr("filters", filters.static_shape[0], "AttrTypeInt32")
-            .Attr("padding", padding.lower(), "AttrTypeString")
-            .Attr("data_format", channel_pos, "AttrTypeString")
-            .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
-            .Attr("strides", strides, "AttrTypeListInt32")
-            .Attr("dilation_rate", dilations, "AttrTypeListInt32")
-            .Attr("groups", groups, "AttrTypeInt32")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
+        .Op("conv2d")
+        .Input("in", [input])
+        .Input("weight", [filters])
+        .Output("out")
+        .Attr("filters", filters.static_shape[0], "AttrTypeInt32")
+        .Attr("padding", padding.lower(), "AttrTypeString")
+        .Attr("data_format", channel_pos, "AttrTypeString")
+        .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
+        .Attr("strides", strides, "AttrTypeListInt32")
+        .Attr("dilation_rate", dilations, "AttrTypeListInt32")
+        .Attr("groups", groups, "AttrTypeInt32")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
+
 
 @oneflow_export("nn.bias_add")
 def bias_add(value, bias, data_format=None, name=None):
@@ -1000,15 +1008,21 @@ def deconv2d(
     if padding.upper() == "VALID":
         for i in range(NDims):
             effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
-            assert (output_shape[i] + strides[i] - effective_filter_size) // strides[i] == input_shape[i]
+            assert (output_shape[i] + strides[i] - effective_filter_size) // strides[
+                i
+            ] == input_shape[i]
     elif padding.upper() == "SAME":
         padding_left = [0] * NDims
         padding_right = [0] * NDims
         for i in range(NDims):
             assert (output_shape[i] + strides[i] - 1) // strides[i] == input_shape[i]
             effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
-            padding_needed = max(0, (input_shape[i] - 1) * strides[i] \
-                                + effective_filter_size - output_shape[i])
+            padding_needed = max(
+                0,
+                (input_shape[i] - 1) * strides[i]
+                + effective_filter_size
+                - output_shape[i],
+            )
             padding_left[i] = padding_needed // 2
             padding_right[i] = padding_needed - padding_needed // 2
     else:
@@ -1017,28 +1031,39 @@ def deconv2d(
     if padding.upper() == "SAME" and padding_left != padding_right:
         assert data_format.upper() == "NCHW"
         padded_output_shape = [0] * NDims
-        for i in range(NDims): 
-            padded_output_shape[i] = output_shape[i] + padding_left[i] + padding_right[i] 
-        input = (flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
-                .Op("deconv2d")
-                .Input("in", [input])
-                .Input("weight", [filters])
-                .Output("out")
-                .Attr("filters", channels, "AttrTypeInt32")
-                .Attr("padding", "valid", "AttrTypeString")
-                .Attr("data_format", channel_pos, "AttrTypeString")
-                .Attr("kernel_size", kernel_size, "AttrTypeListInt32")
-                .Attr("strides", strides, "AttrTypeListInt32")
-                .Attr("dilation_rate", dilations, "AttrTypeListInt32")
-                .Attr("output_shape", padded_output_shape, "AttrTypeListInt32")
-                .Build()
-                .InferAndTryRun()
-                .RemoteBlobList()[0])
-        return flow.pad_grad(input,
-                            [(0, 0), (0, 0),
-                            (padding_left[0], padding_right[0]), 
-                            (padding_left[1], padding_right[1])],
-                            name=name + '_pad_grad' if name is not None else None)
+        for i in range(NDims):
+            padded_output_shape[i] = (
+                output_shape[i] + padding_left[i] + padding_right[i]
+            )
+        input = (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("Conv2d_")
+            )
+            .Op("deconv2d")
+            .Input("in", [input])
+            .Input("weight", [filters])
+            .Output("out")
+            .Attr("filters", channels, "AttrTypeInt32")
+            .Attr("padding", "valid", "AttrTypeString")
+            .Attr("data_format", channel_pos, "AttrTypeString")
+            .Attr("kernel_size", kernel_size, "AttrTypeListInt32")
+            .Attr("strides", strides, "AttrTypeListInt32")
+            .Attr("dilation_rate", dilations, "AttrTypeListInt32")
+            .Attr("output_shape", padded_output_shape, "AttrTypeListInt32")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+        return flow.pad_grad(
+            input,
+            [
+                (0, 0),
+                (0, 0),
+                (padding_left[0], padding_right[0]),
+                (padding_left[1], padding_right[1]),
+            ],
+            name=name + "_pad_grad" if name is not None else None,
+        )
 
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
