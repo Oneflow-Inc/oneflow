@@ -17,7 +17,7 @@ UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) : op_conf_(op_
 #define CASE_ENTRY(field, cpp_type, attr_type)                                              \
   /* UserOpAttrVal::ValueCase has the same order and naming convention as UserOpAttrType */ \
   case (static_cast<UserOpAttrVal::ValueCase>(attr_type)):                                  \
-    CHECK(attr_cache_                                                                       \
+    CHECK(attrs_                                                                            \
               .emplace(kv.first, std::make_shared<TypedAttrVal<cpp_type>>(                  \
                                      AttrValAccessor<cpp_type>::Attr(kv.second)))           \
               .second);                                                                     \
@@ -80,8 +80,8 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \
   template<>                                                                                       \
   const cpp_type& UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {          \
-    auto it = attr_cache_.find(attr_name);                                                         \
-    if (it != attr_cache_.end()) {                                                                 \
+    auto it = attrs_.find(attr_name);                                                              \
+    if (it != attrs_.end()) {                                                                      \
       return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();                 \
     } else {                                                                                       \
       LOG(FATAL) << "Cannot find the attr: " << attr_name                                          \
