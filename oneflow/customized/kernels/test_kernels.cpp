@@ -149,9 +149,7 @@ class TestSourceGpuKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestSource")
     .SetCreateFn<TestSourceGpuKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      return ctx.device_type() == DeviceType::kGPU;
-    })
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU)
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
 
 class TestMultiOutputOrderKernel final : public user_op::OpKernel {
