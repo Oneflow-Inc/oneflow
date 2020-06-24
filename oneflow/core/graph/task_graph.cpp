@@ -690,37 +690,11 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast) {
-  CHECK_EQ(sorted_dst_comp_tasks.size() % sorted_src_comp_tasks.size(), 0);
-  if (sorted_src_comp_tasks.size() == sorted_dst_comp_tasks.size()) {
-    FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
-      CompTaskNode* src = sorted_src_comp_tasks.at(i);
-      CompTaskNode* dst = sorted_dst_comp_tasks.at(i);
-      BuildTaskPath(src, dst, MutBufTask, true);
-    }
-    return;
-  }
-  HashMap<size_t, CompTaskNode*> machine_id2last_src_task;
-  HashMap<std::pair<int64_t, int64_t>, CompTaskNode*> global_thrd_id2src_task;
-  auto GlobalThrdId4TaskNode = [](TaskNode* task_node) -> std::pair<int64_t, int64_t> {
-    return std::make_pair(task_node->machine_id(), task_node->thrd_id());
-  };
-  for (CompTaskNode* src_node : sorted_src_comp_tasks) {
-    machine_id2last_src_task[src_node->machine_id()] = src_node;
-    global_thrd_id2src_task[GlobalThrdId4TaskNode(src_node)] = src_node;
-  }
-  HashMap<std::pair<int64_t, int64_t>, CompTaskNode*> global_thrd_id2dst_task;
   for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
-    global_thrd_id2dst_task[GlobalThrdId4TaskNode(dst_node)] = dst_node;
-  }
-  auto GetSrcNode = [&](const std::pair<int64_t, int64_t>& global_thrd_id) -> CompTaskNode* {
-    const auto& src_task_it = global_thrd_id2src_task.find(global_thrd_id);
-    if (src_task_it != global_thrd_id2src_task.end()) { return src_task_it->second; }
-    const auto& m_src_task_it = machine_id2last_src_task.find(global_thrd_id.first);
-    if (m_src_task_it != machine_id2last_src_task.end()) { return m_src_task_it->second; }
-    return machine_id2last_src_task.begin()->second;
-  };
-  for (const auto& pair : global_thrd_id2dst_task) {
-    BuildTaskPath(GetSrcNode(pair.first), pair.second, MutBufTask, true);
+    CompTaskNode* nearest_src_node =
+        SubTskGphBuilderUtil::FindNearestNode(sorted_src_comp_tasks, dst_node);
+    CHECK_NOTNULL(nearest_src_node);
+    BuildTaskPath(nearest_src_node, dst_node, MutBufTask, true);
   }
 }
 
