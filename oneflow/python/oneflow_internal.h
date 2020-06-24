@@ -11,6 +11,11 @@ bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case, std::string* error_str) {
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
+bool IsOpTypeNameCpuSupportOnly(const std::string& op_type_name, std::string* error_str) {
+  return oneflow::IsOpTypeNameCpuSupportOnly(op_type_name)
+      .GetDataAndSerializedErrorProto(error_str, false);
+}
+
 std::string CurrentResource(std::string* error_str) {
   return oneflow::CurrentResource().GetDataAndSerializedErrorProto(error_str, "");
 }
@@ -62,6 +67,10 @@ void StopGlobalSession(std::string* error_str) {
 
 std::string GetSerializedInterUserJobInfo(std::string* error_str) {
   return oneflow::GetSerializedInterUserJobInfo().GetDataAndSerializedErrorProto(error_str, "");
+}
+
+std::string GetSerializedJobSet(std::string* error_str) {
+  return oneflow::GetSerializedJobSet().GetDataAndSerializedErrorProto(error_str, "");
 }
 
 std::string GetFunctionConfigDef(std::string* error_str) {

@@ -1,5 +1,6 @@
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -91,7 +92,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     CHECK_LE_OR_RETURN(min_id, max_id);
     for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
       if (device_type_ == DeviceType::kGPU) {
-        CHECK_LT_OR_RETURN(dev_phy_id, Global<ResourceDesc>::Get()->GpuDeviceNum());
+        CHECK_LT_OR_RETURN(dev_phy_id, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()));
       }
       machine_id2sorted_dev_phy_ids_[mchn_id].push_back(dev_phy_id);
     }
@@ -171,6 +172,13 @@ int64_t ParallelDesc::DeviceIdForParallelId(int64_t parallel_id) const {
   return parallel_id2device_id_.at(parallel_id);
 }
 
+bool ParallelDesc::Containing(int64_t machine_id, int64_t device_id) const {
+  const auto& machine_iter = machine_id2sorted_dev_phy_ids_.find(machine_id);
+  if (machine_iter == machine_id2sorted_dev_phy_ids_.end()) { return false; }
+  const auto& vec = machine_iter->second;
+  return std::find(vec.begin(), vec.end(), device_id) != vec.end();
+}
+
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
     const ParallelContext* parallel_ctx) {
   return std::make_tuple(parallel_ctx->parallel_id(), parallel_ctx->parallel_num());
@@ -184,7 +192,7 @@ ParallelConf GenParallelConfOfCpuZeroOnMaster() {
 
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   ParallelConf parallel_conf;
-  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->TotalMachineNum()) {
+  FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())) {
     parallel_conf.add_device_name(std::to_string(i) + ":cpu:0");
   }
   return parallel_conf;

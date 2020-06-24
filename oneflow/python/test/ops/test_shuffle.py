@@ -1,10 +1,10 @@
-import oneflow as flow
-import numpy as np
-from collections import OrderedDict
 import uuid
-from test_util import GenArgList
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
+from collections import OrderedDict
+
+import numpy as np
+import oneflow as flow
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+
 
 def test_shuffle(_):
     arg_dict = OrderedDict()
@@ -23,7 +23,7 @@ def test_shuffle(_):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
 
-        @flow.function(flow.FunctionConfig())
+        @flow.global_function(flow.FunctionConfig())
         def TestJob(
             x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
         ):
@@ -43,7 +43,7 @@ def test_shuffle(_):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
 
-        @flow.function(flow.FunctionConfig())
+        @flow.global_function(flow.FunctionConfig())
         def TestJob1(
             x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
         ):

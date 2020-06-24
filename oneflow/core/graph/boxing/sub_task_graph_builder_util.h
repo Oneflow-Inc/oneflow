@@ -9,6 +9,11 @@
 namespace oneflow {
 
 struct SubTskGphBuilderUtil {
+  static constexpr int64_t kDistanceSameDevice = 0;
+  static constexpr int64_t kDistanceSameMachine = 1;
+  static constexpr int64_t kDistanceDiffMachine = 2;
+  static constexpr int64_t kDistanceMax = 3;
+
   static bool IsDeviceTypeCPUOrGPU(const ParallelDesc& parallel_desc);
   static std::vector<TensorSliceView> GetTensorSliceView(int64_t parallel_num,
                                                          const SbpParallel& sbp_parallel,
@@ -22,8 +27,34 @@ struct SubTskGphBuilderUtil {
   static bool IsBoxingP2S(const SbpParallel& src, const SbpParallel& dst);
   static bool IsBoxingP2B(const SbpParallel& src, const SbpParallel& dst);
   static bool IsBoxingB2B(const SbpParallel& src, const SbpParallel& dst);
+  static bool IsBoxingB2S(const SbpParallel& src, const SbpParallel& dst);
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
   static bool IsErrorBoxingNotSupported(const ErrorProto& error);
+  static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
+
+  template<typename NodeType>
+  static int64_t FindNearestNodeIndex(const std::vector<NodeType*> from_nodes,
+                                      const NodeType* to_node) {
+    CHECK(!from_nodes.empty());
+    int64_t nearest_from_node_idx = -1;
+    int64_t nearest_distance = SubTskGphBuilderUtil::kDistanceMax;
+    for (int64_t i = 0; i < from_nodes.size(); ++i) {
+      NodeType* from_node = from_nodes.at(i);
+      int64_t distance = SubTskGphBuilderUtil::GetDistance(from_node, to_node);
+      if (distance < nearest_distance) {
+        nearest_from_node_idx = i;
+        nearest_distance = distance;
+      }
+    }
+    return nearest_from_node_idx;
+  }
+
+  template<typename NodeType>
+  static NodeType* FindNearestNode(const std::vector<NodeType*> from_nodes,
+                                   const NodeType* to_node) {
+    const int64_t idx = FindNearestNodeIndex<NodeType>(from_nodes, to_node);
+    return from_nodes.at(idx);
+  }
 };
 
 }  // namespace oneflow

@@ -433,7 +433,6 @@ REGISTER_USER_OP("conv_bias_grad")
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("dy", 0)->has_value());
       ctx->BatchAxis4ArgNameAndIndex("bias_diff", 0)->clear_value();
       return Maybe<void>::Ok();
     })

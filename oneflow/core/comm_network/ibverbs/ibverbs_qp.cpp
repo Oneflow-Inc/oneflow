@@ -2,6 +2,7 @@
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
@@ -14,7 +15,8 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   // qp_
   ibv_device_attr device_attr;
   CHECK_EQ(ibv_query_device(ctx, &device_attr), 0);
-  uint32_t max_recv_wr = Global<ResourceDesc>::Get()->rdma_recv_msg_buf_byte() / sizeof(ActorMsg);
+  uint32_t max_recv_wr =
+      Global<ResourceDesc, ForSession>::Get()->rdma_recv_msg_buf_byte() / sizeof(ActorMsg);
   max_recv_wr = std::min<uint32_t>(max_recv_wr, device_attr.max_qp_wr);
   ibv_qp_init_attr qp_init_attr;
   qp_init_attr.qp_context = nullptr;

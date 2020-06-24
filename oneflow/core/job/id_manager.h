@@ -4,6 +4,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -32,7 +33,7 @@ class IDMgr final {
   int64_t NewChunkId() { return chunk_id_count_++; }
 
   // MemZoneId
-  int64_t CpuMemZoneId() const { return Global<ResourceDesc>::Get()->GpuDeviceNum(); }
+  int64_t CpuMemZoneId() const { return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum(); }
   bool IsCpuMemZone(int64_t mem_zone_id) const { return mem_zone_id == CpuMemZoneId(); }
   bool IsGpuMemZone(int64_t mem_zone_id) const { return mem_zone_id < gpu_device_num_; }
   int64_t GpuMemZoneId(int64_t dev_phy_id) const { return dev_phy_id; }

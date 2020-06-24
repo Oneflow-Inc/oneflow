@@ -1,9 +1,12 @@
 from __future__ import absolute_import
+
 from contextlib import contextmanager
 
+
 class ScopeStack(object):
-    def __init__(self, init = []):
-        if not isinstance(init, list): init = [init]
+    def __init__(self, init=[]):
+        if not isinstance(init, list):
+            init = [init]
         assert isinstance(init, list)
         self.stack_ = init
 

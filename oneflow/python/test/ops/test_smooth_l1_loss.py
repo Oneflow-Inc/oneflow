@@ -1,10 +1,10 @@
-import oneflow as flow
-import numpy as np
-from collections import OrderedDict
 import uuid
-from test_util import GenArgList
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
+from collections import OrderedDict
+
+import numpy as np
+import oneflow as flow
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+
 
 def gen_numpy_data(prediction, label, beta=1.0):
     original_shape = prediction.shape
@@ -30,11 +30,12 @@ def gen_numpy_data(prediction, label, beta=1.0):
             prediction_grad[i] = diff / beta
         else:
             prediction_grad[i] = np.sign(diff)
-    
+
     return {
         "loss": loss.reshape(original_shape),
-        "prediction_grad": prediction_grad.reshape(original_shape)
+        "prediction_grad": prediction_grad.reshape(original_shape),
     }
+
 
 def test_smooth_l1_loss(_):
     arg_dict = OrderedDict()
@@ -56,20 +57,32 @@ def test_smooth_l1_loss(_):
         func_config.train.primary_lr(1e-4)
         func_config.train.model_update_conf(dict(naive_conf={}))
 
-        prediction = np.random.randn(*prediction_shape).astype(type_name_to_np_type[data_type])
-        label = np.random.randn(*prediction_shape).astype(type_name_to_np_type[data_type])
+        prediction = np.random.randn(*prediction_shape).astype(
+            type_name_to_np_type[data_type]
+        )
+        label = np.random.randn(*prediction_shape).astype(
+            type_name_to_np_type[data_type]
+        )
 
         np_result = gen_numpy_data(prediction, label, beta)
 
         def assert_prediction_grad(b):
             prediction_grad = np_result["prediction_grad"]
             assert prediction_grad.dtype == type_name_to_np_type[data_type]
-            assert np.allclose(prediction_grad, b.ndarray()), (case, prediction_grad, b.ndarray())
+            assert np.allclose(prediction_grad, b.ndarray()), (
+                case,
+                prediction_grad,
+                b.ndarray(),
+            )
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def TestJob(
-            prediction=flow.FixedTensorDef(prediction_shape, dtype=type_name_to_flow_type[data_type]),
-            label=flow.FixedTensorDef(prediction_shape, dtype=type_name_to_flow_type[data_type])
+            prediction=flow.FixedTensorDef(
+                prediction_shape, dtype=type_name_to_flow_type[data_type]
+            ),
+            label=flow.FixedTensorDef(
+                prediction_shape, dtype=type_name_to_flow_type[data_type]
+            ),
         ):
             v = flow.get_variable(
                 "prediction",
@@ -84,7 +97,7 @@ def test_smooth_l1_loss(_):
                 loss = flow.smooth_l1_loss(prediction, label, beta)
                 flow.losses.add_loss(loss)
                 return loss
-        
+
         loss_np = np_result["loss"]
         assert loss_np.dtype == type_name_to_np_type[data_type]
         loss = TestJob(prediction, label).get().ndarray()

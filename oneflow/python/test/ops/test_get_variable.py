@@ -1,5 +1,5 @@
-import oneflow as flow
 import numpy as np
+import oneflow as flow
 
 
 def test_get_variable_with_same_name(test_case):
@@ -15,13 +15,13 @@ def test_get_variable_with_same_name(test_case):
             initializer=flow.random_uniform_initializer(),
         )
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def TestJob0():
         v1 = get_v()
         v2 = get_v()
         return v1, v2
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def TestJob1():
         return get_v()
 

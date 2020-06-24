@@ -30,9 +30,10 @@ REGISTER_USER_OP("split_like")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& user_op_conf) {
       for (size_t i = 0; i < user_op_conf.input_size("like"); ++i) {
-        user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", i);
-        CHECK(like_arg_modifier != nullptr);
-        like_arg_modifier->set_use_header_only(true);
+        user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", i);
+        CHECK_NOTNULL(like_modifier);
+        like_modifier->set_use_header_only(true);
+        like_modifier->set_requires_grad(false);
       }
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {

@@ -1,7 +1,8 @@
-import oneflow as flow
-import numpy as np
-import tensorflow as tf
 from collections import OrderedDict
+
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
 from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -11,11 +12,15 @@ for gpu in gpus:
 
 def _random_inputs(params_shape, indices_shape, axis):
     params = np.random.rand(*params_shape).astype(np.float32)
-    indices = np.random.randint(low=0, high=params_shape[axis], size=indices_shape, dtype=np.int32)
+    indices = np.random.randint(
+        low=0, high=params_shape[axis], size=indices_shape, dtype=np.int32
+    )
     return params, indices
 
 
-def _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, compare_fn):
+def _make_gather_fn(
+    params, indices, axis, batch_dims, device_type, mirrored, compare_fn
+):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
@@ -42,7 +47,7 @@ def _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, co
 
     if mirrored:
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def gather_fn(
             params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
             indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
@@ -51,7 +56,7 @@ def _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, co
 
     else:
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def gather_fn(
             params_def=flow.FixedTensorDef(params.shape, dtype=flow.float),
             indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
@@ -60,8 +65,16 @@ def _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, co
 
     return gather_fn
 
-def _compare_gather_with_tf(test_case, device_type, params_shape,
-        indices_shape, axis, batch_dims, mirrored=False):
+
+def _compare_gather_with_tf(
+    test_case,
+    device_type,
+    params_shape,
+    indices_shape,
+    axis,
+    batch_dims,
+    mirrored=False,
+):
     params, indices = _random_inputs(params_shape, indices_shape, axis)
 
     i = tf.constant(indices)
@@ -71,22 +84,27 @@ def _compare_gather_with_tf(test_case, device_type, params_shape,
 
     dy = t.gradient(y, x)
     if isinstance(dy, tf.IndexedSlices):
-        test_case.assertTrue(np.array_equal(indices.ravel(), dy.indices.numpy().ravel()))
+        test_case.assertTrue(
+            np.array_equal(indices.ravel(), dy.indices.numpy().ravel())
+        )
         zero_params = tf.Variable(np.full(params.shape, 0.0, dtype=np.float32))
         dy = tf.tensor_scatter_nd_add(zero_params, i, dy.values)
 
     if mirrored:
 
         def compare_dy(params_grad):
-            test_case.assertTrue(np.array_equal(dy.numpy(),
-                params_grad.ndarray_list()[0]))
+            test_case.assertTrue(
+                np.array_equal(dy.numpy(), params_grad.ndarray_list()[0])
+            )
 
     else:
 
         def compare_dy(params_grad):
             test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.ndarray()))
 
-    gather_fn = _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, compare_dy)
+    gather_fn = _make_gather_fn(
+        params, indices, axis, batch_dims, device_type, mirrored, compare_dy
+    )
 
     check_point = flow.train.CheckPoint()
     check_point.init()
@@ -97,6 +115,7 @@ def _compare_gather_with_tf(test_case, device_type, params_shape,
         of_y = gather_fn(params, indices).get().ndarray()
 
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
+
 
 def test_gather(test_case):
     arg_dict = OrderedDict()
@@ -131,6 +150,7 @@ def test_gather_case_2(test_case):
     for arg in GenArgList(arg_dict):
         _compare_gather_with_tf(test_case, *arg)
 
+
 def test_gather_case_3(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
@@ -141,5 +161,3 @@ def test_gather_case_3(test_case):
     arg_dict["mirrored"] = [True]
     for arg in GenArgList(arg_dict):
         _compare_gather_with_tf(test_case, *arg)
-
-

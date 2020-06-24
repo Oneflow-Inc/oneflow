@@ -1,36 +1,43 @@
 import unittest
-import numpy as np
 
+import numpy as np
 import oneflow as flow
 
 config = flow.function_config()
+
 
 def make_job(input_shape, axis, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
-    @flow.function(config)
-    def softmax_job(x = flow.FixedTensorDef(input_shape, dtype=dtype)):
+    @flow.global_function(config)
+    def softmax_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.nn.softmax(x, axis=axis)
+
     return softmax_job
+
 
 def make_xla_job(input_shape, axis, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
-    @flow.function(config)
-    def xla_softmax_job(x = flow.FixedTensorDef(input_shape, dtype=dtype)):
+    @flow.global_function(config)
+    def xla_softmax_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.nn.softmax(x, axis=axis)
+
     return xla_softmax_job
+
 
 def make_trt_job(input_shape, axis, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(True)
 
-    @flow.function(config)
-    def trt_softmax_job(x = flow.FixedTensorDef(input_shape, dtype=dtype)):
+    @flow.global_function(config)
+    def trt_softmax_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.nn.softmax(x, axis=axis)
+
     return trt_softmax_job
+
 
 class TestSoftmax(unittest.TestCase):
     def _test_body(self, x, axis, dtype=np.float32):
@@ -69,5 +76,6 @@ class TestSoftmax(unittest.TestCase):
         self._test_random_body((1, 5, 2), axis=1)
         self._test_random_body((1, 5, 2), axis=2)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

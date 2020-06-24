@@ -2,11 +2,12 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
 std::string MachineCtx::GetCtrlAddr(int64_t machine_id) const {
-  const Machine& mchn = Global<ResourceDesc>::Get()->machine(machine_id);
+  const Machine& mchn = Global<ResourceDesc, ForSession>::Get()->machine(machine_id);
   int32_t ctrl_port = (mchn.ctrl_port_agent() != -1) ? (mchn.ctrl_port_agent())
                                                      : Global<EnvDesc>::Get()->ctrl_port();
   return mchn.addr() + ":" + std::to_string(ctrl_port);

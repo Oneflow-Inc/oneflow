@@ -15,6 +15,29 @@ class BlobDesc;
 
 namespace user_op {
 
+class AttrVal {
+ public:
+  AttrVal() = default;
+  virtual ~AttrVal() = default;
+
+ private:
+  OF_DISALLOW_COPY_AND_MOVE(AttrVal)
+};
+
+template<typename T>
+class TypedAttrVal final : public AttrVal {
+ public:
+  TypedAttrVal(T v) : val_(v) {}
+  ~TypedAttrVal() = default;
+
+  const T& val() const { return val_; }
+
+ private:
+  OF_DISALLOW_COPY_AND_MOVE(TypedAttrVal)
+
+  T val_;
+};
+
 class UserOpConfWrapper final {
  public:
   UserOpConfWrapper(const OperatorConf&);
@@ -30,13 +53,14 @@ class UserOpConfWrapper final {
   int32_t output_size(const std::string& arg_name) const;
 
   template<typename T>
-  T attr(const std::string& attr_name) const;
+  const T& attr(const std::string& attr_name) const;
 
  private:
   UserOpConfWrapper() = default;
   friend class UserOpConfWrapperBuilder;
 
   OperatorConf op_conf_;
+  mutable HashMap<std::string, std::shared_ptr<AttrVal>> attr_cache_;
 };
 
 class UserOpWrapper final {

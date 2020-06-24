@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-REGISTER_USER_OP("COCOReader")
+REGISTER_CPU_ONLY_USER_OP("COCOReader")
     .Output("image")
     .Output("image_id")
     .Output("image_size")
