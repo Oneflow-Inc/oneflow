@@ -21,6 +21,7 @@
 #include "oneflow/core/operator/interface_op_util.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/vm/oneflow_vm.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 

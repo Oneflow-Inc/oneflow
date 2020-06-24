@@ -80,6 +80,10 @@ Maybe<void> VariableOp::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
+Symbol<OperatorConf> VariableOp::GetOpConfWithoutOpNameAndLbn() const {
+  return SymbolOf(this->op_conf());
+}
+
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);
 REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kVariableConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kVariableConf);

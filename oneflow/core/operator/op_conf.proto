@@ -1471,7 +1471,7 @@ message AccTickOpConf {
 }
 
 message ModelInitOpConf {
-  required string tick = 1;
+  optional string tick = 1;
   repeated string out = 2;
   repeated string variable_op_name = 3;
   repeated VariableOpConf original_variable_conf = 4;
@@ -1770,6 +1770,7 @@ message OperatorConf {
   optional bool enable_cudnn = 5;
   optional int64 cudnn_buf_limit_mbyte = 6;
   repeated string ctrl_in_op_name = 7;
+  optional int64 logical_object_id = 8;
   oneof op_type {
     // system op
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;
