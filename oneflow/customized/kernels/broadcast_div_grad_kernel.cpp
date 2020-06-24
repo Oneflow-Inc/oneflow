@@ -42,19 +42,16 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_BROADCAST_DIV_GRAD_KERNEL(device, dtype_pair)                      \
-  REGISTER_USER_KERNEL("broadcast_div_grad")                                        \
-      .SetCreateFn<BroadcastDivGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()  \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
-        return ctx.device_type() == device                                          \
-               && y_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);             \
-      })                                                                            \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                  \
-        user_op::TensorDesc* z = ctx->TensorDesc4ArgNameAndIndex("z", 0);           \
-        const DataType& data_type = z->data_type();                                 \
-        const int64_t elem_cnt = z->shape().elem_cnt();                             \
-        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));         \
+#define REGISTER_BROADCAST_DIV_GRAD_KERNEL(device, dtype_pair)                          \
+  REGISTER_USER_KERNEL("broadcast_div_grad")                                            \
+      .SetCreateFn<BroadcastDivGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()      \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device                               \
+                       & user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
+      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                      \
+        user_op::TensorDesc* z = ctx->TensorDesc4ArgNameAndIndex("z", 0);               \
+        const DataType& data_type = z->data_type();                                     \
+        const int64_t elem_cnt = z->shape().elem_cnt();                                 \
+        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));             \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_DIV_GRAD_KERNEL, DEVICE_TYPE_SEQ,

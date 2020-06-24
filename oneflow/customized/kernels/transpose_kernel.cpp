@@ -25,19 +25,12 @@ class TransposeKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_TRANSPOSE_KERNEL(device, dtype)                                         \
-  REGISTER_USER_KERNEL("transpose")                                                      \
-      .SetCreateFn<TransposeKernel<device, dtype>>()                                     \
-      .SetIsMatchedPred([](const KernelRegContext& ctx) {                                \
-        const TensorDesc* tensor_in_desc = ctx.TensorDesc4ArgNameAndIndex("input", 0);   \
-        const TensorDesc* tensor_out_desc = ctx.TensorDesc4ArgNameAndIndex("output", 0); \
-        if (ctx.device_type() == device                                                  \
-            && tensor_out_desc->data_type() == GetDataType<dtype>::value                 \
-            && tensor_in_desc->data_type() == GetDataType<dtype>::value) {               \
-          return true;                                                                   \
-        }                                                                                \
-        return false;                                                                    \
-      });
+#define REGISTER_TRANSPOSE_KERNEL(device, dtype)                                       \
+  REGISTER_USER_KERNEL("transpose")                                                    \
+      .SetCreateFn<TransposeKernel<device, dtype>>()                                   \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device                              \
+                       & user_op::HobDataType("input", 0) == GetDataType<dtype>::value \
+                       & user_op::HobDataType("output", 0) == GetDataType<dtype>::value);
 
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int8_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int32_t)
