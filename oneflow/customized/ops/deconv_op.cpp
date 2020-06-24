@@ -37,12 +37,11 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     for (int32_t i = 0; i < NDims; ++i) {
       int32_t effective_filter_size = (kernel_size.at(i) - 1) * dilation_rate.at(i) + 1;
       if (padding == "valid") {
-        CHECK_EQ(output_shape.at(i),
-                 (in->shape().At(idx_offset + i) - effective_filter_size + strides.at(i))
-                     / strides.at(i));
+        CHECK_EQ(in->shape().At(idx_offset + i),
+                 (output_shape.at(i) - effective_filter_size + strides.at(i)) / strides.at(i));
       } else if (padding == "same") {
-        CHECK_EQ(output_shape.at(i),
-                 (in->shape().At(idx_offset + i) + strides.at(i) - 1) / strides.at(i));
+        CHECK_EQ(in->shape().At(idx_offset + i),
+                 (output_shape.at(i) + strides.at(i) - 1) / strides.at(i));
       } else {
         UNIMPLEMENTED();
       }
