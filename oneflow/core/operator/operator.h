@@ -252,8 +252,8 @@ class Operator {
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       KernelConf*) const {}
 
-  virtual LogicalBlobId ibn2lbi(const std::string& input_bn) const;
-  virtual LogicalBlobId obn2lbi(const std::string& output_bn) const;
+  virtual LogicalBlobId lbi4ibn(const std::string& input_bn) const;
+  virtual LogicalBlobId lbi4obn(const std::string& output_bn) const;
 
   OperatorConf* mut_op_conf() { return op_attribute_.mutable_op_conf(); }
 

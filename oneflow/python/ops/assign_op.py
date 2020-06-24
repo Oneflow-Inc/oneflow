@@ -14,6 +14,28 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow
 
 
+@oneflow_export("assign")
+def assign(ref, value, dtype=None, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Assign_")
+
+    if os.getenv("ENABLE_USER_OP") == "True":
+        op = (
+            oneflow.consistent_user_op_builder(name)
+            .Op("assign")
+            .Input("ref", [ref])
+            .Input("value", [value])
+            .Build()
+        )
+        op.InferAndTryRun()
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(op_conf, "name", name)
+        op_conf.assign_conf.ref = ref.unique_name
+        op_conf.assign_conf.value = value.unique_name
+        compile_context.CurJobAddConsistentOp(op_conf)
+
+
 @oneflow_export("system.assign")
 def api_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     # TODO(lixinqi): check ref.is_lvalue

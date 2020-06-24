@@ -43,7 +43,7 @@ void ReduceGatherOp::VirtualGenKernelConf(
   CHECK_EQ(offset, RtBlobDesc(*GetBlobDesc4BnInOp(SoleObn())).ByteSizeOfBlobBody());
 }
 
-LogicalBlobId ReduceGatherOp::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId ReduceGatherOp::lbi4obn(const std::string& output_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
   ret.set_blob_name("out");

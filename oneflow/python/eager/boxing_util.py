@@ -10,36 +10,63 @@ import oneflow
 
 
 def BoxingTo(builder, x_blob_object, op_arg_parallel_attr):
-    ret_blob_object = TryBroadcastOneToMany(
-        builder, x_blob_object, op_arg_parallel_attr
-    )
-    if ret_blob_object is not None:
-        return ret_blob_object
-    assert (
-        x_blob_object.op_arg_parallel_attr.opt_mirrored_parallel
-        == op_arg_parallel_attr.opt_mirrored_parallel
-    ), (
+    print("BoxingTo", x_blob_object.op_arg_blob_attr.logical_blob_name)
+    x_opt_mirrored_parallel = x_blob_object.op_arg_parallel_attr.opt_mirrored_parallel
+    op_arg_opt_mirrored_parallel = op_arg_parallel_attr.opt_mirrored_parallel
+    assert x_opt_mirrored_parallel == op_arg_opt_mirrored_parallel, (
         "\nx_arg_attribute: %s\nop_arg_parallel_attr: %s"
         % (x_blob_object.op_arg_parallel_attr, op_arg_parallel_attr)
     )
+    boxing_method_getters = [TryBroadcastOneToMany, TryCopyHd]
+    boxing_methods = []
+    for get_boxing_method in boxing_method_getters:
+        method = get_boxing_method(builder, x_blob_object, op_arg_parallel_attr)
+        if method is not None:
+            boxing_methods.append((method, get_boxing_method.__name__))
+    if len(boxing_methods) == 1:
+        return boxing_methods[0][0]()
+    elif len(boxing_methods) >= 1:
+        methods = ",".join([x[1] for x in boxing_methods])
+        raise NotImplementedError(
+            "multiple boxing methods found.\nmethods: %s\nlogical_blob_name: %s\nx_arg_attribute: %s\nop_arg_parallel_attr: %s\n"
+            % (
+                methods,
+                x_blob_object.op_arg_blob_attr.logical_blob_name,
+                x_blob_object.op_arg_parallel_attr,
+                op_arg_parallel_attr,
+            )
+        )
+    else:
+        raise NotImplementedError(
+            "no boxing method found.\nlogical_blob_name: %s\nx_arg_attribute: %s\nop_arg_parallel_attr: %s"
+            % (
+                x_blob_object.op_arg_blob_attr.logical_blob_name,
+                x_blob_object.op_arg_parallel_attr,
+                op_arg_parallel_attr,
+            )
+        )
+
+
+def TryCopyHd(builder, x_blob_object, op_arg_parallel_attr):
     blob_device_ids = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
     arg_parallel_desc_symbol = op_arg_parallel_attr.parallel_desc_symbol
     op_device_ids = arg_parallel_desc_symbol.machine_id2device_id_list
     prompt = "\nboxing is not supported yet."
-    assert blob_device_ids == op_device_ids, (
-        "\nx_arg_attribute: %s\nop_arg_parallel_attr: %s"
-        % (x_blob_object.op_arg_parallel_attr, op_arg_parallel_attr)
-    )
+    if blob_device_ids != op_device_ids:
+        return None
+    x_sbp_parallel = x_blob_object.op_arg_parallel_attr.sbp_parallel
+    op_arg_sbp_parallel = op_arg_parallel_attr.sbp_parallel
+    if x_sbp_parallel != op_arg_sbp_parallel:
+        return None
     blob_device_tag = x_blob_object.parallel_desc_symbol.device_tag
     op_device_tag = arg_parallel_desc_symbol.device_tag
-    assert blob_device_tag != op_device_tag, (
-        "\nx_arg_attribute: %s\nop_arg_parallel_attr: %s"
-        % (x_blob_object.op_arg_parallel_attr, op_arg_parallel_attr)
-    )
-    assert (
-        blob_device_tag != op_device_tag
-    ), "\nblob_device_tag: %s\nop_device_tag: %s" % (blob_device_tag, op_device_tag)
-    return BuildCopyHdInstruction(builder, x_blob_object, op_device_tag)
+    if blob_device_tag == op_device_tag:
+        return None
+
+    def Boxing():
+        return BuildCopyHdInstruction(builder, x_blob_object, op_device_tag)
+
+    return Boxing
 
 
 def TryBroadcastOneToMany(builder, x_blob_object, op_arg_parallel_attr):
@@ -49,18 +76,23 @@ def TryBroadcastOneToMany(builder, x_blob_object, op_arg_parallel_attr):
         return None
     if not op_arg_parallel_attr.sbp_parallel.HasField("broadcast_parallel"):
         return None
-    tmp_blob_object = OneToManyBroadcastBlobReference(
-        builder, x_blob_object, op_arg_parallel_attr.parallel_desc_symbol
-    )
-    if (
-        tmp_blob_object.parallel_desc_symbol
-        == op_arg_parallel_attr.parallel_desc_symbol
-    ):
-        return tmp_blob_object
-    ret = BuildCopyHdInstruction(
-        builder, tmp_blob_object, op_arg_parallel_attr.parallel_desc_symbol.device_tag
-    )
-    return ret
+
+    def Boxing():
+        tmp_blob_object = OneToManyBroadcastBlobReference(
+            builder, x_blob_object, op_arg_parallel_attr.parallel_desc_symbol
+        )
+        tmp_parallel_desc_sym = tmp_blob_object.parallel_desc_symbol
+        op_arg_parallel_desc_sym = op_arg_parallel_attr.parallel_desc_symbol
+        if tmp_parallel_desc_sym == op_arg_parallel_desc_sym:
+            return tmp_blob_object
+        ret = BuildCopyHdInstruction(
+            builder,
+            tmp_blob_object,
+            op_arg_parallel_attr.parallel_desc_symbol.device_tag,
+        )
+        return ret
+
+    return Boxing
 
 
 def Assign(builder, ref_blob_object, value_blob_object):

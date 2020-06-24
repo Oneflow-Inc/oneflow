@@ -33,7 +33,7 @@ class NormalModelUpdtOp : public Operator {
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
+  LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };
 
 }  // namespace oneflow

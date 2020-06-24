@@ -5,10 +5,11 @@ import oneflow.core.job.mirrored_parallel_pb2 as mirrored_parallel_pb
 
 
 class OpArgBlobAttribute(object):
-    def __init__(self, batch_axis, blob_desc):
+    def __init__(self, batch_axis, blob_desc, logical_blob_name):
         self.batch_axis_ = batch_axis
         self.blob_desc_ = blob_desc
         self.shape_ = tuple(self.blob_desc_.body.shape.dim)
+        self.logical_blob_name_ = logical_blob_name
 
     @property
     def shape(self):
@@ -29,6 +30,10 @@ class OpArgBlobAttribute(object):
     @property
     def is_dynamic(self):
         return self.blob_desc_.is_dynamic
+
+    @property
+    def logical_blob_name(self):
+        return self.logical_blob_name_
 
 
 class OpArgParallelAttribute(object):
@@ -94,9 +99,12 @@ def GetOpArgBlobAttribute(op_attribute, bn_in_op):
     blob_desc_signature_map = (
         op_attribute.logical_blob_desc_signature.bn_in_op2blob_desc
     )
+    arg_signature_map = op_attribute.arg_signature.bn_in_op2lbi
+    lbi = arg_signature_map[bn_in_op]
     return OpArgBlobAttribute(
         batch_axis=batch_axis_signature_map[bn_in_op],
         blob_desc=blob_desc_signature_map[bn_in_op],
+        logical_blob_name="%s/%s" % (lbi.op_name, lbi.blob_name),
     )
 
 
