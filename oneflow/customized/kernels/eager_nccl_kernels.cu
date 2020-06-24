@@ -1,6 +1,7 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
@@ -15,14 +16,14 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape(), out->shape());
     CHECK_EQ(in->data_type(), out->data_type());
-    const std::vector<int64_t> device_set_machine_ids =
-        ctx->Attr<std::vector<int64_t>>("device_set_machine_ids");
-    const std::vector<int64_t> device_set_device_ids =
-        ctx->Attr<std::vector<int64_t>>("device_set_device_ids");
-    CHECK_EQ(device_set_machine_ids.size(), device_set_device_ids.size());
     std::set<std::pair<int64_t, int64_t>> device_set;
-    FOR_RANGE(int64_t, i, 0, device_set_machine_ids.size()) {
-      device_set.emplace(std::make_pair(device_set_machine_ids.at(i), device_set_device_ids.at(i)));
+    const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
+    ParallelConf parallel_conf{};
+    CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
+    const ParallelDesc parallel_desc(parallel_conf);
+    FOR_RANGE(int64_t, parallel_id, 0, parallel_desc.parallel_num()) {
+      device_set.emplace(std::make_pair(parallel_desc.MachineIdForParallelId(parallel_id),
+                                        parallel_desc.DeviceIdForParallelId(parallel_id)));
     }
     ncclComm_t comm = Global<EagerNcclCommMgr>::Get()->GetCommForDevice(device_set);
     NcclCheck(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
