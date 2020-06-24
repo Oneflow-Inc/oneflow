@@ -74,17 +74,13 @@ class GatherKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GATHER_KERNEL(device, in_type, indices_type)                                   \
-  REGISTER_USER_KERNEL("gather")                                                                \
-      .SetCreateFn<                                                                             \
-          GatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>()    \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);           \
-        const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0); \
-        return ctx.device_type() == device                                                      \
-               && indices_desc->data_type() == OF_PP_PAIR_SECOND(indices_type)                  \
-               && in_desc->data_type() == OF_PP_PAIR_SECOND(in_type);                           \
-      });
+#define REGISTER_GATHER_KERNEL(device, in_type, indices_type)                                \
+  REGISTER_USER_KERNEL("gather")                                                             \
+      .SetCreateFn<                                                                          \
+          GatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device                                    \
+                       & user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(in_type)         \
+                       & user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_type));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_KERNEL, DEVICE_TYPE_SEQ, GATHER_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)

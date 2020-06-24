@@ -21,14 +21,11 @@ class CpuLeakyReluKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_LEAKY_RELU_KERNEL(dtype)                                       \
-  REGISTER_USER_KERNEL("leaky_relu")                                                \
-      .SetCreateFn<CpuLeakyReluKernel<dtype>>()                                     \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                \
-               && y_desc->data_type() == GetDataType<dtype>::value;                 \
-      });
+#define REGISTER_CPU_LEAKY_RELU_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("leaky_relu")                                \
+      .SetCreateFn<CpuLeakyReluKernel<dtype>>()                     \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
+                       & user_op::HobDataType("y", 0) == GetDataType<dtype>::value);
 
 REGISTER_CPU_LEAKY_RELU_KERNEL(float)
 REGISTER_CPU_LEAKY_RELU_KERNEL(double)
@@ -54,14 +51,11 @@ class CpuLeakyReluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_LEAKY_RELU_GRAD_KERNEL(dtype)                                    \
-  REGISTER_USER_KERNEL("leaky_relu_grad")                                             \
-      .SetCreateFn<CpuLeakyReluGradKernel<dtype>>()                                   \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                  \
-               && dx_desc->data_type() == GetDataType<dtype>::value;                  \
-      });
+#define REGISTER_CPU_LEAKY_RELU_GRAD_KERNEL(dtype)                  \
+  REGISTER_USER_KERNEL("leaky_relu_grad")                           \
+      .SetCreateFn<CpuLeakyReluGradKernel<dtype>>()                 \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
+                       & user_op::HobDataType("dx", 0) == GetDataType<dtype>::value);
 
 REGISTER_CPU_LEAKY_RELU_GRAD_KERNEL(float)
 REGISTER_CPU_LEAKY_RELU_GRAD_KERNEL(double)
