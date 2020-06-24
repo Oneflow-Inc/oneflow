@@ -1749,6 +1749,11 @@ message TensorListToTensorBufferOpConf {
   required string out = 2;
 }
 
+message TensorListSplitOpConf {
+  required string in = 1;
+  repeated string out = 2;
+}
+
 message CollectiveBoxingGenericOpConf {
   required LogicalBlobId lbi = 1;
   required boxing.collective.RankDesc rank_desc = 2;
@@ -1829,6 +1834,7 @@ message OperatorConf {
     TensorListToTensorBufferOpConf tensor_list_to_tensor_buffer_conf = 169;
     CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
     BoxingIdentityOpConf boxing_identity_conf = 171;
+    TensorListSplitOpConf tensor_list_split_conf = 172;
     UserOpConf user_conf = 199;
     
     // domain op
