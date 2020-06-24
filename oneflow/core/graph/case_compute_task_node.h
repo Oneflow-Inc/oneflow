@@ -20,6 +20,7 @@ class CaseCompTaskNode final : public CompTaskNode {
  private:
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
+  bool IsIndependent() const override { return true; }
 };
 
 }  // namespace oneflow

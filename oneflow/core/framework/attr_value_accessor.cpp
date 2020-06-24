@@ -93,6 +93,17 @@ void AttrValAccessor<std::vector<Shape>>::Attr(const std::vector<Shape>& cpp_val
   }
 }
 
+// List of String Attr
+template<>
+std::vector<std::string> AttrValAccessor<std::vector<std::string>>::Attr(const UserOpAttrVal& val) {
+  return PbRpf2StdVec<std::string>(val.at_list_string().val());
+}
+template<>
+void AttrValAccessor<std::vector<std::string>>::Attr(const std::vector<std::string>& cpp_val,
+                                                     UserOpAttrVal* attr_val) {
+  *(attr_val->mutable_at_list_string()->mutable_val()) = StdVec2PbRpf<std::string>(cpp_val);
+}
+
 }  // namespace user_op
 
 }  // namespace oneflow
