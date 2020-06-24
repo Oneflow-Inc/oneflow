@@ -43,11 +43,11 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn(const std::string& bn) {
   };
 }
 
-#define REGISTER_SOFTMAX_KERNEL(device, dtype)                                        \
-  REGISTER_USER_KERNEL("softmax")                                                     \
-      .SetCreateFn<SoftmaxKernel<device, dtype>>()                                    \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device                             \
-                       & user_op::HobDataType("out", 0) == GetDataType<dtype>::value) \
+#define REGISTER_SOFTMAX_KERNEL(device, dtype)                                          \
+  REGISTER_USER_KERNEL("softmax")                                                       \
+      .SetCreateFn<SoftmaxKernel<device, dtype>>()                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(GenInferTmpSizeFn<dtype>("in"));
 
 REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, float)
@@ -84,11 +84,11 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SOFTMAX_GRAD_KERNEL(device, dtype)                                  \
-  REGISTER_USER_KERNEL("softmax_grad")                                               \
-      .SetCreateFn<SoftmaxGradKernel<device, dtype>>()                               \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device                            \
-                       & user_op::HobDataType("dx", 0) == GetDataType<dtype>::value) \
+#define REGISTER_SOFTMAX_GRAD_KERNEL(device, dtype)                                    \
+  REGISTER_USER_KERNEL("softmax_grad")                                                 \
+      .SetCreateFn<SoftmaxGradKernel<device, dtype>>()                                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                            \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(GenInferTmpSizeFn<dtype>("dx"));
 
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, float)

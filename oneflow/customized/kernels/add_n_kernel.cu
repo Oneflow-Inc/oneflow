@@ -101,8 +101,8 @@ class GpuAddNKernel : public user_op::OpKernel {
 #define REGISTER_GPU_ADDN_KERNEL(cpp_type, dtype)                                               \
   REGISTER_USER_KERNEL("add_n")                                                                 \
       .SetCreateFn<GpuAddNKernel<cpp_type>>()                                                   \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                             \
-                       & user_op::HobDataType("in", 0) == dtype)                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+                       & (user_op::HobDataType("in", 0) == dtype))                              \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
@@ -174,8 +174,8 @@ class GpuAddNHalfKernel : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("add_n")
     .SetCreateFn<GpuAddNHalfKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU
-                     & user_op::HobDataType("in", 0) == DataType::kFloat16)
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
+                     & (user_op::HobDataType("in", 0) == DataType::kFloat16))
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));
