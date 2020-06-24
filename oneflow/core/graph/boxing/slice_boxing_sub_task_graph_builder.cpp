@@ -28,6 +28,13 @@ bool IsCopyContiguous(const TensorSliceView& src, const TensorSliceView& dst) {
   return true;
 }
 
+bool IsSameDevice(const ParallelDesc& in_pd, const ParallelDesc& out_pd,
+                  const int64_t in_parallel_id, const int64_t out_parallel_id) {
+  return in_pd.device_type() == out_pd.device_type()
+         && in_pd.DeviceIdForParallelId(in_parallel_id)
+                == out_pd.DeviceIdForParallelId(out_parallel_id);
+}
+
 }  // namespace
 
 Maybe<void> SliceBoxingSubTskGphBuilder::Build(
@@ -174,9 +181,8 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
             } else {
               bool in_contiguous = IsCopyContiguous(in_slice, intersection);
               bool out_contiguous = IsCopyContiguous(intersection, out_slice);
-              if (((in_pd.device_type() == out_pd.device_type())
-                   && (in_pd.DeviceIdForParallelId(in_id) == out_pd.DeviceIdForParallelId(out_id)))
-                  || (IsCopyContiguous(in_slice, out_slice))) {
+              if (IsSameDevice(in_pd, out_pd, in_id, out_id)
+                  || IsCopyContiguous(in_slice, out_slice)) {
                 out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
               } else if (in_contiguous && !out_contiguous) {
                 SliceBoxingTaskNode* copy_to_out_continuous =
