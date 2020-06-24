@@ -31,17 +31,14 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MATH_BINARY_BROADCAST_KERNEL(math_type_pair, device, data_type_pair)      \
-  REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                   \
-      .SetCreateFn<MathBinaryBroadcastKernel<                                              \
-          device, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair),      \
-          &NdarrayUtil<device, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(               \
-              Broadcast, OF_PP_PAIR_SECOND(math_type_pair))>>()                            \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                         \
-        const user_op::TensorDesc* tensor_desc_z = ctx.TensorDesc4ArgNameAndIndex("z", 0); \
-        return ctx.device_type() == device                                                 \
-               && tensor_desc_z->data_type() == OF_PP_PAIR_SECOND(data_type_pair);         \
-      });
+#define REGISTER_MATH_BINARY_BROADCAST_KERNEL(math_type_pair, device, data_type_pair) \
+  REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                              \
+      .SetCreateFn<MathBinaryBroadcastKernel<                                         \
+          device, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair), \
+          &NdarrayUtil<device, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(          \
+              Broadcast, OF_PP_PAIR_SECOND(math_type_pair))>>()                       \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device                             \
+                       & user_op::HobDataType("z", 0) == OF_PP_PAIR_SECOND(data_type_pair));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
                                  MATH_BINARY_BROADCAST_FUNC_SEQ, DEVICE_TYPE_SEQ,
@@ -57,13 +54,9 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
           device, OF_PP_PAIR_FIRST(data_type_pair), int8_t,                                   \
           &NdarrayUtil<device, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(                  \
               Broadcast, OF_PP_PAIR_SECOND(math_type_pair))>>()                               \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                            \
-        const user_op::TensorDesc* tensor_desc_x = ctx.TensorDesc4ArgNameAndIndex("x", 0);    \
-        const user_op::TensorDesc* tensor_desc_z = ctx.TensorDesc4ArgNameAndIndex("z", 0);    \
-        return ctx.device_type() == device                                                    \
-               && tensor_desc_x->data_type() == OF_PP_PAIR_SECOND(data_type_pair)             \
-               && tensor_desc_z->data_type() == DataType::kInt8;                              \
-      });
+      .SetIsMatchedHob(user_op::HobDeviceType() == device                                     \
+                       & user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)    \
+                       & user_op::HobDataType("z", 0) == DataType::kInt8);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_LOGICAL_KERNEL,
                                  MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ, DEVICE_TYPE_SEQ,

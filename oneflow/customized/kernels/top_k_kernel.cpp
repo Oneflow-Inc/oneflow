@@ -85,11 +85,8 @@ class TopKCpuKernel final : public user_op::OpKernel {
 #define REGISTER_CPU_TOP_K_KERNEL(dtype)                                                 \
   REGISTER_USER_KERNEL("top_k")                                                          \
       .SetCreateFn<TopKCpuKernel<dtype>>()                                               \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                       \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);    \
-        return ctx.device_type() == DeviceType::kCPU                                     \
-               && in_desc->data_type() == GetDataType<dtype>::value;                     \
-      })                                                                                 \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                      \
+                       & user_op::HobDataType("in", 0) == GetDataType<dtype>::value)     \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                     \
         return ctx->Attr<int32_t>("k") > 1 ? in_shape->elem_cnt() * sizeof(int32_t) : 0; \

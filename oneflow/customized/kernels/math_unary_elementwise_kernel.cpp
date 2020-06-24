@@ -49,23 +49,16 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
       .SetCreateFn<                                                                                \
           MathUnaryElementwiseCpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),     \
                                         OF_PP_PAIR_FIRST(data_type_pair)>>()                       \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
-        const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);         \
-        const user_op::TensorDesc* y_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);         \
-        return ctx.device_type() == DeviceType::kCPU                                               \
-               && x_tensor_desc->data_type() == OF_PP_PAIR_SECOND(data_type_pair)                  \
-               && y_tensor_desc->data_type() == OF_PP_PAIR_SECOND(data_type_pair);                 \
-      });                                                                                          \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                                \
+                       & user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)         \
+                       & user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair));       \
                                                                                                    \
   REGISTER_USER_KERNEL((std::string("") + OF_PP_PAIR_FIRST(math_type_pair) + "_grad"))             \
       .SetCreateFn<                                                                                \
           MathUnaryElementwiseGradCpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor), \
                                             OF_PP_PAIR_FIRST(data_type_pair)>>()                   \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
-        const user_op::TensorDesc* x_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);         \
-        return ctx.device_type() == DeviceType::kCPU                                               \
-               && x_tensor_desc->data_type() == OF_PP_PAIR_SECOND(data_type_pair);                 \
-      });
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                                \
+                       & user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
                                  MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
