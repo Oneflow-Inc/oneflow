@@ -199,13 +199,10 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(dtype)                                            \
-  REGISTER_USER_KERNEL("top_k").SetCreateFn<GpuHeapSelectionTopKKernel<dtype>>().SetIsMatchedPred( \
-      [](const user_op::KernelRegContext& ctx) {                                                   \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);              \
-        return ctx.device_type() == DeviceType::kGPU && ctx.Attr<int32_t>("k") <= 128              \
-               && in_desc->data_type() == GetDataType<dtype>::value;                               \
-      });
+#define REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(dtype)                                           \
+  REGISTER_USER_KERNEL("top_k").SetCreateFn<GpuHeapSelectionTopKKernel<dtype>>().SetIsMatchedHob( \
+      user_op::HobDeviceType() == DeviceType::kGPU & user_op::HobAttr<int32_t>("k") <= 128        \
+      & user_op::HobDataType("in", 0) == GetDataType<dtype>::value);
 
 REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(float)
 REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(double)

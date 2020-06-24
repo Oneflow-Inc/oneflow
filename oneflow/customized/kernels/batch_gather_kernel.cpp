@@ -26,17 +26,13 @@ class BatchGatherKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BATCH_GATHER_KERNEL(device, out_dtype, indices_dtype)                          \
-  REGISTER_USER_KERNEL("batch_gather")                                                          \
-      .SetCreateFn<BatchGatherKernel<device, OF_PP_PAIR_FIRST(out_dtype),                       \
-                                     OF_PP_PAIR_FIRST(indices_dtype)>>()                        \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);         \
-        const user_op::TensorDesc* indices_desc = ctx.TensorDesc4ArgNameAndIndex("indices", 0); \
-        return ctx.device_type() == device                                                      \
-               && indices_desc->data_type() == OF_PP_PAIR_SECOND(indices_dtype)                 \
-               && out_desc->data_type() == OF_PP_PAIR_SECOND(out_dtype);                        \
-      });
+#define REGISTER_BATCH_GATHER_KERNEL(device, out_dtype, indices_dtype)                  \
+  REGISTER_USER_KERNEL("batch_gather")                                                  \
+      .SetCreateFn<BatchGatherKernel<device, OF_PP_PAIR_FIRST(out_dtype),               \
+                                     OF_PP_PAIR_FIRST(indices_dtype)>>()                \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device                               \
+                       & user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype) \
+                       & user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_dtype));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BATCH_GATHER_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)

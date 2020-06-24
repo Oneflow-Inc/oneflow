@@ -57,7 +57,7 @@ class ReluCpuKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("ccrelu")
     .SetCreateFn<ReluKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; })
+    .SetIsMatchedHob(user_op::HobTrue())
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 10; })
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
@@ -67,15 +67,12 @@ REGISTER_USER_KERNEL("ccrelu")
 
 REGISTER_USER_KERNEL("cpu_only_relu_test")
     .SetCreateFn<ReluCpuKernel<float>>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const auto* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);
-      const auto* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      return in_desc->data_type() == DataType::kFloat && out_desc->data_type() == DataType::kFloat;
-    });
+    .SetIsMatchedHob(user_op::HobDataType("in", 0) == DataType::kFloat
+                     & user_op::HobDataType("out", 0) == DataType::kFloat);
 
 REGISTER_USER_KERNEL("ccrelu_grad")
     .SetCreateFn<ReluGradKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; })
+    .SetIsMatchedHob(user_op::HobTrue())
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 10; });
 
 class TestReshapeKernel final : public user_op::OpKernel {
@@ -95,7 +92,7 @@ class TestReshapeKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestReshape")
     .SetCreateFn<TestReshapeKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
+    .SetIsMatchedHob(user_op::HobTrue());
 
 class CopyIn2OutKernel final : public user_op::OpKernel {
  public:
@@ -114,11 +111,11 @@ class CopyIn2OutKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestReshape4KeepHeaderOnly")
     .SetCreateFn<CopyIn2OutKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
+    .SetIsMatchedHob(user_op::HobTrue());
 
 REGISTER_USER_KERNEL("TestReshapeLike4KeepHeaderOnly")
     .SetCreateFn<CopyIn2OutKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext&) { return true; });
+    .SetIsMatchedHob(user_op::HobTrue());
 
 class TestSourceKernel final : public user_op::OpKernel {
  public:
@@ -135,13 +132,8 @@ class TestSourceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestSource")
     .SetCreateFn<TestSourceKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
-        return true;
-      }
-      return false;
-    })
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU
+                     & user_op::HobDataType("out", 0) == DataType::kFloat)
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
 
 class TestMultiOutputOrderKernel final : public user_op::OpKernel {
@@ -164,13 +156,8 @@ class TestMultiOutputOrderKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestMultiOutputOrder")
     .SetCreateFn<TestMultiOutputOrderKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
-      if (ctx.device_type() == DeviceType::kGPU && in_tensor->data_type() == DataType::kFloat) {
-        return true;
-      }
-      return false;
-    });
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU
+                     & user_op::HobDataType("in", 0) == DataType::kFloat);
 
 class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
  public:
@@ -189,13 +176,8 @@ class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestSourceMultiGpuFixedOutNum")
     .SetCreateFn<TestSourceMultiGpuFixedOutNumKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
-        return true;
-      }
-      return false;
-    });
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU
+                     & user_op::HobDataType("out", 0) == DataType::kFloat);
 
 class TestMultiInputFwKernel final : public user_op::OpKernel {
  public:
@@ -214,13 +196,8 @@ class TestMultiInputFwKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestMultiInput")
     .SetCreateFn<TestMultiInputFwKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* x1_tensor = ctx.TensorDesc4ArgNameAndIndex("x1", 0);
-      if (ctx.device_type() == DeviceType::kGPU && x1_tensor->data_type() == DataType::kFloat) {
-        return true;
-      }
-      return false;
-    });
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU
+                     & user_op::HobDataType("x1", 0) == DataType::kFloat);
 
 class TestMultiInputBwKernel final : public user_op::OpKernel {
  public:
@@ -241,13 +218,8 @@ class TestMultiInputBwKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestMultiInputGrad")
     .SetCreateFn<TestMultiInputBwKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* x1_tensor = ctx.TensorDesc4ArgNameAndIndex("x1", 0);
-      if (ctx.device_type() == DeviceType::kGPU && x1_tensor->data_type() == DataType::kFloat) {
-        return true;
-      }
-      return false;
-    });
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU
+                     & user_op::HobDataType("x1", 0) == DataType::kFloat);
 
 class TestDynamicSourceKernel final : public user_op::OpKernel {
  public:
@@ -265,13 +237,8 @@ class TestDynamicSourceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestDynamicSource")
     .SetCreateFn<TestDynamicSourceKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
-        return true;
-      }
-      return false;
-    });
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU
+                     & user_op::HobDataType("out", 0) == DataType::kFloat);
 
 class TestRandomSourceKernel final : public user_op::OpKernel {
  public:
@@ -297,13 +264,8 @@ class TestRandomSourceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestRandomSource")
     .SetCreateFn<TestRandomSourceKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kFloat) {
-        return true;
-      }
-      return false;
-    });
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU
+                     & user_op::HobDataType("out", 0) == DataType::kFloat);
 
 class TestDataTypeAttrKernel final : public user_op::OpKernel {
  public:
@@ -320,7 +282,7 @@ class TestDataTypeAttrKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestDataTypeAttr")
     .SetCreateFn<TestDataTypeAttrKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
+    .SetIsMatchedHob(user_op::HobTrue());
 
 class TestListDataTypeAndShapeAttrKernel final : public user_op::OpKernel {
  public:
@@ -343,6 +305,6 @@ class TestListDataTypeAndShapeAttrKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("TestListDataTypeAndListShapeAttr")
     .SetCreateFn<TestListDataTypeAndShapeAttrKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
+    .SetIsMatchedHob(user_op::HobTrue());
 
 }  // namespace oneflow

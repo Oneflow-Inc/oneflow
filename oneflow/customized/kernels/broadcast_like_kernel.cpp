@@ -27,21 +27,13 @@ class BroadcastLikeKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device, typename T>
-bool IsMatchedPred(const user_op::KernelRegContext& ctx) {
-  const user_op::TensorDesc* output_tensor_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);
-  if (ctx.device_type() == device && output_tensor_desc->data_type() == GetDataType<T>::value) {
-    return true;
-  }
-  return false;
-}
-
 }  // namespace
 
 #define REGISTER_BROADCAST_LIKE_XPU_KERNEL(device, dtype) \
   REGISTER_USER_KERNEL("broadcast_like")                  \
       .SetCreateFn<BroadcastLikeKernel<device, dtype>>()  \
-      .SetIsMatchedPred(IsMatchedPred<device, dtype>);
+      .SetIsMatchedHob(user_op::HobDeviceType() == device \
+                       & user_op::HobDataType("y", 0) == GetDataType<dtype>::value);
 
 #define REGISTER_BROADCAST_LIKE_KERNEL(dtype)                 \
   REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCPU, dtype) \

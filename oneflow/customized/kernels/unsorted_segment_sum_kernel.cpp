@@ -79,14 +79,10 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(kernel_type)                                                           \
       .SetCreateFn<UnsortedSegmentSumKernel<device, OF_PP_PAIR_FIRST(out_type),               \
                                             OF_PP_PAIR_FIRST(segment_ids_type)>>()            \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                            \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);       \
-        const user_op::TensorDesc* segment_ids_desc =                                         \
-            ctx.TensorDesc4ArgNameAndIndex("segment_ids", 0);                                 \
-        return ctx.device_type() == device                                                    \
-               && segment_ids_desc->data_type() == OF_PP_PAIR_SECOND(segment_ids_type)        \
-               && out_desc->data_type() == OF_PP_PAIR_SECOND(out_type);                       \
-      });
+      .SetIsMatchedHob(user_op::HobDeviceType() == device                                     \
+                       & user_op::HobDataType("segment_ids", 0)                               \
+                             == OF_PP_PAIR_SECOND(segment_ids_type)                           \
+                       & user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type));
 
 #define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE(device_type, out_type, segment_ids_type) \
   REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device_type, out_type, segment_ids_type,            \

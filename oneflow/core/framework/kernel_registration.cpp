@@ -54,7 +54,7 @@ const KernelRegistrationVal* LookUpInKernelRegistry(const std::string& op_type_n
 
   const KernelRegistrationVal* ret = nullptr;
   for (const auto& reg_val : it->second) {
-    if (reg_val.is_matched_fn(ctx)) {
+    if (reg_val.is_matched_hob(ctx)) {
       CHECK(ret == nullptr) << "There are more than one kernels satisfy current Op node. "
                             << GetErrorMsgOfSearchedOp(ctx);
       ret = &reg_val;
@@ -64,6 +64,7 @@ const KernelRegistrationVal* LookUpInKernelRegistry(const std::string& op_type_n
     LOG(ERROR) << "Cannot find the kernel satisfies current Op node. "
                << GetErrorMsgOfSearchedOp(ctx);
   }
+
   return ret;
 }
 
@@ -83,9 +84,8 @@ KernelRegistryWrapperBuilder& KernelRegistryWrapperBuilder::SetCreateFn(CreateFn
   return *this;
 }
 
-KernelRegistryWrapperBuilder& KernelRegistryWrapperBuilder::SetIsMatchedPred(
-    IsMatchedPredicator fn) {
-  wrapper_.reg_val.is_matched_fn = std::move(fn);
+KernelRegistryWrapperBuilder& KernelRegistryWrapperBuilder::SetIsMatchedHob(IsMatchedHob hob) {
+  wrapper_.reg_val.is_matched_hob = hob;
   return *this;
 }
 
@@ -103,8 +103,6 @@ KernelRegistryWrapperBuilder& KernelRegistryWrapperBuilder::SetInplaceProposalFn
 KernelRegistryWrapper KernelRegistryWrapperBuilder::Build() {
   CHECK(wrapper_.reg_val.create_fn != nullptr)
       << "No Create function for " << wrapper_.op_type_name;
-  CHECK(wrapper_.reg_val.is_matched_fn != nullptr)
-      << "No IsMatched function for " << wrapper_.op_type_name;
   if (wrapper_.reg_val.infer_tmp_size_fn == nullptr) {
     wrapper_.reg_val.infer_tmp_size_fn = TmpSizeInferFnUtil::ZeroTmpSize;
   }
