@@ -22,6 +22,9 @@ class Error final {
   static Error Unimplemented();
   static Error BoxingNotSupported();
 
+  // gradient
+  static Error GradientFunctionNotFound();
+
   std::shared_ptr<ErrorProto> error_proto() const { return error_proto_; }
   ErrorProto* operator->() const { return error_proto_.get(); }
   operator std::string() const;
@@ -45,7 +48,7 @@ inline Error&& operator<<(Error&& error, const JobBuildAndInferError& x) {
 }
 
 // for LOG(ERROR)
-Error&& operator<=(const std::string& log_str, Error&& error);
+Error&& operator<=(const std::pair<std::string, std::string>& loc_and_func, Error&& error);
 
 }  // namespace oneflow
 

@@ -1,20 +1,20 @@
 from __future__ import absolute_import
 
 import os
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.id_util as id_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.remote_blob as remote_blob_util
+from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("constant")
 def constant(value, dtype=None, shape=None, name=None):
     is_user_op = False
-    if os.getenv("ENABLE_USER_OP") == 'True':
+    if os.getenv("ENABLE_USER_OP") == "True":
         is_user_op = True
     if name is None:
         name = id_util.UniqueStr("Constant_")
@@ -23,7 +23,7 @@ def constant(value, dtype=None, shape=None, name=None):
 
     if not isinstance(value, (int, float)):
         raise NotImplementedError
-    
+
     if is_user_op:
         if isinstance(value, float):
             is_floating_value = True
@@ -33,14 +33,19 @@ def constant(value, dtype=None, shape=None, name=None):
             assert isinstance(shape, (list, tuple))
         else:
             shape = []
-        return flow.user_op_builder(name).Op("constant")\
-            .Output("out")\
-            .SetAttr("floating_value", float(value), "AttrTypeDouble")\
-            .SetAttr("integer_value", int(value), "AttrTypeInt64")\
-            .SetAttr("is_floating_value", is_floating_value, "AttrTypeBool")\
-            .SetAttr("dtype", dtype, "AttrTypeDataType")\
-            .SetAttr("shape", shape, "AttrTypeShape")\
-            .Build().RemoteBlobList()[0]
+        return (
+            flow.user_op_builder(name)
+            .Op("constant")
+            .Output("out")
+            .Attr("floating_value", float(value), "AttrTypeDouble")
+            .Attr("integer_value", int(value), "AttrTypeInt64")
+            .Attr("is_floating_value", is_floating_value, "AttrTypeBool")
+            .Attr("dtype", dtype, "AttrTypeDataType")
+            .Attr("shape", shape, "AttrTypeShape")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name)
@@ -73,7 +78,7 @@ def constant_like(like, value, dtype=None, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("ConstantLike_"),
     )
-    setattr(op_conf.constant_like_conf, "like", like.logical_blob_name)
+    setattr(op_conf.constant_like_conf, "like", like.unique_name)
     if isinstance(value, int):
         op_conf.constant_like_conf.int_operand = value
     elif isinstance(value, float):

@@ -1,7 +1,8 @@
-import numpy as np
-import tensorflow as tf
-import oneflow as flow
 from collections import OrderedDict
+
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
 from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -20,7 +21,7 @@ def compare_with_tensorflow(device_type, x_shape, axis):
     def check_grad(x_diff_blob):
         assert np.array_equal(x_diff_blob.ndarray(), np.ones(x_shape))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def SqueezeJob():
         with flow.fixed_placement(device_type, "0:0"):
             x = flow.get_variable(

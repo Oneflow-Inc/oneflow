@@ -20,6 +20,10 @@
   https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz
   ```
 
+- #### Common Questions
+
+  [Troubleshooting](docs/source/troubleshooting.md)
+
 - #### Clone Source Code
 
   Clone source code and submodules (faster, recommended)
@@ -35,6 +39,13 @@
   git clone https://github.com/Oneflow-Inc/oneflow --recursive
   ```
 
+- #### Install Python Dev Requirements
+
+  To install development dependencies and linter tools, run:
+  ```
+  pip3 install -r dev-requirements.txt
+  ```
+
 - #### Enter Build Directory
 
   ```
@@ -46,18 +57,14 @@
   Inside directory `build`, run:
   ```
   cmake -DTHIRD_PARTY=ON .. 
-  make -j
+  make -j$(nproc)
   ```
 
 - #### Build OneFlow
 
   Inside directory `build`, run:
   ```
-  cmake .. \
-  -DTHIRD_PARTY=OFF \
-  -DPython_NumPy_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
-  -DPYTHON_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])") \
-  -DPYTHON_LIBRARY=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])")
+  cmake .. -DTHIRD_PARTY=OFF
 
   make -j$(nproc)
   ```
@@ -77,6 +84,10 @@
   ```
 
 - #### Generate Pip Package
+  Please make sure pip package `wheel` is installed:
+  ```
+  pip3 install wheel --user
+  ```
 
   In the root path of OneFlow repo, run:
   ```
@@ -111,10 +122,7 @@
   ```shell
   cmake .. \
   -DWITH_XLA=ON \
-  -DTHIRD_PARTY=OFF \
-  -DPython_NumPy_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
-  -DPYTHON_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])") \
-  -DPYTHON_LIBRARY=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])")
+  -DTHIRD_PARTY=OFF
   
   make -j$(nproc)
   ```
@@ -138,10 +146,7 @@
   cmake .. \
   -DWITH_TENSORRT=ON \
   -DTENSORRT_ROOT=your_tensorrt_path \
-  -DTHIRD_PARTY=OFF \
-  -DPython_NumPy_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
-  -DPYTHON_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])") \
-  -DPYTHON_LIBRARY=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])")
+  -DTHIRD_PARTY=OFF
 
   make -j$(nproc)
   ```

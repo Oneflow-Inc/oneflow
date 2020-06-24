@@ -1,24 +1,21 @@
 from __future__ import absolute_import
 
 import oneflow as flow
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.id_util as id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.record.image_pb2 as image_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-#import oneflow.core.data.data_pb2 as data_util
+import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.remote_blob as remote_blob_util
 
 from oneflow.python.oneflow_export import oneflow_export
+
 
 @oneflow_export("data.ImagePreprocessor")
 class ImagePreprocessor(object):
     def __init__(self, preprocessor):
         assert isinstance(preprocessor, str)
-        if (
-            preprocessor.lower() != "bgr2rgb"
-            and preprocessor.lower() != "mirror"
-        ):
+        if preprocessor.lower() != "bgr2rgb" and preprocessor.lower() != "mirror":
             raise ValueError('preprocessor must be "bgr2rgb" or "mirror".')
 
         self.preprocessor = preprocessor
@@ -65,15 +62,12 @@ class ImageCodec(object):
         if proto is None:
             proto = op_conf_util.EncodeConf()
 
-        proto.jpeg.preprocess.extend(
-            [p.to_proto() for p in self.image_preprocessors]
-        )
+        proto.jpeg.preprocess.extend([p.to_proto() for p in self.image_preprocessors])
         return proto
 
 
 @oneflow_export("data.RawCodec")
 class RawCodec(object):
-
     def __init__(self, auto_zero_padding=False):
         self.auto_zero_padding = auto_zero_padding
 
@@ -88,7 +82,6 @@ class RawCodec(object):
 
 @oneflow_export("data.BytesListCodec")
 class BytesListCodec(object):
-
     def __init__(self):
         pass
 
@@ -103,10 +96,7 @@ class BytesListCodec(object):
 @oneflow_export("data.NormByChannelPreprocessor")
 class NormByChannelPreprocessor(object):
     def __init__(
-        self,
-        mean_values,
-        std_values=(1.0, 1.0, 1.0),
-        data_format="channels_last",
+        self, mean_values, std_values=(1.0, 1.0, 1.0), data_format="channels_last",
     ):
         assert isinstance(mean_values, (list, tuple))
         assert isinstance(std_values, (list, tuple))
@@ -157,9 +147,11 @@ def decode_ofrecord(
     ofrecord_dir,
     blobs,
     batch_size=1,
-    data_part_num=-1,
+    data_part_num=1,
     part_name_prefix="part-",
     part_name_suffix_length=-1,
+    shuffle=False,
+    buffer_size=1024,
     name=None,
 ):
     if name is None:
@@ -174,9 +166,9 @@ def decode_ofrecord(
     op_conf.decode_ofrecord_conf.data_part_num = data_part_num
     op_conf.decode_ofrecord_conf.batch_size = batch_size
     op_conf.decode_ofrecord_conf.part_name_prefix = part_name_prefix
-    op_conf.decode_ofrecord_conf.part_name_suffix_length = (
-        part_name_suffix_length
-    )
+    op_conf.decode_ofrecord_conf.part_name_suffix_length = part_name_suffix_length
+    if shuffle == True:
+        op_conf.decode_ofrecord_conf.random_shuffle_conf.buffer_size = buffer_size
     for blob_conf in blobs:
         op_conf.decode_ofrecord_conf.blob.extend([blob_conf.to_proto()])
         lbi = logical_blob_id_util.LogicalBlobId()
@@ -188,10 +180,75 @@ def decode_ofrecord(
     return tuple(map(lambda x: remote_blob_util.RemoteBlob(x), lbis))
 
 
-@oneflow_export("data.decode_random")
-def decode_random(
-    shape, dtype, batch_size=1, initializer=None, tick=None, name=None
+@oneflow_export("data.ofrecord_loader")
+def ofrecord_loader(
+    ofrecord_dir,
+    batch_size=1,
+    data_part_num=1,
+    part_name_prefix="part-",
+    part_name_suffix_length=-1,
+    shuffle=False,
+    shuffle_buffer_size=1024,
+    name=None,
 ):
+    if name is None:
+        name = id_util.UniqueStr("OFRecord_Loader_")
+
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+
+    op_conf.record_load_conf.out = "out"
+    op_conf.record_load_conf.data_dir = ofrecord_dir
+    op_conf.record_load_conf.data_part_num = data_part_num
+    op_conf.record_load_conf.batch_size = batch_size
+    op_conf.record_load_conf.part_name_prefix = part_name_prefix
+    if part_name_suffix_length is not -1:
+        op_conf.record_load_conf.part_name_suffix_length = part_name_suffix_length
+    if shuffle:
+        op_conf.record_load_conf.random_shuffle_conf.buffer_size = shuffle_buffer_size
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = name
+    lbi.blob_name = "out"
+
+    compile_context.CurJobAddConsistentOp(op_conf)
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("data.ofrecord_reader")
+def ofrecord_reader(
+    ofrecord_dir,
+    batch_size=1,
+    data_part_num=1,
+    part_name_prefix="part-",
+    part_name_suffix_length=-1,
+    random_shuffle=False,
+    shuffle_buffer_size=1024,
+    shuffle_after_epoch=False,
+    name=None,
+):
+    if name is None:
+        name = id_util.UniqueStr("OFRecord_Reader_")
+
+    return (
+        flow.user_op_builder(name)
+        .Op("OFRecordReader")
+        .Output("out")
+        .Attr("data_dir", ofrecord_dir, "AttrTypeString")
+        .Attr("data_part_num", data_part_num, "AttrTypeInt32")
+        .Attr("batch_size", batch_size, "AttrTypeInt32")
+        .Attr("part_name_prefix", part_name_prefix, "AttrTypeString")
+        .Attr("random_shuffle", random_shuffle, "AttrTypeBool")
+        .Attr("shuffle_buffer_size", shuffle_buffer_size, "AttrTypeInt32")
+        .Attr("shuffle_after_epoch", shuffle_after_epoch, "AttrTypeBool")
+        .Attr("part_name_suffix_length", part_name_suffix_length, "AttrTypeInt32")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("data.decode_random")
+def decode_random(shape, dtype, batch_size=1, initializer=None, tick=None, name=None):
     op_conf = op_conf_util.OperatorConf()
 
     if name is None:
@@ -215,7 +272,7 @@ def decode_random(
         )
 
     if tick:
-        op_conf.decode_random_conf.tick = tick.logical_blob_name
+        op_conf.decode_random_conf.tick = tick.unique_name
     op_conf.decode_random_conf.out = "out"
 
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -224,243 +281,3 @@ def decode_random(
 
     compile_context.CurJobAddConsistentOp(op_conf)
     return remote_blob_util.RemoteBlob(lbi)
-
-
-@oneflow_export("data.COCODataset")
-class COCODataset(object):
-    def __init__(
-        self,
-        dataset_dir,
-        annotation_file,
-        image_dir,
-        random_seed,
-        shuffle=True,
-        group_by_aspect_ratio=True,
-        max_segm_poly_points=1024,
-        name=None,
-    ):
-        name = name or id_util.UniqueStr("COCODataset_")
-        self.dataset_dir = dataset_dir
-        self.annotation_file = annotation_file
-        self.image_dir = image_dir
-        self.random_seed = random_seed
-        self.shuffle = shuffle
-        self.group_by_aspect_ratio = group_by_aspect_ratio
-        self.max_segm_poly_points = max_segm_poly_points
-        self.name = name
-
-    def to_proto(self, proto=None):
-        if proto is None:
-            proto = data_util.DatasetProto()
-
-        proto.name = self.name
-        proto.dataset_dir = self.dataset_dir
-        proto.shuffle = self.shuffle
-        proto.random_seed = self.random_seed
-        proto.coco.annotation_file = self.annotation_file
-        proto.coco.image_dir = self.image_dir
-        proto.coco.group_by_aspect_ratio = self.group_by_aspect_ratio
-        proto.coco.max_segm_poly_points = self.max_segm_poly_points
-        return proto
-
-
-@oneflow_export("data.TargetResizeTransform")
-class TargetResizeTransform(object):
-    def __init__(self, target_size, max_size):
-        self.target_size = target_size
-        self.max_size = max_size
-
-    def to_proto(self, proto=None):
-        if proto is None:
-            proto = data_util.DataTransformProto()
-
-        proto.target_resize.target_size = self.target_size
-        proto.target_resize.max_size = self.max_size
-        return proto
-
-
-@oneflow_export("data.SegmentationPolygonListToMask")
-class SegmentationPolygonListToMask(object):
-    def to_proto(self, proto=None):
-        if proto is None:
-            proto = data_util.DataTransformProto()
-
-        proto.segmentation_poly_to_mask.SetInParent()
-        return proto
-
-
-@oneflow_export("data.SegmentationPolygonListToAlignedMask")
-class SegmentationPolygonListToAlignedMask(object):
-    def to_proto(self, proto=None):
-        if proto is None:
-            proto = data_util.DataTransformProto()
-
-        proto.segmentation_poly_to_aligned_mask.SetInParent()
-        return proto
-
-
-@oneflow_export("data.ImageNormalizeByChannel")
-class ImageNormalizeByChannel(object):
-    r"""note: normalize by channel, channel color space is BGR"""
-
-    def __init__(self, mean, std=1.0):
-        if isinstance(mean, (int, float)):
-            mean = (float(mean), float(mean), float(mean))
-
-        if isinstance(std, (int, float)):
-            std = (float(std), float(std), float(std))
-
-        assert isinstance(mean, (tuple, list))
-        assert isinstance(std, (tuple, list))
-        assert len(mean) == len(std)
-
-        self.mean = mean
-        self.std = std
-
-    def to_proto(self, proto=None):
-        if proto is None:
-            proto = data_util.DataTransformProto()
-
-        proto.image_normalize_by_channel.mean.extend(list(self.mean))
-        proto.image_normalize_by_channel.std.extend(list(self.std))
-        return proto
-
-
-@oneflow_export("data.ImageRandomFlip")
-class ImageRandomFlip(object):
-    r"""Random flip image.
-    params:
-        @flip_code:
-            0 means flipping vertically as also as flipping around the horizontal axis
-            >= 1 means flipping horizontally as also as flipping around the vertical axis
-            <= -1 means flipping around both axes
-        @probability: probability of random flip image
-    """
-    def __init__(self, flip_code=1, probability=0.5):
-        self.flip_code = flip_code
-        self.probability = probability
-
-    def to_proto(self, proto=None):
-        if proto is None:
-            proto = data_util.DataTransformProto()
-
-        proto.image_random_flip.flip_code = self.flip_code
-        proto.image_random_flip.probability = self.probability
-        return proto
-
-
-@oneflow_export("data.ImageAlign")
-class ImageAlign(object):
-    def __init__(self, alignment):
-        self.alignment = alignment
-
-    def to_proto(self, proto=None):
-        if proto is None:
-            proto = data_util.DataTransformProto()
-
-        proto.image_align.alignment = self.alignment
-        return proto
-
-
-@oneflow_export("data.DataLoader")
-class DataLoader(object):
-    def __init__(self, dataset, batch_size, batch_cache_size):
-        self._dataset = dataset
-        self._batch_size = batch_size
-        self._batch_cache_size = batch_cache_size
-        self._blobs = []
-        self._transforms = []
-
-    def __call__(self, name):
-        assert hasattr(
-            self, "_outputs"
-        ), "Call DataLoader.init first before get blob"
-        return self._outputs[name]
-
-    @property
-    def batch_size(self):
-        return self._batch_size
-
-    @batch_size.setter
-    def batch_size(self, bs):
-        self._batch_size = bs
-
-    def add_blob(
-        self,
-        name,
-        data_source,
-        shape,
-        dtype,
-        tensor_list_variable_axis=None,
-        is_dynamic=False,
-    ):
-        if tensor_list_variable_axis is not None:
-            assert isinstance(tensor_list_variable_axis, int)
-        self._blobs.append(
-            dict(
-                name=name,
-                data_source=data_source,
-                shape=shape,
-                dtype=dtype,
-                tensor_list_variable_axis=tensor_list_variable_axis,
-                is_dynamic=is_dynamic,
-            )
-        )
-
-    def add_transform(self, transform):
-        if isinstance(transform, SegmentationPolygonListToAlignedMask):
-            if not any([isinstance(t, ImageAlign) for t in self._transforms]):
-                raise ValueError(
-                    "Need do ImageAlign before SegmentationPolygonListToAlignedMask"
-                )
-
-        self._transforms.append(transform)
-
-    def init(self, name=None):
-        if name is None:
-            name = id_util.UniqueStr("DataLoad_")
-        assert isinstance(name, str)
-
-        target_resize_order = -1
-        image_align_order = -1
-        for i, transform in enumerate(self._transforms):
-            if isinstance(transform, TargetResizeTransform):
-                target_resize_order = i
-
-            if isinstance(transform, ImageAlign):
-                image_align_order = i
-
-        if target_resize_order >= 0 and target_resize_order > image_align_order:
-            raise ValueError("Need do ImageAlign after TargetResizeTransform")
-
-        self._outputs = {}
-
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = name
-        op_conf.data_load_conf.batch_size = self._batch_size
-        op_conf.data_load_conf.batch_cache_size = self._batch_cache_size
-        self._dataset.to_proto(op_conf.data_load_conf.dataset)
-        op_conf.data_load_conf.transforms.extend(
-            [transform.to_proto() for transform in self._transforms]
-        )
-        for blob in self._blobs:
-            blob_conf = op_conf_util.BlobConf()
-            blob_conf.name = blob["name"]
-            blob_conf.data_source = blob["data_source"]
-            blob_conf.shape.dim.extend(blob["shape"])
-            blob_conf.data_type = blob["dtype"]
-            if blob_conf.data_source == data_util.DataSourceCase.kImage:
-                blob_conf.encode_case.jpeg.SetInParent()
-            else:
-                blob_conf.encode_case.raw.SetInParent()
-            if blob["tensor_list_variable_axis"] is not None:
-                blob_conf.tensor_list_variable_axis = blob["tensor_list_variable_axis"]
-            blob_conf.is_dynamic = blob["is_dynamic"]
-            op_conf.data_load_conf.blobs.extend([blob_conf])
-
-            lbi = logical_blob_id_util.LogicalBlobId()
-            lbi.op_name = op_conf.name
-            lbi.blob_name = blob_conf.name
-            self._outputs[blob_conf.name] = remote_blob_util.RemoteBlob(lbi)
-
-        compile_context.CurJobAddConsistentOp(op_conf)

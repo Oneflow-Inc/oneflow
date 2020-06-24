@@ -6,32 +6,34 @@ namespace {
 
 Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
   const Shape* cond_shape = ctx->Shape4ArgNameAndIndex("condition", 0);
-  OF_CHECK_EQ(*cond_shape, *ctx->Shape4ArgNameAndIndex("x", 0));
-  OF_CHECK_EQ(*cond_shape, *ctx->Shape4ArgNameAndIndex("y", 0));
+  CHECK_EQ_OR_RETURN(*cond_shape, *ctx->Shape4ArgNameAndIndex("x", 0));
+  CHECK_EQ_OR_RETURN(*cond_shape, *ctx->Shape4ArgNameAndIndex("y", 0));
   *ctx->Shape4ArgNameAndIndex("out", 0) = *cond_shape;
   DataType cond_dtype = *ctx->Dtype4ArgNameAndIndex("condition", 0);
-  OF_CHECK(IsIntegralDataType(cond_dtype));
+  CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
   DataType x_dtype = *ctx->Dtype4ArgNameAndIndex("x", 0);
-  OF_CHECK_EQ(x_dtype, *ctx->Dtype4ArgNameAndIndex("y", 0));
+  CHECK_EQ_OR_RETURN(x_dtype, *ctx->Dtype4ArgNameAndIndex("y", 0));
   *ctx->Dtype4ArgNameAndIndex("out", 0) = x_dtype;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> GetWhereSbpSignatures(user_op::SbpContext* ctx) {
-  int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape().NumAxes();
-  SbpSignatureBuilder()
-      .Split("condition", 0, 0)
-      .Split("x", 0, 0)
-      .Split("y", 0, 0)
-      .Split("out", 0, 0)
-      .MakeSplitSignatureListBuilder(num_axes)
-      .Build(ctx->sbp_sig_list());
-  SbpSignatureBuilder()
-      .Broadcast("condition", 0)
-      .PartialSum("x", 0)
-      .PartialSum("y", 0)
-      .PartialSum("out", 0)
-      .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+  const user_op::TensorDesc& condition_tensor =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0);
+  FOR_RANGE(int64_t, i, 0, condition_tensor.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("condition", 0), i)
+        .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("y", 0), i)
+        .Split(user_op::OpArg("out", 0), i)
+        .Build();
+  }
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("condition", 0))
+      .PartialSum(user_op::OpArg("x", 0))
+      .PartialSum(user_op::OpArg("y", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
   return Maybe<void>::Ok();
 }
 
@@ -44,7 +46,8 @@ REGISTER_USER_OP("where")
     .Output("out")
     .SetTensorDescInferFn(InferWhereTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("condition", 0);
       cond_arg_modifier->set_requires_grad(false);
     })

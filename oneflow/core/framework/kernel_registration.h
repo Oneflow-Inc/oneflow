@@ -7,6 +7,7 @@
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/common/high_order_bool.h"
 
 namespace oneflow {
 
@@ -30,8 +31,10 @@ class KernelRegContext {
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
+  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+
   template<typename T>
-  T GetAttr(const std::string& attr_name) const {
+  T Attr(const std::string& attr_name) const {
     return user_op_conf_.attr<T>(attr_name);
   }
 
@@ -44,18 +47,18 @@ class KernelRegContext {
 };
 
 using CreateFn = std::function<const OpKernel*()>;
-using IsMatchedPredicator = std::function<bool(const KernelRegContext&)>;
 using InferTmpSizeFn = std::function<size_t(InferContext*)>;
 using AddInplaceArgPair = std::function<Maybe<void>(
     const std::string& out_arg_name, int32_t out_arg_index, const std::string& in_arg_name,
     int32_t in_arg_index, bool is_mutable)>;
 using InplaceProposalFn = std::function<Maybe<void>(const InferContext&, AddInplaceArgPair)>;
+using IsMatchedHob = hob::BoolFunctorPtr<user_op::KernelRegContext>;
 
 struct KernelRegistrationVal {
   CreateFn create_fn;
-  IsMatchedPredicator is_matched_fn;
   InferTmpSizeFn infer_tmp_size_fn;
   InplaceProposalFn inplace_proposal_fn;
+  IsMatchedHob is_matched_hob;
 };
 
 struct KernelRegistryWrapper final {
@@ -72,7 +75,7 @@ class KernelRegistryWrapperBuilder final {
   KernelRegistryWrapperBuilder& SetCreateFn() {
     return SetCreateFn([]() -> const OpKernel* { return new T(); });
   }
-  KernelRegistryWrapperBuilder& SetIsMatchedPred(IsMatchedPredicator fn);
+  KernelRegistryWrapperBuilder& SetIsMatchedHob(IsMatchedHob hob);
   KernelRegistryWrapperBuilder& SetInferTmpSizeFn(InferTmpSizeFn fn);
   KernelRegistryWrapperBuilder& SetInplaceProposalFn(InplaceProposalFn fn);
 

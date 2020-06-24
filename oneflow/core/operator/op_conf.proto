@@ -10,6 +10,7 @@ import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/framework/user_op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
+import "oneflow/core/graph/boxing/collective_boxing.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -368,24 +369,6 @@ message SparseCrossEntropyGradOpConf {
   required string prediction_diff = 4;
 }
 
-message SparseSoftmaxCrossEntropyLossOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  optional ScalarReductionType reduction = 4 [default = kSumOverN];
-  optional float weight_scalar = 5 [default = 1.0];
-  optional string weight = 6;
-}
-
-message SparseCrossEntropyLossOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  optional ScalarReductionType reduction = 4 [default = kSumOverN];
-  optional float weight_scalar = 5 [default = 1.0];
-  optional string weight = 6;
-}
-
 message SigmoidCrossEntropyOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -399,14 +382,6 @@ message SigmoidCrossEntropyGradOpConf {
   required string prediction_diff = 3;
   required string loss_diff = 4;
   required DataType label_type = 5;
-}
-
-message IdentityLossOpConf {
-  required string prediction = 1;
-  required string loss = 2;
-  optional ScalarReductionType reduction = 3 [default = kSumOverN];
-  optional float weight_scalar = 4 [default = 1.0];
-  optional string weight = 5;
 }
 
 message DistributeConcatOpConf {
@@ -735,10 +710,7 @@ message GeluGradOpConf {
 }
 
 message ReduceSumOpConf {
-  oneof in_conf {
-    string in = 1; // For User
-    LogicalBlobId in_sys = 2; // For System
-  }
+  required string in = 1;
   required string out = 3;
   repeated int32 axis = 4;
   optional bool keep_dims = 5 [default = false];
@@ -1051,23 +1023,6 @@ message NcclReduceScatterOpConf {
 message NcclAllGatherOpConf {
 }
 
-message NcclTupleBroadcastOpConf {
-  optional string tick = 1;
-  repeated string in = 2;
-  repeated string out = 3;
-  repeated int64 root = 4;
-  repeated DataType data_type = 5;
-  repeated ShapeProto shape = 6;
-  optional int64 nccl_order_hint = 7 [default = 0];
-}
-
-message NcclTupleReduceOpConf {
-  repeated string in = 1;
-  repeated string out = 2;
-  repeated int64 root = 3;
-  optional int64 nccl_order_hint = 4 [default = 0];
-}
-
 message ReduceSplitOpConf {
   required string in = 1;
   repeated string out = 2;
@@ -1086,14 +1041,6 @@ message ReduceAddOpConf {
 
 message ReduceGatherOpConf {
   optional int32 in_num = 1 [default = 0];
-}
-
-message AccuracyOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  optional int32 top_k = 3 [default = 1];
-  required string accuracy = 4;
-  optional string weight = 5;
 }
 
 message MatmulOpConf {
@@ -1122,16 +1069,6 @@ message MultiplyOpConf {
 enum Norm {
   L1 = 1;
   L2 = 2;
-}
-
-message HingeLossOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  optional ScalarReductionType reduction = 4 [default = kSumOverN];
-  optional float weight_scalar = 5 [default = 1.0];
-  optional string weight = 6;
-  optional Norm norm = 7[default = L1];
 }
 
 message PackOpConf {
@@ -1557,6 +1494,23 @@ message IdentityOpConf {
   required string out = 2;
 }
 
+message CopyOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message CastToMirroredOpConf {
+  required string in = 1;
+  required string out = 2;
+  required SbpParallel sbp_parallel = 3;
+}
+
+message CastFromMirroredOpConf {
+  required string in = 1;
+  required string out = 2;
+  required SbpParallel sbp_parallel = 3;
+}
+
 message CaseOpConf {
   required string in = 1;
   repeated string out = 2;
@@ -1631,18 +1585,6 @@ message XrtLaunchOpConf {
   // Sbp signatures of each function node.
   map<string, SbpSignature> sbp_signatures = 8;
   optional bool model_update = 9 [default = false];
-}
-
-message NcclBoxingReduceScatterOpConf {
-  required LogicalBlobId lbi = 1;
-}
-
-message NcclBoxingAllGatherOpConf {
-  required LogicalBlobId lbi = 1;
-}
-
-message NcclBoxingAllReduceOpConf {
-  required LogicalBlobId lbi = 1;
 }
 
 message ParallelCastOpConf {
@@ -1795,6 +1737,32 @@ message BroadcastToCompatibleWithOpConf {
   required string y = 3;
 }
 
+message TensorBufferToTensorListOpConf {
+  required string in = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+  required DataType data_type = 4;
+}
+
+message TensorListToTensorBufferOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message TensorListSplitOpConf {
+  required string in = 1;
+  repeated string out = 2;
+}
+
+message CollectiveBoxingGenericOpConf {
+  required LogicalBlobId lbi = 1;
+  required boxing.collective.RankDesc rank_desc = 2;
+}
+
+message BoxingIdentityOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1846,14 +1814,9 @@ message OperatorConf {
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
     ReturnOpConf return_conf = 146;
-    NcclTupleBroadcastOpConf nccl_tuple_broadcast_conf = 147;
-    NcclTupleReduceOpConf nccl_tuple_reduce_conf = 148;
     PartialTickOpConf partial_tick_conf = 149;
     LazyAdamModelUpdateOpConf lazy_adam_model_update_conf = 150;
     ForeignWatchOpConf foreign_watch_conf = 151;
-    NcclBoxingReduceScatterOpConf nccl_boxing_reduce_scatter_conf = 152;
-    NcclBoxingAllGatherOpConf nccl_boxing_all_gather_conf = 153;
-    NcclBoxingAllReduceOpConf nccl_boxing_all_reduce_conf = 154;
     DistributeConcatOpConf distribute_concat_conf = 155;
     DistributeSplitOpConf distribute_split_conf = 156;
     DistributeCloneOpConf distribute_clone_conf = 157;
@@ -1867,6 +1830,11 @@ message OperatorConf {
     IndexedSlicesLazyAdamModelUpdateOpConf indexed_slices_lazy_adam_model_update_conf = 165;
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
+    TensorBufferToTensorListOpConf tensor_buffer_to_tensor_list_conf = 168;
+    TensorListToTensorBufferOpConf tensor_list_to_tensor_buffer_conf = 169;
+    CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
+    BoxingIdentityOpConf boxing_identity_conf = 171;
+    TensorListSplitOpConf tensor_list_split_conf = 172;
     UserOpConf user_conf = 199;
     
     // domain op
@@ -1897,10 +1865,6 @@ message OperatorConf {
     TanHOpConf tanh_conf = 226;
     ReluOpConf relu_conf = 227;
     SoftmaxOpConf softmax_conf = 228;
-    SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 229;
-    HingeLossOpConf hinge_loss_conf = 230;
-    SparseSoftmaxCrossEntropyLossOpConf sparse_softmax_cross_entropy_loss_conf = 231;
-    AccuracyOpConf accuracy_conf = 232;
     PrintOpConf print_conf = 233;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
@@ -1914,7 +1878,6 @@ message OperatorConf {
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     OneHotOpConf one_hot_conf = 258;
-    IdentityLossOpConf identity_loss_conf = 259;
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
     PReluOpConf prelu_conf = 265;
@@ -1962,7 +1925,9 @@ message OperatorConf {
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
     UnsortedSegmentSumLikeOpConf unsorted_segment_sum_like_conf = 341;
     ArgWhereOpConf arg_where_conf = 342;
-
+    CopyOpConf copy_conf = 343;
+    CastToMirroredOpConf cast_to_mirrored_conf = 344;
+    CastFromMirroredOpConf cast_from_mirrored_conf = 345;
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op

@@ -16,9 +16,9 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
     CHECK_EQ(in->shape(), out->shape());
     CHECK_EQ(in->data_type(), out->data_type());
     const std::vector<int64_t> device_set_machine_ids =
-        ctx->GetAttr<std::vector<int64_t>>("device_set_machine_ids");
+        ctx->Attr<std::vector<int64_t>>("device_set_machine_ids");
     const std::vector<int64_t> device_set_device_ids =
-        ctx->GetAttr<std::vector<int64_t>>("device_set_device_ids");
+        ctx->Attr<std::vector<int64_t>>("device_set_device_ids");
     CHECK_EQ(device_set_machine_ids.size(), device_set_device_ids.size());
     std::set<std::pair<int64_t, int64_t>> device_set;
     FOR_RANGE(int64_t, i, 0, device_set_machine_ids.size()) {
@@ -29,12 +29,11 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
                             GetNcclDataType(in->data_type()), ncclSum, comm,
                             ctx->device_ctx()->cuda_stream()));
   };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("eager_nccl_all_reduce")
     .SetCreateFn<EagerNcclAllReduceKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      return ctx.device_type() == DeviceType::kGPU;
-    });
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
 
 }  // namespace oneflow

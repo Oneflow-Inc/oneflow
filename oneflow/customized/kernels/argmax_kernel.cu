@@ -126,17 +126,15 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
     WriteKeysToOutput<T><<<BlocksNum4ThreadsNum(instance_num), kCudaThreadsNumPerBlock, 0,
                            ctx->device_ctx()->cuda_stream()>>>(
         instance_num, buffer_manager.KeyValueOutPtr(), out->mut_dptr<int32_t>());
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GPU_ARGMAX_KERNEL(dtype)                                                          \
   REGISTER_USER_KERNEL("argmax")                                                                   \
       .SetCreateFn<GpuArgMaxKernel<dtype>>()                                                       \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);              \
-        return ctx.device_type() == DeviceType::kGPU                                               \
-               && in_desc->data_type() == GetDataType<dtype>::value;                               \
-      })                                                                                           \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                                \
+                       & user_op::HobDataType("in", 0) == GetDataType<dtype>::value)               \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                               \
         const int32_t instance_size = in_shape->dim_vec().back();                                  \

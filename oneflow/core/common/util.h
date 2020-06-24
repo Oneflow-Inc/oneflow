@@ -24,6 +24,7 @@
 #include <utility>
 
 #include "oneflow/core/common/meta_util.hpp"
+#include "oneflow/core/common/global.h"
 
 DECLARE_string(log_dir);
 
@@ -59,32 +60,6 @@ namespace oneflow {
 #define UNIMPLEMENTED() LOG(FATAL) << "UNIMPLEMENTED"
 
 #define TODO() LOG(FATAL) << "TODO"
-
-template<typename T>
-class Global final {
- public:
-  static T* Get() { return *GetPPtr(); }
-  static void SetAllocated(T* val) { *GetPPtr() = val; }
-  template<typename... Args>
-  static void New(Args&&... args) {
-    CHECK(Get() == nullptr);
-    LOG(INFO) << "NewGlobal " << typeid(T).name();
-    *GetPPtr() = new T(std::forward<Args>(args)...);
-  }
-  static void Delete() {
-    if (Get() != nullptr) {
-      LOG(INFO) << "DeleteGlobal " << typeid(T).name();
-      delete Get();
-      *GetPPtr() = nullptr;
-    }
-  }
-
- private:
-  static T** GetPPtr() {
-    static T* ptr = nullptr;
-    return &ptr;
-  }
-};
 
 #define OF_COMMA ,
 
@@ -164,8 +139,8 @@ inline double GetCurTime() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
-const size_t kCudaAlignSize = 256;
-const size_t kCudaMemAllocAlignSize = 256;
+const size_t kCudaAlignSize = 512;
+const size_t kCudaMemAllocAlignSize = 512;
 inline size_t RoundUp(size_t n, size_t val) { return (n + val - 1) / val * val; }
 
 inline size_t GetCudaAlignedSize(size_t size) { return RoundUp(size, kCudaAlignSize); }
@@ -204,6 +179,10 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
 #endif
 
 bool IsKernelSafeInt32(int64_t n);
+
+inline void HashCombine(size_t* seed, size_t hash) {
+  *seed ^= (hash + 0x9e3779b9 + (*seed << 6U) + (*seed >> 2U));
+}
 
 }  // namespace oneflow
 

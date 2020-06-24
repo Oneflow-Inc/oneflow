@@ -15,6 +15,29 @@ class BlobDesc;
 
 namespace user_op {
 
+class AttrVal {
+ public:
+  AttrVal() = default;
+  virtual ~AttrVal() = default;
+
+ private:
+  OF_DISALLOW_COPY_AND_MOVE(AttrVal)
+};
+
+template<typename T>
+class TypedAttrVal final : public AttrVal {
+ public:
+  TypedAttrVal(T v) : val_(v) {}
+  ~TypedAttrVal() = default;
+
+  const T& val() const { return val_; }
+
+ private:
+  OF_DISALLOW_COPY_AND_MOVE(TypedAttrVal)
+
+  T val_;
+};
+
 class UserOpConfWrapper final {
  public:
   UserOpConfWrapper(const OperatorConf&);
@@ -24,15 +47,20 @@ class UserOpConfWrapper final {
   const std::string& op_type_name() const;
   const std::string& input(const std::string& arg_name, int32_t index) const;
   const std::string& output(const std::string& arg_name, int32_t index) const;
+  bool has_input(const std::string& arg_name, int32_t index) const;
+  bool has_output(const std::string& arg_name, int32_t index) const;
+  int32_t input_size(const std::string& arg_name) const;
+  int32_t output_size(const std::string& arg_name) const;
 
   template<typename T>
-  T attr(const std::string& attr_name) const;
+  const T& attr(const std::string& attr_name) const;
 
  private:
   UserOpConfWrapper() = default;
   friend class UserOpConfWrapperBuilder;
 
   OperatorConf op_conf_;
+  mutable HashMap<std::string, std::shared_ptr<AttrVal>> attr_cache_;
 };
 
 class UserOpWrapper final {
@@ -46,7 +74,7 @@ class UserOpWrapper final {
   std::string GetGradTensorWithOpOutput(const std::string& output_arg_name, int32_t index) const;
   bool NeedGenGradTensor4OpInput(const std::string& input_arg_name, int32_t index) const;
 
-  const UserOpConfWrapper& user_op_conf_wrapper();
+  const UserOpConfWrapper& user_op_conf() const { return conf_; }
   const OperatorConf& op_conf() const { return conf_.op_conf(); }
   const std::string& op_name() const { return conf_.op_name(); }
   const std::string& op_type_name() const { return conf_.op_type_name(); }
@@ -56,6 +84,8 @@ class UserOpWrapper final {
   const std::string& output(const std::string& arg_name, int32_t index) const {
     return conf_.output(arg_name, index);
   }
+  int32_t input_size(const std::string& arg_name) const { return conf_.input_size(arg_name); }
+  int32_t output_size(const std::string& arg_name) const { return conf_.output_size(arg_name); }
   template<typename T>
   T attr(const std::string& attr_name) const {
     return conf_.attr<T>(attr_name);
@@ -90,6 +120,18 @@ class UserOpConfWrapperBuilder final {
   HashMap<std::string, std::vector<std::string>> input_;
   HashMap<std::string, std::vector<std::string>> output_;
   HashMap<std::string, UserOpAttrVal> attr_;
+};
+
+class OpArg final {
+ public:
+  OpArg(std::string&& name, int32_t index) : name_(std::move(name)), index_(index) {}
+
+  const std::string& name() const { return name_; }
+  int32_t index() const { return index_; }
+
+ private:
+  std::string name_;
+  int32_t index_;
 };
 
 }  // namespace user_op

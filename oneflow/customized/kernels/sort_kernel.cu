@@ -20,7 +20,7 @@ class GpuSortKernel final : public user_op::OpKernel {
                              in->shape().elem_cnt() * sizeof(T));
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
-    const std::string& direction = ctx->GetAttr<std::string>("direction");
+    const std::string& direction = ctx->Attr<std::string>("direction");
     if (direction == "ASCENDING") {
       SortKeysAscending(in->dptr<T>(), instance_num, instance_size, tmp_buffer->mut_dptr<void>(),
                         tmp_buffer->shape().elem_cnt(), out->mut_dptr<T>(),
@@ -32,22 +32,20 @@ class GpuSortKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GPU_SORT_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("sort")                                                              \
       .SetCreateFn<GpuSortKernel<dtype>>()                                                  \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                          \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);     \
-        return ctx.device_type() == DeviceType::kGPU                                        \
-               && out_desc->data_type() == GetDataType<dtype>::value;                       \
-      })                                                                                    \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                         \
+                       & user_op::HobDataType("out", 0) == GetDataType<dtype>::value)       \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                        \
         const int32_t instance_size = in_shape->dim_vec().back();                           \
         const int32_t instance_num = in_shape->elem_cnt() / instance_size;                  \
-        const std::string& direction = ctx->GetAttr<std::string>("direction");              \
+        const std::string& direction = ctx->Attr<std::string>("direction");                 \
         if (direction == "ASCENDING") {                                                     \
           return InferTempStorageForSortKeysAscending<dtype>(instance_num, instance_size);  \
         } else if (direction == "DESCENDING") {                                             \

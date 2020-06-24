@@ -74,24 +74,22 @@ class TopKCpuKernel final : public user_op::OpKernel {
 
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
-    const int32_t k = std::min(ctx->GetAttr<int32_t>("k"), instance_size);
+    const int32_t k = std::min(ctx->Attr<int32_t>("k"), instance_size);
     int32_t* indices_ptr = tmp_buffer ? tmp_buffer->mut_dptr<int32_t>() : nullptr;
     CpuTopK(ctx->device_ctx(), in->dptr<T>(), indices_ptr, instance_num, instance_size, k,
-            ctx->GetAttr<bool>("sorted"), out->mut_dptr<int32_t>());
-  };
+            ctx->Attr<bool>("sorted"), out->mut_dptr<int32_t>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_TOP_K_KERNEL(dtype)                                                    \
-  REGISTER_USER_KERNEL("top_k")                                                             \
-      .SetCreateFn<TopKCpuKernel<dtype>>()                                                  \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                          \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);       \
-        return ctx.device_type() == DeviceType::kCPU                                        \
-               && in_desc->data_type() == GetDataType<dtype>::value;                        \
-      })                                                                                    \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                        \
-        return ctx->GetAttr<int32_t>("k") > 1 ? in_shape->elem_cnt() * sizeof(int32_t) : 0; \
+#define REGISTER_CPU_TOP_K_KERNEL(dtype)                                                 \
+  REGISTER_USER_KERNEL("top_k")                                                          \
+      .SetCreateFn<TopKCpuKernel<dtype>>()                                               \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                      \
+                       & user_op::HobDataType("in", 0) == GetDataType<dtype>::value)     \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                \
+        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                     \
+        return ctx->Attr<int32_t>("k") > 1 ? in_shape->elem_cnt() * sizeof(int32_t) : 0; \
       });
 
 REGISTER_CPU_TOP_K_KERNEL(float)

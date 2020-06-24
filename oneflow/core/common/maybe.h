@@ -10,15 +10,22 @@
 
 namespace oneflow {
 
+template<typename T, typename Enabled = void>
+class Maybe;
+
 template<typename T>
-class Maybe final {
+class Maybe<
+    T, typename std::enable_if<!(std::is_same<T, void>::value || std::is_scalar<T>::value)>::type>
+    final {
+  static_assert(!std::is_reference<T>::value, "reference type not supported");
+
  public:
   Maybe(const T& data) : data_or_error_(std::make_shared<T>(data)) {}
   Maybe(const Error& error) : data_or_error_(error.error_proto()) {}
   Maybe(const std::shared_ptr<T>& data) : data_or_error_(data) {}
   Maybe(const std::shared_ptr<ErrorProto>& error) : data_or_error_(error) {}
-  Maybe(const Maybe<T>&) = default;
-  Maybe(Maybe<T>&&) = default;
+  Maybe(const Maybe&) = default;
+  Maybe(Maybe&&) = default;
   ~Maybe() = default;
 
   bool IsOk() const { return data_or_error_.template Has<T>(); }
@@ -26,6 +33,12 @@ class Maybe final {
     return data_or_error_.template Get<T>();
   }
   std::shared_ptr<ErrorProto> error() const { return data_or_error_.template Get<ErrorProto>(); }
+
+  std::string GetSerializedError() const {
+    std::string str;
+    google::protobuf::TextFormat::PrintToString(*error(), &str);
+    return str;
+  }
 
   T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const {
     if (IsOk()) {
@@ -41,20 +54,27 @@ class Maybe final {
   EitherPtr<T, ErrorProto> data_or_error_;
 };
 
-template<>
-class Maybe<void> final {
+template<typename T>
+class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> final {
  public:
   Maybe(const Error& error) : error_or_plain_(error.error_proto()) { CheckError(); }
   Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_plain_(error) { CheckError(); }
-  Maybe(const Maybe<void>&) = default;
-  Maybe(Maybe<void>&&) = default;
+  Maybe(const Maybe&) = default;
+  Maybe(Maybe&&) = default;
   ~Maybe() = default;
 
-  static Maybe<void> Ok() { return Maybe<void>(); }
+  static Maybe Ok() { return Maybe(); }
 
   bool IsOk() const { return error_or_plain_.IsPlain(); }
   void Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {}
   std::shared_ptr<ErrorProto> error() const { return error_or_plain_.shared_ptr(); }
+
+  std::string GetSerializedError() const {
+    CHECK(!IsOk());
+    std::string str;
+    google::protobuf::TextFormat::PrintToString(*error(), &str);
+    return str;
+  }
 
   void GetDataAndSerializedErrorProto(std::string* error_str) const {
     if (IsOk()) {
@@ -71,70 +91,51 @@ class Maybe<void> final {
   SharedOrPlain<ErrorProto, void*> error_or_plain_;
 };
 
-#define SPECIALIZE_PLAIN_MAYBE(T)                                                                \
-  class Maybe<T> final {                                                                         \
-   public:                                                                                       \
-    Maybe(T data) : error_or_plain_(data) {}                                                     \
-    Maybe(const Error& error) : error_or_plain_(error.error_proto()) { CheckError(); }           \
-    Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_plain_(error) { CheckError(); }   \
-    Maybe(const Maybe<T>&) = default;                                                            \
-    Maybe(Maybe<T>&&) = default;                                                                 \
-    ~Maybe() = default;                                                                          \
-                                                                                                 \
-    bool IsOk() const { return error_or_plain_.IsPlain(); }                                      \
-    T Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {                               \
-      return error_or_plain_.plain_data();                                                       \
-    }                                                                                            \
-    std::shared_ptr<ErrorProto> error() const { return error_or_plain_.shared_ptr(); }           \
-                                                                                                 \
-    T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const { \
-      if (IsOk()) {                                                                              \
-        google::protobuf::TextFormat::PrintToString(ErrorProto(), error_str);                    \
-        return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();                             \
-      } else {                                                                                   \
-        google::protobuf::TextFormat::PrintToString(*error(), error_str);                        \
-        return default_for_error;                                                                \
-      }                                                                                          \
-    }                                                                                            \
-                                                                                                 \
-   private:                                                                                      \
-    void CheckError() const {                                                                    \
-      CHECK_NE(error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET);                      \
-    }                                                                                            \
-                                                                                                 \
-    SharedOrPlain<ErrorProto, T> error_or_plain_;                                                \
+template<typename T>
+class Maybe<T, typename std::enable_if<std::is_scalar<T>::value>::type> final {
+ public:
+  Maybe(T data) : error_or_plain_(data) {}
+  Maybe(const Error& error) : error_or_plain_(error.error_proto()) { CheckError(); }
+  Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_plain_(error) { CheckError(); }
+  Maybe(const Maybe&) = default;
+  Maybe(Maybe&&) = default;
+  ~Maybe() = default;
+
+  bool IsOk() const { return error_or_plain_.IsPlain(); }
+  T Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
+    return error_or_plain_.plain_data();
+  }
+  std::shared_ptr<ErrorProto> error() const { return error_or_plain_.shared_ptr(); }
+
+  std::string GetSerializedError() const {
+    CHECK(!IsOk());
+    std::string str;
+    google::protobuf::TextFormat::PrintToString(*error(), &str);
+    return str;
   }
 
-template<typename T>
-SPECIALIZE_PLAIN_MAYBE(T*);
+  T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const {
+    if (IsOk()) {
+      google::protobuf::TextFormat::PrintToString(ErrorProto(), error_str);
+      return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+    } else {
+      google::protobuf::TextFormat::PrintToString(*error(), error_str);
+      return default_for_error;
+    }
+  }
 
-#define SPECIALIZE_BASIC_DATA_TYPE_MAYBE(T) \
-  template<>                                \
-  SPECIALIZE_PLAIN_MAYBE(T)
+ private:
+  void CheckError() const { CHECK_NE(error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET); }
 
-SPECIALIZE_BASIC_DATA_TYPE_MAYBE(bool);
-SPECIALIZE_BASIC_DATA_TYPE_MAYBE(char);
-SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned char);
-SPECIALIZE_BASIC_DATA_TYPE_MAYBE(short);
-SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned short);
-SPECIALIZE_BASIC_DATA_TYPE_MAYBE(int);
-SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned int);
-SPECIALIZE_BASIC_DATA_TYPE_MAYBE(long);
-SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned long);
-SPECIALIZE_BASIC_DATA_TYPE_MAYBE(long long);
-SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned long long);
-SPECIALIZE_BASIC_DATA_TYPE_MAYBE(float);
-SPECIALIZE_BASIC_DATA_TYPE_MAYBE(double);
-
-#undef SPECIALIZE_BASIC_DATA_TYPE_MAYBE
-#undef SPECIALIZE_PLAIN_MAYBE
+  SharedOrPlain<ErrorProto, T> error_or_plain_;
+};
 
 template<typename T>
 inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
   return maybe;
 }
 
-#define __LOC__ __FILE__ ":" OF_PP_STRINGIZE(__LINE__) "\n"
+#define MAYBE_FAILED_LOC __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
 
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
@@ -143,7 +144,9 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
   ({                                                                      \
     const auto& maybe = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
     if (!maybe.IsOk()) {                                                  \
-      LOG(INFO) << "maybe failed:" << __LOC__;                            \
+      auto* stack_frame = maybe.error()->add_stack_frame();               \
+      stack_frame->set_location(MAYBE_FAILED_LOC);                        \
+      stack_frame->set_function(__FUNCTION__);                            \
       return maybe.error();                                               \
     }                                                                     \
     maybe.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();           \
@@ -151,14 +154,21 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #define CHECK_JUST(...)                                                   \
   ({                                                                      \
     const auto& maybe = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
-    CHECK(maybe.IsOk());                                                  \
+    if (!maybe.IsOk()) {                                                  \
+      auto* stack_frame = maybe.error()->add_stack_frame();               \
+      stack_frame->set_location(MAYBE_FAILED_LOC);                        \
+      stack_frame->set_function(__FUNCTION__);                            \
+      LOG(FATAL) << maybe.GetSerializedError();                           \
+    }                                                                     \
     maybe.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();           \
   })
-#define OF_RETURN_IF_ERROR(...)                                         \
-  const auto& maybe = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
-  if (!maybe.IsOk()) {                                                  \
-    LOG(INFO) << "maybe failed:" << __LOC__;                            \
-    return maybe.error();                                               \
+#define OF_RETURN_IF_ERROR(...)                                                    \
+  const auto& maybe_##__LINE__ = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
+  if (!maybe_##__LINE__.IsOk()) {                                                  \
+    auto* stack_frame = maybe_##__LINE__.error()->add_stack_frame();               \
+    stack_frame->set_location(MAYBE_FAILED_LOC);                                   \
+    stack_frame->set_function(__FUNCTION__);                                       \
+    return maybe_##__LINE__.error();                                               \
   }
 
 #else
@@ -167,40 +177,42 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 
 }  // namespace oneflow
 
-#define OF_CHECK(expr) \
-  if (!(expr))         \
-  return __LOC__ <= Error::CheckFailed() << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
+#define OF_TODO() \
+  return std::pair<std::string, std::string>(MAYBE_FAILED_LOC, __FUNCTION__) <= Error::Todo()
+#define OF_UNIMPLEMENTED()                                                   \
+  return std::pair<std::string, std::string>(MAYBE_FAILED_LOC, __FUNCTION__) \
+         <= Error::Unimplemented()
 
-#define OF_CHECK_NOTNULL(ptr) OF_CHECK(ptr != nullptr)
-#define OF_CHECK_ISNULL(ptr) OF_CHECK(ptr == nullptr)
-#define OF_CHECK_STREQ(lhs, rhs) OF_CHECK_EQ(std::string(lhs), std::string(rhs))
-#define OF_CHECK_STRNE(lhs, rhs) OF_CHECK_NE(std::string(lhs), std::string(rhs))
+#define CHECK_OR_RETURN(expr)                                                \
+  if (!(expr))                                                               \
+  return std::pair<std::string, std::string>(MAYBE_FAILED_LOC, __FUNCTION__) \
+         <= Error::CheckFailed() << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
 
-#define OF_CHECK_EQ(lhs, rhs) OF_CHECK((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
-#define OF_CHECK_NE(lhs, rhs) OF_CHECK((lhs) != (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
-#define OF_CHECK_GT(lhs, rhs) OF_CHECK((lhs) > (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
-#define OF_CHECK_GE(lhs, rhs) OF_CHECK((lhs) >= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
-#define OF_CHECK_LT(lhs, rhs) OF_CHECK((lhs) < (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
-#define OF_CHECK_LE(lhs, rhs) OF_CHECK((lhs) <= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+#define CHECK_EQ_OR_RETURN(lhs, rhs) \
+  CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define OF_TODO() return __LOC__ <= Error::Todo()
-#define OF_UNIMPLEMENTED() return __LOC__ <= Error::Unimplemented()
+#define CHECK_GE_OR_RETURN(lhs, rhs) \
+  CHECK_OR_RETURN((lhs) >= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_OR_RETURN(expr) OF_CHECK(expr)
+#define CHECK_GT_OR_RETURN(lhs, rhs) \
+  CHECK_OR_RETURN((lhs) > (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_EQ_OR_RETURN(lhs, rhs) OF_CHECK_EQ(lhs, rhs)
+#define CHECK_LE_OR_RETURN(lhs, rhs) \
+  CHECK_OR_RETURN((lhs) <= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_GE_OR_RETURN(lhs, rhs) OF_CHECK_GE(lhs, rhs)
+#define CHECK_LT_OR_RETURN(lhs, rhs) \
+  CHECK_OR_RETURN((lhs) < (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_GT_OR_RETURN(lhs, rhs) OF_CHECK_GT(lhs, rhs)
+#define CHECK_NE_OR_RETURN(lhs, rhs) \
+  CHECK_OR_RETURN((lhs) != (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
 
-#define CHECK_LE_OR_RETURN(lhs, rhs) OF_CHECK_LE(lhs, rhs)
+#define CHECK_STREQ_OR_RETURN(lhs, rhs) CHECK_EQ_OR_RETURN(std::string(lhs), std::string(rhs))
 
-#define CHECK_LT_OR_RETURN(lhs, rhs) OF_CHECK_LT(lhs, rhs)
+#define CHECK_STRNE_OR_RETURN(lhs, rhs) CHECK_NE_OR_RETURN(std::string(lhs), std::string(rhs))
 
-#define CHECK_NE_OR_RETURN(lhs, rhs) OF_CHECK_NE(lhs, rhs)
+#define CHECK_NOTNULL_OR_RETURN(ptr) CHECK_OR_RETURN(ptr != nullptr)
 
-#define CHECK_STREQ_OR_RETURN(lhs, rhs) OF_CHECK_STREQ(lhs, rhs)
+#define CHECK_ISNULL_OR_RETURN(ptr) CHECK_OR_RETURN(ptr == nullptr)
 
 #define TODO_THEN_RETURN() OF_TODO()
 

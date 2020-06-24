@@ -2,13 +2,14 @@ from __future__ import absolute_import
 
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export('Box')
+
 class Box(object):
     def __init__(self, *arg):
         assert len(arg) <= 1
         self.has_value_ = len(arg) > 0
         self.value_ = None
-        if self.has_value_: self.value_ = arg[0]
+        if self.has_value_:
+            self.value_ = arg[0]
 
     @property
     def value(self):
@@ -21,7 +22,7 @@ class Box(object):
 
     def set_value(self, val):
         self.value_ = val
-        self.has_value_ = True 
+        self.has_value_ = True
 
     def has_value(self):
         return self.has_value_

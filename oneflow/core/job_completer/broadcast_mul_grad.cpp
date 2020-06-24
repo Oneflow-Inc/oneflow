@@ -5,7 +5,7 @@ namespace oneflow {
 
 namespace {
 
-void GenerateBackwardOpConf(
+Maybe<void> GenerateBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
@@ -48,7 +48,7 @@ void GenerateBackwardOpConf(
                                                     broadcast_axis_vec.end()};
       op_confs->push_back(reduce_sum_like_a);
       DiffLbi4BnInOp("a")->set_op_name(reduce_sum_like_a.name());
-      DiffLbi4BnInOp("a")->set_blob_name("out");
+      DiffLbi4BnInOp("a")->set_blob_name("y");
     }
   }
   if (DiffLbi4BnInOp("b") != nullptr) {
@@ -92,6 +92,7 @@ void GenerateBackwardOpConf(
       DiffLbi4BnInOp("b")->set_blob_name("y");
     }
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace

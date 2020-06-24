@@ -69,7 +69,7 @@ class GpuArgSortKernel final : public user_op::OpKernel {
     const int32_t elem_cnt = in->shape().elem_cnt();
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = elem_cnt / instance_size;
-    const std::string& direction = ctx->GetAttr<std::string>("direction");
+    const std::string& direction = ctx->Attr<std::string>("direction");
     InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                         ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager.IndicesPtr(),
                                                             instance_size);
@@ -86,17 +86,15 @@ class GpuArgSortKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GPU_ARG_SORT_KERNEL(dtype)                                                        \
   REGISTER_USER_KERNEL("arg_sort")                                                                 \
       .SetCreateFn<GpuArgSortKernel<dtype>>()                                                      \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                                 \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);              \
-        return ctx.device_type() == DeviceType::kGPU                                               \
-               && in_desc->data_type() == GetDataType<dtype>::value;                               \
-      })                                                                                           \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                                \
+                       & user_op::HobDataType("in", 0) == GetDataType<dtype>::value)               \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                               \
         const int32_t elem_cnt = in_shape->elem_cnt();                                             \
@@ -109,7 +107,7 @@ class GpuArgSortKernel final : public user_op::OpKernel {
         const int32_t indices_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(int32_t));      \
         /* CUB Temp Storage */                                                                     \
         int32_t temp_storage_bytes = -1;                                                           \
-        const std::string& direction = ctx->GetAttr<std::string>("direction");                     \
+        const std::string& direction = ctx->Attr<std::string>("direction");                        \
         if (direction == "ASCENDING") {                                                            \
           temp_storage_bytes =                                                                     \
               InferTempStorageForSortPairsAscending<dtype, int32_t>(instance_num, instance_size);  \

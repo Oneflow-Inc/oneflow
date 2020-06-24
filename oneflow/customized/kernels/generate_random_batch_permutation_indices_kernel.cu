@@ -72,7 +72,7 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
  private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    int64_t seed = ctx->GetAttr<int64_t>("seed");
+    int64_t seed = ctx->Attr<int64_t>("seed");
     return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>>(
         seed, ctx->device_ctx());
   }
@@ -93,14 +93,13 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
                        argsort_instance_size, buf_manager.TempStoragePtr(),
                        buf_manager.TempStorageBytes(), buf_manager.SortedValuePtr(),
                        y->mut_dptr<int32_t>(), ctx->device_ctx()->cuda_stream());
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")
     .SetCreateFn<GenerateRandomBatchPermutationIndicesGPUKernel>()
-    .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {
-      return ctx.device_type() == DeviceType::kGPU;
-    })
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU)
     .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {
       const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       const int32_t batch_size = y_shape->At(0);

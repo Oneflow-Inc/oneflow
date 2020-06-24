@@ -1,11 +1,9 @@
-#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/sbp_context.h"
-#include "oneflow/core/framework/user_op_attr.pb.h"
 
 namespace oneflow {
 REGISTER_USER_OP("constant")
     .Output("out")
+    .SetOutputBufferNum(1)
     .Attr("floating_value", UserOpAttrType::kAtDouble)
     .Attr("integer_value", UserOpAttrType::kAtInt64)
     .Attr("is_floating_value", UserOpAttrType::kAtBool)
@@ -13,8 +11,8 @@ REGISTER_USER_OP("constant")
     .Attr("shape", UserOpAttrType::kAtShape)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      const Shape& shape = ctx->GetAttr<Shape>("shape");
-      auto dtype = ctx->GetAttr<DataType>("dtype");
+      const Shape& shape = ctx->Attr<Shape>("shape");
+      auto dtype = ctx->Attr<DataType>("dtype");
       DimVector dim_vec;
       if (shape.NumAxes() > 0) {
         dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
@@ -29,10 +27,8 @@ REGISTER_USER_OP("constant")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Broadcast(ctx->inputs())
-          .Broadcast(ctx->outputs())
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
       return Maybe<void>::Ok();
     });
+
 }  // namespace oneflow

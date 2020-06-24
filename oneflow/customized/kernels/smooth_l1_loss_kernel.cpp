@@ -10,7 +10,7 @@ class SmoothL1LossCPUKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const float beta = ctx->GetAttr<float>("beta");
+    const float beta = ctx->Attr<float>("beta");
     const user_op::Tensor* prediction_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const T* prediction = prediction_blob->dptr<T>();
     const int64_t elem_cnt = prediction_blob->shape().elem_cnt();
@@ -24,17 +24,15 @@ class SmoothL1LossCPUKernel final : public user_op::OpKernel {
         loss[i] = abs_diff - 0.5 * beta;
       }
     }
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(dtype)                                         \
-  REGISTER_USER_KERNEL("smooth_l1_loss")                                                  \
-      .SetCreateFn<SmoothL1LossCPUKernel<dtype>>()                                        \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                        \
-        const user_op::TensorDesc* loss_desc = ctx.TensorDesc4ArgNameAndIndex("loss", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                      \
-               && loss_desc->data_type() == GetDataType<dtype>::value;                    \
-      });
+#define REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(dtype)                   \
+  REGISTER_USER_KERNEL("smooth_l1_loss")                            \
+      .SetCreateFn<SmoothL1LossCPUKernel<dtype>>()                  \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
+                       & user_op::HobDataType("loss", 0) == GetDataType<dtype>::value);
 
 REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(float)
 REGISTER_SMOOTH_L1_LOSS_CPU_KERNEL(double)
@@ -47,7 +45,7 @@ class SmoothL1LossGradCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const float beta = ctx->GetAttr<float>("beta");
+    const float beta = ctx->Attr<float>("beta");
     const user_op::Tensor* prediction_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const T* prediction = prediction_blob->dptr<T>();
     const int64_t elem_cnt = prediction_blob->shape().elem_cnt();
@@ -64,18 +62,15 @@ class SmoothL1LossGradCpuKernel final : public user_op::OpKernel {
       }
       prediction_grad[i] = prediction_grad[i] * loss_grad[i];
     }
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(dtype)                            \
-  REGISTER_USER_KERNEL("smooth_l1_loss_grad")                                     \
-      .SetCreateFn<SmoothL1LossGradCpuKernel<dtype>>()                            \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                \
-        const user_op::TensorDesc* prediction_grad_desc =                         \
-            ctx.TensorDesc4ArgNameAndIndex("prediction_grad", 0);                 \
-        return ctx.device_type() == DeviceType::kCPU                              \
-               && prediction_grad_desc->data_type() == GetDataType<dtype>::value; \
-      });
+#define REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(dtype)              \
+  REGISTER_USER_KERNEL("smooth_l1_loss_grad")                       \
+      .SetCreateFn<SmoothL1LossGradCpuKernel<dtype>>()              \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
+                       & user_op::HobDataType("prediction_grad", 0) == GetDataType<dtype>::value);
 
 REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(float)
 REGISTER_SMOOTH_L1_LOSS_GRAD_CPU_KERNEL(double)

@@ -4,6 +4,8 @@
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -140,9 +142,75 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob
   }
   const int32_t groups = GetValFromPbMessage<int32_t>(conv_conf, "groups");
   if (groups != 1) { CudaCheck(cudnnSetConvolutionGroupCount(val_, groups)); }
+  if (GetCudnnDataType(data_type) == CUDNN_DATA_HALF) {
+    CudaCheck(cudnnSetConvolutionMathType(val_, CUDNN_TENSOR_OP_MATH));
+  }
+}
+
+CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
+                             const user_op::UserOpConfWrapper& conv_conf) {
+  int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
+  CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
+  std::vector<int32_t> pad_large_side;
+  GetConvOutAndPad(in_blob_shape, conv_conf, nullptr, nullptr, &pad_large_side);
+  const auto& strides = conv_conf.attr<std::vector<int32_t>>("strides");
+  const auto& dilation_rate = conv_conf.attr<std::vector<int32_t>>("dilation_rate");
+  if (opkernel_dim == 2) {
+    CudaCheck(cudnnSetConvolution2dDescriptor(val_, pad_large_side[0], pad_large_side[1],
+                                              strides.at(0), strides.at(1), dilation_rate.at(0),
+                                              dilation_rate.at(1), CUDNN_CROSS_CORRELATION,
+                                              GetCudnnDataType(data_type)));
+  } else if (opkernel_dim == 1) {
+    CudaCheck(cudnnSetConvolution2dDescriptor(val_, pad_large_side[0], 0, strides.at(0), 1,
+                                              dilation_rate.at(0), 1, CUDNN_CROSS_CORRELATION,
+                                              GetCudnnDataType(data_type)));
+  } else {
+    CudaCheck(cudnnSetConvolutionNdDescriptor(
+        val_, opkernel_dim, pad_large_side.data(), strides.data(), dilation_rate.data(),
+        CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
+  }
+  const int32_t groups = conv_conf.attr<int32_t>("groups");
+  if (groups != 1) { CudaCheck(cudnnSetConvolutionGroupCount(val_, groups)); }
+  if (GetCudnnDataType(data_type) == CUDNN_DATA_HALF) {
+    CudaCheck(cudnnSetConvolutionMathType(val_, CUDNN_TENSOR_OP_MATH));
+  }
 }
 
 CudnnConvArgs::CudnnConvArgs(const PbMessage& conv_conf, DataType x_data_type,
+                             const ShapeView& x_shape, DataType w_data_type,
+                             const ShapeView& w_shape, DataType y_data_type,
+                             const ShapeView& y_shape, const std::string& data_format,
+                             size_t max_workspace_size, bool heuristic_search,
+                             bool use_deterministic_algo_only, bool enable_pseudo_half)
+    : xdesc(x_data_type, x_shape, data_format),
+      ydesc(y_data_type, y_shape, data_format),
+      wdesc(w_data_type, w_shape, data_format),
+      cdesc(GetConvDescDataType(x_data_type, enable_pseudo_half), x_shape, conv_conf),
+      heuristic(heuristic_search),
+      deterministic(use_deterministic_algo_only) {
+  std::memset(&params, 0, sizeof(CudnnConvParams));
+  CudaCheck(cudnnGetTensorNdDescriptor(xdesc.Get(), CudnnConvParams::kTensorMaxDims,
+                                       &params.x_data_type, &params.x_ndim, params.x_dims,
+                                       params.x_strides));
+  CudaCheck(cudnnGetTensorNdDescriptor(ydesc.Get(), CudnnConvParams::kTensorMaxDims,
+                                       &params.y_data_type, &params.y_ndim, params.y_dims,
+                                       params.y_strides));
+  CudaCheck(cudnnGetFilterNdDescriptor(wdesc.Get(), CudnnConvParams::kTensorMaxDims,
+                                       &params.w_data_type, &params.w_format, &params.w_ndim,
+                                       params.w_dims));
+  cudnnConvolutionMode_t mode;
+  int conv_dim_size = 0;
+  CudaCheck(cudnnGetConvolutionNdDescriptor(cdesc.Get(), CudnnConvParams::kConvMaxDims,
+                                            &conv_dim_size, params.padding, params.stride,
+                                            params.dilation, &mode, &params.data_type));
+  CHECK_EQ(params.x_data_type, params.w_data_type);
+  CHECK_EQ(params.x_ndim, params.w_ndim);
+  CHECK_EQ(conv_dim_size + 2, params.x_ndim);
+  CudaCheck(cudnnGetConvolutionGroupCount(cdesc.Get(), &params.groups));
+  params.max_ws_size = max_workspace_size;
+}
+
+CudnnConvArgs::CudnnConvArgs(const user_op::UserOpConfWrapper& conv_conf, DataType x_data_type,
                              const ShapeView& x_shape, DataType w_data_type,
                              const ShapeView& w_shape, DataType y_data_type,
                              const ShapeView& y_shape, const std::string& data_format,
@@ -276,7 +344,7 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionFwdAlgoPerf_t> {
     perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionForwardAlgorithm_v7(
         res->cudnn_handle(), args.xdesc.Get(), args.wdesc.Get(), args.cdesc.Get(), args.ydesc.Get(),
-        perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+        perf_vec->size(), &found_algo_cnt, perf_vec->data()));
     // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
@@ -288,7 +356,7 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionFwdAlgoPerf_t> {
     CudaCheck(cudnnFindConvolutionForwardAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.wdesc.Get(),
         res->w_const_dptr(), args.cdesc.Get(), args.ydesc.Get(), res->y_mut_dptr(),
-        perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
+        perf_vec->size(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
     // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
@@ -311,7 +379,7 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdDataAlgoPerf_t> {
     perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm_v7(
         res->cudnn_handle(), args.wdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.xdesc.Get(),
-        perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+        perf_vec->size(), &found_algo_cnt, perf_vec->data()));
     // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
@@ -323,7 +391,7 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdDataAlgoPerf_t> {
     CudaCheck(cudnnFindConvolutionBackwardDataAlgorithmEx(
         res->cudnn_handle(), args.wdesc.Get(), res->w_const_dptr(), args.ydesc.Get(),
         res->y_const_dptr(), args.cdesc.Get(), args.xdesc.Get(), res->x_mut_dptr(),
-        perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
+        perf_vec->size(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
     // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
@@ -347,7 +415,7 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdFilterAlgoPerf_t> {
     perf_vec->resize(GetAlgoMaxCount(res));
     CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm_v7(
         res->cudnn_handle(), args.xdesc.Get(), args.ydesc.Get(), args.cdesc.Get(), args.wdesc.Get(),
-        perf_vec->capacity(), &found_algo_cnt, perf_vec->data()));
+        perf_vec->size(), &found_algo_cnt, perf_vec->data()));
     // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
   }
@@ -359,7 +427,7 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdFilterAlgoPerf_t> {
     CudaCheck(cudnnFindConvolutionBackwardFilterAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.ydesc.Get(),
         res->y_const_dptr(), args.cdesc.Get(), args.wdesc.Get(), res->w_mut_dptr(),
-        perf_vec->capacity(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
+        perf_vec->size(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
         args.params.max_ws_size));
     // vector::resize does not affect the first found_algo_cnt elements.
     perf_vec->resize(found_algo_cnt);
@@ -383,7 +451,7 @@ perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs* args, CudnnConvResource
     }
     return GetBestAlgorithm<perf_t>(*args, res, perf_vec);
   };
-  size_t cache_size = Global<ResourceDesc>::Get()->thread_local_cache_max_size();
+  size_t cache_size = Global<ResourceDesc, ForSession>::Get()->thread_local_cache_max_size();
   return ThreadLocalCachedCall(cache_size, Infer, args->params);
 }
 

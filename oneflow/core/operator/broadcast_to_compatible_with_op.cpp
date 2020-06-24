@@ -10,8 +10,8 @@ Maybe<void> GetBroadcastShape(const Shape& a_shape, const Shape& b_shape, Shape*
   Shape a_extend_shape = CreateLeftExtendedShape(ShapeView(a_shape), max_shape.NumAxes());
   Shape b_extend_shape = CreateLeftExtendedShape(ShapeView(b_shape), max_shape.NumAxes());
   FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
-    OF_CHECK(a_extend_shape.At(i) == 1 || b_extend_shape.At(i) == 1
-             || a_extend_shape.At(i) == b_extend_shape.At(i))
+    CHECK_OR_RETURN(a_extend_shape.At(i) == 1 || b_extend_shape.At(i) == 1
+                    || a_extend_shape.At(i) == b_extend_shape.At(i))
         << "shape " << a_shape.ToString() << " and shape " << b_shape.ToString()
         << " are not broadcastable";
     max_shape.Set(i, std::max(a_extend_shape.At(i), b_extend_shape.At(i)));
@@ -80,18 +80,24 @@ class BroadcastToCompatibleWithOp final : public Operator {
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
-    const Shape& y_shape = JUST(LogicalBlobDesc4Ibn("y"))->shape();
-    int64_t broadcast_num_axes = y_shape.NumAxes();
+    Shape broadcasted_shape{1};
+    for (const std::string ibn : input_bns()) {
+      const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(ibn))->shape();
+      GetBroadcastShape(broadcasted_shape, input_shape, &broadcasted_shape);
+    }
+
+    const int64_t broadcast_num_axes = broadcasted_shape.NumAxes();
     HashMap<std::string, Shape> ibn2extend_shape;
-    for (const std::string bn : input_bns()) {
-      const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(bn))->shape();
-      OF_CHECK(ibn2extend_shape
-                   .emplace(bn, CreateLeftExtendedShape(ShapeView(input_shape), broadcast_num_axes))
-                   .second);
+    for (const std::string ibn : input_bns()) {
+      const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(ibn))->shape();
+      CHECK_OR_RETURN(
+          ibn2extend_shape
+              .emplace(ibn, CreateLeftExtendedShape(ShapeView(input_shape), broadcast_num_axes))
+              .second);
     }
 
     FOR_RANGE(int64_t, i, 0, broadcast_num_axes) {
-      if (y_shape.At(i) == 1) { continue; }
+      if (broadcasted_shape.At(i) == 1) { continue; }
       SbpSignature sbp_sig;
       for (const auto& pair : ibn2extend_shape) {
         if (pair.second.At(i) == 1) {

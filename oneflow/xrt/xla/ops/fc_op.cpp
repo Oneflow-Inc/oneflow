@@ -13,7 +13,7 @@ class FullyConnectedOp : public XlaOpKernel {
     xla::XlaOp weight = xla::Transpose(ctx->Input("weight"), {1, 0});
     xla::XlaOp result = xla::Dot(in, weight);
 
-    if (ctx->GetAttr<bool>("use_bias")) { result = xla::Add(result, ctx->Input("bias")); }
+    if (ctx->Attr<bool>("use_bias")) { result = xla::Add(result, ctx->Input("bias")); }
     ctx->SetOutput("out", result);
   }
 };

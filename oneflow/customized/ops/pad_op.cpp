@@ -12,8 +12,8 @@ REGISTER_USER_OP("pad")
     .Attr("integral_constant_value", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      const auto& padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
-      const auto& padding_after = ctx->GetAttr<std::vector<int64_t>>("padding_after");
+      const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
+      const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
       CHECK_EQ(padding_before.size(), x_shape->NumAxes());
       CHECK_EQ(padding_after.size(), x_shape->NumAxes());
       DimVector y_dim_vec(x_shape->NumAxes());
@@ -26,12 +26,14 @@ REGISTER_USER_OP("pad")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      const auto& padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
-      const auto& padding_after = ctx->GetAttr<std::vector<int64_t>>("padding_after");
-      for (int64_t i = 0; i < x_tensor.shape().NumAxes(); i++) {
+      const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
+      const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
+      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
         if (padding_before[i] == 0 && padding_after[i] == 0) {
-          SbpSignatureBuilder().Split("x", 0, i).Split("y", 0, i).Build(
-              ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("x", 0), i)
+              .Split(user_op::OpArg("y", 0), i)
+              .Build();
         }
       }
       return Maybe<void>::Ok();
@@ -46,8 +48,8 @@ REGISTER_USER_OP("pad_grad")
     .Attr("integral_constant_value", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      const auto& padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
-      const auto& padding_after = ctx->GetAttr<std::vector<int64_t>>("padding_after");
+      const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
+      const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
       CHECK_EQ(padding_before.size(), dy_shape->NumAxes());
       CHECK_EQ(padding_after.size(), dy_shape->NumAxes());
       DimVector dx_dim_vec(dy_shape->NumAxes());
@@ -60,14 +62,14 @@ REGISTER_USER_OP("pad_grad")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-      const auto& padding_before = ctx->GetAttr<std::vector<int64_t>>("padding_before");
-      const auto& padding_after = ctx->GetAttr<std::vector<int64_t>>("padding_after");
-      for (int64_t i = 0; i < dy_tensor.shape().NumAxes(); i++) {
+      const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
+      const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
+      FOR_RANGE(int64_t, i, 0, dy_tensor.shape().NumAxes()) {
         if (padding_before[i] == 0 && padding_after[i] == 0) {
-          SbpSignatureBuilder()
-              .Split("dx", 0, i)
-              .Split("dy", 0, i)
-              .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("dx", 0), i)
+              .Split(user_op::OpArg("dy", 0), i)
+              .Build();
         }
       }
       return Maybe<void>::Ok();

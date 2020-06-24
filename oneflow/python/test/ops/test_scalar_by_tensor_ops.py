@@ -1,12 +1,11 @@
 import os
-import numpy as np
-import tensorflow as tf
-import oneflow as flow
-from collections import OrderedDict 
+from collections import OrderedDict
 
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
+import test_global_storage
 from test_util import GenArgList
-from test_util import GetSavePath
-from test_util import Save
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -21,7 +20,7 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ScalarAddByTensorJob():
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -48,12 +47,12 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
                 loss = flow.math.divide(x, y)
             flow.losses.add_loss(loss)
 
-            flow.watch(x, Save("x"))
-            flow.watch(y, Save("y"))
-            flow.watch_diff(x, Save("x_diff"))
-            flow.watch_diff(y, Save("y_diff"))
-            flow.watch(loss, Save("loss"))
-            flow.watch_diff(loss, Save("loss_diff"))
+            flow.watch(x, test_global_storage.Setter("x"))
+            flow.watch(y, test_global_storage.Setter("y"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+            flow.watch_diff(y, test_global_storage.Setter("y_diff"))
+            flow.watch(loss, test_global_storage.Setter("loss"))
+            flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
 
             return loss
 
@@ -63,8 +62,8 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
     of_out = ScalarAddByTensorJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
-        y = tf.Variable(np.load(os.path.join(GetSavePath(), "y.npy")))
+        x = tf.Variable(test_global_storage.Get("x"))
+        y = tf.Variable(test_global_storage.Get("y"))
         if case == "add":
             tf_out = x + y
         elif case == "sub":
@@ -73,17 +72,18 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
             tf_out = x * y
         elif case == "div":
             tf_out = x / y
-    loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
+    loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_y_diff = tape.gradient(tf_out, y, loss_diff)
 
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "y_diff.npy")), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5
+        test_global_storage.Get("y_diff"), tf_y_diff.numpy(), rtol=1e-5, atol=1e-5
     )
+
 
 def test_add(test_case):
     arg_dict = OrderedDict()
@@ -94,6 +94,7 @@ def test_add(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
+
 def test_sub(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
@@ -103,6 +104,7 @@ def test_sub(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
+
 def test_mul(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
@@ -111,6 +113,7 @@ def test_mul(test_case):
     arg_dict["case"] = ["mul"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
+
 
 def test_div(test_case):
     arg_dict = OrderedDict()

@@ -29,11 +29,11 @@ void BoxingOp::InitFromOpConf() {
 
 const PbMessage& BoxingOp::GetCustomizedConf() const { return op_conf().boxing_conf(); }
 
-LogicalBlobId BoxingOp::ibn2lbi(const std::string& input_bn) const {
+LogicalBlobId BoxingOp::lbi4ibn(const std::string& input_bn) const {
   return GetMsgFromCustomizedConf<LogicalBlobId>("lbi");
 }
 
-LogicalBlobId BoxingOp::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId BoxingOp::lbi4obn(const std::string& output_bn) const {
   return GetMsgFromCustomizedConf<LogicalBlobId>("lbi");
 }
 
@@ -69,7 +69,7 @@ Maybe<void> BoxingOp::InferBlobDescs(
     FOR_RANGE(size_t, i, 0, output_bns().size()) {
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
       *out_blob_desc = *first_in_blob;
-      OF_CHECK_GT(split_conf.part_num(i), 0);
+      CHECK_GT_OR_RETURN(split_conf.part_num(i), 0);
       data_tmp_blob_shape_vec[split_conf.axis()] = split_conf.part_num(i);
       out_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
     }

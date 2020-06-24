@@ -1,11 +1,12 @@
-import os
-import numpy as np
 import itertools
+import os
 from collections import OrderedDict
 from collections.abc import Iterable
 
+import numpy as np
 import oneflow as flow
 import tensorflow as tf
+import test_global_storage
 
 
 def GenCartesianProduct(sets):
@@ -26,22 +27,6 @@ def GenArgDict(arg_dict):
     return [dict(zip(arg_dict.keys(), x)) for x in GenArgList(arg_dict)]
 
 
-def GetSavePath():
-    return "./log/op_unit_test/"
-
-
-# Save func for flow.watch
-def Save(name):
-    path = GetSavePath()
-    if not os.path.isdir(path):
-        os.makedirs(path)
-
-    def _save(x):
-        np.save(os.path.join(path, name), x.ndarray())
-
-    return _save
-
-
 class Args:
     def __init__(self, flow_args, tf_args=None):
         super().__init__()
@@ -57,15 +42,20 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
     func_config.default_data_type(flow.float)
     func_config.train.primary_lr(0)
     func_config.train.model_update_conf(dict(naive_conf={}))
-    @flow.function(func_config)
+
+    @flow.global_function(func_config)
     def FlowJob(x=flow.FixedTensorDef(x.shape)):
         with flow.device_prior_placement(device_type, "0:0"):
-            x += flow.get_variable(name='v1', shape=(1,),
-                                   dtype=flow.float, initializer=flow.zeros_initializer())
+            x += flow.get_variable(
+                name="v1",
+                shape=(1,),
+                dtype=flow.float,
+                initializer=flow.zeros_initializer(),
+            )
             loss = flow_op(x, *flow_args)
             flow.losses.add_loss(loss)
 
-            flow.watch_diff(x, Save("x_diff"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
 
             return loss
 
@@ -73,7 +63,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
     check_point = flow.train.CheckPoint()
     check_point.init()
     y = FlowJob(x).get().ndarray()
-    x_diff = np.load(os.path.join(GetSavePath(), "x_diff.npy"))
+    x_diff = test_global_storage.Get("x_diff")
     return y, x_diff
 
 
@@ -86,24 +76,33 @@ def RunTensorFlowOp(tf_op, x, tf_args):
     return y.numpy(), x_diff.numpy()
 
 
-def CompareOpWithTensorFlow(device_type, flow_op, tf_op, input_shape,
-                            op_args=None, input_minval=-10, input_maxval=10, y_rtol=1e-5,
-                            y_atol=1e-5, x_diff_rtol=1e-5, x_diff_atol=1e-5):
+def CompareOpWithTensorFlow(
+    device_type,
+    flow_op,
+    tf_op,
+    input_shape,
+    op_args=None,
+    input_minval=-10,
+    input_maxval=10,
+    y_rtol=1e-5,
+    y_atol=1e-5,
+    x_diff_rtol=1e-5,
+    x_diff_atol=1e-5,
+):
     assert device_type in ["gpu", "cpu"]
     if op_args is None:
         flow_args, tf_args = [], []
     else:
         flow_args, tf_args = op_args.flow_args, op_args.tf_args
 
-    x = np.random.uniform(low=input_minval, high=input_maxval,
-                          size=input_shape).astype(np.float32)
+    x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape).astype(
+        np.float32
+    )
     of_y, of_x_diff, = RunOneflowOp(device_type, flow_op, x, flow_args)
     tf_y, tf_x_diff = RunTensorFlowOp(tf_op, x, tf_args)
 
     assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
-    assert np.allclose(
-        of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol
-    )
+    assert np.allclose(of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol)
 
 
 type_name_to_flow_type = {

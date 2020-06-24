@@ -36,6 +36,13 @@ T* MemoryAllocator::PlacementNew(T* mem_ptr) {
   return obj;
 }
 
+struct MemoryAllocatorImpl final {
+  static void* Allocate(MemoryCase mem_case, size_t size);
+  static void Deallocate(void* ptr, MemoryCase mem_case);
+  static void* AllocateUnPinnedHostMem(size_t size);
+  static void DeallocateUnPinnedHostMem(void* ptr);
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_MEMORY_MEMORY_ALLOCATOR_H_

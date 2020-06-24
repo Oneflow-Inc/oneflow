@@ -1,4 +1,5 @@
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -11,10 +12,21 @@ Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& j
   int64_t job_id = job_set_.job_size();
   Job* job = job_set_.add_job();
   job->mutable_job_conf()->set_job_name(job_name);
-  job_name2infer_ctx_.emplace(job_name, std::make_unique<JobBuildAndInferCtx>(job, job_id));
+  std::unique_ptr<JobBuildAndInferCtx> ctx(NewJobBuildAndInferCtx(job, job_id));
+  job_name2infer_ctx_.emplace(job_name, std::move(ctx));
   cur_job_name_ = job_name;
   has_cur_job_ = true;
   return Maybe<void>::Ok();
+}
+
+JobBuildAndInferCtx* LazyJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job,
+                                                                        int64_t job_id) const {
+  return new LazyJobBuildAndInferCtx(job, job_id);
+}
+
+JobBuildAndInferCtx* EagerJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job,
+                                                                         int64_t job_id) const {
+  return new EagerJobBuildAndInferCtx(job, job_id);
 }
 
 Maybe<JobBuildAndInferCtx*> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
@@ -26,7 +38,8 @@ Maybe<JobBuildAndInferCtx*> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
 
 Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() const {
   CHECK_OR_RETURN(has_cur_job_) << JobBuildAndInferError::kNoJobBuildAndInferCtx
-                                << "current has not job name";
+                                << "current JobBuildAndInferCtx was closed, job name: "
+                                << cur_job_name_;
   return cur_job_name_;
 }
 
@@ -41,7 +54,7 @@ Maybe<void> JobBuildAndInferCtxMgr::AddLbiAndDiffWatcherUuidPair(
   };
   auto found_iter = std::find_if(pairs->lbi_and_uuid_pair().begin(),
                                  pairs->lbi_and_uuid_pair().end(), PairFoundCond);
-  OF_CHECK(found_iter == pairs->lbi_and_uuid_pair().end())
+  CHECK_OR_RETURN(found_iter == pairs->lbi_and_uuid_pair().end())
       << "diff blob has been watched. (logical_blob_name: "
       << GenLogicalBlobName(lbi_uuid_pair.lbi()) << ", job_name: " << *job_name << ")";
   *pairs->mutable_lbi_and_uuid_pair()->Add() = lbi_uuid_pair;
@@ -57,5 +70,7 @@ void JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
   CHECK_EQ(job_desc->job_id(), job_set_.job_size() - 1);
   Global<JobDesc>::Delete();
 }
+
+COMMAND(Global<bool, EagerExecutionOption>::SetAllocated(new bool(false)));
 
 }  // namespace oneflow

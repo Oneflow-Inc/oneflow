@@ -11,7 +11,7 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    bool hash_precomputed = ctx->GetAttr<bool>("hash_precomputed");
+    bool hash_precomputed = ctx->Attr<bool>("hash_precomputed");
     CHECK(hash_precomputed);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* table = ctx->Tensor4ArgNameAndIndex("table", 0);
@@ -24,15 +24,14 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
         ctx->device_ctx(), capacity, table->mut_dptr<T>(), size->mut_dptr<T>(),
         in->shape().elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
 #define REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(device, proto_type, cpp_type) \
   REGISTER_USER_KERNEL("CategoricalOrdinalEncode")                               \
       .SetCreateFn<CategoricalOrdinalEncodeKernel<device, cpp_type>>()           \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {               \
-        const user_op::TensorDesc* in = ctx.TensorDesc4ArgNameAndIndex("in", 0); \
-        return ctx.device_type() == device && in->data_type() == proto_type;     \
-      });
+      .SetIsMatchedHob(user_op::HobDeviceType() == device                        \
+                       & user_op::HobDataType("in", 0) == proto_type);
 
 REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCPU, DataType::kInt32, int32_t);
 REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCPU, DataType::kInt64, int64_t);

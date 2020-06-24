@@ -13,8 +13,10 @@ REGISTER_USER_OP("eager_nccl_all_reduce")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder().PartialSum("in", 0).Broadcast("out", 0).Build(
-          ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("in", 0))
+          .Broadcast(user_op::OpArg("out", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 

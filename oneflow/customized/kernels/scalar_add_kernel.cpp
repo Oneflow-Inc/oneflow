@@ -14,10 +14,10 @@ class ScalarAddUserKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T scalar_operand = 0;
-    if (ctx->GetAttr<bool>("has_int_operand")) {
-      scalar_operand = static_cast<T>(ctx->GetAttr<int64_t>("int_operand"));
-    } else if (ctx->GetAttr<bool>("has_float_operand")) {
-      scalar_operand = static_cast<T>(ctx->GetAttr<double>("float_operand"));
+    if (ctx->Attr<bool>("has_int_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
+    } else if (ctx->Attr<bool>("has_float_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
     } else {
       UNIMPLEMENTED();
     }
@@ -26,17 +26,15 @@ class ScalarAddUserKernel final : public user_op::OpKernel {
 
     KernelUtil<device_type, T>::AddByScalar(ctx->device_ctx(), out->shape().elem_cnt(), in_ptr,
                                             scalar_operand, out_ptr);
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_KERNEL(kernel_device_type, dtype)                                    \
-  REGISTER_USER_KERNEL("scalar_add")                                                  \
-      .SetCreateFn<ScalarAddUserKernel<DeviceType::k##kernel_device_type, dtype>>()   \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        return ctx.device_type() == DeviceType::k##kernel_device_type                 \
-               && y_desc->data_type() == GetDataType<dtype>::value;                   \
-      });
+#define REGISTER_KERNEL(kernel_device_type, dtype)                                   \
+  REGISTER_USER_KERNEL("scalar_add")                                                 \
+      .SetCreateFn<ScalarAddUserKernel<DeviceType::k##kernel_device_type, dtype>>()  \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::k##kernel_device_type \
+                       & user_op::HobDataType("out", 0) == GetDataType<dtype>::value);
 
 REGISTER_KERNEL(CPU, int8_t)
 REGISTER_KERNEL(CPU, int32_t)

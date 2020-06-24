@@ -1,12 +1,6 @@
 name: Build and Test CI
 
 on:
-    push:
-      branches:
-        - develop
-      paths-ignore:
-        - '**.md'
-        - '.gitignore'
     pull_request:
       types: [synchronize, opened, reopened, ready_for_review]
       branches:
@@ -23,6 +17,12 @@ jobs:
     if: github.event.pull_request.draft == false
     steps:
     - uses: actions/checkout@v2
+    - name: Check C++ format
+      run: |
+        python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
+    - name: Check python format
+      run: |
+        docker run --rm -v $PWD:$PWD --entrypoint "/bin/sh" cytopia/black@sha256:ea649b81bf6a64aaa34f4abba803da83528135b5d12bed9b485bcabb37480d33 -c "python3 $PWD/ci/check/run_py_format.py --source_dir $PWD/oneflow/python"
     - name: Setup environment
       run: |
         echo $HOSTNAME
@@ -70,15 +70,24 @@ jobs:
         docker rmi oneflow-build-base:${git_hash}
         docker rmi oneflow-build-third-party:${git_hash}
         docker rmi oneflow-build-make:${git_hash}
-    - name: Unit test with user op
+    - name: Build docker image for testing
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash ci/test/1node_op_test_user_op.sh
-    - name: Integration test with user op
+        bash docker/ci/test/build.sh
+    - name: Unit test with/without user op
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash ci/test/1node_model_test_user_op.sh
-    - name: Unit test
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash ci/test/1node_op_test.sh
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test bash ci/test/1node_op_test.sh
     - name: Integration test
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo ufoym/deepo bash ci/test/1node_model_test.sh
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test bash ci/test/1node_model_test.sh
+    - name: Integration test with user op
+      run: |
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test bash ci/test/1node_model_test_user_op.sh
+    - name: Benchmark with user op
+      run: |
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test bash ci/test/1node_benchmark_test.sh
+    - name: Benchmark with user op FP16
+      run: |
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test bash ci/test/1node_benchmark_test_fp16.sh
+    - name: Build documentation
+      run: |
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD oneflow-test bash ci/test/build_docs.sh

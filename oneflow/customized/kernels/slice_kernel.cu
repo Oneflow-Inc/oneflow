@@ -20,11 +20,11 @@ struct SliceGpuParams {
 SliceGpuParams ConstructSliceGpuParams(user_op::KernelComputeContext* ctx,
                                        const user_op::Tensor* entire,
                                        const user_op::Tensor* sliced) {
-  const auto& begin_vec = ctx->GetAttr<std::vector<int64_t>>("begin");
-  const auto& end_vec = ctx->GetAttr<std::vector<int64_t>>("end");
-  const auto& stride_vec = ctx->GetAttr<std::vector<int64_t>>("stride");
-  const auto& has_begin_vec = ctx->GetAttr<std::vector<int64_t>>("has_begin");
-  const auto& has_end_vec = ctx->GetAttr<std::vector<int64_t>>("has_end");
+  const auto& begin_vec = ctx->Attr<std::vector<int64_t>>("begin");
+  const auto& end_vec = ctx->Attr<std::vector<int64_t>>("end");
+  const auto& stride_vec = ctx->Attr<std::vector<int64_t>>("stride");
+  const auto& has_begin_vec = ctx->Attr<std::vector<int64_t>>("has_begin");
+  const auto& has_end_vec = ctx->Attr<std::vector<int64_t>>("has_end");
   CHECK_LE(entire->shape().NumAxes(), kSliceMaxDims);
   CHECK_EQ(entire->shape().NumAxes(), sliced->shape().NumAxes());
   CHECK_EQ(entire->shape().NumAxes(), begin_vec.size());
@@ -140,6 +140,7 @@ class SliceGpuKernel final : public user_op::OpKernel {
                          ctx->device_ctx()->cuda_stream()>>>(elem_cnt, params, input->dptr<T>(),
                                                              output->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<typename T>
@@ -160,29 +161,18 @@ class SliceGradGpuKernel final : public user_op::OpKernel {
         <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
            ctx->device_ctx()->cuda_stream()>>>(elem_cnt, params, dy->dptr<T>(), dx->mut_dptr<T>());
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SLICE_GPU_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("slice_v2")                                                    \
-      .SetCreateFn<SliceGpuKernel<dtype>>()                                           \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0);   \
-        if (ctx.device_type() == DeviceType::kGPU                                     \
-            && y_desc->data_type() == GetDataType<dtype>::value) {                    \
-          return true;                                                                \
-        }                                                                             \
-        return false;                                                                 \
-      });                                                                             \
-  REGISTER_USER_KERNEL("slice_grad_v2")                                               \
-      .SetCreateFn<SliceGradGpuKernel<dtype>>()                                       \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
-        if (ctx.device_type() == DeviceType::kGPU                                     \
-            && dx_desc->data_type() == GetDataType<dtype>::value) {                   \
-          return true;                                                                \
-        }                                                                             \
-        return false;                                                                 \
-      });
+#define REGISTER_SLICE_GPU_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("slice_v2")                                                   \
+      .SetCreateFn<SliceGpuKernel<dtype>>()                                          \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                  \
+                       & user_op::HobDataType("y", 0) == GetDataType<dtype>::value); \
+  REGISTER_USER_KERNEL("slice_grad_v2")                                              \
+      .SetCreateFn<SliceGradGpuKernel<dtype>>()                                      \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                  \
+                       & user_op::HobDataType("dx", 0) == GetDataType<dtype>::value);
 
 REGISTER_SLICE_GPU_KERNEL(float)
 REGISTER_SLICE_GPU_KERNEL(double)

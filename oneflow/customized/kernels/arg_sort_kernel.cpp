@@ -16,7 +16,7 @@ class CpuArgSortKernel final : public user_op::OpKernel {
 
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
-    const std::string& direction = ctx->GetAttr<std::string>("direction");
+    const std::string& direction = ctx->Attr<std::string>("direction");
     const bool is_ascending = direction == "ASCENDING";
     const bool is_descending = direction == "DESCENDING";
     FOR_RANGE(int32_t, i, 0, instance_num) {
@@ -40,17 +40,15 @@ class CpuArgSortKernel final : public user_op::OpKernel {
       };
       std::sort(out_ptr_i, out_ptr_i + instance_size, comp);
     }
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_ARG_SORT_KERNEL(dtype)                                           \
-  REGISTER_USER_KERNEL("arg_sort")                                                    \
-      .SetCreateFn<CpuArgSortKernel<dtype>>()                                         \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                  \
-               && in_desc->data_type() == GetDataType<dtype>::value;                  \
-      });
+#define REGISTER_CPU_ARG_SORT_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("arg_sort")                                  \
+      .SetCreateFn<CpuArgSortKernel<dtype>>()                       \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
+                       & user_op::HobDataType("in", 0) == GetDataType<dtype>::value);
 
 REGISTER_CPU_ARG_SORT_KERNEL(float)
 REGISTER_CPU_ARG_SORT_KERNEL(double)

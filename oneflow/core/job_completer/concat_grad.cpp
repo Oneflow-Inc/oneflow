@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 
-void GenerateBackwardOpConf(
+Maybe<void> GenerateBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
@@ -26,6 +26,7 @@ void GenerateBackwardOpConf(
     }
   }
   op_confs->push_back(split_op);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace

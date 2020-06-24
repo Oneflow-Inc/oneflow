@@ -1,12 +1,11 @@
 import os
-import numpy as np
-import tensorflow as tf
-import oneflow as flow
-from collections import OrderedDict 
+from collections import OrderedDict
 
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
+import test_global_storage
 from test_util import GenArgList
-from test_util import GetSavePath
-from test_util import Save
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -21,7 +20,7 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def MatmulJob():
         with flow.device_prior_placement(device_type, "0:0"):
             a = flow.get_variable(
@@ -41,12 +40,12 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
             loss = flow.matmul(a, b, transpose_a, transpose_b)
             flow.losses.add_loss(loss)
 
-            flow.watch(a, Save("a"))
-            flow.watch_diff(a, Save("a_diff"))
-            flow.watch(b, Save("b"))
-            flow.watch_diff(b, Save("b_diff"))
-            flow.watch(loss, Save("loss"))
-            flow.watch_diff(loss, Save("loss_diff"))
+            flow.watch(a, test_global_storage.Setter("a"))
+            flow.watch_diff(a, test_global_storage.Setter("a_diff"))
+            flow.watch(b, test_global_storage.Setter("b"))
+            flow.watch_diff(b, test_global_storage.Setter("b_diff"))
+            flow.watch(loss, test_global_storage.Setter("loss"))
+            flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
 
             return loss
 
@@ -56,16 +55,18 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
     of_out = MatmulJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        a = tf.Variable(np.load(os.path.join(GetSavePath(), "a.npy")))
-        b = tf.Variable(np.load(os.path.join(GetSavePath(), "b.npy")))
+        a = tf.Variable(test_global_storage.Get("a"))
+        b = tf.Variable(test_global_storage.Get("b"))
         tf_out = tf.matmul(a, b, transpose_a, transpose_b)
-    loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
+    loss_diff = test_global_storage.Get("loss_diff")
     tf_a_diff = tape.gradient(tf_out, a, loss_diff)
     tf_b_diff = tape.gradient(tf_out, b, loss_diff)
 
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), atol=1e-03), np.max(np.abs(of_out.ndarray() - tf_out.numpy()))
-    assert np.allclose(np.load(os.path.join(GetSavePath(), "a_diff.npy")), tf_a_diff.numpy(), atol=1e-03)
-    assert np.allclose(np.load(os.path.join(GetSavePath(), "b_diff.npy")), tf_b_diff.numpy(), atol=1e-03)
+    assert np.allclose(of_out.ndarray(), tf_out.numpy(), atol=1e-03), np.max(
+        np.abs(of_out.ndarray() - tf_out.numpy())
+    )
+    assert np.allclose(test_global_storage.Get("a_diff"), tf_a_diff.numpy(), atol=1e-03)
+    assert np.allclose(test_global_storage.Get("b_diff"), tf_b_diff.numpy(), atol=1e-03)
 
 
 def filter_args(arg_list):
@@ -89,7 +90,7 @@ def filter_args(arg_list):
 
 def gen_arg_list():
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["a_shape"] = [(512, 256), (256, 512)]
     arg_dict["b_shape"] = [(256, 1024), (1024, 256)]
     arg_dict["transpose_a"] = [True, False]
@@ -97,7 +98,7 @@ def gen_arg_list():
     matmul_args = filter_args(GenArgList(arg_dict))
 
     arg_dict.clear()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["a_shape"] = [(10, 10, 64, 32), (10, 10, 32, 64)]
     arg_dict["b_shape"] = [(10, 10, 32, 128), (10, 10, 128, 32)]
     arg_dict["transpose_a"] = [True, False]

@@ -77,7 +77,7 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
     const int32_t elem_cnt = in->shape().elem_cnt();
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = elem_cnt / instance_size;
-    const int32_t k = std::min(ctx->GetAttr<int32_t>("k"), instance_size);
+    const int32_t k = std::min(ctx->Attr<int32_t>("k"), instance_size);
     InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                         ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager.IndicesPtr(),
                                                             instance_size);
@@ -88,17 +88,16 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
     cudaMemcpy2DAsync(out->mut_dptr<int32_t>(), k * sizeof(int32_t), buf_manager.SortedIndicesPtr(),
                       instance_size * sizeof(int32_t), k * sizeof(int32_t), instance_num,
                       cudaMemcpyDeviceToDevice, ctx->device_ctx()->cuda_stream());
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GPU_RADIX_SORT_TOP_K_KERNEL(dtype)                                              \
   REGISTER_USER_KERNEL("top_k")                                                                  \
       .SetCreateFn<GpuRadixSortTopKKernel<dtype>>()                                              \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);            \
-        return ctx.device_type() == DeviceType::kGPU && ctx.GetAttr<int32_t>("k") > 128          \
-               && in_desc->data_type() == GetDataType<dtype>::value;                             \
-      })                                                                                         \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                              \
+                       & user_op::HobAttr<int32_t>("k") > 128                                    \
+                       & user_op::HobDataType("in", 0) == GetDataType<dtype>::value)             \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                             \
         const int32_t elem_cnt = in_shape->elem_cnt();                                           \

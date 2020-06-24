@@ -46,23 +46,23 @@ Maybe<void> IndexedSlicesNaiveMdUpdateOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* indices = GetBlobDesc4BnInOp("model_diff_indices");
   const BlobDesc* values = GetBlobDesc4BnInOp("model_diff_values");
-  OF_CHECK(IsIndexDataType(indices->data_type()));
+  CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
   const int64_t num_indices_axes = indices->shape().NumAxes();
   const int64_t num_values_axes = values->shape().NumAxes();
-  OF_CHECK_GE(num_values_axes, num_indices_axes);
+  CHECK_GE_OR_RETURN(num_values_axes, num_indices_axes);
   FOR_RANGE(int64_t, i, 0, num_indices_axes) {
-    OF_CHECK_EQ(values->shape().At(i), indices->shape().At(i));
+    CHECK_EQ_OR_RETURN(values->shape().At(i), indices->shape().At(i));
   }
   const BlobDesc* model = GetBlobDesc4BnInOp("model");
-  OF_CHECK_EQ(model->data_type(), values->data_type());
+  CHECK_EQ_OR_RETURN(model->data_type(), values->data_type());
   const int64_t num_model_axes = model->shape().NumAxes();
-  OF_CHECK_EQ(num_model_axes, num_values_axes - num_indices_axes + 1);
+  CHECK_EQ_OR_RETURN(num_model_axes, num_values_axes - num_indices_axes + 1);
   FOR_RANGE(int64_t, i, 1, num_model_axes) {
-    OF_CHECK_EQ(model->shape().At(i), values->shape().At(num_indices_axes + i - 1));
+    CHECK_EQ_OR_RETURN(model->shape().At(i), values->shape().At(num_indices_axes + i - 1));
   }
   const BlobDesc* learning_rate = GetBlobDesc4BnInOp("learning_rate");
-  OF_CHECK_EQ(learning_rate->data_type(), DataType::kFloat);
-  OF_CHECK_EQ(learning_rate->shape(), Shape({1}));
+  CHECK_EQ_OR_RETURN(learning_rate->data_type(), DataType::kFloat);
+  CHECK_EQ_OR_RETURN(learning_rate->shape(), Shape({1}));
   return Maybe<void>::Ok();
 }
 

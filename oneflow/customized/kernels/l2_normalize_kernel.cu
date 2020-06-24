@@ -78,24 +78,22 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* square_x_sum = ctx->Tensor4ArgNameAndIndex("square_x_sum", 0);
-    const float epsilon = ctx->GetAttr<float>("epsilon");
-    int32_t axis = ctx->GetAttr<int32_t>("axis");
+    const float epsilon = ctx->Attr<float>("epsilon");
+    int32_t axis = ctx->Attr<int32_t>("axis");
     int32_t c = x->shape().At(axis);
     int32_t n = x->shape().elem_cnt() / c;
     int32_t d = x->shape().Count(axis + 1);
     RUN_CUDA_KERNEL((L2NormalizeForward<T>), ctx->device_ctx(), n, n, c, d, static_cast<T>(epsilon),
                     x->dptr<T>(), square_x_sum->mut_dptr<T>(), y->mut_dptr<T>());
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_L2_NORMALIZE_KERNEL(dtype)                                     \
-  REGISTER_USER_KERNEL("l2_normalize")                                              \
-      .SetCreateFn<GpuL2NormalizeKernel<dtype>>()                                   \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
-        return ctx.device_type() == DeviceType::kGPU                                \
-               && y_desc->data_type() == GetDataType<dtype>::value;                 \
-      });
+#define REGISTER_GPU_L2_NORMALIZE_KERNEL(dtype)                     \
+  REGISTER_USER_KERNEL("l2_normalize")                              \
+      .SetCreateFn<GpuL2NormalizeKernel<dtype>>()                   \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU \
+                       & user_op::HobDataType("y", 0) == GetDataType<dtype>::value);
 
 REGISTER_GPU_L2_NORMALIZE_KERNEL(float)
 
@@ -111,25 +109,23 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* square_x_sum = ctx->Tensor4ArgNameAndIndex("square_x_sum", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const float epsilon = ctx->GetAttr<float>("epsilon");
-    int32_t axis = ctx->GetAttr<int32_t>("axis");
+    const float epsilon = ctx->Attr<float>("epsilon");
+    int32_t axis = ctx->Attr<int32_t>("axis");
     int32_t c = dy->shape().At(axis);
     int32_t n = dy->shape().elem_cnt() / c;
     int32_t d = dy->shape().Count(axis + 1);
     RUN_CUDA_KERNEL((L2NormalizeBackward<T>), ctx->device_ctx(), n, n, c, d,
                     static_cast<T>(epsilon), y->dptr<T>(), dy->dptr<T>(), square_x_sum->dptr<T>(),
                     dx->mut_dptr<T>());
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_L2_NORMALIZE_GRAD_KERNEL(dtype)                                  \
-  REGISTER_USER_KERNEL("l2_normalize_grad")                                           \
-      .SetCreateFn<GpuL2NormalizeGradKernel<dtype>>()                                 \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0); \
-        return ctx.device_type() == DeviceType::kGPU                                  \
-               && dx_desc->data_type() == GetDataType<dtype>::value;                  \
-      });
+#define REGISTER_GPU_L2_NORMALIZE_GRAD_KERNEL(dtype)                \
+  REGISTER_USER_KERNEL("l2_normalize_grad")                         \
+      .SetCreateFn<GpuL2NormalizeGradKernel<dtype>>()               \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU \
+                       & user_op::HobDataType("dx", 0) == GetDataType<dtype>::value);
 
 REGISTER_GPU_L2_NORMALIZE_GRAD_KERNEL(float)
 

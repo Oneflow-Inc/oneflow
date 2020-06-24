@@ -1,7 +1,6 @@
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/optimizer_compute_task_node.h"
-#include "oneflow/core/graph/loss_compute_task_node.h"
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
@@ -17,12 +16,9 @@
 #include "oneflow/core/graph/nccl_all_reduce_compute_task_node.h"
 #include "oneflow/core/graph/nccl_reduce_scatter_compute_task_node.h"
 #include "oneflow/core/graph/nccl_all_gather_compute_task_node.h"
-#include "oneflow/core/graph/accuracy_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/graph/nccl_tuple_broadcast_compute_task_node.h"
-#include "oneflow/core/graph/nccl_tuple_reduce_compute_task_node.h"
 
 namespace oneflow {
 
@@ -290,7 +286,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       && IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
-  if (IsProducedLbisAllBroadcastParallel(src_node, dst_node)) {
+  if (IsProducedLbisAllBroadcastParallel(src_node, dst_node) && !GlobalJobDesc().use_boxing_v2()) {
     return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
   } else {
     return &TaskGraph::BldSubTskGphByBoxing;
@@ -345,21 +341,6 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
                               "ReduceSplit",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
-                              "NcclTupleBroadcast",
-                              &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleBroadcast"
-                              "NormalForward",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
-                              "NcclTupleReduce",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
-                              "NormalForward",
-                              &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
-                              "Optimizer",
-                              &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
                               "ReduceScatter",
                               &TaskGraph::BldSubTskGphByOneToOne);
@@ -379,9 +360,6 @@ BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const Logi
   return GetBldBoxingOpConfMethodByFwParallelPolicy(src, dst);
 }
 
-REGISTER_BLD_BOXING_OP_CONF_MTHD("Accuracy"
-                                 "Print",
-                                 &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 REGISTER_BLD_BOXING_OP_CONF_MTHD("MdDiffAcc"
                                  "NormalMdUpdt",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
@@ -396,7 +374,6 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("Tick"
   OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)    \
   OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)        \
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)  \
-  OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)             \
   OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                  \
   OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)          \
@@ -407,8 +384,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("Tick"
   OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)           \
   OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)     \
-  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \
@@ -446,20 +422,5 @@ int32_t ReduceSplitLogicalNode::order_in_logical_graph() const {
     return order_in_logical_graph_;
   }
 }
-std::string NcclTupleBroadcastLogicalNode::TypeName() const { return "NcclTupleBroadcast"; }
-
-CompTaskNode* NcclTupleBroadcastLogicalNode::NewCompTaskNode() const {
-  return new NcclTupleBroadcastCompTaskNode;
-}
-
-int64_t NcclTupleBroadcastLogicalNode::GetAreaId() const { return kMdUpdtArea; }
-
-std::string NcclTupleReduceLogicalNode::TypeName() const { return "NcclTupleReduce"; }
-
-CompTaskNode* NcclTupleReduceLogicalNode::NewCompTaskNode() const {
-  return new NcclTupleReduceCompTaskNode;
-}
-
-int64_t NcclTupleReduceLogicalNode::GetAreaId() const { return kMdUpdtArea; }
 
 }  // namespace oneflow

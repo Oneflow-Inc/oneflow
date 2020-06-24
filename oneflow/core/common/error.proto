@@ -75,19 +75,28 @@ enum BoxingError {
   kNotSupported = 1;
 }
 
+message GradientFunctionNotFoundError { }
+
 message UnkownError { }
+
+message ErrorStackFrame {
+  required string location = 1;
+  required string function = 2;
+}
 
 message ErrorProto {
   optional string msg = 1 [default = ""];
+  repeated ErrorStackFrame stack_frame = 2;
   oneof error_type {
-    ConfigAssertFailedError config_assert_failed_error = 2;
-    ConfigResourceUnavailableError config_resource_unavailable_error = 3;
-    JobBuildAndInferError job_build_and_infer_error = 4;
-    ProtoParseFailedError proto_parse_failed_error = 5;
-    CheckFailed check_failed = 6;
-    TodoError todo_error = 7;
-    UnimplementedError unimplemented_error = 8;
-    BoxingError boxing_error = 9;
+    ConfigAssertFailedError config_assert_failed_error = 12;
+    ConfigResourceUnavailableError config_resource_unavailable_error = 13;
+    JobBuildAndInferError job_build_and_infer_error = 14;
+    ProtoParseFailedError proto_parse_failed_error = 15;
+    CheckFailed check_failed = 16;
+    TodoError todo_error = 17;
+    UnimplementedError unimplemented_error = 18;
+    BoxingError boxing_error = 19;
+    GradientFunctionNotFoundError gradient_function_not_found_error = 20;
     UnkownError unknown_error = 100;
   }
 }

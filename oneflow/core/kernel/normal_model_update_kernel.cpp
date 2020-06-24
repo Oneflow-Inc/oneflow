@@ -10,7 +10,7 @@ void NormalMdUpdateKernel<device_type, T>::VirtualKernelInit() {
 }
 
 template<DeviceType device_type, typename T>
-void NormalMdUpdateKernel<device_type, T>::Forward(
+void NormalMdUpdateKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const int64_t* train_step_ptr = BnInOp2Blob("train_step")->dptr<int64_t>();
   const float* learning_rate_ptr = BnInOp2Blob("learning_rate")->dptr<float>();

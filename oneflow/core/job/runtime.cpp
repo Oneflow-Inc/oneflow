@@ -1,4 +1,5 @@
 #include "oneflow/core/job/runtime.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -13,6 +14,8 @@
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
+#include "oneflow/core/job/collective_boxing_executor.h"
+#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 
 namespace oneflow {
 
@@ -92,9 +95,9 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
       && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
-  if (Global<ResourceDesc>::Get()->TotalMachineNum() > 1) {
+  if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
 #ifdef PLATFORM_POSIX
-    if (Global<ResourceDesc>::Get()->use_rdma()) {
+    if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
       IBVerbsCommNet::Init(plan);
 #else
@@ -108,6 +111,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #endif
+  Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
@@ -116,11 +120,13 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   Global<NcclCommMgr>::New(plan);
   Global<EagerNcclCommMgr>::New();
 #endif  // WITH_CUDA
+  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
 }
 
 void Runtime::DeleteAllGlobal() {
   Global<RuntimeJobDescs>::Delete();
+  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::Delete();
   Global<NcclCommMgr>::Delete();
@@ -129,6 +135,7 @@ void Runtime::DeleteAllGlobal() {
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();
   Global<MemoryAllocator>::Delete();
+  Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
