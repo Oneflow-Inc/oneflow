@@ -39,6 +39,13 @@
   git clone https://github.com/Oneflow-Inc/oneflow --recursive
   ```
 
+- #### Install Python Dev Requirements
+
+  To install development dependencies and linter tools, run:
+  ```
+  pip3 install -r dev-requirements.txt
+  ```
+
 - #### Enter Build Directory
 
   ```
