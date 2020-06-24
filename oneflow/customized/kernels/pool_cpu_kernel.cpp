@@ -328,14 +328,6 @@ std::shared_ptr<user_op::OpKernelState> DoCreateOpKernelState(user_op::KernelIni
                                                           pool_size, strides);
 }
 
-template<typename dtype>
-std::function<bool(const user_op::KernelRegContext& ctx)> MakeIsMatchedPred(
-    DeviceType device_type) {
-  return [device_type](const user_op::KernelRegContext& ctx) {
-    const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
-    return ctx.device_type() == device_type && y_desc->data_type() == GetDataType<dtype>::value;
-  };
-}
 }  // namespace
 
 template<typename T>
@@ -554,43 +546,55 @@ class MaxPool3DGradCpuKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_POOL_CPU_KERNEL(dtype)                              \
-  REGISTER_USER_KERNEL("avg_pool_1d")                                \
-      .SetCreateFn<AvgPool1DCpuKernel<dtype>>()                      \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("avg_pool_1d_grad")                           \
-      .SetCreateFn<AvgPool1DGradCpuKernel<dtype>>()                  \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("avg_pool_2d")                                \
-      .SetCreateFn<AvgPool2DCpuKernel<dtype>>()                      \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("avg_pool_2d_grad")                           \
-      .SetCreateFn<AvgPool2DGradCpuKernel<dtype>>()                  \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("avg_pool_3d")                                \
-      .SetCreateFn<AvgPool3DCpuKernel<dtype>>()                      \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("avg_pool_3d_grad")                           \
-      .SetCreateFn<AvgPool3DGradCpuKernel<dtype>>()                  \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("max_pool_1d")                                \
-      .SetCreateFn<MaxPool1DCpuKernel<dtype>>()                      \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("max_pool_1d_grad")                           \
-      .SetCreateFn<MaxPool1DGradCpuKernel<dtype>>()                  \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("max_pool_2d")                                \
-      .SetCreateFn<MaxPool2DCpuKernel<dtype>>()                      \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("max_pool_2d_grad")                           \
-      .SetCreateFn<MaxPool2DGradCpuKernel<dtype>>()                  \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("max_pool_3d")                                \
-      .SetCreateFn<MaxPool3DCpuKernel<dtype>>()                      \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("max_pool_3d_grad")                           \
-      .SetCreateFn<MaxPool3DGradCpuKernel<dtype>>()                  \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU));
+#define REGISTER_POOL_CPU_KERNEL(dtype)                                              \
+  REGISTER_USER_KERNEL("avg_pool_1d")                                                \
+      .SetCreateFn<AvgPool1DCpuKernel<dtype>>()                                      \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                  \
+                       & user_op::HobDataType("x", 0) == GetDataType<dtype>::value); \
+  REGISTER_USER_KERNEL("avg_pool_1d_grad")                                           \
+      .SetCreateFn<AvgPool1DGradCpuKernel<dtype>>()                                  \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                  \
+                       & user_op::HobDataType("x", 0) == GetDataType<dtype>::value); \
+  REGISTER_USER_KERNEL("avg_pool_2d")                                                \
+      .SetCreateFn<AvgPool2DCpuKernel<dtype>>()                                      \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                  \
+                       & user_op::HobDataType("x", 0) == GetDataType<dtype>::value); \
+  REGISTER_USER_KERNEL("avg_pool_2d_grad")                                           \
+      .SetCreateFn<AvgPool2DGradCpuKernel<dtype>>()                                  \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                  \
+                       & user_op::HobDataType("x", 0) == GetDataType<dtype>::value); \
+  REGISTER_USER_KERNEL("avg_pool_3d")                                                \
+      .SetCreateFn<AvgPool3DCpuKernel<dtype>>()                                      \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                  \
+                       & user_op::HobDataType("x", 0) == GetDataType<dtype>::value); \
+  REGISTER_USER_KERNEL("avg_pool_3d_grad")                                           \
+      .SetCreateFn<AvgPool3DGradCpuKernel<dtype>>()                                  \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                  \
+                       & user_op::HobDataType("x", 0) == GetDataType<dtype>::value); \
+  REGISTER_USER_KERNEL("max_pool_1d")                                                \
+      .SetCreateFn<MaxPool1DCpuKernel<dtype>>()                                      \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                  \
+                       & user_op::HobDataType("x", 0) == GetDataType<dtype>::value); \
+  REGISTER_USER_KERNEL("max_pool_1d_grad")                                           \
+      .SetCreateFn<MaxPool1DGradCpuKernel<dtype>>()                                  \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                  \
+                       & user_op::HobDataType("x", 0) == GetDataType<dtype>::value); \
+  REGISTER_USER_KERNEL("max_pool_2d")                                                \
+      .SetCreateFn<MaxPool2DCpuKernel<dtype>>()                                      \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                  \
+                       & user_op::HobDataType("x", 0) == GetDataType<dtype>::value); \
+  REGISTER_USER_KERNEL("max_pool_2d_grad")                                           \
+      .SetCreateFn<MaxPool2DGradCpuKernel<dtype>>()                                  \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                  \
+                       & user_op::HobDataType("x", 0) == GetDataType<dtype>::value); \
+  REGISTER_USER_KERNEL("max_pool_3d")                                                \
+      .SetCreateFn<MaxPool3DCpuKernel<dtype>>()                                      \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                  \
+                       & user_op::HobDataType("x", 0) == GetDataType<dtype>::value); \
+  REGISTER_USER_KERNEL("max_pool_3d_grad")                                           \
+      .SetCreateFn<MaxPool3DGradCpuKernel<dtype>>()                                  \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                  \
+                       & user_op::HobDataType("x", 0) == GetDataType<dtype>::value);
 
 REGISTER_POOL_CPU_KERNEL(float)
 REGISTER_POOL_CPU_KERNEL(double)

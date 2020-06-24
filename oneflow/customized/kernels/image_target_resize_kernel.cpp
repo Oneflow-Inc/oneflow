@@ -106,16 +106,10 @@ class ImageTargetResizeKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("image_target_resize")
     .SetCreateFn<ImageTargetResizeKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const auto* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);
-      const auto* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      const auto* size_desc = ctx.TensorDesc4ArgNameAndIndex("size", 0);
-      const auto* scale_desc = ctx.TensorDesc4ArgNameAndIndex("scale", 0);
-      return ctx.device_type() == DeviceType::kCPU
-             && in_desc->data_type() == DataType::kTensorBuffer
-             && out_desc->data_type() == DataType::kTensorBuffer
-             && size_desc->data_type() == DataType::kInt32
-             && scale_desc->data_type() == DataType::kFloat;
-    });
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU
+                     & user_op::HobDataType("in", 0) == DataType::kTensorBuffer
+                     & user_op::HobDataType("out", 0) == DataType::kTensorBuffer
+                     & user_op::HobDataType("size", 0) == DataType::kInt32
+                     & user_op::HobDataType("scale", 0) == DataType::kFloat);
 
 }  // namespace oneflow

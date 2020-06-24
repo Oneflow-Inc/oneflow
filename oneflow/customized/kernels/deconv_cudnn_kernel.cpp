@@ -111,23 +111,20 @@ class DeConvGpuKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_DECONV_KERNEL(op_name, dtype, ndims)                      \
-  REGISTER_USER_KERNEL(#op_name)                                           \
-      .SetCreateFn<DeConvGpuKernel<dtype, ndims>>()                        \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {         \
-        return ctx.device_type() == DeviceType::kGPU                       \
-               && ctx.TensorDesc4ArgNameAndIndex("in", 0)->data_type()     \
-                      == GetDataType<dtype>::value;                        \
-      })                                                                   \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {        \
-        const JobDesc& job_desc = ctx->job_desc();                         \
-        const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);         \
-        const auto* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0); \
-        const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);       \
-        return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(   \
-            out, weight, in, job_desc, ctx->user_op_conf(),                \
-            job_desc.job_conf().has_cudnn_conv_force_bwd_data_algo(),      \
-            job_desc.job_conf().cudnn_conv_force_bwd_data_algo());         \
+#define REGISTER_DECONV_KERNEL(op_name, dtype, ndims)                                \
+  REGISTER_USER_KERNEL(#op_name)                                                     \
+      .SetCreateFn<DeConvGpuKernel<dtype, ndims>>()                                  \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                  \
+                       & user_op::HobDataType("in", 0) == GetDataType<dtype>::value) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                  \
+        const JobDesc& job_desc = ctx->job_desc();                                   \
+        const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);                   \
+        const auto* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);           \
+        const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);                 \
+        return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(             \
+            out, weight, in, job_desc, ctx->user_op_conf(),                          \
+            job_desc.job_conf().has_cudnn_conv_force_bwd_data_algo(),                \
+            job_desc.job_conf().cudnn_conv_force_bwd_data_algo());                   \
       })
 
 REGISTER_DECONV_KERNEL(deconv1d, float, 1);
