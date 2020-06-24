@@ -110,18 +110,18 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(
   REGISTER_USER_KERNEL(#op_type_name)                                                              \
       .SetCreateFn<                                                                                \
           op##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device_type_v                                   \
-                       & user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(itype_pair)       \
-                       & user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                                 \
+                       & (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(itype_pair))     \
+                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 #define REGISTER_TENSOR_SCATTER_ND_OPT_KERNELS(op_type_name, opt, device_type_v, dtype_pair,    \
                                                itype_pair)                                      \
   REGISTER_USER_KERNEL(#op_type_name)                                                           \
       .SetCreateFn<TensorScatterNd##opt##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),    \
                                                 OF_PP_PAIR_FIRST(itype_pair)>>()                \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device_type_v                                \
-                       & user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(itype_pair)    \
-                       & user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair))       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                              \
+                       & (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(itype_pair))  \
+                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))     \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "params", 0, true));                   \
