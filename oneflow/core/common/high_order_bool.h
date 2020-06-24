@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include <sstream>
+#include <functional>
 
 namespace oneflow {
 
