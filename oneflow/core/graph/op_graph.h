@@ -122,6 +122,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   explicit OpGraph(const Job& job) { Init(job); }
   ~OpGraph() override = default;
 
+  Maybe<void> ForEachOpNode(const std::function<Maybe<void>(const OpNode&)>& DoEach) const;
+
   const OpNode* OpNode4OpName(const std::string& name) const;
 
   std::function<const BlobDesc&(const LogicalBlobId&)> MakeGetterBlobDesc4ModelLbi() const;
