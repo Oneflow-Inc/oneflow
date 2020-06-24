@@ -48,7 +48,7 @@ inline Error&& operator<<(Error&& error, const JobBuildAndInferError& x) {
 }
 
 // for LOG(ERROR)
-Error&& operator<=(const std::string& log_str, Error&& error);
+Error&& operator<=(const std::pair<std::string, std::string>& loc_and_func, Error&& error);
 
 }  // namespace oneflow
 

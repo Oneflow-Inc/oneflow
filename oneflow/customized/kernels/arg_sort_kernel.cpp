@@ -44,14 +44,11 @@ class CpuArgSortKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_ARG_SORT_KERNEL(dtype)                                           \
-  REGISTER_USER_KERNEL("arg_sort")                                                    \
-      .SetCreateFn<CpuArgSortKernel<dtype>>()                                         \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                  \
-               && in_desc->data_type() == GetDataType<dtype>::value;                  \
-      });
+#define REGISTER_CPU_ARG_SORT_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("arg_sort")                                  \
+      .SetCreateFn<CpuArgSortKernel<dtype>>()                       \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
+                       & user_op::HobDataType("in", 0) == GetDataType<dtype>::value);
 
 REGISTER_CPU_ARG_SORT_KERNEL(float)
 REGISTER_CPU_ARG_SORT_KERNEL(double)

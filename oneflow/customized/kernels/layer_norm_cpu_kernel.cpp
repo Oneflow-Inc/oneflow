@@ -13,14 +13,11 @@ class LayerNormCpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override { TODO(); };
 };
 
-#define REGISTER_LAYER_NORM_CPU_KERNEL(dtype)                                       \
-  REGISTER_USER_KERNEL("layer_norm")                                                \
-      .SetCreateFn<LayerNormCpuKernel<dtype>>()                                     \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
-        const user_op::TensorDesc* x_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                \
-               && x_desc->data_type() == GetDataType<dtype>::value;                 \
-      });
+#define REGISTER_LAYER_NORM_CPU_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("layer_norm")                                \
+      .SetCreateFn<LayerNormCpuKernel<dtype>>()                     \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
+                       & user_op::HobDataType("x", 0) == GetDataType<dtype>::value);
 
 REGISTER_LAYER_NORM_CPU_KERNEL(float)
 REGISTER_LAYER_NORM_CPU_KERNEL(double)
@@ -36,14 +33,11 @@ class LayerNormGradCpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override { TODO(); };
 };
 
-#define REGISTER_LAYER_NORM_GRAD_CPU_KERNEL(dtype)                                    \
-  REGISTER_USER_KERNEL("layer_norm_grad")                                             \
-      .SetCreateFn<LayerNormGradCpuKernel<dtype>>()                                   \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* dy_desc = ctx.TensorDesc4ArgNameAndIndex("dy", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                  \
-               && dy_desc->data_type() == GetDataType<dtype>::value;                  \
-      });
+#define REGISTER_LAYER_NORM_GRAD_CPU_KERNEL(dtype)                  \
+  REGISTER_USER_KERNEL("layer_norm_grad")                           \
+      .SetCreateFn<LayerNormGradCpuKernel<dtype>>()                 \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
+                       & user_op::HobDataType("dy", 0) == GetDataType<dtype>::value);
 
 REGISTER_LAYER_NORM_GRAD_CPU_KERNEL(float)
 REGISTER_LAYER_NORM_GRAD_CPU_KERNEL(double)
@@ -59,14 +53,11 @@ class LayerNormParamGradCpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override { TODO(); };
 };
 
-#define REGISTER_LAYER_NORM_PARAM_GRAD_CPU_KERNEL(dtype)                              \
-  REGISTER_USER_KERNEL("layer_norm_param_grad")                                       \
-      .SetCreateFn<LayerNormParamGradCpuKernel<dtype>>()                              \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* dy_desc = ctx.TensorDesc4ArgNameAndIndex("dy", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                  \
-               && dy_desc->data_type() == GetDataType<dtype>::value;                  \
-      });
+#define REGISTER_LAYER_NORM_PARAM_GRAD_CPU_KERNEL(dtype)            \
+  REGISTER_USER_KERNEL("layer_norm_param_grad")                     \
+      .SetCreateFn<LayerNormParamGradCpuKernel<dtype>>()            \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU \
+                       & user_op::HobDataType("dy", 0) == GetDataType<dtype>::value);
 
 REGISTER_LAYER_NORM_PARAM_GRAD_CPU_KERNEL(float)
 REGISTER_LAYER_NORM_PARAM_GRAD_CPU_KERNEL(double)
