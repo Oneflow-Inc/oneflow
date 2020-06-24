@@ -202,7 +202,7 @@ def ofrecord_loader(
     op_conf.record_load_conf.data_part_num = data_part_num
     op_conf.record_load_conf.batch_size = batch_size
     op_conf.record_load_conf.part_name_prefix = part_name_prefix
-    if part_name_suffix_length is not -1:
+    if part_name_suffix_length != -1:
         op_conf.record_load_conf.part_name_suffix_length = part_name_suffix_length
     if shuffle:
         op_conf.record_load_conf.random_shuffle_conf.buffer_size = shuffle_buffer_size
