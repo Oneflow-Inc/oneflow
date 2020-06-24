@@ -1,4 +1,4 @@
-// include sstream first to avoid some compiling error 
+// include sstream first to avoid some compiling error
 // caused by the following trick
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
