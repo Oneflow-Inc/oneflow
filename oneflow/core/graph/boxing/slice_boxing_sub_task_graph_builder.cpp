@@ -181,8 +181,7 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
             } else {
               bool in_contiguous = IsCopyContiguous(in_slice, intersection);
               bool out_contiguous = IsCopyContiguous(intersection, out_slice);
-              if (IsSameDevice(in_pd, out_pd, in_id, out_id)
-                  || IsCopyContiguous(in_slice, out_slice)) {
+              if (IsSameDevice(in_pd, out_pd, in_id, out_id) || (in_contiguous && out_contiguous)) {
                 out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
               } else if (in_contiguous && !out_contiguous) {
                 SliceBoxingTaskNode* copy_to_out_continuous =
