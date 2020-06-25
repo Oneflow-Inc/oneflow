@@ -182,7 +182,6 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
   OFRecordImageDecoderRandomCropKernel() = default;
   ~OFRecordImageDecoderRandomCropKernel() override = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     int32_t num_attempts = ctx->Attr<int32_t>("num_attempts");
@@ -212,6 +211,7 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
     return crop_window_generators;
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* crop_window_generators = dynamic_cast<RandCropGens*>(state);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);

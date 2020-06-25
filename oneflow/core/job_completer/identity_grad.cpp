@@ -7,7 +7,6 @@ namespace {
 void GenerateIdentityBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
-  CHECK(op.op_conf().has_identity_conf());
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf grad_op{};
     grad_op.set_name("System-AutoGrad-" + op.op_name());
@@ -21,6 +20,7 @@ void GenerateIdentityBackwardOpConf(
 }
 
 REGISTER_OP_GRAD(OperatorConf::kIdentityConf, &GenerateIdentityBackwardOpConf);
+REGISTER_OP_GRAD(OperatorConf::kCopyConf, &GenerateIdentityBackwardOpConf);
 
 }  // namespace
 
