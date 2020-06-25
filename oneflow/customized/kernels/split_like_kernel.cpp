@@ -38,15 +38,15 @@ class SplitLikeKernel final : public user_op::OpKernel {
 #define REGISTER_SPLIT_LIKE_KERNEL(device_type_v, dtype_pair)                      \
   REGISTER_USER_KERNEL("split_like")                                               \
       .SetCreateFn<SplitLikeKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>() \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device_type_v                   \
-                       & user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                 \
+                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPLIT_LIKE_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ)
 
 REGISTER_USER_KERNEL("split_like")
     .SetCreateFn<SplitLikeKernel<DeviceType::kGPU, float16>>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU
-                     & user_op::HobDataType("out", 0) == DataType::kFloat16);
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
+                     & (user_op::HobDataType("out", 0) == DataType::kFloat16));
 
 }  // namespace oneflow

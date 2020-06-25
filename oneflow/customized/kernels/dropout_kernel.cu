@@ -70,8 +70,8 @@ class DropoutKernelGPU final : public user_op::OpKernel {
 #define REGISTER_DROPOUT_KERNEL_GPU(dtype)                                                      \
   REGISTER_USER_KERNEL("dropout")                                                               \
       .SetCreateFn<DropoutKernelGPU<dtype>>()                                                   \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                             \
-                       & user_op::HobDataType("out", 0) == GetDataType<dtype>::value)           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
@@ -103,8 +103,8 @@ class DropoutGradKernelGPU final : public user_op::OpKernel {
 #define REGISTER_DROPOUT_GRAD_KERNEL_GPU(dtype)                                                 \
   REGISTER_USER_KERNEL("dropout_grad")                                                          \
       .SetCreateFn<DropoutGradKernelGPU<dtype>>()                                               \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                             \
-                       & user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \
@@ -116,4 +116,5 @@ REGISTER_DROPOUT_GRAD_KERNEL_GPU(float)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(double)
 
 }  // namespace
+
 }  // namespace oneflow

@@ -38,14 +38,14 @@ class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_UNSORTED_BATCH_SEGMENT_SUM_KERNEL(device, out_dtype, segment_ids_dtype) \
-  REGISTER_USER_KERNEL("unsorted_batch_segment_sum")                                     \
-      .SetCreateFn<UnsortedBatchSegmentSumKernel<device, OF_PP_PAIR_FIRST(out_dtype),    \
-                                                 OF_PP_PAIR_FIRST(segment_ids_dtype)>>() \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device                                \
-                       & user_op::HobDataType("segment_ids", 0)                          \
-                             == OF_PP_PAIR_SECOND(segment_ids_dtype)                     \
-                       & user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype));
+#define REGISTER_UNSORTED_BATCH_SEGMENT_SUM_KERNEL(device, out_dtype, segment_ids_dtype)     \
+  REGISTER_USER_KERNEL("unsorted_batch_segment_sum")                                         \
+      .SetCreateFn<UnsortedBatchSegmentSumKernel<device, OF_PP_PAIR_FIRST(out_dtype),        \
+                                                 OF_PP_PAIR_FIRST(segment_ids_dtype)>>()     \
+      .SetIsMatchedHob(                                                                      \
+          (user_op::HobDeviceType() == device)                                               \
+          & (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_dtype)) \
+          & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_BATCH_SEGMENT_SUM_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)

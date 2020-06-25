@@ -186,6 +186,10 @@ class UserOpConfBuilder(object):
                 shape = shape_util.ShapeProto()
                 shape.dim[:] = list(attr_value[i])
                 attribute.at_list_shape.val.append(shape)
+        elif attr_type == "AttrTypeListString":
+            assert isinstance(attr_value, (tuple, list))
+            assert all(isinstance(x, str) for x in attr_value)
+            attribute.at_list_string.val[:] = list(attr_value)
         else:
             raise ValueError("Invalid op attribute type {}".format(attr_type))
 

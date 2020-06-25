@@ -148,14 +148,14 @@ class NormalizationGradUserKernel<DeviceType::kGPU, T> final : public user_op::O
 #define REGISTER_BN_KERNEL(op_device_type, dtype)                                   \
   REGISTER_USER_KERNEL("normalization")                                             \
       .SetCreateFn<NormalizationUserKernel<DeviceType::k##op_device_type, dtype>>() \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::k##op_device_type    \
-                       & user_op::HobDataType("y", 0) == GetDataType<dtype>::value);
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::k##op_device_type)  \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_BN_GRAD_KERNEL(op_device_type, dtype)                                  \
   REGISTER_USER_KERNEL("normalization_grad")                                            \
       .SetCreateFn<NormalizationGradUserKernel<DeviceType::k##op_device_type, dtype>>() \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::k##op_device_type        \
-                       & user_op::HobDataType("dx", 0) == GetDataType<dtype>::value);
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::k##op_device_type)      \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_BN_KERNEL(CPU, float)
 REGISTER_BN_KERNEL(CPU, double)

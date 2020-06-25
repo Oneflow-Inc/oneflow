@@ -43,7 +43,7 @@
 
   To install development dependencies and linter tools, run:
   ```
-  pip3 install -r dev-requirements.txt
+  pip3 install -r dev-requirements.txt --user
   ```
 
 - #### Enter Build Directory

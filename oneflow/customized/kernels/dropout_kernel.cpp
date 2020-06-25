@@ -33,8 +33,8 @@ class DropoutKernelCPU final : public user_op::OpKernel {
 #define REGISTER_DROPOUT_KERNEL_CPU(dtype)                                                      \
   REGISTER_USER_KERNEL("dropout")                                                               \
       .SetCreateFn<DropoutKernelCPU<dtype>>()                                                   \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                             \
-                       & user_op::HobDataType("out", 0) == GetDataType<dtype>::value)           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
@@ -65,8 +65,8 @@ class DropoutGradKernelCPU final : public user_op::OpKernel {
 #define REGISTER_DROPOUT_GRAD_KERNEL_CPU(dtype)                                                 \
   REGISTER_USER_KERNEL("dropout_grad")                                                          \
       .SetCreateFn<DropoutGradKernelCPU<dtype>>()                                               \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU                             \
-                       & user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \
@@ -82,12 +82,13 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
   RandomMaskLikeKernel() = default;
   ~RandomMaskLikeKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     int64_t seed = ctx->Attr<int64_t>("seed");
     return std::make_shared<OpKernelStateWrapper<RandomMaskGenerator<device_type>>>(seed);
   }
+
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* like = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
