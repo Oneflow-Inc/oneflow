@@ -58,6 +58,8 @@ class CudaAllocator final : public Allocator {
   void DeallocatePiece(Piece* piece);
   void MarkPiece(Piece* piece);
   void UnMarkPiece(Piece* piece);
+  void MergeNeighbourFreePiece(Piece* lhs, Piece* rhs);
+  void RemovePieceFromBin(Piece* piece);
 
   int64_t device_id_;
   size_t total_memory_bytes_;

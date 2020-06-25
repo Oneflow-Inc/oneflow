@@ -63,6 +63,13 @@ void CudaAllocator::InsertPiece2Bin(Piece* piece) {
   CHECK(bins_.at(bin_num).pieces.insert(piece).second);
 }
 
+void CudaAllocator::RemovePieceFromBin(Piece* piece) {
+  CHECK(piece->is_free);
+  CHECK_NE(piece->bin_num, kInvalidBinNum);
+  CHECK_GT(bins_.at(piece->bin_num).pieces.erase(piece), 0);
+  piece->bin_num = 0;
+}
+
 CudaAllocator::Piece* CudaAllocator::AllocatePiece() {
   if(recycle_piece_list_) {
     Piece* ret = recycle_piece_list_;
@@ -125,12 +132,29 @@ CudaAllocator::Piece* CudaAllocator::FindPiece(size_t aligned_size) {
           new_piece->is_free = true;
           new_piece->bin_num = kInvalidBinNum;
           InsertPiece2Bin(new_piece);
+          MarkPiece(new_piece);
         }
         return piece;
       }
     }
   }
   return nullptr;
+}
+
+void CudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
+  CHECK(lhs->is_free);
+  CHECK(rhs->is_free);
+  CHECK(lhs->next == rhs);
+  CHECK(lhs == rhs->prev);
+  CHECK(lhs->ptr + lhs->size == rhs->ptr);
+
+  lhs->size += rhs->size;
+  lhs->next = rhs->next;
+  if(rhs->next != nullptr) {
+    rhs->next->prev = lhs;
+  }
+  UnMarkPiece(rhs);
+  DeallocatePiece(rhs);
 }
 
 void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
@@ -143,11 +167,39 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   Piece* piece = FindPiece(aligned_size);
   CHECK(piece != nullptr) << "Error! : Out of memory when allocate size : " << size;
   CHECK_NOTNULL(piece->ptr);
+  CHECK(ptr2piece_.find(piece->ptr) != ptr2piece_.end());
   *mem_ptr = piece->ptr;
 }
 
 void CudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
-  TODO();
+  if(mem_ptr == nullptr) {
+    return;
+  }
+
+  auto it = ptr2piece_.find(mem_ptr);
+  CHECK(it != ptr2piece_.end()) << "Error! : Try deallocate mem_ptr non-existent. mem ptr = " << mem_ptr;
+  Piece* piece = it->second;
+  CHECK_NOTNULL(piece);
+  CHECK_EQ(piece->ptr, mem_ptr);
+  CHECK(!piece->is_free);
+
+  piece->is_free = true;
+
+  Piece* last_piece_insert_to_bin = piece;
+  Piece* next_p = piece->next;
+  Piece* prev_p = piece->prev;
+
+  if(next_p != nullptr && next_p->is_free && next_p->ptr == piece->ptr + piece->size) {
+    RemovePieceFromBin(next_p);
+    MergeNeighbourFreePiece(piece, next_p);
+  }
+
+  if(prev_p != nullptr && prev_p->is_free && piece->ptr == prev_p->ptr + piece->size) {
+    RemovePieceFromBin(prev_p);
+    MergeNeighbourFreePiece(prev_p, piece);
+    last_piece_insert_to_bin = prev_p;
+  }
+  InsertPiece2Bin(last_piece_insert_to_bin);
 }
 
 }  // namespace vm
