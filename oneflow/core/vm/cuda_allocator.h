@@ -22,7 +22,7 @@ class CudaAllocator final : public Allocator {
 
   struct Piece {
     size_t size = 0;
-    void* ptr = nullptr;
+    char* ptr = nullptr;
     bool is_free = false;
     Piece* prev = nullptr;
     Piece* next = nullptr;
@@ -51,17 +51,21 @@ class CudaAllocator final : public Allocator {
     uint64_t value = std::max(size, kCudaMemAllocAlignSize) >> 9;
     return std::min(kBinNumSize - 1, static_cast<int32_t>(63 ^ __builtin_clzll(value)));
   }
-  
+
+  Piece* FindPiece(size_t aligned_size);
   void InsertPiece2Bin(Piece* piece);
   Piece* AllocatePiece();
+  void DeallocatePiece(Piece* piece);
+  void MarkPiece(Piece* piece);
+  void UnMarkPiece(Piece* piece);
 
   int64_t device_id_;
   size_t total_memory_bytes_;
-  void* mem_ptr_; // maybe ptr list for dynamic growth
+  char* mem_ptr_; // maybe ptr list for dynamic growth
 
   std::vector<Bin> bins_;
   std::vector<Piece> pieces_;
-  HashMap<void*, Piece*> ptr2piece_;
+  HashMap<char*, Piece*> ptr2piece_;
   Piece* recycle_piece_list_;
 };
 
