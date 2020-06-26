@@ -10,7 +10,7 @@ func_config.default_data_type(flow.float)
 data_dir = "/dataset/imagenet_16_same_pics/ofrecord"
 
 
-@flow.function(func_config)
+@flow.global_function(func_config)
 def DataLoaderJob():
     batch_size = 8
     seed = 0
@@ -41,7 +41,7 @@ def DataLoaderJob():
     return rsz, normal, label, rng
 
 
-@flow.function(func_config)
+@flow.global_function(func_config)
 def DataLoaderEvalJob():
     batch_size = 8
     rgb_mean = [123.68, 116.779, 103.939]

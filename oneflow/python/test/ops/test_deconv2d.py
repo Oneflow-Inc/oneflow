@@ -21,7 +21,7 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def DeconvJob():
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -143,6 +143,8 @@ def test_deconv2d_NHWC(test_case):
     arg_dict["device_type"] = ["gpu"]
     # params_case: (input_shape, output_shape, padding, stirdes, kernel_size)
     arg_dict["params_case"] = [
+        ((2, 3, 3, 4), (2, 3, 3, 8), "SAME", 1, 3),
+        ((2, 3, 3, 2), (2, 6, 6, 8), "SAME", 2, 4),
         ((3, 2, 2, 1), (3, 5, 5, 2), "VALID", 2, 2),
         ((3, 2, 2, 16), (3, 8, 8, 4), "VALID", 2, 5),
     ]
@@ -157,6 +159,8 @@ def test_deconv2d_NCHW(test_case):
     arg_dict["device_type"] = ["gpu"]
     # params_case: (input_shape, output_shape, padding, stirdes, kernel_size)
     arg_dict["params_case"] = [
+        ((2, 4, 3, 3), (2, 8, 3, 3), "SAME", 1, 3),
+        ((2, 4, 3, 3), (2, 8, 6, 6), "SAME", 2, 5),
         ((3, 1, 2, 2), (3, 2, 5, 5), "VALID", 2, 2),
         ((3, 16, 2, 2), (3, 4, 8, 8), "VALID", 2, 5),
     ]

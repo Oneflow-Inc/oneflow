@@ -52,12 +52,12 @@ class FunctionConfig(object):
         return FunctionConfigSetter
 
 
-@oneflow_export("function")
+@oneflow_export("global_function")
 def oneflow_function(function_config=FunctionConfig()):
-    r"""Creates a callable OneFlow function from a Python function.
+    r"""Creates a callable OneFlow global function from a Python function.
     For instance::
 
-        @oneflow.function(flow.FunctionConfig())
+        @oneflow.global_function(flow.FunctionConfig())
         def train():
             # your model
 

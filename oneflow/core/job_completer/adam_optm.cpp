@@ -12,7 +12,6 @@ OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::s
   InitializerConf constant_initializer;
   constant_initializer.mutable_constant_conf()->set_value(initial_value);
   *(helper_variable_op.mutable_variable_conf()->mutable_initializer()) = constant_initializer;
-  *helper_variable_op.mutable_ctrl_in_op_name()->Add() = op.op_name();
   return helper_variable_op;
 }
 

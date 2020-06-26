@@ -1,4 +1,5 @@
 #include "oneflow/core/job/runtime.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -12,6 +13,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 
@@ -93,9 +95,9 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
       && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
-  if (Global<ResourceDesc>::Get()->TotalMachineNum() > 1) {
+  if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
 #ifdef PLATFORM_POSIX
-    if (Global<ResourceDesc>::Get()->use_rdma()) {
+    if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
       IBVerbsCommNet::Init(plan);
 #else
@@ -116,6 +118,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   Global<ThreadMgr>::New(plan);
 #ifdef WITH_CUDA
   Global<NcclCommMgr>::New(plan);
+  Global<EagerNcclCommMgr>::New();
 #endif  // WITH_CUDA
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
@@ -125,6 +128,7 @@ void Runtime::DeleteAllGlobal() {
   Global<RuntimeJobDescs>::Delete();
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
 #ifdef WITH_CUDA
+  Global<EagerNcclCommMgr>::Delete();
   Global<NcclCommMgr>::Delete();
 #endif  // WITH_CUDA
   Global<ThreadMgr>::Delete();

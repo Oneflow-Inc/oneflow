@@ -20,7 +20,7 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def MatmulJob():
         with flow.device_prior_placement(device_type, "0:0"):
             a = flow.get_variable(

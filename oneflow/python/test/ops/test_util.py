@@ -43,7 +43,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
     func_config.train.primary_lr(0)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def FlowJob(x=flow.FixedTensorDef(x.shape)):
         with flow.device_prior_placement(device_type, "0:0"):
             x += flow.get_variable(

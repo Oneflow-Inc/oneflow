@@ -28,9 +28,8 @@ def _of_assign_and_relu(value, dtype, device_type):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(dtype)
     func_config.default_placement_scope(flow.fixed_placement(device_type, "0:0"))
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def assign_fn(value_def=flow.FixedTensorDef(value.shape, dtype=dtype)):
         var = flow.get_variable(
             name="var",
@@ -40,7 +39,7 @@ def _of_assign_and_relu(value, dtype, device_type):
         )
         flow.assign(var, value_def)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def relu_fn():
         var = flow.get_variable(
             name="var",
@@ -64,10 +63,10 @@ def _compare_with_np(test_case, shape, dtype, device_type):
     test_case.assertTrue(np.allclose(_np_relu(x), of_y))
 
 
-def test_argwhere(test_case):
+def test_assign(test_case):
     arg_dict = OrderedDict()
     arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
     arg_dict["dtype"] = [flow.float, flow.double]
-    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     for arg in GenArgDict(arg_dict):
         _compare_with_np(test_case, **arg)

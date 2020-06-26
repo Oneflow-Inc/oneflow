@@ -33,10 +33,9 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
-  const OptInt64& BatchAxis4Lbi(const LogicalBlobId& lbi) const;
+  Maybe<const OptInt64*> BatchAxis4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
-  const OpNode& SrcNode4InputBnInOp(const std::string& bn_in_op) const;
-  const OpNode& ProducerOpNode4BnInOp(const std::string& bn_in_op) const;
+  const OpNode& SrcNode4Ibn(const std::string& bn_in_op) const;
   const ParallelDesc& BlobParallelDesc4Obn(const std::string& obn) const;
 
   std::string VisualStr() const override;
@@ -55,12 +54,9 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
   }
-  OptInt64* MutBatchAxis4Lbi(const LogicalBlobId& lbi);
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
-  OpNode* MutSrcNode4InputBnInOp(const std::string& bn_in_op) const;
-  OpNode* MutProducerOpNode4BnInOp(const std::string& bn_in_op);
+  OpNode* MutSrcNode4Ibn(const std::string& bn_in_op) const;
   OpNode* MutSrcNode4InputLbi(const LogicalBlobId& lbi) const;
-  OpNode* MutProducerOpNode4Lbi(const LogicalBlobId& lbi);
   void ForEachSplitOrBroadcastBlobDesc(const BlobDesc& blob_desc, const SbpParallel& sbp_parallel,
                                        const std::function<void(const BlobDesc&)>& Handler) const;
 
@@ -84,7 +80,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   std::unique_ptr<Shape> out_blob_time_shape_;
-  HashMap<LogicalBlobId, OptInt64> lbi2batch_axis_;
   HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
@@ -126,6 +121,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   OF_DISALLOW_COPY_AND_MOVE(OpGraph);
   explicit OpGraph(const Job& job) { Init(job); }
   ~OpGraph() override = default;
+
+  Maybe<void> ForEachOpNode(const std::function<Maybe<void>(const OpNode&)>& DoEach) const;
 
   const OpNode* OpNode4OpName(const std::string& name) const;
 

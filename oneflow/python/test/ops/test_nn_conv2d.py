@@ -38,7 +38,9 @@ def grouped_convolution2D(
     return outputs
 
 
-def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
+def compare_with_tensorflow(
+    device_type, x_shape, filters, kernel_size, groups, padding="VALID", stride=1
+):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -46,7 +48,7 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ConvJob():
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -66,8 +68,8 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
             loss = flow.nn.conv2d(
                 x,
                 weight,
-                strides=[1, 1],
-                padding="valid",
+                strides=[stride, stride],
+                padding=padding,
                 data_format="NCHW",
                 dilations=[1, 1],
                 groups=groups,
@@ -98,14 +100,18 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
                 test_global_storage.Get("weight").transpose(2, 3, 1, 0)
             )
             tf_out = tf.nn.conv2d(
-                x, weight, strides=[1, 1, 1, 1], padding="VALID", data_format="NHWC"
+                x,
+                weight,
+                strides=[1, stride, stride, 1],
+                padding=padding,
+                data_format="NHWC",
             )
         else:
             weight = tf.Variable(
                 test_global_storage.Get("weight").transpose(2, 3, 1, 0)
             )
             tf_out = grouped_convolution2D(
-                x, weight, padding="VALID", num_groups=groups
+                x, weight, padding=padding, num_groups=groups
             )
 
     loss_diff = test_global_storage.Get("loss_diff").transpose(0, 2, 3, 1)

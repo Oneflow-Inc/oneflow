@@ -151,7 +151,7 @@ func_config.enable_auto_mixed_precision(FLAGS.enable_auto_mixed_precision)
 def test_1n1c(test_case):
     flow.config.enable_debug_mode(True)
     flow.config.gpu_device_num(1)
-    pretrain_job = flow.function(func_config)(PretrainJob)
+    pretrain_job = flow.global_function(func_config)(PretrainJob)
     check_point = flow.train.CheckPoint()
     check_point.load(FLAGS.model_load_dir)
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
@@ -160,7 +160,7 @@ def test_1n1c(test_case):
 
 def test_1n4c(test_case):
     flow.config.gpu_device_num(4)
-    pretrain_job = flow.function(func_config)(PretrainJob)
+    pretrain_job = flow.global_function(func_config)(PretrainJob)
     check_point = flow.train.CheckPoint()
     check_point.load(FLAGS.model_load_dir)
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
@@ -170,7 +170,7 @@ def test_1n4c(test_case):
 @flow.unittest.num_nodes_required(2)
 def test_2n8c(test_case):
     flow.config.gpu_device_num(4)
-    pretrain_job = flow.function(func_config)(PretrainJob)
+    pretrain_job = flow.global_function(func_config)(PretrainJob)
     check_point = flow.train.CheckPoint()
     check_point.load(FLAGS.model_load_dir)
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
@@ -192,7 +192,7 @@ def GetSeveralLossesAsNumpy(enable_inplace, num_iters=10):
     train_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
     train_config.enable_inplace(enable_inplace)
 
-    @flow.function(train_config)
+    @flow.global_function(train_config)
     def PretrainJob():
         loss = BuildPreTrainNet(
             batch_size=FLAGS.batch_size,

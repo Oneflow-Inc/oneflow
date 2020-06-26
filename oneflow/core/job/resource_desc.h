@@ -11,6 +11,8 @@ static const size_t kMB = 1024 * 1024;
 class ResourceDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ResourceDesc);
+  explicit ResourceDesc(const Resource& resource) : resource_(resource) {}
+
   ~ResourceDesc() = default;
 
   size_t TotalMachineNum() const;
@@ -42,9 +44,6 @@ class ResourceDesc final {
   const Resource& resource() const { return resource_; }
 
  private:
-  friend class Global<ResourceDesc>;
-  explicit ResourceDesc(const Resource& resource) : resource_(resource) {}
-
   Resource resource_;
 };
 

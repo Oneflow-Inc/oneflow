@@ -37,8 +37,8 @@ void RecordLoadKernel::VirtualKernelInit() {
   }
 }
 
-void RecordLoadKernel::Forward(const KernelCtx& ctx,
-                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void RecordLoadKernel::ForwardDataContent(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto status = static_cast<RecordLoadStatus*>(ctx.other);
   status->record_num = record_reader_->Read(static_cast<size_t>(piece_size_in_one_loader_),
                                             BnInOp2Blob("out")->mut_dptr<OFRecord>());

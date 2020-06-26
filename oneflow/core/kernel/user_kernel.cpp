@@ -1,3 +1,5 @@
+#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
 #include "oneflow/core/framework/op_registration.h"
@@ -439,5 +441,45 @@ class UserKernel final : public Kernel {
 NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](const KernelConf&) {
   return true;
 });
+
+EagerKernel::EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf) {
+  InitBase(job_desc, kernel_conf);
+  InitOpKernel(kernel_conf);
+}
+
+void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
+  const std::string& op_type_name = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
+  auto kernel_reg_val =
+      user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf, job_desc()));
+  CHECK_NOTNULL(kernel_reg_val);
+  kernel_.reset(kernel_reg_val->create_fn());
+}
+
+void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (!kernel_conf().need_do_shape()) { return; }
+  UserKernelInferContext infer_ctx(nullptr, kernel_conf(), job_desc());
+  infer_ctx.UpdateArg2Tensor(BnInOp2Blob);
+  auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx.MutOpInferContext());
+  if (op_infer_ctx) { op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob); }
+  kernel_->InferShape(&infer_ctx);
+}
+
+std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerModelForward(
+    const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, DeviceCtx* device_ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  std::shared_ptr<user_op::OpKernelState> new_opkernel_state;
+  if (old_opkernel_state) {
+    new_opkernel_state = old_opkernel_state;
+  } else {
+    CHECK_NOTNULL(&job_desc());
+    UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
+    new_opkernel_state = kernel_->CreateOpKernelState(&init_ctx);
+  }
+  // TODO(lixinqi): refactor to a lightweight KernelComputeContext
+  UserKernelComputeContext compute_ctx(device_ctx, kernel_conf(), job_desc());
+  compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
+  kernel_->Compute(&compute_ctx, new_opkernel_state.get());
+  return new_opkernel_state;
+}
 
 }  // namespace oneflow
