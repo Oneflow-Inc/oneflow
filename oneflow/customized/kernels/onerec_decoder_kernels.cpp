@@ -251,12 +251,12 @@ class OneRecDecoderKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_ONEREC_DECODER_KERNEL(dtype)                                     \
-  REGISTER_USER_KERNEL("onerec_decoder")                                          \
-      .SetCreateFn<OneRecDecoderKernel<dtype>>()                                  \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU               \
-                       & user_op::HobDataType("in", 0) == DataType::kTensorBuffer \
-                       & user_op::HobDataType("out", 0) == GetDataType<dtype>::value);
+#define REGISTER_ONEREC_DECODER_KERNEL(dtype)                                       \
+  REGISTER_USER_KERNEL("onerec_decoder")                                            \
+      .SetCreateFn<OneRecDecoderKernel<dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)               \
+                       & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer) \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_ONEREC_DECODER_KERNEL(char)
 REGISTER_ONEREC_DECODER_KERNEL(float)
