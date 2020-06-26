@@ -32,7 +32,7 @@ docker run --rm -it -v `pwd`:/oneflow-src oneflow:manylinux2014-cuda10.2
 3. 只想在生成某些 python 版本的包，例如 python3.5，可以用命令
 
     ```bash
-    docker run --runtime=nvidia --rm -it -v `pwd`:/oneflow-src oneflow:manylinux2014-cuda10.2 /oneflow-src/docker/package/manylinux/build_wheel.sh --python3.5
+    docker run --rm -it -v `pwd`:/oneflow-src oneflow:manylinux2014-cuda10.2 /oneflow-src/docker/package/manylinux/build_wheel.sh --python3.5
     ```
 
     支持的参数是 `--python3.5`、`--python3.6`、`--python3.7`、`--python3.8`，需要生成多个版本可以同时传入多个参数。不传入版本参数则会生成所有的 python 版本的包
@@ -40,5 +40,5 @@ docker run --rm -it -v `pwd`:/oneflow-src oneflow:manylinux2014-cuda10.2
 3. 如果想自定义 oneflow 编译时的 cmake 参数，可以直接把 cmake 参数写出来，如：
 
     ```bash
-    docker run --runtime=nvidia --rm -it -v `pwd`:/oneflow-src oneflow:manylinux2014-cuda10.2 /oneflow-src/docker/package/manylinux/build_wheel.sh -DWITH_XLA=ON
+    docker run --rm -it -v `pwd`:/oneflow-src oneflow:manylinux2014-cuda10.2 /oneflow-src/docker/package/manylinux/build_wheel.sh -DWITH_XLA=ON
     ```
