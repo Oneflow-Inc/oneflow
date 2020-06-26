@@ -136,6 +136,22 @@ REGISTER_USER_KERNEL("TestSource")
                      & (user_op::HobDataType("out", 0) == DataType::kFloat))
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
 
+class TestSourceGpuKernel final : public user_op::OpKernel {
+ public:
+  TestSourceGpuKernel() = default;
+  ~TestSourceGpuKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {}
+};
+
+REGISTER_USER_KERNEL("TestSource")
+    .SetCreateFn<TestSourceGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU)
+    .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
+
 class TestMultiOutputOrderKernel final : public user_op::OpKernel {
  public:
   TestMultiOutputOrderKernel() = default;
@@ -245,13 +261,14 @@ class TestRandomSourceKernel final : public user_op::OpKernel {
   TestRandomSourceKernel() = default;
   ~TestRandomSourceKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     int64_t seed = ctx->Attr<int64_t>("seed");
     return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kCPU>>>(
         seed, ctx->device_ctx());
   }
+
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* random_generator =
         dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kCPU>>*>(state);

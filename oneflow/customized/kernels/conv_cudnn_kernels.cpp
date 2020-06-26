@@ -122,7 +122,6 @@ class ConvGpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const {
     const auto& data_format = ctx->Attr<std::string>("data_format");
@@ -139,6 +138,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
     return std::move(state);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const JobDesc& job_desc = ctx->job_desc();
 
@@ -312,7 +312,6 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const {
     const auto* bias_diff = ctx->TensorDesc4ArgNameAndIndex("bias_diff", 0);
@@ -334,6 +333,8 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
     }
     return std::move(state);
   }
+
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* bias_diff = ctx->Tensor4ArgNameAndIndex("bias_diff", 0);

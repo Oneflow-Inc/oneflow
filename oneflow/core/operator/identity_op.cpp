@@ -157,6 +157,53 @@ class CastFromMirroredOp : public MirroredCastOp {
 
 REGISTER_OP(OperatorConf::kCastFromMirroredConf, CastFromMirroredOp);
 
+namespace {
+
+class EagerInplaceIdentityOp : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EagerInplaceIdentityOp);
+  EagerInplaceIdentityOp() = default;
+  virtual ~EagerInplaceIdentityOp() override = default;
+
+  const PbMessage& GetCustomizedConf() const override {
+    return op_conf().eager_inplace_identity_conf();
+  }
+
+  void InitFromOpConf() override {
+    EnrollInputBn("in");
+    EnrollOutputBn("out")->set_mutable_inplace_ibn("in");
+  }
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override {
+    *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    const auto& in_hint = *JUST(SbpInferHint4Ibn("in"));
+    CHECK_OR_RETURN(in_hint.sbp_parallel().has_broadcast_parallel()
+                    || in_hint.sbp_parallel().has_partial_sum_parallel());
+    CHECK_OR_RETURN(in_hint.parallel_desc() == parallel_desc);
+    auto* map = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    (*map)["in"] = in_hint.sbp_parallel();
+    (*map)["out"].mutable_partial_sum_parallel();
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP(OperatorConf::kEagerInplaceIdentityConf, EagerInplaceIdentityOp);
+
+}  // namespace
+
 }  // namespace
 
 }  // namespace oneflow

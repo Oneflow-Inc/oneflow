@@ -226,12 +226,12 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
   CropMirrorNormalizeFromStaticShapeToFloatKernel() = default;
   ~CropMirrorNormalizeFromStaticShapeToFloatKernel() override = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return std::make_shared<CMNAttr>(ctx);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* cmn_attr = dynamic_cast<CMNAttr*>(state);
     const std::vector<float>& mean_vec = cmn_attr->mean_vec();
@@ -307,12 +307,12 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
   CropMirrorNormalizeFromTensorBufferToFloatKernel() = default;
   ~CropMirrorNormalizeFromTensorBufferToFloatKernel() override = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return std::make_shared<CMNAttr>(ctx);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* cmn_attr = dynamic_cast<CMNAttr*>(state);
     const std::vector<float>& mean_vec = cmn_attr->mean_vec();
@@ -413,7 +413,6 @@ class CoinFlipKernel final : public user_op::OpKernel {
   CoinFlipKernel() = default;
   ~CoinFlipKernel() override = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     float prob = ctx->Attr<float>("probability");
@@ -422,6 +421,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
     return rand_bool_gen;
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* rand_bool_gen = dynamic_cast<RandBoolGen*>(state);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
