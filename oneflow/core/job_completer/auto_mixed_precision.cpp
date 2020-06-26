@@ -22,6 +22,14 @@ bool IsNodeInList(const AMPList& amp_list, OpNode* node) {
   return IsKeyFound(amp_list, op_type);
 }
 
+ParallelConf GetCastParallelConf(const ParallelDesc& src, const ParallelDesc& dst) {
+  ParallelDesc ret(src);
+  if (src.device_type() == DeviceType::kCPU && dst.device_type() == DeviceType::kGPU) {
+    ret.set_device_type(DeviceType::kGPU);
+  }
+  return ret.parallel_conf();
+}
+
 template<typename ContainerT, typename ElemT>
 std::string Container2Str(const ContainerT& container,
                           std::function<std::string(const ElemT&)> elem2str) {
@@ -202,7 +210,8 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     }
 
     if (cast_is_consumed) {
-      job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
+      job_builder->AddOps(GetCastParallelConf(src_node->parallel_desc(),
+                                              pair.second.front()->dst_node()->parallel_desc()),
                           std::vector<OperatorConf>{cast_op.op_conf()});
       LOG(INFO) << "Insert CastOp: " << cast_op.op_name() << " between " << lbn;
     }
