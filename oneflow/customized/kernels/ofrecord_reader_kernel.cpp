@@ -23,13 +23,13 @@ class OFRecordReaderKernel final : public user_op::OpKernel {
   OFRecordReaderKernel() = default;
   ~OFRecordReaderKernel() override = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     std::shared_ptr<OFRecordReaderWrapper> reader(new OFRecordReaderWrapper(ctx));
     return reader;
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* reader = dynamic_cast<OFRecordReaderWrapper*>(state);
     reader->Read(ctx);
@@ -39,12 +39,7 @@ class OFRecordReaderKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("OFRecordReader")
     .SetCreateFn<OFRecordReaderKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-      if (ctx.device_type() == DeviceType::kCPU && out_tensor->data_type() == DataType::kOFRecord) {
-        return true;
-      }
-      return false;
-    });
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("out", 0) == DataType::kOFRecord));
 
 }  // namespace oneflow

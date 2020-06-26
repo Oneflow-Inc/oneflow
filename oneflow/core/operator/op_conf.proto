@@ -710,10 +710,7 @@ message GeluGradOpConf {
 }
 
 message ReduceSumOpConf {
-  oneof in_conf {
-    string in = 1; // For User
-    LogicalBlobId in_sys = 2; // For System
-  }
+  required string in = 1;
   required string out = 3;
   repeated int32 axis = 4;
   optional bool keep_dims = 5 [default = false];
@@ -1474,7 +1471,7 @@ message AccTickOpConf {
 }
 
 message ModelInitOpConf {
-  required string tick = 1;
+  optional string tick = 1;
   repeated string out = 2;
   repeated string variable_op_name = 3;
   repeated VariableOpConf original_variable_conf = 4;
@@ -1752,6 +1749,11 @@ message TensorListToTensorBufferOpConf {
   required string out = 2;
 }
 
+message TensorListSplitOpConf {
+  required string in = 1;
+  repeated string out = 2;
+}
+
 message CollectiveBoxingGenericOpConf {
   required LogicalBlobId lbi = 1;
   required boxing.collective.RankDesc rank_desc = 2;
@@ -1768,6 +1770,7 @@ message OperatorConf {
   optional bool enable_cudnn = 5;
   optional int64 cudnn_buf_limit_mbyte = 6;
   repeated string ctrl_in_op_name = 7;
+  optional int64 logical_object_id = 8;
   oneof op_type {
     // system op
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;
@@ -1832,6 +1835,7 @@ message OperatorConf {
     TensorListToTensorBufferOpConf tensor_list_to_tensor_buffer_conf = 169;
     CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
     BoxingIdentityOpConf boxing_identity_conf = 171;
+    TensorListSplitOpConf tensor_list_split_conf = 172;
     UserOpConf user_conf = 199;
     
     // domain op

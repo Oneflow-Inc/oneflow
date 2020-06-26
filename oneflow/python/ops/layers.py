@@ -44,7 +44,7 @@ def dense(
     )
 
     if model_distribute is distribute_util.split(0):
-        assert in_num_axes is 2  # model distribute is hard for reshape split dim 1
+        assert in_num_axes == 2  # model distribute is hard for reshape split dim 1
 
     weight = flow.get_variable(
         name="{}-weight".format(name_prefix),
@@ -250,7 +250,7 @@ def layer_norm(
             else len(inputs.shape) + begin_params_axis
         )
         param_shape = inputs.shape[begin_params_axis:]
-        if len(param_shape) is 0:
+        if len(param_shape) == 0:
             param_shape = (1,)
         if center:
             beta = flow.get_variable(

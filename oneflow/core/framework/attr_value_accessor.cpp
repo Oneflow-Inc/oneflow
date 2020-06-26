@@ -11,6 +11,7 @@ namespace user_op {
 #define BASIC_AND_ENUM_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                          \
   template<>                                                                               \
   cpp_type AttrValAccessor<cpp_type>::Attr(const UserOpAttrVal& val) {                     \
+    CHECK(val.has_##field());                                                              \
     return val.field();                                                                    \
   }                                                                                        \
   template<>                                                                               \
@@ -91,6 +92,17 @@ void AttrValAccessor<std::vector<Shape>>::Attr(const std::vector<Shape>& cpp_val
   FOR_RANGE(int32_t, i, 0, cpp_val.size()) {
     cpp_val.at(i).ToProto(attr_val->mutable_at_list_shape()->add_val());
   }
+}
+
+// List of String Attr
+template<>
+std::vector<std::string> AttrValAccessor<std::vector<std::string>>::Attr(const UserOpAttrVal& val) {
+  return PbRpf2StdVec<std::string>(val.at_list_string().val());
+}
+template<>
+void AttrValAccessor<std::vector<std::string>>::Attr(const std::vector<std::string>& cpp_val,
+                                                     UserOpAttrVal* attr_val) {
+  *(attr_val->mutable_at_list_string()->mutable_val()) = StdVec2PbRpf<std::string>(cpp_val);
 }
 
 }  // namespace user_op
