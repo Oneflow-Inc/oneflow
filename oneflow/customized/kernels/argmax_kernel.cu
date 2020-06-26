@@ -133,8 +133,8 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_ARGMAX_KERNEL(dtype)                                                          \
   REGISTER_USER_KERNEL("argmax")                                                                   \
       .SetCreateFn<GpuArgMaxKernel<dtype>>()                                                       \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU                                \
-                       & user_op::HobDataType("in", 0) == GetDataType<dtype>::value)               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))             \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                               \
         const int32_t instance_size = in_shape->dim_vec().back();                                  \

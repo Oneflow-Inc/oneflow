@@ -1471,7 +1471,7 @@ message AccTickOpConf {
 }
 
 message ModelInitOpConf {
-  required string tick = 1;
+  optional string tick = 1;
   repeated string out = 2;
   repeated string variable_op_name = 3;
   repeated VariableOpConf original_variable_conf = 4;
@@ -1495,6 +1495,11 @@ message IdentityOpConf {
 }
 
 message CopyOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message EagerInplaceIdentityOpConf {
   required string in = 1;
   required string out = 2;
 }
@@ -1770,6 +1775,7 @@ message OperatorConf {
   optional bool enable_cudnn = 5;
   optional int64 cudnn_buf_limit_mbyte = 6;
   repeated string ctrl_in_op_name = 7;
+  optional int64 logical_object_id = 8;
   oneof op_type {
     // system op
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;
@@ -1928,6 +1934,7 @@ message OperatorConf {
     CopyOpConf copy_conf = 343;
     CastToMirroredOpConf cast_to_mirrored_conf = 344;
     CastFromMirroredOpConf cast_from_mirrored_conf = 345;
+    EagerInplaceIdentityOpConf eager_inplace_identity_conf = 346;
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op

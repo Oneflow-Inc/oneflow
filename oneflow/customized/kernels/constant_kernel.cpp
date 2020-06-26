@@ -33,22 +33,23 @@ class ConstantKernel final : public OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->Attr<bool>("is_floating_value");
     const int64_t elem_cnt = out_tensor->shape().elem_cnt();
-    CHECK(elem_cnt);
+    CHECK_GT(elem_cnt, 0);
     NewKernelUtil<device_type>::Fill(ctx->device_ctx(), elem_cnt,
                                      is_floating_value
                                          ? static_cast<T>(ctx->Attr<double>("floating_value"))
                                          : static_cast<T>(ctx->Attr<int64_t>("integer_value")),
                                      out_tensor->mut_dptr<T>());
+
     const_state->set_is_inited(true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CONSTANT_XPU_KERNEL(device, dtype)       \
-  REGISTER_USER_KERNEL("constant")                        \
-      .SetCreateFn<ConstantKernel<device, dtype>>()       \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device \
-                       & user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value);
+#define REGISTER_CONSTANT_XPU_KERNEL(device, dtype)         \
+  REGISTER_USER_KERNEL("constant")                          \
+      .SetCreateFn<ConstantKernel<device, dtype>>()         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 #define REGISTER_CONSTANT_KERNEL(device, dtype_pair) \
   REGISTER_CONSTANT_XPU_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))

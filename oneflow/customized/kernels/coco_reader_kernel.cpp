@@ -21,13 +21,13 @@ class COCOReaderKernel final : public user_op::OpKernel {
   COCOReaderKernel() = default;
   ~COCOReaderKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     std::shared_ptr<user_op::OpKernelState> reader(new COCOReaderWrapper(ctx));
     return reader;
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* reader = dynamic_cast<COCOReaderWrapper*>(state);
     reader->Read(ctx);
@@ -39,13 +39,13 @@ class COCOReaderKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("COCOReader")
     .SetCreateFn<COCOReaderKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU
-                     & user_op::HobDataType("image", 0) == DataType::kTensorBuffer
-                     & user_op::HobDataType("image_id", 0) == DataType::kInt64
-                     & user_op::HobDataType("image_size", 0) == DataType::kInt32
-                     & user_op::HobDataType("gt_bbox", 0) == DataType::kTensorBuffer
-                     & user_op::HobDataType("gt_label", 0) == DataType::kTensorBuffer
-                     & user_op::HobDataType("gt_segm", 0) == DataType::kTensorBuffer
-                     & user_op::HobDataType("gt_segm_index", 0) == DataType::kTensorBuffer);
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("image", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("image_id", 0) == DataType::kInt64)
+                     & (user_op::HobDataType("image_size", 0) == DataType::kInt32)
+                     & (user_op::HobDataType("gt_bbox", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("gt_label", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("gt_segm", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("gt_segm_index", 0) == DataType::kTensorBuffer));
 
 }  // namespace oneflow

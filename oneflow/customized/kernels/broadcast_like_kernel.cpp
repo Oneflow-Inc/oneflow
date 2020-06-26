@@ -29,11 +29,11 @@ class BroadcastLikeKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_BROADCAST_LIKE_XPU_KERNEL(device, dtype) \
-  REGISTER_USER_KERNEL("broadcast_like")                  \
-      .SetCreateFn<BroadcastLikeKernel<device, dtype>>()  \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device \
-                       & user_op::HobDataType("y", 0) == GetDataType<dtype>::value);
+#define REGISTER_BROADCAST_LIKE_XPU_KERNEL(device, dtype)   \
+  REGISTER_USER_KERNEL("broadcast_like")                    \
+      .SetCreateFn<BroadcastLikeKernel<device, dtype>>()    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_BROADCAST_LIKE_KERNEL(dtype)                 \
   REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCPU, dtype) \
