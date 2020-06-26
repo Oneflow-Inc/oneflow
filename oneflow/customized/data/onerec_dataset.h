@@ -87,10 +87,13 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
     static_assert(sizeof(OneRecFrameHeader) == kHeaderSize, "");
     OneRecFrameHeaderView header_view{};
     static_assert(sizeof(header_view.header) == kHeaderSize, "");
-    if (in_stream_->ReadFully(header_view.raw, kHeaderSize) != 0) {
+    int32_t read_status = in_stream_->ReadFully(header_view.raw, kHeaderSize);
+    if (read_status == -1) {
       ResetInstream();
       current_epoch_++;
       CHECK_EQ(in_stream_->ReadFully(header_view.raw, kHeaderSize), 0);
+    } else {
+      CHECK_EQ(read_status, 0);
     }
     CHECK_EQ(header_view.header.magic, kMagicNumber);
     CHECK_EQ(header_view.header.reserved, kReservedNumber);
