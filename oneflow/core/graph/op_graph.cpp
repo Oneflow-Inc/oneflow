@@ -353,7 +353,7 @@ void OpNode::InitLbi2SbpParallel() {
   Update(op().output_bns());
 }
 
-void OpGraph::Init(const Job& job) {
+Maybe<void> OpGraph::Init(const Job& job) {
   InitNodes(job);
   ForEachNode([&](OpNode* node) {
     CHECK(op_name2op_node_.emplace(node->op().op_name(), node).second)
@@ -365,8 +365,9 @@ void OpGraph::Init(const Job& job) {
   ForEachNode([](OpNode* node) { node->InitLbi2SourceNode(); });
   InferBlobLastUsed();
   InferTimeShape();
-  InferLogicalBlobDesc(job);
+  JUST(InferLogicalBlobDesc(job));
   ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
+  return Maybe<void>::Ok();
 }
 
 void OpGraph::CheckIsDAG() const {
@@ -503,7 +504,7 @@ void OpGraph::InferOpNodeMirroredSignature(OpNode* op_node,
       MirroredSigInferHint4Ibn, is_mirrored_parallel_view_conf, op_node->parallel_desc()));
 }
 
-void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
+Maybe<void> OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
   auto* bn2parallel_id2blob_desc = op_node->mut_bn2parallel_id2blob_desc();
   op_node->SplitLogicalInputBlobDesc();
   int64_t parallel_num = op_node->parallel_desc().parallel_num();
@@ -525,10 +526,11 @@ void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(parallel_id);
     parallel_ctx.set_parallel_num(parallel_num);
-    CHECK_JUST(op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx,
-                                              &op_node->sbp_signature(), [](OpContext*) {}));
+    JUST(op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &op_node->sbp_signature(),
+                                        [](OpContext*) {}));
   }
   op_node->ConcatLogicalOutputBlobDesc();
+  return Maybe<void>::Ok();
 }
 
 const OpNode* OpGraph::OpNode4OpName(const std::string& op_name) const {
@@ -537,14 +539,14 @@ const OpNode* OpGraph::OpNode4OpName(const std::string& op_name) const {
   return op_node_it->second;
 }
 
-void OpGraph::InferLogicalBlobDesc(const Job& job) const {
+Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
   JobParallelViewConf job_parallel_view_conf(job.job_parallel_view_conf());
   HashMap<OpBlobArg, std::vector<OpBlobArg>> oba2sbp_identical_obas;
   for (const auto& pair : job.helper().identical_sbp_oba_pairs().pair()) {
     oba2sbp_identical_obas[pair.first()].push_back(pair.second());
     oba2sbp_identical_obas[pair.second()].push_back(pair.first());
   }
-  TopoForEachNode([&](OpNode* op_node) {
+  JUST(TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
     // infer batch_axis
     const auto& BatchAxis4Ibn = [&](const std::string& ibn) -> Maybe<const OptInt64*> {
       const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
@@ -557,7 +559,7 @@ void OpGraph::InferLogicalBlobDesc(const Job& job) const {
       CHECK(std::find(ibns.begin(), ibns.end(), ibn) != ibns.end());
       return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn));
     };
-    CHECK_JUST(op_node->mut_op()->InferBatchAxisIf(LogicalBlobDesc4Ibn, BatchAxis4Ibn));
+    JUST(op_node->mut_op()->InferBatchAxisIf(LogicalBlobDesc4Ibn, BatchAxis4Ibn));
     // infer mirrored_signature
     bool is_mirrored_parallel_view_conf = false;
     {
@@ -577,13 +579,14 @@ void OpGraph::InferLogicalBlobDesc(const Job& job) const {
     op_node->InferBlobParallelDesc();
     UpdateJobParallelViewConf(*op_node, oba2sbp_identical_obas, &job_parallel_view_conf);
     // infer logical_blob_desc
-    InferOpNodeLogicalBlobDesc(op_node);
+    JUST(InferOpNodeLogicalBlobDesc(op_node));
     // Fill logical blob_desc signature.
-    CHECK_JUST(op_node->mut_op()->FillLogicalBlobDescSignature(
+    JUST(op_node->mut_op()->FillLogicalBlobDescSignature(
         [&](const std::string& bn_in_op) -> Maybe<const BlobDesc*> {
           return &op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
         }));
-  });
+    return Maybe<void>::Ok();
+  }));
   // fix sbp_signature
   {
     TopoForEachNode([&](OpNode* op_node) {
@@ -599,6 +602,7 @@ void OpGraph::InferLogicalBlobDesc(const Job& job) const {
       }
     });
   }
+  return Maybe<void>::Ok();
 }
 
 BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
