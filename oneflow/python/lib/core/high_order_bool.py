@@ -1,3 +1,10 @@
+def bool_functor(debug_str):
+    def Decorator(match_function):
+        return HighOrderBool(debug_str, match_function)
+
+    return Decorator
+
+
 class BoolFunctor(object):
     def debug_str(self, ctx, display_result=True):
         raise NotImplementedError
