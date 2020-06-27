@@ -52,7 +52,7 @@ def MakeDefaultFunction(default, conditional_functions):
             prompt = location if customized_prompt is None else customized_prompt
             failed_info += "\n%s: \033[1;31mFAILED\033[0m\n\t%s\n" % (
                 prompt,
-                bf.debug_str(),
+                bf.debug_str(None),
             )
         return failed_info
 
@@ -65,7 +65,7 @@ def _MultiMatchedErrorFunction(matched_functions):
         for bf, func, location in matched_functions:
             failed_info += "\n%s: \033[1;31mPASSED\033[0m\n\t%s\n" % (
                 location,
-                bf.debug_str(),
+                bf.debug_str(None),
             )
         raise AssertionError(failed_info)
 
