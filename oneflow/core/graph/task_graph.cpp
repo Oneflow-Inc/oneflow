@@ -20,6 +20,7 @@
 #include "oneflow/core/graph/boxing/slice_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/naive_b2b_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/one_to_one_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/to_interface_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing_identity_compute_task_node.h"
 
@@ -157,6 +158,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   if (GlobalJobDesc().use_boxing_v2()) {
     sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
     std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
+    builders.emplace_back(new ToInterfaceSubTskGphBuilder());
     builders.emplace_back(new OneToOneSubTskGphBuilder());
     builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
     builders.emplace_back(new SliceBoxingSubTskGphBuilder());
