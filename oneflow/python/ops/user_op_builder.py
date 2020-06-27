@@ -73,7 +73,7 @@ def lazy_user_op_builder(op_name):
 
 @oneflow_export("user_op_builder")
 def api_user_op_builder(op_name):
-    return enable_if.unique(lazy_user_op_builder)(op_name)
+    return enable_if.unique([lazy_user_op_builder])(op_name)
 
 
 class ConsistentUserOp(UserOp):
@@ -96,7 +96,7 @@ def consistent_user_op_builder(op_name):
 
 @oneflow_export("consistent_user_op_builder")
 def api_consistent_user_op_builder(op_name):
-    return enable_if.unique(consistent_user_op_builder)(op_name)
+    return enable_if.unique([consistent_user_op_builder])(op_name)
 
 
 class UserOpConfBuilder(object):
