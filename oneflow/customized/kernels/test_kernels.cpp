@@ -136,6 +136,22 @@ REGISTER_USER_KERNEL("TestSource")
                      & (user_op::HobDataType("out", 0) == DataType::kFloat))
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
 
+class TestSourceGpuKernel final : public user_op::OpKernel {
+ public:
+  TestSourceGpuKernel() = default;
+  ~TestSourceGpuKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {}
+};
+
+REGISTER_USER_KERNEL("TestSource")
+    .SetCreateFn<TestSourceGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU)
+    .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
+
 class TestMultiOutputOrderKernel final : public user_op::OpKernel {
  public:
   TestMultiOutputOrderKernel() = default;
