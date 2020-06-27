@@ -14,14 +14,13 @@ class ThreadPool final {
   ~ThreadPool();
 
   int32_t thread_num() const { return threads_.size(); }
-  void AddWork(std::function<void()> work);
+  void AddWork(const std::function<void()>& work);
 
  private:
   std::vector<Channel<std::function<void()>>> work_chans_;
   std::vector<std::thread> threads_;
 
-  std::mutex cur_chan_idx_mtx_;
-  int32_t cur_chan_idx_;
+  std::atomic<size_t> work_cnt_;
 };
 
 }  // namespace oneflow
