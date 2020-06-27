@@ -4,6 +4,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.op_arg_util as op_arg_util
+import oneflow.python.framework.env_util as env_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.lib.core.high_order_bool as high_order_bool
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -81,7 +82,17 @@ MatchNcclAllReduce = (
 
 @enable_if.condition(MatchNcclAllReduce)
 def NcclAllReduce(builder, x_blob_object, op_arg_parallel_attr):
-    TODO()
+    parallel_conf = op_arg_parallel_attr.parallel_desc_symbol.parallel_conf
+    op_attribute = _GetEagerNcclAllReduce(parallel_conf)
+    bn_in_op2blob_object = dict(in_0=x_blob_object)
+    builder.BoxingStatelessCall(
+        op_attribute,
+        parallel_conf=env_util.GetEnvDefaultParallelConf("gpu"),
+        bn_in_op2blob_object=bn_in_op2blob_object,
+    )
+    y_blob_object = bn_in_op2blob_object["out_0"]
+    y_blob_object.op_arg_parallel_attr.Assign(op_arg_parallel_attr)
+    return y_blob_object
 
 
 MatchCopyH2DThenNcclAllReduce = (
@@ -272,3 +283,13 @@ def ReplaceDeviceTag(builder, parallel_desc_symbol, device_tag):
             "%s:%s:%s" % (triple[0], device_tag, triple[2])
         )
     return builder.GetParallelDescSymbol(parallel_conf)
+
+
+def _GetEagerNcclAllReduce(parallel_conf):
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = "eager_nccl_all_reduce"
+    op_conf.user_conf.op_type_name = "eager_nccl_all_reduce"
+    op_conf.user_conf.input["in"].s.append("eager_nccl_all_reduce/in_0")
+    op_conf.user_conf.output["out"].s.append("eager_nccl_all_reduce/out_0")
+    op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
+    return c_api_util.GetOpAttribute4OpConf(op_conf)
