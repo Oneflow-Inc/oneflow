@@ -69,6 +69,11 @@ Maybe<std::string> CurrentResource() {
   return PbMessage2TxtString(Global<ResourceDesc, ForSession>::Get()->resource());
 }
 
+Maybe<std::string> EnvResource() {
+  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForEnv>::Get()));
+  return PbMessage2TxtString(Global<ResourceDesc, ForEnv>::Get()->resource());
+}
+
 Maybe<void> InitEnv(const std::string& env_proto_str) {
   EnvProto env_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))

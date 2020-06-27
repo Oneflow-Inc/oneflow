@@ -16,7 +16,7 @@ class PlacementScope(object):
         if isinstance(machine_device_ids, (list, tuple)) == False:
             machine_device_ids = [machine_device_ids]
         self.machine_device_ids_ = machine_device_ids
-        self.default_parallel_conf_ = _MakeParallelConf(
+        self.default_parallel_conf_ = MakeParallelConf(
             self.device_tag_, self.machine_device_ids_
         )
         self.machine_id2device_id_list_ = MakeMachineId2DeviceIdList(
@@ -45,7 +45,7 @@ class PlacementScope(object):
         return self.parallel_size_
 
     def ParallelConf4OpConf(self, op_conf):
-        return _MakeParallelConf(
+        return MakeParallelConf(
             self.GetDeviceTag4OpConf(op_conf), self.machine_device_ids_
         )
 
@@ -125,7 +125,19 @@ def ParallelConf4OpConf(op_conf):
     )
 
 
-def _MakeParallelConf(device_tag, machine_device_ids):
+def MakeParallelConf4Resource(device_tag, resource):
+    if device_tag == "gpu":
+        assert resource.HasField("gpu_device_num")
+        machine_device_ids = GetGpuMachineDeviceIds(resource)
+    elif device_tag == "cpu":
+        assert resource.HasField("cpu_device_num")
+        machine_device_ids = GetCpuMachineDeviceIds(resource)
+    else:
+        raise NotImplementedError
+    return MakeParallelConf(device_tag, machine_device_ids)
+
+
+def MakeParallelConf(device_tag, machine_device_ids):
     assert isinstance(machine_device_ids, collections.Sized)
     device_names = []
     for machine_device_id in machine_device_ids:
@@ -160,6 +172,24 @@ def GetParallelSize(key2list):
     for k, v in key2list.items():
         size += len(v)
     return size
+
+
+def GetGpuMachineDeviceIds(resource):
+    assert resource.machine_num > 0
+    assert resource.HasField("gpu_device_num")
+    return [
+        "%s:0-%s" % (m_id, resource.gpu_device_num - 1)
+        for m_id in range(resource.machine_num)
+    ]
+
+
+def GetCpuMachineDeviceIds(resource):
+    assert resource.machine_num > 0
+    assert resource.HasField("cpu_device_num")
+    return [
+        "%s:0-%s" % (m_id, resource.gpu_device_num - 1)
+        for m_id in range(resource.machine_num)
+    ]
 
 
 _parallel_conf_str2ofrecord = {}

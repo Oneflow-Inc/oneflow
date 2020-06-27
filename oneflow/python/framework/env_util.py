@@ -5,6 +5,7 @@ from contextlib import closing
 
 import oneflow.core.job.env_pb2 as env_pb
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
@@ -202,6 +203,17 @@ def _FindFreePort():
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s.getsockname()[1]
 
+
+def GetEnvDefaultParallelConf(device_tag):
+    if device_tag not in device_tag2default_parallel_conf:
+        parallel_conf = placement_ctx.MakeParallelConf4Resource(
+            device_tag, c_api_util.EnvResource()
+        )
+        device_tag2default_parallel_conf[device_tag] = parallel_conf
+    return device_tag2default_parallel_conf[device_tag]
+
+
+device_tag2default_parallel_conf = {}
 
 default_env_proto = _DefaultEnvProto()
 env_proto_mutable = True

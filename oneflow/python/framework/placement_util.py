@@ -56,26 +56,8 @@ def GetDevicePriorPlacementScope(device_tag, machine_device_ids):
 
 def GetDefaultMachineDeviceIds(resource):
     if resource.HasField("gpu_device_num"):
-        return "gpu", _GetGpuDefaultMachineDeviceIds(resource)
+        return "gpu", placement_ctx.GetGpuMachineDeviceIds(resource)
     elif resource.HasField("cpu_device_num"):
-        return "cpu", _GetCpuDefaultMachineDeviceIds(resource)
+        return "cpu", placement_ctx.GetCpuMachineDeviceIds(resource)
     else:
         raise NotImplementedError
-
-
-def _GetGpuDefaultMachineDeviceIds(resource):
-    assert resource.machine_num > 0
-    assert resource.HasField("gpu_device_num")
-    return [
-        "%s:0-%s" % (m_id, resource.gpu_device_num - 1)
-        for m_id in range(resource.machine_num)
-    ]
-
-
-def _GetCpuDefaultMachineDeviceIds(resource):
-    assert resource.machine_num > 0
-    assert resource.HasField("cpu_device_num")
-    return [
-        "%s:0-%s" % (m_id, resource.gpu_device_num - 1)
-        for m_id in range(resource.machine_num)
-    ]
