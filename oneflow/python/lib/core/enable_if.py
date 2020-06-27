@@ -11,19 +11,20 @@ def condition(hob_expr):
     return Decorator
 
 
-def unique(*args):
+def unique(arg_funcs, context=None):
+    assert isinstance(arg_funcs, (list, tuple))
     conditional_functions = []
-    for arg in args:
-        if isinstance(arg, tuple):
-            func, hob_expr = arg
-        elif inspect.isfunction(arg):
-            func = arg
+    for arg_func in arg_funcs:
+        if isinstance(arg_func, tuple):
+            func, hob_expr = arg_func
+        elif inspect.isfunction(arg_func):
+            func = arg_func
             assert hasattr(func, "__oneflow_condition_hob__")
             hob_expr = func.__oneflow_condition_hob__
         else:
             raise NotImplementedError
         conditional_functions.append((hob_expr, func, func.__name__))
-    matched_func = GetMatchedFunction(conditional_functions)
+    matched_func = GetMatchedFunction(conditional_functions, context=context)
     if matched_func is not None:
         return matched_func
 
@@ -33,10 +34,10 @@ def unique(*args):
     return MakeDefaultFunction(default, conditional_functions)
 
 
-def GetMatchedFunction(conditional_functions):
+def GetMatchedFunction(conditional_functions, context=None):
     select_triple = (None, None, None)
     for triple in conditional_functions:
-        if not triple[0]():
+        if not triple[0](context):
             continue
         if select_triple[1] is not None:
             return _MultiMatchedErrorFunction([select_triple, triple])
