@@ -547,6 +547,7 @@ bool Improver::IsAnyZoneOutOfMemory(
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
     double ii) const {
+  const ResourceDesc* resource_desc = Global<ResourceDesc, ForSession>::Get();
   FOR_RANGE(int64_t, machine_id, 0, mz_regst_descs.size()) {
     FOR_RANGE(int64_t, mem_zone_id, 0, mz_regst_descs[machine_id].size()) {
       const auto& regst_descs = mz_regst_descs[machine_id][mem_zone_id];
@@ -554,9 +555,11 @@ bool Improver::IsAnyZoneOutOfMemory(
           CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii);
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
       if (calc >= available) {
+        std::string device_type = (mem_zone_id == resource_desc->GpuDeviceNum()) ? "gpu" : "cpu";
         LOG(INFO) << "OOM detected at compile time, machine_id: " << machine_id
-                  << ", mem_zone_id: " << mem_zone_id << ", calc: " << calc
-                  << ", available: " << available;
+                  << ", mem_zone_id: " << mem_zone_id << ", device_type: " << device_type
+                  << ", calc: " << calc << ", available: " << available
+                  << ", out of memory: " << (calc - available) / (1024 * 1024) << " MB";
         return true;
       }
     }
