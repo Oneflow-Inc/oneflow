@@ -11,3 +11,4 @@ core.*
 *.ipynb
 /.vscode
 manylinux*
+wheelhouse/
