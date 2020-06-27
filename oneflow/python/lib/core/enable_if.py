@@ -11,7 +11,7 @@ def condition(hob_expr):
     return Decorator
 
 
-def unique(arg_funcs, context=None):
+def unique(arg_funcs, context=None, default=None):
     assert isinstance(arg_funcs, (list, tuple))
     conditional_functions = []
     for arg_func in arg_funcs:
@@ -28,10 +28,12 @@ def unique(arg_funcs, context=None):
     if matched_func is not None:
         return matched_func
 
-    def default(get_failed_info, *args, **kwargs):
-        raise NotImplementedError(get_failed_info())
+    if default is None:
 
-    return MakeDefaultFunction(default, conditional_functions)
+        def default(get_failed_info, *args, **kwargs):
+            raise NotImplementedError(get_failed_info())
+
+    return MakeDefaultFunction(default, conditional_functions, context=context)
 
 
 def GetMatchedFunction(conditional_functions, context=None):
@@ -40,32 +42,32 @@ def GetMatchedFunction(conditional_functions, context=None):
         if not triple[0](context):
             continue
         if select_triple[1] is not None:
-            return _MultiMatchedErrorFunction([select_triple, triple])
+            return _MultiMatchedErrorFunction([select_triple, triple], context=context)
         select_triple = triple
     return select_triple[1]
 
 
-def MakeDefaultFunction(default, conditional_functions):
+def MakeDefaultFunction(default, conditional_functions, context=None):
     def get_failed_info(customized_prompt=None):
         failed_info = "no avaliable function found.\n"
         for bf, func, location in conditional_functions:
             prompt = location if customized_prompt is None else customized_prompt
             failed_info += "\n%s: \033[1;31mFAILED\033[0m\n\t%s\n" % (
                 prompt,
-                bf.debug_str(None),
+                bf.debug_str(context),
             )
         return failed_info
 
     return lambda *args, **kwargs: default(get_failed_info, *args, **kwargs)
 
 
-def _MultiMatchedErrorFunction(matched_functions):
+def _MultiMatchedErrorFunction(matched_functions, context=None):
     def raise_assert_error(*args, **kwargs):
         failed_info = "at least two conditional functions matched.\n"
         for bf, func, location in matched_functions:
             failed_info += "\n%s: \033[1;31mPASSED\033[0m\n\t%s\n" % (
                 location,
-                bf.debug_str(None),
+                bf.debug_str(context),
             )
         raise AssertionError(failed_info)
 
