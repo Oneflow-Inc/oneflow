@@ -5,6 +5,7 @@
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/thread/thread_pool.h"
 
 namespace oneflow {
 
@@ -12,23 +13,42 @@ namespace boxing {
 
 namespace collective {
 
+class CollectiveBoxingDeviceCtxCheckpoint final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingDeviceCtxCheckpoint);
+  CollectiveBoxingDeviceCtxCheckpoint() = default;
+  ~CollectiveBoxingDeviceCtxCheckpoint() = default;
+
+  void SetCallback(std::function<void()> done_callback) {
+    CHECK(!done_callback_);
+    done_callback_ = std::move(done_callback);
+  }
+  void SetDone() {
+    CHECK(done_callback_);
+    done_callback_();
+  }
+
+ private:
+  std::function<void()> done_callback_;
+};
+
 class CollectiveBoxingDeviceCtxPoller final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingDeviceCtxPoller);
   ~CollectiveBoxingDeviceCtxPoller();
 
-  void Enqueue(const std::shared_ptr<std::atomic<bool>>& ready_flag, const std::function<void()>&);
+  std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> CreateCheckpoint();
+  void Enqueue(const std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint>& checkpoint,
+               const std::function<void()>&);
 
  private:
-  using EventList = std::list<std::pair<std::shared_ptr<std::atomic<bool>>, std::function<void()>>>;
   friend class Global<CollectiveBoxingDeviceCtxPoller>;
   CollectiveBoxingDeviceCtxPoller();
-  std::vector<std::thread> poller_thread_vec_;
-  std::vector<std::unique_ptr<std::mutex>> mutex_vec_;
-  std::vector<EventList> event_list_vec_;
-  std::atomic<bool> shutdown_;
-  std::atomic<int64_t> counter_;
-  int64_t num_threads_;
+
+  std::shared_ptr<HashMap<CollectiveBoxingDeviceCtxCheckpoint*, std::list<std::function<void()>>>>
+      checkpoint2callbacks_;
+  std::shared_ptr<ThreadPool> thread_pool_;
+  std::shared_ptr<std::mutex> mutex_;
 };
 
 }  // namespace collective

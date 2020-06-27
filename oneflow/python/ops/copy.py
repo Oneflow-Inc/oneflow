@@ -15,7 +15,7 @@ import oneflow
 
 @oneflow_export("copy")
 def api_copy(x, name=None):
-    return enable_if.unique(lazy_copy, eager_copy)(x, name=name)
+    return enable_if.unique([lazy_copy, eager_copy])(x, name=name)
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)

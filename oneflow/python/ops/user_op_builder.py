@@ -68,11 +68,14 @@ class UserOp(object):
 
 @oneflow_export("user_op_builder")
 def api_user_op_builder(op_name):
-    return enable_if.unique(
-        lazy_user_op_builder,
-        eager_logical_user_op_builder,
-        eager_physical_user_op_builder,
-    )(op_name)
+    api = enable_if.unique(
+        [
+            lazy_user_op_builder,
+            eager_logical_user_op_builder,
+            eager_physical_user_op_builder,
+        ]
+    )
+    return api(op_name)
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
@@ -163,7 +166,7 @@ class EagerPhysicalUserOp(UserOp):
 
 @oneflow_export("consistent_user_op_builder")
 def api_consistent_user_op_builder(op_name):
-    return enable_if.unique(consistent_user_op_builder)(op_name)
+    return enable_if.unique([consistent_user_op_builder])(op_name)
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)

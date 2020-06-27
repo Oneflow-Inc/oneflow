@@ -14,7 +14,7 @@ def api_add_loss(loss):
     Args:
         loss: A `Blob`.
     """
-    return enable_if.unique(lazy_add_loss, eager_add_loss)(loss)
+    return enable_if.unique([lazy_add_loss, eager_add_loss])(loss)
 
 
 @enable_if.condition(
