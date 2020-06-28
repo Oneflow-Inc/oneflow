@@ -34,18 +34,14 @@ class CudaAllocator final : public Allocator {
 
     struct PieceCmp {
       bool operator()(const Piece* lhs, const Piece* rhs) const {
-        if (lhs->size != rhs->size) {
-          return lhs->size < rhs->size;
-        }
+        if (lhs->size != rhs->size) { return lhs->size < rhs->size; }
         return lhs->ptr < rhs->ptr;
       }
     };
     std::set<Piece*, PieceCmp> pieces;
   };
 
-  size_t BinSize4BinNum(int32_t bin_num) {
-    return kCudaMemAllocAlignSize << bin_num;
-  }
+  size_t BinSize4BinNum(int32_t bin_num) { return kCudaMemAllocAlignSize << bin_num; }
 
   int32_t BinNum4BinSize(size_t size) {
     uint64_t value = std::max(size, kCudaMemAllocAlignSize) >> 9;
@@ -63,10 +59,10 @@ class CudaAllocator final : public Allocator {
 
   int64_t device_id_;
   size_t total_memory_bytes_;
-  char* mem_ptr_; // maybe ptr list for dynamic growth
+  char* mem_ptr_;  // maybe ptr list for dynamic growth
 
   std::vector<Bin> bins_;
-  std::vector<Piece> pieces_;
+  std::vector<std::unique_ptr<Piece>> pieces_;
   HashMap<char*, Piece*> ptr2piece_;
   Piece* recycle_piece_list_;
 };

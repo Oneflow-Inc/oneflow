@@ -6,32 +6,30 @@ namespace vm {
 
 namespace {
 
-inline size_t CudaMemAlignedBytes(size_t bytes) {
-  return RoundUp(bytes, kCudaMemAllocAlignSize);
-}
+inline size_t CudaMemAlignedBytes(size_t bytes) { return RoundUp(bytes, kCudaMemAllocAlignSize); }
 
-inline bool IsAlignedSize(size_t size) {
-  return size % kCudaMemAllocAlignSize == 0;
-}
+inline bool IsAlignedSize(size_t size) { return size % kCudaMemAllocAlignSize == 0; }
 
 static const size_t kPieceSplitThreshold = 128 << 20;  // 128MiB
 
-} // namespace
+}  // namespace
 
-CudaAllocator::CudaAllocator(int64_t device_id) : Allocator(), device_id_(device_id), recycle_piece_list_(nullptr) {
+CudaAllocator::CudaAllocator(int64_t device_id)
+    : Allocator(), device_id_(device_id), recycle_piece_list_(nullptr) {
   cudaSetDevice(device_id_);
   size_t free_bytes = -1;
   size_t total_bytes = -1;
   const size_t remain_bytes = 50 * 1048576;
   CudaCheck(cudaMemGetInfo(&free_bytes, &total_bytes));
-  CHECK_GT(free_bytes, remain_bytes); // free bytes should greater than 50MiB
-  size_t allocate_bytes = std::max(free_bytes - remain_bytes, static_cast<size_t>(free_bytes * 0.95));
+  CHECK_GT(free_bytes, remain_bytes);  // free bytes should greater than 50MiB
+  size_t allocate_bytes =
+      std::max(free_bytes - remain_bytes, static_cast<size_t>(free_bytes * 0.95));
   total_memory_bytes_ = CudaMemAlignedBytes(allocate_bytes);
   CHECK_LE(total_memory_bytes_, free_bytes);
   CudaCheck(cudaMalloc(&mem_ptr_, total_memory_bytes_));
 
   bins_.resize(kBinNumSize);
-  for(int i = 0; i < kBinNumSize; ++i) {
+  for (int i = 0; i < kBinNumSize; ++i) {
     size_t bin_size = BinSize4BinNum(i);
     bins_.at(i).size = bin_size;
     CHECK_EQ(BinNum4BinSize(bin_size), i);
@@ -47,6 +45,7 @@ CudaAllocator::CudaAllocator(int64_t device_id) : Allocator(), device_id_(device
   piece->next = nullptr;
   piece->is_free = true;
   piece->bin_num = kInvalidBinNum;
+  CHECK(IsAlignedSize(piece->size));
   InsertPiece2Bin(piece);
   MarkPiece(piece);
 }
@@ -67,17 +66,33 @@ void CudaAllocator::RemovePieceFromBin(Piece* piece) {
   CHECK(piece->is_free);
   CHECK_NE(piece->bin_num, kInvalidBinNum);
   CHECK_GT(bins_.at(piece->bin_num).pieces.erase(piece), 0);
-  piece->bin_num = 0;
+  piece->bin_num = kInvalidBinNum;
 }
 
 CudaAllocator::Piece* CudaAllocator::AllocatePiece() {
-  if(recycle_piece_list_) {
+  if (recycle_piece_list_) {
     Piece* ret = recycle_piece_list_;
     recycle_piece_list_ = recycle_piece_list_->next;
     return ret;
   } else {
-    pieces_.push_back(Piece());
-    return &pieces_.at(pieces_.size() - 1);
+    /*
+    for (int i = 0; i < pieces_.size(); ++i) {
+      Piece* log_i = pieces_.at(i).get();
+      LOG(INFO) << "cclog: allocate piece. old piece i = " << i << " piece->size = " << log_i->size
+                << " piece address" << log_i;
+    }
+    */
+    pieces_.emplace_back(new Piece());
+    // pieces_.resize(pieces_.size() + 1);
+    /*
+    for (int i = 0; i < pieces_.size(); ++i) {
+      Piece* log_i = pieces_.at(i).get();
+      LOG(INFO) << "cclog: allocate piece. new piece i = " << i << " piece->size = " << log_i->size
+                << " piece address" << log_i;
+    }
+    */
+    // pieces_.push_back(Piece());
+    return pieces_.at(pieces_.size() - 1).get();
   }
 }
 
@@ -101,23 +116,50 @@ void CudaAllocator::UnMarkPiece(Piece* piece) {
   CHECK(it != ptr2piece_.end());
   ptr2piece_.erase(it);
 }
-  
+
 CudaAllocator::Piece* CudaAllocator::FindPiece(size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size));
-  for(int32_t bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
+  for (int32_t bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
     Bin* bin = &bins_.at(bin_num);
-    for(auto it = bin->pieces.begin(); it != bin->pieces.end(); ++ it) {
+    for (auto it = bin->pieces.begin(); it != bin->pieces.end(); ++it) {
       Piece* piece = *it;
       CHECK(piece->is_free);
       CHECK_NOTNULL(piece->ptr);
       CHECK_EQ(piece->bin_num, bin_num);
-      CHECK_EQ(piece->size % kCudaMemAllocAlignSize, 0);
-      if(piece->size >= aligned_size) {
+      // LOG(INFO) << "cclog: piece_size: " << piece->size;
+      CHECK(IsAlignedSize(piece->size));
+      if (piece->size >= aligned_size) {
         bin->pieces.erase(it);
+        // LOG(INFO) << "cclog(1): piece_size: " << piece->size;
         piece->bin_num = kInvalidBinNum;
-        if(piece->size >= aligned_size * 2 || piece->size - aligned_size >= kPieceSplitThreshold) {
+        piece->is_free = false;
+        // LOG(INFO) << "cclog: Erase from Bin";
+        if (piece->size >= aligned_size * 2 || piece->size - aligned_size >= kPieceSplitThreshold) {
+          // LOG(INFO) << "cclog(2): piece_size: " << piece->size << " piece address" << piece;
+          // LOG(INFO) << "cclog: Split piece START";
+          /*
+          for (int i = 0; i < pieces_.size(); ++i) {
+            Piece* log_i = pieces_.at(i).get();
+            LOG(INFO) << "cclog: before allocate piece. new piece i = " << i
+                      << " piece->size = " << log_i->size << " piece address" << log_i;
+          }
+          */
           Piece* new_piece = AllocatePiece();
+          /*
+          for (int i = 0; i < pieces_.size(); ++i) {
+            Piece* log_i = pieces_.at(i).get();
+            LOG(INFO) << "cclog: after allocate piece. new piece i = " << i
+                      << " piece->size = " << log_i->size << " piece address" << log_i;
+          }
+          LOG(INFO) << "cclog: Allocate new piece";
+          LOG(INFO) << "cclog(3): piece_size: " << piece->size << " piece address" << piece;
+          */
           new_piece->ptr = piece->ptr + aligned_size;
+          /*
+          LOG(INFO) << "cclog(4): piece_size: " << piece->size;
+          LOG(INFO) << "cclog: new_piece_size = " << (piece->size - aligned_size)
+                    << " piece_size = " << piece->size << " aligned_size = " << aligned_size;
+          */
           new_piece->size = piece->size - aligned_size;
           piece->size = aligned_size;
 
@@ -125,12 +167,14 @@ CudaAllocator::Piece* CudaAllocator::FindPiece(size_t aligned_size) {
           piece->next = new_piece;
           new_piece->prev = piece;
           new_piece->next = next_p;
-          if(next_p != nullptr) {
-            next_p->prev = new_piece;
-          }
-          
+          if (next_p != nullptr) { next_p->prev = new_piece; }
+
           new_piece->is_free = true;
           new_piece->bin_num = kInvalidBinNum;
+          // LOG(INFO) << "cclog: split piece_size: " << piece->size;
+          // LOG(INFO) << "cclog: split new_piece_size: " << new_piece->size;
+          CHECK(IsAlignedSize(piece->size));
+          CHECK(IsAlignedSize(new_piece->size));
           InsertPiece2Bin(new_piece);
           MarkPiece(new_piece);
         }
@@ -150,17 +194,15 @@ void CudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
 
   lhs->size += rhs->size;
   lhs->next = rhs->next;
-  if(rhs->next != nullptr) {
-    rhs->next->prev = lhs;
-  }
+  if (rhs->next != nullptr) { rhs->next->prev = lhs; }
   UnMarkPiece(rhs);
   DeallocatePiece(rhs);
 }
 
 void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
-  if(size == 0) { 
+  if (size == 0) {
     *mem_ptr = nullptr;
-    return; 
+    return;
   }
   size_t aligned_size = CudaMemAlignedBytes(size);
 
@@ -172,12 +214,11 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
 }
 
 void CudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
-  if(mem_ptr == nullptr) {
-    return;
-  }
+  if (mem_ptr == nullptr) { return; }
 
   auto it = ptr2piece_.find(mem_ptr);
-  CHECK(it != ptr2piece_.end()) << "Error! : Try deallocate mem_ptr non-existent. mem ptr = " << mem_ptr;
+  CHECK(it != ptr2piece_.end()) << "Error! : Try deallocate mem_ptr non-existent. mem ptr = "
+                                << mem_ptr;
   Piece* piece = it->second;
   CHECK_NOTNULL(piece);
   CHECK_EQ(piece->ptr, mem_ptr);
@@ -189,12 +230,12 @@ void CudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   Piece* next_p = piece->next;
   Piece* prev_p = piece->prev;
 
-  if(next_p != nullptr && next_p->is_free && next_p->ptr == piece->ptr + piece->size) {
+  if (next_p != nullptr && next_p->is_free && next_p->ptr == piece->ptr + piece->size) {
     RemovePieceFromBin(next_p);
     MergeNeighbourFreePiece(piece, next_p);
   }
 
-  if(prev_p != nullptr && prev_p->is_free && piece->ptr == prev_p->ptr + piece->size) {
+  if (prev_p != nullptr && prev_p->is_free && piece->ptr == prev_p->ptr + piece->size) {
     RemovePieceFromBin(prev_p);
     MergeNeighbourFreePiece(prev_p, piece);
     last_piece_insert_to_bin = prev_p;
