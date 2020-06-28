@@ -92,8 +92,8 @@ class KernelRegistryWrapperBuilder final {
   KernelRegistryWrapper wrapper_;
 };
 
-const KernelRegistrationVal* LookUpInKernelRegistry(const std::string& op_type_name,
-                                                    const KernelRegContext&);
+Maybe<const KernelRegistrationVal*> LookUpInKernelRegistry(const std::string& op_type_name,
+                                                           const KernelRegContext&);
 
 std::vector<std::string> GetAllUserOpInKernelRegistry();
 

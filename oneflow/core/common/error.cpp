@@ -65,6 +65,24 @@ Error Error::BoxingNotSupported() {
   return error;
 }
 
+Error Error::OpKernelNotFoundError(const std::vector<std::string>& error_msgs) {
+  auto error = std::make_shared<ErrorProto>();
+  auto* op_kernel_not_found_error = error->mutable_op_kernel_not_found_error();
+  for (const auto& msg : error_msgs) {
+    op_kernel_not_found_error->add_op_kernels_not_found_debug_str(msg);
+  }
+  return error;
+}
+
+Error Error::MultipleOpKernelsMatchedError(const std::vector<std::string>& error_msgs) {
+  auto error = std::make_shared<ErrorProto>();
+  auto* multiple_op_kernels_matched_error = error->mutable_multiple_op_kernels_matched_error();
+  for (const auto& msg : error_msgs) {
+    multiple_op_kernels_matched_error->add_matched_op_kernels_debug_str(msg);
+  }
+  return error;
+}
+
 Error Error::GradientFunctionNotFound() {
   auto error = std::make_shared<ErrorProto>();
   error->mutable_gradient_function_not_found_error();
