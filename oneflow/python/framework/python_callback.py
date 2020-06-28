@@ -3,8 +3,6 @@ from __future__ import absolute_import
 import traceback
 
 import oneflow.oneflow_internal as oneflow_internal
-import oneflow.python.eager.interpreter_callback as interpreter_callback
-import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.ofblob as ofblob
 
 
@@ -21,7 +19,7 @@ def DeleteRegisteredCallback(cb):
     del unique_id2handler[id(cb)]
 
 
-class _PythonCallback(oneflow_internal.ForeignCallback):
+class PythonCallback(oneflow_internal.ForeignCallback):
     def __init__(self):
         oneflow_internal.ForeignCallback.__init__(self)
 
@@ -65,6 +63,10 @@ def _WatcherHandler(unique_id, of_blob_ptr):
 
 
 unique_id2handler = {}
+
 # static lifetime
-_global_python_callback = _PythonCallback()
-c_api_util.RegisterForeignCallbackOnlyOnce(_global_python_callback)
+# registered in the file python/framework/register_python_callback
+global_python_callback = PythonCallback()
+
+# initialized in the file python/framework/register_python_callback for avoiding import loop
+interpreter_callback = None
