@@ -32,18 +32,18 @@ TEST(CudaAllocator, cuda_allocator) {
   }
   std::sort(ptrs.begin(), ptrs.end());
   for (int i = 0; i < 512; ++i) {
-    if (i > 0) { ASSERT_TRUE(ptrs.at(i) != ptrs.at(i - 1)); }
+    if (i > 0) {
+      ASSERT_TRUE(ptrs.at(i) != ptrs.at(i - 1));
+      ASSERT_TRUE(std::abs(ptrs.at(i) - ptrs.at(i - 1)) >= kCudaMemAllocAlignSize);
+    }
     a->Deallocate(ptrs.at(i), 1);
   }
 
   char* data_ptr_1 = nullptr;
   a->Allocate(&data_ptr_1, 2048 * sizeof(float));
-  // float* float_ptr_1 = reinterpret_cast<float*>(data_ptr_1);
-  // for (int i = 0; i < 2048; ++i) { *(float_ptr_1 + i) = i * 1.0f; }
 
   char* data_ptr_2 = nullptr;
   a->Allocate(&data_ptr_2, 4096 * sizeof(double));
-  // double* float_ptr_2 = reinterpret_cast<double*>(data_ptr_2);
 
   ASSERT_TRUE(data_ptr_1 != data_ptr_2);
   if (data_ptr_1 < data_ptr_2) {
@@ -51,10 +51,6 @@ TEST(CudaAllocator, cuda_allocator) {
   } else {
     ASSERT_TRUE(data_ptr_2 + 4096 * sizeof(double) <= data_ptr_1);
   }
-  // for (int i = 0; i < 4096; ++i) { *(float_ptr_2 + i) = 4096.0; }
-
-  // ASSERT_TRUE(std::abs((*(float_ptr_1 + 2047)) - 2047.0f) <= 1e-6);
-  // ASSERT_TRUE(std::abs((*float_ptr_2) - 4096.0) <= 1e-6);
 
   a->Deallocate(data_ptr_2, 4096 * sizeof(double));
   a->Deallocate(data_ptr_1, 2048 * sizeof(float));
