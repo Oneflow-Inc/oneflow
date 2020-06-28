@@ -21,14 +21,17 @@ CudaAllocator::CudaAllocator(int64_t device_id)
   size_t total_bytes = -1;
   const size_t remain_bytes = 50 * 1048576;
   CudaCheck(cudaMemGetInfo(&free_bytes, &total_bytes));
-  CHECK_GT(free_bytes, remain_bytes);  // free bytes should greater than 50MiB
-  size_t allocate_bytes =
-      std::max(free_bytes - remain_bytes, static_cast<size_t>(free_bytes * 0.95));
+  size_t allocate_bytes = 1048576;
+  // if free bytes > 100MiB, malloc normal; else malloc 1MiB if could
+  if (free_bytes > 2 * remain_bytes) {
+    allocate_bytes = std::min(free_bytes - remain_bytes, static_cast<size_t>(free_bytes * 0.95));
+  }
   total_memory_bytes_ = CudaMemAlignedBytes(allocate_bytes);
-  CHECK_LE(total_memory_bytes_, free_bytes);
+  CHECK_LE(total_memory_bytes_, free_bytes)
+      << " Error! Create CudaAllocator need at least " << total_memory_bytes_
+      << " bytes free memory, but only " << free_bytes
+      << " free bytes in GPU device_id: " << device_id;
   CudaCheck(cudaMalloc(&mem_ptr_, total_memory_bytes_));
-
-  LOG(INFO) << "cclog: allocator malloc bytes: " << total_memory_bytes_;
 
   bins_.resize(kBinNumSize);
   for (int i = 0; i < kBinNumSize; ++i) {
@@ -55,7 +58,6 @@ CudaAllocator::CudaAllocator(int64_t device_id)
 CudaAllocator::~CudaAllocator() {
   cudaSetDevice(device_id_);
   CudaCheck(cudaFree(mem_ptr_));
-  LOG(INFO) << "cclog: allocator free bytes: " << total_memory_bytes_;
 }
 
 void CudaAllocator::InsertPiece2Bin(Piece* piece) {
