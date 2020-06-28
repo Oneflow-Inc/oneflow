@@ -8,11 +8,24 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.ofblob as ofblob
 
 
+def GetIdForRegisteredCallback(cb):
+    assert callable(cb)
+    global unique_id2handler
+    unique_id2handler[id(cb)] = cb
+    return id(cb)
+
+
+def DeleteRegisteredCallback(cb):
+    global unique_id2handler
+    assert id(cb) in unique_id2handler
+    del unique_id2handler[id(cb)]
+
+
 class _PythonCallback(oneflow_internal.ForeignCallback):
     def __init__(self):
         oneflow_internal.ForeignCallback.__init__(self)
 
-    def Call(self, unique_id, of_blob_ptr):
+    def OfBlobCall(self, unique_id, of_blob_ptr):
         try:
             _WatcherHandler(unique_id, of_blob_ptr)
         except Exception as e:

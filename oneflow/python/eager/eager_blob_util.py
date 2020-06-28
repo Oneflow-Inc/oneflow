@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.blob_trait as blob_trait
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.blob_cache as blob_cache_util
+import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.vm_util as vm_util
-import oneflow.python.eager.physical_blob_callback as physical_blob_callback
+import oneflow.python.framework.blob_trait as blob_trait
+import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.lib.core.async_util as async_util
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
@@ -62,7 +62,7 @@ def FetchTensorBlobAsNumpyList(parallel_size, blob_object):
     def AsyncFetchBlobBody(Yield):
         fetcher = _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield)
         vm_util.PhysicalRun(lambda builder: builder.WatchBlobBody(blob_object, fetcher))
-        physical_blob_callback.DeleteRegisteredCallback(fetcher)
+        python_callback.DeleteRegisteredCallback(fetcher)
 
     return async_util.Await(parallel_size, AsyncFetchBlobBody)
 
@@ -83,7 +83,7 @@ def _FetchBlobHeader(blob_object):
         vm_util.PhysicalRun(
             lambda builder: builder.WatchBlobHeader(blob_object, fetcher)
         )
-        physical_blob_callback.DeleteRegisteredCallback(fetcher)
+        python_callback.DeleteRegisteredCallback(fetcher)
 
     return async_util.Await(1, AsyncFetchBlobHeader)[0]
 

@@ -38,12 +38,6 @@ Maybe<void> RegisterForeignCallbackOnlyOnce(ForeignCallback* callback) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RegisterWorkerCallbackOnlyOnce(ForeignCallback* callback) {
-  CHECK_ISNULL_OR_RETURN(Global<ForeignCallback>::Get()) << "foreign woker callback registered";
-  Global<ForeignCallback>::SetAllocated(callback);
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
   Global<ForeignWatcher>::SetAllocated(watcher);
