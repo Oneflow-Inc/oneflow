@@ -1,4 +1,5 @@
 #include "oneflow/core/job/improver.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/register/register_desc.pb.h"
@@ -542,12 +543,12 @@ void Improver::MakeMemZoneRegstDescs(const Plan& plan, MemZoneRegstDescs* mz2reg
   }
 }
 
-bool Improver::IsAnyZoneOutOfMemory(
+Maybe<bool> Improver::IsNoneZoneOutOfMemory(
     const MemZoneRegstDescs& mz_regst_descs,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
-    double ii) const {
-  const ResourceDesc* resource_desc = Global<ResourceDesc, ForSession>::Get();
+    double ii, bool is_just) const {
+  const auto* id_mgr = Global<IDMgr>::Get();
   FOR_RANGE(int64_t, machine_id, 0, mz_regst_descs.size()) {
     FOR_RANGE(int64_t, mem_zone_id, 0, mz_regst_descs[machine_id].size()) {
       const auto& regst_descs = mz_regst_descs[machine_id][mem_zone_id];
@@ -555,16 +556,22 @@ bool Improver::IsAnyZoneOutOfMemory(
           CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii);
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
       if (calc >= available) {
-        std::string device_type = (mem_zone_id == resource_desc->GpuDeviceNum()) ? "gpu" : "cpu";
-        LOG(INFO) << "OOM detected at compile time, machine_id: " << machine_id
+        std::string device_type = id_mgr->IsGpuMemZone(mem_zone_id) ? "gpu" : "cpu";
+        std::stringstream ss;
+        ss << "OOM detected at compile time, machine_id: " << machine_id
                   << ", mem_zone_id: " << mem_zone_id << ", device_type: " << device_type
-                  << ", calc: " << calc << ", available: " << available
-                  << ", out of memory: " << (calc - available) / (1024 * 1024) << " MB";
-        return true;
+                  << ", required: " << calc << "bytes, available: " << available
+                  << "bytes, exceeded: " << (calc - available) << " bytes";
+        if(is_just) {
+          return Error::CheckFailed() << ss.str(); 
+        } else {
+          LOG(INFO) << ss.str();
+          return false;
+        }
       }
     }
   }
-  return false;
+  return true;
 }
 
 double Improver::CalcMaxRegstDescDuration(
@@ -583,31 +590,31 @@ double Improver::CalcMaxRegstDescDuration(
   return max_duration;
 }
 
-double Improver::BinarySearchII(
+Maybe<double> Improver::BinarySearchII(
     double base_ii,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
     const MemZoneRegstDescs& mz_regst_descs) const {
   double max_duration = CalcMaxRegstDescDuration(PathDurations4RegstDescId, mz_regst_descs);
-  CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId,
-                              max_duration));
+  CHECK_JUST(IsNoneZoneOutOfMemory(mz_regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId,
+                              max_duration, true));
   const double ii_search_threshold = 1;
   double r = max_duration;
   double l = base_ii;
   double mid = base_ii;
   while ((r - l) > ii_search_threshold) {
     mid = (l + r) / 2;
-    if (IsAnyZoneOutOfMemory(mz_regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId,
-                             mid)) {
-      l = mid;
-    } else {
+    if (JUST(IsNoneZoneOutOfMemory(mz_regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId,
+                             mid, false))) {
       r = mid;
+    } else {
+      l = mid;
     }
   }
   return r;
 }
 
-void Improver::ForEachImprovedRegstNum(
+Maybe<void> Improver::ForEachImprovedRegstNum(
     const Plan& plan, bool is_memory_limited, double ii,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
@@ -615,7 +622,7 @@ void Improver::ForEachImprovedRegstNum(
   if (is_memory_limited) {
     MemZoneRegstDescs mz_regst_descs;
     MakeMemZoneRegstDescs(plan, &mz_regst_descs);
-    ii = BinarySearchII(ii, PathDurations4RegstDescId, PathIIScales4RegstDescId, mz_regst_descs);
+    ii = JUST(BinarySearchII(ii, PathDurations4RegstDescId, PathIIScales4RegstDescId, mz_regst_descs));
   }
   LOG(INFO) << "memory " << (is_memory_limited ? "limited" : "unlimited") << " ii: " << ii;
   for (const auto& task_proto : plan.task()) {
@@ -630,6 +637,7 @@ void Improver::ForEachImprovedRegstNum(
       Handler(pair.second.regst_desc_id(), regst_num);
     }
   }
+  return Maybe<void>::Ok();
 }
 
 void Improver::ForEachInferredMemBlockCriticalSection(
@@ -672,7 +680,7 @@ void Improver::Init(const AvailableMemDesc& amd, const Plan& naive_plan) {
   }
 }
 
-Plan Improver::GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan) {
+Maybe<Plan> Improver::GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan) {
   Init(amd, naive_plan);
   Plan complete_plan = GenAndInferMemBlockId(naive_plan);
   // Check if there is any zone out of memory even though all register_num == 1
@@ -680,13 +688,13 @@ Plan Improver::GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan
   MakeMemZoneRegstDescs(complete_plan, &mz_regst_descs);
   HashMap<int64_t, double> zero2one{{0, 1}};
   auto Zero2One = [&](int64_t) -> const HashMap<int64_t, double>& { return zero2one; };
-  CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, Zero2One, Zero2One, 1));
+  CHECK_JUST(IsNoneZoneOutOfMemory(mz_regst_descs, Zero2One, Zero2One, 1, true));
   SetUniqueMemBlockId4UnreusedMemRegst(&complete_plan);
   GenMemBlockAndChunk4Plan(&complete_plan);
   return complete_plan;
 }
 
-Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
+Maybe<Plan> Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
                        const std::string& act_event_filepath) {
   Init(amd, naive_plan);
   std::list<std::unique_ptr<ActEvent>> act_events;
@@ -702,8 +710,8 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&mem_unlimited_plan));
   Plan complete_plan = GenAndInferMemBlockId(mem_unlimited_plan);
   Plan plan(complete_plan);
-  ForEachImprovedRegstNum(complete_plan, true, base_ii, PathDurations4RegstDescId,
-                          PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan));
+  JUST(ForEachImprovedRegstNum(complete_plan, true, base_ii, PathDurations4RegstDescId,
+                          PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan)));
   FixReliantCtrlRegstNum(plan, MakeGetterGetPlanRegstNum(&plan), MakeSetterSetPlanRegstNum(&plan));
   SetUniqueMemBlockId4UnreusedMemRegst(&plan);
   GenMemBlockAndChunk4Plan(&plan);

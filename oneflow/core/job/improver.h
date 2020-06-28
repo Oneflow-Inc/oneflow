@@ -15,14 +15,14 @@ class Improver final {
   Improver() : start_mem_block_id_(-1) {}
   ~Improver() = default;
 
-  Plan Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
+  Maybe<Plan> Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
                const std::string& act_event_filepath);
-  Plan GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan);
+  Maybe<Plan> GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan);
 
  private:
   Plan GenAndInferMemBlockId(const Plan& naive_plan) const;
   void Init(const AvailableMemDesc& amd, const Plan& naive_plan);
-  void ForEachImprovedRegstNum(
+  Maybe<void> ForEachImprovedRegstNum(
       const Plan& plan, bool is_memory_limited, double ii,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
@@ -33,12 +33,12 @@ class Improver final {
   //  first dimension index of MemZoneRegstDescs is machine_id
   //  second dimension index of MemZoneRegstDescs is mem_zone_id
   using MemZoneRegstDescs = std::vector<std::vector<std::list<const RegstDescProto*>>>;
-  bool IsAnyZoneOutOfMemory(
+  Maybe<bool> IsNoneZoneOutOfMemory(
       const MemZoneRegstDescs& mz_regst_descs,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Ratio4RegstDescId,
-      double ii) const;
-  double BinarySearchII(
+      double ii, bool is_just) const;
+  Maybe<double> BinarySearchII(
       double base_ii,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Ratio4RegstDescId,
