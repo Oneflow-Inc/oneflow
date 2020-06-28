@@ -5,6 +5,7 @@ from contextlib import closing
 
 import oneflow.core.job.env_pb2 as env_pb
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
@@ -12,7 +13,7 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("env.init")
 def api_env_init():
-    return enable_if.unique(env_init, do_nothing)()
+    return enable_if.unique([env_init, do_nothing])()
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
@@ -28,7 +29,7 @@ def env_init():
 
 @oneflow_export("env.current_resource", "current_resource")
 def api_get_current_resource():
-    return enable_if.unique(get_current_resource)()
+    return enable_if.unique([get_current_resource])()
 
 
 @enable_if.condition(hob.in_normal_mode & hob.env_initialized)
@@ -38,7 +39,7 @@ def get_current_resource():
 
 @oneflow_export("current_machine_id")
 def api_get_current_machine_id():
-    return enable_if.unique(get_current_machine_id)()
+    return enable_if.unique([get_current_machine_id])()
 
 
 @enable_if.condition(hob.in_normal_mode & hob.env_initialized)
@@ -55,7 +56,7 @@ def api_machine(*val):
     Args:
         val:  `list`, `tuple` or multiple arguments of `dict`. First in the list is the master machine.
     """
-    return enable_if.unique(machine, do_nothing)(*val)
+    return enable_if.unique([machine, do_nothing])(*val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
@@ -75,7 +76,7 @@ def api_ctrl_port(val):
     Args:
         val: a port number accessible to peer machines
     """
-    return enable_if.unique(ctrl_port, do_nothing)(val)
+    return enable_if.unique([ctrl_port, do_nothing])(val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
@@ -91,7 +92,7 @@ def api_data_port(val):
     Args:
         val: a port number accessible to peer machines
     """
-    return enable_if.unique(data_port, do_nothing)(val)
+    return enable_if.unique([data_port, do_nothing])(val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
@@ -102,7 +103,7 @@ def data_port(val):
 
 @oneflow_export("env.grpc_use_no_signal")
 def api_grpc_use_no_signal(val=True):
-    return enable_if.unique(grpc_use_no_signal, do_nothing)(val=True)
+    return enable_if.unique([grpc_use_no_signal, do_nothing])(val=True)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
@@ -116,7 +117,7 @@ def api_log_dir(val):
     r"""Specify a dir to store OneFlow's logging files. If not specified, it is `./log` by default.
 
     """
-    return enable_if.unique(log_dir, do_nothing)(val)
+    return enable_if.unique([log_dir, do_nothing])(val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
@@ -127,7 +128,7 @@ def log_dir(val):
 
 @oneflow_export("env.logtostderr")
 def api_logtostderr(val):
-    return enable_if.unique(logtostderr, do_nothing)(val)
+    return enable_if.unique([logtostderr, do_nothing])(val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
@@ -138,7 +139,7 @@ def logtostderr(val):
 
 @oneflow_export("env.logbuflevel")
 def api_logbuflevel(val):
-    return enable_if.unique(logbuflevel, do_nothing)(val)
+    return enable_if.unique([logbuflevel, do_nothing])(val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
@@ -202,6 +203,17 @@ def _FindFreePort():
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s.getsockname()[1]
 
+
+def GetEnvDefaultParallelConf(device_tag):
+    if device_tag not in device_tag2default_parallel_conf:
+        parallel_conf = placement_ctx.MakeParallelConf4Resource(
+            device_tag, c_api_util.EnvResource()
+        )
+        device_tag2default_parallel_conf[device_tag] = parallel_conf
+    return device_tag2default_parallel_conf[device_tag]
+
+
+device_tag2default_parallel_conf = {}
 
 default_env_proto = _DefaultEnvProto()
 env_proto_mutable = True

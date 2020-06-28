@@ -19,7 +19,8 @@ blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
 def RemoteBlob(lbi, **kw):
-    return enable_if.unique(EagerLogicalBlob, LazyRemoteBlob)(lbi, **kw)
+    api = enable_if.unique([EagerLogicalBlob, LazyRemoteBlob])
+    return api(lbi, **kw)
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)

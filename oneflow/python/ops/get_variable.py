@@ -46,7 +46,8 @@ def api_get_variable(
         random_seed: Random seed for random initializers. `None` by defauilt
 
     """
-    return enable_if.unique(get_lazy_variable, get_eager_variable)(
+    api = enable_if.unique([get_lazy_variable, get_eager_variable])
+    return api(
         name,
         shape=shape,
         dtype=dtype,

@@ -39,7 +39,8 @@ def assign(ref, value, dtype=None, name=None):
 @oneflow_export("system.assign")
 def api_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     # TODO(lixinqi): check ref.is_lvalue
-    return enable_if.unique(lazy_assign, eager_assign)(
+    api = enable_if.unique([lazy_assign, eager_assign])
+    return api(
         ref, value, validate_shape=validate_shape, use_locking=use_locking, name=name
     )
 

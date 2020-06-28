@@ -55,6 +55,11 @@ class OpArgParallelAttribute(object):
     def opt_mirrored_parallel(self):
         return self.opt_mirrored_parallel_
 
+    def Assign(self, other):
+        self.__init__(
+            other.parallel_desc_symbol, other.sbp_parallel, other.opt_mirrored_parallel
+        )
+
     def __hash__(self):
         return self.hash_
 

@@ -29,7 +29,7 @@ def CurrentPlacement():
 
 
 @enable_if.condition(hob.in_normal_mode & hob.env_initialized)
-def _NewPlacementScope(device_tag_and_id):
+def NewPlacementScope(device_tag_and_id):
     assert type(device_tag_and_id) is str
     assert re.match("^(cpu)|(gpu):\d+$", device_tag_and_id) is not None
     device_tag, device_id = device_tag_and_id.split(":")
@@ -43,13 +43,13 @@ def _NewPlacementScope(device_tag_and_id):
 
 @oneflow_export("device")
 def api_device(device_tag_and_id):
-    return enable_if.unique(_NewPlacementScope)(device_tag_and_id)
+    return enable_if.unique([NewPlacementScope])(device_tag_and_id)
 
 
 @enable_if.condition(
     hob.in_normal_mode & hob.env_initialized & hob.is_current_machine_master
 )
-def _EagerPlacementScope(device_tag, machine_device_ids):
+def EagerPlacementScope(device_tag, machine_device_ids):
     def EagerPlacementScope():
         return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
 
@@ -59,7 +59,7 @@ def _EagerPlacementScope(device_tag, machine_device_ids):
 
 @oneflow_export("eager_fixed_placement")
 def api_eager_fixed_placement(device_tag, machine_device_ids):
-    return enable_if.unique(_EagerPlacementScope)(device_tag, machine_device_ids)
+    return enable_if.unique([EagerPlacementScope])(device_tag, machine_device_ids)
 
 
 def _GetInitDeviceScope():

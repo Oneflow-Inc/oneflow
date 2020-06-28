@@ -34,22 +34,33 @@ namespace user_op {
 #define LIST_MESSAGE_ATTR_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(at_list_shape, std::vector<Shape>, UserOpAttrType::kAtListShape)
 
-#define ATTR_SEQ      \
-  BASIC_ATTR_SEQ      \
-  ENUM_ATTR_SEQ       \
-  MESSAGE_ATTR_SEQ    \
-  LIST_BASIC_ATTR_SEQ \
-  LIST_ENUM_ATTR_SEQ  \
-  LIST_MESSAGE_ATTR_SEQ
+#define LIST_STRING_ATTR_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(at_list_string, std::vector<std::string>, UserOpAttrType::kAtListString)
 
-// Type Trait: GetAttrType
+#define ATTR_SEQ        \
+  BASIC_ATTR_SEQ        \
+  ENUM_ATTR_SEQ         \
+  MESSAGE_ATTR_SEQ      \
+  LIST_BASIC_ATTR_SEQ   \
+  LIST_ENUM_ATTR_SEQ    \
+  LIST_MESSAGE_ATTR_SEQ \
+  LIST_STRING_ATTR_SEQ
+
+// Type Trait: GetAttrType, GetCppType
 
 template<typename T>
 struct GetAttrType;
 
-#define SPECIALIZE_GET_ATTR_TYPE(field, type_cpp, type_proto) \
-  template<>                                                  \
-  struct GetAttrType<type_cpp> : std::integral_constant<UserOpAttrType, type_proto> {};
+template<UserOpAttrType AttrT>
+struct GetCppType;
+
+#define SPECIALIZE_GET_ATTR_TYPE(field, type_cpp, type_proto)                           \
+  template<>                                                                            \
+  struct GetAttrType<type_cpp> : std::integral_constant<UserOpAttrType, type_proto> {}; \
+  template<>                                                                            \
+  struct GetCppType<type_proto> {                                                       \
+    typedef type_cpp type;                                                              \
+  };
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_ATTR_TYPE, ATTR_SEQ);
 #undef SPECIALIZE_GET_ATTR_TYPE
 

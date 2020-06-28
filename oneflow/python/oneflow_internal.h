@@ -31,6 +31,10 @@ std::string CurrentResource(std::string* error_str) {
   return oneflow::CurrentResource().GetDataAndSerializedErrorProto(error_str, "");
 }
 
+std::string EnvResource(std::string* error_str) {
+  return oneflow::EnvResource().GetDataAndSerializedErrorProto(error_str, "");
+}
+
 void EnableEagerExecution(bool enable_eager_execution) {
   using namespace oneflow;
   *Global<bool, EagerExecutionOption>::Get() = enable_eager_execution;

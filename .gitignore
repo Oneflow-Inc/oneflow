@@ -10,3 +10,5 @@ core.*
 *.pyc
 *.ipynb
 /.vscode
+manylinux*
+wheelhouse/

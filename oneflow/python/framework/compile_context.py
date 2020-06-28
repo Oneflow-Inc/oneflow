@@ -15,7 +15,7 @@ import oneflow
 
 
 def GetCurJobConfigProto():
-    return enable_if.unique(GetEagerCurJobConfigProto, GetLazyCurJobConfigProto)()
+    return enable_if.unique([GetEagerCurJobConfigProto, GetLazyCurJobConfigProto])()
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
@@ -58,7 +58,7 @@ def CurJobAddConsistentOp(op_conf, parallel_conf=None):
 
 
 def CurJobAddMirroredOp(op_conf, parallel_conf=None):
-    assert not hob.consistent_view_enabled()
+    assert not hob.consistent_view_enabled(None)
     op_conf, parallel_conf = GetOpConfAndParallelConf(op_conf, parallel_conf)
     return c_api_util.CurJobBuildAndInferCtx_AddAndInferMirroredOp(
         op_conf, parallel_conf

@@ -112,9 +112,8 @@ def api_oneflow_function(function_config=FunctionConfig()):
     Returns:
         a callable which is called to execute the compiled function
     """
-    return enable_if.unique(lazy_oneflow_function, eager_oneflow_function)(
-        function_config
-    )
+    api = enable_if.unique([lazy_oneflow_function, eager_oneflow_function])
+    return api(function_config)
 
 
 def _CloneFunctionDesc(func_desc, job_func):

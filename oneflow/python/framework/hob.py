@@ -3,58 +3,50 @@ import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow
-from oneflow.python.lib.core.high_order_bool import HighOrderBool
+from oneflow.python.lib.core.high_order_bool import bool_functor
 
 
-def InRuntimeModeHOB(mode):
-    assert rt_mode.IsValidMode(mode)
-    return HighOrderBool(
-        "Current mode is %s" % mode, lambda: rt_mode.CurrentMode() == mode
-    )
+@bool_functor("Current mode is %s" % rt_mode.NORMAL_MODE)
+def in_normal_mode(ctx):
+    return rt_mode.CurrentMode() == rt_mode.NORMAL_MODE
 
 
-in_normal_mode = InRuntimeModeHOB(rt_mode.NORMAL_MODE)
-in_global_mode = InRuntimeModeHOB(rt_mode.GLOBAL_MODE)
-in_device_mode = InRuntimeModeHOB(rt_mode.DEVICE_MODE)
+@bool_functor("Current mode is %s" % rt_mode.GLOBAL_MODE)
+def in_global_mode(ctx):
+    return rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
 
 
-def _IsEnvInitialized():
-    assert in_normal_mode()
+@bool_functor("Current mode is %s" % rt_mode.DEVICE_MODE)
+def in_device_mode(ctx):
+    return rt_mode.CurrentMode() == rt_mode.DEVICE_MODE
+
+
+@bool_functor("Environment initialized")
+def env_initialized(ctx):
+    assert in_normal_mode(ctx)
     return c_api_util.IsEnvInited()
 
 
-env_initialized = HighOrderBool("Environment initialized", _IsEnvInitialized)
-
-
-def _AnyGlobalFunctionDefined():
-    assert in_normal_mode()
+@bool_functor("Any global function defined")
+def any_global_function_defined(ctx):
+    assert in_normal_mode(ctx)
     return session_ctx.GetDefaultSession().AnyGlobalFunctionDefined()
 
 
-any_global_function_defined = HighOrderBool(
-    "Any global function defined", _AnyGlobalFunctionDefined
-)
-
-
-def _EagerExecutionEnabled():
+@bool_functor("Eager execution enabled")
+def eager_execution_enabled(ctx):
     return c_api_util.EagerExecutionEnabled()
 
 
-eager_execution_enabled = HighOrderBool(
-    "Eager execution enabled ", _EagerExecutionEnabled
-)
-
-
-def _IsSessionInitialized():
-    assert in_normal_mode()
+@bool_functor("Session initialized")
+def session_initialized(ctx):
+    assert in_normal_mode(ctx)
     return session_ctx.GetDefaultSession().is_running
 
 
-session_initialized = HighOrderBool("Session initialized", _IsSessionInitialized)
-
-
-def _IsCurrentFunctionTrainable():
-    assert in_global_mode()
+@bool_functor("Current global function is trainable")
+def is_trainable(ctx):
+    assert in_global_mode(ctx)
     if c_api_util.EagerExecutionEnabled():
         return session_ctx.GetDefaultSession().CurrentEagerGlobalFunctionDesc()
     else:
@@ -62,40 +54,21 @@ def _IsCurrentFunctionTrainable():
         return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
 
 
-is_trainable = HighOrderBool(
-    "Current global function is trainable", _IsCurrentFunctionTrainable
-)
-
-
-def _InPlacementScope():
+@bool_functor("In a placement scope")
+def in_placement_scope(ctx):
     return len(session_ctx.GetDefaultSession().placement_scope_stack) > 0
 
 
-in_placement_scope = HighOrderBool("In a placement scope", _InPlacementScope)
-
-
-def _IsCurrentPlacementPhysical():
+@bool_functor("Current placement is physical")
+def is_current_placement_physical(ctx):
     return oneflow.placement.current_scope().is_physical_placement
 
 
-is_current_placement_physical = HighOrderBool(
-    "Current placement is physical", _IsCurrentPlacementPhysical
-)
-
-
-def _IsCurrentMachineMaster():
+@bool_functor("Current machine is master")
+def is_current_machine_master(ctx):
     return c_api_util.CurrentMachineId() == 0
 
 
-is_current_machine_master = HighOrderBool(
-    "Current machine is master", _IsCurrentMachineMaster
-)
-
-
-def _ConsistentViewEnabled():
+@bool_functor("Consistent view enabled")
+def consistent_view_enabled(ctx):
     return oneflow.distribute.consistent_strategy_enabled()
-
-
-consistent_view_enabled = HighOrderBool(
-    "Consistent view enabled", _ConsistentViewEnabled
-)
