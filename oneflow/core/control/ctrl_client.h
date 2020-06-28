@@ -4,6 +4,7 @@
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_service.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -65,8 +66,9 @@ class CtrlClient final {
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
 
 #define OF_BARRIER_ALL() Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR)
-#define OF_BARRIER() \
-  Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR, Global<ResourceDesc>::Get()->TotalMachineNum())
+#define OF_BARRIER()                                \
+  Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR, \
+                                     Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())
 
 static void OfCallOnce(const std::string& name, std::function<void()> f) {
   TryLockResult lock_ret = Global<CtrlClient>::Get()->TryLock(name);

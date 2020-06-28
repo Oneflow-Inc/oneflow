@@ -5,6 +5,7 @@
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/common/str_util.h"
@@ -58,12 +59,16 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   int64_t this_mchn_id =
       Global<EnvDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
   Global<MachineCtx>::New(this_mchn_id);
-  Global<ResourceDesc>::New(GetDefaultResource(env_proto));
+  Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
+  Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
-  if (Global<ResourceDesc>::Get() != nullptr) { Global<ResourceDesc>::Delete(); }
+  if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
+    Global<ResourceDesc, ForSession>::Delete();
+  }
+  Global<ResourceDesc, ForEnv>::Delete();
   CHECK_NOTNULL(Global<MachineCtx>::Get());
   CHECK_NOTNULL(Global<CtrlClient>::Get());
   CHECK_NOTNULL(Global<CtrlServer>::Get());

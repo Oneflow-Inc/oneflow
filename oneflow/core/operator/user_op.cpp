@@ -45,8 +45,8 @@ class UserOp final : public Operator {
                                 std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
+  LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
+  LogicalBlobId lbi4obn(const std::string& output_bn) const override;
   Maybe<void> InferBatchAxis(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
@@ -400,12 +400,12 @@ Maybe<void> UserOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-LogicalBlobId UserOp::ibn2lbi(const std::string& input_bn) const {
+LogicalBlobId UserOp::lbi4ibn(const std::string& input_bn) const {
   auto pair = GenUnRepeatedBn(input_bn);
   return GenLogicalBlobId(op_conf().user_conf().input().at(pair.first).s(pair.second));
 }
 
-LogicalBlobId UserOp::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId UserOp::lbi4obn(const std::string& output_bn) const {
   auto pair = GenUnRepeatedBn(output_bn);
   auto ret = GenLogicalBlobId(op_conf().user_conf().output().at(pair.first).s(pair.second));
   CHECK_EQ(ret.op_name(), op_conf().name());

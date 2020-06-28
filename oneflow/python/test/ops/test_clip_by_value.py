@@ -1,7 +1,8 @@
+from collections import OrderedDict
+
 import numpy as np
 import oneflow as flow
 import tensorflow as tf
-from collections import OrderedDict
 from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -52,7 +53,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
     if dynamic:
         func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def clip_fn(values_def=flow.MirroredTensorDef(values.shape, dtype=data_type)):
             return clip(values_def)
 
@@ -63,7 +64,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
     else:
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def clip_fn(values_def=flow.FixedTensorDef(values.shape, dtype=data_type)):
             return clip(values_def)
 
@@ -80,7 +81,9 @@ def _compare_with_tf(test_case, values, min, max, device_type, dynamic):
 
     def compare_dy(dy_blob):
         test_case.assertTrue(
-            np.array_equal(dy.numpy(), dy_blob.ndarray_list()[0] if dynamic else dy_blob.ndarray())
+            np.array_equal(
+                dy.numpy(), dy_blob.ndarray_list()[0] if dynamic else dy_blob.ndarray()
+            )
         )
 
     of_y = _of_clip_by_value(

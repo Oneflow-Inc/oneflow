@@ -126,14 +126,6 @@ message GatherMs0GradKernelConf {
   required DataType indices_data_type = 2;
 }
 
-message NcclTupleReduceConf {
-  required ParallelContext parallel_ctx = 1;
-}
-
-message NcclTupleBroadcastConf {
-  required ParallelContext parallel_ctx = 1;
-}
-
 message UserKernelConf {
   map<string, BlobDescProto> bn_in_op2blob_desc = 1;
   required ParallelContext parallel_ctx = 2;
@@ -228,8 +220,6 @@ message KernelConf {
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
     GatherMs0KernelConf gather_ms0_conf = 414;
     GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
-    NcclTupleReduceConf nccl_tuple_reduce_conf = 426;
-    NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 427;
     BroadcastToCompatibleWithKernelConf broadcast_to_compatible_with_conf = 428;
   }
 }

@@ -5,6 +5,7 @@
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -24,17 +25,18 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
 
 #ifdef WITH_CUDA
   FOR_RANGE(int64_t, i, 0, GetCudaWorkTypeSize()) {
-    FOR_RANGE(int64_t, dev_phy_id, 0, Global<ResourceDesc>::Get()->GpuDeviceNum()) {
+    FOR_RANGE(int64_t, dev_phy_id, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
       threads_.push_back(new GpuThread(thrd_id++, dev_phy_id));
     }
   }
 #endif
-  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->CpuDeviceNum()) {
+  FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum())) {
     threads_.push_back(new CpuThread(thrd_id++));
   }
   threads_.push_back(new CpuThread(thrd_id++));  // comm_net
   CreatePersistenceThrd(plan, thrd_id);
-  compute_thread_pool_.reset(new ThreadPool(Global<ResourceDesc>::Get()->ComputeThreadPoolSize()));
+  compute_thread_pool_.reset(
+      new ThreadPool(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize()));
 }
 
 void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {

@@ -9,8 +9,9 @@
 #               -n IP addresses of nodes, seperated by comma
 # ###################################################################
 
-import oneflow as flow
 import argparse
+
+import oneflow as flow
 
 DATA_DIR = "/dataset/imagenet_1k/oneflow/30/train"
 parser = argparse.ArgumentParser(description="flags for multi-node and resource")
@@ -169,7 +170,7 @@ def alexnet(images, labels):
 
 
 # train job
-@flow.function
+@flow.global_function
 def alexnet_train_job():
     # set hyper parameter
     flow.config.train.primary_lr(0.00001)
@@ -188,7 +189,7 @@ def alexnet_train_job():
 
 
 # inference job
-@flow.function
+@flow.global_function
 def alexnet_eval_job():
     # load data
     (labels, images) = _data_load_layer(args.eval_dir)
@@ -222,7 +223,7 @@ def main():
     else:
         check_point.load(args.model_load_dir)
 
-    # training iter 
+    # training iter
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
     for i in range(args.iter_num):
         fmt_str = "{:>12}  {:>12}  {:>12.10f}"
