@@ -18,7 +18,8 @@ class OpGraphPass {
   }
   virtual bool IsEnabled() const { return true; }
   virtual Maybe<void> Apply(Job* job) const {
-    const OpGraph op_graph(*job);
+    OpGraph op_graph;
+    JUST(op_graph.Init(*job));
     return Apply(op_graph, job);
   }
   virtual Maybe<void> Apply(const OpGraph& op_graph, Job* job) const {
