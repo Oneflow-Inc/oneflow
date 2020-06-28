@@ -45,11 +45,10 @@ void CollectiveBoxingGenericKernel<device_type>::ForwardDataContent(
   }
   auto* device_ctx = dynamic_cast<CollectiveBoxingDeviceCtx*>(ctx.device_ctx);
   CHECK_NOTNULL(device_ctx);
-  std::shared_ptr<std::atomic<bool>> ready_flag(new std::atomic<bool>(false));
-  device_ctx->SetCheckPoint(ready_flag);
-  request.callback = [ready_flag](const Maybe<void>& status) {
+  std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> checkpoint = device_ctx->AddCheckpoint();
+  request.callback = [checkpoint](const Maybe<void>& status) {
     CHECK(status.IsOk());
-    *ready_flag = true;
+    checkpoint->SetDone();
   };
   Global<CollectiveBoxingExecutor>::Get()->Enqueue(rank_desc, request);
 }

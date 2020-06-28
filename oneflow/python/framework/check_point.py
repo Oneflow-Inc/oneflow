@@ -26,13 +26,13 @@ class CheckPoint(object):
             path: A `string` of path to save checkpoint. 
         """
         assert type(path) is str
-        enable_if.unique(lazy_checkpoint_save, eager_checkpoint_save)(path)
+        enable_if.unique([lazy_checkpoint_save, eager_checkpoint_save])(path)
 
     @session_ctx.try_init_default_session
     def init(self):
         r"""Initialize models by default initializer of op or Job.
         """
-        enable_if.unique(lazy_checkpoint_init, eager_checkpoint_init)()
+        enable_if.unique([lazy_checkpoint_init, eager_checkpoint_init])()
 
     @session_ctx.try_init_default_session
     def load(self, path):
@@ -42,7 +42,7 @@ class CheckPoint(object):
             path: A `string` of path to load checkpoint.
         """
         assert type(path) is str
-        enable_if.unique(lazy_checkpoint_load, eager_checkpoint_load)(path)
+        enable_if.unique([lazy_checkpoint_load, eager_checkpoint_load])(path)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.eager_execution_enabled)
