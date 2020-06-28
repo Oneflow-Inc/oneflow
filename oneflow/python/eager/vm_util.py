@@ -1,28 +1,26 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.vm.id_util as vm_id_util
-import oneflow.core.vm.instruction_pb2 as instr_util
-import oneflow.core.job.placement_pb2 as placement_pb_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import re
+from contextlib import contextmanager
+
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
+import oneflow.core.job.placement_pb2 as placement_pb_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.session_context as session_ctx
+import oneflow.core.vm.instruction_pb2 as instr_util
+import oneflow.python.eager.blob_cache as blob_cache_util
+import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.job_conf_ctx as job_conf_ctx
-import oneflow.python.eager.symbol as symbol_util
-import oneflow.python.eager.symbol_cache as symbol_cache
 import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_cache as object_cache
-import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.physical_blob_callback as physical_blob_callback
-import oneflow.python.eager.boxing_util as boxing_util
+import oneflow.python.eager.symbol as symbol_util
+import oneflow.python.eager.symbol_cache as symbol_cache
+import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.op_arg_util as op_arg_util
-import re
-import oneflow
-
-from contextlib import contextmanager
+import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.python.framework.python_callback as python_callback
+import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.vm.id_util as vm_id_util
 
 
 def PhysicalRun(build):
@@ -567,7 +565,7 @@ class InstructionsBuilder(object):
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _WatchBlob(self, instruction_name, blob_object, fetcher):
-        unique_callback_id = physical_blob_callback.GetIdForRegisteredCallback(fetcher)
+        unique_callback_id = python_callback.GetIdForRegisteredCallback(fetcher)
         instruction = instr_util.InstructionProto()
         device_tag = blob_object.parallel_desc_symbol.device_tag
         instruction.instr_type_name = "%s.%s" % (device_tag, instruction_name)
