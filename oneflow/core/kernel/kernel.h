@@ -40,16 +40,26 @@ class Kernel {
    */
   virtual bool IsKernelLaunchSynchronized() const { return true; }
 
+  void SystemForwardHeader(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    ForwardHeader(ctx, BnInOp2Blob);
+  }
+  void SystemForwardDataContent(const KernelCtx& ctx,
+                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    ForwardDataContent(ctx, BnInOp2Blob);
+  }
+  virtual void Forward(const KernelCtx& ctx,
+                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
  protected:
   Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
+  void InitBase(const JobDesc* job_desc, const KernelConf&);
   virtual void VirtualKernelInit(DeviceCtx* device_ctx) { VirtualKernelInit(); }
   virtual void VirtualKernelInit() {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
 
   virtual void InitConstBufBlobs(DeviceCtx* ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void Forward(const KernelCtx& ctx,
-                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardHeader(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardShape(const KernelCtx& ctx,
@@ -57,7 +67,7 @@ class Kernel {
   void NaiveForwardShape(std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   // TODO(niuchong) : rename ForwardDataContent to ForwardBody
   virtual void ForwardDataContent(const KernelCtx& ctx,
-                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void ForwardPackedHeader(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();

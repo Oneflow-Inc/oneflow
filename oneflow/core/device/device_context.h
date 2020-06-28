@@ -5,6 +5,12 @@
 
 namespace oneflow {
 
+namespace vm {
+
+class Allocator;
+
+}  // namespace vm
+
 class DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtx);
@@ -20,7 +26,12 @@ class DeviceCtx {
 #endif
 
   virtual void SyncDevice() { UNIMPLEMENTED(); }
-  virtual void AddCallBack(std::function<void()>) const = 0;
+  virtual void AddCallBack(std::function<void()>) const { UNIMPLEMENTED(); }
+
+  virtual vm::Allocator* mut_allocator() {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
 
  protected:
   DeviceCtx() = default;

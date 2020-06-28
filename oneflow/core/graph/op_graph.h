@@ -119,8 +119,11 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
 class OpGraph final : public Graph<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpGraph);
-  explicit OpGraph(const Job& job) { Init(job); }
+  explicit OpGraph(const Job& job) { CHECK_JUST(Init(job)); }
+  explicit OpGraph() = default;
   ~OpGraph() override = default;
+
+  Maybe<void> ForEachOpNode(const std::function<Maybe<void>(const OpNode&)>& DoEach) const;
 
   const OpNode* OpNode4OpName(const std::string& name) const;
 
@@ -151,8 +154,9 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void DumpOpTimeShape(Job* job) const;
   void DumpBatchAxisLbi(Job* job) const;
 
+  Maybe<void> Init(const Job& job);
+
  private:
-  void Init(const Job& job);
   void InitNodes(const Job& job);
   void InitEdges();
   void InitProducerOpName2CtrlConsumerOpNames(const Job& job);
@@ -161,8 +165,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferTimeShape() const;
   void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
   void InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_parallel_view_conf) const;
-  void InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
-  void InferLogicalBlobDesc(const Job& job) const;
+  Maybe<void> InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
+  Maybe<void> InferLogicalBlobDesc(const Job& job) const;
   bool IsBatchAxisBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;

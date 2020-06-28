@@ -413,18 +413,6 @@ class ObjectSegmentationPolygonToMask final : public user_op::OpKernel {
 
 namespace {
 
-std::function<bool(const user_op::KernelRegContext&)> MakeKernelMatchPredFn(
-    std::map<std::string, DataType> arg_name2data_type) {
-  return [arg_name2data_type](const user_op::KernelRegContext& ctx) -> bool {
-    bool match = (ctx.device_type() == DeviceType::kCPU);
-    for (const auto& pair : arg_name2data_type) {
-      const user_op::TensorDesc* arg_desc = ctx.TensorDesc4ArgNameAndIndex(pair.first, 0);
-      match = match && (arg_desc->data_type(), pair.second);
-    }
-    return match;
-  };
-}
-
 std::function<Maybe<void>(const user_op::InferContext&, user_op::AddInplaceArgPair)>
 MakeInplaceProposalFn(const std::string& input_arg_name) {
   return [input_arg_name](const user_op::InferContext& ctx,
@@ -438,52 +426,59 @@ MakeInplaceProposalFn(const std::string& input_arg_name) {
 
 REGISTER_USER_KERNEL("image_flip")
     .SetCreateFn<ImageFlipKernel>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn({{"in", DataType::kTensorBuffer},
-                                             {"flip_code", DataType::kInt8},
-                                             {"out", DataType::kTensorBuffer}}))
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("flip_code", 0) == DataType::kInt8)
+                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("in"));
 
 REGISTER_USER_KERNEL("object_bbox_flip")
     .SetCreateFn<ObjectBboxFlipKernel>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn({{"bbox", DataType::kTensorBuffer},
-                                             {"image_size", DataType::kInt32},
-                                             {"flip_code", DataType::kInt8},
-                                             {"out", DataType::kTensorBuffer}}))
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("bbox", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("image_size", 0) == DataType::kInt32)
+                     & (user_op::HobDataType("flip_code", 0) == DataType::kInt8)
+                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("bbox"));
 
 REGISTER_USER_KERNEL("object_bbox_scale")
     .SetCreateFn<ObjectBboxScaleKernel>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn({{"bbox", DataType::kTensorBuffer},
-                                             {"scale", DataType::kFloat},
-                                             {"out", DataType::kTensorBuffer}}))
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("bbox", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("scale", 0) == DataType::kFloat)
+                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("bbox"));
 
 REGISTER_USER_KERNEL("object_segmentation_polygon_flip")
     .SetCreateFn<ObjectSegmentationPolygonFlipKernel>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn({{"poly", DataType::kTensorBuffer},
-                                             {"image_size", DataType::kInt32},
-                                             {"flip_code", DataType::kInt8},
-                                             {"out", DataType::kTensorBuffer}}))
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("poly", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("image_size", 0) == DataType::kInt32)
+                     & (user_op::HobDataType("flip_code", 0) == DataType::kInt8)
+                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("poly"));
 
 REGISTER_USER_KERNEL("object_segmentation_polygon_scale")
     .SetCreateFn<ObjectSegmentationPolygonScaleKernel>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn({{"poly", DataType::kTensorBuffer},
-                                             {"scale", DataType::kFloat},
-                                             {"out", DataType::kTensorBuffer}}))
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("poly", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("scale", 0) == DataType::kFloat)
+                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("poly"));
 
 REGISTER_USER_KERNEL("image_normalize")
     .SetCreateFn<ImageNormalize>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn({{"in", DataType::kTensorBuffer},
-                                             {"out", DataType::kTensorBuffer}}))
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("in"));
 
 REGISTER_USER_KERNEL("object_segmentation_polygon_to_mask")
     .SetCreateFn<ObjectSegmentationPolygonToMask>()
-    .SetIsMatchedPred(MakeKernelMatchPredFn({{"poly", DataType::kTensorBuffer},
-                                             {"poly_index", DataType::kTensorBuffer},
-                                             {"image_size", DataType::kInt32},
-                                             {"out", DataType::kTensorBuffer}}));
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("poly", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("poly_index", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("image_size", 0) == DataType::kInt32)
+                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 }  // namespace oneflow

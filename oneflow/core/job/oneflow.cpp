@@ -21,6 +21,7 @@
 #include "oneflow/core/operator/interface_op_util.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/vm/oneflow_vm.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 
@@ -787,6 +788,8 @@ void FinishGlobalCriticalSectionDesc(const Plan& plan, int64_t job_size) {
 
 void MakePullJob(const std::string& job_name, const std::string& op_name,
                  const ParallelBlobConf& parallel_blob_conf, Job* job) {
+  auto* flag_name2flag_value = job->mutable_job_conf()->mutable_flag_name2flag_value();
+  (*flag_name2flag_value)["__is_user_function__"].set_at_bool(false);
   auto* op_name2job_name =
       Global<InterUserJobInfo>::Get()->mutable_output_or_var_op_name2pull_job_name();
   CHECK(op_name2job_name->find(op_name) == op_name2job_name->end());
@@ -822,6 +825,8 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
 
 void MakePushJob(const std::string& job_name, const std::string& op_name,
                  const ParallelBlobConf& parallel_blob_conf, Job* job) {
+  auto* flag_name2flag_value = job->mutable_job_conf()->mutable_flag_name2flag_value();
+  (*flag_name2flag_value)["__is_user_function__"].set_at_bool(false);
   auto* op_name2job_name =
       Global<InterUserJobInfo>::Get()->mutable_input_or_var_op_name2push_job_name();
   CHECK(op_name2job_name->find(op_name) == op_name2job_name->end());
