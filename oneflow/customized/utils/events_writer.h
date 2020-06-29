@@ -10,44 +10,41 @@
 #include <sys/time.h>
 #include <time.h>
 
+#define MAX_QUEUE_NUM 10
+#define FLUSH_MILLIS 2 * 60 * 1000
+#define FILE_VERSION "brain.Event:3"
+const size_t kHeadSize = sizeof(uint64_t) + sizeof(uint32_t);
+const size_t kTailSize = sizeof(uint32_t);
+
 namespace oneflow {
 
 class EventsWriter {
  public:
-  explicit EventsWriter(const std::string& file_prefix);
+  EventsWriter();
   ~EventsWriter();
 
-  static const size_t kHeaderSize = sizeof(uint64_t) + sizeof(uint32_t);
-  static const size_t kFooterSize = sizeof(uint32_t);
-
-  Maybe<void> Initialize(const std::string& logdir, const std::string& filename_suffix);
-  Maybe<void> Init();
-  Maybe<void> InitWithSuffix(const std::string& suffix);
-
+  Maybe<void> Init(const std::string& logdir);
   std::string FileName();
   void WriteEvent(const Event& event);
-  Maybe<void> WriteRecord(std::string data);
-  void WriteSerializedEvent(std::string event_str);
+  Maybe<void> WriteRecord(const std::string& data);
+  void WriteSerializedEvent(const std::string& event_str);
   Maybe<void> Flush();
   Maybe<void> Close();
 
   void AppendQueue(std::unique_ptr<Event> event);
   void InternalFlush();
 
-  inline static void PopulateHeader(char* header, const char* data, size_t n);
-  inline static void PopulateFooter(char* footer, const char* data, size_t n);
-
  private:
-  Maybe<void> InitIfNeeded();
-  Maybe<void> FileStillExists();
+  Maybe<void> TryToInit();
 
   inline static uint32_t MaskedCrc(const char* data, size_t n) {
     return crc32c::Mask(crc32c::Value(data, n));
   }
 
-  const std::string file_prefix_;
+  inline static void EncodeHead(char* header, const char* data, size_t n);
+  inline static void EncodeTail(char* footer, const char* data, size_t n);
+
   std::string log_dir_;
-  std::string file_suffix_;
   std::string filename_;
   std::unique_ptr<fs::FileSystem> file_system_;
   std::unique_ptr<fs::WritableFile> writable_file_;
@@ -59,12 +56,12 @@ class EventsWriter {
   OF_DISALLOW_COPY(EventsWriter);
 };
 
-void EventsWriter::PopulateHeader(char* header, const char* data, size_t n) {
+void EventsWriter::EncodeHead(char* header, const char* data, size_t n) {
   crc32c::EncodeFixed64(header + 0, n);
   crc32c::EncodeFixed32(header + sizeof(uint64_t), MaskedCrc(header, sizeof(uint64_t)));
 }
 
-void EventsWriter::PopulateFooter(char* footer, const char* data, size_t n) {
+void EventsWriter::EncodeTail(char* footer, const char* data, size_t n) {
   crc32c::EncodeFixed32(footer, MaskedCrc(data, n));
 }
 

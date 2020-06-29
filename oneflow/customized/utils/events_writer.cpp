@@ -6,31 +6,20 @@
 
 namespace oneflow {
 
-EventsWriter::EventsWriter(const std::string& file_prefix)
-    : file_prefix_(file_prefix), max_queue_(10), flush_millis_(2 * 60 * 1000) {}
+EventsWriter::EventsWriter() : max_queue_(MAX_QUEUE_NUM), flush_millis_(FLUSH_MILLIS) {}
 
-EventsWriter::~EventsWriter() {
-  Close();  // Autoclose in destructor.
-}
+EventsWriter::~EventsWriter() { Close(); }
 
-Maybe<void> EventsWriter::Init() { return InitWithSuffix(""); }
-
-Maybe<void> EventsWriter::Initialize(const std::string& logdir,
-                                     const std::string& filename_suffix) {
+Maybe<void> EventsWriter::Init(const std::string& logdir) {
   file_system_ = std::make_unique<fs::PosixFileSystem>();
   file_system_->RecursivelyCreateDirIfNotExist(logdir);
   log_dir_ = logdir;
-  InitWithSuffix(filename_suffix);
+  TryToInit();
   last_flush_ = envtime::CurrentMircoTime();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EventsWriter::InitWithSuffix(const std::string& suffix) {
-  file_suffix_ = suffix;
-  return InitIfNeeded();
-}
-
-Maybe<void> EventsWriter::InitIfNeeded() {
+Maybe<void> EventsWriter::TryToInit() {
   if (!filename_.empty()) {
     if (!file_system_->FileExists(filename_)) {
       // Todo
@@ -40,23 +29,20 @@ Maybe<void> EventsWriter::InitIfNeeded() {
     }
   }
 
-  int32_t time_in_seconds = envtime::CurrentMircoTime() / 1000000;
-
+  int32_t current_time = envtime::CurrentMircoTime() / 1000000;
   char hostname[255];
   CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
 
   char fname[100] = {'\0'};
-  snprintf(fname, 100, "%s.out.tfevents.%d.%s%s", file_prefix_.c_str(), time_in_seconds, hostname,
-           file_suffix_.c_str());
+  snprintf(fname, 100, "events.out.tfevents.%d.%s.v2", current_time, hostname);
 
   filename_ = JoinPath(log_dir_, fname);
-
   file_system_->NewWritableFile(filename_, &writable_file_);
   CHECK_OR_RETURN(writable_file_ != nullptr);
   {
     Event event;
-    event.set_wall_time(time_in_seconds);
-    event.set_file_version("brain.Event:2");
+    event.set_wall_time(current_time);
+    event.set_file_version(FILE_VERSION);
     WriteEvent(event);
     Flush();
   }
@@ -64,28 +50,28 @@ Maybe<void> EventsWriter::InitIfNeeded() {
 }
 
 std::string EventsWriter::FileName() {
-  if (filename_.empty()) { InitIfNeeded(); }
+  if (filename_.empty()) { TryToInit(); }
   return filename_;
 }
 
-void EventsWriter::WriteSerializedEvent(std::string event_str) {
-  if (!InitIfNeeded().IsOk()) {
+void EventsWriter::WriteSerializedEvent(const std::string& event_str) {
+  if (!TryToInit().IsOk()) {
     LOG(ERROR) << "Write failed because file could not be opened.";
     return;
   }
   WriteRecord(event_str);
 }
 
-Maybe<void> EventsWriter::WriteRecord(std::string data) {
+Maybe<void> EventsWriter::WriteRecord(const std::string& data) {
   if (writable_file_ == nullptr) { return Maybe<void>::Ok(); }
-  char header[kHeaderSize];
-  char footer[kFooterSize];
+  char head[kHeadSize];
+  char tail[kTailSize];
 
-  PopulateHeader(header, data.data(), data.size());
-  PopulateFooter(footer, data.data(), data.size());
-  writable_file_->Append(header, sizeof(header));
+  EncodeHead(head, data.data(), data.size());
+  EncodeTail(tail, data.data(), data.size());
+  writable_file_->Append(head, sizeof(head));
   writable_file_->Append(data.data(), data.size());
-  writable_file_->Append(footer, sizeof(footer));
+  writable_file_->Append(tail, sizeof(tail));
   Flush();
   return Maybe<void>::Ok();
 }
@@ -125,7 +111,5 @@ Maybe<void> EventsWriter::Close() {
   }
   return Maybe<void>::Ok();
 }
-
-Maybe<void> EventsWriter::FileStillExists() { return Maybe<void>::Ok(); }
 
 }  // namespace oneflow

@@ -1,6 +1,7 @@
-/*
 syntax = "proto2";
 package oneflow;
+
+import "oneflow/core/framework/user_op_attr.proto";
 
 // Represents the graph of operations
 message GraphDef {
@@ -14,7 +15,6 @@ message NodeDef {
   required string op = 2;
   repeated string input = 3;
   optional string device = 4;
-  map<string, AttrValue> attr = 5;
+  map<string, UserOpAttrVal> attr = 5;
 }
 
-*/

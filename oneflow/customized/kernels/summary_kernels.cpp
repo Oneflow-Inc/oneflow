@@ -13,7 +13,6 @@
 #include <sys/time.h>
 #include <time.h>
 #include <memory>
-#include <string>
 
 namespace oneflow {
 
@@ -68,9 +67,9 @@ Maybe<void> AddHistogramToSummary(const user_op::Tensor& value, const std::strin
     // } else if (Eigen::numext::isinf(double_val)) {
     //   return errors::InvalidArgument("Infinity in summary histogram for: ", tag);
     // }
-    histo.Add(double_val);
+    histo.AppendValue(double_val);
   }
-  histo.EncodeToProto(v->mutable_histo(), false);
+  histo.AppendToProto(v->mutable_histo());
   return Maybe<void>::Ok();
 }
 
@@ -244,7 +243,7 @@ class CreateSummaryWriterOp final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const std::string& logdir = ctx->Attr<std::string>("logdir");
-    Global<EventsWriter>::Get()->Initialize(logdir, ".v2");
+    Global<EventsWriter>::Get()->Init(logdir);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

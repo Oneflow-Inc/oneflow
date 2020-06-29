@@ -24,9 +24,7 @@ def create_summary_metadata(hparams_plugin_data_pb):
     Args:
       hparams_plugin_data_pb: the HParamsPluginData protobuffer to use.
     """
-    if not isinstance(
-        hparams_plugin_data_pb, plugin_data_pb2.HParamsPluginData
-    ):
+    if not isinstance(hparams_plugin_data_pb, plugin_data_pb2.HParamsPluginData):
         raise TypeError(
             "Needed an instance of plugin_data_pb2.HParamsPluginData."
             " Got: %s" % type(hparams_plugin_data_pb)
@@ -43,7 +41,6 @@ def create_summary_metadata(hparams_plugin_data_pb):
 
 def parse_session_start_info_plugin_data(content):
     return _parse_plugin_data_as(content, "session_start_info")
-
 
 
 def _parse_plugin_data_as(content, data_oneof_field):

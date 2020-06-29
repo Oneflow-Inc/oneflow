@@ -9,42 +9,29 @@ class HistogramProto;
 
 namespace histogram {
 
+#define MIN_VALUE 1.0e-12
+#define MAX_VLAUE 1.0e20
+#define INCREASE_RATE 1.1
+
 class Histogram {
  public:
   Histogram();
-  explicit Histogram(std::vector<double> custom_bucket_limits);
-
-  bool DecodeFromProto(const HistogramProto& proto);
-
+  explicit Histogram(const std::vector<double>& container);
   ~Histogram() {}
 
+  void AppendValue(double value);
+  void AppendToProto(HistogramProto* proto);
   void Clear();
-  void Add(double value);
-
-  void EncodeToProto(HistogramProto* proto, bool preserve_zero_buckets) const;
-
-  double Median() const;
-
-  double Percentile(double p) const;
-
-  double Average() const;
-
-  double StandardDeviation() const;
-
-  std::string ToString() const;
 
  private:
-  double min_;
-  double max_;
-  double num_;
-  double sum_;
-  double sum_squares_;
+  double value_count_;
+  double value_sum_;
+  double sum_value_squares_;
+  double min_value_;
+  double max_value_;
 
-  std::vector<double> custom_bucket_limits_;
-  std::vector<double> bucket_limits_;
-  std::vector<double> buckets_;
-
-  double Remap(double x, double x0, double x1, double y0, double y1) const;
+  std::vector<double> max_constainers_;
+  std::vector<double> containers_;
   OF_DISALLOW_COPY(Histogram);
 };
 

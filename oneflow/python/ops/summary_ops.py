@@ -12,56 +12,69 @@ import oneflow as flow
 def write_scalar(value, step, tag, name=None):
     if name is None:
         name = id_util.UniqueStr("WriteScalar_")
-    (flow.user_op_builder(name).Op("write_scalar")
-     .Input("in", [value])
-     .Input("step", [step])
-     .Input("tag", [tag])
-     .Build()
-     .InferAndTryRun())
+    (
+        flow.user_op_builder(name)
+        .Op("write_scalar")
+        .Input("in", [value])
+        .Input("step", [step])
+        .Input("tag", [tag])
+        .Build()
+        .InferAndTryRun()
+    )
 
 
 @oneflow_export("summary.create_summary_writer")
 def create_summary_write(logdir, name=None):
     if name is None:
         name = id_util.UniqueStr("CreateWriter_")
-    (flow.user_op_builder(name).Op("create_summary_writer")
-     .Attr("logdir", logdir, "AttrTypeString")
-     .Build()
-     .InferAndTryRun())
+    (
+        flow.user_op_builder(name)
+        .Op("create_summary_writer")
+        .Attr("logdir", logdir, "AttrTypeString")
+        .Build()
+        .InferAndTryRun()
+    )
 
 
 @oneflow_export("summary.histogram")
 def write_histogram(value, step, tag, name=None):
     if name is None:
         name = id_util.UniqueStr("WriteHistogram_")
-    (flow.user_op_builder(name).Op("write_histogram")
-     .Input("in", [value])
-     .Input("step", [step])
-     .Input("tag", [tag])
-     .Build()
-     .InferAndTryRun())
+    (
+        flow.user_op_builder(name)
+        .Op("write_histogram")
+        .Input("in", [value])
+        .Input("step", [step])
+        .Input("tag", [tag])
+        .Build()
+        .InferAndTryRun()
+    )
 
 
 @oneflow_export("summary.text")
 def write_text(value, step, tag, name=None):
     if name is None:
         name = id_util.UniqueStr("WriteText_")
-    (flow.user_op_builder(name).Op("write_text")
-     .Input("in", [value])
-     .Input("step", [step])
-     .Input("tag", [tag])
-     .Build()
-     .InferAndTryRun())
+    (
+        flow.user_op_builder(name)
+        .Op("write_text")
+        .Input("in", [value])
+        .Input("step", [step])
+        .Input("tag", [tag])
+        .Build()
+        .InferAndTryRun()
+    )
 
 
 @oneflow_export("summary.pb")
 def write_pb(value, step=None, name=None):
     if name is None:
         name = id_util.UniqueStr("WritePb_")
-    (flow.user_op_builder(name).Op("write_pb")
-     .Input("in", [value])
-     .Input("step", [step])
-     .Build()
-     .InferAndTryRun())
-
-
+    (
+        flow.user_op_builder(name)
+        .Op("write_pb")
+        .Input("in", [value])
+        .Input("step", [step])
+        .Build()
+        .InferAndTryRun()
+    )

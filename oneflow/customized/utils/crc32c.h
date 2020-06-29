@@ -19,10 +19,12 @@ inline void EncodeFixed32(char* buf, uint32_t value) {
   if (kLittleEndian) {
     memcpy(buf, &value, sizeof(value));
   } else {
-    buf[0] = value & 0xff;
-    buf[1] = (value >> 8) & 0xff;
-    buf[2] = (value >> 16) & 0xff;
-    buf[3] = (value >> 24) & 0xff;
+    // buf[0] = value & 0xff;
+    // buf[1] = (value >> 8) & 0xff;
+    // buf[2] = (value >> 16) & 0xff;
+    // buf[3] = (value >> 24) & 0xff;
+
+    for (int i = 0; i < 3; ++i) { buf[i] = (value >> 8 * i) & 0xff; }
   }
 }
 
@@ -30,22 +32,22 @@ inline void EncodeFixed64(char* buf, uint64_t value) {
   if (kLittleEndian) {
     memcpy(buf, &value, sizeof(value));
   } else {
-    buf[0] = value & 0xff;
-    buf[1] = (value >> 8) & 0xff;
-    buf[2] = (value >> 16) & 0xff;
-    buf[3] = (value >> 24) & 0xff;
-    buf[4] = (value >> 32) & 0xff;
-    buf[5] = (value >> 40) & 0xff;
-    buf[6] = (value >> 48) & 0xff;
-    buf[7] = (value >> 56) & 0xff;
+    // buf[0] = value & 0xff;
+    // buf[1] = (value >> 8) & 0xff;
+    // buf[2] = (value >> 16) & 0xff;
+    // buf[3] = (value >> 24) & 0xff;
+    // buf[4] = (value >> 32) & 0xff;
+    // buf[5] = (value >> 40) & 0xff;
+    // buf[6] = (value >> 48) & 0xff;
+    // buf[7] = (value >> 56) & 0xff;
+    for (int i = 0; i < 8; ++i) { buf[i] = (value >> 8 * i) & 0xff; }
   }
 }
 
 inline uint32_t DecodeFixed32(const char* ptr) {
   if (kLittleEndian) {
-    // Load the raw bytes
     uint32_t result;
-    memcpy(&result, ptr, sizeof(result));  // gcc optimizes this to a plain load
+    memcpy(&result, ptr, sizeof(result));
     return result;
   } else {
     return ((static_cast<uint32_t>(static_cast<unsigned char>(ptr[0])))
@@ -57,15 +59,10 @@ inline uint32_t DecodeFixed32(const char* ptr) {
 
 extern uint32_t Extend(uint32_t init_crc, const char* data, size_t n);
 
-// Return the crc32c of data[0,n-1]
 inline uint32_t Value(const char* data, size_t n) { return Extend(0, data, n); }
 
-inline uint32_t Mask(uint32_t crc) {
-  // Rotate right by 15 bits and add a constant.
-  return ((crc >> 15) | (crc << 17)) + kMaskDelta;
-}
+inline uint32_t Mask(uint32_t crc) { return ((crc >> 15) | (crc << 17)) + kMaskDelta; }
 
-// Return the crc whose masked representation is masked_crc.
 inline uint32_t Unmask(uint32_t masked_crc) {
   uint32_t rot = masked_crc - kMaskDelta;
   return ((rot >> 17) | (rot << 15));

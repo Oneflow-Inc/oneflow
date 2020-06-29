@@ -122,7 +122,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
 
-  Global<EventsWriter>::New("events");
+  Global<EventsWriter>::New();
 }
 
 void Runtime::DeleteAllGlobal() {

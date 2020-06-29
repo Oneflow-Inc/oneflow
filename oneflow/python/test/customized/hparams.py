@@ -31,60 +31,63 @@ def text(text):
         dim.size = text_size
 
         tensor = tensor_pb2.TensorProto(
-           dtype=tensor_pb2.DT_STRING,
-           tensor_shape=tensor_shape,
+            dtype=tensor_pb2.DT_STRING, tensor_shape=tensor_shape,
         )
         for idx in range(text_size):
             tensor.string_val.append(str.encode(text[idx]))
-        summary=summary_pb2.Summary()
-        value=summary.value.add(
-            tag="text", 
-            metadata=summary_pb2.SummaryMetadata(plugin_data=summary_pb2.SummaryMetadata.PluginData(plugin_name="text")), 
+        summary = summary_pb2.Summary()
+        value = summary.value.add(
+            tag="text",
+            metadata=summary_pb2.SummaryMetadata(
+                plugin_data=summary_pb2.SummaryMetadata.PluginData(plugin_name="text")
+            ),
             tensor=tensor,
         )
         return summary
 
+
 def AddFloatsToProto(proto, values):
     proto.float_val.extend([np.asscalar(x) for x in values])
 
-def make_tensor_proto(values,  dtype=None, shape=None):
-    nparray=np.empty(shape, dtype=np.float)
-    tshape=tensor_pb2.TensorShapeProto()
-    dim=tshape.dim.add()
-    dim.size=0
 
-    tensor_proto=tensor_pb2.TensorProto(
-        dtype=tensor_pb2.DT_FLOAT,
-        tensor_shape=tshape,
+def make_tensor_proto(values, dtype=None, shape=None):
+    nparray = np.empty(shape, dtype=np.float)
+    tshape = tensor_pb2.TensorShapeProto()
+    dim = tshape.dim.add()
+    dim.size = 0
+
+    tensor_proto = tensor_pb2.TensorProto(
+        dtype=tensor_pb2.DT_FLOAT, tensor_shape=tshape,
     )
-    proto_values=nparray.ravel()
+    proto_values = nparray.ravel()
     AddFloatsToProto(tensor_proto, proto_values)
     return tensor_proto
 
-NULL_TENSOR=make_tensor_proto([], tensor_pb2.DT_FLOAT, (0,))
+
+NULL_TENSOR = make_tensor_proto([], tensor_pb2.DT_FLOAT, (0,))
 
 
 @oneflow_export("hparams")
 def hparams(hparams, trial_id=None, start_time_secs=None):
-    pb=hparams_pb(
+    pb = hparams_pb(
         hparams=hparams, trial_id=trial_id, start_time_secs=start_time_secs,
     )
     return _write_summary("hparams", pb)
 
-def _write_summary(name, pb):
-    raw_pb=pb.SerializeToString()
 
-    event=event_pb2.Event(summary=pb)
-    event.wall_time=22222
-    event.step=0
+def _write_summary(name, pb):
+    raw_pb = pb.SerializeToString()
+
+    event = event_pb2.Event(summary=pb)
+    event.wall_time = 22222
+    event.step = 0
     # event.summary = summary_pb2.Summary(pb)
 
-    event_pb=event.SerializeToString()
+    event_pb = event.SerializeToString()
 
-    filename="/home/zjhushengjian/oneflow/events.out.tfevents.2222.oneflow-15.v2"
-    with open(filename, 'wb') as f:
+    filename = "/home/zjhushengjian/oneflow/events.out.tfevents.2222.oneflow-15.v2"
+    with open(filename, "wb") as f:
         f.write(event_pb)
-
 
     # summary_scope = (
     #     getattr(tf.summary.experimental, "summary_scope", None)
@@ -103,24 +106,25 @@ def _write_summary(name, pb):
 
     # return flow.summary.hparam(, step=0)
 
+
 @oneflow_export("hparams_pb")
 def hparams_pb(hparams, trial_id=None, start_time_secs=None):
     if start_time_secs is None:
-        start_time_secs=time.time()
-    hparams=_normalize_hparams(hparams)
-    group_name=_derive_session_group_name(trial_id, hparams)
+        start_time_secs = time.time()
+    hparams = _normalize_hparams(hparams)
+    group_name = _derive_session_group_name(trial_id, hparams)
 
-    session_start_info=plugin_data_pb2.SessionStartInfo(
+    session_start_info = plugin_data_pb2.SessionStartInfo(
         group_name=group_name, start_time_secs=start_time_secs,
     )
     for hp_name in sorted(hparams):
-        hp_value=hparams[hp_name]
+        hp_value = hparams[hp_name]
         if isinstance(hp_value, bool):
-            session_start_info.hparams[hp_name].bool_value=hp_value
+            session_start_info.hparams[hp_name].bool_value = hp_value
         elif isinstance(hp_value, (float, int)):
-            session_start_info.hparams[hp_name].number_value=hp_value
+            session_start_info.hparams[hp_name].number_value = hp_value
         elif isinstance(hp_value, six.string_types):
-            session_start_info.hparams[hp_name].string_value=hp_value
+            session_start_info.hparams[hp_name].string_value = hp_value
         else:
             raise TypeError(
                 "hparams[%r] = %r, of unsupported type %r"
@@ -129,20 +133,19 @@ def hparams_pb(hparams, trial_id=None, start_time_secs=None):
 
     return _summary_pb(
         metadata.SESSION_START_INFO_TAG,
-        plugin_data_pb2.HParamsPluginData(
-            session_start_info=session_start_info
-        ),
+        plugin_data_pb2.HParamsPluginData(session_start_info=session_start_info),
         NULL_TENSOR,
     )
 
+
 def _normalize_hparams(hparams):
-    result={}
+    result = {}
     for (k, v) in six.iteritems(hparams):
         if isinstance(k, HParam):
-            k=k.name
+            k = k.name
         if k in result:
             raise ValueError("multiple values specified for hparam %r" % (k,))
-        result[k]=_normalize_numpy_value(v)
+        result[k] = _normalize_numpy_value(v)
     return result
 
 
@@ -152,46 +155,44 @@ def _normalize_numpy_value(value):
     else:
         return value
 
+
 def _derive_session_group_name(trial_id, hparams):
     if trial_id is not None:
         if not isinstance(trial_id, six.string_types):
-            raise TypeError(
-                "`trial_id` should be a `str`, but got: %r" % (trial_id,)
-            )
+            raise TypeError("`trial_id` should be a `str`, but got: %r" % (trial_id,))
         return trial_id
-    jparams=json.dumps(hparams, sort_keys=True, separators=(",", ":"))
+    jparams = json.dumps(hparams, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(jparams.encode("utf-8")).hexdigest()
 
 
-
 def _summary_pb(tag, hparams_plugin_data, tensor):
-    summary=summary_pb2.Summary()
-    summary_metadata=metadata.create_summary_metadata(hparams_plugin_data)
-    value=summary.value.add(
-        tag=tag, metadata=summary_metadata, tensor=tensor
-    )
+    summary = summary_pb2.Summary()
+    summary_metadata = metadata.create_summary_metadata(hparams_plugin_data)
+    value = summary.value.add(tag=tag, metadata=summary_metadata, tensor=tensor)
     return summary
+
 
 @oneflow_export("Hparam")
 class HParam(object):
     def __init__(self, name, domain=None, display_name=None, description=None):
-        self._name=name
-        self._domain=domain
-        self._display_name=display_name
-        self._description=description
+        self._name = name
+        self._domain = domain
+        self._display_name = display_name
+        self._description = description
         if not isinstance(self._domain, (Domain, type(None))):
             raise ValueError("not a domain: %r" % (self._domain,))
+
     def __str__(self):
         return "<HParam %r: %s>" % (self._name, self._domain)
 
     def __repr__(self):
-        fields=[
+        fields = [
             ("name", self._name),
             ("domain", self._domain),
             ("display_name", self._display_name),
             ("description", self._description),
         ]
-        fields_string=", ".join("%s=%r" % (k, v) for (k, v) in fields)
+        fields_string = ", ".join("%s=%r" % (k, v) for (k, v) in fields)
         return "HParam(%s)" % fields_string
 
     @property
@@ -243,6 +244,7 @@ class Domain(object):
         """
         pass
 
+
 @oneflow_export("IntInterval")
 class IntInterval(Domain):
     """A domain that takes on all integer values in a closed interval."""
@@ -264,8 +266,8 @@ class IntInterval(Domain):
             raise TypeError("max_value must be an int: %r" % (max_value,))
         if min_value > max_value:
             raise ValueError("%r > %r" % (min_value, max_value))
-        self._min_value=min_value
-        self._max_value=max_value
+        self._min_value = min_value
+        self._max_value = max_value
 
     def __str__(self):
         return "[%s, %s]" % (self._min_value, self._max_value)
@@ -289,11 +291,10 @@ class IntInterval(Domain):
         return rng.randint(self._min_value, self._max_value)
 
     def update_hparam_info(self, hparam_info):
-        hparam_info.type=(
-            api_pb2.DATA_TYPE_FLOAT64
-        )  # TODO(#1998): Add int dtype.
-        hparam_info.domain_interval.min_value=self._min_value
-        hparam_info.domain_interval.max_value=self._max_value
+        hparam_info.type = api_pb2.DATA_TYPE_FLOAT64  # TODO(#1998): Add int dtype.
+        hparam_info.domain_interval.min_value = self._min_value
+        hparam_info.domain_interval.max_value = self._max_value
+
 
 @oneflow_export("RealInterval")
 class RealInterval(Domain):
@@ -316,8 +317,8 @@ class RealInterval(Domain):
             raise TypeError("max_value must be a float: %r" % (max_value,))
         if min_value > max_value:
             raise ValueError("%r > %r" % (min_value, max_value))
-        self._min_value=min_value
-        self._max_value=max_value
+        self._min_value = min_value
+        self._max_value = max_value
 
     def __str__(self):
         return "[%s, %s]" % (self._min_value, self._max_value)
@@ -341,9 +342,10 @@ class RealInterval(Domain):
         return rng.uniform(self._min_value, self._max_value)
 
     def update_hparam_info(self, hparam_info):
-        hparam_info.type=api_pb2.DATA_TYPE_FLOAT64
-        hparam_info.domain_interval.min_value=self._min_value
-        hparam_info.domain_interval.max_value=self._max_value
+        hparam_info.type = api_pb2.DATA_TYPE_FLOAT64
+        hparam_info.domain_interval.min_value = self._min_value
+        hparam_info.domain_interval.max_value = self._max_value
+
 
 @oneflow_export("Discrete")
 class Discrete(Domain):
@@ -369,15 +371,15 @@ class Discrete(Domain):
           TypeError: If an element of `values` is not an instance of
             `dtype`.
         """
-        self._values=list(values)
+        self._values = list(values)
         if dtype is None:
             if self._values:
-                dtype=type(self._values[0])
+                dtype = type(self._values[0])
             else:
                 raise ValueError("Empty domain with no dtype specified")
         if dtype not in (int, float, bool, str):
             raise ValueError("Unknown dtype: %r" % (dtype,))
-        self._dtype=dtype
+        self._dtype = dtype
         for value in self._values:
             if not isinstance(value, self._dtype):
                 raise TypeError(
@@ -404,7 +406,7 @@ class Discrete(Domain):
         return rng.choice(self._values)
 
     def update_hparam_info(self, hparam_info):
-        hparam_info.type={
+        hparam_info.type = {
             int: api_pb2.DATA_TYPE_FLOAT64,  # TODO(#1998): Add int dtype.
             float: api_pb2.DATA_TYPE_FLOAT64,
             bool: api_pb2.DATA_TYPE_BOOL,
@@ -412,6 +414,7 @@ class Discrete(Domain):
         }[self._dtype]
         hparam_info.ClearField("domain_discrete")
         hparam_info.domain_discrete.extend(self._values)
+
 
 @oneflow_export("Metric")
 class Metric(object):
@@ -422,16 +425,11 @@ class Metric(object):
     metric's value as the model trains.
     """
 
-    TRAINING=1
-    VALIDATION=2
+    TRAINING = 1
+    VALIDATION = 2
 
     def __init__(
-        self,
-        tag,
-        group=None,
-        display_name=None,
-        description=None,
-        dataset_type=None,
+        self, tag, group=None, display_name=None, description=None, dataset_type=None,
     ):
         """
 
@@ -450,14 +448,13 @@ class Metric(object):
           dataset_type: Either `Metric.TRAINING` or `Metric.VALIDATION`, or
             `None`.
         """
-        self._tag=tag
-        self._group=group
-        self._display_name=display_name
-        self._description=description
-        self._dataset_type=dataset_type
+        self._tag = tag
+        self._group = group
+        self._display_name = display_name
+        self._description = description
+        self._dataset_type = dataset_type
         if self._dataset_type not in (None, Metric.TRAINING, Metric.VALIDATION):
-            raise ValueError("invalid dataset type: %r" %
-                             (self._dataset_type,))
+            raise ValueError("invalid dataset type: %r" % (self._dataset_type,))
 
     def as_proto(self):
         return api_pb2.MetricInfo(

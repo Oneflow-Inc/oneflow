@@ -1,7 +1,6 @@
 #include "oneflow/customized/utils/crc32c.h"
 
 #include <stdint.h>
-//#include "tensorflow/core/lib/core/coding.h"
 
 namespace oneflow {
 namespace crc32c {
@@ -139,7 +138,6 @@ static const uint32_t table3_[256] = {
     0xc747336e, 0x1a0299d6, 0x782010ef, 0xa565ba57, 0xbc65029d, 0x6120a825, 0x0302211c, 0xde478ba4,
     0x31035088, 0xec46fa30, 0x8e647309, 0x5321d9b1, 0x4a21617b, 0x9764cbc3, 0xf54642fa, 0x2803e842};
 
-// Used to fetch a naturally-aligned 32-bit word in little endian byte-order
 static inline uint32_t LE_LOAD32(const uint8_t *p) {
   return DecodeFixed32(reinterpret_cast<const char *>(p));
 }
@@ -163,24 +161,18 @@ uint32_t Extend(uint32_t crc, const char *buf, size_t size) {
         ^ table0_[c >> 24];                                                      \
   } while (0)
 
-  // Point x at first 4-byte aligned byte in string.  This might be
-  // just past the end of the string.
   const uintptr_t pval = reinterpret_cast<uintptr_t>(p);
   const uint8_t *x = reinterpret_cast<const uint8_t *>(((pval + 3) >> 2) << 2);
   if (x <= e) {
-    // Process bytes until finished or p is 4-byte aligned
     while (p != x) { STEP1; }
   }
-  // Process bytes 16 at a time
   while ((e - p) >= 16) {
     STEP4;
     STEP4;
     STEP4;
     STEP4;
   }
-  // Process bytes 4 at a time
   while ((e - p) >= 4) { STEP4; }
-  // Process the last few bytes
   while (p != e) { STEP1; }
 #undef STEP4
 #undef STEP1
