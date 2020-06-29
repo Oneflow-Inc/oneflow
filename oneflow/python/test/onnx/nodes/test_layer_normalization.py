@@ -6,9 +6,9 @@ func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 
-def test_reshape(test_case):
+def test_ln(test_case):
     @flow.function(func_config)
-    def reshape(x=flow.FixedTensorDef((3, 4, 2, 5))):
-        return flow.reshape(x, (4, 30))
+    def ln(x=flow.FixedTensorDef((3, 4, 2, 5))):
+        return flow.layers.layer_norm(x)
 
-    convert_to_onnx_and_check(reshape)
+    convert_to_onnx_and_check(ln)

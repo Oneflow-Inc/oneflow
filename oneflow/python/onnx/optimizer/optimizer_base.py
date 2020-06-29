@@ -16,7 +16,9 @@ class GraphOptimizerBase(object):
     """
 
     def __init__(self):
-        self._logger = logging.getLogger('.'.join(__name__.split('.')[:-1] + [self.__class__.__name__]))
+        self._logger = logging.getLogger(
+            ".".join(__name__.split(".")[:-1] + [self.__class__.__name__])
+        )
         self._graph_been_opt = False
 
     @property
@@ -72,6 +74,11 @@ class GraphOptimizerBase(object):
     def _print_stat_diff(self, before, after):
         diff = copy.deepcopy(after)
         diff.subtract(before)
-        diff = ["{} {} ({}->{})".format(k, str(v) if v < 0 else '+' + str(v), before.get(k, 0), after.get(k, 0))
-                for k, v in sorted(diff.items()) if v != 0]
-        self.logger.debug(', '.join(diff) if diff else "no change")
+        diff = [
+            "{} {} ({}->{})".format(
+                k, str(v) if v < 0 else "+" + str(v), before.get(k, 0), after.get(k, 0)
+            )
+            for k, v in sorted(diff.items())
+            if v != 0
+        ]
+        self.logger.debug(", ".join(diff) if diff else "no change")

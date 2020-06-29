@@ -15,6 +15,7 @@ BLOCK_FILTERS_INNER = [64, 128, 256, 512]
 
 g_trainable = False
 
+
 def _conv2d(
     name,
     input,
@@ -25,9 +26,11 @@ def _conv2d(
     data_format="NCHW",
     dilations=1,
     trainable=True,
-    #weight_initializer=flow.variance_scaling_initializer(data_format="NCHW"),
-    weight_initializer=flow.variance_scaling_initializer(2, 'fan_in', 'random_normal', data_format="NCHW"),
-    weight_regularizer=flow.regularizers.l2(1.0/32768),
+    # weight_initializer=flow.variance_scaling_initializer(data_format="NCHW"),
+    weight_initializer=flow.variance_scaling_initializer(
+        2, "fan_in", "random_normal", data_format="NCHW"
+    ),
+    weight_regularizer=flow.regularizers.l2(1.0 / 32768),
 ):
     weight = flow.get_variable(
         name + "-weight",
@@ -47,7 +50,7 @@ def _batch_norm(inputs, name=None, trainable=True):
     return flow.layers.batch_normalization(
         inputs=inputs,
         axis=1,
-        momentum=0.9,#97,
+        momentum=0.9,  # 97,
         epsilon=1.001e-5,
         center=True,
         scale=True,
@@ -60,7 +63,9 @@ def _batch_norm(inputs, name=None, trainable=True):
 def conv2d_affine(input, name, filters, kernel_size, strides, activation=None):
     # input data_format must be NCHW, cannot check now
     padding = "SAME" if strides > 1 or kernel_size > 1 else "VALID"
-    output = _conv2d(name, input, filters, kernel_size, strides, padding, trainable=g_trainable)
+    output = _conv2d(
+        name, input, filters, kernel_size, strides, padding, trainable=g_trainable
+    )
     output = _batch_norm(output, name + "_bn", trainable=g_trainable)
     if activation == "Relu":
         output = flow.keras.activations.relu(output)
@@ -149,10 +154,12 @@ def resnet50(images, trainable=True, need_transpose=False):
             flow.reshape(pool5, (pool5.shape[0], -1)),
             units=1000,
             use_bias=True,
-            kernel_initializer=flow.variance_scaling_initializer(2, 'fan_in', 'random_normal'),
-            #kernel_initializer=flow.xavier_uniform_initializer(),
+            kernel_initializer=flow.variance_scaling_initializer(
+                2, "fan_in", "random_normal"
+            ),
+            # kernel_initializer=flow.xavier_uniform_initializer(),
             bias_initializer=flow.random_uniform_initializer(),
-            kernel_regularizer=flow.regularizers.l2(1.0/32768),
+            kernel_regularizer=flow.regularizers.l2(1.0 / 32768),
             trainable=trainable,
             name="fc1001",
         )
@@ -163,12 +170,12 @@ def resnet50(images, trainable=True, need_transpose=False):
 def test_resnet50(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
+
     @flow.function(func_config)
-    def InferenceNet(images=flow.FixedTensorDef((1,3,224,224))):
+    def InferenceNet(images=flow.FixedTensorDef((1, 3, 224, 224))):
         logits = resnet50(images)
 
         predictions = flow.nn.softmax(logits)
         return predictions
 
     convert_to_onnx_and_check(InferenceNet)
-

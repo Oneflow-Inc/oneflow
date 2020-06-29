@@ -70,7 +70,9 @@ def _register_all_schemas_with_history():
     name_domain_version_schema_map = defaultdict(lambda: defaultdict(dict))
     for s in onnx_schemas:
         schema = OnnxOpSchema.from_onnx_schema(s)
-        name_domain_version_schema_map[schema.name][schema.domain][schema.since_version] = schema
+        name_domain_version_schema_map[schema.name][schema.domain][
+            schema.since_version
+        ] = schema
 
     ordered_map = defaultdict(lambda: defaultdict(OrderedDict))
     for name, domain_version_schema_map in name_domain_version_schema_map.items():
@@ -91,7 +93,9 @@ def _parse_domain_opset_versions(schemas):
             if domain not in domain_opset_versions:
                 domain_opset_versions[domain] = int(max_version)
             else:
-                domain_opset_versions[domain] = max(domain_opset_versions[domain], int(max_version))
+                domain_opset_versions[domain] = max(
+                    domain_opset_versions[domain], int(max_version)
+                )
     return domain_opset_versions
 
 
@@ -119,7 +123,9 @@ def get_max_supported_opset_version(domain=None):
     return _domain_opset_versions.get(domain, None)
 
 
-def infer_onnx_shape_dtype(node, opset_version, input_shapes, input_dtypes, initializers=None):
+def infer_onnx_shape_dtype(
+    node, opset_version, input_shapes, input_dtypes, initializers=None
+):
     """
     Infer shapes and dtypes for outputs of the node.
     Sometimes, shape inference needs the values of node's inputs, so initializers are used.
@@ -134,7 +140,9 @@ def infer_onnx_shape_dtype(node, opset_version, input_shapes, input_dtypes, init
         if attr_graphs:
             for attr_name, sub_graph in attr_graphs.items():
                 copied_sub_graph = copy.deepcopy(sub_graph)
-                graph_proto = copied_sub_graph.make_graph("graph for " + node.name + " " + attr_name)
+                graph_proto = copied_sub_graph.make_graph(
+                    "graph for " + node.name + " " + attr_name
+                )
                 attr.append(helper.make_attribute(attr_name, graph_proto))
         attr.extend(node.attr_onnx.values())
         if attr:
@@ -146,8 +154,12 @@ def infer_onnx_shape_dtype(node, opset_version, input_shapes, input_dtypes, init
     for inp, shape, dtype in zip(node.input, input_shapes, input_dtypes):
         inputs.append(util.make_onnx_inputs_outputs(inp, dtype, shape))
     for output in node.output:
-        outputs.append(util.make_onnx_inputs_outputs(output, TensorProto.UNDEFINED, None))
-    graph_proto = helper.make_graph([build_onnx_op(node)], "infer-graph", inputs, outputs, initializer=initializers)
+        outputs.append(
+            util.make_onnx_inputs_outputs(output, TensorProto.UNDEFINED, None)
+        )
+    graph_proto = helper.make_graph(
+        [build_onnx_op(node)], "infer-graph", inputs, outputs, initializer=initializers
+    )
     imp = OperatorSetIdProto()
     imp.version = opset_version
     model_proto = helper.make_model(graph_proto, opset_imports=[imp])
@@ -158,7 +170,9 @@ def infer_onnx_shape_dtype(node, opset_version, input_shapes, input_dtypes, init
     except Exception:  # pylint: disable=broad-except
         logger.warning(
             "ONNX Failed to infer shapes and dtypes for [%s, type: %s]",
-            node.name, node.type, exc_info=1
+            node.name,
+            node.type,
+            exc_info=1,
         )
         return None, None
 
@@ -173,7 +187,8 @@ def infer_onnx_shape_dtype(node, opset_version, input_shapes, input_dtypes, init
         # 0 in shapes of onnx means unknown which is -1 in our convertor
         if tensor_type.HasField("shape"):
             shapes[output.name] = [
-                dim.dim_value if dim.dim_value != 0 else util.ONNX_UNKNOWN_DIMENSION for dim in tensor_type.shape.dim
+                dim.dim_value if dim.dim_value != 0 else util.ONNX_UNKNOWN_DIMENSION
+                for dim in tensor_type.shape.dim
             ]
         else:
             shapes[output.name] = None

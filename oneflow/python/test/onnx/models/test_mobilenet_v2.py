@@ -4,6 +4,7 @@ from util import convert_to_onnx_and_check
 
 g_trainable = False
 
+
 def _conv2d_layer(
     name,
     input,
@@ -21,11 +22,19 @@ def _conv2d_layer(
 ):
 
     if data_format == "NCHW":
-        weight_shape = (int(filters), int(
-            input.shape[1] / group_num), int(kernel_size[0]), int(kernel_size[0]))
+        weight_shape = (
+            int(filters),
+            int(input.shape[1] / group_num),
+            int(kernel_size[0]),
+            int(kernel_size[0]),
+        )
     elif data_format == "NHWC":
-        weight_shape = (int(filters), int(kernel_size[0]), int(
-            kernel_size[0]), int(input.shape[3] / group_num))
+        weight_shape = (
+            int(filters),
+            int(kernel_size[0]),
+            int(kernel_size[0]),
+            int(input.shape[3] / group_num),
+        )
     else:
         raise ValueError('data_format must be "NCHW" or "NHWC".')
     weight = flow.get_variable(
@@ -35,7 +44,14 @@ def _conv2d_layer(
         initializer=weight_initializer,
     )
     output = flow.nn.conv2d(
-        input, weight, strides, padding, data_format, dilation_rate, group_num, name=name
+        input,
+        weight,
+        strides,
+        padding,
+        data_format,
+        dilation_rate,
+        group_num,
+        name=name,
     )
     if use_bias:
         bias = flow.get_variable(
@@ -56,7 +72,9 @@ def _conv2d_layer(
     return output
 
 
-def _batch_norm(inputs, axis, momentum, epsilon, center=True, scale=True, trainable=True, name=None):
+def _batch_norm(
+    inputs, axis, momentum, epsilon, center=True, scale=True, trainable=True, name=None
+):
 
     return flow.layers.batch_normalization(
         inputs=inputs,
@@ -67,17 +85,39 @@ def _batch_norm(inputs, axis, momentum, epsilon, center=True, scale=True, traina
         scale=scale,
         trainable=trainable,
         training=trainable,
-        name=name
+        name=name,
     )
 
 
 def _relu6(data, prefix):
-    return flow.clip_by_value(data, 0, 6, name='%s-relu6' % prefix)
+    return flow.clip_by_value(data, 0, 6, name="%s-relu6" % prefix)
 
 
-def mobilenet_unit(data, num_filter=1, kernel=(1, 1), stride=(1, 1), pad=(0, 0), num_group=1, data_format="NCHW", if_act=True, use_bias=False, prefix=''):
-    conv = _conv2d_layer(name=prefix, input=data, filters=num_filter, kernel_size=kernel, strides=stride, padding=pad,
-                         group_num=num_group, data_format=data_format, dilation_rate=1, activation=None, use_bias=use_bias)
+def mobilenet_unit(
+    data,
+    num_filter=1,
+    kernel=(1, 1),
+    stride=(1, 1),
+    pad=(0, 0),
+    num_group=1,
+    data_format="NCHW",
+    if_act=True,
+    use_bias=False,
+    prefix="",
+):
+    conv = _conv2d_layer(
+        name=prefix,
+        input=data,
+        filters=num_filter,
+        kernel_size=kernel,
+        strides=stride,
+        padding=pad,
+        group_num=num_group,
+        data_format=data_format,
+        dilation_rate=1,
+        activation=None,
+        use_bias=use_bias,
+    )
     if data_format == "NCHW":
         axis = 1
     elif data_format == "NHWC":
@@ -85,8 +125,14 @@ def mobilenet_unit(data, num_filter=1, kernel=(1, 1), stride=(1, 1), pad=(0, 0),
     else:
         raise ValueError('data_format must be "NCHW" or "NHWC".')
 
-    bn = _batch_norm(conv, axis=axis, momentum=0.97,
-                     epsilon=1e-3, name='%s-BatchNorm' % prefix, trainable=g_trainable)
+    bn = _batch_norm(
+        conv,
+        axis=axis,
+        momentum=0.97,
+        epsilon=1e-3,
+        name="%s-BatchNorm" % prefix,
+        trainable=g_trainable,
+    )
     if if_act:
         act = _relu6(bn, prefix)
         return act
@@ -94,9 +140,31 @@ def mobilenet_unit(data, num_filter=1, kernel=(1, 1), stride=(1, 1), pad=(0, 0),
         return bn
 
 
-def conv(data, num_filter=1, kernel=(1, 1), stride=(1, 1), pad=(0, 0), num_group=1, data_format="NCHW", use_bias=False, prefix=''):
+def conv(
+    data,
+    num_filter=1,
+    kernel=(1, 1),
+    stride=(1, 1),
+    pad=(0, 0),
+    num_group=1,
+    data_format="NCHW",
+    use_bias=False,
+    prefix="",
+):
     # return _conv2d_layer(name='%s-conv2d'%prefix, input=data, filters=num_filter, kernel_size=kernel, strides=stride, padding=pad, group_num=num_group, dilation_rate=1, activation=None, use_bias=use_bias)
-    return _conv2d_layer(name=prefix, input=data, filters=num_filter, kernel_size=kernel, strides=stride, padding=pad, group_num=num_group, data_format=data_format, dilation_rate=1, activation=None, use_bias=use_bias)
+    return _conv2d_layer(
+        name=prefix,
+        input=data,
+        filters=num_filter,
+        kernel_size=kernel,
+        strides=stride,
+        padding=pad,
+        group_num=num_group,
+        data_format=data_format,
+        dilation_rate=1,
+        activation=None,
+        use_bias=use_bias,
+    )
 
 
 def shortcut(data_in, data_residual, prefix):
@@ -104,8 +172,20 @@ def shortcut(data_in, data_residual, prefix):
     return out
 
 
-def inverted_residual_unit(data, num_in_filter, num_filter, ifshortcut, stride, kernel, pad, expansion_factor, prefix, data_format="NCHW", has_expand=1):
-    num_expfilter = int(round(num_in_filter*expansion_factor))
+def inverted_residual_unit(
+    data,
+    num_in_filter,
+    num_filter,
+    ifshortcut,
+    stride,
+    kernel,
+    pad,
+    expansion_factor,
+    prefix,
+    data_format="NCHW",
+    has_expand=1,
+):
+    num_expfilter = int(round(num_in_filter * expansion_factor))
     if has_expand:
         channel_expand = mobilenet_unit(
             data=data,
@@ -116,7 +196,7 @@ def inverted_residual_unit(data, num_in_filter, num_filter, ifshortcut, stride, 
             num_group=1,
             data_format=data_format,
             if_act=True,
-            prefix='%s-expand' % prefix,
+            prefix="%s-expand" % prefix,
         )
     else:
         channel_expand = data
@@ -129,7 +209,7 @@ def inverted_residual_unit(data, num_in_filter, num_filter, ifshortcut, stride, 
         num_group=num_expfilter,
         data_format=data_format,
         if_act=True,
-        prefix='%s-depthwise' % prefix,
+        prefix="%s-depthwise" % prefix,
     )
     linear_out = mobilenet_unit(
         data=bottleneck_conv,
@@ -140,15 +220,11 @@ def inverted_residual_unit(data, num_in_filter, num_filter, ifshortcut, stride, 
         num_group=1,
         data_format=data_format,
         if_act=False,
-        prefix='%s-project' % prefix
+        prefix="%s-project" % prefix,
     )
 
     if ifshortcut:
-        out = shortcut(
-            data_in=data,
-            data_residual=linear_out,
-            prefix=prefix,
-        )
+        out = shortcut(data_in=data, data_residual=linear_out, prefix=prefix,)
         return out
     else:
         return linear_out
@@ -156,9 +232,9 @@ def inverted_residual_unit(data, num_in_filter, num_filter, ifshortcut, stride, 
 
 MNETV2_CONFIGS_MAP = {
     (224, 224): {
-        'firstconv_filter_num': 32,
+        "firstconv_filter_num": 32,
         # t, c, s
-        'bottleneck_params_list': [
+        "bottleneck_params_list": [
             (1, 16, 1, False),
             (6, 24, 2, False),
             (6, 24, 1, True),
@@ -177,7 +253,7 @@ MNETV2_CONFIGS_MAP = {
             (6, 160, 1, True),
             (6, 320, 1, False),
         ],
-        'filter_num_before_gp': 1280,
+        "filter_num_before_gp": 1280,
     }
 }
 
@@ -192,17 +268,17 @@ class MobileNetV2(object):
         else:
             self.config_map = MNETV2_CONFIGS_MAP[(224, 224)]
 
-    def build_network(self, input_data, data_format, class_num=1000, prefix="", **configs):
+    def build_network(
+        self, input_data, data_format, class_num=1000, prefix="", **configs
+    ):
         self.config_map.update(configs)
 
-        #input_data = flow.math.multiply(input_data, 2.0 / 255.0)
-        #input_data = flow.math.add(input_data, -1)
+        # input_data = flow.math.multiply(input_data, 2.0 / 255.0)
+        # input_data = flow.math.add(input_data, -1)
 
         if data_format == "NCHW":
-            input_data = flow.transpose(
-                input_data, name="transpose", perm=[0, 3, 1, 2])
-        first_c = int(
-            round(self.config_map['firstconv_filter_num']*self.multiplier))
+            input_data = flow.transpose(input_data, name="transpose", perm=[0, 3, 1, 2])
+        first_c = int(round(self.config_map["firstconv_filter_num"] * self.multiplier))
         first_layer = mobilenet_unit(
             data=input_data,
             num_filter=first_c,
@@ -211,55 +287,54 @@ class MobileNetV2(object):
             pad="same",
             data_format=data_format,
             if_act=True,
-            prefix=prefix+'-Conv'
+            prefix=prefix + "-Conv",
         )
 
         last_bottleneck_layer = first_layer
         in_c = first_c
-        for i, layer_setting in enumerate(self.config_map['bottleneck_params_list']):
+        for i, layer_setting in enumerate(self.config_map["bottleneck_params_list"]):
             t, c, s, sc = layer_setting
             if i == 0:
                 last_bottleneck_layer = inverted_residual_unit(
                     data=last_bottleneck_layer,
                     num_in_filter=in_c,
-                    num_filter=int(round(c*self.multiplier)),
+                    num_filter=int(round(c * self.multiplier)),
                     ifshortcut=sc,
                     stride=(s, s),
                     kernel=(3, 3),
                     pad="same",
                     expansion_factor=t,
-                    prefix=prefix+'-expanded_conv',
+                    prefix=prefix + "-expanded_conv",
                     data_format=data_format,
-                    has_expand=0
+                    has_expand=0,
                 )
-                in_c = int(round(c*self.multiplier))
+                in_c = int(round(c * self.multiplier))
             else:
                 last_bottleneck_layer = inverted_residual_unit(
                     data=last_bottleneck_layer,
                     num_in_filter=in_c,
-                    num_filter=int(round(c*self.multiplier)),
+                    num_filter=int(round(c * self.multiplier)),
                     ifshortcut=sc,
                     stride=(s, s),
                     kernel=(3, 3),
                     pad="same",
                     expansion_factor=t,
                     data_format=data_format,
-                    prefix=prefix+'-expanded_conv_%d' % i
+                    prefix=prefix + "-expanded_conv_%d" % i,
                 )
-                in_c = int(round(c*self.multiplier))
+                in_c = int(round(c * self.multiplier))
 
         last_fm = mobilenet_unit(
             data=last_bottleneck_layer,
-            #num_filter=int(1280 * self.multiplier) if self.multiplier > 1.0 else 1280,
+            # num_filter=int(1280 * self.multiplier) if self.multiplier > 1.0 else 1280,
             # gr to confirm
-            num_filter=int(
-                256 * self.multiplier) if self.multiplier > 1.0 else 256,
+            num_filter=int(256 * self.multiplier) if self.multiplier > 1.0 else 256,
             kernel=(1, 1),
             stride=(1, 1),
             pad="valid",
             data_format=data_format,
             if_act=True,
-            prefix=prefix+'-Conv_1'
+            prefix=prefix + "-Conv_1",
         )
         base_only = True
         if base_only:
@@ -267,32 +342,44 @@ class MobileNetV2(object):
         else:
             raise NotImplementedError
 
-    def __call__(self, input_data, class_num=1000, prefix="", layer_out=None, **configs):
+    def __call__(
+        self, input_data, class_num=1000, prefix="", layer_out=None, **configs
+    ):
         sym = self.build_network(
-            input_data, class_num=class_num, prefix=prefix, **configs)
+            input_data, class_num=class_num, prefix=prefix, **configs
+        )
         if layer_out is None:
             return sym
 
         internals = sym.get_internals()
         if type(layer_out) is list or type(layer_out) is tuple:
-            layers_out = [internals[layer_nm.strip() + '_output']
-                          for layer_nm in layer_out]
+            layers_out = [
+                internals[layer_nm.strip() + "_output"] for layer_nm in layer_out
+            ]
             return layers_out
         else:
-            layer_out = internals[layer_out.strip() + '_output']
+            layer_out = internals[layer_out.strip() + "_output"]
             return layer_out
 
 
-def Mobilenet(input_data, data_format="NCHW", num_classes=1000, multiplier=1.0, prefix=""):
+def Mobilenet(
+    input_data, data_format="NCHW", num_classes=1000, multiplier=1.0, prefix=""
+):
     mobilenetgen = MobileNetV2((224, 224), multiplier=multiplier)
-    layer_out = mobilenetgen(input_data, data_format=data_format,
-                             class_num=num_classes, prefix=prefix+"-MobilenetV2", layer_out=None)
+    layer_out = mobilenetgen(
+        input_data,
+        data_format=data_format,
+        class_num=num_classes,
+        prefix=prefix + "-MobilenetV2",
+        layer_out=None,
+    )
     return layer_out
 
 
 def test_mobilenetv2(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
+
     @flow.function(func_config)
     def mobilenetv2(x=flow.FixedTensorDef((1, 224, 224, 3))):
         return Mobilenet(x)

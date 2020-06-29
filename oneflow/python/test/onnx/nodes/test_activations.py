@@ -10,4 +10,5 @@ def test_relu(test_case):
     @flow.function(func_config)
     def relu(x=flow.FixedTensorDef((3, 4, 2, 5))):
         return flow.math.relu(x)
+
     convert_to_onnx_and_check(relu)

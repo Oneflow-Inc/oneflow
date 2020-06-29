@@ -9,10 +9,18 @@ func_config.default_data_type(flow.float)
 def generate_binary_op_test(flow_op, *args, **kwargs):
     @flow.function(func_config)
     def job1():
-        x = flow.get_variable(name='x1', shape=(2, 3, 4),
-                              dtype=flow.float, initializer=flow.random_uniform_initializer(-10, 10))
-        y = flow.get_variable(name='y1', shape=(1, 3, 1),
-                              dtype=flow.float, initializer=flow.random_uniform_initializer(-10, 10))
+        x = flow.get_variable(
+            name="x1",
+            shape=(2, 3, 4),
+            dtype=flow.float,
+            initializer=flow.random_uniform_initializer(-10, 10),
+        )
+        y = flow.get_variable(
+            name="y1",
+            shape=(1, 3, 1),
+            dtype=flow.float,
+            initializer=flow.random_uniform_initializer(-10, 10),
+        )
         return flow_op(x, y, *args, **kwargs)
 
     convert_to_onnx_and_check(job1)
@@ -21,8 +29,12 @@ def generate_binary_op_test(flow_op, *args, **kwargs):
 def generate_unary_op_test(flow_op, *args, min_val=-10, max_val=10, **kwargs):
     @flow.function(func_config)
     def job1():
-        x = flow.get_variable(name='x1', shape=(2, 3, 4),
-                              dtype=flow.float, initializer=flow.random_uniform_initializer(min_val, max_val))
+        x = flow.get_variable(
+            name="x1",
+            shape=(2, 3, 4),
+            dtype=flow.float,
+            initializer=flow.random_uniform_initializer(min_val, max_val),
+        )
         return flow_op(x, *args, **kwargs)
 
     convert_to_onnx_and_check(job1)
@@ -210,4 +222,3 @@ def test_scalar_add_int(test_cast):
 
 def test_scalar_add_float(test_cast):
     generate_unary_op_test(flow.math.add, 5.1)
-

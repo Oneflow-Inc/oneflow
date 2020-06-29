@@ -69,18 +69,19 @@ ONNX_DTYPE_NAMES = {
     onnx_pb.TensorProto.UINT16: "uint16",
     onnx_pb.TensorProto.INT64: "int64",
     onnx_pb.TensorProto.STRING: "string",
-    onnx_pb.TensorProto.BOOL: "bool"
+    onnx_pb.TensorProto.BOOL: "bool",
 }
 
 
 def is_integral_onnx_dtype(dtype):
-    return dtype in [onnx_pb.TensorProto.INT32,
-                     onnx_pb.TensorProto.INT16,
-                     onnx_pb.TensorProto.INT8,
-                     onnx_pb.TensorProto.UINT8,
-                     onnx_pb.TensorProto.UINT16,
-                     onnx_pb.TensorProto.INT64,
-                     ]
+    return dtype in [
+        onnx_pb.TensorProto.INT32,
+        onnx_pb.TensorProto.INT16,
+        onnx_pb.TensorProto.INT8,
+        onnx_pb.TensorProto.UINT8,
+        onnx_pb.TensorProto.UINT16,
+        onnx_pb.TensorProto.INT64,
+    ]
 
 
 class TensorValueInfo(object):
@@ -121,8 +122,7 @@ def split_nodename_and_shape(name):
     for i in range(1, len(splits), 3):
         inputs.append(splits[i])
         if splits[i + 1] is not None:
-            shapes[splits[i]] = [int(n)
-                                 for n in splits[i + 1][1:-1].split(",")]
+            shapes[splits[i]] = [int(n) for n in splits[i + 1][1:-1].split(",")]
     if not shapes:
         shapes = None
     return inputs, shapes
@@ -175,10 +175,7 @@ def make_onnx_inputs_outputs(name, elem_type, shape, **kwargs):
     if elem_type is None:
         elem_type = onnx_pb.TensorProto.UNDEFINED
     return helper.make_tensor_value_info(
-        name,
-        elem_type,
-        make_onnx_shape(shape),
-        **kwargs
+        name, elem_type, make_onnx_shape(shape), **kwargs
     )
 
 
@@ -193,19 +190,26 @@ def find_opset(opset):
 
 
 def get_flow_node_attr(node, name):
-    assert node.WhichOneof("op_type") == 'user_conf'
+    assert node.WhichOneof("op_type") == "user_conf"
     attr_msg = node.user_conf.attr[name]
     attr_type = attr_msg.WhichOneof("value")
     # TODO(daquexian): a better check
-    if attr_type == 'at_shape':
+    if attr_type == "at_shape":
         return list(getattr(attr_msg, attr_type).dim)
-    elif attr_type[:7] == 'at_list':
+    elif attr_type[:7] == "at_list":
         return list(getattr(attr_msg, attr_type).val)
     else:
         return getattr(attr_msg, attr_type)
 
 
-def save_onnx_model(save_path_root, onnx_file_name, feed_dict, model_proto, include_test_data=False, as_text=False):
+def save_onnx_model(
+    save_path_root,
+    onnx_file_name,
+    feed_dict,
+    model_proto,
+    include_test_data=False,
+    as_text=False,
+):
     """Save onnx model as file. Save a pbtxt file as well if as_text is True"""
     save_path = save_path_root
     if not os.path.exists(save_path):
@@ -247,8 +251,15 @@ def construct_graph_from_nodes(parent_g, nodes, outputs, shapes, dtypes):
     for op in nodes:
         all_outputs |= set(op.output)
 
-        new_node = g.make_node(op.type, op.input, outputs=op.output, attr=op.attr, name=op.name,
-                               skip_conversion=op.skip_conversion, infer_shape_dtype=False)
+        new_node = g.make_node(
+            op.type,
+            op.input,
+            outputs=op.output,
+            attr=op.attr,
+            name=op.name,
+            skip_conversion=op.skip_conversion,
+            infer_shape_dtype=False,
+        )
         body_graphs = op.graph.contained_graphs.pop(op.name, None)
         if body_graphs:
             for attr_name, body_graph in body_graphs.items():
@@ -266,15 +277,21 @@ def construct_graph_from_nodes(parent_g, nodes, outputs, shapes, dtypes):
     # than once as output node.
     new_output_names = []
     for output, shape, dtype in zip(outputs, shapes, dtypes):
-        node = g.make_node("Identity", inputs=[output], op_name_scope="sub_graph_ending_node",
-                           shapes=[shape], dtypes=[dtype], infer_shape_dtype=False)
+        node = g.make_node(
+            "Identity",
+            inputs=[output],
+            op_name_scope="sub_graph_ending_node",
+            shapes=[shape],
+            dtypes=[dtype],
+            infer_shape_dtype=False,
+        )
         new_output_names.append(node.output[0])
     g.outputs = new_output_names
     return g
 
 
 def flow_name_scope(name):
-    return '/'.join(name.split('/')[:-1])
+    return "/".join(name.split("/")[:-1])
 
 
 def get_temp_directory():
@@ -321,8 +338,12 @@ def merge_shapes(shape1, shape2):
 
     make_sure(is_list_or_tuple(shape1), "invalid type for shape1")
     make_sure(is_list_or_tuple(shape2), "invalid type for shape2")
-    make_sure(len(shape1) == len(shape2),
-              "shapes rank mismatch: shape1=%s, shape2=%s", shape1, shape2)
+    make_sure(
+        len(shape1) == len(shape2),
+        "shapes rank mismatch: shape1=%s, shape2=%s",
+        shape1,
+        shape2,
+    )
 
     merged = []
     for d1, d2 in zip(shape1, shape2):
@@ -331,7 +352,11 @@ def merge_shapes(shape1, shape2):
             d = d2
         elif not is_unknown_dimension(d2):
             make_sure(
-                d1 == d2, "shapes dimension mismatch: shape1=%s, shape2=%s", shape1, shape2)
+                d1 == d2,
+                "shapes dimension mismatch: shape1=%s, shape2=%s",
+                shape1,
+                shape2,
+            )
         merged.append(d)
     return merged
 
@@ -426,8 +451,7 @@ def have_same_inference_value(g, output_1, output_2):
             return True
         # check body graph
         if node_1.get_body_graphs() or node_2.get_body_graphs():
-            logger.warning(
-                "Comparing two nodes containing body graph isn't supported.")
+            logger.warning("Comparing two nodes containing body graph isn't supported.")
             return False
         # check domain
         if node_1.domain != node_2.domain:
@@ -438,7 +462,9 @@ def have_same_inference_value(g, output_1, output_2):
         # check onnx attributes
         if node_1.attr_onnx.keys() != node_2.attr_onnx.keys():
             return False
-        for name in node_1.attr_onnx.keys():  # pylint: disable=consider-iterating-dictionary
+        for (
+            name
+        ) in node_1.attr_onnx.keys():  # pylint: disable=consider-iterating-dictionary
             if node_1.get_attr_value(name) != node_2.get_attr_value(name):
                 return False
         return True

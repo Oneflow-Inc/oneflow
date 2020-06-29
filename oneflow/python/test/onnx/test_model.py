@@ -6,14 +6,16 @@ import oneflow as flow
 
 flow.unittest.register_test_cases(
     scope=globals(),
-    directory=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'models'),
+    directory=os.path.join(os.path.dirname(os.path.realpath(__file__)), "models"),
     filter_by_num_nodes=lambda x: True,
-    base_class=absltest.TestCase)
+    base_class=absltest.TestCase,
+)
+
 
 def main(argv):
     flow.env.init()
     absltest.main()
 
-if __name__ == '__main__': app.run(main)
 
-
+if __name__ == "__main__":
+    app.run(main)

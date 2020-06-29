@@ -25,7 +25,6 @@ def _register_func(op_type):
 
 
 class ConstFoldOptimizer(GraphOptimizerBase):
-
     def __init__(self):  # pylint: disable=useless-super-delegation
         super(ConstFoldOptimizer, self).__init__()
 
@@ -64,13 +63,19 @@ class ConstFoldOptimizer(GraphOptimizerBase):
         """ if node's input are all const and it's not graph's output then it can be fold.
             if node can be fold True will be return indicating that graph is changed
         """
-        if self._all_inputs_are_const(node.inputs) and not self._is_graph_output(node, graph):
+        if self._all_inputs_are_const(node.inputs) and not self._is_graph_output(
+            node, graph
+        ):
             process_func = _func_map.get(node.type, None)
             if process_func:
                 const_outputs = process_func(node, graph)
                 self._replace_node_with_const(node, graph, const_outputs)
                 return True
-            self.logger.debug("need to add function to fold op %s whose op_type is %s", node.name, node.type)
+            self.logger.debug(
+                "need to add function to fold op %s whose op_type is %s",
+                node.name,
+                node.type,
+            )
         return False
 
     @staticmethod
@@ -85,10 +90,15 @@ class ConstFoldOptimizer(GraphOptimizerBase):
 
     @staticmethod
     def _replace_node_with_const(node, graph, vals):
-        util.make_sure(len(node.output) == len(vals), "length of node outputs and const vals should be same")
+        util.make_sure(
+            len(node.output) == len(vals),
+            "length of node outputs and const vals should be same",
+        )
         for old_input, val in zip(node.output, vals):
             const_node = graph.make_const(util.make_name("const_fold_opt"), val)
-            graph.set_dtype(const_node.output[0], util.map_numpy_to_onnx_dtype(val.dtype))
+            graph.set_dtype(
+                const_node.output[0], util.map_numpy_to_onnx_dtype(val.dtype)
+            )
             graph.set_shape(const_node.output[0], val.shape)
             graph.replace_all_inputs(graph.get_nodes(), old_input, const_node.output[0])
         graph.remove_node(node.name)
@@ -118,7 +128,10 @@ class ConstFoldOptimizer(GraphOptimizerBase):
         """
         const_val = node.inputs[0].get_tensor_value(as_list=False)
         axes = list(node.get_attr("axes").ints)
-        util.make_sure(all(axis >= 0 for axis in axes), "onnx spec says it only supports positive axis")
+        util.make_sure(
+            all(axis >= 0 for axis in axes),
+            "onnx spec says it only supports positive axis",
+        )
         shape_in = const_val.shape
         dims_out = len(shape_in) + len(axes)
         # calculate the shape of output accroding to onnx Unsqueeze's spec

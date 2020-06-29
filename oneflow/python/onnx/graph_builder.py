@@ -41,8 +41,7 @@ class GraphBuilder(object):
             inputs = [kwargs.pop("data")]
             starts = self.convert_to_attribute(kwargs.pop("starts"))
             ends = self.convert_to_attribute(kwargs.pop("ends"))
-            axes = self.convert_to_attribute(
-                kwargs.pop("axes", None), is_optional=True)
+            axes = self.convert_to_attribute(kwargs.pop("axes", None), is_optional=True)
             attr = {"starts": starts, "ends": ends, "axes": axes}
         else:
             # slice-10 has 3 required inputs "data", "starts", "ends"l
@@ -50,13 +49,14 @@ class GraphBuilder(object):
             # input sequence should be "data", "starts", "ends", "axes", "steps"
             attr = {}
             data = self.convert_to_input(kwargs.pop("data"))
-            starts = self.convert_to_input(
-                kwargs.pop("starts"), dtype=np.int64)
+            starts = self.convert_to_input(kwargs.pop("starts"), dtype=np.int64)
             ends = self.convert_to_input(kwargs.pop("ends"), dtype=np.int64)
-            axes = self.convert_to_input(kwargs.pop(
-                "axes", None), is_optional=True, dtype=np.int64)
-            steps = self.convert_to_input(kwargs.pop(
-                "steps", None), is_optional=True, dtype=np.int64)
+            axes = self.convert_to_input(
+                kwargs.pop("axes", None), is_optional=True, dtype=np.int64
+            )
+            steps = self.convert_to_input(
+                kwargs.pop("steps", None), is_optional=True, dtype=np.int64
+            )
             inputs = [data, starts, ends, axes, steps]
 
         # pro-process inputs and attr
@@ -81,27 +81,37 @@ class GraphBuilder(object):
             dtype = self.graph.get_dtype(inputs[1])
             for input_data in inputs[1:]:
                 if input_data != util.ONNX_EMPTY_INPUT:
-                    util.make_sure(dtype == self.graph.get_dtype(
-                        input_data), "dtype should be same")
+                    util.make_sure(
+                        dtype == self.graph.get_dtype(input_data),
+                        "dtype should be same",
+                    )
 
-        return self.graph.make_node(op_type="Slice", inputs=inputs, attr=attr, name=name,
-                                    outputs=outputs, shapes=shapes, dtypes=dtypes).output[0]
+        return self.graph.make_node(
+            op_type="Slice",
+            inputs=inputs,
+            attr=attr,
+            name=name,
+            outputs=outputs,
+            shapes=shapes,
+            dtypes=dtypes,
+        ).output[0]
 
     def convert_to_input(self, tensor, is_optional=False, dtype=None):
         """in ONNX, input shold come from node, so it must be a string"""
         if is_optional and tensor is None:
             return None
 
-        util.make_sure(tensor is not None,
-                        "input is required so it couldn't be None")
+        util.make_sure(tensor is not None, "input is required so it couldn't be None")
 
         res = tensor
         if isinstance(tensor, list):
-            res = self.graph.make_const(util.make_name(
-                "const_slice"), np.array(tensor, dtype)).output[0]
+            res = self.graph.make_const(
+                util.make_name("const_slice"), np.array(tensor, dtype)
+            ).output[0]
 
-        util.make_sure(isinstance(res, str),
-                        "input is a dynamic input, so a str is needed")
+        util.make_sure(
+            isinstance(res, str), "input is a dynamic input, so a str is needed"
+        )
 
         return res
 
@@ -109,15 +119,13 @@ class GraphBuilder(object):
         if is_optional and tensor is None:
             return None
 
-        util.make_sure(tensor is not None,
-                        "input is required so it couldn't be None")
+        util.make_sure(tensor is not None, "input is required so it couldn't be None")
 
         res = tensor
         if isinstance(tensor, str):
             const_node = self.graph.get_node_by_output(tensor)
             res = const_node.get_tensor_value(as_list=True)
 
-        util.make_sure(isinstance(res, list),
-                        "input is an attr, so a list is needed")
+        util.make_sure(isinstance(res, list), "input is an attr, so a list is needed")
 
         return res

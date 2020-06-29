@@ -51,7 +51,7 @@ def flowlist_to_onnx(node_list, shape_override):
     ops = node_list
 
     def is_user_op(node):
-        return node.WhichOneof("op_type") == 'user_conf'
+        return node.WhichOneof("op_type") == "user_conf"
 
     def get_op_conf(node):
         conf_type = node.WhichOneof("op_type")
@@ -85,7 +85,7 @@ def flowlist_to_onnx(node_list, shape_override):
         else:
             conf = get_op_conf(node)
             # it cannot cover all legacy op but it's enough
-            if hasattr(conf, 'out'):
+            if hasattr(conf, "out"):
                 out = getattr(conf, "out")
                 if isinstance(out, str):
                     outputs = [out]
@@ -113,8 +113,7 @@ def flowlist_to_onnx(node_list, shape_override):
         for a in attrs:
             attr_cnt[a] += 1
             if a == "dtype":
-                attr[a] = util.map_flow_dtype(
-                    util.get_flow_node_attr(node, "dtype"))
+                attr[a] = util.map_flow_dtype(util.get_flow_node_attr(node, "dtype"))
             else:
                 attr[a] = util.get_flow_node_attr(node, a)
 
@@ -124,7 +123,8 @@ def flowlist_to_onnx(node_list, shape_override):
             output_names = get_outputs(node)
             update_input_maps(node)
             onnx_node = helper.make_node(
-                op_type, input_names, output_names, name=node.name, **attr)
+                op_type, input_names, output_names, name=node.name, **attr
+            )
             onnx_nodes.append(onnx_node)
         except Exception as ex:
             logger.error("pass1 convert failed for %s, ex=%s", node, ex)
@@ -173,17 +173,28 @@ def oneflow_onnx_mapping(g, ops_mapping):
         func, onnx_op, kwargs = map_info
         if onnx_op is not None:
             node.type = onnx_op
+        if len(node.input) > 1:
+            assert kwargs and kwargs.get("flow_inputs")
+        if len(node.output) > 1:
+            assert kwargs and kwargs.get("flow_outputs")
         if kwargs:
             flow_inputs = kwargs.get("flow_inputs")
             if flow_inputs:
                 for i, ipt in enumerate(flow_inputs):
+                    assert len(g.get_inputs(node, ipt)) == 1
                     node.input[i] = g.get_inputs(node, ipt)[0]
+            flow_outputs = kwargs.get("flow_outputs")
+            if flow_outputs:
+                for i, output in enumerate(flow_outputs):
+                    assert len(g.get_outputs(node, output)) == 1
+                    node.output[i] = g.get_outputs(node, output)[0]
         try:
             func(g, node, **kwargs)
             node.skip_conversion = True
         except Exception as ex:
-            logger.error("Failed to convert node %s\n%s",
-                         node.name, node.summary, exc_info=1)
+            logger.error(
+                "Failed to convert node %s\n%s", node.name, node.summary, exc_info=1
+            )
             exceptions.append(ex)
 
     return mapped_op, unmapped_op, exceptions
@@ -198,17 +209,19 @@ def transpose_inputs(ctx, inputs_as_nchw):
                 shape = ctx.get_shape(output_name)
                 if len(shape) != len(constants.NCHW_TO_NHWC):
                     logger.warning(
-                        "transpose_input for %s: shape must be rank 4, ignored" % output_name)
+                        "transpose_input for %s: shape must be rank 4, ignored"
+                        % output_name
+                    )
                     ops.append(node)
                     continue
                 # insert transpose
                 op_name = util.make_name(node.name)
                 transpose = ctx.insert_new_node_on_output(
-                    "Transpose", output_name, name=op_name)
+                    "Transpose", output_name, name=op_name
+                )
                 transpose.set_attr("perm", constants.NCHW_TO_NHWC)
                 ctx.copy_shape(output_name, transpose.output[0])
-                ctx.set_shape(output_name, np.array(
-                    shape)[constants.NHWC_TO_NCHW])
+                ctx.set_shape(output_name, np.array(shape)[constants.NHWC_TO_NCHW])
                 ops.append(transpose)
                 ops.append(node)
                 continue
@@ -229,25 +242,45 @@ def topological_sort(g, continue_on_error):
 
 
 @oneflow_export("onnx.export")
-def export(job_obj, model_save_dir, continue_on_error=False, target=None,
-           opset=None, extra_opset=None, shape_override=None, inputs_as_nchw=None):
-    assert os.getenv("ENABLE_USER_OP") == 'True'
+def export(
+    job_obj,
+    model_save_dir,
+    continue_on_error=False,
+    target=None,
+    opset=None,
+    extra_opset=None,
+    shape_override=None,
+    inputs_as_nchw=None,
+):
+    assert os.getenv("ENABLE_USER_OP") == "True"
     job_set = c_api_util.GetJobSet()
     job_name = job_obj.__name__
     for job in job_set.job:
         if job.job_conf.job_name == job_name:
             onnx_graph = process_flow_graph(
-                job, model_save_dir, continue_on_error=continue_on_error,
-                opset=opset, extra_opset=extra_opset,
-                shape_override=shape_override, inputs_as_nchw=inputs_as_nchw)
+                job,
+                model_save_dir,
+                continue_on_error=continue_on_error,
+                opset=opset,
+                extra_opset=extra_opset,
+                shape_override=shape_override,
+                inputs_as_nchw=inputs_as_nchw,
+            )
             onnx_graph = optimizer.optimize_graph(onnx_graph)
             model_proto = onnx_graph.make_model(job_name)
             return model_proto
     return None
 
 
-def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
-                       opset=None, extra_opset=None, shape_override=None, inputs_as_nchw=None):
+def process_flow_graph(
+    flow_graph,
+    model_save_dir,
+    continue_on_error=False,
+    opset=None,
+    extra_opset=None,
+    shape_override=None,
+    inputs_as_nchw=None,
+):
     """Convert oneflow graph to onnx graph.
         Args:
             flow_graph: oneflow graph
@@ -263,9 +296,12 @@ def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
     opset = util.find_opset(opset)
     logger.info("Using opset <onnx, %s>", opset)
     if opset > schemas.get_max_supported_opset_version():
-        logger.warning("Currently installed onnx package %s is too low to support opset %s, "
-                       "please upgrade onnx package to avoid potential conversion issue.",
-                       util.get_onnx_version(), opset)
+        logger.warning(
+            "Currently installed onnx package %s is too low to support opset %s, "
+            "please upgrade onnx package to avoid potential conversion issue.",
+            util.get_onnx_version(),
+            opset,
+        )
 
     if shape_override is None:
         shape_override = {}
@@ -273,11 +309,25 @@ def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
         inputs_as_nchw = []
     target = constants.DEFAULT_TARGET
 
-    onnx_nodes, op_cnt, attr_cnt, input_maps, dtypes, output_shapes = oneflow_to_onnx_naive(
-        flow_graph, shape_override)
+    (
+        onnx_nodes,
+        op_cnt,
+        attr_cnt,
+        input_maps,
+        dtypes,
+        output_shapes,
+    ) = oneflow_to_onnx_naive(flow_graph, shape_override)
 
-    g = Graph(onnx_nodes, model_save_dir, output_shapes, dtypes,
-              target, opset, extra_opset, input_maps=input_maps)
+    g = Graph(
+        onnx_nodes,
+        model_save_dir,
+        output_shapes,
+        dtypes,
+        target,
+        opset,
+        extra_opset,
+        input_maps=input_maps,
+    )
 
     # create ops mapping for the desired opsets
     ops_mapping = handler.flow_op.create_mapping(g.opset, g.extra_opset)
@@ -304,6 +354,7 @@ def process_flow_graph(flow_graph, model_save_dir, continue_on_error=False,
         "\toneflow ops: {}\n"
         "\toneflow attr: {}\n"
         "\tonnx mapped: {}\n"
-        "\tonnx unmapped: {}".format(op_cnt, attr_cnt, mapped_op, unmapped_op))
+        "\tonnx unmapped: {}".format(op_cnt, attr_cnt, mapped_op, unmapped_op)
+    )
 
     return g

@@ -18,16 +18,19 @@ logger = logging.getLogger(__name__)
 
 # pylint: disable=unused-argument,missing-docstring
 
-@flow_op(['input', 'return', 'variable'], None)
+
+@flow_op(["input", "return", "variable"], None)
 class DirectOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         pass
 
 
-@flow_op(["distribute_split", "distribute_concat", "distribute_clone", "distribute_add"], 'Identity')
+@flow_op(
+    ["distribute_split", "distribute_concat", "distribute_clone", "distribute_add"],
+    "Identity",
+)
 class BoxingOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         pass
-

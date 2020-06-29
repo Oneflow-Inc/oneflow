@@ -78,13 +78,11 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
             # get_tensor_value is costly so that we check their shape first
             shape_1 = graph.get_shape(node_1.output[0])
             shape_2 = graph.get_shape(node_2.output[0])
-            if shape_1 is not None and shape_2 is not None and \
-                    shape_1 != shape_2:
+            if shape_1 is not None and shape_2 is not None and shape_1 != shape_2:
                 return False
             const_1 = node_1.get_tensor_value(as_list=False)
             const_2 = node_2.get_tensor_value(as_list=False)
-            if const_1.dtype == const_2.dtype and \
-                    np.array_equal(const_1, const_2):
+            if const_1.dtype == const_2.dtype and np.array_equal(const_1, const_2):
                 return True
         else:
             if node_1.attr == node_2.attr:
@@ -99,7 +97,9 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
             # if one of the output is graph's output then it can't be deleted
             if set(node_to_delete.output).intersection(set(graph.outputs)):
                 continue
-            for old_input, new_input in zip(node_to_delete.output, node_to_retain.output):
+            for old_input, new_input in zip(
+                node_to_delete.output, node_to_retain.output
+            ):
                 graph.replace_all_inputs(graph.get_nodes(), old_input, new_input)
             graph.remove_node(node_to_delete.name)
             self._graph_can_be_optimized = True

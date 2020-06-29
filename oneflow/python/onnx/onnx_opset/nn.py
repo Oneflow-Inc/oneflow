@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 # pylint: disable=unused-argument,missing-docstring,unused-variable
 
+
 def spatial_map(shape, perm):
     new_shape = shape[:]
     for i in perm:
@@ -29,8 +30,14 @@ def spatial_map(shape, perm):
     return new_shape
 
 
-def conv_convert_inputs(ctx, node, with_kernel=False, new_kernel_shape=None,
-                        input_indices=None, output_indices=None):
+def conv_convert_inputs(
+    ctx,
+    node,
+    with_kernel=False,
+    new_kernel_shape=None,
+    input_indices=None,
+    output_indices=None,
+):
     """Convert input and kernel from oneflow to onnx. This maybe require to
         to insert transpose ops for input, kernel and output unless they are constants
         and we can transpose the constant.
@@ -53,15 +60,17 @@ def conv_convert_inputs(ctx, node, with_kernel=False, new_kernel_shape=None,
         # transpose input if needed, no need to record shapes on input
         for idx in input_indices:
             parent = node.inputs[idx]
-            if node.inputs[idx].is_const() and len(ctx.find_output_consumers(node.input[1])) == 1:
+            if (
+                node.inputs[idx].is_const()
+                and len(ctx.find_output_consumers(node.input[1])) == 1
+            ):
                 # if input is a constant, transpose that one if we are the only consumer
                 val = parent.get_tensor_value(as_list=False)
                 parent.set_tensor_value(val.transpose(constants.NHWC_TO_NCHW))
             else:
                 # if input comes from a op, insert transpose op
                 input_name = node.input[idx]
-                transpose = ctx.insert_new_node_on_input(
-                    node, "Transpose", input_name)
+                transpose = ctx.insert_new_node_on_input(node, "Transpose", input_name)
                 transpose.set_attr("perm", constants.NHWC_TO_NCHW)
                 transpose.skip_conversion = True
                 shape = ctx.get_shape(input_name)
@@ -76,15 +85,13 @@ def conv_convert_inputs(ctx, node, with_kernel=False, new_kernel_shape=None,
             if ctx.opset < 5:
                 # old reshape takes new shape as attribute
                 input_name = node.input[1]
-                reshape = ctx.insert_new_node_on_input(
-                    node, "Reshape", input_name)
+                reshape = ctx.insert_new_node_on_input(node, "Reshape", input_name)
                 reshape.set_attr("shape", new_kernel_shape)
                 reshape.skip_conversion = True
             else:
                 # new reshape takes new shape as input[1]
                 shape_name = util.make_name(node.name)
-                ctx.make_const(shape_name, np.array(
-                    new_kernel_shape, dtype=np.int64))
+                ctx.make_const(shape_name, np.array(new_kernel_shape, dtype=np.int64))
                 input_name = node.input[1]
                 reshape = ctx.make_node("Reshape", [input_name, shape_name])
                 ctx.replace_input(node, input_name, reshape.output[0])
@@ -99,20 +106,18 @@ def conv_convert_inputs(ctx, node, with_kernel=False, new_kernel_shape=None,
                 consumers = ctx.find_output_consumers(node.input[1])
                 if len(consumers) == 1:
                     val = parent.get_tensor_value(as_list=False)
-                    import pdb
-                    pdb.set_trace()
                     val = val.transpose(constants.NHWC_TO_NCHW)
                     parent.set_tensor_value(val)
                     need_transpose = False
 
             if need_transpose:
                 input_name = node.input[1]
-                transpose = ctx.insert_new_node_on_input(
-                    node, "Transpose", input_name)
+                transpose = ctx.insert_new_node_on_input(node, "Transpose", input_name)
                 transpose.set_attr("perm", constants.NHWC_TO_NCHW)
                 transpose.skip_conversion = True
-                new_shape = spatial_map(ctx.get_shape(
-                    input_name), constants.NHWC_TO_NCHW)
+                new_shape = spatial_map(
+                    ctx.get_shape(input_name), constants.NHWC_TO_NCHW
+                )
                 ctx.set_shape(transpose.output[0], new_shape)
 
     # transpose outputs if needed
@@ -122,14 +127,16 @@ def conv_convert_inputs(ctx, node, with_kernel=False, new_kernel_shape=None,
             output_shape = ctx.get_shape(node.output[idx])
             op_name = util.make_name(node.name)
             transpose = ctx.insert_new_node_on_output(
-                "Transpose", output_name, name=op_name)
+                "Transpose", output_name, name=op_name
+            )
             transpose.set_attr("perm", constants.NCHW_TO_NHWC)
             transpose.skip_conversion = True
             # set NHWC shape to transpose node output
             ctx.set_shape(transpose.output[0], output_shape)
             # Transpose NHWC shape back to NCHW shape for current ONNX conv node output
-            ctx.set_shape(output_name, spatial_map(
-                output_shape, constants.NHWC_TO_NCHW))
+            ctx.set_shape(
+                output_name, spatial_map(output_shape, constants.NHWC_TO_NCHW)
+            )
         node.data_format = "NCHW"
 
 
@@ -139,30 +146,43 @@ def add_padding(ctx, node, kernel_shape, strides, dilations=None, spatial=2):
         if dilations is None:
             dilations = [1] * spatial * 2
         padding = padding.s.decode("utf-8")
-        if padding == 'same':
+        if padding == "same":
             pads = [0] * spatial * 2
             input_shape = ctx.get_shape(node.input[0])
             output_shape = ctx.get_shape(node.output[0])
             # check if the input shape is valid
             if len(input_shape) != len(pads):
-                logger.error("node %s input needs to be rank %d, is %d",
-                             node.name, len(pads), len(input_shape))
+                logger.error(
+                    "node %s input needs to be rank %d, is %d",
+                    node.name,
+                    len(pads),
+                    len(input_shape),
+                )
             # transpose shape to nchw
             if node.is_nhwc():
                 input_shape = spatial_map(input_shape, constants.NHWC_TO_NCHW)
-                output_shape = spatial_map(
-                    output_shape, constants.NHWC_TO_NCHW)
+                output_shape = spatial_map(output_shape, constants.NHWC_TO_NCHW)
             # calculate pads
-            if any(input_shape[i + 2] == -1 or output_shape[i + 2] == -1 for i in range(spatial)):
+            if any(
+                input_shape[i + 2] == -1 or output_shape[i + 2] == -1
+                for i in range(spatial)
+            ):
                 logger.debug(
                     "node %s has unknown dim for pads calculation, fallback to auto_pad: "
                     "input_shape=%s, output_shape=%s",
-                    node.name, input_shape, output_shape)
+                    node.name,
+                    input_shape,
+                    output_shape,
+                )
                 node.set_attr("auto_pad", "SAME_LOWER")
             else:
                 for i in range(spatial):
-                    pad = (output_shape[i + 2] - 1) * strides[i] + dilations[i] * \
-                        (kernel_shape[i] - 1) + 1 - input_shape[i + 2]
+                    pad = (
+                        (output_shape[i + 2] - 1) * strides[i]
+                        + dilations[i] * (kernel_shape[i] - 1)
+                        + 1
+                        - input_shape[i + 2]
+                    )
                     pad = max(pad, 0)
                     # pads[i] = pad // 2
                     # pads[i + spatial] = pad - pad // 2
@@ -170,7 +190,7 @@ def add_padding(ctx, node, kernel_shape, strides, dilations=None, spatial=2):
                     pads[i] = pad - pad // 2
                 node.set_attr("pads", pads)
 
-        elif padding == 'valid':
+        elif padding == "valid":
             pass
         else:
             raise ValueError("invalid padding value: " + padding)
@@ -201,13 +221,13 @@ def conv_kernel_shape(ctx, node, input_idx, spatial=2):
     # if len(kernel_shape) != 2 * spatial:
     #     raise ValueError("kernel rank must be 2* spatial")
     # kernel_shape = kernel_shape[0:spatial]
-    kernel_shape = node.get_attr('kernel_size').ints
+    kernel_shape = node.get_attr("kernel_size").ints
     # import pdb; pdb.set_trace()
     node.set_attr("kernel_shape", kernel_shape)
     return kernel_shape
 
 
-@flow_op(["conv2d"], flow_inputs=['in', 'weight'])
+@flow_op(["conv2d"], flow_inputs=["in", "weight"])
 class ConvOp:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -217,13 +237,11 @@ class ConvOp:
         #                       @AttrType.INTS kernel_shape, @AttrType.INTS pads, @AttrType.INTS strides)
         node.type = "Conv"
         kernel_shape = conv_kernel_shape(ctx, node, 1, spatial=2)
-        node.set_attr('group', node.get_attr_value('groups', 1))
-        node.set_attr('dilations', node.get_attr_value(
-            'dilation_rate', [1, 1]))
+        node.set_attr("group", node.get_attr_value("groups", 1))
+        node.set_attr("dilations", node.get_attr_value("dilation_rate", [1, 1]))
         strides = conv_dims_attr(node, "strides")
         dilations = conv_dims_attr(node, "dilations")
-        add_padding(ctx, node, kernel_shape, strides,
-                    dilations=dilations, spatial=2)
+        add_padding(ctx, node, kernel_shape, strides, dilations=dilations, spatial=2)
         conv_convert_inputs(ctx, node, with_kernel=True)
 
     @classmethod
@@ -274,32 +292,75 @@ class PoolOp:
 class Pad:
     @classmethod
     def version_2(cls, ctx, node, **kwargs):
-        padding_before = node.get_attr_value('padding_before')
-        padding_after = node.get_attr_value('padding_after')
+        padding_before = node.get_attr_value("padding_before")
+        padding_after = node.get_attr_value("padding_after")
         paddings = padding_before + padding_after
-        node.set_attr('pads', paddings)
-        node.set_attr('mode', 'constant')
-        const_val = node.get_attr_value('integral_constant_value') if util.is_integral_onnx_dtype(
-            ctx.get_dtype(node.input[0])) else node.get_attr_value('floating_constant_value')
-        node.set_attr('value', const_val)
+        node.set_attr("pads", paddings)
+        node.set_attr("mode", "constant")
+        const_val = (
+            node.get_attr_value("integral_constant_value")
+            if util.is_integral_onnx_dtype(ctx.get_dtype(node.input[0]))
+            else node.get_attr_value("floating_constant_value")
+        )
+        node.set_attr("value", const_val)
 
     @classmethod
     def version_11(cls, ctx, node, **kwargs):
-        node.set_attr('mode', 'constant')
-        padding_before = node.get_attr_value('padding_before')
-        padding_after = node.get_attr_value('padding_after')
+        node.set_attr("mode", "constant")
+        padding_before = node.get_attr_value("padding_before")
+        padding_after = node.get_attr_value("padding_after")
         paddings = np.array(padding_before + padding_after).astype(np.int64)
-        padding_node = ctx.make_const(util.make_name('const'), paddings)
+        padding_node = ctx.make_const(util.make_name("const"), paddings)
         node.input.append(padding_node.output[0])
         dtype = ctx.get_dtype(node.input[0])
-        const_val = node.get_attr_value('integral_constant_value') if util.is_integral_onnx_dtype(
-            dtype) else node.get_attr_value('floating_constant_value')
+        const_val = (
+            node.get_attr_value("integral_constant_value")
+            if util.is_integral_onnx_dtype(dtype)
+            else node.get_attr_value("floating_constant_value")
+        )
         const_val = np.array(const_val).astype(util.map_onnx_to_numpy_type(dtype))
-        const_val_node = ctx.make_const(util.make_name('const'), const_val)
+        const_val_node = ctx.make_const(util.make_name("const"), const_val)
         node.input.append(const_val_node.output[0])
 
 
-@flow_op(['normalization'], flow_inputs=['x', 'gamma', 'beta', 'moving_mean', 'moving_variance'])
+@flow_op(
+    ["layer_norm"],
+    flow_inputs=["x", "gamma", "beta"],
+    flow_outputs=["y", "mean", "inv_variance"],
+)
+class BatchNorm:
+    @classmethod
+    def version_6(cls, ctx, node, **kwargs):
+        node.type = "BatchNormalization"
+        shape1 = ctx.get_shape(node.input[0])
+        shape1_name = util.make_name(node.name)
+        begin_norm_axis = node.get_attr_value("begin_norm_axis")
+        shape2 = np.reshape(
+            shape1,
+            (
+                1,
+                np.prod(shape1[:begin_norm_axis], 1, np.prod(shape1[begin_norm_axis:])),
+            ),
+        )
+        shape2_name = util.make_name(node.name)
+        reshape1_name = util.make_name(node.name)
+        reshape2_name = util.make_name(node.name)
+        ctx.make_const(shape1_name, np.array(shape1, dtype=np.int64))
+        ctx.make_const(shape2_name, np.array(shape2, dtype=np.int64))
+        ctx.insert_new_node_on_input(node, "Reshape", [node.input[0], shape2_name])
+        reshape2 = ctx.insert_new_node_on_output("Reshape", node.output[0], reshape2)
+        reshape2.input.append(shape1_name)
+
+    @classmethod
+    def version_9(cls, ctx, node, **kwargs):
+        # is_test was removed - no change for us
+        cls.version_6(ctx, node, **kwargs)
+
+
+@flow_op(
+    ["normalization"],
+    flow_inputs=["x", "gamma", "beta", "moving_mean", "moving_variance"],
+)
 class BatchNorm:
     @classmethod
     def version_6(cls, ctx, node, **kwargs):
@@ -311,11 +372,13 @@ class BatchNorm:
         # output: y, mean, var, savedmean, savedvar,
         # detach unused outputs. While we could let the unused outputs dangle,
         # some runtimes like pytorch/caffe2 do complain about it.
-        if node.get_attr_value('training') or node.get_attr_value('trainable'):
+        if node.get_attr_value("training") or node.get_attr_value("trainable"):
             raise NotImplementedError(
-                "We only support inference mode ONNX BatchNormalization now")
-        consumers = [ctx.find_output_consumers(
-            output_name) for output_name in node.output[1:]]
+                "We only support inference mode ONNX BatchNormalization now"
+            )
+        consumers = [
+            ctx.find_output_consumers(output_name) for output_name in node.output[1:]
+        ]
         if not any(consumers):
             new_output = [node.output[0]]
             node.output = new_output
@@ -328,15 +391,19 @@ class BatchNorm:
         val_type = util.map_onnx_to_numpy_type(ctx.get_dtype(node.input[1]))
 
         if mean_shape != scale_shape:
-            new_mean_value = np.array(np.resize(node.inputs[3].get_tensor_value(as_list=False), scale_shape),
-                                      dtype=val_type)
+            new_mean_value = np.array(
+                np.resize(node.inputs[3].get_tensor_value(as_list=False), scale_shape),
+                dtype=val_type,
+            )
             new_mean_node_name = util.make_name(node.name)
             ctx.make_const(new_mean_node_name, new_mean_value)
             node.input[3] = new_mean_node_name
 
         if var_shape != scale_shape:
-            new_var_value = np.array(np.resize(node.inputs[4].get_tensor_value(as_list=False), scale_shape),
-                                     dtype=val_type)
+            new_var_value = np.array(
+                np.resize(node.inputs[4].get_tensor_value(as_list=False), scale_shape),
+                dtype=val_type,
+            )
             new_val_node_name = util.make_name(node.name)
             ctx.make_const(new_val_node_name, new_var_value)
             node.input[4] = new_val_node_name
@@ -345,4 +412,3 @@ class BatchNorm:
     def version_9(cls, ctx, node, **kwargs):
         # is_test was removed - no change for us
         cls.version_6(ctx, node, **kwargs)
-

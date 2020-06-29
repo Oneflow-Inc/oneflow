@@ -45,7 +45,9 @@ class IdentityOptimizer(GraphOptimizerBase):
 
     @staticmethod
     def _handle_non_graph_output_identity(graph, identity):
-        graph.replace_all_inputs(graph.get_nodes(), identity.output[0], identity.input[0])
+        graph.replace_all_inputs(
+            graph.get_nodes(), identity.output[0], identity.input[0]
+        )
         graph.remove_node(identity.name)
         return True
 

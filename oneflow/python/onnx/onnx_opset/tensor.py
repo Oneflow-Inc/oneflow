@@ -55,13 +55,15 @@ def _wrap_concat_with_cast(ctx, node):
         # cast output back to dtype unless the next op is a cast
         if next_nodes[0].type != "Cast":
             op_name = util.make_name(node.name)
-            output_cast = ctx.insert_new_node_on_output("Cast", output_name, name=op_name)
+            output_cast = ctx.insert_new_node_on_output(
+                "Cast", output_name, name=op_name
+            )
             output_cast.set_attr("to", dtype)
             ctx.set_dtype(output_cast.output[0], dtype)
             ctx.copy_shape(output_name, output_cast.output[0])
 
 
-@flow_op("reshape", 'Reshape')
+@flow_op("reshape", "Reshape")
 class Reshape:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -80,10 +82,14 @@ class Reshape:
     @classmethod
     def version_5(cls, ctx, node, **kwargs):
         dtype = ctx.get_dtype(node.output[0])
-        need_casting = dtype in [onnx_pb.TensorProto.INT32,
-                                 onnx_pb.TensorProto.INT16,
-                                 onnx_pb.TensorProto.INT64]
-        shape_node = ctx.make_const(util.make_name("shape"), np.array(node.get_attr_value('shape')))
+        need_casting = dtype in [
+            onnx_pb.TensorProto.INT32,
+            onnx_pb.TensorProto.INT16,
+            onnx_pb.TensorProto.INT64,
+        ]
+        shape_node = ctx.make_const(
+            util.make_name("shape"), np.array(node.get_attr_value("shape"))
+        )
         node.input = node.input + [shape_node.name]
         if ctx.opset >= 8 or not need_casting:
             # onnx reshape can handle the type - done
@@ -98,13 +104,15 @@ class Reshape:
         next_nodes = ctx.find_output_consumers(node.output[0])
         if len(next_nodes) != 1 or next_nodes[0].type != "Cast":
             op_name = util.make_name(node.name)
-            output_cast = ctx.insert_new_node_on_output("Cast", node.output[0], name=op_name)
+            output_cast = ctx.insert_new_node_on_output(
+                "Cast", node.output[0], name=op_name
+            )
             output_cast.set_attr("to", dtype)
             ctx.set_dtype(output_cast.output[0], dtype)
             ctx.copy_shape(node.output[0], output_cast.output[0])
 
 
-@flow_op("squeeze", 'Squeeze')
+@flow_op("squeeze", "Squeeze")
 class Squeeze:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -126,7 +134,7 @@ class Squeeze:
         cls.version_1(ctx, node, **kwargs)
 
 
-@flow_op("transpose", onnx_op='Transpose')
+@flow_op("transpose", onnx_op="Transpose")
 class Transpose:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -146,12 +154,12 @@ class Transpose:
             pass
 
 
-@flow_op('concat', "Concat")
+@flow_op("concat", "Concat")
 class Concat:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         # old concat op has axis as input[0]
-        axis_val = node.get_attr_value('axis')
+        axis_val = node.get_attr_value("axis")
 
         if axis_val < 0:
             input_shape = ctx.get_shape(node.input[0])
@@ -192,16 +200,20 @@ def _make_gathernd_inner_loop(ctx, params, index, dtype):
 
     index_i = g.make_node("Gather", [index.output[0], trip_name], attr={"axis": 0})
     gather = g.make_node("Gather", [cur_name, index_i.output[0]], attr={"axis": 0})
-    g.make_node("Squeeze", [gather.output[0]], attr={"axes": [0]}, outputs=[result_name])
+    g.make_node(
+        "Squeeze", [gather.output[0]], attr={"axes": [0]}, outputs=[result_name]
+    )
     g.make_node("Identity", [cond_name], outputs=[cond_out_name])
 
     g.add_graph_output(cond_out_name, TensorProto.BOOL, [])
     g.add_graph_output(result_name, dtype, [])
 
-    inner_loop = ctx.make_node("Loop", [trip_node.output[0],
-                                        cond_const.output[0],
-                                        params],
-                               op_name_scope=scope_name, skip_conversion=False)
+    inner_loop = ctx.make_node(
+        "Loop",
+        [trip_node.output[0], cond_const.output[0], params],
+        op_name_scope=scope_name,
+        skip_conversion=False,
+    )
     inner_loop.set_body_graph_as_attr("body", g)
     return inner_loop
 
@@ -216,13 +228,15 @@ def make_gathernd(ctx, params, indices, output, scope_name, t_params, shapes, dt
     attr = {"axes": [0], "ends": [sys.maxsize], "starts": [-1]}
     inputs_map = {"data": indices_shape.output[0], **attr}
     inner_shape = GraphBuilder(ctx).make_slice(inputs_map, dtypes=[TensorProto.INT64])
-    outter_shape = ctx.make_node("Div",
-                                 [indices_size.output[0], inner_shape],
-                                 dtypes=[TensorProto.INT64])
-    flatten_shape = ctx.make_node("Concat",
-                                  [outter_shape.output[0], inner_shape],
-                                  attr={"axis": 0},
-                                  dtypes=[TensorProto.INT64])
+    outter_shape = ctx.make_node(
+        "Div", [indices_size.output[0], inner_shape], dtypes=[TensorProto.INT64]
+    )
+    flatten_shape = ctx.make_node(
+        "Concat",
+        [outter_shape.output[0], inner_shape],
+        attr={"axis": 0},
+        dtypes=[TensorProto.INT64],
+    )
     flatten_indices = ctx.make_node("Reshape", [indices, flatten_shape.output[0]])
 
     # outter loop for each index
@@ -244,7 +258,9 @@ def make_gathernd(ctx, params, indices, output, scope_name, t_params, shapes, dt
     g.add_graph_input(dummy_name, t_params, [])
     g.parent_graph = ctx
 
-    index = g.make_node("Gather", [flatten_indices.output[0], trip_name], attr={"axis": 0})
+    index = g.make_node(
+        "Gather", [flatten_indices.output[0], trip_name], attr={"axis": 0}
+    )
     index_squeeze = g.make_node("Squeeze", [index.output[0]], attr={"axes": [0]})
     # inner loop to gather result
     inner_loop = _make_gathernd_inner_loop(g, params, index_squeeze, t_params)
@@ -256,42 +272,57 @@ def make_gathernd(ctx, params, indices, output, scope_name, t_params, shapes, dt
     g.add_graph_output(dummy_out_name, t_params, [])
     g.add_graph_output(result_name, t_params, [])
 
-    gathernd_loop = ctx.make_node("Loop",
-                                  [outter_shape.output[0], cond_const.output[0], params],
-                                  output_count=2,
-                                  op_name_scope=scope_name, skip_conversion=False)
+    gathernd_loop = ctx.make_node(
+        "Loop",
+        [outter_shape.output[0], cond_const.output[0], params],
+        output_count=2,
+        op_name_scope=scope_name,
+        skip_conversion=False,
+    )
     gathernd_loop.set_body_graph_as_attr("body", g)
 
     # reshape to target shape
     # output shape of gathernd: indices.shape[:-1] + gathernd_output.shape[1:]
-    inner_loop_shape = ctx.make_node("Shape", [gathernd_loop.output[1]], dtypes=[TensorProto.INT64])
+    inner_loop_shape = ctx.make_node(
+        "Shape", [gathernd_loop.output[1]], dtypes=[TensorProto.INT64]
+    )
     # workaround in case gathernd_loop is 1-dimensional
     one_const = ctx.make_const(util.make_name("one"), np.array([1], dtype=np.int64))
-    inner_loop_shape_ = ctx.make_node("Concat",
-                                      [inner_loop_shape.output[0], one_const.output[0]],
-                                      attr={"axis": 0},
-                                      dtypes=[TensorProto.INT64])
+    inner_loop_shape_ = ctx.make_node(
+        "Concat",
+        [inner_loop_shape.output[0], one_const.output[0]],
+        attr={"axis": 0},
+        dtypes=[TensorProto.INT64],
+    )
     attr = {"axes": [0], "ends": [sys.maxsize], "starts": [1]}
     inputs_map = {"data": inner_loop_shape_.output[0], **attr}
-    output_inner_shape = GraphBuilder(ctx).make_slice(inputs_map, dtypes=[TensorProto.INT64])
+    output_inner_shape = GraphBuilder(ctx).make_slice(
+        inputs_map, dtypes=[TensorProto.INT64]
+    )
     attr = {"axes": [0], "ends": [-1], "starts": [0]}
     inputs_map = {"data": indices_shape.output[0], **attr}
-    indices_outter_shape = GraphBuilder(ctx).make_slice(inputs_map, dtypes=[TensorProto.INT64])
-    output_shape_ = ctx.make_node("Concat",
-                                  [indices_outter_shape, output_inner_shape],
-                                  attr={"axis": 0},
-                                  dtypes=[TensorProto.INT64])
+    indices_outter_shape = GraphBuilder(ctx).make_slice(
+        inputs_map, dtypes=[TensorProto.INT64]
+    )
+    output_shape_ = ctx.make_node(
+        "Concat",
+        [indices_outter_shape, output_inner_shape],
+        attr={"axis": 0},
+        dtypes=[TensorProto.INT64],
+    )
     attr = {"axes": [0], "ends": [-1], "starts": [0]}
     inputs_map = {"data": output_shape_.output[0], **attr}
     output_shape = GraphBuilder(ctx).make_slice(inputs_map, dtypes=[TensorProto.INT64])
-    ctx.make_node("Reshape",
-                  [gathernd_loop.output[1], output_shape],
-                  outputs=[output],
-                  shapes=shapes,
-                  dtypes=dtypes)
+    ctx.make_node(
+        "Reshape",
+        [gathernd_loop.output[1], output_shape],
+        outputs=[output],
+        shapes=shapes,
+        dtypes=dtypes,
+    )
 
 
-@flow_op("gather_nd", onnx_op="GatherND", flow_inputs=['params', 'indices'])
+@flow_op("gather_nd", onnx_op="GatherND", flow_inputs=["params", "indices"])
 class GatherND:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -313,12 +344,14 @@ class GatherND:
         input1 = node.input[1]
         target_dtype = TensorProto.INT64
         if ctx.get_dtype(input1) != TensorProto.INT64:
-            inp_cast = ctx.insert_new_node_on_input(node, "Cast", input1, to=target_dtype)
+            inp_cast = ctx.insert_new_node_on_input(
+                node, "Cast", input1, to=target_dtype
+            )
             ctx.copy_shape(input1, inp_cast.output[0])
             ctx.set_dtype(inp_cast.output[0], target_dtype)
 
 
-@flow_op("cast", 'Cast')
+@flow_op("cast", "Cast")
 class Cast:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -338,7 +371,7 @@ class Cast:
         cls.version_6(ctx, node, **kwargs)
 
 
-@flow_op('identity', 'Identity')
+@flow_op("identity", "Identity")
 class Identity:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):

@@ -48,20 +48,28 @@ class LoopOptimizer(GraphOptimizerBase):
         body_graph = loop_node.get_body_graphs()["body"]
         parent_graph = loop_node.graph
         scan_nodes_name_in_body, scan_node_in_parent = self._scan_outputs(loop_node)
-        scan_nodes = [body_graph.get_node_by_output(name) for name in scan_nodes_name_in_body]
+        scan_nodes = [
+            body_graph.get_node_by_output(name) for name in scan_nodes_name_in_body
+        ]
         graph_is_changed = False
         for node, name_in_parent in zip(scan_nodes, scan_node_in_parent):
             # 1 delete node in body graph if possible
             # only consider two case: trans is output, or transpose > identity > output
             need_process = False
-            if node.type == "Transpose" and self.consumer_nodes_num(body_graph, node) <= 1:
+            if (
+                node.type == "Transpose"
+                and self.consumer_nodes_num(body_graph, node) <= 1
+            ):
                 trans = node
                 new_output = node.input[0]
                 body_graph.remove_node(node.name)
                 need_process = True
-            elif node.type == "Identity" and node.inputs[0].type == "Transpose" \
-                    and self.consumer_nodes_num(body_graph, node) <= 1\
-                    and self.consumer_nodes_num(body_graph, node.inputs[0]) <= 1:
+            elif (
+                node.type == "Identity"
+                and node.inputs[0].type == "Transpose"
+                and self.consumer_nodes_num(body_graph, node) <= 1
+                and self.consumer_nodes_num(body_graph, node.inputs[0]) <= 1
+            ):
                 trans = node.inputs[0]
                 new_output = node.inputs[0].input[0]
                 body_graph.remove_node(node.inputs[0].name)
@@ -74,9 +82,13 @@ class LoopOptimizer(GraphOptimizerBase):
                 body_outputs[body_outputs.index(node.output[0])] = new_output
                 # 3 insert new node in parent graph
                 ori_perm = list(trans.get_attr("perm").ints)
-                new_perm = [0] + [i + 1 for i in ori_perm]  # body output's rank is m > rank of loop's output is m+1
+                new_perm = [0] + [
+                    i + 1 for i in ori_perm
+                ]  # body output's rank is m > rank of loop's output is m+1
                 name = make_name("trans_moved_from_loop_body")
-                _ = parent_graph.insert_new_node_on_output("Transpose", name_in_parent, name, perm=new_perm)
+                _ = parent_graph.insert_new_node_on_output(
+                    "Transpose", name_in_parent, name, perm=new_perm
+                )
                 graph_is_changed = True
 
         return graph_is_changed
@@ -87,4 +99,4 @@ class LoopOptimizer(GraphOptimizerBase):
         # loop's body graph has 1+N+K outputs
         loop_carried = len(loop.input) - 2
         body_graph = loop.get_body_graphs()["body"]
-        return body_graph.outputs[loop_carried + 1:], loop.output[loop_carried:]
+        return body_graph.outputs[loop_carried + 1 :], loop.output[loop_carried:]

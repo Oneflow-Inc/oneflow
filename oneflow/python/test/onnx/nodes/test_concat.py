@@ -10,8 +10,16 @@ def test_concat_axis0(test_case):
     def concat():
         variables = []
         for i in range(4):
-            variables.append(flow.get_variable(name=str(i), shape=(2, 3), dtype=flow.float, initializer=flow.random_uniform_initializer()))
+            variables.append(
+                flow.get_variable(
+                    name=str(i),
+                    shape=(2, 3),
+                    dtype=flow.float,
+                    initializer=flow.random_uniform_initializer(),
+                )
+            )
         return flow.concat(variables, axis=0)
+
     convert_to_onnx_and_check(concat)
 
 
@@ -20,7 +28,14 @@ def test_concat_axis1(test_case):
     def concat():
         variables = []
         for i in range(4):
-            variables.append(flow.get_variable(name=str(i), shape=(2, 3), dtype=flow.float, initializer=flow.random_uniform_initializer()))
+            variables.append(
+                flow.get_variable(
+                    name=str(i),
+                    shape=(2, 3),
+                    dtype=flow.float,
+                    initializer=flow.random_uniform_initializer(),
+                )
+            )
         return flow.concat(variables, axis=1)
-    convert_to_onnx_and_check(concat)
 
+    convert_to_onnx_and_check(concat)

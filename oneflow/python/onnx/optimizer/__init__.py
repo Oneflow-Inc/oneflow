@@ -18,17 +18,19 @@ from .back_to_back_optimizer import BackToBackOptimizer
 import logging
 
 # optimizer sequence need to be considered carefully
-_optimizers = OrderedDict([
-    # FIXME(daquexian): transpose optimizer fails test_conv.test_conv2d_k3s1_nhwc_valid test
-    ("optimize_transpose", TransposeOptimizer),
-    ("fold_constants", ConstFoldOptimizer),
-    ("loop_optimizer", LoopOptimizer),
-    # merge_duplication should be used after optimize_transpose
-    # for optimize_transpose may have some trans nodes that can be merge
-    ("merge_duplication", MergeDuplicatedNodesOptimizer),
-    ("remove_identity", IdentityOptimizer),
-    ("remove_back_to_back", BackToBackOptimizer),
-])
+_optimizers = OrderedDict(
+    [
+        # FIXME(daquexian): transpose optimizer fails test_conv.test_conv2d_k3s1_nhwc_valid test
+        ("optimize_transpose", TransposeOptimizer),
+        ("fold_constants", ConstFoldOptimizer),
+        ("loop_optimizer", LoopOptimizer),
+        # merge_duplication should be used after optimize_transpose
+        # for optimize_transpose may have some trans nodes that can be merge
+        ("merge_duplication", MergeDuplicatedNodesOptimizer),
+        ("remove_identity", IdentityOptimizer),
+        ("remove_back_to_back", BackToBackOptimizer),
+    ]
+)
 
 
 def _get_optimizers():
@@ -65,8 +67,13 @@ def optimize_graph(graph):
     after = graph.dump_node_statistics()
     diff = copy.deepcopy(after)
     diff.subtract(before)
-    diff = ["{} {} ({}->{})".format(k, str(v) if v < 0 else '+' + str(v), before.get(k, 0), after.get(k, 0))
-            for k, v in sorted(diff.items()) if v != 0]
-    logger.info("After optimization: %s", ', '.join(diff) if diff else "no change")
+    diff = [
+        "{} {} ({}->{})".format(
+            k, str(v) if v < 0 else "+" + str(v), before.get(k, 0), after.get(k, 0)
+        )
+        for k, v in sorted(diff.items())
+        if v != 0
+    ]
+    logger.info("After optimization: %s", ", ".join(diff) if diff else "no change")
 
     return graph

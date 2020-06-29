@@ -9,6 +9,7 @@ def generate_reduction_test(flow_op, *args, **kwargs):
     @flow.function(func_config)
     def job(x=flow.FixedTensorDef((3, 5, 4))):
         return flow_op(x, *args, **kwargs)
+
     convert_to_onnx_and_check(job)
 
 
@@ -58,4 +59,3 @@ def test_reduce_min_axis_12(test_case):
 
 def test_reduce_min_axis_12_keepdim(test_case):
     generate_reduction_test(flow.math.reduce_min, axis=[1, 2], keepdims=True)
-

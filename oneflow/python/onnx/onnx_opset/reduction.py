@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 # pylint: disable=unused-argument,missing-docstring
 
+
 @flow_op("reduce_min", onnx_op="ReduceMin")
 # reduce_max is not user op
 # @flow_op("reduce_max", onnx_op="ReduceMax")
@@ -30,11 +31,13 @@ logger = logging.getLogger(__name__)
 class ReduceOpBase:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
-        axes = node.get_attr_value('axis')
+        axes = node.get_attr_value("axis")
         input_shape = ctx.get_shape(node.input[0])
         if input_shape is None:
             if any([val < 0 for val in axes]):
-                raise ValueError("reduce_op: cannot have negative axis because we don't know input rank")
+                raise ValueError(
+                    "reduce_op: cannot have negative axis because we don't know input rank"
+                )
         else:
             input_rank = len(ctx.get_shape(node.input[0]))
             axes = [val + input_rank if val < 0 else val for val in axes]
@@ -44,7 +47,7 @@ class ReduceOpBase:
             node.set_attr("axes", axes)
         keep_dims = node.get_attr("keepdims")
         if keep_dims:
-            del node.attr['keepdims']
+            del node.attr["keepdims"]
             node.set_attr("keepdims", keep_dims.i)
 
     @classmethod
@@ -53,7 +56,7 @@ class ReduceOpBase:
         cls.version_1(ctx, node, **kwargs)
 
 
-@flow_op(['argmax', 'argmin'], ["ArgMax", "ArgMin"])
+@flow_op(["argmax", "argmin"], ["ArgMax", "ArgMin"])
 class ArgMax:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
@@ -68,8 +71,9 @@ class ArgMax:
             # current node will return int64 after conversion, which differs from previous dtype got from oneflow
             ctx.set_dtype(node.output[0], onnx_pb.TensorProto.INT64)
             op_name = util.make_name("Cast")
-            cast_node = ctx.insert_new_node_on_output("Cast", node.output[0], name=op_name,
-                                                      to=onnx_pb.TensorProto.INT32)
+            cast_node = ctx.insert_new_node_on_output(
+                "Cast", node.output[0], name=op_name, to=onnx_pb.TensorProto.INT32
+            )
             ctx.set_dtype(cast_node.output[0], onnx_pb.TensorProto.INT32)
             ctx.copy_shape(node.output[0], cast_node.output[0])
 
@@ -81,4 +85,3 @@ class ArgMax:
     def version_11(cls, ctx, node, **kwargs):
         # Opset 11 supports negative axis, but core logic same
         cls.version_1(ctx, node, **kwargs)
-
