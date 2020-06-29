@@ -105,15 +105,9 @@ class TensorBuffer {
 
   void Swap(TensorBuffer* lhs) {
     data_.swap(lhs->data_);
-    Shape tmp_shape = shape_;
-    DataType tmp_data_type = data_type_;
-    size_t tmp_num_bytes_ = num_bytes_;
-    shape_ = lhs->shape_;
-    data_type_ = lhs->data_type_;
-    num_bytes_ = lhs->num_bytes_;
-    lhs->shape_ = tmp_shape;
-    lhs->data_type_ = tmp_data_type;
-    lhs->num_bytes_ = tmp_num_bytes_;
+    std::swap(num_bytes_, lhs->num_bytes_);
+    std::swap(shape_, lhs->shape_);
+    std::swap(data_type_, lhs->data_type_);
   }
 
  private:
