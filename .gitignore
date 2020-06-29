@@ -5,3 +5,4 @@
 *plan
 core.*
 *.pyc
+manylinux*/

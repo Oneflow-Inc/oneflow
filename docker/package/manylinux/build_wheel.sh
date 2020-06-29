@@ -41,7 +41,7 @@ if [[ $SKIP_THIRD_PARTY != 1 ]]; then
     cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release \
         -DTHIRD_PARTY_DIR=`pwd`   \
         $ONEFLOW_SRC_DIR
-    make -j`nproc`
+    make -j
 
     popd
 fi
@@ -62,6 +62,7 @@ do
     cmake -DTHIRD_PARTY=OFF         \
         -DPython3_ROOT_DIR=$PY_ROOT \
         -DCMAKE_BUILD_TYPE=Release  \
+        -DPY3=ON  \
         -DTHIRD_PARTY_DIR=$THIRD_PARTY_BUILD_DIR   \
         $EXTRA_ONEFLOW_CMAKE_ARGS   \
         $ONEFLOW_SRC_DIR

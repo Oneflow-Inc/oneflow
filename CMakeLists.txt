@@ -7,7 +7,7 @@ option(USE_CLANG_FORMAT "" OFF)
 option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
 option(RELEASE_VERSION "" ON)
-option(PY3 "" OFF)
+option(PY3 "" ON)
 
 if(NOT RELEASE_VERSION)
   set(CUDNN_STATIC OFF CACHE BOOL "")
