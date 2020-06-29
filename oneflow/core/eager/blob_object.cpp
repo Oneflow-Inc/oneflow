@@ -1,4 +1,5 @@
 #include "oneflow/core/eager/blob_object.h"
+#include "oneflow/core/vm/allocator.h"
 
 namespace oneflow {
 namespace eager {
