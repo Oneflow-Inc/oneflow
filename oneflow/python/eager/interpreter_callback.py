@@ -1,8 +1,5 @@
 from __future__ import absolute_import
 
-import oneflow.python.eager.vm_util as vm_util
-
-import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb

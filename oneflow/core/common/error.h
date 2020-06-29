@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_COMMON_ERROR_H_
 
 #include <sstream>
+#include <vector>
 #include "oneflow/core/common/error.pb.h"
 
 namespace oneflow {
@@ -21,6 +22,8 @@ class Error final {
   static Error Todo();
   static Error Unimplemented();
   static Error BoxingNotSupported();
+  static Error OpKernelNotFoundError(const std::vector<std::string>& error_msgs);
+  static Error MultipleOpKernelsMatchedError(const std::vector<std::string>& error_msgs);
 
   // gradient
   static Error GradientFunctionNotFound();

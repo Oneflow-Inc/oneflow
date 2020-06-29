@@ -7,12 +7,6 @@ void RegisterForeignCallbackOnlyOnce(oneflow::ForeignCallback* callback, std::st
       error_str);
 }
 
-void RegisterWorkerCallbackOnlyOnce(oneflow::ForeignWorkerCallback* callback,
-                                    std::string* error_str) {
-  return oneflow::RegisterWorkerCallbackOnlyOnce(callback).GetDataAndSerializedErrorProto(
-      error_str);
-}
-
 void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* error_str) {
   return oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndSerializedErrorProto(error_str);
 }

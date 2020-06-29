@@ -13,8 +13,7 @@ for x in dir(dtype):
 del x
 del dtype
 
-import oneflow.python.framework.python_callback as python_callback
-del python_callback
+import oneflow.python.framework.register_python_callback
 
 import traceback
 try:
