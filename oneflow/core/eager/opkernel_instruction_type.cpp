@@ -354,7 +354,7 @@ Maybe<void> OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instr
     JUST(MakeBlob4BnInOp(instruction, args, opkernel_obj, &Blob4BnInOp));
     EagerKernel* eager_kernel = opkernel_obj->mut_kernel();
     const auto& old_state = opkernel_obj->opkernel_state();
-    new_state = eager_kernel->EagerModelForward(old_state, device_ctx, Blob4BnInOp);
+    new_state = eager_kernel->EagerForward(old_state, device_ctx, Blob4BnInOp);
   }
   opkernel_obj->reset_opkernel_state(new_state);
   return Maybe<void>::Ok();
