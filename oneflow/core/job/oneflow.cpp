@@ -687,8 +687,8 @@ void ConnectCriticalSectionEndToReentrantLockEnd(Plan* main_plan,
   reentrant_lock_conf->set_end(GenLogicalBlobName(critical_section_sink_lbi));
 }
 
-Maybe<void> CompileMainJob(Job* main_job, const LogicalBlobId& critical_section_sink_lbi, int64_t job_id,
-                    Plan* main_plan) {
+Maybe<void> CompileMainJob(Job* main_job, const LogicalBlobId& critical_section_sink_lbi,
+                           int64_t job_id, Plan* main_plan) {
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   {
     auto scope = std::make_unique<GlobalJobDescScope>(main_job->job_conf(), job_id);
@@ -948,7 +948,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
 
 Oneflow::Oneflow(const oneflow::JobSet& job_set) {
   // Runtime
-  CompileAndMergePlanOnMaster(job_set.job(), &plan_);
+  CHECK_JUST(CompileAndMergePlanOnMaster(job_set.job(), &plan_));
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_));
   }
