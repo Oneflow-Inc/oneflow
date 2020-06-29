@@ -22,7 +22,7 @@ HashMap<std::string, std::vector<KernelRegistrationVal>>* MutKernelRegistry() {
 std::string GetErrorMsgOfSearchedOp(const KernelRegContext& ctx) {
   const auto& op_conf = ctx.user_op_conf();
   std::stringstream ss;
-  ss << " The info of Op node are "
+  ss << " The Info of OperatorConf are "
      << "\n op_name: " << op_conf.op_name() << "\n op_type_name: " << op_conf.op_type_name()
      << "\n DeviceType_Name: " << DeviceType_Name(ctx.device_type());
   for (const auto& pair : ctx.inputs()) {
