@@ -33,22 +33,25 @@ import os.path
 logger = logging.getLogger(__name__)
 
 
-def flowlist_to_onnx(node_list, shape_override):
+def oneflow_to_onnx_naive(graph, shape_override):
     """
-    Convert the oneflow-node list into an onnx graph with minimal rewrites so
+    Convert node from oneflow format to onnx format.
+    Convert the oneflow nodes into an onnx graph with minimal rewrites so
     we can use the onnx graph as intermediate graph.
+    The input/output/attr of each node are kept here and will be converted in other
+    following functions.
     """
+    dtypes = {}
+    for lbn in graph.helper.lbn2logical_blob_desc:
+        lbd = graph.helper.lbn2logical_blob_desc[lbn]
+        if lbn not in shape_override:
+            shape_override[lbn] = list(lbd.body.shape.dim)
+        dtypes[lbn] = util.map_flow_dtype(lbd.body.data_type)
 
     # some stats
     op_cnt = collections.Counter()
     attr_cnt = collections.Counter()
     onnx_nodes = []
-    output_shapes = {}
-    dtypes = {}
-    input_maps = {}
-
-    # find outputs
-    ops = node_list
 
     def is_user_op(node):
         return node.WhichOneof("op_type") == "user_conf"
@@ -65,7 +68,19 @@ def flowlist_to_onnx(node_list, shape_override):
 
     def get_inputs(node):
         if is_user_op(node):
-            return list(itertools.chain(*[x.s for x in node.user_conf.input.values()]))
+            ibns = handler.flow_op.ibn4op_type(get_op_type(node))
+            if ibns is None:
+                return list(itertools.chain(*[x.s for x in node.user_conf.input.values()]))
+            ipts = []
+            for ibn in ibns:
+                for key, val in node.user_conf.input.items():
+                    if key == ibn:
+                        assert len(val.s) == 1
+                        ipts.append(val.s[0])
+                        break
+                else:
+                    raise ValueError("ibn {} of node {} (type {}) not found".format(ibn, node.name, get_op_type(node)))
+            return ipts
         else:
             conf = get_op_conf(node)
             # it cannot cover all legacy op but it's enough
@@ -80,8 +95,19 @@ def flowlist_to_onnx(node_list, shape_override):
 
     def get_outputs(node):
         if is_user_op(node):
-            assert all([len(x.s) == 1 for x in node.user_conf.output.values()])
-            outputs = [x.s[0] for x in node.user_conf.output.values()]
+            obns = handler.flow_op.obn4op_type(get_op_type(node))
+            if obns is None:
+                assert all([len(x.s) == 1 for x in node.user_conf.output.values()])
+                return [x.s[0] for x in node.user_conf.output.values()]
+            outputs = []
+            for obn in obns:
+                for key, val in node.user_conf.output.items():
+                    if key == obn:
+                        assert len(val.s) == 1
+                        outputs.append(val.s[0])
+                        break
+                else:
+                    raise ValueError("obn {} of node {} (type {}) not found".format(obn, node.name, get_op_type(node)))
         else:
             conf = get_op_conf(node)
             # it cannot cover all legacy op but it's enough
@@ -96,15 +122,8 @@ def flowlist_to_onnx(node_list, shape_override):
             outputs = ["{}/{}".format(node.name, output) for output in outputs]
         return outputs
 
-    def update_input_maps(node):
-        # keep track of the pair of ibn and lbn to ensure the correct input order in onnx model (see `flow_inputs`)
-        input_maps[node.name] = {}
-        ipts = node.user_conf.input
-        for key in ipts:
-            input_maps[node.name][key] = list(ipts[key].s)
-
     # minimal conversion of attributes
-    for node in ops:
+    for node in graph.net.op:
         attr = {}
 
         op_cnt[get_op_type(node)] += 1
@@ -121,7 +140,6 @@ def flowlist_to_onnx(node_list, shape_override):
             op_type = get_op_type(node)
             input_names = get_inputs(node)
             output_names = get_outputs(node)
-            update_input_maps(node)
             onnx_node = helper.make_node(
                 op_type, input_names, output_names, name=node.name, **attr
             )
@@ -130,22 +148,8 @@ def flowlist_to_onnx(node_list, shape_override):
             logger.error("pass1 convert failed for %s, ex=%s", node, ex)
             raise
 
-    return onnx_nodes, op_cnt, attr_cnt, input_maps
+    return onnx_nodes, op_cnt, attr_cnt, dtypes, shape_override
 
-
-def oneflow_to_onnx_naive(graph, shape_override):
-    """
-    Convert node from oneflow format to onnx format.
-    The input/output/attr of each node are kept here and will be converted in other
-    following functions.
-    """
-    dtypes = {}
-    for lbn in graph.helper.lbn2logical_blob_desc:
-        lbd = graph.helper.lbn2logical_blob_desc[lbn]
-        if lbn not in shape_override:
-            shape_override[lbn] = list(lbd.body.shape.dim)
-        dtypes[lbn] = util.map_flow_dtype(lbd.body.data_type)
-    return flowlist_to_onnx(graph.net.op, shape_override) + (dtypes, shape_override)
 
 
 def oneflow_onnx_mapping(g, ops_mapping):
@@ -173,21 +177,6 @@ def oneflow_onnx_mapping(g, ops_mapping):
         func, onnx_op, kwargs = map_info
         if onnx_op is not None:
             node.type = onnx_op
-        if len(node.input) > 1:
-            assert kwargs and kwargs.get("flow_inputs")
-        if len(node.output) > 1:
-            assert kwargs and kwargs.get("flow_outputs")
-        if kwargs:
-            flow_inputs = kwargs.get("flow_inputs")
-            if flow_inputs:
-                for i, ipt in enumerate(flow_inputs):
-                    assert len(g.get_inputs(node, ipt)) == 1
-                    node.input[i] = g.get_inputs(node, ipt)[0]
-            flow_outputs = kwargs.get("flow_outputs")
-            if flow_outputs:
-                for i, output in enumerate(flow_outputs):
-                    assert len(g.get_outputs(node, output)) == 1
-                    node.output[i] = g.get_outputs(node, output)[0]
         try:
             func(g, node, **kwargs)
             node.skip_conversion = True
@@ -313,7 +302,6 @@ def process_flow_graph(
         onnx_nodes,
         op_cnt,
         attr_cnt,
-        input_maps,
         dtypes,
         output_shapes,
     ) = oneflow_to_onnx_naive(flow_graph, shape_override)
@@ -326,7 +314,6 @@ def process_flow_graph(
         target,
         opset,
         extra_opset,
-        input_maps=input_maps,
     )
 
     # create ops mapping for the desired opsets

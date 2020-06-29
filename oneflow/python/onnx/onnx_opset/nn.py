@@ -70,7 +70,8 @@ def conv_convert_inputs(
             else:
                 # if input comes from a op, insert transpose op
                 input_name = node.input[idx]
-                transpose = ctx.insert_new_node_on_input(node, "Transpose", input_name)
+                transpose = ctx.insert_new_node_on_input(
+                    node, "Transpose", input_name)
                 transpose.set_attr("perm", constants.NHWC_TO_NCHW)
                 transpose.skip_conversion = True
                 shape = ctx.get_shape(input_name)
@@ -85,16 +86,18 @@ def conv_convert_inputs(
             if ctx.opset < 5:
                 # old reshape takes new shape as attribute
                 input_name = node.input[1]
-                reshape = ctx.insert_new_node_on_input(node, "Reshape", input_name)
+                reshape = ctx.insert_new_node_on_input(
+                    node, "Reshape", input_name)
                 reshape.set_attr("shape", new_kernel_shape)
                 reshape.skip_conversion = True
             else:
                 # new reshape takes new shape as input[1]
                 shape_name = util.make_name(node.name)
-                ctx.make_const(shape_name, np.array(new_kernel_shape, dtype=np.int64))
+                ctx.make_const(shape_name, np.array(
+                    new_kernel_shape, dtype=np.int64))
                 input_name = node.input[1]
                 reshape = ctx.make_node("Reshape", [input_name, shape_name])
-                ctx.replace_input(node, input_name, reshape.output[0])
+                ctx.replace_all_inputs(node, input_name, reshape.output[0])
                 reshape.skip_conversion = True
             ctx.set_shape(reshape.output[0], new_kernel_shape)
 
@@ -112,7 +115,8 @@ def conv_convert_inputs(
 
             if need_transpose:
                 input_name = node.input[1]
-                transpose = ctx.insert_new_node_on_input(node, "Transpose", input_name)
+                transpose = ctx.insert_new_node_on_input(
+                    node, "Transpose", input_name)
                 transpose.set_attr("perm", constants.NHWC_TO_NCHW)
                 transpose.skip_conversion = True
                 new_shape = spatial_map(
@@ -161,7 +165,8 @@ def add_padding(ctx, node, kernel_shape, strides, dilations=None, spatial=2):
             # transpose shape to nchw
             if node.is_nhwc():
                 input_shape = spatial_map(input_shape, constants.NHWC_TO_NCHW)
-                output_shape = spatial_map(output_shape, constants.NHWC_TO_NCHW)
+                output_shape = spatial_map(
+                    output_shape, constants.NHWC_TO_NCHW)
             # calculate pads
             if any(
                 input_shape[i + 2] == -1 or output_shape[i + 2] == -1
@@ -222,7 +227,6 @@ def conv_kernel_shape(ctx, node, input_idx, spatial=2):
     #     raise ValueError("kernel rank must be 2* spatial")
     # kernel_shape = kernel_shape[0:spatial]
     kernel_shape = node.get_attr("kernel_size").ints
-    # import pdb; pdb.set_trace()
     node.set_attr("kernel_shape", kernel_shape)
     return kernel_shape
 
@@ -238,10 +242,12 @@ class ConvOp:
         node.type = "Conv"
         kernel_shape = conv_kernel_shape(ctx, node, 1, spatial=2)
         node.set_attr("group", node.get_attr_value("groups", 1))
-        node.set_attr("dilations", node.get_attr_value("dilation_rate", [1, 1]))
+        node.set_attr("dilations", node.get_attr_value(
+            "dilation_rate", [1, 1]))
         strides = conv_dims_attr(node, "strides")
         dilations = conv_dims_attr(node, "dilations")
-        add_padding(ctx, node, kernel_shape, strides, dilations=dilations, spatial=2)
+        add_padding(ctx, node, kernel_shape, strides,
+                    dilations=dilations, spatial=2)
         conv_convert_inputs(ctx, node, with_kernel=True)
 
     @classmethod
@@ -318,43 +324,10 @@ class Pad:
             if util.is_integral_onnx_dtype(dtype)
             else node.get_attr_value("floating_constant_value")
         )
-        const_val = np.array(const_val).astype(util.map_onnx_to_numpy_type(dtype))
+        const_val = np.array(const_val).astype(
+            util.map_onnx_to_numpy_type(dtype))
         const_val_node = ctx.make_const(util.make_name("const"), const_val)
         node.input.append(const_val_node.output[0])
-
-
-@flow_op(
-    ["layer_norm"],
-    flow_inputs=["x", "gamma", "beta"],
-    flow_outputs=["y", "mean", "inv_variance"],
-)
-class BatchNorm:
-    @classmethod
-    def version_6(cls, ctx, node, **kwargs):
-        node.type = "BatchNormalization"
-        shape1 = ctx.get_shape(node.input[0])
-        shape1_name = util.make_name(node.name)
-        begin_norm_axis = node.get_attr_value("begin_norm_axis")
-        shape2 = np.reshape(
-            shape1,
-            (
-                1,
-                np.prod(shape1[:begin_norm_axis], 1, np.prod(shape1[begin_norm_axis:])),
-            ),
-        )
-        shape2_name = util.make_name(node.name)
-        reshape1_name = util.make_name(node.name)
-        reshape2_name = util.make_name(node.name)
-        ctx.make_const(shape1_name, np.array(shape1, dtype=np.int64))
-        ctx.make_const(shape2_name, np.array(shape2, dtype=np.int64))
-        ctx.insert_new_node_on_input(node, "Reshape", [node.input[0], shape2_name])
-        reshape2 = ctx.insert_new_node_on_output("Reshape", node.output[0], reshape2)
-        reshape2.input.append(shape1_name)
-
-    @classmethod
-    def version_9(cls, ctx, node, **kwargs):
-        # is_test was removed - no change for us
-        cls.version_6(ctx, node, **kwargs)
 
 
 @flow_op(
@@ -392,7 +365,8 @@ class BatchNorm:
 
         if mean_shape != scale_shape:
             new_mean_value = np.array(
-                np.resize(node.inputs[3].get_tensor_value(as_list=False), scale_shape),
+                np.resize(node.inputs[3].get_tensor_value(
+                    as_list=False), scale_shape),
                 dtype=val_type,
             )
             new_mean_node_name = util.make_name(node.name)
@@ -401,7 +375,8 @@ class BatchNorm:
 
         if var_shape != scale_shape:
             new_var_value = np.array(
-                np.resize(node.inputs[4].get_tensor_value(as_list=False), scale_shape),
+                np.resize(node.inputs[4].get_tensor_value(
+                    as_list=False), scale_shape),
                 dtype=val_type,
             )
             new_val_node_name = util.make_name(node.name)

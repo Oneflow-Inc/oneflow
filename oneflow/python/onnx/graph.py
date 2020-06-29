@@ -437,7 +437,6 @@ class Graph(object):
         target=None,
         opset=None,
         extra_opset=None,
-        input_maps=None,
     ):
         """Create Graph.
         Args:
@@ -466,7 +465,6 @@ class Graph(object):
 
         self._order_sensitive_inputs = []
         self.outputs = []
-        self._input_maps = input_maps if input_maps is not None else {}
 
         self.parent_graph = None
         self.contained_graphs = {}  # {node_name: {node_attribute_name: Graph}}
@@ -690,9 +688,6 @@ class Graph(object):
 
         self._nodes.remove(node)
         node.graph = None
-
-    def get_inputs(self, node, key):
-        return self._input_maps[node.name][key]
 
     def reset_nodes(self, ops):
         """Reset the graph with node list."""
@@ -1351,6 +1346,8 @@ class Graph(object):
         if old_input == new_input:
             return
 
+        if type(ops) is not list:
+            ops = [ops]
         for node in ops:
             if old_input in node.input and new_input in node.output:
                 raise RuntimeError(
@@ -1360,38 +1357,12 @@ class Graph(object):
             for i, input_name in enumerate(node.input):
                 if input_name == old_input:
                     node.input[i] = new_input
-                    if node.name in node.graph._input_maps:
-                        for k, v in node.graph._input_maps[node.name].items():
-                            assert len(v) == 1
-                            if v[0] == old_input:
-                                node.graph._input_maps[node.name][k] = [new_input]
 
             # modify references in sub graphs
             body_graphs = node.get_body_graphs()
             if body_graphs:
                 for g in body_graphs.values():
                     g.replace_all_inputs(g.get_nodes(), old_input, new_input)
-
-    @staticmethod
-    def replace_input(node, old_input, new_input):
-        """Replace node."""
-        assert (
-            isinstance(node, Node)
-            and isinstance(old_input, six.text_type)
-            and isinstance(new_input, six.text_type)
-        )
-        is_replaced = False
-        for i, input_name in enumerate(node.input):
-            if input_name == old_input:
-                node.input[i] = new_input
-                # TODO(daquexian):
-                if node.name in node.graph._input_maps:
-                    for k, v in node.graph._input_maps[node.name].items():
-                        assert len(v) == 1
-                        if v[0] == old_input:
-                            node.graph._input_maps[node.name][k] = [new_input]
-                is_replaced = True
-        return is_replaced
 
     def _extract_sub_graph_nodes(self, dest_node, input_checker=None):
         """Return nodes of subgraph ending with dest_node.

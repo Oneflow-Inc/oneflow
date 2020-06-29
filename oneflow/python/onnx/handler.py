@@ -21,9 +21,11 @@ class flow_op:
 
     _OPSETS = collections.OrderedDict()
     _MAPPING = None
+    _OP_TYPE_2_IBN = {}
+    _OP_TYPE_2_OBN = {}
     name_set = set()
 
-    def __init__(self, name, onnx_op=None, domain=constants.ONNX_DOMAIN, **kwargs):
+    def __init__(self, name, onnx_op=None, domain=constants.ONNX_DOMAIN, flow_inputs=None, flow_outputs=None, **kwargs):
         """Called decorator from decorator.
 
         :param name: The name of the oneflow operator.
@@ -38,6 +40,8 @@ class flow_op:
         self.onnx_op = onnx_op
         self.domain = domain
         self.kwargs = kwargs
+        self.flow_ibns = flow_inputs
+        self.flow_obns = flow_outputs
 
     def __call__(self, func):
         opset = flow_op._OPSETS.get(self.domain)
@@ -53,6 +57,10 @@ class flow_op:
                 for i, name in enumerate(self.name):
                     opset_dict[name] = (v, self.onnx_op[i], self.kwargs)
                     flow_op.name_set.add(name)
+                    if self.flow_ibns is not None:
+                        flow_op._OP_TYPE_2_IBN[name] = self.flow_ibns
+                    if self.flow_obns is not None:
+                        flow_op._OP_TYPE_2_OBN[name] = self.flow_obns
         return func
 
     def register_compat_handler(self, func, version):
@@ -70,6 +78,14 @@ class flow_op:
                 opset.append({})
             opset_dict = opset[version]
             opset_dict[self.name[0]] = (func, self.onnx_op[0], self.kwargs)
+
+    @staticmethod
+    def ibn4op_type(op_type):
+        return flow_op._OP_TYPE_2_IBN.get(op_type, None)
+
+    @staticmethod
+    def obn4op_type(op_type):
+        return flow_op._OP_TYPE_2_OBN.get(op_type, None)
 
     @staticmethod
     def get_opsets():

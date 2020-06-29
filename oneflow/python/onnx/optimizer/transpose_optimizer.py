@@ -327,7 +327,7 @@ class TransposeOptimizer(GraphOptimizerBase):
             branch_trans = self._g.make_node(
                 "Transpose", [trans.input[0]], attr=trans.attr_onnx
             )
-            self._g.replace_input(n, trans.output[0], branch_trans.output[0])
+            self._g.replace_all_inputs(n, trans.output[0], branch_trans.output[0])
 
         self._g.remove_node(trans.name)
         return False
@@ -365,7 +365,7 @@ class TransposeOptimizer(GraphOptimizerBase):
             nhwc_node = self._g.make_node(
                 "Transpose", [nchw_node.output[0]], attr={"perm": NCHW_TO_NHWC}
             )
-            self._g.replace_input(consumer, node.output[0], nhwc_node.output[0])
+            self._g.replace_all_inputs(consumer, node.output[0], nhwc_node.output[0])
 
     def _create_transpose_pairs_before_node(self, node):
         def shape_after_expand(ori_shape):
@@ -443,7 +443,7 @@ class TransposeOptimizer(GraphOptimizerBase):
             nhwc_node = self._g.make_node(
                 "Transpose", [nchw_node.output[0]], attr={"perm": NCHW_TO_NHWC}
             )
-            self._g.replace_input(node, input_id, nhwc_node.output[0])
+            self._g.replace_all_inputs(node, input_id, nhwc_node.output[0])
         return True
 
     def _add_handler(self, trans, node):
@@ -704,7 +704,7 @@ class TransposeOptimizer(GraphOptimizerBase):
                         new_axes_const = self._g.make_const(
                             util.make_name(node.inputs[3].name), new_axes
                         )
-                        self._g.replace_input(
+                        self._g.replace_all_inputs(
                             node, node.input[3], new_axes_const.output[0]
                         )
                     return self._switch_transpose_and_node(node, trans)
