@@ -32,11 +32,12 @@ Maybe<void> Run(const InstructionListProto& instruction_list_proto) {
     auto instr_msg = ObjectMsgPtr<InstructionMsg>::New(instr_proto);
     instr_msg_list.EmplaceBack(std::move(instr_msg));
   }
-  auto* vm = JUST(GlobalMaybe<OneflowVM>())->mut_vm();
+  auto* oneflow_vm = JUST(GlobalMaybe<OneflowVM>());
+  auto* vm = oneflow_vm->mut_vm();
   vm->Receive(&instr_msg_list);
   while (!vm->Empty()) {
     vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    oneflow_vm->TryReceiveAndRun();
   }
   return Maybe<void>::Ok();
 }
