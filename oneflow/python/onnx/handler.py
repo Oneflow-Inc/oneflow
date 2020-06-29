@@ -25,7 +25,15 @@ class flow_op:
     _OP_TYPE_2_OBN = {}
     name_set = set()
 
-    def __init__(self, name, onnx_op=None, domain=constants.ONNX_DOMAIN, flow_inputs=None, flow_outputs=None, **kwargs):
+    def __init__(
+        self,
+        name,
+        onnx_op=None,
+        domain=constants.ONNX_DOMAIN,
+        flow_inputs=None,
+        flow_outputs=None,
+        **kwargs
+    ):
         """Called decorator from decorator.
 
         :param name: The name of the oneflow operator.

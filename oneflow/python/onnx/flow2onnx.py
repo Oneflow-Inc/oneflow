@@ -70,7 +70,9 @@ def oneflow_to_onnx_naive(graph, shape_override):
         if is_user_op(node):
             ibns = handler.flow_op.ibn4op_type(get_op_type(node))
             if ibns is None:
-                return list(itertools.chain(*[x.s for x in node.user_conf.input.values()]))
+                return list(
+                    itertools.chain(*[x.s for x in node.user_conf.input.values()])
+                )
             ipts = []
             for ibn in ibns:
                 for key, val in node.user_conf.input.items():
@@ -79,7 +81,11 @@ def oneflow_to_onnx_naive(graph, shape_override):
                         ipts.append(val.s[0])
                         break
                 else:
-                    raise ValueError("ibn {} of node {} (type {}) not found".format(ibn, node.name, get_op_type(node)))
+                    raise ValueError(
+                        "ibn {} of node {} (type {}) not found".format(
+                            ibn, node.name, get_op_type(node)
+                        )
+                    )
             return ipts
         else:
             conf = get_op_conf(node)
@@ -107,7 +113,11 @@ def oneflow_to_onnx_naive(graph, shape_override):
                         outputs.append(val.s[0])
                         break
                 else:
-                    raise ValueError("obn {} of node {} (type {}) not found".format(obn, node.name, get_op_type(node)))
+                    raise ValueError(
+                        "obn {} of node {} (type {}) not found".format(
+                            obn, node.name, get_op_type(node)
+                        )
+                    )
         else:
             conf = get_op_conf(node)
             # it cannot cover all legacy op but it's enough
@@ -149,7 +159,6 @@ def oneflow_to_onnx_naive(graph, shape_override):
             raise
 
     return onnx_nodes, op_cnt, attr_cnt, dtypes, shape_override
-
 
 
 def oneflow_onnx_mapping(g, ops_mapping):
@@ -298,22 +307,12 @@ def process_flow_graph(
         inputs_as_nchw = []
     target = constants.DEFAULT_TARGET
 
-    (
-        onnx_nodes,
-        op_cnt,
-        attr_cnt,
-        dtypes,
-        output_shapes,
-    ) = oneflow_to_onnx_naive(flow_graph, shape_override)
+    (onnx_nodes, op_cnt, attr_cnt, dtypes, output_shapes,) = oneflow_to_onnx_naive(
+        flow_graph, shape_override
+    )
 
     g = Graph(
-        onnx_nodes,
-        model_save_dir,
-        output_shapes,
-        dtypes,
-        target,
-        opset,
-        extra_opset,
+        onnx_nodes, model_save_dir, output_shapes, dtypes, target, opset, extra_opset,
     )
 
     # create ops mapping for the desired opsets

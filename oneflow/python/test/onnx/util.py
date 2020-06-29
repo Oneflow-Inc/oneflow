@@ -27,7 +27,7 @@ def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True
         while not os.path.exists(os.path.join(tmpdirname, "snapshot_done")):
             pass
         onnx_proto = flow.onnx.export(job_func, tmpdirname, opset=11)
-    with open('/tmp/model.onnx', 'wb') as f:
+    with open("/tmp/model.onnx", "wb") as f:
         onnx.save(onnx_proto, f)
     sess = ort.InferenceSession(onnx_proto.SerializeToString())
     assert len(sess.get_outputs()) == 1
