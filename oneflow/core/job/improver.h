@@ -33,11 +33,11 @@ class Improver final {
   //  first dimension index of MemZoneRegstDescs is machine_id
   //  second dimension index of MemZoneRegstDescs is mem_zone_id
   using MemZoneRegstDescs = std::vector<std::vector<std::list<const RegstDescProto*>>>;
-  bool IsAnyZoneOutOfMemory(
+  Maybe<void> CheckAllZoneNotOOM(
       const MemZoneRegstDescs& mz_regst_descs,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,
-      const std::function<const HashMap<int64_t, double>&(int64_t)>& Ratio4RegstDescId, double ii,
-      std::string* error_str) const;
+      const std::function<const HashMap<int64_t, double>&(int64_t)>& Ratio4RegstDescId,
+      double ii) const;
   Maybe<double> BinarySearchII(
       double base_ii,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,

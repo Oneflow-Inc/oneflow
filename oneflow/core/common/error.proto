@@ -85,6 +85,15 @@ message MultipleOpKernelsMatchedError {
   repeated string matched_op_kernels_debug_str = 1;
 }
 
+message MemoryZoneOutOfMemory {
+  repeated string machine_id = 1;
+  repeated string mem_zone_id = 2;
+  repeated string device_type = 3;
+  repeated string required = 4;
+  repeated string available = 5;
+  repeated string exceeded = 6;
+}
+
 message UnkownError { }
 
 message ErrorStackFrame {
@@ -107,6 +116,7 @@ message ErrorProto {
     GradientFunctionNotFoundError gradient_function_not_found_error = 20;
     OpKernelNotFoundError op_kernel_not_found_error = 21;
     MultipleOpKernelsMatchedError multiple_op_kernels_matched_error = 22;
+    MemoryZoneOutOfMemory memory_zone_out_of_memory = 23;
     UnkownError unknown_error = 100;
   }
 }

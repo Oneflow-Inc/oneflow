@@ -506,6 +506,19 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
   }
 }
 
+std::vector<std::string> GetErrorMsgOfOutOFMemory(int64_t machine_id, int64_t mem_zone_id,
+                                                  uint64_t calc, uint64_t available,
+                                                  const std::string& device_type) {
+  std::vector<std::string> debug_msgs;
+  debug_msgs.emplace_back("machine_id: " + std::to_string(machine_id));
+  debug_msgs.emplace_back("mem_zone_id: " + std::to_string(mem_zone_id));
+  debug_msgs.emplace_back("device_type: " + device_type);
+  debug_msgs.emplace_back("available: " + std::to_string(available) + " bytes");
+  debug_msgs.emplace_back("required: " + std::to_string(calc) + " bytes");
+  debug_msgs.emplace_back("exceeded: " + std::to_string(calc - available) + " bytes");
+  return debug_msgs;
+}
+
 }  // namespace
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
@@ -543,12 +556,11 @@ void Improver::MakeMemZoneRegstDescs(const Plan& plan, MemZoneRegstDescs* mz2reg
   }
 }
 
-bool Improver::IsAnyZoneOutOfMemory(
+Maybe<void> Improver::CheckAllZoneNotOOM(
     const MemZoneRegstDescs& mz_regst_descs,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
-    double ii, std::string* error_str) const {
-  const auto* id_mgr = Global<IDMgr>::Get();
+    double ii) const {
   FOR_RANGE(int64_t, machine_id, 0, mz_regst_descs.size()) {
     FOR_RANGE(int64_t, mem_zone_id, 0, mz_regst_descs[machine_id].size()) {
       const auto& regst_descs = mz_regst_descs[machine_id][mem_zone_id];
@@ -556,20 +568,18 @@ bool Improver::IsAnyZoneOutOfMemory(
           CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii);
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
       if (calc >= available) {
-        if (error_str != nullptr) {
-          std::string device_type = id_mgr->IsGpuMemZone(mem_zone_id) ? "gpu" : "cpu";
-          std::stringstream ss;
-          ss << "OOM detected at compile time, machine_id: " << machine_id
-             << ", mem_zone_id: " << mem_zone_id << ", device_type: " << device_type
-             << ", required: " << calc << " bytes, available: " << available
-             << " bytes, exceeded: " << (calc - available) << " bytes";
-          *error_str = ss.str();
-        }
-        return true;
+        const auto* id_mgr = Global<IDMgr>::Get();
+        std::string device_type = id_mgr->IsGpuMemZone(mem_zone_id) ? "gpu" : "cpu";
+        std::vector<std::string> debug_msgs =
+            GetErrorMsgOfOutOFMemory(machine_id, mem_zone_id, calc, available, device_type);
+        std::stringstream ss;
+        for (auto& msg : debug_msgs) { ss << "\n " << msg; }
+        return Error::MemoryZoneOutOfMemory(machine_id, mem_zone_id, calc, available, device_type)
+               << "OOM detected at compile time. The info of Memory are" << ss.str();
       }
     }
   }
-  return false;
+  return Maybe<void>::Ok();
 }
 
 double Improver::CalcMaxRegstDescDuration(
@@ -594,21 +604,23 @@ Maybe<double> Improver::BinarySearchII(
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
     const MemZoneRegstDescs& mz_regst_descs) const {
   double max_duration = CalcMaxRegstDescDuration(PathDurations4RegstDescId, mz_regst_descs);
-  std::string error_str;
-  CHECK_OR_RETURN(!IsAnyZoneOutOfMemory(mz_regst_descs, PathDurations4RegstDescId,
-                                        PathIIScales4RegstDescId, max_duration, &error_str))
-      << error_str;
+  JUST(CheckAllZoneNotOOM(mz_regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId,
+                          max_duration));
   const double ii_search_threshold = 1;
   double r = max_duration;
   double l = base_ii;
   double mid = base_ii;
   while ((r - l) > ii_search_threshold) {
     mid = (l + r) / 2;
-    if (IsAnyZoneOutOfMemory(mz_regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId,
-                             mid, nullptr)) {
+    const auto& oom_status = TRY(CheckAllZoneNotOOM(mz_regst_descs, PathDurations4RegstDescId,
+                                                    PathIIScales4RegstDescId, mid));
+
+    if (oom_status.IsOk()) {
+      r = mid;
+    } else if (oom_status.error()->has_memory_zone_out_of_memory()) {
       l = mid;
     } else {
-      r = mid;
+      return oom_status.error();
     }
   }
   return r;
@@ -690,9 +702,7 @@ Maybe<Plan> Improver::GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd,
   MakeMemZoneRegstDescs(complete_plan, &mz_regst_descs);
   HashMap<int64_t, double> zero2one{{0, 1}};
   auto Zero2One = [&](int64_t) -> const HashMap<int64_t, double>& { return zero2one; };
-  std::string error_str;
-  CHECK_OR_RETURN(!IsAnyZoneOutOfMemory(mz_regst_descs, Zero2One, Zero2One, 1, &error_str))
-      << error_str;
+  JUST(CheckAllZoneNotOOM(mz_regst_descs, Zero2One, Zero2One, 1));
   SetUniqueMemBlockId4UnreusedMemRegst(&complete_plan);
   GenMemBlockAndChunk4Plan(&complete_plan);
   return complete_plan;

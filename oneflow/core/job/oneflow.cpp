@@ -946,13 +946,16 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
 
 }  // namespace
 
-Oneflow::Oneflow(const oneflow::JobSet& job_set) {
+Oneflow::Oneflow() {}
+
+Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   // Runtime
-  CHECK_JUST(CompileAndMergePlanOnMaster(job_set.job(), &plan_));
+  JUST(CompileAndMergePlanOnMaster(job_set.job(), &plan_));
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_));
   }
   runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
+  return Maybe<void>::Ok();
 }
 
 Oneflow::~Oneflow() {
