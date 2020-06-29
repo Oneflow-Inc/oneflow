@@ -53,7 +53,8 @@ def BoxingTo(builder, x_blob_object, op_arg_parallel_attr):
 
 
 MatchCopyHd = (
-    boxing_hob.SameDeviceIds
+    boxing_hob.MasterMachineOnly
+    & boxing_hob.SameDeviceIds
     & boxing_hob.SameSbpParallel
     & (boxing_hob.HostToGpuDevice | boxing_hob.GpuDeviceToHost)
 )
@@ -66,13 +67,21 @@ def CopyHd(builder, x_blob_object, op_arg_parallel_attr):
     return BuildCopyHdInstruction(builder, x_blob_object, op_device_tag)
 
 
-@enable_if.condition(boxing_hob.SameParallelDesc & boxing_hob.BlobOnSingleDevice)
+MatchSingleDeviceBoxing = (
+    boxing_hob.MasterMachineOnly
+    & boxing_hob.SameParallelDesc
+    & boxing_hob.BlobOnSingleDevice
+)
+
+
+@enable_if.condition(MatchSingleDeviceBoxing)
 def SingleDeviceBoxing(builder, x_blob_object, op_arg_parallel_attr):
     return x_blob_object
 
 
 MatchNcclAllReduce = (
-    boxing_hob.SameParallelDesc
+    boxing_hob.MasterMachineOnly
+    & boxing_hob.SameParallelDesc
     & boxing_hob.BlobOnDevice("gpu")
     & boxing_hob.BlobPartialSumParallel
     & boxing_hob.OpArgParallelNumGT1
@@ -96,7 +105,8 @@ def NcclAllReduce(builder, x_blob_object, op_arg_parallel_attr):
 
 
 MatchCopyH2DThenNcclAllReduce = (
-    boxing_hob.SameDeviceIds
+    boxing_hob.MasterMachineOnly
+    & boxing_hob.SameDeviceIds
     & boxing_hob.BlobOnDevice("cpu")
     & boxing_hob.BlobPartialSumParallel
     & boxing_hob.OpArgOnDevice("gpu")
@@ -126,7 +136,8 @@ def CopyH2DThenNcclAllReduce(builder, x_blob_object, op_arg_parallel_attr):
 
 
 MatchBroadcastOneToMany = (
-    boxing_hob.SameMachineId
+    boxing_hob.MasterMachineOnly
+    & boxing_hob.SameMachineId
     & boxing_hob.BlobOnSingleDevice
     & boxing_hob.OpArgParallelNumGT1
     & boxing_hob.OpArgBroadcastParallel

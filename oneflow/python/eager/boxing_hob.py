@@ -3,6 +3,15 @@ from __future__ import absolute_import
 from oneflow.python.lib.core.high_order_bool import bool_functor
 
 
+@bool_functor("MasterMachineOnly")
+def MasterMachineOnly(context):
+    x_blob_object, op_arg_parallel_attr = context
+    blob_device_ids = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
+    arg_parallel_desc_symbol = op_arg_parallel_attr.parallel_desc_symbol
+    op_arg_device_ids = arg_parallel_desc_symbol.machine_id2device_id_list
+    return list(blob_device_ids.keys()) == [0] and list(op_arg_device_ids.keys()) == [0]
+
+
 @bool_functor("SameDeviceIds")
 def SameDeviceIds(context):
     x_blob_object, op_arg_parallel_attr = context
