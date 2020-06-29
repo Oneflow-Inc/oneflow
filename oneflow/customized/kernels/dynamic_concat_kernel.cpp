@@ -111,18 +111,13 @@ class DynamicSplitLikeKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device_type, typename T>
-bool IsKernelMatched(const user_op::KernelRegContext& ctx) {
-  const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-  return ctx.device_type() == device_type && out_desc->data_type() == GetDataType<T>::value;
-}
-
 }  // namespace
 
-#define REGISTER_DYNAMIC_CONCAT_KERNEL(device, dtype)    \
-  REGISTER_USER_KERNEL("dynamic_concat")                 \
-      .SetCreateFn<DynamicConcatKernel<device, dtype>>() \
-      .SetIsMatchedPred(IsKernelMatched<device, dtype>);
+#define REGISTER_DYNAMIC_CONCAT_KERNEL(device, dtype)       \
+  REGISTER_USER_KERNEL("dynamic_concat")                    \
+      .SetCreateFn<DynamicConcatKernel<device, dtype>>()    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_DYNAMIC_CONCAT_KERNEL_WITH_DEVICE_AND_DTYPE_PAIR(device, dtype_pair) \
   REGISTER_DYNAMIC_CONCAT_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
@@ -130,7 +125,8 @@ bool IsKernelMatched(const user_op::KernelRegContext& ctx) {
 #define REGISTER_DYNAMIC_SPLIT_LIKE_KERNEL(device, dtype)   \
   REGISTER_USER_KERNEL("dynamic_split_like")                \
       .SetCreateFn<DynamicSplitLikeKernel<device, dtype>>() \
-      .SetIsMatchedPred(IsKernelMatched<device, dtype>);
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_DYNAMIC_SPLIT_LIKE_KERNEL_WITH_DEVICE_AND_DTYPE_PAIR(device, dtype_pair) \
   REGISTER_DYNAMIC_SPLIT_LIKE_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
