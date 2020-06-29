@@ -9,7 +9,7 @@ initer_args = {"kernel_initializer": initializer, "bias_initializer": initialize
 
 
 def test_conv2d_k2d1_valid(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def conv2d_k3s1_valid(x=flow.FixedTensorDef((2, 4, 3, 5))):
         return flow.layers.conv2d(
             x, 6, kernel_size=3, strides=1, padding="VALID", **initer_args
@@ -19,7 +19,7 @@ def test_conv2d_k2d1_valid(test_case):
 
 
 def test_conv2d_s2_valid(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def conv2d_s2_valid(x=flow.FixedTensorDef((2, 4, 3, 5))):
         return flow.layers.conv2d(
             x, 6, kernel_size=1, strides=2, padding="VALID", **initer_args
@@ -29,7 +29,7 @@ def test_conv2d_s2_valid(test_case):
 
 
 def test_conv2d_s2_same(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def conv2d_s2_same(x=flow.FixedTensorDef((2, 4, 3, 5))):
         return flow.layers.conv2d(
             x, 6, kernel_size=3, strides=2, padding="SAME", **initer_args
@@ -39,7 +39,7 @@ def test_conv2d_s2_same(test_case):
 
 
 def test_conv2d_k3s1_nhwc_valid(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def conv2d_k3s1_nhwc_valid(x=flow.FixedTensorDef((2, 3, 5, 4))):
         return flow.layers.conv2d(
             x,
@@ -55,7 +55,7 @@ def test_conv2d_k3s1_nhwc_valid(test_case):
 
 
 def test_conv2d_k3s1_nhwc_same_d2(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def conv2d(x=flow.FixedTensorDef((2, 7, 5, 4))):
         return flow.layers.conv2d(
             x,
@@ -72,7 +72,7 @@ def test_conv2d_k3s1_nhwc_same_d2(test_case):
 
 
 def test_conv2d_k3s1_nchw_same_g2(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def conv2d(x=flow.FixedTensorDef((2, 4, 5, 3))):
         return flow.layers.conv2d(
             x,
@@ -89,7 +89,7 @@ def test_conv2d_k3s1_nchw_same_g2(test_case):
 
 
 def test_conv2d_k3s1_nchw_same_depthwise(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def conv2d(x=flow.FixedTensorDef((2, 4, 5, 3))):
         return flow.layers.conv2d(
             x,

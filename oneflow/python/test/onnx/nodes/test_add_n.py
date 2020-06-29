@@ -7,7 +7,7 @@ func_config.default_data_type(flow.float)
 
 
 def test_add_2(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def add_2():
         x = flow.get_variable(
             name="x",
@@ -27,7 +27,7 @@ def test_add_2(test_case):
 
 
 def test_add_3(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def add_3():
         x = flow.get_variable(
             name="x",
@@ -53,7 +53,7 @@ def test_add_3(test_case):
 
 
 def test_add_many(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def add_many():
         variables = []
         for i in range(50):

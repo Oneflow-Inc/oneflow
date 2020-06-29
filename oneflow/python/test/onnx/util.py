@@ -11,7 +11,7 @@ def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True
     check_point = flow.train.CheckPoint()
     if explicit_init:
         # TODO(daquexian): it is a trick to keep check_point.save() from hanging when there is no variable
-        @flow.function(flow.FunctionConfig())
+        @flow.global_function(flow.FunctionConfig())
         def add_var():
             return flow.get_variable(
                 name="trick",
@@ -27,6 +27,8 @@ def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True
         while not os.path.exists(os.path.join(tmpdirname, "snapshot_done")):
             pass
         onnx_proto = flow.onnx.export(job_func, tmpdirname, opset=11)
+    with open('/tmp/model.onnx', 'wb') as f:
+        onnx.save(onnx_proto, f)
     sess = ort.InferenceSession(onnx_proto.SerializeToString())
     assert len(sess.get_outputs()) == 1
     assert len(sess.get_inputs()) <= 1

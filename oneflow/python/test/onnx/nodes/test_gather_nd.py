@@ -7,7 +7,7 @@ func_config.default_data_type(flow.float)
 
 
 def test_gather_nd(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def gather_nd():
         x = flow.get_variable(
             name="x",

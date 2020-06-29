@@ -171,7 +171,7 @@ def test_resnet50(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def InferenceNet(images=flow.FixedTensorDef((1, 3, 224, 224))):
         logits = resnet50(images)
 

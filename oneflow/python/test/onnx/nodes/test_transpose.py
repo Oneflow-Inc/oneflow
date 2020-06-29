@@ -6,7 +6,7 @@ func_config.default_data_type(flow.float)
 
 
 def test_transpose(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def transpose(x=flow.FixedTensorDef((3, 5, 4))):
         return flow.transpose(x, perm=(2, 0, 1))
 

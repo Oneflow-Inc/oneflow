@@ -6,7 +6,7 @@ func_config.default_data_type(flow.float)
 
 
 def test_max_pooling_2d_k3s1_valid_nhwc(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def max_pooling_2d_k3s1_valid_nhwc(x=flow.FixedTensorDef((2, 3, 5, 4))):
         x += flow.get_variable(
             name="v1",
@@ -22,7 +22,7 @@ def test_max_pooling_2d_k3s1_valid_nhwc(test_case):
 
 
 def test_max_pooling_2d_k3s1_same_nhwc(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def max_pooling_2d_k3s1_same_nhwc(x=flow.FixedTensorDef((2, 3, 5, 4))):
         x += flow.get_variable(
             name="v1",
@@ -38,7 +38,7 @@ def test_max_pooling_2d_k3s1_same_nhwc(test_case):
 
 
 def test_max_pooling_2d_k2s2_same_nhwc(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def max_pooling_2d_k2s2_same_nhwc(x=flow.FixedTensorDef((2, 3, 5, 4))):
         x += flow.get_variable(
             name="v1",
@@ -54,7 +54,7 @@ def test_max_pooling_2d_k2s2_same_nhwc(test_case):
 
 
 def test_max_pooling_2d_k3s1_valid_nchw(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def max_pooling_2d_k3s1_valid_nchw(x=flow.FixedTensorDef((2, 3, 5, 4))):
         x += flow.get_variable(
             name="v1",
@@ -70,7 +70,7 @@ def test_max_pooling_2d_k3s1_valid_nchw(test_case):
 
 
 def test_avg_pooling_2d_k3s1_valid_nhwc(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def avg_pooling_2d_k3s1_valid_nhwc(x=flow.FixedTensorDef((2, 3, 5, 4))):
         x += flow.get_variable(
             name="v1",
@@ -86,7 +86,7 @@ def test_avg_pooling_2d_k3s1_valid_nhwc(test_case):
 
 
 def test_avg_pooling_2d_k3s1_same_nhwc(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def avg_pooling_2d_k3s1_same_nhwc(x=flow.FixedTensorDef((2, 3, 5, 4))):
         x += flow.get_variable(
             name="v1",
@@ -102,7 +102,7 @@ def test_avg_pooling_2d_k3s1_same_nhwc(test_case):
 
 
 def test_avg_pooling_2d_k2s2_same_nhwc(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def avg_pooling_2d_k2s2_same_nhwc(x=flow.FixedTensorDef((2, 3, 5, 4))):
         x += flow.get_variable(
             name="v1",
@@ -118,7 +118,7 @@ def test_avg_pooling_2d_k2s2_same_nhwc(test_case):
 
 
 def test_avg_pooling_2d_k3s1_valid_nchw(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def avg_pooling_2d_k3s1_valid_nchw(x=flow.FixedTensorDef((2, 3, 5, 4))):
         x += flow.get_variable(
             name="v1",

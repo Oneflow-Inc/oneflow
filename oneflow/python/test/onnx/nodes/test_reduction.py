@@ -6,7 +6,7 @@ func_config.default_data_type(flow.float)
 
 
 def generate_reduction_test(flow_op, *args, **kwargs):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def job(x=flow.FixedTensorDef((3, 5, 4))):
         return flow_op(x, *args, **kwargs)
 

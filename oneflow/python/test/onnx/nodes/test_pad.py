@@ -6,7 +6,7 @@ func_config.default_data_type(flow.float)
 
 
 def test_pad_float(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def pad(x=flow.FixedTensorDef((3, 5))):
         return flow.pad(x, [(1, 2), (3, 4)], 1)
 

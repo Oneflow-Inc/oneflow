@@ -7,7 +7,7 @@ func_config.default_data_type(flow.float)
 
 
 def generate_binary_op_test(flow_op, *args, **kwargs):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def job1():
         x = flow.get_variable(
             name="x1",
@@ -27,7 +27,7 @@ def generate_binary_op_test(flow_op, *args, **kwargs):
 
 
 def generate_unary_op_test(flow_op, *args, min_val=-10, max_val=10, **kwargs):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def job1():
         x = flow.get_variable(
             name="x1",

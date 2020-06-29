@@ -7,7 +7,7 @@ func_config.default_data_type(flow.float)
 
 
 def test_ln(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ln(x=flow.FixedTensorDef((3, 4, 2, 5))):
         return flow.layers.layer_norm(x)
 

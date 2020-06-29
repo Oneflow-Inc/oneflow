@@ -6,7 +6,7 @@ func_config.default_data_type(flow.float)
 
 
 def test_softmax(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def softmax(x=flow.FixedTensorDef((3, 5))):
         return flow.nn.softmax(x)
 
@@ -14,7 +14,7 @@ def test_softmax(test_case):
 
 
 def test_softmax_with_axis(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def softmax(x=flow.FixedTensorDef((3, 5, 4))):
         return flow.nn.softmax(x, axis=1)
 

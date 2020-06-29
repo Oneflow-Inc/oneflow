@@ -380,7 +380,7 @@ def test_mobilenetv2(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def mobilenetv2(x=flow.FixedTensorDef((1, 224, 224, 3))):
         return Mobilenet(x)
 

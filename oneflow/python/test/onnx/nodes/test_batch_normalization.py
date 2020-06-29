@@ -7,7 +7,7 @@ func_config.default_data_type(flow.float)
 
 
 def test_bn_nchw(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def bn(x=flow.FixedTensorDef((3, 4, 2, 5))):
         params_shape = (4,)
         mean = flow.get_variable(
@@ -40,7 +40,7 @@ def test_bn_nchw(test_case):
 
 
 def test_bn_nhwc(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def bn(x=flow.FixedTensorDef((3, 4, 2, 5))):
         params_shape = (5,)
         mean = flow.get_variable(

@@ -7,7 +7,7 @@ func_config.default_data_type(flow.float)
 
 
 def test_matmul(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def matmul():
         a = flow.get_variable(
             name="a",
@@ -27,7 +27,7 @@ def test_matmul(test_case):
 
 
 def test_matmul_ta(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def matmul():
         a = flow.get_variable(
             name="a",
@@ -47,7 +47,7 @@ def test_matmul_ta(test_case):
 
 
 def test_matmul_tb(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def matmul():
         a = flow.get_variable(
             name="a",
@@ -67,7 +67,7 @@ def test_matmul_tb(test_case):
 
 
 def test_matmul_ta_tb(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def matmul():
         a = flow.get_variable(
             name="a",
@@ -87,7 +87,7 @@ def test_matmul_ta_tb(test_case):
 
 
 def test_batch_matmul(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def matmul():
         a = flow.get_variable(
             name="a",

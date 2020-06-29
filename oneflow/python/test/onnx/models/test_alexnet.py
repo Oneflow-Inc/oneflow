@@ -118,7 +118,7 @@ def test_alexnet(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def alexnet_eval_job(x=flow.FixedTensorDef((1, 227, 227, 3))):
         return alexnet(x, None, False)
 

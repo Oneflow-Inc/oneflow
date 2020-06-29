@@ -6,7 +6,7 @@ func_config.default_data_type(flow.float)
 
 
 def test_concat_axis0(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def concat():
         variables = []
         for i in range(4):
@@ -24,7 +24,7 @@ def test_concat_axis0(test_case):
 
 
 def test_concat_axis1(test_case):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def concat():
         variables = []
         for i in range(4):
