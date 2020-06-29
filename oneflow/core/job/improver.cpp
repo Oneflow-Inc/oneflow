@@ -556,14 +556,15 @@ bool Improver::IsAnyZoneOutOfMemory(
           CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii);
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
       if (calc >= available) {
-        std::string device_type = id_mgr->IsGpuMemZone(mem_zone_id) ? "gpu" : "cpu";
-        std::stringstream ss;
-        ss << "OOM detected at compile time, machine_id: " << machine_id
-           << ", mem_zone_id: " << mem_zone_id << ", device_type: " << device_type
-           << ", required: " << calc << " bytes, available: " << available
-           << " bytes, exceeded: " << (calc - available) << " bytes";
-        LOG(INFO) << ss.str();
-        *error_str = ss.str();
+        if (error_str != nullptr) {
+          std::string device_type = id_mgr->IsGpuMemZone(mem_zone_id) ? "gpu" : "cpu";
+          std::stringstream ss;
+          ss << "OOM detected at compile time, machine_id: " << machine_id
+             << ", mem_zone_id: " << mem_zone_id << ", device_type: " << device_type
+             << ", required: " << calc << " bytes, available: " << available
+             << " bytes, exceeded: " << (calc - available) << " bytes";
+          *error_str = ss.str();
+        }
         return true;
       }
     }
@@ -604,7 +605,7 @@ Maybe<double> Improver::BinarySearchII(
   while ((r - l) > ii_search_threshold) {
     mid = (l + r) / 2;
     if (IsAnyZoneOutOfMemory(mz_regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId,
-                             mid, &error_str)) {
+                             mid, nullptr)) {
       l = mid;
     } else {
       r = mid;
