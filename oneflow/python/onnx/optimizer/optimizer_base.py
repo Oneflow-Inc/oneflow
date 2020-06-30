@@ -26,10 +26,6 @@ class GraphOptimizerBase(object):
         return self._logger
 
     @property
-    def is_debug_mode(self):
-        return util.is_debug_mode()
-
-    @property
     def graph_been_opt(self):
         return self._graph_been_opt
 

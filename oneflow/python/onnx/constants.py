@@ -5,17 +5,12 @@
 common constants
 """
 
-from onnx import helper
-
 # Built-in supported domains
 ONNX_DOMAIN = ""
 AI_ONNX_ML_DOMAIN = "ai.onnx.ml"
 
 # Default opset version for onnx domain
 PREFERRED_OPSET = 8
-
-# Default opset for custom ops
-ONEFLOW_OPSET = helper.make_opsetid("ai.onnx.converters.oneflow", 1)
 
 # Target for the generated onnx graph. It possible targets:
 # onnx-1.1 = onnx at v1.1 (winml in rs4 is based on this)
@@ -31,6 +26,3 @@ NCHW_TO_NHWC = [0, 2, 3, 1]
 NHWC_TO_NCHW = [0, 3, 1, 2]
 HWCN_TO_NCHW = [3, 2, 0, 1]
 NCHW_TO_HWCN = [2, 3, 1, 0]
-
-# Environment variables
-ENV_FLOW2ONNX_DEBUG_MODE = "ONEFLOW_DEBUG_MODE"

@@ -198,35 +198,6 @@ def oneflow_onnx_mapping(g, ops_mapping):
     return mapped_op, unmapped_op, exceptions
 
 
-def transpose_inputs(ctx, inputs_as_nchw):
-    """Insert a transpose from NHWC to NCHW on model input on users request."""
-    ops = []
-    for node in ctx.get_nodes():
-        for idx, output_name in enumerate(node.output):
-            if output_name in inputs_as_nchw:
-                shape = ctx.get_shape(output_name)
-                if len(shape) != len(constants.NCHW_TO_NHWC):
-                    logger.warning(
-                        "transpose_input for %s: shape must be rank 4, ignored"
-                        % output_name
-                    )
-                    ops.append(node)
-                    continue
-                # insert transpose
-                op_name = util.make_name(node.name)
-                transpose = ctx.insert_new_node_on_output(
-                    "Transpose", output_name, name=op_name
-                )
-                transpose.set_attr("perm", constants.NCHW_TO_NHWC)
-                ctx.copy_shape(output_name, transpose.output[0])
-                ctx.set_shape(output_name, np.array(shape)[constants.NHWC_TO_NCHW])
-                ops.append(transpose)
-                ops.append(node)
-                continue
-        ops.append(node)
-    ctx.reset_nodes(ops)
-
-
 def topological_sort(g, continue_on_error):
     ops = g.get_nodes()
     if not continue_on_error:
@@ -248,7 +219,6 @@ def export(
     opset=None,
     extra_opset=None,
     shape_override=None,
-    inputs_as_nchw=None,
 ):
     assert os.getenv("ENABLE_USER_OP") == "True"
     job_set = c_api_util.GetJobSet()
@@ -262,7 +232,6 @@ def export(
                 opset=opset,
                 extra_opset=extra_opset,
                 shape_override=shape_override,
-                inputs_as_nchw=inputs_as_nchw,
             )
             onnx_graph = optimizer.optimize_graph(onnx_graph)
             model_proto = onnx_graph.make_model(job_name)
@@ -277,7 +246,6 @@ def process_flow_graph(
     opset=None,
     extra_opset=None,
     shape_override=None,
-    inputs_as_nchw=None,
 ):
     """Convert oneflow graph to onnx graph.
         Args:
@@ -286,7 +254,6 @@ def process_flow_graph(
             opset: the opset to be used (int, default is 8)
             extra_opset: list of extra opset's, for example the opset's used by custom ops
             shape_override: dict with inputs that override the shapes given by oneflow
-            inputs_as_nchw: transpose inputs in list from nchw to nchw
         Return:
             the onnx model_proto object
     """
@@ -303,8 +270,6 @@ def process_flow_graph(
 
     if shape_override is None:
         shape_override = {}
-    if inputs_as_nchw is None:
-        inputs_as_nchw = []
     target = constants.DEFAULT_TARGET
 
     (onnx_nodes, op_cnt, attr_cnt, dtypes, output_shapes,) = oneflow_to_onnx_naive(
@@ -317,9 +282,6 @@ def process_flow_graph(
 
     # create ops mapping for the desired opsets
     ops_mapping = handler.flow_op.create_mapping(g.opset, g.extra_opset)
-
-    if inputs_as_nchw:
-        transpose_inputs(g, inputs_as_nchw)
 
     # some nodes may already copied into inner Graph, so remove them from main Graph.
     topological_sort(g, continue_on_error)
