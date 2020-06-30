@@ -115,14 +115,20 @@ void GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
 
 }  // namespace
 
-#define REGISTER_SPAESE_CROSS_ENTROPY_USER_OP(op_name, sbp_sig) \
-  REGISTER_USER_OP(op_name)                                     \
-      .Input("prediction")                                      \
-      .Input("label")                                           \
-      .Output("out")                                            \
-      .Attr("depth", UserOpAttrType::kAtInt64)                  \
-      .SetTensorDescInferFn(InferTensorDescFn)                  \
-      .SetBatchAxisInferFn(InferBatchAxisFn)                    \
+#define REGISTER_SPAESE_CROSS_ENTROPY_USER_OP(op_name, sbp_sig)                        \
+  REGISTER_USER_OP(op_name)                                                            \
+      .Input("prediction")                                                             \
+      .Input("label")                                                                  \
+      .Output("out")                                                                   \
+      .Attr("depth", UserOpAttrType::kAtInt64)                                         \
+      .SetTensorDescInferFn(InferTensorDescFn)                                         \
+      .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,      \
+                              const user_op::UserOpConfWrapper&) {                     \
+        user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0); \
+        CHECK(label_modifier != nullptr);                                              \
+        label_modifier->set_requires_grad(false);                                      \
+      })                                                                               \
+      .SetBatchAxisInferFn(InferBatchAxisFn)                                           \
       .SetGetSbpFn(GetSbpFn<sbp_sig>);
 
 #define REGISTER_SPAESE_CROSS_ENTROPY_GRAD_USER_OP(op_name, sbp_sig) \
