@@ -59,6 +59,4 @@ def LazyReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
 def EagerReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
     assert allow_cpu_return_op is True
     assert isinstance(remote_blob, remote_blob_util.EagerBlobMixin)
-    if isinstance(remote_blob, remote_blob_util.EagerConsistentBlob):
-        raise NotImplementedError
     return remote_blob
