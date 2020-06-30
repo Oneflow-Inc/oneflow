@@ -141,7 +141,7 @@ def compare_with_tensorflow(
 
 
 def test_conv1(test_case):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
@@ -153,7 +153,7 @@ def test_conv1(test_case):
 
 
 def test_conv2(test_case):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
@@ -165,7 +165,7 @@ def test_conv2(test_case):
 
 
 def test_conv3(test_case):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
@@ -177,7 +177,7 @@ def test_conv3(test_case):
 
 
 def test_conv4(test_case):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
@@ -189,7 +189,7 @@ def test_conv4(test_case):
 
 
 def test_conv5(test_case):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
@@ -201,7 +201,7 @@ def test_conv5(test_case):
 
 
 def test_conv6(test_case):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
@@ -213,7 +213,7 @@ def test_conv6(test_case):
 
 
 def test_conv7(test_case):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(2, 4, 8, 8)]
@@ -226,7 +226,7 @@ def test_conv7(test_case):
 
 
 def test_conv8(test_case):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(2, 4, 8, 8)]

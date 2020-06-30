@@ -74,7 +74,7 @@ def test_softmax(test_case):
             continue
         if arg[3] >= len(arg[1]):
             continue
-        if os.getenv("ENABLE_USER_OP") != "True":
+        if os.getenv("ENABLE_USER_OP") == "False":
             if arg[3] != -1:
                 continue  # axis
         compare_with_tensorflow(*arg)
