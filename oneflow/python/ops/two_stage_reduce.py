@@ -23,6 +23,7 @@ def two_stage_reduce_min(x, axis=None, keepdims=False, name=None):
 def two_stage_reduce(x, axis=None, keepdims=False, op_type_name=None, name=None):
 
     assert check_x_dictribute(x, axis)
+    axis = _check_axis(axis, x.shape)
 
     device_stage_out_list = []
     device_stage_count_list = []
@@ -91,6 +92,22 @@ def reduce_global_stage(x, device_count, axis, keepdims, op_name, name):
         .RemoteBlobList()
     )
     return out
+
+
+def _check_axis(axis, shape):
+    if axis is None:
+        axis = list(range(len(shape)))
+
+    if isinstance(axis, int):
+        axis = [axis]
+
+    assert isinstance(axis, (list, tuple)), "Invalid axis {}".format(axis)
+    for x in axis:
+        if x < 0:
+            x += len(shape)
+        assert x >= 0 and x < len(shape), "Invalid axis {}".format(axis)
+
+    return axis
 
 
 def check_x_dictribute(x, axis):

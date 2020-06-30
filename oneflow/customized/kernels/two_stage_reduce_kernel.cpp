@@ -64,12 +64,6 @@ class ReduceDeviceStageKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device, typename T>
-bool ReduceDeviceStageIsMatchedPred(const KernelRegContext& ctx) {
-  const TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-  return ctx.device_type() == device && out_desc->data_type() == GetDataType<T>::value;
-}
-
 template<typename T>
 user_op::InferTmpSizeFn GenDeviceStageInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
@@ -84,7 +78,8 @@ user_op::InferTmpSizeFn GenDeviceStageInferTmpSizeFn() {
 #define REGISTER_REDUCE_DEVICE_STAGE_KERNEL(op_name, binary_func, device, dtype_pair)            \
   REGISTER_USER_KERNEL(op_name)                                                                  \
       .SetCreateFn<ReduceDeviceStageKernel<binary_func, device, OF_PP_PAIR_FIRST(dtype_pair)>>() \
-      .SetIsMatchedPred(ReduceDeviceStageIsMatchedPred<device, OF_PP_PAIR_FIRST(dtype_pair)>)    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn(GenDeviceStageInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_DEVICE_STAGE_KERNEL, ("reduce_max_device_stage"),
@@ -127,12 +122,6 @@ class ReduceDeviceStageGradKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device, typename T>
-bool ReduceDeviceStageGradIsMatchedPred(const KernelRegContext& ctx) {
-  const TensorDesc* in_diff_desc = ctx.TensorDesc4ArgNameAndIndex("in_diff", 0);
-  return ctx.device_type() == device && in_diff_desc->data_type() == GetDataType<T>::value;
-}
-
 template<typename T>
 user_op::InferTmpSizeFn GenDeviceStageGradInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
@@ -144,10 +133,11 @@ user_op::InferTmpSizeFn GenDeviceStageGradInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_REDUCE_DEVICE_STAGE_GRAD_KERNEL(op_name, device, dtype_pair)                     \
-  REGISTER_USER_KERNEL(op_name)                                                                   \
-      .SetCreateFn<ReduceDeviceStageGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()           \
-      .SetIsMatchedPred(ReduceDeviceStageGradIsMatchedPred<device, OF_PP_PAIR_FIRST(dtype_pair)>) \
+#define REGISTER_REDUCE_DEVICE_STAGE_GRAD_KERNEL(op_name, device, dtype_pair)                   \
+  REGISTER_USER_KERNEL(op_name)                                                                 \
+      .SetCreateFn<ReduceDeviceStageGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+                       & (user_op::HobDataType("in_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
       .SetInferTmpSizeFn(GenDeviceStageGradInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_DEVICE_STAGE_GRAD_KERNEL,
@@ -170,9 +160,7 @@ class ReduceGlobalStageKernel final : public OpKernel {
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-    const Shape& reduced_shape = axis.empty()
-                                     ? Shape::Ones(in->shape().NumAxes())
-                                     : CreateReducedShape(in->shape(), {axis.begin(), axis.end()});
+    const Shape& reduced_shape = CreateReducedShape(in->shape(), {axis.begin(), axis.end()});
     NdarrayReduce<device_type, T, BinaryFunc>::Reduce(
         ctx->device_ctx(), XpuVarNdarray<T>(reduced_shape, out->mut_dptr<T>()),
         XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
@@ -186,16 +174,11 @@ class ReduceGlobalStageKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device, typename T>
-bool ReduceGlobalStageIsMatchedPred(const KernelRegContext& ctx) {
-  const TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-  return ctx.device_type() == device && out_desc->data_type() == GetDataType<T>::value;
-}
-
 #define REGISTER_REDUCE_GLOBAL_STAGE_KERNEL(op_name, binary_func, device, dtype_pair)            \
   REGISTER_USER_KERNEL(op_name)                                                                  \
       .SetCreateFn<ReduceGlobalStageKernel<binary_func, device, OF_PP_PAIR_FIRST(dtype_pair)>>() \
-      .SetIsMatchedPred(ReduceGlobalStageIsMatchedPred<device, OF_PP_PAIR_FIRST(dtype_pair)>)    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn([](InferContext* ctx) {                                                 \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                             \
         return in_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair));                      \
@@ -246,8 +229,7 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
 
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     const Shape& reduced_shape =
-        axis.empty() ? Shape::Ones(device_count->shape().NumAxes())
-                     : CreateReducedShape(device_count->shape(), {axis.begin(), axis.end()});
+        CreateReducedShape(device_count->shape(), {axis.begin(), axis.end()});
 
     NdarrayUtil<device_type, int32_t>::ReduceSum(
         ctx->device_ctx(), XpuVarNdarray<int32_t>(reduced_shape, global_count),
@@ -269,12 +251,6 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<DeviceType device, typename T>
-bool ReduceGlobalStageGradIsMatchedPred(const KernelRegContext& ctx) {
-  const TensorDesc* in_diff_desc = ctx.TensorDesc4ArgNameAndIndex("in_diff", 0);
-  return ctx.device_type() == device && in_diff_desc->data_type() == GetDataType<T>::value;
-}
 
 template<typename T>
 user_op::InferTmpSizeFn GenGlobalStageGradInferTmpSizeFn() {
@@ -298,10 +274,11 @@ user_op::InferTmpSizeFn GenGlobalStageGradInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_REDUCE_GLOBAL_STAGE_GRAD_KERNEL(op_name, device, dtype_pair)                     \
-  REGISTER_USER_KERNEL(op_name)                                                                   \
-      .SetCreateFn<ReduceGlobalStageGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()           \
-      .SetIsMatchedPred(ReduceGlobalStageGradIsMatchedPred<device, OF_PP_PAIR_FIRST(dtype_pair)>) \
+#define REGISTER_REDUCE_GLOBAL_STAGE_GRAD_KERNEL(op_name, device, dtype_pair)                   \
+  REGISTER_USER_KERNEL(op_name)                                                                 \
+      .SetCreateFn<ReduceGlobalStageGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+                       & (user_op::HobDataType("in_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
       .SetInferTmpSizeFn(GenGlobalStageGradInferTmpSizeFn<OF_PP_PAIR_FIRST(dtype_pair)>());
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_GLOBAL_STAGE_GRAD_KERNEL,

@@ -32,7 +32,7 @@ def _test_two_stage_reduce(
     func_config.train.model_update_conf(dict(naive_conf={}))
     func_config.use_boxing_v2(True)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def two_stage_reduce_job(x=flow.FixedTensorDef((4, 20, 20, 20))):
         with flow.fixed_placement(device_type, "0:0"):
             x += flow.get_variable(
