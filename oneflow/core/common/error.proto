@@ -101,8 +101,9 @@ message ErrorStackFrame {
 }
 
 message ErrorProto {
-  optional string msg = 1 [default = ""];
-  repeated ErrorStackFrame stack_frame = 2;
+  optional string error_summary = 1 [default = ""];
+  optional string msg = 2 [default = ""];
+  repeated ErrorStackFrame stack_frame = 3;
   oneof error_type {
     ConfigAssertFailedError config_assert_failed_error = 12;
     ConfigResourceUnavailableError config_resource_unavailable_error = 13;
