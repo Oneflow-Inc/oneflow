@@ -83,6 +83,13 @@ Error Error::MultipleOpKernelsMatchedError(const std::vector<std::string>& error
   return error;
 }
 
+Error Error::GetLossOpNodesError(const std::vector<std::string>& error_msgs) {
+  auto error = std::make_shared<ErrorProto>();
+  auto* get_loss_op_nodes_error = error->mutable_get_loss_op_nodes_error();
+  for (const auto& msg : error_msgs) { get_loss_op_nodes_error->add_op_graph_node_name(msg); }
+  return error;
+}
+
 Error Error::GradientFunctionNotFound() {
   auto error = std::make_shared<ErrorProto>();
   error->mutable_gradient_function_not_found_error();

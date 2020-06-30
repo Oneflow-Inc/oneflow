@@ -24,6 +24,7 @@ class Error final {
   static Error BoxingNotSupported();
   static Error OpKernelNotFoundError(const std::vector<std::string>& error_msgs);
   static Error MultipleOpKernelsMatchedError(const std::vector<std::string>& error_msgs);
+  static Error GetLossOpNodesError(const std::vector<std::string>& error_msgs);
 
   // gradient
   static Error GradientFunctionNotFound();

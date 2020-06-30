@@ -85,6 +85,10 @@ message MultipleOpKernelsMatchedError {
   repeated string matched_op_kernels_debug_str = 1;
 }
 
+message GetLossOpNodesError {
+  repeated string op_graph_node_name = 1;
+}
+
 message UnkownError { }
 
 message ErrorStackFrame {
@@ -107,6 +111,7 @@ message ErrorProto {
     GradientFunctionNotFoundError gradient_function_not_found_error = 20;
     OpKernelNotFoundError op_kernel_not_found_error = 21;
     MultipleOpKernelsMatchedError multiple_op_kernels_matched_error = 22;
+    GetLossOpNodesError get_loss_op_nodes_error = 24;
     UnkownError unknown_error = 100;
   }
 }
