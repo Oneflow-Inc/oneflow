@@ -57,8 +57,8 @@ class flow_op:
             opset = []
             flow_op._OPSETS[self.domain] = opset
         for k, v in inspect.getmembers(func, inspect.ismethod):
-            if k.startswith("version_"):
-                version = int(k.replace("version_", ""))
+            if k.startswith("Version_"):
+                version = int(k.replace("Version_", ""))
                 while version >= len(opset):
                     opset.append({})
                 opset_dict = opset[version]
@@ -70,22 +70,6 @@ class flow_op:
                     if self.flow_obns is not None:
                         flow_op._OP_TYPE_2_OBN[name] = self.flow_obns
         return func
-
-    def register_compat_handler(self, func, version):
-        """Register old style custom handler.
-
-        :param func: The handler.
-        :param version: The domain the operator belongs to, defaults to onnx.
-        :param version: The version of the handler.
-        """
-        opset = flow_op._OPSETS.get(self.domain)
-        if not opset:
-            opset = []
-            flow_op._OPSETS[self.domain] = opset
-            while version >= len(opset):
-                opset.append({})
-            opset_dict = opset[version]
-            opset_dict[self.name[0]] = (func, self.onnx_op[0], self.kwargs)
 
     @staticmethod
     def ibn4op_type(op_type):
@@ -100,7 +84,7 @@ class flow_op:
         return flow_op._OPSETS
 
     @staticmethod
-    def create_mapping(max_onnx_opset_version, extra_opsets):
+    def CreateMapping(max_onnx_opset_version, extra_opsets):
         """Create the final mapping dictionary by stacking domains and opset versions.
 
         :param max_onnx_opset_version: The highest onnx opset the resulting graph may use.
@@ -120,17 +104,3 @@ class flow_op:
 
         flow_op._MAPPING = ops_mapping
         return ops_mapping
-
-    @staticmethod
-    def find_effective_op(name):
-        """Find the effective version of an op create_mapping.
-           This is used if we need to compose ops from other ops where we'd need to find the
-           op that is doing to be used in the final graph, for example there is a custom op
-           that overrides a onnx op ...
-
-        :param name: The operator name.
-        """
-        map_info = flow_op._MAPPING.get(name)
-        if map_info is None:
-            return None
-        return map_info

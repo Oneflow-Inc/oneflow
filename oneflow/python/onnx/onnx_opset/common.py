@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class BroadcastOp:
     @classmethod
-    def version_6(cls, ctx, node, **kwargs):
+    def Version_6(cls, ctx, node, **kwargs):
         """Elementwise Ops with broadcast flag."""
         shape0 = ctx.get_shape(node.input[0])
         shape1 = ctx.get_shape(node.input[1])
@@ -32,10 +32,10 @@ class BroadcastOp:
                 # in rs4 mul and add do not support scalar correctly
                 if not shape0:
                     if node.inputs[0].is_const():
-                        shape0 = node.inputs[0].scalar_to_dim1()
+                        shape0 = node.inputs[0].ScalarTo1DTensor()
                 if not shape1:
                     if node.inputs[1].is_const():
-                        shape1 = node.inputs[1].scalar_to_dim1()
+                        shape1 = node.inputs[1].ScalarTo1DTensor()
             if (
                 shape0
                 and shape1

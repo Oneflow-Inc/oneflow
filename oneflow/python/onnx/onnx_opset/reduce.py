@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 @flow_op("reduce_prod", onnx_op="ReduceProd")
 class ReduceOpBase:
     @classmethod
-    def version_1(cls, ctx, node, **kwargs):
+    def Version_1(cls, ctx, node, **kwargs):
         axes = node.get_attr_value("axis")
         input_shape = ctx.get_shape(node.input[0])
         if input_shape is None:
@@ -52,15 +52,15 @@ class ReduceOpBase:
             node.set_attr("keepdims", keep_dims.i)
 
     @classmethod
-    def version_11(cls, ctx, node, **kwargs):
+    def Version_11(cls, ctx, node, **kwargs):
         # Opset 11 supports negative axis, but core logic is same
-        cls.version_1(ctx, node, **kwargs)
+        cls.Version_1(ctx, node, **kwargs)
 
 
 @flow_op(["argmax", "argmin"], ["ArgMax", "ArgMin"])
 class ArgMax:
     @classmethod
-    def version_1(cls, ctx, node, **kwargs):
+    def Version_1(cls, ctx, node, **kwargs):
         # output_type output = ArgMin(T input, Tidx dimension, @type Tidx, @type output_type)
         # tensor(int32) reduced = ArgMin(T data, @INT axis, @INT keepdims)
         input_shape = ctx.get_shape(node.input[0])
@@ -72,17 +72,17 @@ class ArgMax:
             # current node will return int64 after conversion, which differs from previous dtype got from oneflow
             ctx.set_dtype(node.output[0], onnx_pb.TensorProto.INT64)
             op_name = id_util.UniqueStr("Cast")
-            cast_node = ctx.insert_new_node_on_output(
+            cast_node = ctx.InsertNewNodeOnOutput(
                 "Cast", node.output[0], name=op_name, to=onnx_pb.TensorProto.INT32
             )
             ctx.set_dtype(cast_node.output[0], onnx_pb.TensorProto.INT32)
-            ctx.copy_shape(node.output[0], cast_node.output[0])
+            ctx.CopyShape(node.output[0], cast_node.output[0])
 
         node.set_attr("axis", axis)
         node.set_attr("keepdims", 0)
-        ctx.remove_input(node, node.input[1])
+        ctx.RemoveInput(node, node.input[1])
 
     @classmethod
-    def version_11(cls, ctx, node, **kwargs):
+    def Version_11(cls, ctx, node, **kwargs):
         # Opset 11 supports negative axis, but core logic same
-        cls.version_1(ctx, node, **kwargs)
+        cls.Version_1(ctx, node, **kwargs)

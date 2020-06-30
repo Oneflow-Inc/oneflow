@@ -29,24 +29,24 @@ class ConstFoldOptimizer(GraphOptimizerBase):
     def __init__(self):  # pylint: disable=useless-super-delegation
         super(ConstFoldOptimizer, self).__init__()
 
-    def _optimize(self, graph):
-        return self._apply_optimization(graph, self._optimize_at_current_graph_level)
+    def _Optimize(self, graph):
+        return self._ApplyOptimization(graph, self._OptimizeAtCurrentGraphLevel)
 
-    def _optimize_at_current_graph_level(self, graph):
+    def _OptimizeAtCurrentGraphLevel(self, graph):
         graph_changed = True
         while graph_changed:
             graph_changed = False
             ops = graph.get_nodes()
             for op in ops:
-                if self._should_skip(op):
+                if self._ShouldSkip(op):
                     continue
-                if self._fold_node(op, graph):
+                if self._FoldNode(op, graph):
                     graph_changed = True
                     self.graph_been_opt = True
         return graph
 
     @staticmethod
-    def _should_skip(node):
+    def _ShouldSkip(node):
         # only support onnx official op for now, op in other domain is not supported for now
         if not util.is_onnx_domain(node.domain):
             return True
@@ -60,17 +60,17 @@ class ConstFoldOptimizer(GraphOptimizerBase):
 
         return False
 
-    def _fold_node(self, node, graph):
+    def _FoldNode(self, node, graph):
         """ if node's input are all const and it's not graph's output then it can be fold.
             if node can be fold True will be return indicating that graph is changed
         """
-        if self._all_inputs_are_const(node.inputs) and not self._is_graph_output(
+        if self._AllInputsAreConst(node.inputs) and not self._IsGraphOutput(
             node, graph
         ):
             process_func = _func_map.get(node.type, None)
             if process_func:
                 const_outputs = process_func(node, graph)
-                self._replace_node_with_const(node, graph, const_outputs)
+                self._ReplaceNodeWithConst(node, graph, const_outputs)
                 return True
             self.logger.debug(
                 "need to add function to fold op %s whose op_type is %s",
@@ -80,41 +80,39 @@ class ConstFoldOptimizer(GraphOptimizerBase):
         return False
 
     @staticmethod
-    def _all_inputs_are_const(nodes):
+    def _AllInputsAreConst(nodes):
         return all(node.is_const() for node in nodes if node)
 
     @staticmethod
-    def _is_graph_output(node, graph):
+    def _IsGraphOutput(node, graph):
         node_out_set = set(node.output)
         graph_out_set = set(graph.outputs)
         return node_out_set.intersection(graph_out_set)
 
     @staticmethod
-    def _replace_node_with_const(node, graph, vals):
-        util.make_sure(
+    def _ReplaceNodeWithConst(node, graph, vals):
+        util.MakeSure(
             len(node.output) == len(vals),
             "length of node outputs and const vals should be same",
         )
         for old_input, val in zip(node.output, vals):
-            const_node = graph.make_const(id_util.UniqueStr("const_fold_opt"), val)
-            graph.set_dtype(
-                const_node.output[0], util.map_numpy_to_onnx_dtype(val.dtype)
-            )
+            const_node = graph.MakeConst(id_util.UniqueStr("const_fold_opt"), val)
+            graph.set_dtype(const_node.output[0], util.Numpy2OnnxDtype(val.dtype))
             graph.set_shape(const_node.output[0], val.shape)
-            graph.replace_all_inputs(graph.get_nodes(), old_input, const_node.output[0])
-        graph.remove_node(node.name)
+            graph.ReplaceAllInputs(graph.get_nodes(), old_input, const_node.output[0])
+        graph.RemoveNode(node.name)
 
     @staticmethod
     @_register_func("Cast")
-    def _fold_cast(node, graph):
+    def _FoldCast(node, graph):
         const_val = node.inputs[0].get_tensor_value(as_list=False)
-        np_dtype = util.ONNX_TO_NUMPY_DTYPE[node.get_attr("to").i]
+        np_dtype = util.ONNX_2_NUMPY_DTYPE[node.get_attr("to").i]
         const_val_after_cast = const_val.astype(np_dtype)
         return [const_val_after_cast]
 
     @staticmethod
     @_register_func("Transpose")
-    def _fold_transpose(node, graph) -> list:
+    def _FoldTranspose(node, graph) -> list:
         const_val = node.inputs[0].get_tensor_value(as_list=False)
         perm_attr = node.get_attr("perm")
         perm = perm_attr.ints if perm_attr else None
@@ -123,13 +121,13 @@ class ConstFoldOptimizer(GraphOptimizerBase):
 
     @staticmethod
     @_register_func("Unsqueeze")
-    def _fold_unsqueeze(node, graph):
+    def _FoldUnsqueeze(node, graph):
         """
         numpy expand_dims only supports to unsqueeze one dim one time, so reshape is used to simplify the logic
         """
         const_val = node.inputs[0].get_tensor_value(as_list=False)
         axes = list(node.get_attr("axes").ints)
-        util.make_sure(
+        util.MakeSure(
             all(axis >= 0 for axis in axes),
             "onnx spec says it only supports positive axis",
         )

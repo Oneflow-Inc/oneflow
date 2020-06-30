@@ -30,10 +30,10 @@ class BackToBackOptimizer(GraphOptimizerBase):
     def __init__(self):  # pylint: disable=useless-super-delegation
         super(BackToBackOptimizer, self).__init__()
 
-    def _optimize(self, graph):
-        return self._apply_optimization(graph, self._optimize_at_current_graph_level)
+    def _Optimize(self, graph):
+        return self._ApplyOptimization(graph, self._OptimizeAtCurrentGraphLevel)
 
-    def _optimize_at_current_graph_level(self, g):
+    def _OptimizeAtCurrentGraphLevel(self, g):
         for optype, handler in _func_map.items():
             # candidate nodes for removal/optimization
             nodes = [n for n in g.get_nodes() if n.type in optype]
@@ -56,7 +56,7 @@ class BackToBackOptimizer(GraphOptimizerBase):
                 consumer_nodes = consumer_node_ids[nodeid]
 
                 if len(consumer_nodes) > 0:
-                    all_consumers = g.find_output_consumers(node.output[0])
+                    all_consumers = g.FindOutputConsumers(node.output[0])
                     if len(all_consumers) != len(consumer_nodes):
                         # if first node is used elsewhere, skip
                         continue
@@ -70,7 +70,7 @@ class BackToBackOptimizer(GraphOptimizerBase):
 
     @staticmethod
     @_register_func("Cast")
-    def _optimize_cast(g, node, consumer_nodes):
+    def _OptimizeCast(g, node, consumer_nodes):
         """remove long chains of cast ops"""
         q2 = []
         type1 = node.get_attr("to").i
@@ -84,7 +84,7 @@ class BackToBackOptimizer(GraphOptimizerBase):
                 for node2 in consumer_nodes:
                     node2.input[0] = node.input[0]
                     q2.append(node2.output[0])
-                g.remove_node(node.name)
+                g.RemoveNode(node.name)
                 return q2
 
         # otherwise, check consumer cast nodes for a target type
@@ -118,12 +118,12 @@ class BackToBackOptimizer(GraphOptimizerBase):
         if can_reduce:
             for node2 in consumer_nodes:
                 node2.input[0] = node.input[0]
-            g.remove_node(node.name)
+            g.RemoveNode(node.name)
         return q2
 
     @staticmethod
     @_register_func("Transpose")
-    def _optimize_transpose(g, node, consumer_nodes):
+    def _OptimizeTranspose(g, node, consumer_nodes):
         """remove long chains of transpose ops"""
         t1 = list(node.get_attr("perm").ints)
         q2 = []
@@ -136,11 +136,11 @@ class BackToBackOptimizer(GraphOptimizerBase):
                 # both nodes can be deleted
                 shape = g.get_shape(node2.output[0])
                 dtype = g.get_dtype(node2.output[0])
-                node2_consumers = g.find_output_consumers(node2.output[0])
-                g.replace_all_inputs(node2_consumers, node2.output[0], node.input[0])
-                g.remove_node(node2.name)
+                node2_consumers = g.FindOutputConsumers(node2.output[0])
+                g.ReplaceAllInputs(node2_consumers, node2.output[0], node.input[0])
+                g.RemoveNode(node2.name)
                 if set(node2.output) & set(g.outputs):
-                    g.make_node(
+                    g.MakeNode(
                         "Identity",
                         [node.input[0]],
                         outputs=node2.output,
@@ -150,12 +150,12 @@ class BackToBackOptimizer(GraphOptimizerBase):
             else:
                 node2.set_attr("perm", [t1[i] for i in t2])
                 q2.append(node2.output[0])
-        g.remove_node(node.name)
+        g.RemoveNode(node.name)
         return q2
 
     @staticmethod
     @_register_func(("Squeeze", "Unsqueeze"))
-    def _optimize_squeeze_unsqueeze(g, node, consumer_nodes):
+    def _OptimizeSqueezeUnsqueeze(g, node, consumer_nodes):
         """remove pairs of squeeze-unsqueeze nodes"""
 
         if node.type != "Squeeze" or len(consumer_nodes) != 1:
@@ -177,8 +177,8 @@ class BackToBackOptimizer(GraphOptimizerBase):
         if set(node2.output) & set(g.outputs):
             return []
 
-        node2_consumers = g.find_output_consumers(node2.output[0])
-        g.replace_all_inputs(node2_consumers, node2.output[0], node.input[0])
-        g.remove_node(node.name)
-        g.remove_node(node2.name)
+        node2_consumers = g.FindOutputConsumers(node2.output[0])
+        g.ReplaceAllInputs(node2_consumers, node2.output[0], node.input[0])
+        g.RemoveNode(node.name)
+        g.RemoveNode(node2.name)
         return []

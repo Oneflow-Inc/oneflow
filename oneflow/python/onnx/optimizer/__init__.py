@@ -20,7 +20,6 @@ import logging
 # optimizer sequence need to be considered carefully
 _optimizers = OrderedDict(
     [
-        # FIXME(daquexian): transpose optimizer fails test_conv.test_conv2d_k3s1_nhwc_valid test
         ("optimize_transpose", TransposeOptimizer),
         ("fold_constants", ConstFoldOptimizer),
         ("loop_optimizer", LoopOptimizer),
@@ -37,12 +36,12 @@ def _get_optimizers():
     return _optimizers
 
 
-def optimize_graph(graph):
+def OptimizeGraph(graph):
     """ Optimize graph, return optimized graph. No throw. """
     logger = logging.getLogger(__name__)
     logger.info("Optimizing ONNX model")
 
-    before = graph.dump_node_statistics()
+    before = graph.DumpNodeStatistics()
     opts = _get_optimizers()
     continue_flag = True
     while continue_flag:
@@ -52,7 +51,7 @@ def optimize_graph(graph):
                 logger.debug("Apply %s", name)
                 current = copy.deepcopy(graph)
                 opt = factory()
-                graph = opt.optimize(current) or graph
+                graph = opt.Optimize(current) or graph
                 continue_flag = continue_flag or opt.graph_been_opt
 
             except Exception:  # pylint: disable=broad-except
@@ -60,11 +59,11 @@ def optimize_graph(graph):
                 logger.warning("Failed to apply %s", name, exc_info=1)
 
     try:
-        graph.topological_sort(graph.get_nodes())
+        graph.TopologicalSort(graph.get_nodes())
     except Exception:  # pylint: disable=broad-except
-        logger.warning("Failed topological_sort", exc_info=1)
+        logger.warning("Failed TopologicalSort", exc_info=1)
 
-    after = graph.dump_node_statistics()
+    after = graph.DumpNodeStatistics()
     diff = copy.deepcopy(after)
     diff.subtract(before)
     diff = [

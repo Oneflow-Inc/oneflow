@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 @flow_op(["input", "return", "variable"], None)
 class DirectOp:
     @classmethod
-    def version_1(cls, ctx, node, **kwargs):
+    def Version_1(cls, ctx, node, **kwargs):
         pass
 
 
@@ -32,5 +32,5 @@ class DirectOp:
 )
 class BoxingOp:
     @classmethod
-    def version_1(cls, ctx, node, **kwargs):
+    def Version_1(cls, ctx, node, **kwargs):
         pass

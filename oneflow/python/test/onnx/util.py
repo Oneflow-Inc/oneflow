@@ -23,12 +23,10 @@ def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True
         check_point.init()
     with tempfile.TemporaryDirectory() as tmpdirname:
         check_point.save(tmpdirname)
-        # TODO: a more elegant way?
+        # TODO(daquexian): a more elegant way?
         while not os.path.exists(os.path.join(tmpdirname, "snapshot_done")):
             pass
         onnx_proto = flow.onnx.export(job_func, tmpdirname, opset=11)
-    with open("/tmp/model.onnx", "wb") as f:
-        onnx.save(onnx_proto, f)
     sess = ort.InferenceSession(onnx_proto.SerializeToString())
     assert len(sess.get_outputs()) == 1
     assert len(sess.get_inputs()) <= 1
@@ -43,8 +41,6 @@ def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True
     oneflow_res = job_func(*ipt_dict.values()).get().ndarray()
     a = onnx_res.flatten()
     b = oneflow_res.flatten()
-    np.savetxt("/tmp/onnx_res", a.flatten())
-    np.savetxt("/tmp/oneflow_res", b.flatten())
     max_idx = np.argmax(np.abs(a - b) / a)
     if print_rel_diff:
         print(

@@ -6,7 +6,7 @@
 """
 
 from oneflow.python.framework import id_util
-from oneflow.python.onnx.util import make_sure
+from oneflow.python.onnx.util import MakeSure
 from .optimizer_base import GraphOptimizerBase
 
 
@@ -21,34 +21,34 @@ class LoopOptimizer(GraphOptimizerBase):
     def __init__(self):  # pylint: disable=useless-super-delegation
         super(LoopOptimizer, self).__init__()
 
-    def _optimize(self, graph):
-        return self._apply_optimization(graph, self._optimize_at_current_graph_level)
+    def _Optimize(self, graph):
+        return self._ApplyOptimization(graph, self._OptimizeAtCurrentGraphLevel)
 
-    def _optimize_at_current_graph_level(self, g):
+    def _OptimizeAtCurrentGraphLevel(self, g):
         has_update = True
         while has_update:
             has_update = False
             nodes = [n for n in g.get_nodes() if n.type == "Loop"]
             for n in nodes:
-                has_update_tmp = self._try_move_transpose_out_of_body_graph(n)
+                has_update_tmp = self._TryMoveTransposeOutOfBodyGraph(n)
                 if has_update_tmp:
                     has_update = True
                     self.graph_been_opt = True
         return g
 
     @staticmethod
-    def consumer_nodes_num(graph, node):
-        make_sure(len(node.output) == 1, "only consider node with only one output")
-        res = len(graph.find_output_consumers(node.output[0]))
+    def ConsumerNodesNum(graph, node):
+        MakeSure(len(node.output) == 1, "only consider node with only one output")
+        res = len(graph.FindOutputConsumers(node.output[0]))
         return res
 
-    def _try_move_transpose_out_of_body_graph(self, loop_node):
+    def _TryMoveTransposeOutOfBodyGraph(self, loop_node):
         # output node of body graph can be loop-carried-dependent, if so it can't be move out of the body graph
         # return True if moving some nodes successfully
         # for now, we only consider moving transpose
         body_graph = loop_node.get_body_graphs()["body"]
         parent_graph = loop_node.graph
-        scan_nodes_name_in_body, scan_node_in_parent = self._scan_outputs(loop_node)
+        scan_nodes_name_in_body, scan_node_in_parent = self._ScanOutputs(loop_node)
         scan_nodes = [
             body_graph.get_node_by_output(name) for name in scan_nodes_name_in_body
         ]
@@ -59,22 +59,22 @@ class LoopOptimizer(GraphOptimizerBase):
             need_process = False
             if (
                 node.type == "Transpose"
-                and self.consumer_nodes_num(body_graph, node) <= 1
+                and self.ConsumerNodesNum(body_graph, node) <= 1
             ):
                 trans = node
                 new_output = node.input[0]
-                body_graph.remove_node(node.name)
+                body_graph.RemoveNode(node.name)
                 need_process = True
             elif (
                 node.type == "Identity"
                 and node.inputs[0].type == "Transpose"
-                and self.consumer_nodes_num(body_graph, node) <= 1
-                and self.consumer_nodes_num(body_graph, node.inputs[0]) <= 1
+                and self.ConsumerNodesNum(body_graph, node) <= 1
+                and self.ConsumerNodesNum(body_graph, node.inputs[0]) <= 1
             ):
                 trans = node.inputs[0]
                 new_output = node.inputs[0].input[0]
-                body_graph.remove_node(node.inputs[0].name)
-                body_graph.remove_node(node.name)
+                body_graph.RemoveNode(node.inputs[0].name)
+                body_graph.RemoveNode(node.name)
                 need_process = True
 
             if need_process:
@@ -87,7 +87,7 @@ class LoopOptimizer(GraphOptimizerBase):
                     i + 1 for i in ori_perm
                 ]  # body output's rank is m > rank of loop's output is m+1
                 name = id_util.UniqueStr("trans_moved_from_loop_body")
-                _ = parent_graph.insert_new_node_on_output(
+                _ = parent_graph.InsertNewNodeOnOutput(
                     "Transpose", name_in_parent, name, perm=new_perm
                 )
                 graph_is_changed = True
@@ -95,7 +95,7 @@ class LoopOptimizer(GraphOptimizerBase):
         return graph_is_changed
 
     @classmethod
-    def _scan_outputs(cls, loop):
+    def _ScanOutputs(cls, loop):
         # loop has 2+N inputs; loop has N+K outputs;
         # loop's body graph has 1+N+K outputs
         loop_carried = len(loop.input) - 2

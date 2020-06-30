@@ -25,30 +25,30 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
     def __init__(self):
         super(MergeDuplicatedNodesOptimizer, self).__init__()
         # used internally
-        self._graph_can_be_optimized = True
+        self._graph_can_be_Optimized = True
 
-    def _optimize(self, graph):
-        return self._apply_optimization(graph, self._optimize_at_current_graph_level)
+    def _Optimize(self, graph):
+        return self._ApplyOptimization(graph, self._OptimizeAtCurrentGraphLevel)
 
-    def _optimize_at_current_graph_level(self, graph):
-        while self._graph_can_be_optimized:
-            self._graph_can_be_optimized = False
-            self._merge_duplicated_nodes(graph)
-            if self._graph_can_be_optimized:
+    def _OptimizeAtCurrentGraphLevel(self, graph):
+        while self._graph_can_be_Optimized:
+            self._graph_can_be_Optimized = False
+            self._MergeDuplicatedNodes(graph)
+            if self._graph_can_be_Optimized:
                 self.graph_been_opt = True
         return graph
 
-    def _merge_duplicated_nodes(self, graph):
+    def _MergeDuplicatedNodes(self, graph):
         # "duplicated" means: op_type, input and attribute are same
         # while attr is un-hashable so doesn't include it when grouping nodes
-        nodes_groups = self._group_nodes_by_type_inputs(graph)
+        nodes_groups = self._GroupNodesByTypeInputs(graph)
         for _, nodes_group in nodes_groups.items():
             if self._skip_node_type(nodes_group[0]):
                 continue
-            self._del_nodes_if_duplicated(nodes_group, graph)
+            self._DelNodesIfDuplicated(nodes_group, graph)
 
     @staticmethod
-    def _group_nodes_by_type_inputs(graph):
+    def _GroupNodesByTypeInputs(graph):
         res = defaultdict(list)
         for node in graph.get_nodes():
             # default const of graph input cannot be merged
@@ -57,7 +57,7 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
             res[_KeyToGroupNodes(node.type, tuple(node.input))].append(node)
         return res
 
-    def _del_nodes_if_duplicated(self, nodes_group, graph):
+    def _DelNodesIfDuplicated(self, nodes_group, graph):
         # input and op type of nodes in same group are same,
         # and if their attributes are also same then they are duplicated
         while len(nodes_group) > 1:
@@ -69,7 +69,7 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
                 else:
                     unprocessed_node.append(node)
 
-            self._merge_nodes_that_are_duplicated(nodes_to_process, graph)
+            self._MergeNodesThatAreDuplicated(nodes_to_process, graph)
             nodes_group = unprocessed_node
 
     def _have_equal_attr(self, node_1, node_2, graph):
@@ -89,7 +89,7 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
                 return True
         return False
 
-    def _merge_nodes_that_are_duplicated(self, nodes_to_process, graph):
+    def _MergeNodesThatAreDuplicated(self, nodes_to_process, graph):
         # node's output may not all be used, so have to select the one that uses most of node's outputs
         nodes_to_process.sort(key=self._len_of_node_output, reverse=True)
         node_to_retain = nodes_to_process[0]
@@ -100,9 +100,9 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
             for old_input, new_input in zip(
                 node_to_delete.output, node_to_retain.output
             ):
-                graph.replace_all_inputs(graph.get_nodes(), old_input, new_input)
-            graph.remove_node(node_to_delete.name)
-            self._graph_can_be_optimized = True
+                graph.ReplaceAllInputs(graph.get_nodes(), old_input, new_input)
+            graph.RemoveNode(node_to_delete.name)
+            self._graph_can_be_Optimized = True
 
     @staticmethod
     def _skip_node_type(node):

@@ -33,7 +33,7 @@ import os.path
 logger = logging.getLogger(__name__)
 
 
-def oneflow_to_onnx_naive(graph, shape_override):
+def OneflowToOnnxNaive(graph, shape_override):
     """
     Convert node from oneflow format to onnx format.
     Convert the oneflow nodes into an onnx graph with minimal rewrites so
@@ -46,7 +46,7 @@ def oneflow_to_onnx_naive(graph, shape_override):
         lbd = graph.helper.lbn2logical_blob_desc[lbn]
         if lbn not in shape_override:
             shape_override[lbn] = list(lbd.body.shape.dim)
-        dtypes[lbn] = util.map_flow_dtype(lbd.body.data_type)
+        dtypes[lbn] = util.Flow2OnnxDtype(lbd.body.data_type)
 
     # some stats
     op_cnt = collections.Counter()
@@ -142,7 +142,7 @@ def oneflow_to_onnx_naive(graph, shape_override):
         for a in attrs:
             attr_cnt[a] += 1
             if a == "dtype":
-                attr[a] = util.map_flow_dtype(util.get_flow_node_attr(node, "dtype"))
+                attr[a] = util.Flow2OnnxDtype(util.get_flow_node_attr(node, "dtype"))
             else:
                 attr[a] = util.get_flow_node_attr(node, a)
 
@@ -161,7 +161,7 @@ def oneflow_to_onnx_naive(graph, shape_override):
     return onnx_nodes, op_cnt, attr_cnt, dtypes, shape_override
 
 
-def oneflow_onnx_mapping(g, ops_mapping):
+def FlowOnnxMapping(g, ops_mapping):
     logger.debug("Mapping Oneflow node to ONNX node(s)")
     mapped_op = collections.Counter()
     unmapped_op = collections.Counter()
@@ -171,7 +171,7 @@ def oneflow_onnx_mapping(g, ops_mapping):
     for node in ops:
         logger.debug("Process node: %s\n%s", node.name, node.summary)
 
-        if node.need_skip():
+        if node.skip_conversion:
             logger.debug("explicitly skip node " + node.name)
             continue
 
@@ -198,20 +198,20 @@ def oneflow_onnx_mapping(g, ops_mapping):
     return mapped_op, unmapped_op, exceptions
 
 
-def topological_sort(g, continue_on_error):
+def TopologicalSort(g, continue_on_error):
     ops = g.get_nodes()
     if not continue_on_error:
-        g.topological_sort(ops)
+        g.TopologicalSort(ops)
     else:
         try:
-            g.topological_sort(ops)
+            g.TopologicalSort(ops)
         except:  # pylint: disable=bare-except
             # if we continue on error, ignore graph cycles so we can report all missing ops
             pass
 
 
 @oneflow_export("onnx.export")
-def export(
+def Export(
     job_obj,
     model_save_dir,
     continue_on_error=False,
@@ -225,7 +225,7 @@ def export(
     job_name = job_obj.__name__
     for job in job_set.job:
         if job.job_conf.job_name == job_name:
-            onnx_graph = process_flow_graph(
+            onnx_graph = ProcessFlowGraph(
                 job,
                 model_save_dir,
                 continue_on_error=continue_on_error,
@@ -233,13 +233,13 @@ def export(
                 extra_opset=extra_opset,
                 shape_override=shape_override,
             )
-            onnx_graph = optimizer.optimize_graph(onnx_graph)
-            model_proto = onnx_graph.make_model(job_name)
+            onnx_graph = optimizer.OptimizeGraph(onnx_graph)
+            model_proto = onnx_graph.MakeModel(job_name)
             return model_proto
     return None
 
 
-def process_flow_graph(
+def ProcessFlowGraph(
     flow_graph,
     model_save_dir,
     continue_on_error=False,
@@ -258,7 +258,7 @@ def process_flow_graph(
             the onnx model_proto object
     """
 
-    opset = util.find_opset(opset)
+    opset = util.FindOpset(opset)
     logger.info("Using opset <onnx, %s>", opset)
     if opset > schemas.get_max_supported_opset_version():
         logger.warning(
@@ -272,7 +272,7 @@ def process_flow_graph(
         shape_override = {}
     target = constants.DEFAULT_TARGET
 
-    (onnx_nodes, op_cnt, attr_cnt, dtypes, output_shapes,) = oneflow_to_onnx_naive(
+    (onnx_nodes, op_cnt, attr_cnt, dtypes, output_shapes,) = OneflowToOnnxNaive(
         flow_graph, shape_override
     )
 
@@ -281,21 +281,21 @@ def process_flow_graph(
     )
 
     # create ops mapping for the desired opsets
-    ops_mapping = handler.flow_op.create_mapping(g.opset, g.extra_opset)
+    ops_mapping = handler.flow_op.CreateMapping(g.opset, g.extra_opset)
 
     # some nodes may already copied into inner Graph, so remove them from main Graph.
-    topological_sort(g, continue_on_error)
+    TopologicalSort(g, continue_on_error)
 
-    mapped_op, unmapped_op, exceptions = oneflow_onnx_mapping(g, ops_mapping)
+    mapped_op, unmapped_op, exceptions = FlowOnnxMapping(g, ops_mapping)
     if unmapped_op:
         logger.error("Unsupported ops: %s", unmapped_op)
     if exceptions and not continue_on_error:
         raise exceptions[0]
 
     # onnx requires topological sorting
-    topological_sort(g, continue_on_error)
+    TopologicalSort(g, continue_on_error)
 
-    g.update_proto()
+    g.UpdateProto()
 
     logger.debug(
         "Summay Stats:\n"

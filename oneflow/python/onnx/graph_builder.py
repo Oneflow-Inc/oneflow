@@ -27,11 +27,11 @@ class GraphBuilder(object):
     def graph(self):
         return self._g
 
-    def make_slice(self, kwargs, name=None, shapes=None, dtypes=None):
+    def MakeSlice(self, kwargs, name=None, shapes=None, dtypes=None):
         """
         slice changes its schema at opset 10: it treats some attributes as dynamic input
         so this function has to process inputs according to graph's opset version
-        to get "inputs" and "attr" to feed "make_node"
+        to get "inputs" and "attr" to feed "MakeNode"
         kwargs: key could be ["data", "starts", "ends", "axes", "steps", "outputs"].
         """
         outputs = kwargs.pop("outputs", None)
@@ -40,9 +40,9 @@ class GraphBuilder(object):
             # "data" is string
             # "starts", "ends" and "axes" are attributes, and "axes" is optional.
             inputs = [kwargs.pop("data")]
-            starts = self.convert_to_attribute(kwargs.pop("starts"))
-            ends = self.convert_to_attribute(kwargs.pop("ends"))
-            axes = self.convert_to_attribute(kwargs.pop("axes", None), is_optional=True)
+            starts = self.ConvertToAttribute(kwargs.pop("starts"))
+            ends = self.ConvertToAttribute(kwargs.pop("ends"))
+            axes = self.ConvertToAttribute(kwargs.pop("axes", None), is_optional=True)
             attr = {"starts": starts, "ends": ends, "axes": axes}
         else:
             # slice-10 has 3 required inputs "data", "starts", "ends"l
@@ -82,12 +82,12 @@ class GraphBuilder(object):
             dtype = self.graph.get_dtype(inputs[1])
             for input_data in inputs[1:]:
                 if input_data != util.ONNX_EMPTY_INPUT:
-                    util.make_sure(
+                    util.MakeSure(
                         dtype == self.graph.get_dtype(input_data),
                         "dtype should be same",
                     )
 
-        return self.graph.make_node(
+        return self.graph.MakeNode(
             op_type="Slice",
             inputs=inputs,
             attr=attr,
@@ -102,31 +102,31 @@ class GraphBuilder(object):
         if is_optional and tensor is None:
             return None
 
-        util.make_sure(tensor is not None, "input is required so it couldn't be None")
+        util.MakeSure(tensor is not None, "input is required so it couldn't be None")
 
         res = tensor
         if isinstance(tensor, list):
-            res = self.graph.make_const(
+            res = self.graph.MakeConst(
                 id_util.UniqueStr("const_slice"), np.array(tensor, dtype)
             ).output[0]
 
-        util.make_sure(
+        util.MakeSure(
             isinstance(res, str), "input is a dynamic input, so a str is needed"
         )
 
         return res
 
-    def convert_to_attribute(self, tensor, is_optional=False):
+    def ConvertToAttribute(self, tensor, is_optional=False):
         if is_optional and tensor is None:
             return None
 
-        util.make_sure(tensor is not None, "input is required so it couldn't be None")
+        util.MakeSure(tensor is not None, "input is required so it couldn't be None")
 
         res = tensor
         if isinstance(tensor, str):
             const_node = self.graph.get_node_by_output(tensor)
             res = const_node.get_tensor_value(as_list=True)
 
-        util.make_sure(isinstance(res, list), "input is an attr, so a list is needed")
+        util.MakeSure(isinstance(res, list), "input is an attr, so a list is needed")
 
         return res

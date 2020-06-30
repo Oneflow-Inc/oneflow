@@ -53,7 +53,7 @@ class OnnxOpSchema(object):
         return self._since_version
 
     @staticmethod
-    def from_onnx_schema(onnx_schema):
+    def FromOnnxSchema(onnx_schema):
         name = onnx_schema.name
         domain = onnx_schema.domain
         since_version = int(onnx_schema.since_version)
@@ -64,12 +64,12 @@ class OnnxOpSchema(object):
         return attr in self.attributes
 
 
-def _register_all_schemas_with_history():
+def _RegisterAllSchemasWithHistory():
     """Register all schemas with history"""
     onnx_schemas = defs.get_all_schemas_with_history()
     name_domain_version_schema_map = defaultdict(lambda: defaultdict(dict))
     for s in onnx_schemas:
-        schema = OnnxOpSchema.from_onnx_schema(s)
+        schema = OnnxOpSchema.FromOnnxSchema(s)
         name_domain_version_schema_map[schema.name][schema.domain][
             schema.since_version
         ] = schema
@@ -83,7 +83,7 @@ def _register_all_schemas_with_history():
     return ordered_map
 
 
-def _parse_domain_opset_versions(schemas):
+def _ParseDomainOpsetVersions(schemas):
     """ Get max opset version among all schemas within each domain. """
     domain_opset_versions = dict()
     for domain_version_schema_map in schemas.values():
@@ -101,9 +101,9 @@ def _parse_domain_opset_versions(schemas):
 
 # format is <OpName, <Domain, <SinceVersion, OpSchema>>>
 # SinceVersion is sorted from high to low
-_schemas = _register_all_schemas_with_history()
+_schemas = _RegisterAllSchemasWithHistory()
 
-_domain_opset_versions = _parse_domain_opset_versions(_schemas)
+_domain_opset_versions = _ParseDomainOpsetVersions(_schemas)
 
 
 def get_schema(name, max_inclusive_opset_version, domain=None):
@@ -123,7 +123,7 @@ def get_max_supported_opset_version(domain=None):
     return _domain_opset_versions.get(domain, None)
 
 
-def infer_onnx_shape_dtype(
+def InferOnnxShapeDtype(
     node, opset_version, input_shapes, input_dtypes, initializers=None
 ):
     """
@@ -131,7 +131,7 @@ def infer_onnx_shape_dtype(
     Sometimes, shape inference needs the values of node's inputs, so initializers are used.
     """
 
-    def build_onnx_op(node):
+    def BuildOnnxOp(node):
         """Build onnx op"""
         onnx_node = helper.make_node(node.type, node.input, node.output, name=node.name)
         # deal with attributes
@@ -140,7 +140,7 @@ def infer_onnx_shape_dtype(
         if attr_graphs:
             for attr_name, sub_graph in attr_graphs.items():
                 copied_sub_graph = copy.deepcopy(sub_graph)
-                graph_proto = copied_sub_graph.make_graph(
+                graph_proto = copied_sub_graph.MakeGraph(
                     "graph for " + node.name + " " + attr_name
                 )
                 attr.append(helper.make_attribute(attr_name, graph_proto))
@@ -152,13 +152,11 @@ def infer_onnx_shape_dtype(
     inputs = []
     outputs = []
     for inp, shape, dtype in zip(node.input, input_shapes, input_dtypes):
-        inputs.append(util.make_onnx_inputs_outputs(inp, dtype, shape))
+        inputs.append(util.MakeOnnxInputsOutputs(inp, dtype, shape))
     for output in node.output:
-        outputs.append(
-            util.make_onnx_inputs_outputs(output, TensorProto.UNDEFINED, None)
-        )
+        outputs.append(util.MakeOnnxInputsOutputs(output, TensorProto.UNDEFINED, None))
     graph_proto = helper.make_graph(
-        [build_onnx_op(node)], "infer-graph", inputs, outputs, initializer=initializers
+        [BuildOnnxOp(node)], "infer-graph", inputs, outputs, initializer=initializers
     )
     imp = OperatorSetIdProto()
     imp.version = opset_version

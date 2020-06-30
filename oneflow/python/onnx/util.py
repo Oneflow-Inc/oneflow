@@ -27,7 +27,7 @@ from . import constants
 #
 #  mapping dtypes from oneflow to onnx
 #
-FLOW_TO_ONNX_DTYPE = {
+FLOW_2_ONNX_DTYPE = {
     data_type_pb2.kFloat: onnx_pb.TensorProto.FLOAT,
     data_type_pb2.kDouble: onnx_pb.TensorProto.DOUBLE,
     data_type_pb2.kInt64: onnx_pb.TensorProto.INT64,
@@ -42,7 +42,7 @@ FLOW_TO_ONNX_DTYPE = {
 #
 # mapping dtypes from onnx to numpy
 #
-ONNX_TO_NUMPY_DTYPE = {
+ONNX_2_NUMPY_DTYPE = {
     onnx_pb.TensorProto.FLOAT: np.float32,
     onnx_pb.TensorProto.FLOAT16: np.float16,
     onnx_pb.TensorProto.DOUBLE: np.float64,
@@ -85,35 +85,26 @@ def is_integral_onnx_dtype(dtype):
     ]
 
 
-class TensorValueInfo(object):
-    def __init__(self, tensor_id, g):
-        self.id = tensor_id
-        if self.id:
-            self.dtype = g.get_dtype(tensor_id)
-            self.shape = g.get_shape(tensor_id)
-
-
 ONNX_UNKNOWN_DIMENSION = -1
 ONNX_EMPTY_INPUT = ""
 
-def map_flow_dtype(dtype):
-    if dtype:
-        dtype = FLOW_TO_ONNX_DTYPE[dtype]
-    return dtype
+
+def Flow2OnnxDtype(dtype):
+    return FLOW_2_ONNX_DTYPE[dtype]
 
 
-def map_numpy_to_onnx_dtype(np_dtype):
-    for onnx_dtype, numpy_dtype in ONNX_TO_NUMPY_DTYPE.items():
+def Numpy2OnnxDtype(np_dtype):
+    for onnx_dtype, numpy_dtype in ONNX_2_NUMPY_DTYPE.items():
         if numpy_dtype == np_dtype:
             return onnx_dtype
     raise ValueError("unsupported dtype " + np_dtype + " for mapping")
 
 
-def map_onnx_to_numpy_type(onnx_type):
-    return ONNX_TO_NUMPY_DTYPE[onnx_type]
+def Onnx2NumpyDtype(onnx_type):
+    return ONNX_2_NUMPY_DTYPE[onnx_type]
 
 
-def make_onnx_shape(shape):
+def MakeOnnxShape(shape):
     """shape with -1 is not valid in onnx ... make it a name."""
     if shape:
         # don't do this if input is a scalar
@@ -121,7 +112,7 @@ def make_onnx_shape(shape):
     return shape
 
 
-def make_onnx_inputs_outputs(name, elem_type, shape, **kwargs):
+def MakeOnnxInputsOutputs(name, elem_type, shape, **kwargs):
     """Wrapper for creating onnx graph inputs or outputs
        name,  # type: Text
        elem_type,  # type: TensorProto.DataType
@@ -130,11 +121,11 @@ def make_onnx_inputs_outputs(name, elem_type, shape, **kwargs):
     if elem_type is None:
         elem_type = onnx_pb.TensorProto.UNDEFINED
     return helper.make_tensor_value_info(
-        name, elem_type, make_onnx_shape(shape), **kwargs
+        name, elem_type, MakeOnnxShape(shape), **kwargs
     )
 
 
-def find_opset(opset):
+def FindOpset(opset):
     """Find opset."""
     if opset is None or opset == 0:
         opset = defs.onnx_opset_version()
@@ -157,12 +148,12 @@ def get_flow_node_attr(node, name):
         return getattr(attr_msg, attr_type)
 
 
-def make_sure(bool_val, error_msg, *args):
+def MakeSure(bool_val, error_msg, *args):
     if not bool_val:
-        raise ValueError("make_sure failure: " + error_msg % args)
+        raise ValueError("MakeSure failure: " + error_msg % args)
 
 
-def are_shapes_equal(src, dest):
+def AreShapesEqual(src, dest):
     """ Check whether 2 shapes are equal. """
     if src is None:
         return dest is None
@@ -171,8 +162,9 @@ def are_shapes_equal(src, dest):
 
     def is_list_or_tuple(obj):
         return isinstance(obj, (list, tuple))
-    make_sure(is_list_or_tuple(src), "invalid type for src")
-    make_sure(is_list_or_tuple(dest), "invalid type for dest")
+
+    MakeSure(is_list_or_tuple(src), "invalid type for src")
+    MakeSure(is_list_or_tuple(dest), "invalid type for dest")
 
     if len(src) != len(dest):
         return False
@@ -183,13 +175,7 @@ def get_onnx_version():
     return onnx.__version__
 
 
-def make_opsetid(domain, version):
-    make_sure(isinstance(version, int), "version must be an integer")
-    return helper.make_opsetid(domain, version)
-
-
 def is_onnx_domain(domain):
     if domain is None or domain == "":
         return True
     return False
-

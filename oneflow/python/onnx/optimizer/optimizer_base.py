@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT license.
 
-"""Graph Optimizer Base"""
+"""Graph optimizer Base"""
 
 from __future__ import unicode_literals
 
@@ -33,24 +33,24 @@ class GraphOptimizerBase(object):
     def graph_been_opt(self, value):
         self._graph_been_opt = value
 
-    def optimize(self, graph):
-        """ Optimize graph, return optimized graph. """
-        before = graph.dump_node_statistics()
+    def Optimize(self, graph):
+        """ optimize graph, return optimized graph. """
+        before = graph.DumpNodeStatistics()
 
-        graph = self._optimize(graph)
-        graph.update_proto()
-        graph.delete_unused_nodes(graph.outputs)
+        graph = self._Optimize(graph)
+        graph.UpdateProto()
+        graph.DeleteUnusedNodes(graph.outputs)
 
-        after = graph.dump_node_statistics()
-        self._print_stat_diff(before, after)
+        after = graph.DumpNodeStatistics()
+        self._PrintStatDiff(before, after)
         return graph
 
-    def _optimize(self, graph):
+    def _Optimize(self, graph):
         """ Derived class should override this function. """
         raise NotImplementedError
 
     @staticmethod
-    def _apply_optimization(graph, optimize_func):
+    def _ApplyOptimization(graph, optimize_func):
         """
         optimize graph
         will also optimize graph of nodes'
@@ -63,11 +63,11 @@ class GraphOptimizerBase(object):
             body_graphs = node.get_body_graphs()
             if body_graphs:
                 for attr, b_g in body_graphs.items():
-                    b_g = GraphOptimizerBase._apply_optimization(b_g, optimize_func)
+                    b_g = GraphOptimizerBase._ApplyOptimization(b_g, optimize_func)
                     node.set_body_graph_as_attr(attr, b_g)
         return graph
 
-    def _print_stat_diff(self, before, after):
+    def _PrintStatDiff(self, before, after):
         diff = copy.deepcopy(after)
         diff.subtract(before)
         diff = [
