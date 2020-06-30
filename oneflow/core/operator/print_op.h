@@ -29,7 +29,7 @@ class PrintOp final : public Operator {
 
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
+  LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
 };
 
 }  // namespace oneflow

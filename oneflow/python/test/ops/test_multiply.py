@@ -43,7 +43,7 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
     np_type = type_name_to_np_type[type_name]
     flow_type = type_name_to_flow_type[type_name]
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def test_element_wise_mul_job(
         x=flow.FixedTensorDef(shape, dtype=flow_type),
         y=flow.FixedTensorDef(shape, dtype=flow_type),

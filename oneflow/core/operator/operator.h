@@ -129,9 +129,7 @@ class Operator {
 
   Maybe<void> InferBatchAxisIf(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-    return InferBatchAxis(LogicalBlobDesc4Ibn, BatchAxis4BnInOp);
-  }
+      std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4Ibn);
   Maybe<void> NaiveInferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const;
 
@@ -160,6 +158,7 @@ class Operator {
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
   Maybe<const SbpParallel*> SbpParallel4BnInOp(const std::string& bn_in_op) const;
+  Maybe<const OptInt64*> BatchAxis4BnInOp(const std::string& bn_in_op) const;
   Maybe<const OptMirroredParallel*> OptMirroredParallel4BnInOp(const std::string& bn_in_op) const;
 
   Maybe<void> GetSbpSignaturesIf(
@@ -174,8 +173,15 @@ class Operator {
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
 
   Maybe<const SbpSignature*> sbp_signature() const;
-  // TODO(lixinqi) It's dangerous to expose mut_sbp_signature()
   SbpSignature* mut_sbp_signature() { return op_attribute_.mutable_sbp_signature(); }
+  BlobLastUsedSignature* mut_blob_last_used_signature() {
+    return op_attribute_.mutable_blob_last_used_signature();
+  }
+  BlobBackwardUsedSignature* mut_blob_backward_used_signature() {
+    return op_attribute_.mutable_blob_backward_used_signature();
+  }
+  Maybe<void> FillLogicalBlobDescSignature(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& BlobDesc4BnInOp);
 
  protected:
   virtual Maybe<void> GetSbpSignatures(
@@ -246,8 +252,8 @@ class Operator {
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       KernelConf*) const {}
 
-  virtual LogicalBlobId ibn2lbi(const std::string& input_bn) const;
-  virtual LogicalBlobId obn2lbi(const std::string& output_bn) const;
+  virtual LogicalBlobId lbi4ibn(const std::string& input_bn) const;
+  virtual LogicalBlobId lbi4obn(const std::string& output_bn) const;
 
   OperatorConf* mut_op_conf() { return op_attribute_.mutable_op_conf(); }
 
@@ -404,7 +410,7 @@ Maybe<bool> ParseDisableBoxingFlag(const std::string& lbn_with_hint, bool* disab
 Maybe<void> InferOpSbpSignature(
     Operator* op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
     const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
-    std::function<const OptInt64&(const LogicalBlobId&)> GetBatchAxis4Lbi);
+    std::function<Maybe<const OptInt64*>(const LogicalBlobId&)> BatchAxis4Lbi);
 
 std::string GetInputLbnInOpCustomizedConf(const PbMessage& msg,
                                           const std::string& fd_name_may_have_idx);

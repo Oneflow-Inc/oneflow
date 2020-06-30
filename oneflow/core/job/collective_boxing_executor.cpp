@@ -6,6 +6,7 @@
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -99,24 +100,32 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
   std::list<Event> event_list_;
   std::thread event_list_poll_thread_;
   std::mutex event_list_mutex_;
-  std::atomic<bool> shutdown_;
+  std::condition_variable event_list_cond_;
+  bool shutdown_;
   std::mutex mutex_;
 
   int64_t current_stream_id_ = 0;
 };
 
 NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
-    : collective_boxing_conf_(Global<ResourceDesc>::Get()->collective_boxing_conf()),
+    : collective_boxing_conf_(Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf()),
       shutdown_(false) {
   CHECK_GT(collective_boxing_conf_.nccl_num_streams(), 0);
   num_streams_ = collective_boxing_conf_.nccl_num_streams();
   CHECK_GE(collective_boxing_conf_.nccl_fusion_threshold_mb(), 0);
   fusion_threshold_ = collective_boxing_conf_.nccl_fusion_threshold_mb() * 1024 * 1024;
   event_list_poll_thread_ = std::thread([this]() {
+    std::list<Event> local_event_list;
     while (true) {
-      std::unique_lock<std::mutex> lock(event_list_mutex_);
-      if (event_list_.empty() && shutdown_) { break; }
-      for (auto it = event_list_.begin(); it != event_list_.end();) {
+      {
+        std::unique_lock<std::mutex> lock(event_list_mutex_);
+        if (local_event_list.empty()) {
+          event_list_cond_.wait(lock, [this]() { return (!event_list_.empty()) || shutdown_; });
+        }
+        local_event_list.splice(local_event_list.end(), event_list_);
+      }
+      if (local_event_list.empty() && shutdown_) { break; }
+      for (auto it = local_event_list.begin(); it != local_event_list.end();) {
         CudaCheck(cudaSetDevice(it->device_id));
         cudaError_t err = cudaEventQuery(it->cuda_event);
         if (err == cudaErrorNotReady) {
@@ -125,7 +134,7 @@ NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
         } else if (err == cudaSuccess) {
           CudaCheck(cudaEventDestroy(it->cuda_event));
           it->callback(Maybe<void>::Ok());
-          event_list_.erase(it++);
+          local_event_list.erase(it++);
         } else {
           CudaCheck(err);
           UNIMPLEMENTED();
@@ -136,7 +145,11 @@ NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
 }
 
 NcclCollectiveBoxingExecutorBackend::~NcclCollectiveBoxingExecutorBackend() {
-  shutdown_ = true;
+  {
+    std::unique_lock<std::mutex> lock(event_list_mutex_);
+    shutdown_ = true;
+    event_list_cond_.notify_all();
+  }
   event_list_poll_thread_.join();
   CudaCurrentDeviceGuard guard;
   for (auto& device_id2device_ctx : stream_id2device_id2device_ctx_) {
@@ -353,6 +366,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
                                          callback(status);
                                        }
                                      }});
+      event_list_cond_.notify_all();
     }
   }
 }
@@ -442,7 +456,7 @@ CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan)
 void CollectiveBoxingExecutor::Init() {
   for (const auto& job_id7request_set : collective_boxing_plan_.job_id2request_set()) {
     const CollectiveBoxingConf collective_boxing_conf =
-        Global<ResourceDesc>::Get()->collective_boxing_conf();
+        Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
     const int64_t job_id = job_id7request_set.first;
     const RequestSet& request_set = job_id7request_set.second;
     std::vector<const RequestDesc*> requests;
@@ -497,7 +511,7 @@ void CollectiveBoxingExecutor::Init() {
 }
 
 void CollectiveBoxingExecutor::DumpSummary() const {
-  if (!Global<ResourceDesc>::Get()->enable_debug_mode()) { return; }
+  if (!Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { return; }
   auto group_ls = TeePersistentLogStream::Create("boxing/collective/group");
   for (int64_t group_id = 0; group_id < group_id2group_state_.size(); ++group_id) {
     group_ls << "group id: " << std::to_string(group_id) << "\n";

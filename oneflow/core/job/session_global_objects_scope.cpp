@@ -19,6 +19,7 @@
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/version.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -31,7 +32,7 @@ std::string GetAmdCtrlKey(int64_t machine_id) {
 void PushAvailableMemDescOfThisMachine() {
   AvailableMemDescOfMachine this_machine_mem_desc;
 #ifdef WITH_CUDA
-  FOR_RANGE(int, i, 0, Global<ResourceDesc>::Get()->GpuDeviceNum()) {
+  FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
     this_machine_mem_desc.add_zone_size(GetAvailableGpuMemSize(i));
   }
 #endif
@@ -43,7 +44,7 @@ void PushAvailableMemDescOfThisMachine() {
 AvailableMemDesc PullAvailableMemDesc() {
   AvailableMemDesc ret;
   AvailableMemDescOfMachine machine_amd_i;
-  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->TotalMachineNum()) {
+  FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())) {
     Global<CtrlClient>::Get()->PullKV(GetAmdCtrlKey(i), ret.add_machine_amd());
   }
   return ret;
@@ -54,9 +55,9 @@ AvailableMemDesc PullAvailableMemDesc() {
 SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
 
 Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
-  if (Global<ResourceDesc>::Get() != nullptr) { Global<ResourceDesc>::Delete(); }
+  Global<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
-  Global<ResourceDesc>::New(config_proto.resource());
+  Global<ResourceDesc, ForSession>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
   Global<IDMgr>::New();
@@ -95,7 +96,8 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   Global<IDMgr>::Delete();
   Global<const ProfilerConf>::Delete();
   Global<const IOConf>::Delete();
-  Global<ResourceDesc>::Delete();
+  Global<ResourceDesc, ForSession>::Delete();
+  Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource());
 }
 
 }  // namespace oneflow

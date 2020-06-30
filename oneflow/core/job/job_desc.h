@@ -18,6 +18,7 @@ class JobDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobDesc);
   JobDesc(const JobConfigProto& job_conf, int64_t job_id);
+  explicit JobDesc(const JobConfigProto& job_conf) : JobDesc(job_conf, -1) {}
   ~JobDesc() = default;
   // Common
   int64_t job_id() const { return job_id_; }
@@ -25,7 +26,6 @@ class JobDesc final {
   int64_t concurrency_width() const { return job_conf_.concurrency_width(); }
   const JobConfigProto& job_conf() const { return job_conf_; }
   DataType DefaultDataType() const { return job_conf_.default_data_type(); }
-  size_t SizeOfOneDataId() const { return job_conf_.max_data_id_length() * sizeof(char); }
   bool EnableCudnn() const { return job_conf_.enable_cudnn(); }
   bool IsTrain() const { return job_conf_.has_train_conf(); }
   bool IsPredict() const { return job_conf_.has_predict_conf(); }

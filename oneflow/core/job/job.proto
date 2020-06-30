@@ -71,7 +71,6 @@ message JobConfigProto {
   }
   optional int64 total_batch_num = 7 [default = 1];
   optional DataType default_data_type = 8 [default = kFloat]; // kFloat or kDouble
-  optional int32 max_data_id_length = 9 [default = 0];
   oneof default_initialize_conf {
     InitializerConf default_initializer_conf = 10;
     string default_initialize_with_snapshot_path = 11;
@@ -127,11 +126,13 @@ message JobConfigProto {
   optional bool enable_float_compute_for_half_gemm = 601 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
   
-  optional bool enable_keep_header_only = 700 [default = false];
+  optional bool enable_keep_header_only = 700 [default = true];
 
   optional int64 concurrency_width = 1000 [default = 128];
 
   map<string, UserOpAttrVal> flag_name2flag_value = 2000;
+
+  optional int64 logical_object_id = 3000;
 }
 
 message OpTimeShape {
@@ -151,6 +152,7 @@ message JobHelperConf {
   map<string, OpNameRelations> tag2op_name_relations = 2;
   map<string, OpTimeShape> op_name2op_time_shape = 3;
   map<string, BlobDescProto> lbn2logical_blob_desc = 4;
+  map<string, int64> lbn2logical_object_id = 5;
   map<string, OptInt64> lbn2batch_axis = 6;
   optional OpBlobArgPairs identical_sbp_oba_pairs = 7;
 }

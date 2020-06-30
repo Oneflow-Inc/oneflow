@@ -12,7 +12,7 @@ def test_non_distribute_optimizer(test_case):
     func_config.train.model_update_conf(dict(naive_conf={}))
     func_config.enable_non_distributed_optimizer(True)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def Foo(x=flow.FixedTensorDef((2, 10))):
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(100))
         flow.losses.add_loss(x + w)
@@ -26,7 +26,7 @@ def _test_two_job_non_distribute_optimizer(test_case):
     eval_config = flow.FunctionConfig()
     eval_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-    @flow.function(eval_config)
+    @flow.global_function(eval_config)
     def Bar():
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(100))
         return w
@@ -38,7 +38,7 @@ def _test_two_job_non_distribute_optimizer(test_case):
     func_config.train.model_update_conf(dict(naive_conf={}))
     func_config.enable_non_distributed_optimizer(True)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def Foo(x=flow.FixedTensorDef((2, 10))):
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(100))
         flow.losses.add_loss(x + w)
@@ -56,7 +56,7 @@ def _test_non_distribute_optimizer_var_as_loss(test_case):
     func_config.train.model_update_conf(dict(naive_conf={}))
     func_config.enable_non_distributed_optimizer(True)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def Foo():
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(100))
         flow.losses.add_loss(w)

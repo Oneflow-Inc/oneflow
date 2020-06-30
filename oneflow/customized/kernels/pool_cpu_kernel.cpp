@@ -217,7 +217,7 @@ struct PoolCpuKernelUtil {
     const OpKernelStateWrapper<Params3D>* params_3d =
         dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
     CHECK(params_3d != nullptr);
-    const std::string data_format = ctx->Attr<std::string>("data_format");
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
       CFirstForward(params_3d->Get(), x, y, GetZeroVal<T>, [](const T& lhs, T& rhs) { rhs += lhs; },
                     [](const int64_t size, T& out) { out /= size; });
@@ -242,7 +242,7 @@ struct PoolCpuKernelUtil {
     const OpKernelStateWrapper<Params3D>* params_3d =
         dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
     CHECK(params_3d != nullptr);
-    const std::string data_format = ctx->Attr<std::string>("data_format");
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
       CFirstBackward(params_3d->Get(), dy, y, x, dx,
                      [](const T& in, const T& out, const T& out_diff, const int64_t size,
@@ -266,7 +266,7 @@ struct PoolCpuKernelUtil {
     const OpKernelStateWrapper<Params3D>* params_3d =
         dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
     CHECK(params_3d != nullptr);
-    const std::string data_format = ctx->Attr<std::string>("data_format");
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
       CFirstForward(params_3d->Get(), x, y, GetMinVal<T>,
                     [](const T& lhs, T& rhs) {
@@ -294,7 +294,7 @@ struct PoolCpuKernelUtil {
     const OpKernelStateWrapper<Params3D>* params_3d =
         dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
     CHECK(params_3d != nullptr);
-    const std::string data_format = ctx->Attr<std::string>("data_format");
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
       CFirstBackward(
           params_3d->Get(), dy, y, x, dx,
@@ -320,22 +320,14 @@ struct PoolCpuKernelUtil {
 std::shared_ptr<user_op::OpKernelState> DoCreateOpKernelState(user_op::KernelInitContext* ctx,
                                                               const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
-  const std::string data_format = ctx->Attr<std::string>("data_format");
-  const std::string padding = ctx->Attr<std::string>("padding");
+  const std::string& data_format = ctx->Attr<std::string>("data_format");
+  const std::string& padding = ctx->Attr<std::string>("padding");
   const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
   const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
   return std::make_shared<OpKernelStateWrapper<Params3D>>(dim, x_shape, data_format, padding,
                                                           pool_size, strides);
 }
 
-template<typename dtype>
-std::function<bool(const user_op::KernelRegContext& ctx)> MakeIsMatchedPred(
-    DeviceType device_type) {
-  return [device_type](const user_op::KernelRegContext& ctx) {
-    const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);
-    return ctx.device_type() == device_type && y_desc->data_type() == GetDataType<dtype>::value;
-  };
-}
 }  // namespace
 
 template<typename T>
@@ -344,11 +336,12 @@ class AvgPool1DCpuKernel final : public user_op::OpKernel {
   AvgPool1DCpuKernel() = default;
   ~AvgPool1DCpuKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 1);
   }
+
+ private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::AvgFWCompute(ctx, state);
@@ -361,11 +354,12 @@ class AvgPool1DGradCpuKernel final : public user_op::OpKernel {
   AvgPool1DGradCpuKernel() = default;
   ~AvgPool1DGradCpuKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 1);
   }
+
+ private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::AvgBWCompute(ctx, state);
@@ -378,11 +372,12 @@ class AvgPool2DCpuKernel final : public user_op::OpKernel {
   AvgPool2DCpuKernel() = default;
   ~AvgPool2DCpuKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 2);
   }
+
+ private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::AvgFWCompute(ctx, state);
@@ -395,11 +390,12 @@ class AvgPool2DGradCpuKernel final : public user_op::OpKernel {
   AvgPool2DGradCpuKernel() = default;
   ~AvgPool2DGradCpuKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 2);
   }
+
+ private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::AvgBWCompute(ctx, state);
@@ -412,11 +408,12 @@ class AvgPool3DCpuKernel final : public user_op::OpKernel {
   AvgPool3DCpuKernel() = default;
   ~AvgPool3DCpuKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 3);
   }
+
+ private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::AvgFWCompute(ctx, state);
@@ -429,11 +426,12 @@ class AvgPool3DGradCpuKernel final : public user_op::OpKernel {
   AvgPool3DGradCpuKernel() = default;
   ~AvgPool3DGradCpuKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 3);
   }
+
+ private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::AvgBWCompute(ctx, state);
@@ -446,11 +444,12 @@ class MaxPool1DCpuKernel final : public user_op::OpKernel {
   MaxPool1DCpuKernel() = default;
   ~MaxPool1DCpuKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 1);
   }
+
+ private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::MaxFWCompute(ctx, state);
@@ -463,11 +462,12 @@ class MaxPool1DGradCpuKernel final : public user_op::OpKernel {
   MaxPool1DGradCpuKernel() = default;
   ~MaxPool1DGradCpuKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 1);
   }
+
+ private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::MaxBWCompute(ctx, state);
@@ -480,11 +480,12 @@ class MaxPool2DCpuKernel final : public user_op::OpKernel {
   MaxPool2DCpuKernel() = default;
   ~MaxPool2DCpuKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 2);
   }
+
+ private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::MaxFWCompute(ctx, state);
@@ -497,11 +498,12 @@ class MaxPool2DGradCpuKernel final : public user_op::OpKernel {
   MaxPool2DGradCpuKernel() = default;
   ~MaxPool2DGradCpuKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 2);
   }
+
+ private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::MaxBWCompute(ctx, state);
@@ -514,11 +516,12 @@ class MaxPool3DCpuKernel final : public user_op::OpKernel {
   MaxPool3DCpuKernel() = default;
   ~MaxPool3DCpuKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 3);
   }
+
+ private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::MaxFWCompute(ctx, state);
@@ -531,54 +534,67 @@ class MaxPool3DGradCpuKernel final : public user_op::OpKernel {
   MaxPool3DGradCpuKernel() = default;
   ~MaxPool3DGradCpuKernel() = default;
 
- private:
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     return DoCreateOpKernelState(ctx, 3);
   }
+
+ private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     PoolCpuKernelUtil<T>::MaxBWCompute(ctx, state);
   };
 };
 
-#define REGISTER_POOL_CPU_KERNEL(dtype)                              \
-  REGISTER_USER_KERNEL("avg_pool_1d")                                \
-      .SetCreateFn<AvgPool1DCpuKernel<dtype>>()                      \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("avg_pool_1d_grad")                           \
-      .SetCreateFn<AvgPool1DGradCpuKernel<dtype>>()                  \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("avg_pool_2d")                                \
-      .SetCreateFn<AvgPool2DCpuKernel<dtype>>()                      \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("avg_pool_2d_grad")                           \
-      .SetCreateFn<AvgPool2DGradCpuKernel<dtype>>()                  \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("avg_pool_3d")                                \
-      .SetCreateFn<AvgPool3DCpuKernel<dtype>>()                      \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("avg_pool_3d_grad")                           \
-      .SetCreateFn<AvgPool3DGradCpuKernel<dtype>>()                  \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("max_pool_1d")                                \
-      .SetCreateFn<MaxPool1DCpuKernel<dtype>>()                      \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("max_pool_1d_grad")                           \
-      .SetCreateFn<MaxPool1DGradCpuKernel<dtype>>()                  \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("max_pool_2d")                                \
-      .SetCreateFn<MaxPool2DCpuKernel<dtype>>()                      \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("max_pool_2d_grad")                           \
-      .SetCreateFn<MaxPool2DGradCpuKernel<dtype>>()                  \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("max_pool_3d")                                \
-      .SetCreateFn<MaxPool3DCpuKernel<dtype>>()                      \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU)); \
-  REGISTER_USER_KERNEL("max_pool_3d_grad")                           \
-      .SetCreateFn<MaxPool3DGradCpuKernel<dtype>>()                  \
-      .SetIsMatchedPred(MakeIsMatchedPred<dtype>(DeviceType::kCPU));
+#define REGISTER_POOL_CPU_KERNEL(dtype)                                                \
+  REGISTER_USER_KERNEL("avg_pool_1d")                                                  \
+      .SetCreateFn<AvgPool1DCpuKernel<dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("avg_pool_1d_grad")                                             \
+      .SetCreateFn<AvgPool1DGradCpuKernel<dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("avg_pool_2d")                                                  \
+      .SetCreateFn<AvgPool2DCpuKernel<dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("avg_pool_2d_grad")                                             \
+      .SetCreateFn<AvgPool2DGradCpuKernel<dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("avg_pool_3d")                                                  \
+      .SetCreateFn<AvgPool3DCpuKernel<dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("avg_pool_3d_grad")                                             \
+      .SetCreateFn<AvgPool3DGradCpuKernel<dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("max_pool_1d")                                                  \
+      .SetCreateFn<MaxPool1DCpuKernel<dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("max_pool_1d_grad")                                             \
+      .SetCreateFn<MaxPool1DGradCpuKernel<dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("max_pool_2d")                                                  \
+      .SetCreateFn<MaxPool2DCpuKernel<dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("max_pool_2d_grad")                                             \
+      .SetCreateFn<MaxPool2DGradCpuKernel<dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("max_pool_3d")                                                  \
+      .SetCreateFn<MaxPool3DCpuKernel<dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("max_pool_3d_grad")                                             \
+      .SetCreateFn<MaxPool3DGradCpuKernel<dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_POOL_CPU_KERNEL(float)
 REGISTER_POOL_CPU_KERNEL(double)

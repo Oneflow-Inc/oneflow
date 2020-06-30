@@ -12,7 +12,7 @@ def test_dynamic_reshape(test_case):
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def DynamicReshapeJob(x=flow.MirroredTensorDef(data_shape)):
         reshape_out1 = flow.reshape(x, (-1, 20))
         my_model = flow.get_variable(

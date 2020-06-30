@@ -12,7 +12,7 @@ void ReduceAddOp::InitFromOpConf() {
 
 const PbMessage& ReduceAddOp::GetCustomizedConf() const { return op_conf().reduce_add_conf(); }
 
-LogicalBlobId ReduceAddOp::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId ReduceAddOp::lbi4obn(const std::string& output_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
   ret.set_blob_name(output_bn);
@@ -34,7 +34,7 @@ Maybe<void> ReduceAddOp::InferBlobDescs(
 
 Symbol<OperatorConf> ReduceAddOp::GetOpConfWithoutOpNameAndLbn() const {
   OperatorConf op_conf(this->op_conf());
-  op_conf.set_name("");
+  op_conf.set_name("undefined-op-name");
   return SymbolOf(op_conf);
 }
 

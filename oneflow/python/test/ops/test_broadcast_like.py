@@ -16,7 +16,7 @@ def compare_broadcast_like_with_tf(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def broadcast_like_forward(
         x=flow.FixedTensorDef(shape=input_shape, dtype=data_type_util.kFloat),
         y=flow.FixedTensorDef(shape=like_shape, dtype=data_type_util.kFloat),

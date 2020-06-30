@@ -15,7 +15,7 @@ def _of_image_decode(images):
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def image_decode_job(
         images_def=flow.MirroredTensorListDef(shape=static_shape, dtype=flow.int8)
     ):

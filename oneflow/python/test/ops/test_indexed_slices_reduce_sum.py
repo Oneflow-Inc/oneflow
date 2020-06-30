@@ -24,7 +24,7 @@ def _check(test_case, x_indices, x_values, y_indices, y_values, num_unique):
 
 
 def _run_test(test_case, indices, values, indices_dtype, values_dtype, device):
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def TestJob(
         indices=flow.FixedTensorDef(indices.shape, dtype=indices_dtype),
         values=flow.FixedTensorDef(values.shape, dtype=values_dtype),

@@ -39,6 +39,13 @@
   git clone https://github.com/Oneflow-Inc/oneflow --recursive
   ```
 
+- #### Install Python Dev Requirements
+
+  To install development dependencies and linter tools, run:
+  ```
+  pip3 install -r dev-requirements.txt --user
+  ```
+
 - #### Enter Build Directory
 
   ```
@@ -57,11 +64,7 @@
 
   Inside directory `build`, run:
   ```
-  cmake .. \
-  -DTHIRD_PARTY=OFF \
-  -DPython_NumPy_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
-  -DPYTHON_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])") \
-  -DPYTHON_LIBRARY=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])")
+  cmake .. -DTHIRD_PARTY=OFF
 
   make -j$(nproc)
   ```
@@ -119,10 +122,7 @@
   ```shell
   cmake .. \
   -DWITH_XLA=ON \
-  -DTHIRD_PARTY=OFF \
-  -DPython_NumPy_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
-  -DPYTHON_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])") \
-  -DPYTHON_LIBRARY=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])")
+  -DTHIRD_PARTY=OFF
   
   make -j$(nproc)
   ```
@@ -146,10 +146,7 @@
   cmake .. \
   -DWITH_TENSORRT=ON \
   -DTENSORRT_ROOT=your_tensorrt_path \
-  -DTHIRD_PARTY=OFF \
-  -DPython_NumPy_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
-  -DPYTHON_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])") \
-  -DPYTHON_LIBRARY=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])")
+  -DTHIRD_PARTY=OFF
 
   make -j$(nproc)
   ```

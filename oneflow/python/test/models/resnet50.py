@@ -281,7 +281,7 @@ def main(args):
     train_config.train.model_update_conf(dict(naive_conf={}))
     train_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 
-    @flow.function(train_config)
+    @flow.global_function(train_config)
     def TrainNet():
         _set_trainable(True)
         loss = resnet50(args, args.train_dir)
@@ -292,7 +292,7 @@ def main(args):
     eval_config.default_data_type(flow.float)
     eval_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 
-    @flow.function(eval_config)
+    @flow.global_function(eval_config)
     def evaluate():
         with flow.distribute.consistent_strategy():
             _set_trainable(False)

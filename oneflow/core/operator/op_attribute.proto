@@ -2,10 +2,13 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/register/batch_axis_signature.proto";
+import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/operator/arg_modifier_signature.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/job/mirrored_parallel.proto";
+import "oneflow/core/job/blob_lifetime_signature.proto";
 
 message OpAttribute {
   repeated string input_bns = 1;
@@ -19,4 +22,8 @@ message OpAttribute {
   required ArgModifierSignature arg_modifier_signature = 101;
   optional SbpSignature sbp_signature = 102;
   optional MirroredSignature mirrored_signature = 103;
+  optional BlobLastUsedSignature blob_last_used_signature = 104;
+  optional BlobBackwardUsedSignature blob_backward_used_signature = 105;
+  optional BlobDescSignature logical_blob_desc_signature = 106;
+  optional BatchAxisSignature batch_axis_signature = 107;
 }

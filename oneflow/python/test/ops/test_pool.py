@@ -181,7 +181,7 @@ def test_pool(_):
         else:
             tensor_def = flow.FixedTensorDef
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def pooling_job(x=tensor_def(x_shape, dtype=dtype)):
             v = flow.get_variable(
                 "x",

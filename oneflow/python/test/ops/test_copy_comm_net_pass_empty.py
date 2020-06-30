@@ -21,7 +21,7 @@ def test_multi_node_comm_net(test_case):
     func_config.default_data_type(flow.float)
     flow.config.gpu_device_num(1)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReluJob(x=flow.FixedTensorDef((10, 2))):
         with flow.fixed_placement("gpu", "0:0"):
             out0 = ccrelu(x, "my_op_0_0")
@@ -57,7 +57,7 @@ def test_multi_node_comm_net_dynamic(test_case):
     flow.config.machine_num(2)
     flow.config.gpu_device_num(1)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReluJob(x=flow.MirroredTensorDef((10, 2))):
         with flow.fixed_placement("gpu", "0:0"):
             out0 = flow.keras.activations.relu(x)
@@ -93,7 +93,7 @@ def test_multi_node_comm_net_dynamic_empty(test_case):
     flow.config.machine_num(2)
     flow.config.gpu_device_num(1)
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ReluJob(x=flow.MirroredTensorDef((10, 2))):
         with flow.fixed_placement("cpu", "0:0"):
             out0 = flow.keras.activations.relu(x)

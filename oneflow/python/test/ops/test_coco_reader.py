@@ -35,7 +35,7 @@ def _make_coco_data_load_fn(
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def coco_load_fn():
         with flow.device_prior_placement("cpu", "0:0-{}".format(nthread - 1)):
             (

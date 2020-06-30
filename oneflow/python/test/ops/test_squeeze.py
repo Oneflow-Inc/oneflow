@@ -21,7 +21,7 @@ def compare_with_tensorflow(device_type, x_shape, axis):
     def check_grad(x_diff_blob):
         assert np.array_equal(x_diff_blob.ndarray(), np.ones(x_shape))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def SqueezeJob():
         with flow.fixed_placement(device_type, "0:0"):
             x = flow.get_variable(

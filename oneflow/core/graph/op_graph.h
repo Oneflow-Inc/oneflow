@@ -33,10 +33,9 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
-  const OptInt64& BatchAxis4Lbi(const LogicalBlobId& lbi) const;
+  Maybe<const OptInt64*> BatchAxis4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
-  const OpNode& SrcNode4InputBnInOp(const std::string& bn_in_op) const;
-  const OpNode& ProducerOpNode4BnInOp(const std::string& bn_in_op) const;
+  const OpNode& SrcNode4Ibn(const std::string& bn_in_op) const;
   const ParallelDesc& BlobParallelDesc4Obn(const std::string& obn) const;
 
   std::string VisualStr() const override;
@@ -55,12 +54,9 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
   }
-  OptInt64* MutBatchAxis4Lbi(const LogicalBlobId& lbi);
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
-  OpNode* MutSrcNode4InputBnInOp(const std::string& bn_in_op) const;
-  OpNode* MutProducerOpNode4BnInOp(const std::string& bn_in_op);
+  OpNode* MutSrcNode4Ibn(const std::string& bn_in_op) const;
   OpNode* MutSrcNode4InputLbi(const LogicalBlobId& lbi) const;
-  OpNode* MutProducerOpNode4Lbi(const LogicalBlobId& lbi);
   void ForEachSplitOrBroadcastBlobDesc(const BlobDesc& blob_desc, const SbpParallel& sbp_parallel,
                                        const std::function<void(const BlobDesc&)>& Handler) const;
 
@@ -84,7 +80,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   std::unique_ptr<Shape> out_blob_time_shape_;
-  HashMap<LogicalBlobId, OptInt64> lbi2batch_axis_;
   HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
@@ -124,8 +119,11 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
 class OpGraph final : public Graph<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpGraph);
-  explicit OpGraph(const Job& job) { Init(job); }
+  explicit OpGraph(const Job& job) { CHECK_JUST(Init(job)); }
+  explicit OpGraph() = default;
   ~OpGraph() override = default;
+
+  Maybe<void> ForEachOpNode(const std::function<Maybe<void>(const OpNode&)>& DoEach) const;
 
   const OpNode* OpNode4OpName(const std::string& name) const;
 
@@ -156,17 +154,19 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void DumpOpTimeShape(Job* job) const;
   void DumpBatchAxisLbi(Job* job) const;
 
+  Maybe<void> Init(const Job& job);
+
  private:
-  void Init(const Job& job);
   void InitNodes(const Job& job);
   void InitEdges();
   void InitProducerOpName2CtrlConsumerOpNames(const Job& job);
   void CheckIsDAG() const;
+  void InferBlobLastUsed() const;
   void InferTimeShape() const;
   void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
   void InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_parallel_view_conf) const;
-  void InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
-  void InferLogicalBlobDesc(const Job& job) const;
+  Maybe<void> InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
+  Maybe<void> InferLogicalBlobDesc(const Job& job) const;
   bool IsBatchAxisBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;
@@ -175,6 +175,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   std::list<OpNode*> DataOrCtrlSourceNodes() const;
 
   HashMap<std::string, OpNode*> op_name2op_node_;
+  std::list<std::string> op_names_;
   HashMap<std::string, HashSet<std::string>> producer_op_name2ctrl_consumer_op_names_;
 };
 

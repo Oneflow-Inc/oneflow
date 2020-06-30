@@ -73,7 +73,7 @@ def _of_where(
         )
         func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def where_fn(
             condition_def=flow.MirroredTensorDef(condition.shape, dtype=flow.int32),
             x_def=flow.MirroredTensorDef(x.shape, dtype=flow.float),
@@ -91,7 +91,7 @@ def _of_where(
         )
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def where_fn(
             condition_def=flow.FixedTensorDef(condition.shape, dtype=flow.int32),
             x_def=flow.FixedTensorDef(x.shape, dtype=flow.float),
@@ -185,14 +185,14 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
     if input_shape is None:
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def where_fn(input_def=flow.FixedTensorDef(input.shape, dtype=flow.float)):
             return flow.where(input_def)
 
     else:
         func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def where_fn(input_def=flow.MirroredTensorDef(input_shape, dtype=flow.float)):
             return flow.where(input_def)
 
@@ -277,17 +277,16 @@ def test_where_grad_case_2(test_case):
         _compare_with_tf(test_case, **arg)
 
 
-# open this test case when PR https://github.com/Oneflow-Inc/oneflow/pull/2989 has merged
-# def test_where_grad_4card(test_case):
-#     arg_dict = OrderedDict()
-#     arg_dict["cond_shape"] = [[10]]
-#     arg_dict["x_shape"] = [[10]]
-#     arg_dict["y_shape"] = [[10]]
-#     arg_dict["device_type"] = ["gpu"]
-#     arg_dict["machine_device_ids"] = ["0:0-3"]
-#     arg_dict["dynamic"] = [False]
-#     for arg in GenArgDict(arg_dict):
-#         _compare_with_tf(test_case, **arg)
+def test_where_grad_4card(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["cond_shape"] = [[10]]
+    arg_dict["x_shape"] = [[10]]
+    arg_dict["y_shape"] = [[10]]
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["machine_device_ids"] = ["0:0-3"]
+    arg_dict["dynamic"] = [False]
+    for arg in GenArgDict(arg_dict):
+        _compare_with_tf(test_case, **arg)
 
 
 def test_where_argwhere(test_case):

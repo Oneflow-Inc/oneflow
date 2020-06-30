@@ -26,7 +26,7 @@ def RunOneflowOp(device_type, flow_op, x, y, data_type):
 
     flow_type = type_name_to_flow_type[data_type]
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def FlowJob(
         x=flow.FixedTensorDef(x.shape, dtype=flow_type),
         y=flow.FixedTensorDef(y.shape, dtype=flow_type),
@@ -96,6 +96,8 @@ def compare_with_tensorflow_grad(
     y = np.random.uniform(low=input_minval, high=input_maxval, size=y_shape).astype(
         np_type
     )
+    if flow_op in (flow.math.divide, flow.math.mod):
+        y[np.where(y == 0)] += 1
 
     of_out, of_x_diff, of_y_diff, = RunOneflowOp(device_type, flow_op, x, y, data_type)
     tf_out, tf_x_diff, tf_y_diff = RunTensorFlowOp(tf_op, x, y)
@@ -125,7 +127,7 @@ def compare_with_tensorflow(
 
     flow_type = type_name_to_flow_type[data_type]
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def FlowJob(
         x=flow.FixedTensorDef(x_shape, dtype=flow_type),
         y=flow.FixedTensorDef(y_shape, dtype=flow_type),
@@ -148,7 +150,7 @@ def compare_with_tensorflow(
         y = np.random.uniform(low=input_minval, high=input_maxval, size=y_shape).astype(
             np_type
         )
-    if isinstance(flow_op, (type(flow.math.divide), type(flow.math.mod))):
+    if flow_op in (flow.math.divide, flow.math.mod):
         y[np.where(y == 0)] += 1
 
     # Oneflow
