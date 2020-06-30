@@ -25,7 +25,7 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
       device_set.emplace(std::make_pair(parallel_desc.MachineIdForParallelId(parallel_id),
                                         parallel_desc.DeviceIdForParallelId(parallel_id)));
     }
-    ncclComm_t comm = Global<EagerNcclCommMgr>::Get()->GetCommForDevice(device_set);
+    ncclComm_t comm = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
     NcclCheck(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                             GetNcclDataType(in->data_type()), ncclSum, comm,
                             ctx->device_ctx()->cuda_stream()));

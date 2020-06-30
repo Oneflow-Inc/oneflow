@@ -17,7 +17,7 @@
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/object.h"
 #include "oneflow/core/framework/kernel_registration.h"
-#include "oneflow/core/job/foreign_watcher.h"
+#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/register/ofblob.h"
 
 namespace oneflow {
@@ -454,7 +454,7 @@ void WatchBlob(vm::Instruction* instruction) {
   auto* blob_object = instruction->mut_operand_type(args->blob())->Mut<BlobObject>();
   OfBlob of_blob(device_ctx, blob_object->mut_blob());
   int64_t of_blob_ptr = reinterpret_cast<int64_t>(&of_blob);
-  Global<ForeignWorkerCallback>::Get()->Call(args->unique_callback_id(), of_blob_ptr);
+  Global<ForeignCallback>::Get()->OfBlobCall(args->unique_callback_id(), of_blob_ptr);
 }
 
 void WatchBlobHeaderInstructionType::Infer(vm::Instruction* instruction) const {
