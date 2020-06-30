@@ -172,8 +172,6 @@ def batch_normalization(
         .Input("gamma", [scale])
         .Input("beta", [offset])
         .Output("y")
-        .Output("mean")
-        .Output("inv_variance")
         .Attr("axis", axis, "AttrTypeInt32")
         .Attr("epsilon", variance_epsilon, "AttrTypeFloat")
         .Attr("training", False, "AttrTypeBool")
