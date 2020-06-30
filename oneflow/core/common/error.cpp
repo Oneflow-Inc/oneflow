@@ -65,8 +65,10 @@ Error Error::BoxingNotSupported() {
   return error;
 }
 
-Error Error::OpKernelNotFoundError(const std::vector<std::string>& error_msgs) {
+Error Error::OpKernelNotFoundError(const std::string& error_summary,
+                                   const std::vector<std::string>& error_msgs) {
   auto error = std::make_shared<ErrorProto>();
+  error->set_error_summary(error_summary);
   auto* op_kernel_not_found_error = error->mutable_op_kernel_not_found_error();
   for (const auto& msg : error_msgs) {
     op_kernel_not_found_error->add_op_kernels_not_found_debug_str(msg);
@@ -74,8 +76,10 @@ Error Error::OpKernelNotFoundError(const std::vector<std::string>& error_msgs) {
   return error;
 }
 
-Error Error::MultipleOpKernelsMatchedError(const std::vector<std::string>& error_msgs) {
+Error Error::MultipleOpKernelsMatchedError(const std::string& error_summary,
+                                           const std::vector<std::string>& error_msgs) {
   auto error = std::make_shared<ErrorProto>();
+  error->set_error_summary(error_summary);
   auto* multiple_op_kernels_matched_error = error->mutable_multiple_op_kernels_matched_error();
   for (const auto& msg : error_msgs) {
     multiple_op_kernels_matched_error->add_matched_op_kernels_debug_str(msg);
