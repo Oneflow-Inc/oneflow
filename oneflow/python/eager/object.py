@@ -25,7 +25,9 @@ class BlobObject(Object):
         Object.__init__(self, object_id, op_arg_parallel_attr.parallel_desc_symbol)
         self.op_arg_parallel_attr_ = op_arg_parallel_attr
         self.op_arg_blob_attr_ = op_arg_blob_attr
-        self.release_ = [release]
+        self.release_ = []
+        if release is not None:
+            self.release_.append(release)
 
     @property
     def op_arg_parallel_attr(self):

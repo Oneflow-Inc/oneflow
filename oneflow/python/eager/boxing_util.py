@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 
+import oneflow.python.eager.symbol as symbol_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.op_arg_util as op_arg_util
@@ -12,6 +14,24 @@ import oneflow.core.job.placement_pb2 as placement_proto_pb
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_hob as boxing_hob
 import oneflow
+
+
+def ComposeBoxing(lhs_boxing, rhs_boxing, get_medium_op_arg_parallel_attr):
+    composed_hob = boxing_hob.ComposeHob(
+        enable_if.get_condition_hob(lhs_boxing),
+        enable_if.get_condition_hob(rhs_boxing),
+        get_medium_op_arg_parallel_attr=get_medium_op_arg_parallel_attr,
+    )
+
+    @enable_if.condition(composed_hob)
+    def Composed(builder, x_blob_object, op_arg_parallel_attr):
+        tmp_op_arg_parallel_attr = get_medium_op_arg_parallel_attr(
+            builder, x_blob_object, op_arg_parallel_attr
+        )
+        tmp = lhs_boxing(builder, x_blob_object, tmp_op_arg_parallel_attr)
+        return rhs_boxing(builder, tmp, op_arg_parallel_attr)
+
+    return Composed
 
 
 def BoxingTo(builder, x_blob_object, op_arg_parallel_attr):
@@ -26,7 +46,16 @@ def BoxingTo(builder, x_blob_object, op_arg_parallel_attr):
         BroadcastOneToMany,
         CopyHd,
         NcclAllReduce,
-        CopyH2DThenNcclAllReduce,
+        ComposeBoxing(
+            CopyHd,
+            NcclAllReduce,
+            get_medium_op_arg_parallel_attr=GetGpuOpArgParallelAttr,
+        ),
+        ComposeBoxing(
+            NcclAllReduce,
+            CopyHd,
+            get_medium_op_arg_parallel_attr=GetBroadcastOpArgParallelAttr,
+        ),
     ]
 
     def default(get_failed_info, *args, **kwargs):
@@ -104,35 +133,26 @@ def NcclAllReduce(builder, x_blob_object, op_arg_parallel_attr):
     return y_blob_object
 
 
-MatchCopyH2DThenNcclAllReduce = (
-    boxing_hob.MasterMachineOnly
-    & boxing_hob.SameDeviceIds
-    & boxing_hob.BlobOnDevice("cpu")
-    & boxing_hob.BlobPartialSumParallel
-    & boxing_hob.OpArgOnDevice("gpu")
-    & boxing_hob.OpArgParallelNumGT1
-    & boxing_hob.OpArgBroadcastParallel
-)
-
-
-@enable_if.condition(MatchCopyH2DThenNcclAllReduce)
-def CopyH2DThenNcclAllReduce(builder, x_blob_object, op_arg_parallel_attr):
+def GetGpuOpArgParallelAttr(builder, x_blob_object, op_arg_parallal_attr):
     x_parallel_attr = x_blob_object.op_arg_parallel_attr
     parallel_desc_sym = x_blob_object.parallel_desc_symbol
-    gpu_parallel_attr = ReplaceDeviceTag(builder, parallel_desc_sym, "gpu")
-    gpu_op_arg_parallel_attr = op_arg_util.OpArgParallelAttribute(
-        gpu_parallel_attr,
+    gpu_parallel_desc_symbol = TryReplaceDeviceTag(builder, parallel_desc_sym, "gpu")
+    return op_arg_util.OpArgParallelAttribute(
+        gpu_parallel_desc_symbol,
         x_parallel_attr.sbp_parallel,
         x_parallel_attr.opt_mirrored_parallel,
     )
-    copy_hd = enable_if.unique(
-        [CopyHd], context=(x_blob_object, gpu_op_arg_parallel_attr)
+
+
+def GetBroadcastOpArgParallelAttr(builder, x_blob_object, op_arg_parallal_attr):
+    x_parallel_attr = x_blob_object.op_arg_parallel_attr
+    sbp_parallel = sbp_parallel_pb.SbpParallel()
+    sbp_parallel.broadcast_parallel.SetInParent()
+    return op_arg_util.OpArgParallelAttribute(
+        x_parallel_attr.parallel_desc_symbol,
+        sbp_parallel,
+        x_parallel_attr.opt_mirrored_parallel,
     )
-    tmp = copy_hd(builder, x_blob_object, gpu_op_arg_parallel_attr)
-    nccl_all_reduce = enable_if.unique(
-        [NcclAllReduce], context=(tmp, op_arg_parallel_attr)
-    )
-    return nccl_all_reduce(builder, tmp, op_arg_parallel_attr)
 
 
 MatchBroadcastOneToMany = (
@@ -282,10 +302,10 @@ def TryReplaceDeviceTag(builder, parallel_desc_symbol, device_tag):
     if parallel_desc_symbol.device_tag == device_tag:
         return parallel_desc_symbol
     else:
-        return ReplaceDeviceTag(builder, parallel_desc_symbol, device_tag)
+        return ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=builder)
 
 
-def ReplaceDeviceTag(builder, parallel_desc_symbol, device_tag):
+def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
     assert parallel_desc_symbol.device_tag != device_tag
     parallel_conf = placement_proto_pb.ParallelConf()
     for device_name in parallel_desc_symbol.parallel_conf.device_name:
@@ -293,7 +313,12 @@ def ReplaceDeviceTag(builder, parallel_desc_symbol, device_tag):
         parallel_conf.device_name.append(
             "%s:%s:%s" % (triple[0], device_tag, triple[2])
         )
-    return builder.GetParallelDescSymbol(parallel_conf)
+    if builder is None:
+        return symbol_util.ParallelDescSymbol(
+            parallel_desc_symbol.symbol_id, parallel_conf, device_tag
+        )
+    else:
+        return builder.GetParallelDescSymbol(parallel_conf)
 
 
 def _GetEagerNcclAllReduce(parallel_conf):

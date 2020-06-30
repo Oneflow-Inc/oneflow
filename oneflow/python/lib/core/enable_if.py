@@ -11,6 +11,11 @@ def condition(hob_expr):
     return Decorator
 
 
+def get_condition_hob(func):
+    assert hasattr(func, "__oneflow_condition_hob__")
+    return func.__oneflow_condition_hob__
+
+
 def unique(arg_funcs, context=None, default=None):
     assert isinstance(arg_funcs, (list, tuple))
     conditional_functions = []
