@@ -9,6 +9,7 @@
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/regst_lifetime_graph.h"
 #include "oneflow/core/graph/sharable_mem_block_graph.h"
@@ -556,7 +557,8 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
       if (calc >= available) {
         const auto* id_mgr = Global<IDMgr>::Get();
-        std::string device_tag = id_mgr->IsGpuMemZone(mem_zone_id) ? "gpu" : "cpu";
+        const char* device_tag = JUST(DeviceTag4DeviceType(
+            id_mgr->IsGpuMemZone(mem_zone_id) ? DeviceType::kGPU : DeviceType::kCPU));
         return Error::MemoryZoneOutOfMemory(machine_id, mem_zone_id, calc, available, device_tag)
                << "OOM detected at compile time. ";
       }
