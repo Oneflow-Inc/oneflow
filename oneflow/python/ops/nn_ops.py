@@ -61,7 +61,7 @@ def conv2d(
         else:
             raise ValueError("dilations must be an int or a list.")
 
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         if channel_pos == "channels_first":
             kernel_size_list = filters.shape[2:4]
         elif channel_pos == "channels_last":
@@ -224,7 +224,7 @@ def tf_conv2d(
         else:
             raise ValueError("dilations must be an int or a list.")
 
-    assert os.getenv("ENABLE_USER_OP") == "True"
+    assert os.getenv("ENABLE_USER_OP") != "False"
     if channel_pos == "channels_first":
         input_size = input.static_shape[2:4]
         kernel_size_list = filters.static_shape[2:4]
@@ -314,7 +314,7 @@ def bias_add(value, bias, data_format=None, name=None):
         else:
             raise ValueError("data_format must be of the form `N...C` or `NC...`")
 
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return (
             flow.user_op_builder(name)
             .Op("bias_add")
@@ -358,7 +358,7 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     Analogous to `tf.nn.max_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool2d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("MaxPool2D_")
@@ -409,7 +409,7 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     Analogous to `tf.nn.avg_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool2d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("AvgPool2D_")
@@ -460,7 +460,7 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     Analogous to `tf.nn.max_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool3d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("MaxPool3D_")
@@ -511,7 +511,7 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     Analogous to `tf.nn.avg_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool3d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("AvgPool3D_")
@@ -681,7 +681,7 @@ def sparse_cross_entropy(labels=None, prediction=None, name=None):
     assert labels is not None
     assert prediction is not None
 
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         if len(labels.shape) == len(prediction.shape):
             assert labels.shape[-1] == 1
             labels = flow.squeeze(labels, axis=[-1])
@@ -757,7 +757,7 @@ def sparse_softmax_cross_entropy_with_logits(labels=None, logits=None, name=None
     assert labels is not None
     assert logits is not None
 
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         if len(labels.shape) == len(logits.shape):
             assert labels.shape[-1] == 1
             labels = flow.squeeze(labels, axis=[-1])

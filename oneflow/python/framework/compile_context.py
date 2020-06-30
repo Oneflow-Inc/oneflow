@@ -22,7 +22,7 @@ def CurJobAddOp(op_conf, parallel_conf=None):
     # TODO: tsai: remove this debug code when transition ends
     import os
 
-    if os.getenv("ENABLE_USER_OP") == "True" and op_conf.HasField("user_conf") == False:
+    if os.getenv("ENABLE_USER_OP") != "False" and op_conf.HasField("user_conf") == False:
         op_type = op_conf.WhichOneof("op_type")
         if op_type not in logged_op_confs and op_type != "return_conf":
             print("non-user op added: {}".format(op_type))
