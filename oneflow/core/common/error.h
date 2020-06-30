@@ -24,6 +24,8 @@ class Error final {
   static Error BoxingNotSupported();
   static Error OpKernelNotFoundError(const std::vector<std::string>& error_msgs);
   static Error MultipleOpKernelsMatchedError(const std::vector<std::string>& error_msgs);
+  static Error MemoryZoneOutOfMemory(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
+                                     uint64_t available, const std::string& device_type);
 
   // gradient
   static Error GradientFunctionNotFound();
