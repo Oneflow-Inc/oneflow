@@ -946,8 +946,6 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
 
 }  // namespace
 
-Oneflow::Oneflow() {}
-
 Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   // Runtime
   JUST(CompileAndMergePlanOnMaster(job_set.job(), &plan_));

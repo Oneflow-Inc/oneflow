@@ -506,19 +506,6 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
   }
 }
 
-std::vector<std::string> GetErrorMsgOfOutOFMemory(int64_t machine_id, int64_t mem_zone_id,
-                                                  uint64_t calc, uint64_t available,
-                                                  const std::string& device_type) {
-  std::vector<std::string> debug_msgs;
-  debug_msgs.emplace_back("machine_id: " + std::to_string(machine_id));
-  debug_msgs.emplace_back("mem_zone_id: " + std::to_string(mem_zone_id));
-  debug_msgs.emplace_back("device_type: " + device_type);
-  debug_msgs.emplace_back("available: " + std::to_string(available) + " bytes");
-  debug_msgs.emplace_back("required: " + std::to_string(calc) + " bytes");
-  debug_msgs.emplace_back("exceeded: " + std::to_string(calc - available) + " bytes");
-  return debug_msgs;
-}
-
 }  // namespace
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
@@ -569,13 +556,9 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
       if (calc >= available) {
         const auto* id_mgr = Global<IDMgr>::Get();
-        std::string device_type = id_mgr->IsGpuMemZone(mem_zone_id) ? "gpu" : "cpu";
-        std::vector<std::string> debug_msgs =
-            GetErrorMsgOfOutOFMemory(machine_id, mem_zone_id, calc, available, device_type);
-        std::stringstream ss;
-        for (auto& msg : debug_msgs) { ss << "\n " << msg; }
-        return Error::MemoryZoneOutOfMemory(machine_id, mem_zone_id, calc, available, device_type)
-               << "OOM detected at compile time. The info of Memory are" << ss.str();
+        std::string device_tag = id_mgr->IsGpuMemZone(mem_zone_id) ? "gpu" : "cpu";
+        return Error::MemoryZoneOutOfMemory(machine_id, mem_zone_id, calc, available, device_tag)
+               << "OOM detected at compile time. ";
       }
     }
   }

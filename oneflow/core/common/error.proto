@@ -88,10 +88,9 @@ message MultipleOpKernelsMatchedError {
 message MemoryZoneOutOfMemory {
   repeated string machine_id = 1;
   repeated string mem_zone_id = 2;
-  repeated string device_type = 3;
+  repeated string device_tag = 3;
   repeated string required = 4;
   repeated string available = 5;
-  repeated string exceeded = 6;
 }
 
 message UnkownError { }
