@@ -25,8 +25,9 @@ from onnx import (
     TensorProto,
     onnx_pb,
 )
+from oneflow.python.framework import id_util
 from oneflow.python.onnx import util
-from oneflow.python.onnx.util import make_name, port_name, find_opset
+from oneflow.python.onnx.util import find_opset
 from oneflow.python.onnx import optimizer
 from oneflow.python.onnx.schemas import get_schema, infer_onnx_shape_dtype
 from oneflow.python.onnx import constants
@@ -479,7 +480,7 @@ class Graph(object):
         # add identity node after each output, in case it is renamed during conversion.
         for o in self.outputs:
             n = self.get_node_by_output_in_current_graph(o)
-            new_output_name = port_name(n.name + "_" + util.make_name("raw_output_"))
+            new_output_name = id_util.UniqueStr(n.name + "_raw_output")
             n_shapes = n.output_shapes
             n_dtypes = n.output_dtypes
             body_graphs = n.graph.contained_graphs.pop(n.name, None)
@@ -597,7 +598,7 @@ class Graph(object):
             dtypes = []
 
         if name is None:
-            name = util.make_name(op_type)
+            name = id_util.UniqueStr(op_type)
 
         if op_name_scope:
             name = "_".join([op_name_scope, name])
@@ -894,7 +895,7 @@ class Graph(object):
         if shape is None:
             shape = self.get_shape(name)
 
-        default_const_name = port_name(make_name("{}_default".format(name)))
+        default_const_name = id_util.UniqueStr("{}_default".format(name))
         default_const.output = [default_const_name]
         new_node = self.make_node(
             "PlaceholderWithDefault",
@@ -1214,7 +1215,7 @@ class Graph(object):
             return []
         val.append(
             "{}{} {} {}".format(
-                space, node.type, node.name, self.get_shape(port_name(node.name))
+                space, node.type, node.name, self.get_shape(id_util.UniqueStr(node.name))
             )
         )
         space += "    "
@@ -1269,8 +1270,8 @@ class Graph(object):
             node that was inserted
         """
         if name is None:
-            name = util.make_name(node.name)
-        new_output = port_name(name)
+            name = id_util.UniqueStr(node.name)
+        new_output = id_util.UniqueStr(name)
         if not isinstance(input_name, list):
             input_name = [input_name]
 
@@ -1312,7 +1313,7 @@ class Graph(object):
             type(op_type),
         )
 
-        new_output = port_name(name)
+        new_output = id_util.UniqueStr(name)
         new_node = self.make_node(
             op_type,
             [output_name],
@@ -1580,7 +1581,7 @@ class GraphUtil(object):
 
             # some pytorch model had empty names - make one up
             if not n.name:
-                n.name = util.make_name("was_empty")
+                n.name = id_util.UniqueStr("was_empty")
             nodes_to_append.append(n)
 
         output_names = []

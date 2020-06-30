@@ -6,6 +6,7 @@
    for example, input of transpose node is const then we can do transpose statically instead of at runtime
 """
 
+from oneflow.python.framework import id_util
 from .. import util
 from .optimizer_base import GraphOptimizerBase
 
@@ -95,7 +96,7 @@ class ConstFoldOptimizer(GraphOptimizerBase):
             "length of node outputs and const vals should be same",
         )
         for old_input, val in zip(node.output, vals):
-            const_node = graph.make_const(util.make_name("const_fold_opt"), val)
+            const_node = graph.make_const(id_util.UniqueStr("const_fold_opt"), val)
             graph.set_dtype(
                 const_node.output[0], util.map_numpy_to_onnx_dtype(val.dtype)
             )

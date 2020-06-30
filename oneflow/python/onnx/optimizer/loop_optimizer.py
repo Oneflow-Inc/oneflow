@@ -5,7 +5,8 @@
    some op in loop's body graph can be moved out to the loop
 """
 
-from oneflow.python.onnx.util import make_name, make_sure
+from oneflow.python.framework import id_util
+from oneflow.python.onnx.util import make_sure
 from .optimizer_base import GraphOptimizerBase
 
 
@@ -85,7 +86,7 @@ class LoopOptimizer(GraphOptimizerBase):
                 new_perm = [0] + [
                     i + 1 for i in ori_perm
                 ]  # body output's rank is m > rank of loop's output is m+1
-                name = make_name("trans_moved_from_loop_body")
+                name = id_util.UniqueStr("trans_moved_from_loop_body")
                 _ = parent_graph.insert_new_node_on_output(
                     "Transpose", name_in_parent, name, perm=new_perm
                 )

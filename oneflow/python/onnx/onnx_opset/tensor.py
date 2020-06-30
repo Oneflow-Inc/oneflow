@@ -18,6 +18,7 @@ from onnx import onnx_pb
 from onnx.onnx_pb import TensorProto
 
 import oneflow.python.onnx
+from oneflow.python.framework import id_util
 from oneflow.python.onnx import constants, util
 from oneflow.python.onnx.graph_builder import GraphBuilder
 from oneflow.python.onnx.handler import flow_op
@@ -54,7 +55,7 @@ def _wrap_concat_with_cast(ctx, node):
         next_nodes = ctx.find_output_consumers(node.output[0])
         # cast output back to dtype unless the next op is a cast
         if next_nodes[0].type != "Cast":
-            op_name = util.make_name(node.name)
+            op_name = id_util.UniqueStr(node.name)
             output_cast = ctx.insert_new_node_on_output(
                 "Cast", output_name, name=op_name
             )
@@ -88,7 +89,7 @@ class Reshape:
             onnx_pb.TensorProto.INT64,
         ]
         shape_node = ctx.make_const(
-            util.make_name("shape"), np.array(node.get_attr_value("shape"))
+            id_util.UniqueStr("shape"), np.array(node.get_attr_value("shape"))
         )
         node.input = node.input + [shape_node.name]
         if ctx.opset >= 8 or not need_casting:
@@ -103,7 +104,7 @@ class Reshape:
         # if the next node is already a cast we don't need to insert another one
         next_nodes = ctx.find_output_consumers(node.output[0])
         if len(next_nodes) != 1 or next_nodes[0].type != "Cast":
-            op_name = util.make_name(node.name)
+            op_name = id_util.UniqueStr(node.name)
             output_cast = ctx.insert_new_node_on_output(
                 "Cast", node.output[0], name=op_name
             )
@@ -182,14 +183,14 @@ def _make_gathernd_inner_loop(ctx, params, index, dtype):
     # gather_cur = params
     # for (int i = 0; i < size(index); i++)
     #   gather_res = gather(gather_cur, index[i])
-    scope_name = util.make_name("gathernd_inner_loop")
+    scope_name = id_util.UniqueStr("gathernd_inner_loop")
     trip_node = ctx.make_node("Size", [index.output[0]])
-    cond_const = ctx.make_const(util.make_name("cond"), np.ones((), dtype=np.bool))
-    trip_name = util.make_name("i")
-    cond_name = util.make_name("cond")
-    cond_out_name = util.make_name("cond_out")
-    cur_name = util.make_name("gather_cur")
-    result_name = util.make_name("res")
+    cond_const = ctx.make_const(id_util.UniqueStr("cond"), np.ones((), dtype=np.bool))
+    trip_name = id_util.UniqueStr("i")
+    cond_name = id_util.UniqueStr("cond")
+    cond_out_name = id_util.UniqueStr("cond_out")
+    cur_name = id_util.UniqueStr("gather_cur")
+    result_name = id_util.UniqueStr("res")
 
     # body graph creation
     g = ctx.create_new_graph_with_same_config()
@@ -221,7 +222,7 @@ def _make_gathernd_inner_loop(ctx, params, index, dtype):
 def make_gathernd(ctx, params, indices, output, scope_name, t_params, shapes, dtypes):
     """make GatherNd op."""
     # Tparams output = GatherNd(Tparams params, Tidx indices)
-    scope_name = util.make_name(scope_name)
+    scope_name = id_util.UniqueStr(scope_name)
     # reshape indices into [sum(indices[:-1]), indices[-1]]
     indices_shape = ctx.make_node("Shape", [indices], dtypes=[TensorProto.INT64])
     indices_size = ctx.make_node("Size", [indices])
@@ -241,17 +242,17 @@ def make_gathernd(ctx, params, indices, output, scope_name, t_params, shapes, dt
 
     # outter loop for each index
     # for (int i=0; i<outter_shape; i++) inner_loop(params, flatten_indices[i])
-    cond_const = ctx.make_const(util.make_name("cond"), np.ones((), dtype=np.bool))
-    dummy_const = ctx.make_const(util.make_name("dummy"), np.ones((), dtype=np.int64))
+    cond_const = ctx.make_const(id_util.UniqueStr("cond"), np.ones((), dtype=np.bool))
+    dummy_const = ctx.make_const(id_util.UniqueStr("dummy"), np.ones((), dtype=np.int64))
 
     # body graph creation
     g = ctx.create_new_graph_with_same_config()
-    trip_name = util.make_name("i")
-    cond_name = util.make_name("cond")
-    cond_out_name = util.make_name("cond_out")
-    dummy_name = util.make_name("dummy")
-    dummy_out_name = util.make_name("dummy_out")
-    result_name = util.make_name("res")
+    trip_name = id_util.UniqueStr("i")
+    cond_name = id_util.UniqueStr("cond")
+    cond_out_name = id_util.UniqueStr("cond_out")
+    dummy_name = id_util.UniqueStr("dummy")
+    dummy_out_name = id_util.UniqueStr("dummy_out")
+    result_name = id_util.UniqueStr("res")
 
     g.add_graph_input(trip_name, TensorProto.INT64, [1])
     g.add_graph_input(cond_name, TensorProto.BOOL, [])
@@ -287,7 +288,7 @@ def make_gathernd(ctx, params, indices, output, scope_name, t_params, shapes, dt
         "Shape", [gathernd_loop.output[1]], dtypes=[TensorProto.INT64]
     )
     # workaround in case gathernd_loop is 1-dimensional
-    one_const = ctx.make_const(util.make_name("one"), np.array([1], dtype=np.int64))
+    one_const = ctx.make_const(id_util.UniqueStr("one"), np.array([1], dtype=np.int64))
     inner_loop_shape_ = ctx.make_node(
         "Concat",
         [inner_loop_shape.output[0], one_const.output[0]],

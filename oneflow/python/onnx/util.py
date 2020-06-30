@@ -17,6 +17,7 @@ import tempfile
 import six
 import numpy as np
 import oneflow.core.common.data_type_pb2 as data_type_pb2
+from oneflow.python.framework import id_util
 from google.protobuf import text_format
 import onnx
 from onnx import helper, onnx_pb, defs, numpy_helper
@@ -95,20 +96,6 @@ class TensorValueInfo(object):
 ONNX_UNKNOWN_DIMENSION = -1
 ONNX_EMPTY_INPUT = ""
 
-# index for internally generated names
-INTERNAL_NAME = 1
-
-# Fake onnx op type which is used for Graph input.
-GRAPH_INPUT_TYPE = "NON_EXISTENT_ONNX_TYPE"
-
-
-def make_name(name):
-    """Make op name for inserted ops."""
-    global INTERNAL_NAME
-    INTERNAL_NAME += 1
-    return "{}__{}".format(name, INTERNAL_NAME)
-
-
 def map_flow_dtype(dtype):
     if dtype:
         dtype = FLOW_TO_ONNX_DTYPE[dtype]
@@ -130,13 +117,8 @@ def make_onnx_shape(shape):
     """shape with -1 is not valid in onnx ... make it a name."""
     if shape:
         # don't do this if input is a scalar
-        return [make_name("unk") if i == -1 else i for i in shape]
+        return [id_util.UniqueStr("unk") if i == -1 else i for i in shape]
     return shape
-
-
-def port_name(name, nr=0):
-    """Map node output number to name."""
-    return name + ":" + str(nr)
 
 
 def make_onnx_inputs_outputs(name, elem_type, shape, **kwargs):

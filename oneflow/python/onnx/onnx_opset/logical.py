@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 import logging
 
 from onnx import TensorProto
+from oneflow.python.framework import id_util
 from oneflow.python.onnx import util
 from oneflow.python.onnx.handler import flow_op
 from oneflow.python.onnx.onnx_opset import common
@@ -41,7 +42,7 @@ def _add_cast_to_output(graph, node):
     # oneflow logical ops produce int8 tensor while onnx logical ops produce bool tensor
     output = node.output[0]
     cast_node = graph.insert_new_node_on_output(
-        "Cast", output, util.make_name("cast"), to=graph.get_dtype(output)
+        "Cast", output, id_util.UniqueStr("cast"), to=graph.get_dtype(output)
     )
     graph.copy_shape(output, node.output[0])
     graph.set_dtype(node.output[0], TensorProto.BOOL)
@@ -80,7 +81,7 @@ class Equal:
             node.type = "Equal"
             output_name = node.output[0]
             not_node = ctx.insert_new_node_on_output(
-                "Not", output_name, name=util.make_name(node.name)
+                "Not", output_name, name=id_util.UniqueStr(node.name)
             )
             ctx.copy_shape(output_name, not_node.output[0])
             ctx.copy_dtype(output_name, not_node.output[0])
@@ -98,7 +99,7 @@ class Equal:
             node.type = "Equal"
             output_name = node.output[0]
             not_node = ctx.insert_new_node_on_output(
-                "Not", output_name, name=util.make_name(node.name)
+                "Not", output_name, name=id_util.UniqueStr(node.name)
             )
             ctx.copy_shape(output_name, not_node.output[0])
             ctx.copy_dtype(output_name, not_node.output[0])
@@ -112,7 +113,7 @@ class Equal:
             node.type = "Equal"
             output_name = node.output[0]
             not_node = ctx.insert_new_node_on_output(
-                "Not", output_name, name=util.make_name(node.name)
+                "Not", output_name, name=id_util.UniqueStr(node.name)
             )
             ctx.copy_shape(output_name, not_node.output[0])
             ctx.copy_dtype(output_name, not_node.output[0])
@@ -147,7 +148,7 @@ class GreaterLessEqual:
         GreaterLess.version_7(ctx, node, **kwargs)
         output_name = node.output[0]
         new_node = ctx.insert_new_node_on_output(
-            "Not", output_name, name=util.make_name(node.name)
+            "Not", output_name, name=id_util.UniqueStr(node.name)
         )
         ctx.copy_shape(output_name, new_node.output[0])
         ctx.set_dtype(new_node.output[0], ctx.get_dtype(output_name))

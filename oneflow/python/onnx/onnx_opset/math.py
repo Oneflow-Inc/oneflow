@@ -13,6 +13,7 @@ import logging
 
 import numpy as np
 from onnx import onnx_pb
+from oneflow.python.framework import id_util
 from oneflow.python.onnx import constants, util
 from oneflow.python.onnx.handler import flow_op
 from oneflow.python.onnx.onnx_opset import common
@@ -47,7 +48,7 @@ class ScalarBinaryOp:
         )
         np_dtype = util.map_onnx_to_numpy_type(ctx.get_dtype(node.input[0]))
         scalar_node = ctx.make_const(
-            util.make_name("scalar"), np.array([scalar_val]).astype(np_dtype)
+            id_util.UniqueStr("scalar"), np.array([scalar_val]).astype(np_dtype)
         )
         node.input.append(scalar_node.output[0])
 
@@ -180,7 +181,7 @@ def make_min_or_max_op(
         if output_dtypes is not None:
             origin_dtype = output_dtypes[0]
         ctx.set_dtype(node.output[0], target_dtype)
-        cast_name = util.make_name(node.name)
+        cast_name = id_util.UniqueStr(node.name)
         cast_node = ctx.insert_new_node_on_output(
             "Cast", node.output[0], name=cast_name, to=origin_dtype
         )
@@ -257,7 +258,7 @@ class ClipOps:
         np_dtype = util.ONNX_TO_NUMPY_DTYPE[onnx_dtype]
         if min_val is not None:
             clip_min = ctx.make_const(
-                util.make_name("{}_min".format(node.name)),
+                id_util.UniqueStr("{}_min".format(node.name)),
                 np.array(min_val, dtype=np_dtype),
             )
             node.input.append(clip_min.output[0])
@@ -265,7 +266,7 @@ class ClipOps:
             node.input.append("")
         if max_val is not None:
             clip_max = ctx.make_const(
-                util.make_name("{}_max".format(node.name)),
+                id_util.UniqueStr("{}_max".format(node.name)),
                 np.array(max_val, dtype=np_dtype),
             )
             node.input.append(clip_max.output[0])
@@ -323,7 +324,7 @@ class Rsqrt:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         node.type = "Sqrt"
-        op_name = util.make_name(node.name)
+        op_name = id_util.UniqueStr(node.name)
         reciprocal = ctx.insert_new_node_on_output(
             "Reciprocal", node.output[0], name=op_name
         )
@@ -335,7 +336,7 @@ class SquaredDifference:
     @classmethod
     def version_1(cls, ctx, node, **kwargs):
         node.type = "Sub"
-        op_name = util.make_name(node.name)
+        op_name = id_util.UniqueStr(node.name)
         mul = ctx.insert_new_node_on_output("Mul", node.output[0], name=op_name)
         mul.input.append(node.output[0])
 
@@ -355,7 +356,7 @@ class Sign:
             raise ValueError(
                 "dtype " + str(node_dtype) + " is not supported in onnx for now"
             )
-        zero_name = util.make_name("{}_zero".format(node.name))
+        zero_name = id_util.UniqueStr("{}_zero".format(node.name))
         ctx.make_const(zero_name, np.array(0, dtype=np.float32))
         if node_dtype not in [
             onnx_pb.TensorProto.FLOAT16,

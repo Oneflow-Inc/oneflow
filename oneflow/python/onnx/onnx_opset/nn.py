@@ -14,6 +14,7 @@ import logging
 import numpy as np
 from onnx import onnx_pb
 from onnx.onnx_pb import TensorProto
+from oneflow.python.framework import id_util
 from oneflow.python.onnx import constants, util
 from oneflow.python.onnx.handler import flow_op
 
@@ -90,7 +91,7 @@ def conv_convert_inputs(
                 reshape.skip_conversion = True
             else:
                 # new reshape takes new shape as input[1]
-                shape_name = util.make_name(node.name)
+                shape_name = id_util.UniqueStr(node.name)
                 ctx.make_const(shape_name, np.array(new_kernel_shape, dtype=np.int64))
                 input_name = node.input[1]
                 reshape = ctx.make_node("Reshape", [input_name, shape_name])
@@ -125,7 +126,7 @@ def conv_convert_inputs(
         for idx in output_indices:
             output_name = node.output[idx]
             output_shape = ctx.get_shape(node.output[idx])
-            op_name = util.make_name(node.name)
+            op_name = id_util.UniqueStr(node.name)
             transpose = ctx.insert_new_node_on_output(
                 "Transpose", output_name, name=op_name
             )
@@ -309,7 +310,7 @@ class Pad:
         padding_before = node.get_attr_value("padding_before")
         padding_after = node.get_attr_value("padding_after")
         paddings = np.array(padding_before + padding_after).astype(np.int64)
-        padding_node = ctx.make_const(util.make_name("const"), paddings)
+        padding_node = ctx.make_const(id_util.UniqueStr("const"), paddings)
         node.input.append(padding_node.output[0])
         dtype = ctx.get_dtype(node.input[0])
         const_val = (
@@ -318,7 +319,7 @@ class Pad:
             else node.get_attr_value("floating_constant_value")
         )
         const_val = np.array(const_val).astype(util.map_onnx_to_numpy_type(dtype))
-        const_val_node = ctx.make_const(util.make_name("const"), const_val)
+        const_val_node = ctx.make_const(id_util.UniqueStr("const"), const_val)
         node.input.append(const_val_node.output[0])
 
 
@@ -360,7 +361,7 @@ class BatchNorm:
                 np.resize(node.inputs[3].get_tensor_value(as_list=False), scale_shape),
                 dtype=val_type,
             )
-            new_mean_node_name = util.make_name(node.name)
+            new_mean_node_name = id_util.UniqueStr(node.name)
             ctx.make_const(new_mean_node_name, new_mean_value)
             node.input[3] = new_mean_node_name
 
@@ -369,7 +370,7 @@ class BatchNorm:
                 np.resize(node.inputs[4].get_tensor_value(as_list=False), scale_shape),
                 dtype=val_type,
             )
-            new_val_node_name = util.make_name(node.name)
+            new_val_node_name = id_util.UniqueStr(node.name)
             ctx.make_const(new_val_node_name, new_var_value)
             node.input[4] = new_val_node_name
 

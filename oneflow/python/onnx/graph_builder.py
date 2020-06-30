@@ -7,6 +7,7 @@ oneflow.python.onnx.graph_helper - class to help building graph, such as helping
 
 import numpy as np
 import logging
+from oneflow.python.framework import id_util
 from oneflow.python.onnx import util
 
 
@@ -106,7 +107,7 @@ class GraphBuilder(object):
         res = tensor
         if isinstance(tensor, list):
             res = self.graph.make_const(
-                util.make_name("const_slice"), np.array(tensor, dtype)
+                id_util.UniqueStr("const_slice"), np.array(tensor, dtype)
             ).output[0]
 
         util.make_sure(
