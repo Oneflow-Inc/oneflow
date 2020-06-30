@@ -5,6 +5,13 @@ def bool_functor(debug_str):
     return Decorator
 
 
+def hob_context_attr(attr_name):
+    def Decorator(attr_getter):
+        return HobContextAttr(attr_name, attr_getter)
+
+    return Decorator
+
+
 class BoolFunctor(object):
     def debug_str(self, ctx, display_result=True):
         raise NotImplementedError
@@ -85,3 +92,86 @@ class _NotBoolFunctor(BoolFunctor):
 
     def __call__(self, ctx):
         return not self.x_(ctx)
+
+
+class HobContextGetter(object):
+    def __init__(self, attr_name, attr_getter):
+        self.attr_name_ = attr_name
+        self.attr_getter_ = attr_getter
+
+    @property
+    def attr_name(self):
+        return self.attr_name_
+
+    @property
+    def attr_getter(self):
+        return self.attr_getter_
+
+    def __eq__(self, other):
+        if not isinstance(other, HobContextGetter):
+            other = HobContextConstant(other)
+        return self._MakeHob(other, "==", lambda a, b: a == b)
+
+    def __ne__(self, other):
+        if not isinstance(other, HobContextGetter):
+            other = HobContextConstant(other)
+        return self._MakeHob(other, "!=", lambda a, b: a != b)
+
+    def __gt__(self, other):
+        if not isinstance(other, HobContextGetter):
+            other = HobContextConstant(other)
+        return self._MakeHob(other, ">", lambda a, b: a > b)
+
+    def __ge__(self, other):
+        if not isinstance(other, HobContextGetter):
+            other = HobContextConstant(other)
+        return self._MakeHob(other, ">=", lambda a, b: a >= b)
+
+    def __lt__(self, other):
+        if not isinstance(other, HobContextGetter):
+            other = HobContextConstant(other)
+        return self._MakeHob(other, "<", lambda a, b: a < b)
+
+    def __le__(self, other):
+        if not isinstance(other, HobContextGetter):
+            other = HobContextConstant(other)
+        return self._MakeHob(other, "<=", lambda a, b: a <= b)
+
+    def _MakeHob(self, other, cmp_str, cmp_func):
+        @bool_functor("%s %s %s" % (self.attr_name, cmp_str, other.attr_name))
+        def HobHob(context):
+            return cmp_func(self.attr_getter(context), other.attr_getter(context))
+
+        return HobHob
+
+    @property
+    def __force_no_export__(self):
+        return True
+
+
+class HobContextConstant(HobContextGetter):
+    def __init__(self, value):
+        HobContextGetter.__init__(self, str(value), lambda ctx: value)
+
+
+class HobContextAttr(HobContextGetter):
+    def __init__(self, attr_name, attr_getter):
+        HobContextGetter.__init__(self, attr_name, attr_getter)
+
+    def __getattr__(self, attr_name):
+        @hob_context_attr("%s.%s" % (self.attr_name, attr_name))
+        def HobCtxAttr(ctx):
+            return getattr(self.attr_getter(ctx), attr_name)
+
+        return HobCtxAttr
+
+    def HasField(self, attr_name):
+        @bool_functor('%s.HasField("%s")' % (self.attr_name, attr_name))
+        def BoolFunctor(ctx):
+            obj = self.attr_getter(ctx)
+            if hasattr(obj, "HasField"):
+                return obj.HasField(attr_name)
+            else:
+                return hasattr(obj, attr_name)
+
+        return BoolFunctor

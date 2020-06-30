@@ -13,25 +13,8 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.job.placement_pb2 as placement_proto_pb
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_hob as boxing_hob
+import inspect
 import oneflow
-
-
-def ComposeBoxing(lhs_boxing, rhs_boxing, get_medium_op_arg_parallel_attr):
-    composed_hob = boxing_hob.ComposeHob(
-        enable_if.get_condition_hob(lhs_boxing),
-        enable_if.get_condition_hob(rhs_boxing),
-        get_medium_op_arg_parallel_attr=get_medium_op_arg_parallel_attr,
-    )
-
-    @enable_if.condition(composed_hob)
-    def Composed(builder, x_blob_object, op_arg_parallel_attr):
-        tmp_op_arg_parallel_attr = get_medium_op_arg_parallel_attr(
-            builder, x_blob_object, op_arg_parallel_attr
-        )
-        tmp = lhs_boxing(builder, x_blob_object, tmp_op_arg_parallel_attr)
-        return rhs_boxing(builder, tmp, op_arg_parallel_attr)
-
-    return Composed
 
 
 def BoxingTo(builder, x_blob_object, op_arg_parallel_attr):
@@ -44,18 +27,11 @@ def BoxingTo(builder, x_blob_object, op_arg_parallel_attr):
     conditional_functions = [
         SingleDeviceBoxing,
         BroadcastOneToMany,
-        CopyHd,
+        CopyH2D,
+        CopyD2H,
         NcclAllReduce,
-        ComposeBoxing(
-            CopyHd,
-            NcclAllReduce,
-            get_medium_op_arg_parallel_attr=GetGpuOpArgParallelAttr,
-        ),
-        ComposeBoxing(
-            NcclAllReduce,
-            CopyHd,
-            get_medium_op_arg_parallel_attr=GetBroadcastOpArgParallelAttr,
-        ),
+        Sequential((CopyH2D, GetGpuOpArgParallelAttr), NcclAllReduce),
+        Sequential((NcclAllReduce, GetBroadcastOpArgParallelAttr), CopyD2H),
     ]
 
     def default(get_failed_info, *args, **kwargs):
@@ -81,16 +57,75 @@ def BoxingTo(builder, x_blob_object, op_arg_parallel_attr):
     return function(builder, x_blob_object, op_arg_parallel_attr)
 
 
-MatchCopyHd = (
+def ComposeBoxing(lhs_boxing, rhs_boxing, get_medium_op_arg_parallel_attr):
+    composed_hob = boxing_hob.ComposeHob(
+        enable_if.get_condition_hob(lhs_boxing),
+        enable_if.get_condition_hob(rhs_boxing),
+        get_medium_op_arg_parallel_attr=get_medium_op_arg_parallel_attr,
+    )
+
+    @enable_if.condition(composed_hob)
+    def Composed(builder, x_blob_object, op_arg_parallel_attr):
+        tmp_op_arg_parallel_attr = get_medium_op_arg_parallel_attr(
+            builder, x_blob_object, op_arg_parallel_attr
+        )
+        tmp = lhs_boxing(builder, x_blob_object, tmp_op_arg_parallel_attr)
+        return rhs_boxing(builder, tmp, op_arg_parallel_attr)
+
+    return Composed
+
+
+def Sequential(*boxing_methods):
+    def GetBoxingMethodWithDefault(boxing_method):
+        if isinstance(boxing_method, tuple):
+            assert len(boxing_method) == 2
+            return boxing_method
+        else:
+
+            def Default(_0, x_blob_object, _):
+                return x_blob_object.op_arg_parallel_attr
+
+            return boxing_method, Default
+
+    assert not isinstance(boxing_methods[-1], tuple)
+    composed = boxing_methods[-1]
+    for pair in boxing_methods[-2::-1]:
+        boxing_method, medium_getter = GetBoxingMethodWithDefault(pair)
+        composed = ComposeBoxing(
+            boxing_method, composed, get_medium_op_arg_parallel_attr=medium_getter
+        )
+    return composed
+
+
+MatchCopyH2D = (
     boxing_hob.MasterMachineOnly
     & boxing_hob.SameDeviceIds
-    & boxing_hob.SameSbpParallel
-    & (boxing_hob.HostToGpuDevice | boxing_hob.GpuDeviceToHost)
+    & (boxing_hob.blob_sbp_parallel == boxing_hob.op_arg_sbp_parallel)
+    & (boxing_hob.blob_parallel_desc.device_tag == "cpu")
+    & (boxing_hob.op_arg_parallel_desc.device_tag == "gpu")
 )
 
 
-@enable_if.condition(MatchCopyHd)
-def CopyHd(builder, x_blob_object, op_arg_parallel_attr):
+@enable_if.condition(MatchCopyH2D)
+def CopyH2D(builder, x_blob_object, op_arg_parallel_attr):
+    return CopyHD(builder, x_blob_object, op_arg_parallel_attr)
+
+
+MatchCopyD2H = (
+    boxing_hob.MasterMachineOnly
+    & boxing_hob.SameDeviceIds
+    & (boxing_hob.blob_sbp_parallel == boxing_hob.op_arg_sbp_parallel)
+    & (boxing_hob.blob_parallel_desc.device_tag == "gpu")
+    & (boxing_hob.op_arg_parallel_desc.device_tag == "cpu")
+)
+
+
+@enable_if.condition(MatchCopyD2H)
+def CopyD2H(builder, x_blob_object, op_arg_parallel_attr):
+    return CopyHD(builder, x_blob_object, op_arg_parallel_attr)
+
+
+def CopyHD(builder, x_blob_object, op_arg_parallel_attr):
     arg_parallel_desc_symbol = op_arg_parallel_attr.parallel_desc_symbol
     op_device_tag = arg_parallel_desc_symbol.device_tag
     return BuildCopyHdInstruction(builder, x_blob_object, op_device_tag)
@@ -98,8 +133,8 @@ def CopyHd(builder, x_blob_object, op_arg_parallel_attr):
 
 MatchSingleDeviceBoxing = (
     boxing_hob.MasterMachineOnly
-    & boxing_hob.SameParallelDesc
-    & boxing_hob.BlobOnSingleDevice
+    & (boxing_hob.blob_parallel_desc == boxing_hob.op_arg_parallel_desc)
+    & (boxing_hob.blob_parallel_desc.parallel_num == 1)
 )
 
 
@@ -108,13 +143,17 @@ def SingleDeviceBoxing(builder, x_blob_object, op_arg_parallel_attr):
     return x_blob_object
 
 
+BlobIsPartialSum = boxing_hob.blob_sbp_parallel.HasField("partial_sum_parallel")
+OpArgIsBroadcast = boxing_hob.op_arg_sbp_parallel.HasField("broadcast_parallel")
+
+
 MatchNcclAllReduce = (
     boxing_hob.MasterMachineOnly
-    & boxing_hob.SameParallelDesc
-    & boxing_hob.BlobOnDevice("gpu")
-    & boxing_hob.BlobPartialSumParallel
-    & boxing_hob.OpArgParallelNumGT1
-    & boxing_hob.OpArgBroadcastParallel
+    & (boxing_hob.blob_parallel_desc.device_tag == "gpu")
+    & (boxing_hob.blob_parallel_desc == boxing_hob.op_arg_parallel_desc)
+    & (boxing_hob.op_arg_parallel_desc.parallel_num > 1)
+    & BlobIsPartialSum
+    & OpArgIsBroadcast
 )
 
 
@@ -157,10 +196,9 @@ def GetBroadcastOpArgParallelAttr(builder, x_blob_object, op_arg_parallal_attr):
 
 MatchBroadcastOneToMany = (
     boxing_hob.MasterMachineOnly
-    & boxing_hob.SameMachineId
-    & boxing_hob.BlobOnSingleDevice
-    & boxing_hob.OpArgParallelNumGT1
-    & boxing_hob.OpArgBroadcastParallel
+    & (boxing_hob.blob_parallel_desc.parallel_num == 1)
+    & (boxing_hob.op_arg_parallel_desc.parallel_num > 1)
+    & boxing_hob.op_arg_sbp_parallel.HasField("broadcast_parallel")
 )
 
 
@@ -177,6 +215,18 @@ def BroadcastOneToMany(builder, x_blob_object, op_arg_parallel_attr):
         builder, tmp_blob_object, op_arg_parallel_attr.parallel_desc_symbol.device_tag,
     )
     return ret
+
+
+MatchBroadcastManyToOne = (
+    boxing_hob.MasterMachineOnly
+    & (boxing_hob.blob_sbp_parallel == boxing_hob.op_arg_sbp_parallel)
+    & boxing_hob.op_arg_sbp_parallel.HasField("broadcast_parallel")
+)
+
+
+@enable_if.condition(MatchBroadcastManyToOne)
+def BroadcastManyToOne(builder, x_blob_object, op_arg_parallel_attr):
+    TODO()
 
 
 def Assign(builder, ref_blob_object, value_blob_object):

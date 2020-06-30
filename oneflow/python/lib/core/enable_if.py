@@ -16,6 +16,10 @@ def get_condition_hob(func):
     return func.__oneflow_condition_hob__
 
 
+def set_condition_hob(func, hob):
+    func.__oneflow_condition_hob__ = hob
+
+
 def unique(arg_funcs, context=None, default=None):
     assert isinstance(arg_funcs, (list, tuple))
     conditional_functions = []

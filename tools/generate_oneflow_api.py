@@ -71,6 +71,8 @@ def collect_exports():
         if mod.__name__.startswith("oneflow"):
             for attr in dir(mod):
                 symbol = getattr(mod, attr)
+                if hasattr(symbol, "__force_no_export__"):
+                    continue
                 if hasattr(symbol, "_ONEFLOW_API"):
                     for api_name in getattr(symbol, "_ONEFLOW_API"):
                         is_existing = api_name in exports
