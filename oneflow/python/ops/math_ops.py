@@ -52,7 +52,7 @@ def _recursive_build_add_n(inputs, name=None):
 
 @oneflow_export("math.add_n")
 def add_n(inputs, name=None):
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         op_conf = op_conf_util.OperatorConf()
         setattr(
             op_conf, "name", name if name is not None else id_util.UniqueStr("AddN_"),
@@ -486,7 +486,7 @@ def tanh(x, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         op_conf = op_conf_util.OperatorConf()
         setattr(
             op_conf, "name", name if name is not None else id_util.UniqueStr("TanH_")
@@ -554,7 +554,7 @@ def relu(x, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         op_conf = op_conf_util.OperatorConf()
         setattr(
             op_conf, "name", name if name is not None else id_util.UniqueStr("Relu_")
@@ -587,7 +587,7 @@ def sigmoid(x, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         op_conf = op_conf_util.OperatorConf()
         setattr(
             op_conf, "name", name if name is not None else id_util.UniqueStr("Sigmoid_")

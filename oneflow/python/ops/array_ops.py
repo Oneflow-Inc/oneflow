@@ -72,7 +72,7 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
     elif (
         params.has_batch_axis() == False
         and params.distribute is distribute_util.split(0)
-        and os.getenv("ENABLE_USER_OP") != "True"
+        and os.getenv("ENABLE_USER_OP") == "False"
     ):
         assert axis == 0
         assert batch_dims == 0

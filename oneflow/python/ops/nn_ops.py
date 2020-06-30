@@ -153,7 +153,7 @@ def batch_normalization(
     are always 1D. Users need to specify "axis" to 1 for NCHW data format.
 
     """
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         raise ValueError("nn.batch_normalization is not supported in non-user-op mode")
 
     assert axis >= -len(x.shape) and axis < len(x.shape)
@@ -583,7 +583,7 @@ def softmax(logits, axis=None, name=None):
     if axis is None:
         axis = -1
 
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         assert type(axis) is int
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -626,7 +626,7 @@ def softmax_grad(y, dy, axis=None, name=None):
     if axis is None:
         axis = -1
 
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         assert type(axis) is int
         op_conf = op_conf_util.OperatorConf()
 
@@ -858,7 +858,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
     Analogous to `tf.nn.dropout <https://www.tensorflow.org/api_docs/python/tf/nn/dropout>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         # dropout op
         op_conf = op_conf_util.OperatorConf()
         if name is None:
