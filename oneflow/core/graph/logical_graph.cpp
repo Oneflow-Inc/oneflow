@@ -3,6 +3,7 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -10,7 +11,7 @@ LogicalGraph::LogicalGraph(const Job& job) : job_(job) {
   BuildFwStruct();
   MergeEdge();
   SetNodeDataLbi();
-  if (Global<ResourceDesc>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
 template<typename LogicalNodeType>
@@ -244,9 +245,7 @@ void LogicalGraph::ForEachNecessaryCtrlEdge(
       for (const auto& ctrl_in_op_name : op->op_conf().ctrl_in_op_name()) {
         const LogicalNode* src = op_name2node.at(ctrl_in_op_name);
         CHECK(!IsReachable(dst, src));
-        if (!IsReachable(src, dst)
-            || (dynamic_cast<const NcclTupleBroadcastLogicalNode*>(src) != nullptr
-                && dynamic_cast<const NcclTupleReduceLogicalNode*>(dst) != nullptr)) {
+        if (!IsReachable(src, dst)) {
           CHECK(src->parallel_desc()->EqualsIgnoringDeviceType(*dst->parallel_desc()));
           const Shape* src_time_shape = src->out_blob_time_shape();
           if (src_time_shape == nullptr) { src_time_shape = src->in_blob_fastest_time_shape(); }

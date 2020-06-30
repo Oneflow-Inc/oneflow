@@ -7,8 +7,8 @@
 
 namespace oneflow {
 
-void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
-              HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi);
+Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
+                     HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi);
 void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
                          HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
@@ -19,27 +19,31 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
                         HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
                   HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const ClipConf& clip_conf);
-void GenerateBackwardOpConfIf(const Operator&, std::vector<OperatorConf>*,
-                              const std::function<LogicalBlobId*(const std::string&)>&);
+Maybe<void> GenerateBackwardOpConfIf(
+    const Operator& op, std::vector<OperatorConf>* op_confs,
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp);
 void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes);
 
 class GenerateBackwardOpConfWrapperStruct final {
  public:
   using NaiveFunc = std::function<void(const Operator&, std::vector<OperatorConf>*,
                                        const std::function<LogicalBlobId*(const std::string&)>&)>;
-  using Func = std::function<void(const Operator&, std::vector<OperatorConf>*,
-                                  const std::function<LogicalBlobId*(const std::string&)>&,
-                                  const std::function<const BlobDesc&(const std::string&)>&)>;
+  using MaybeFunc =
+      std::function<Maybe<void>(const Operator&, std::vector<OperatorConf>*,
+                                const std::function<LogicalBlobId*(const std::string&)>&,
+                                const std::function<const BlobDesc&(const std::string&)>&)>;
   GenerateBackwardOpConfWrapperStruct(const NaiveFunc& f)
       : naive_func_(std::make_unique<NaiveFunc>(f)) {}
-  GenerateBackwardOpConfWrapperStruct(const Func& f) : func_(std::make_unique<Func>(f)) {}
-  void Call(const Operator&, std::vector<OperatorConf>*,
-            const std::function<LogicalBlobId*(const std::string&)>&,
-            const std::function<const BlobDesc&(const std::string&)>&) const;
+  GenerateBackwardOpConfWrapperStruct(const MaybeFunc& f)
+      : maybe_func_(std::make_unique<MaybeFunc>(f)) {}
+  Maybe<void> Call(const Operator&, std::vector<OperatorConf>*,
+                   const std::function<LogicalBlobId*(const std::string&)>&,
+                   const std::function<const BlobDesc&(const std::string&)>&) const;
 
  private:
   const std::unique_ptr<const NaiveFunc> naive_func_;
-  const std::unique_ptr<const Func> func_;
+  const std::unique_ptr<const MaybeFunc> maybe_func_;
 };
 
 #define REGISTER_OP_GRAD(op_type_case, gen_grad_func)                       \

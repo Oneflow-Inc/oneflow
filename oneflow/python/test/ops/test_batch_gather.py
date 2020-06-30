@@ -1,9 +1,10 @@
-import oneflow as flow
-import numpy as np
-import tensorflow as tf
 from collections import OrderedDict
-from test_util import GenArgList
+
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
 from tensorflow.python.ops import gen_math_ops
+from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -12,12 +13,18 @@ for gpu in gpus:
 
 def _random_inputs(params_shape, indices_shape):
     params = np.random.rand(*params_shape).astype(np.float32)
-    indices = np.random.randint(low=0, high=params_shape[len(indices_shape) -1],
-            size=indices_shape, dtype=np.int32)
+    indices = np.random.randint(
+        low=0,
+        high=params_shape[len(indices_shape) - 1],
+        size=indices_shape,
+        dtype=np.int32,
+    )
     return params, indices
 
 
-def _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, compare_fn):
+def _make_gather_fn(
+    params, indices, axis, batch_dims, device_type, mirrored, compare_fn
+):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
@@ -44,7 +51,7 @@ def _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, co
 
     if mirrored:
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def gather_fn(
             params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float32),
             indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
@@ -53,7 +60,7 @@ def _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, co
 
     else:
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def gather_fn(
             params_def=flow.FixedTensorDef(params.shape, dtype=flow.float32),
             indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
@@ -62,8 +69,16 @@ def _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, co
 
     return gather_fn
 
-def _compare_gather_with_tf(test_case, device_type, params_shape,
-        indices_shape, axis, batch_dims, mirrored=False):
+
+def _compare_gather_with_tf(
+    test_case,
+    device_type,
+    params_shape,
+    indices_shape,
+    axis,
+    batch_dims,
+    mirrored=False,
+):
     params, indices = _random_inputs(params_shape, indices_shape)
     i = tf.constant(indices.astype(np.int32))
     with tf.GradientTape() as t:
@@ -71,17 +86,22 @@ def _compare_gather_with_tf(test_case, device_type, params_shape,
         y = tf.gather(x, i, axis=axis, batch_dims=axis)
     dy = t.gradient(y, x)
     if mirrored:
+
         def compare_dy(params_grad):
-            test_case.assertTrue(np.allclose(dy,
-                params_grad.ndarray_list()[0], atol=1e-5, rtol=1e-5))
+            test_case.assertTrue(
+                np.allclose(dy, params_grad.ndarray_list()[0], atol=1e-5, rtol=1e-5)
+            )
 
     else:
 
         def compare_dy(params_grad):
-            test_case.assertTrue(np.allclose(dy, params_grad.ndarray(),
-                atol=1e-5, rtol=1e-5))
+            test_case.assertTrue(
+                np.allclose(dy, params_grad.ndarray(), atol=1e-5, rtol=1e-5)
+            )
 
-    gather_fn = _make_gather_fn(params, indices, axis, batch_dims, device_type, mirrored, compare_dy)
+    gather_fn = _make_gather_fn(
+        params, indices, axis, batch_dims, device_type, mirrored, compare_dy
+    )
 
     check_point = flow.train.CheckPoint()
     check_point.init()
@@ -91,6 +111,7 @@ def _compare_gather_with_tf(test_case, device_type, params_shape,
     else:
         of_y = gather_fn(params, indices).get().ndarray()
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
+
 
 def test_batch_gather(test_case):
     arg_dict = OrderedDict()
@@ -136,6 +157,3 @@ def test_batch_gather_case_3(test_case):
     arg_dict["mirrored"] = [True]
     for arg in GenArgList(arg_dict):
         _compare_gather_with_tf(test_case, *arg)
-
-
-

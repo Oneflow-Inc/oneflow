@@ -76,7 +76,8 @@ void AddIdentityOpAndReconnect(
   }
   // set sbp conf for tuple_identity_op
   CHECK_EQ(old_lbi2new_obn.size(), old_lbi2sbp_parallel.size());
-  auto* sbp_sig_conf_map = job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf();
+  auto* sbp_sig_conf_map =
+      job->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
   auto* sbp_parallel_map = (*sbp_sig_conf_map)[identity_op_name].mutable_bn_in_op2sbp_parallel();
   for (const auto& pair : old_lbi2new_obn) {
     (*sbp_parallel_map)[pair.second] = old_lbi2sbp_parallel.at(pair.first);
@@ -98,7 +99,7 @@ class TieUpChainHeadersUnReachableFromAnyVariableOps final : public OpGraphPass 
     return GlobalJobDesc().IsTrain() && GlobalJobDesc().Bool("enable_pseudo_chain_merge");
   }
 
-  void Apply(const OpGraph& op_graph, Job* job) const override {
+  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override {
     auto IsReachableFromAnyVariableOps = MakePredicatorIsReachableFromAnyVariableOps(op_graph);
     auto GetSourceNodesAndEdges = [&](const HashSet<OpNode*>& chain_nodes,
                                       std::vector<OpNode*>* source_nodes,
@@ -126,6 +127,7 @@ class TieUpChainHeadersUnReachableFromAnyVariableOps final : public OpGraphPass 
       AddIdentityOpAndReconnect("pseudo_chain_header_", job, source_edges, MutOperatorConf4OpName,
                                 *ParallelConf4OpName(source_nodes.at(0)->op().op_name()));
     });
+    return Maybe<void>::Ok();
   }
 };
 

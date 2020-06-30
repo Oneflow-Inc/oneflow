@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-REGISTER_USER_OP("ofrecord_raw_decoder")
+REGISTER_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
     .Input("in")
     .Output("out")
     .Attr("name", UserOpAttrType::kAtString)
@@ -25,6 +25,12 @@ REGISTER_USER_OP("ofrecord_raw_decoder")
       *out_tensor->mut_data_type() = static_cast<DataType>(data_type);
       return Maybe<void>::Ok();
     })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
+      CHECK_NOTNULL(in_modifier);
+      in_modifier->set_requires_grad(false);
+    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .Split(user_op::OpArg("in", 0), 0)
@@ -38,7 +44,40 @@ REGISTER_USER_OP("ofrecord_raw_decoder")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("ofrecord_image_decoder_random_crop")
+REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder")
+    .Input("in")
+    .Output("out")
+    .Attr("name", UserOpAttrType::kAtString)
+    .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kOFRecord);
+      CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().At(0) >= 1);
+      *out_tensor->mut_shape() = in_tensor->shape();
+      *out_tensor->mut_data_type() = DataType::kTensorBuffer;
+      return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
+      CHECK_NOTNULL(in_modifier);
+      in_modifier->set_requires_grad(false);
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("in", 0), 0)
+          .Split(user_op::OpArg("out", 0), 0)
+          .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
+      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder_random_crop")
     .Input("in")
     .Output("out")
     .Attr("name", UserOpAttrType::kAtString)
@@ -63,6 +102,12 @@ REGISTER_USER_OP("ofrecord_image_decoder_random_crop")
           .Split(user_op::OpArg("out", 0), 0)
           .Build();
       return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
+      CHECK_NOTNULL(in_modifier);
+      in_modifier->set_requires_grad(false);
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);

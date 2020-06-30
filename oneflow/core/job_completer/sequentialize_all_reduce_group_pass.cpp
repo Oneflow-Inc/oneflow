@@ -59,11 +59,11 @@ class SequentializeAllReduceGroupPass final : public OpGraphPass {
   bool IsEnabled() const override {
     return GlobalJobDesc().IsTrain() && !GlobalJobDesc().disable_all_reduce_sequence();
   }
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
-void SequentializeAllReduceGroupPass::Apply(const OpGraph& op_graph,
-                                            JobBuilder* job_builder) const {
+Maybe<void> SequentializeAllReduceGroupPass::Apply(const OpGraph& op_graph,
+                                                   JobBuilder* job_builder) const {
   std::vector<AllReduceGroup> all_reduce_groups;
   FindAllReduceGroups(op_graph, &all_reduce_groups);
   ReOrderAllReduceGroups(&all_reduce_groups);
@@ -75,6 +75,7 @@ void SequentializeAllReduceGroupPass::Apply(const OpGraph& op_graph,
     succ_identity_op_conf.add_ctrl_in_op_name(pred_split_op_name);
     job_builder->MutOpsOnlyOnce({succ_identity_op_conf});
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_FUNCTION_PASS("SequentializeAllReduceGroupPass", SequentializeAllReduceGroupPass);

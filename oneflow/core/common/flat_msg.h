@@ -10,20 +10,21 @@
 
 namespace oneflow {
 
-#define BEGIN_FLAT_MSG(struct_name)                           \
-  struct struct_name final {                                  \
-    using self_type = struct_name;                            \
-    static const bool __is_flat_message_type__ = true;        \
-    PRIVATE DEFINE_STATIC_COUNTER(field_counter);             \
-    BEGIN_DSS(STATIC_COUNTER(field_counter), struct_name, 0); \
-    FLAT_MSG_DEFINE_BASIC_METHODS(struct_name);               \
+#define FLAT_MSG_BEGIN(struct_name)                        \
+  struct struct_name final {                               \
+    using self_type = struct_name;                         \
+    using self_value_type = struct_name;                   \
+    static const bool __is_flat_message_type__ = true;     \
+    PRIVATE DEFINE_STATIC_COUNTER(field_counter);          \
+    DSS_BEGIN(STATIC_COUNTER(field_counter), struct_name); \
+    FLAT_MSG_DEFINE_BASIC_METHODS(struct_name);            \
     FLAT_MSG_DEFINE_DEFAULT(struct_name);
 
-#define END_FLAT_MSG(struct_name)                                               \
+#define FLAT_MSG_END(struct_name)                                               \
   static_assert(__is_flat_message_type__, "this struct is not a flat message"); \
   PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);   \
   PRIVATE INCREASE_STATIC_COUNTER(field_counter);                               \
-  END_DSS(STATIC_COUNTER(field_counter), "flat message", struct_name);          \
+  DSS_END(STATIC_COUNTER(field_counter), "flat message", struct_name);          \
   }                                                                             \
   ;
 
@@ -51,7 +52,8 @@ namespace oneflow {
   static_assert(__is_flat_message_type__, "this struct is not a flat message");           \
   _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE_CHECK(field_type), field_name, max_size); \
   PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                         \
-  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "flat message", OF_PP_CAT(field_name, _));
+  DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "flat message",                         \
+                   OF_PP_CAT(field_name, _RepeatedField), OF_PP_CAT(field_name, _));
 
 #define FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP() _FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP()
 
@@ -70,7 +72,8 @@ namespace oneflow {
 // details
 
 #define FLAT_MSG_DSS_DEFINE_UION_FIELD(field_counter, oneof_name, type_and_field_name_seq) \
-  DSS_DEFINE_FIELD(field_counter, "flat message", OF_PP_CAT(oneof_name, _));               \
+  DSS_DEFINE_FIELD(field_counter, "flat message", OF_PP_CAT(oneof_name, _OneofType),       \
+                   OF_PP_CAT(oneof_name, _));                                              \
   DSS_DEFINE_UNION_FIELD_VISITOR(                                                          \
       field_counter, case_,                                                                \
       OF_PP_FOR_EACH_TUPLE(FLAT_MSG_MAKE_UNION_TYPE7FIELD4CASE, type_and_field_name_seq));
@@ -92,8 +95,11 @@ struct FlatMsgSelfType<
 
 template<typename T>
 struct FlatMsg final {
-  using value_type = typename FLAT_MSG_TYPE_CHECK(T);
+  using value_type = T;
+  using self_value_type = value_type;
   FlatMsg() { msg_.clear(); }
+  FlatMsg(const FlatMsg& rhs) { msg_.CopyFrom(rhs.msg_); }
+  FlatMsg(const T& msg) { msg_.CopyFrom(msg); }
 
   const value_type& operator*() const { return msg_; }
   value_type& operator*() { return msg_; }
@@ -102,6 +108,42 @@ struct FlatMsg final {
 
   const value_type& Get() const { return msg_; }
   value_type* Mutable() { return &msg_; }
+
+  template<typename RhsT>
+  bool operator==(const RhsT& rhs) const {
+    static_assert(std::is_same<FlatMsg, RhsT>::value, "");
+    return msg_ == rhs.msg_;
+  }
+
+  template<typename RhsT>
+  bool operator!=(const RhsT& rhs) const {
+    static_assert(std::is_same<FlatMsg, RhsT>::value, "");
+    return msg_ != rhs.msg_;
+  }
+
+  template<typename RhsT>
+  bool operator>=(const RhsT& rhs) const {
+    static_assert(std::is_same<FlatMsg, RhsT>::value, "");
+    return msg_ >= rhs.msg_;
+  }
+
+  template<typename RhsT>
+  bool operator<=(const RhsT& rhs) const {
+    static_assert(std::is_same<FlatMsg, RhsT>::value, "");
+    return msg_ <= rhs.msg_;
+  }
+
+  template<typename RhsT>
+  bool operator>(const RhsT& rhs) const {
+    static_assert(std::is_same<FlatMsg, RhsT>::value, "");
+    return msg_ > rhs.msg_;
+  }
+
+  template<typename RhsT>
+  bool operator<(const RhsT& rhs) const {
+    static_assert(std::is_same<FlatMsg, RhsT>::value, "");
+    return msg_ < rhs.msg_;
+  }
 
  private:
   union {
@@ -313,22 +355,28 @@ struct FlatMsgGetDefault<true> final {
     OF_PP_CAT(oneof_name, _).case_ = val;                                               \
   }
 
-#define _FLAT_MSG_DEFINE_REPEATED_FIELD(T, field_name, N)                                         \
- public:                                                                                          \
-  std::size_t OF_PP_CAT(field_name, _size)() const { return OF_PP_CAT(field_name, _).size(); }    \
-  const FlatMsgRepeatedField<T, N>& field_name() const { return OF_PP_CAT(field_name, _); }       \
-  const T& field_name(int32_t i) const { return OF_PP_CAT(field_name, _).Get(i); }                \
-  FlatMsgRepeatedField<T, N>* OF_PP_CAT(mut_, field_name)() { return &OF_PP_CAT(field_name, _); } \
-  FlatMsgRepeatedField<T, N>* OF_PP_CAT(mutable_, field_name)() {                                 \
-    return &OF_PP_CAT(field_name, _);                                                             \
-  }                                                                                               \
-  T* OF_PP_CAT(mut_, field_name)(int32_t i) { return OF_PP_CAT(field_name, _).Mutable(i); }       \
-  T* OF_PP_CAT(mutable_, field_name)(int32_t i) { return OF_PP_CAT(field_name, _).Mutable(i); }   \
-  T* OF_PP_CAT(add_, field_name)() { return OF_PP_CAT(field_name, _).Add(); }                     \
-  void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(field_name, _).clear(); }                      \
-                                                                                                  \
- private:                                                                                         \
-  FlatMsgRepeatedField<T, N> OF_PP_CAT(field_name, _)
+#define _FLAT_MSG_DEFINE_REPEATED_FIELD(T, field_name, N)                                       \
+ public:                                                                                        \
+  using OF_PP_CAT(field_name, _RepeatedField) = FlatMsgRepeatedField<T, N>;                     \
+  std::size_t OF_PP_CAT(field_name, _size)() const { return OF_PP_CAT(field_name, _).size(); }  \
+  const OF_PP_CAT(field_name, _RepeatedField) & field_name() const {                            \
+    return OF_PP_CAT(field_name, _);                                                            \
+  }                                                                                             \
+  const T& field_name(int32_t i) const { return OF_PP_CAT(field_name, _).Get(i); }              \
+  OF_PP_CAT(field_name, _RepeatedField) * OF_PP_CAT(mut_, field_name)() {                       \
+    return &OF_PP_CAT(field_name, _);                                                           \
+  }                                                                                             \
+  OF_PP_CAT(field_name, _RepeatedField) * OF_PP_CAT(mutable_, field_name)() {                   \
+    return &OF_PP_CAT(field_name, _);                                                           \
+  }                                                                                             \
+  T* OF_PP_CAT(mut_, field_name)(int32_t i) { return OF_PP_CAT(field_name, _).Mutable(i); }     \
+  T* OF_PP_CAT(mutable_, field_name)(int32_t i) { return OF_PP_CAT(field_name, _).Mutable(i); } \
+  T* OF_PP_CAT(add_, field_name)() { return OF_PP_CAT(field_name, _).Add(); }                   \
+  void OF_PP_CAT(clear_, field_name)() { OF_PP_CAT(field_name, _).clear(); }                    \
+                                                                                                \
+ private:                                                                                       \
+  OF_PP_CAT(field_name, _RepeatedField)                                                         \
+  OF_PP_CAT(field_name, _);
 
 #define _FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP()                                           \
  public:                                                                                         \
@@ -375,41 +423,45 @@ class FlatMsgRepeatedField final {
 
   void clear() { size_ = 0; }
 
-  T* begin() { return &array_[0]; }
+  T* begin() { return &data_[0]; }
   T* end() {
     CHECK_GE(size_, 0);
     CHECK_LE(size_, N);
-    return &array_[size_];
+    return &data_[size_];
   }
 
-  const T* begin() const { return &array_[0]; }
+  const T* begin() const { return &data_[0]; }
   const T* end() const {
     CHECK_GE(size_, 0);
     CHECK_LE(size_, N);
-    return &array_[size_];
+    return &data_[size_];
   }
 
   const T& Get(int32_t index) const {
     CHECK_GE(index, 0);
     CHECK_LT(index, N);
-    return array_[index];
+    return data_[index];
   }
 
   T* Mutable(int32_t index) {
     CHECK_GE(index, 0);
     CHECK_LT(index, N);
-    return &array_[index];
+    return &data_[index];
   }
+
+  const T* data() const { return &Get(0); }
+  T* data() { return Mutable(0); }
+  T* mut_data() { return Mutable(0); }
 
   T* Add() {
     CHECK_GE(size_, 0);
     CHECK_LT(size_, N);
-    return &array_[size_++];
+    return &data_[size_++];
   }
 
  private:
   std::size_t size_;
-  std::array<T, N> array_;
+  std::array<T, N> data_;
 };
 }  // namespace oneflow
 

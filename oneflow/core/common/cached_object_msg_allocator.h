@@ -29,26 +29,26 @@ struct ObjMsgMemBlock final {
 class ObjMsgSizedMemPool;
 
 // clang-format off
-BEGIN_OBJECT_MSG(ObjMsgChunk);
+OBJECT_MSG_BEGIN(ObjMsgChunk);
  public:
   void __Init__(ObjMsgSizedMemPool* mem_pool, int64_t mem_size);
   void __Delete__();
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, mem_size);
-  OBJECT_MSG_DEFINE_RAW_PTR(ObjMsgMemBlock, mem_block);
-  OBJECT_MSG_DEFINE_RAW_PTR(ObjMsgSizedMemPool, mem_pool);
+  OBJECT_MSG_DEFINE_PTR(ObjMsgMemBlock, mem_block);
+  OBJECT_MSG_DEFINE_PTR(ObjMsgSizedMemPool, mem_pool);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(list);
 
-END_OBJECT_MSG(ObjMsgChunk);
+OBJECT_MSG_END(ObjMsgChunk);
 // clang-format on
 
 using ObjMsgChunkList = OBJECT_MSG_LIST(ObjMsgChunk, list);
 
 // clang-format off
-BEGIN_OBJECT_MSG(ObjMsgSizedMemPool);
+OBJECT_MSG_BEGIN(ObjMsgSizedMemPool);
  public:
   void __Init__(int64_t fiexed_mem_size, int64_t prefetch_cnt);
   void __Delete__();
@@ -68,7 +68,7 @@ BEGIN_OBJECT_MSG(ObjMsgSizedMemPool);
   void Prefetch();
   void Prefetch(ObjMsgChunkList* free_list);
   void AppendToFreeList(ObjMsgChunkList* free_list);
-END_OBJECT_MSG(ObjMsgSizedMemPool);
+OBJECT_MSG_END(ObjMsgSizedMemPool);
 // clang-format on
 
 class CachedObjectMsgAllocatorBase : public ObjectMsgAllocator {
@@ -87,6 +87,8 @@ class CachedObjectMsgAllocatorBase : public ObjectMsgAllocator {
   void RoundUpDeallocate(std::mutex* mutex, char* ptr, std::size_t size);
 
  private:
+  int RoundUpShift(std::size_t size) const;
+
   static const std::size_t kMemSizeShiftMin = 6;
   void Prefetch();
 

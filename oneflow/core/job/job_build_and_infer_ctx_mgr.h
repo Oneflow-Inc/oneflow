@@ -10,18 +10,7 @@
 
 namespace oneflow {
 
-class EagerExecutionOption {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(EagerExecutionOption);
-  explicit EagerExecutionOption() : enable_eager_execution_(false) {}
-  ~EagerExecutionOption() {}
-
-  bool enable_eager_execution() const { return enable_eager_execution_; }
-  void set_enable_eager_execution(bool val) { enable_eager_execution_ = val; }
-
- private:
-  bool enable_eager_execution_;
-};
+class EagerExecutionOption {};
 
 class JobBuildAndInferCtxMgr {
  public:
@@ -31,7 +20,7 @@ class JobBuildAndInferCtxMgr {
   Maybe<void> OpenJobBuildAndInferCtx(const std::string& job_name);
   Maybe<JobBuildAndInferCtx*> FindJobBuildAndInferCtx(const std::string& job_name);
   Maybe<std::string> GetCurrentJobName() const;
-  void CloseCurrentJobBuildAndInferCtx();
+  Maybe<void> CloseCurrentJobBuildAndInferCtx();
   Maybe<void> AddLbiAndDiffWatcherUuidPair(const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) const;
 
   const JobSet& job_set() const { return job_set_; }
@@ -39,6 +28,10 @@ class JobBuildAndInferCtxMgr {
  protected:
   virtual JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const = 0;
   JobBuildAndInferCtxMgr() : has_cur_job_(false) {}
+  virtual void VirtualCloseJob() = 0;
+  JobSet* mut_job_set() { return &job_set_; }
+
+  void clear_job_name2infer_ctx() { job_name2infer_ctx_.clear(); }
 
  private:
   JobSet job_set_;
@@ -56,6 +49,20 @@ class LazyJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
  private:
   friend class Global<LazyJobBuildAndInferCtxMgr>;
 
+  void VirtualCloseJob() override {}
+  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
+};
+
+class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EagerJobBuildAndInferCtxMgr);
+  EagerJobBuildAndInferCtxMgr() : JobBuildAndInferCtxMgr() {}
+  ~EagerJobBuildAndInferCtxMgr() override = default;
+
+ private:
+  friend class Global<EagerJobBuildAndInferCtxMgr>;
+
+  void VirtualCloseJob() override;
   JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
 };
 

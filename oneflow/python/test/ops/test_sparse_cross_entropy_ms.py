@@ -14,7 +14,9 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(device_type, data_type, label_type, num_classes, batch_size):
+def compare_with_tensorflow(
+    device_type, data_type, label_type, num_classes, batch_size
+):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -24,11 +26,12 @@ def compare_with_tensorflow(device_type, data_type, label_type, num_classes, bat
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def SparseSoftmaxCrossEntropyWithLogitsJob(
-            labels=flow.FixedTensorDef((batch_size, ), dtype=type_name_to_flow_type[label_type])
-        ):
+        labels=flow.FixedTensorDef(
+            (batch_size,), dtype=type_name_to_flow_type[label_type]
+        )
+    ):
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
@@ -39,13 +42,16 @@ def compare_with_tensorflow(device_type, data_type, label_type, num_classes, bat
             )
             prediction = flow.nn.softmax(logits=x)
         with flow.device_prior_placement(device_type, "0:0-3"):
-            if os.getenv("ENABLE_USER_OP") == 'True':
+            if os.getenv("ENABLE_USER_OP") == "True":
                 lebels_distribute = flow.distribute.broadcast()
-                prediction_distribute = flow.distribute.split(len(prediction.shape)-1)
+                prediction_distribute = flow.distribute.split(len(prediction.shape) - 1)
             else:
                 lebels_distribute = flow.distribute.split(0)
                 prediction_distribute = flow.distribute.split(0)
-            loss = flow.nn.sparse_cross_entropy(labels=labels.with_distribute(lebels_distribute), prediction=prediction.with_distribute(prediction_distribute))
+            loss = flow.nn.sparse_cross_entropy(
+                labels=labels.with_distribute(lebels_distribute),
+                prediction=prediction.with_distribute(prediction_distribute),
+            )
         with flow.device_prior_placement(device_type, "0:0"):
             loss = flow.math.square(loss)
             flow.losses.add_loss(loss)
@@ -57,7 +63,9 @@ def compare_with_tensorflow(device_type, data_type, label_type, num_classes, bat
         return loss
 
     # fake labels
-    labels = np.random.randint(0, num_classes, size=(batch_size, )).astype(type_name_to_np_type[label_type])
+    labels = np.random.randint(0, num_classes, size=(batch_size,)).astype(
+        type_name_to_np_type[label_type]
+    )
 
     # OneFlow
     check_point = flow.train.CheckPoint()

@@ -1,13 +1,12 @@
-import numpy as np
 import math
 import os
+from collections import OrderedDict
+
+import numpy as np
 import oneflow as flow
 import tensorflow as tf
-#import tensorflow_addons as tfa
-from collections import OrderedDict 
-
-from test_util import GenArgList
 import test_global_storage
+from test_util import GenArgList
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -17,7 +16,7 @@ for gpu in gpus:
 def compare_with_tensorflow(device_type, activation_type, shape, data_type):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
-    flow.config.enable_debug_mode(True);
+    flow.config.enable_debug_mode(True)
     func_config = flow.FunctionConfig()
     if data_type == flow.float16:
         func_config.enable_auto_mixed_precision(True)
@@ -28,21 +27,21 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     of_activation_map = {
-        #"relu": flow.keras.activations.relu,
+        # "relu": flow.keras.activations.relu,
         "relu": flow.nn.relu,
         "sigmoid": flow.math.sigmoid,
-        #"tanh": flow.keras.activations.tanh,
+        # "tanh": flow.keras.activations.tanh,
         "tanh": flow.math.tanh,
-#        "gelu": flow.keras.activations.gelu,
+        #        "gelu": flow.keras.activations.gelu,
     }
     tf_activation_map = {
         "relu": tf.nn.relu,
         "sigmoid": tf.math.sigmoid,
         "tanh": tf.math.tanh,
-#        "gelu": tfa.activations.gelu,
+        #        "gelu": tfa.activations.gelu,
     }
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def ActivationJob():
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -76,14 +75,13 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
     rtol = 1e-3 if activation_type is "gelu" else 1e-5
     atol = 1e-3 if activation_type is "gelu" else 1e-5
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol, atol)
-    assert np.allclose(
-        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol, atol
-    )
+    assert np.allclose(test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol, atol)
+
 
 def test_activations(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
-#    arg_dict["activation_type"] = ["relu", "sigmoid", "tanh", "gelu"]
+    #    arg_dict["activation_type"] = ["relu", "sigmoid", "tanh", "gelu"]
     arg_dict["activation_type"] = ["relu", "sigmoid", "tanh"]
     arg_dict["shape"] = [(1024, 1024)]
     arg_dict["data_type"] = [flow.float, flow.double]
@@ -91,4 +89,4 @@ def test_activations(test_case):
         compare_with_tensorflow(*arg)
 
     for act_type in arg_dict["activation_type"]:
-        compare_with_tensorflow('gpu', act_type, (1024, 1024), flow.float16)
+        compare_with_tensorflow("gpu", act_type, (1024, 1024), flow.float16)

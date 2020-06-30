@@ -6,9 +6,9 @@ namespace oneflow {
 
 namespace {
 
-void LogError(const std::string& log_str, const Error& error) {
+void LogError(const Error& error) {
   // gdb break point
-  LOG(ERROR) << log_str << error->msg();
+  LOG(ERROR) << error->msg();
 }
 
 }  // namespace
@@ -65,8 +65,36 @@ Error Error::BoxingNotSupported() {
   return error;
 }
 
-Error&& operator<=(const std::string& log_str, Error&& error) {
-  LogError(log_str, error);
+Error Error::OpKernelNotFoundError(const std::vector<std::string>& error_msgs) {
+  auto error = std::make_shared<ErrorProto>();
+  auto* op_kernel_not_found_error = error->mutable_op_kernel_not_found_error();
+  for (const auto& msg : error_msgs) {
+    op_kernel_not_found_error->add_op_kernels_not_found_debug_str(msg);
+  }
+  return error;
+}
+
+Error Error::MultipleOpKernelsMatchedError(const std::vector<std::string>& error_msgs) {
+  auto error = std::make_shared<ErrorProto>();
+  auto* multiple_op_kernels_matched_error = error->mutable_multiple_op_kernels_matched_error();
+  for (const auto& msg : error_msgs) {
+    multiple_op_kernels_matched_error->add_matched_op_kernels_debug_str(msg);
+  }
+  return error;
+}
+
+Error Error::GradientFunctionNotFound() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_gradient_function_not_found_error();
+  return error;
+}
+
+Error&& operator<=(const std::pair<std::string, std::string>& loc_and_func, Error&& error) {
+  LogError(error);
+  CHECK(error.error_proto()->stack_frame().empty());
+  auto* stack_frame = error.error_proto()->add_stack_frame();
+  stack_frame->set_location(loc_and_func.first);
+  stack_frame->set_function(loc_and_func.second);
   return std::move(error);
 }
 

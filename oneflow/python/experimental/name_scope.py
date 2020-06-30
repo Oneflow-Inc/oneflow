@@ -1,14 +1,27 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.session_context as session_context
-import oneflow.python.framework.c_api_util as c_api_util
-from oneflow.python.oneflow_export import oneflow_export
 from contextlib import contextmanager
+
+import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.session_context as session_context
+from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("name_scope", "experimental.name_scope", "deprecated.variable_scope")
 @contextmanager
 def name_scope(name):
+    r"""Create a name scope. All variables within the name scope will have a prefix `[SCOPE NAME]-`. This is for convenience only and has no other effect on the system. 
+    Usage::
+
+        with oneflow.name_scope("scope1"):
+            ...
+            with oneflow.name_scope("scope12"):
+                ...
+
+    Args:
+        name: Name of this name scope
+
+    """
     assert isinstance(name, str)
     name_scope_stack_push(name)
     try:

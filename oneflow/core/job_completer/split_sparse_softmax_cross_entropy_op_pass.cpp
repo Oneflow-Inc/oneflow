@@ -26,11 +26,11 @@ class SplitSparseSoftmaxCrossEntropyOpPass final : public OpGraphPass {
     // if has sparse softmax cross entropy ms op
     return true;
   }
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
-void SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
-                                                 JobBuilder* job_builder) const {
+Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
+                                                        JobBuilder* job_builder) const {
   op_graph.ForEachNode([&](const OpNode* node) {
     const OperatorConf& op_conf = node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -65,7 +65,7 @@ void SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     (*reduce_max_device_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["output_tensor_0"]
         .mutable_split_parallel()
         ->set_axis(split_axis);
-    (*job_builder->mutable_sbp_conf()
+    (*job_builder->mutable_job_parallel_view_conf()
           ->mutable_op_name2sbp_signature_conf())[reduce_max_device_stage_op.op_name()] =
         reduce_max_device_stage_sbp_signature;
 
@@ -86,7 +86,7 @@ void SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
         .mutable_broadcast_parallel();
     (*reduce_max_global_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["output_tensor_0"]
         .mutable_broadcast_parallel();
-    (*job_builder->mutable_sbp_conf()
+    (*job_builder->mutable_job_parallel_view_conf()
           ->mutable_op_name2sbp_signature_conf())[reduce_max_global_stage_op.op_name()] =
         reduce_max_global_stage_sbp_signature;
 
@@ -134,6 +134,7 @@ void SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
 
     job_builder->MutOpsOnlyOnce({sparse_cross_entropy_ms_op.op_conf()});
   });
+  return Maybe<void>::Ok();
 }
 
 REGISTER_FUNCTION_PASS("SplitSparseSoftmaxCrossEntropyOpPass",

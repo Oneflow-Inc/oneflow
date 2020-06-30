@@ -7,6 +7,9 @@
 
 namespace oneflow {
 
+class TaskGraph;
+class TaskNode;
+
 class SubTskGphBuilderCtx final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SubTskGphBuilderCtx);

@@ -4,6 +4,7 @@ OneFlow Documentation
     :maxdepth: 1
 
     models
+    troubleshooting
     mandarin
 
 
@@ -20,6 +21,7 @@ OneFlow Documentation
     nn
     layers
     data
+    distribute
 
 
 Indices and tables

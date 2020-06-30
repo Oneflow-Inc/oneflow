@@ -52,13 +52,9 @@ class SparseSoftmaxCrossEntropyMsKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(kernel_name)                                                            \
       .SetCreateFn<kernel_class<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                   \
                                 OF_PP_PAIR_FIRST(ltype_pair)>>()                               \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                             \
-        const user_op::TensorDesc* label_desc = ctx.TensorDesc4ArgNameAndIndex("label", 0);    \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0);        \
-        return ctx.device_type() == device_type_v                                              \
-               && label_desc->data_type() == OF_PP_PAIR_SECOND(ltype_pair)                     \
-               && out_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                      \
-      })                                                                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                             \
+                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))   \
+                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))    \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                      \
         const Shape* prediction_shape = ctx->Shape4ArgNameAndIndex("prediction", 0);           \
         return prediction_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair));            \
@@ -142,14 +138,9 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(kernel_name)                                                              \
       .SetCreateFn<kernel_class<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                     \
                                 OF_PP_PAIR_FIRST(ltype_pair)>>()                                 \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                               \
-        const user_op::TensorDesc* label_desc = ctx.TensorDesc4ArgNameAndIndex("label", 0);      \
-        const user_op::TensorDesc* prediction_diff_desc =                                        \
-            ctx.TensorDesc4ArgNameAndIndex("prediction_diff", 0);                                \
-        return ctx.device_type() == device_type_v                                                \
-               && label_desc->data_type() == OF_PP_PAIR_SECOND(ltype_pair)                       \
-               && prediction_diff_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);            \
-      })                                                                                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
+                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))     \
+                       & (user_op::HobDataType("prediction_diff", 0)))                           \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("prediction_diff", 0, "prob", 0, true));          \

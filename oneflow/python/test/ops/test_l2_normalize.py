@@ -1,16 +1,16 @@
 import os
-import numpy as np
-import tensorflow as tf
-import oneflow as flow
-from collections import OrderedDict 
-from test_util import type_name_to_flow_type
+from collections import OrderedDict
 
-from test_util import GenArgList
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
 import test_global_storage
+from test_util import GenArgList, type_name_to_flow_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def compare_with_tensorflow(device_type, x_shape, data_type, axis, epsilon):
     assert device_type in ["gpu", "cpu"]
@@ -20,8 +20,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis, epsilon):
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def L2NormalizeJob():
         with flow.device_prior_placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -55,6 +54,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis, epsilon):
     assert np.allclose(
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
+
 
 def test_l2_normalize(test_case):
     arg_dict = OrderedDict()
