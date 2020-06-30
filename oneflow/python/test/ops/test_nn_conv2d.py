@@ -136,7 +136,7 @@ def compare_with_tensorflow(
 
 
 def test_cpu1(test_case):
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
@@ -149,7 +149,7 @@ def test_cpu1(test_case):
 
 
 def test_cpu2(test_case):
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
@@ -162,7 +162,7 @@ def test_cpu2(test_case):
 
 
 def test_cpu3(test_case):
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
