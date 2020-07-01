@@ -14,9 +14,9 @@ option(FOR_CI "" OFF)
 option(BUILD_GIT_VERSION "" ON)
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
-  set(CUDNN_STATIC ON CACHE BOOL "")
-else ()
   set(CUDNN_STATIC OFF CACHE BOOL "")
+else ()
+  set(CUDNN_STATIC ON CACHE BOOL "")
 endif()
 
 # Project
