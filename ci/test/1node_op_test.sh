@@ -2,20 +2,13 @@
 set -xe
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
-wheel_path=${ONEFLOW_WHEEL_PATH:-"ci_tmp/*.whl"}
 test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"/test_tmp_dir"}
-
-if [ -f "$wheel_path" ]; then
-    pip3 install --user "$wheel_path"
-elif [ -d "$src_dir" ]; then
-    pip3 install -e "$src_dir" --user
-else
-    echo "wheel not found: $wheel_path, src dir not found: $src_dir, continue anyway..."
-fi
+test_tmp_dir="$test_tmp_dir/ENABLE_USER_OP_$ENABLE_USER_OP"
 
 
 rm -rf $test_tmp_dir
+mkdir -p $test_tmp_dir
 cp -r $src_dir/oneflow/python/test $test_tmp_dir
 cd $test_tmp_dir
 
-python3 ops/1node_test.py
+python3 test/ops/1node_test.py
