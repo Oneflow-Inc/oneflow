@@ -1,16 +1,17 @@
 #include "oneflow/core/device/collective_boxing_device_context.h"
-#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 
 namespace oneflow {
 
-void CollectiveBoxingDeviceCtx::SetCheckPoint(std::shared_ptr<std::atomic<bool>> ready_flag) {
-  CHECK(ready_flag);
-  current_ready_flag_ = std::move(ready_flag);
+std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> CollectiveBoxingDeviceCtx::AddCheckpoint() {
+  std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> checkpoint =
+      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Get()->CreateCheckpoint();
+  current_checkpoint_ = checkpoint;
+  return checkpoint;
 }
 
 void CollectiveBoxingDeviceCtx::AddCallBack(std::function<void()> callback) const {
-  CHECK(current_ready_flag_);
-  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Get()->Enqueue(current_ready_flag_,
+  CHECK(current_checkpoint_);
+  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Get()->Enqueue(current_checkpoint_,
                                                                               callback);
 }
 

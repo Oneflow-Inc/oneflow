@@ -12,9 +12,15 @@ class DecodeRandomKernel final : public KernelIf<device_type> {
   DecodeRandomKernel() = default;
   ~DecodeRandomKernel() = default;
 
- private:
   void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    ForwardDataContent(ctx, BnInOp2Blob);
+  }
+
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+ private:
   void VirtualKernelInit() override;
   uint32_t GenNextRandomSeed() const;
 

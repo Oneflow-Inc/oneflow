@@ -262,11 +262,13 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
         return &TaskGraph::BldSubTskGphByBoxing;
       } else {
         if (IsTickNode(src_node) && IsTickNode(dst_node)) {
-          if (src_pd->parallel_num() > 1) {
-            CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
+          if (src_pd->parallel_num() == dst_pd->parallel_num()) {
+            return &TaskGraph::BldSubTskGphByOneToOne;
+          } else {
+            CHECK_EQ(src_pd->parallel_num(), 1);
+            return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
           }
         }
-        return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
       }
     }
   }

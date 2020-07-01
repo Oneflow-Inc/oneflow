@@ -39,7 +39,7 @@ LogicalBlobId BoxingOp::lbi4obn(const std::string& output_bn) const {
 
 Symbol<OperatorConf> BoxingOp::GetOpConfWithoutOpNameAndLbn() const {
   OperatorConf op_conf(this->op_conf());
-  op_conf.set_name("");
+  op_conf.set_name("undefined-op-name");
   CHECK(op_conf.has_boxing_conf());
   auto* boxing_conf = op_conf.mutable_boxing_conf();
   LogicalBlobId empty_logical_blob_id;

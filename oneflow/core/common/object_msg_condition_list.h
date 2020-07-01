@@ -101,6 +101,11 @@ class TrivialObjectMsgConditionList {
     new (cond_buff_) std::condition_variable();
   }
 
+  bool Empty() {
+    std::unique_lock<std::mutex> lock(*mut_mutex());
+    return list_head_.empty();
+  }
+
   ObjectMsgConditionListStatus EmplaceBack(ObjectMsgPtr<value_type>&& ptr) {
     std::unique_lock<std::mutex> lock(*mut_mutex());
     if (is_closed_) { return kObjectMsgConditionListStatusErrorClosed; }

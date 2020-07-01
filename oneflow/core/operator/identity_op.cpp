@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
@@ -86,15 +87,18 @@ class CastToMirroredOp : public MirroredCastOp {
   const PbMessage& GetCustomizedConf() const override { return op_conf().cast_to_mirrored_conf(); }
 
  private:
-  Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
     CHECK_NE_OR_RETURN(op_conf().cast_to_mirrored_conf().sbp_parallel().parallel_type_case(),
                        SbpParallel::PARALLEL_TYPE_NOT_SET)
         << "attribute sbp_parallel not set.";
-    auto* sbp_signature = sbp_sig_list->mutable_sbp_signature()->Add();
+    const auto& ibn_hint = *JUST(SbpInferHint4Ibn("in"));
+    CHECK_EQ_OR_RETURN(ibn_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
     auto* map = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    (*map)["in"] = op_conf().cast_to_mirrored_conf().sbp_parallel();
+    (*map)["in"] = ibn_hint.sbp_parallel();
     (*map)["out"] = op_conf().cast_to_mirrored_conf().sbp_parallel();
     return Maybe<void>::Ok();
   }
@@ -129,15 +133,18 @@ class CastFromMirroredOp : public MirroredCastOp {
   }
 
  private:
-  Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
     CHECK_NE_OR_RETURN(op_conf().cast_from_mirrored_conf().sbp_parallel().parallel_type_case(),
                        SbpParallel::PARALLEL_TYPE_NOT_SET)
         << "attribute sbp_parallel not set.";
-    auto* sbp_signature = sbp_sig_list->mutable_sbp_signature()->Add();
+    const auto& ibn_hint = *JUST(SbpInferHint4Ibn("in"));
+    CHECK_EQ_OR_RETURN(ibn_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
     auto* map = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    (*map)["in"] = op_conf().cast_from_mirrored_conf().sbp_parallel();
+    (*map)["in"] = ibn_hint.sbp_parallel();
     (*map)["out"] = op_conf().cast_from_mirrored_conf().sbp_parallel();
     return Maybe<void>::Ok();
   }

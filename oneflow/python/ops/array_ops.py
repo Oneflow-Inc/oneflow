@@ -48,7 +48,7 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
 
     if batch_dims > 0:
         if axis == batch_dims:
-            if os.getenv("ENABLE_USER_OP") == "True":
+            if os.getenv("ENABLE_USER_OP") != "False":
                 return (
                     flow.user_op_builder(
                         name if name is not None else id_util.UniqueStr("BatchGather_")
@@ -72,7 +72,7 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
     elif (
         params.has_batch_axis() == False
         and params.distribute is distribute_util.split(0)
-        and os.getenv("ENABLE_USER_OP") != "True"
+        and os.getenv("ENABLE_USER_OP") == "False"
     ):
         assert axis == 0
         assert batch_dims == 0
@@ -80,7 +80,7 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
         op_conf.gather_ms0_conf.indices = indices.unique_name
         op_conf.gather_ms0_conf.out = "out"
     else:
-        if os.getenv("ENABLE_USER_OP") == "True":
+        if os.getenv("ENABLE_USER_OP") != "False":
             return (
                 flow.user_op_builder(
                     name if name is not None else id_util.UniqueStr("Gather_")
@@ -158,7 +158,7 @@ def reshape(x, shape, name=None):
     shape = list(shape)
     assert all(dim == -1 or dim > 0 for dim in shape)
     assert shape.count(-1) <= 1
-    if (not x.is_dynamic) and (os.getenv("ENABLE_USER_OP") == "True"):
+    if (not x.is_dynamic) and (os.getenv("ENABLE_USER_OP") != "False"):
         if name is None:
             name = id_util.UniqueStr("Reshape_")
         return (
@@ -250,7 +250,7 @@ def transpose(a, perm=None, conjugate=False, name=None):
     if conjugate:
         raise NotImplementedError
 
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return (
             flow.user_op_builder(name)
             .Op("transpose")
@@ -301,7 +301,7 @@ def slice(x, begin, size, name=None):
     # assert (
     #     size[0] is None
     # ), "size not support dim0 slice at present, the first element of size must be set to None"
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         slice_tup_list = []
         for b, s, d in list(zip(begin, size, x.shape)):
             begin, end, stride = None, None, 1
@@ -453,7 +453,7 @@ def concat(values, axis, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         assert isinstance(values, (list, tuple))
         assert len(values) >= 2
         if axis < 0:
@@ -622,25 +622,6 @@ def where(condition, x=None, y=None, name=None):
         raise ValueError("it is not supported when exactly one of x or y is non-None")
 
 
-@oneflow_export("piece_slice")
-def piece_slice(inputs, output_size, name=None):
-    assert inputs.shape[0] == output_size
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("PieceSlice_")
-    )
-    setattr(op_conf.piece_slice_conf, "in", inputs.unique_name)
-    op_conf.piece_slice_conf.out.extend(["out_" + str(i) for i in range(output_size)])
-    compile_context.CurJobAddOp(op_conf)
-    ret = []
-    for i in range(output_size):
-        out_lbi = logical_blob_id_util.LogicalBlobId()
-        setattr(out_lbi, "op_name", op_conf.name)
-        setattr(out_lbi, "blob_name", "out_" + str(i))
-        ret.append(remote_blob_util.RemoteBlob(out_lbi))
-    return tuple(ret)
-
-
 @oneflow_export("elem_cnt")
 def elem_cnt(inputs, dtype=None, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -778,7 +759,7 @@ def identity_n(inputs, name=None):
 @oneflow_export("squeeze")
 def squeeze(input, axis=None, name=None):
     if axis is None:
-        axis = [idx for idx, dim in enumerate(input.shape) if dim is 1]
+        axis = [idx for idx, dim in enumerate(input.shape) if dim == 1]
     else:
         assert isinstance(axis, list) or isinstance(axis, tuple)
         in_num_axes = len(input.shape)

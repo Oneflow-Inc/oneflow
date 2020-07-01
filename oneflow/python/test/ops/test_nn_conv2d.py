@@ -38,7 +38,9 @@ def grouped_convolution2D(
     return outputs
 
 
-def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
+def compare_with_tensorflow(
+    device_type, x_shape, filters, kernel_size, groups, padding="VALID", stride=1
+):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -66,8 +68,8 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
             loss = flow.nn.conv2d(
                 x,
                 weight,
-                strides=[1, 1],
-                padding="valid",
+                strides=[stride, stride],
+                padding=padding,
                 data_format="NCHW",
                 dilations=[1, 1],
                 groups=groups,
@@ -98,14 +100,18 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
                 test_global_storage.Get("weight").transpose(2, 3, 1, 0)
             )
             tf_out = tf.nn.conv2d(
-                x, weight, strides=[1, 1, 1, 1], padding="VALID", data_format="NHWC"
+                x,
+                weight,
+                strides=[1, stride, stride, 1],
+                padding=padding,
+                data_format="NHWC",
             )
         else:
             weight = tf.Variable(
                 test_global_storage.Get("weight").transpose(2, 3, 1, 0)
             )
             tf_out = grouped_convolution2D(
-                x, weight, padding="VALID", num_groups=groups
+                x, weight, padding=padding, num_groups=groups
             )
 
     loss_diff = test_global_storage.Get("loss_diff").transpose(0, 2, 3, 1)
@@ -118,8 +124,8 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
     assert np.allclose(
         test_global_storage.Get("x_diff").transpose(0, 2, 3, 1),
         tf_x_diff.numpy(),
-        rtol=1e-5,
-        atol=1e-5,
+        rtol=1e-4,
+        atol=1e-4,
     )
     assert np.allclose(
         test_global_storage.Get("weight_diff").transpose(2, 3, 1, 0),
@@ -130,7 +136,7 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
 
 
 def test_cpu1(test_case):
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
@@ -143,7 +149,7 @@ def test_cpu1(test_case):
 
 
 def test_cpu2(test_case):
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
@@ -156,7 +162,7 @@ def test_cpu2(test_case):
 
 
 def test_cpu3(test_case):
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
