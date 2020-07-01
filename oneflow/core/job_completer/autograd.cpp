@@ -55,13 +55,11 @@ Maybe<void> GetLossOpNodes(const OpGraph& op_graph, std::list<OpNode*>* loss_op_
       loss_op_nodes->push_back(op_node);
     }
   });
-  std::stringstream ss;
-  for (const auto& op_name : loss_op_names) { ss << "\n" << op_name; }
   if (loss_op_nodes->size() <= 0) {
     std::vector<std::string> debug_msgs;
-    op_graph.ForEachNode(
-        [&](OpNode* op_node) { debug_msgs.emplace_back(op_node->op().op_name()); });
-    return Error::GetLossOpNodesError(debug_msgs) << "Get loss op nodes failed. ";
+    for (const auto& op_name : loss_op_names) { debug_msgs.emplace_back(op_name); }
+    return Error::LossBlobOutFoundError("Loss operator nodes not found at autograd time.",
+                                        debug_msgs);
   }
   return Maybe<void>::Ok();
 }

@@ -28,8 +28,9 @@ class Error final {
                                      const std::vector<std::string>& error_msgs);
   static Error MultipleOpKernelsMatchedError(const std::string& error_summary,
                                              const std::vector<std::string>& error_msgs);
-  static Error GetLossOpNodesError(const std::vector<std::string>& error_msgs);
-  
+  static Error LossBlobOutFoundError(const std::string& error_summary,
+                                     const std::vector<std::string>& error_msgs);
+
   // gradient
   static Error GradientFunctionNotFound();
 

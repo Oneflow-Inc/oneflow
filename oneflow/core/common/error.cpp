@@ -99,10 +99,12 @@ Error Error::MemoryZoneOutOfMemory(int64_t machine_id, int64_t mem_zone_id, uint
   return error;
 }
 
-Error Error::GetLossOpNodesError(const std::vector<std::string>& error_msgs) {
+Error Error::LossBlobOutFoundError(const std::string& error_summary,
+                                   const std::vector<std::string>& error_msgs) {
   auto error = std::make_shared<ErrorProto>();
-  auto* get_loss_op_nodes_error = error->mutable_get_loss_op_nodes_error();
-  for (const auto& msg : error_msgs) { get_loss_op_nodes_error->add_op_graph_node_name(msg); }
+  error->set_error_summary(error_summary);
+  auto* loss_blob_out_found_error = error->mutable_loss_blob_out_found_error();
+  for (const auto& msg : error_msgs) { loss_blob_out_found_error->add_loss_operator_name(msg); }
   return error;
 }
 

@@ -93,8 +93,8 @@ message MemoryZoneOutOfMemory {
   repeated string available = 5;
 }
 
-message GetLossOpNodesError {
-  repeated string op_graph_node_name = 1;
+message LossBlobOutFoundError {
+  repeated string loss_operator_name = 1;
 }
 
 message UnkownError { }
@@ -121,7 +121,7 @@ message ErrorProto {
     OpKernelNotFoundError op_kernel_not_found_error = 21;
     MultipleOpKernelsMatchedError multiple_op_kernels_matched_error = 22;
     MemoryZoneOutOfMemory memory_zone_out_of_memory = 23;
-    GetLossOpNodesError get_loss_op_nodes_error = 24;
+    LossBlobOutFoundError loss_blob_out_found_error = 24;
     UnkownError unknown_error = 100;
   }
 }
