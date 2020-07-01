@@ -1,5 +1,4 @@
 #include "oneflow/core/job/improver.h"
-#include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
@@ -512,8 +511,6 @@ uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) 
   const ResourceDesc* resource_desc = Global<ResourceDesc, ForSession>::Get();
   if (memory_zone_id == resource_desc->GpuDeviceNum()) {
     mem_size -= resource_desc->reserved_host_mem_byte();
-    mem_size -=
-        Global<const IOConf>::Get()->persistence_buf_byte() * record_load_task_num_.at(machine_id);
   } else {
     mem_size -= resource_desc->reserved_device_mem_byte();
   }
