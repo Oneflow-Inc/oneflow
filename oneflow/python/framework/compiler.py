@@ -12,8 +12,10 @@ import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.runtime_mode as runtime_mode
+import oneflow.python.framework.push_util as push_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
+
 from oneflow.python.lib.core.box import Box
 import oneflow
 
@@ -26,7 +28,7 @@ def Compile(function_desc, config_proto):
 
 def EagerRun(function_desc, config_proto, args):
     with InterpretScope(function_desc, config_proto):
-        _CompileJob(function_desc)
+        _InterpretGlobalFunction(function_desc, args)
         ret = function_desc.job_func.__oneflow_output_remote_blobs__
         c_api_util.CurJobBuildAndInferCtx_Complete()
     return ret
@@ -56,6 +58,17 @@ def _CompileJob(function_desc):
     func = function_desc.job_func
     func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
     inputs = _RecursiveMakeInputBlobs(func.__oneflow_input_blob_defs__)
+    kwarg = dict(
+        allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
+    )
+    ret = func(*inputs)
+    func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(ret, kwarg)
+
+
+def _InterpretGlobalFunction(function_desc, args):
+    func = function_desc.job_func
+    func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
+    inputs = push_util.MakeEagerInputBlobs(func.__oneflow_input_blob_defs__, args)
     kwarg = dict(
         allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
     )

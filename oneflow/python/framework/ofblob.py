@@ -33,6 +33,13 @@ class OfBlob(object):
         oneflow_api.OfBlob_CopyShapeToNumpy(self.of_blob_ptr_, dst_ndarray)
         return tuple(dst_ndarray.tolist())
 
+    def set_shape(self, shape):
+        assert isinstance(shape, (list, tuple))
+        assert len(shape) == oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
+        oneflow_api.OfBlob_CopyShapeFromNumpy(
+            self.of_blob_ptr_, np.array(shape, dtype=np.int64)
+        )
+
     @property
     def num_axes(self):
         return oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)

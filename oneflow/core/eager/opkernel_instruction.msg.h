@@ -52,12 +52,12 @@ FLAT_MSG_VIEW_BEGIN(StatelessCallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, mut2_obn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::Mut2Operand, mut2_output_blob);
 FLAT_MSG_VIEW_END(StatelessCallOpKernelInstrOperand);
-// clang-format on
 
 FLAT_MSG_VIEW_BEGIN(WatchBlobInstrOperand);
-FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstOperand, blob);
-FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, blob);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
 FLAT_MSG_VIEW_END(WatchBlobInstrOperand);
+// clang-format on
 
 }  // namespace eager
 }  // namespace oneflow
