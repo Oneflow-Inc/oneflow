@@ -4,7 +4,6 @@ pids=()
 
 docker run --shm-size=8g --rm \
     -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-    --env ENABLE_USER_OP=True \
     oneflow-test bash ci/test/exe_test.sh &
 pids+=($!)
 
