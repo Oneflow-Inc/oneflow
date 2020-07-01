@@ -35,8 +35,6 @@ FLOW_2_ONNX_DTYPE = {
     data_type_pb2.kInt8: onnx_pb.TensorProto.INT8,
     data_type_pb2.kUInt8: onnx_pb.TensorProto.UINT8,
     data_type_pb2.kFloat16: onnx_pb.TensorProto.FLOAT16,
-    # TODO(daquexian): a tempoary hack
-    data_type_pb2.kOFRecord: onnx_pb.TensorProto.INT32,
 }
 
 #

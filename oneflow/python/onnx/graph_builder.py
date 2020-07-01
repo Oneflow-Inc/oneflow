@@ -49,13 +49,13 @@ class GraphBuilder(object):
             # and 2 optional inputs "axes", "steps"
             # input sequence should be "data", "starts", "ends", "axes", "steps"
             attr = {}
-            data = self.convert_to_input(kwargs.pop("data"))
-            starts = self.convert_to_input(kwargs.pop("starts"), dtype=np.int64)
-            ends = self.convert_to_input(kwargs.pop("ends"), dtype=np.int64)
-            axes = self.convert_to_input(
+            data = self.ConvertToInput(kwargs.pop("data"))
+            starts = self.ConvertToInput(kwargs.pop("starts"), dtype=np.int64)
+            ends = self.ConvertToInput(kwargs.pop("ends"), dtype=np.int64)
+            axes = self.ConvertToInput(
                 kwargs.pop("axes", None), is_optional=True, dtype=np.int64
             )
-            steps = self.convert_to_input(
+            steps = self.ConvertToInput(
                 kwargs.pop("steps", None), is_optional=True, dtype=np.int64
             )
             inputs = [data, starts, ends, axes, steps]
@@ -97,7 +97,7 @@ class GraphBuilder(object):
             dtypes=dtypes,
         ).output[0]
 
-    def convert_to_input(self, tensor, is_optional=False, dtype=None):
+    def ConvertToInput(self, tensor, is_optional=False, dtype=None):
         """in ONNX, input shold come from node, so it must be a string"""
         if is_optional and tensor is None:
             return None

@@ -407,7 +407,6 @@ class Graph(object):
         model_save_dir,
         output_shapes=None,
         dtypes=None,
-        target=None,
         opset=None,
         extra_opset=None,
     ):
@@ -418,14 +417,11 @@ class Graph(object):
             dtypes: dict of oneflow dtype
             input_maps: map (node_name, key) to value_names
         """
-        if target is None:
-            target = []
         self._nodes = []
         self._nodes_by_name = {}
         self._output_to_node_name = {}
         self.shapes = {}
 
-        self._target = set(target)
         self._dtypes = dtypes
 
         self._model_save_dir = model_save_dir
@@ -495,7 +491,6 @@ class Graph(object):
             [],
             output_shapes={},
             dtypes={},
-            target=self._target,
             opset=self._opset,
             extra_opset=self.extra_opset,
             output_names=[],
@@ -508,10 +503,6 @@ class Graph(object):
     @property
     def extra_opset(self):
         return self._extra_opset
-
-    def is_target(self, *names):
-        """Return True if target platform contains any name."""
-        return any(name in self._target for name in names)
 
     def MakeConst(self, name, np_val, skip_conversion=False, raw=True):
         """Make a new constant in the graph.
@@ -919,9 +910,10 @@ class Graph(object):
         self.set_dtype(dst_name, dtype)
 
     def get_saved_tensor(self, node):
-        # TODO(daquexian): node.output[0] is "node_name/output_name", so pathjoin is not cross-platform
         tensor_name = node.output[0]
         if self._model_save_dir is not None:
+            # TODO(daquexian): node.output[0] is "node_name/output_name", so this pathjoin doesn't work
+            # on windows (where path separator is "\")
             path = pathjoin(self._model_save_dir, node.output[0])
             tensor_value = np.fromfile(
                 path, dtype=util.Onnx2NumpyDtype(self.get_dtype(tensor_name))

@@ -10,7 +10,7 @@ import os
 def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True):
     check_point = flow.train.CheckPoint()
     if explicit_init:
-        # TODO(daquexian): it is a trick to keep check_point.save() from hanging when there is no variable
+        # it is a trick to keep check_point.save() from hanging when there is no variable
         @flow.global_function(flow.FunctionConfig())
         def add_var():
             return flow.get_variable(
@@ -39,10 +39,10 @@ def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True
 
     onnx_res = sess.run([], ipt_dict)[0]
     oneflow_res = job_func(*ipt_dict.values()).get().ndarray()
-    a = onnx_res.flatten()
-    b = oneflow_res.flatten()
-    max_idx = np.argmax(np.abs(a - b) / a)
     if print_rel_diff:
+        a = onnx_res.flatten()
+        b = oneflow_res.flatten()
+        max_idx = np.argmax(np.abs(a - b) / a)
         print(
             "max rel diff is {} at index {}".format(np.max(np.abs(a - b) / a), max_idx)
         )

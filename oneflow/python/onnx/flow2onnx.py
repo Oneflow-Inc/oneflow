@@ -270,14 +270,13 @@ def ProcessFlowGraph(
 
     if shape_override is None:
         shape_override = {}
-    target = constants.DEFAULT_TARGET
 
     (onnx_nodes, op_cnt, attr_cnt, dtypes, output_shapes,) = OneflowToOnnxNaive(
         flow_graph, shape_override
     )
 
     g = Graph(
-        onnx_nodes, model_save_dir, output_shapes, dtypes, target, opset, extra_opset,
+        onnx_nodes, model_save_dir, output_shapes, dtypes, opset, extra_opset,
     )
 
     # create ops mapping for the desired opsets

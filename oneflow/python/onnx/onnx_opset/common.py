@@ -26,16 +26,6 @@ class BroadcastOp:
         shape0 = ctx.get_shape(node.input[0])
         shape1 = ctx.get_shape(node.input[1])
         if shape0 != shape1:
-            # this works around shortcomings in the broadcasting code
-            # of caffe2 and winml/rs4.
-            if ctx.is_target(constants.TARGET_RS4):
-                # in rs4 mul and add do not support scalar correctly
-                if not shape0:
-                    if node.inputs[0].is_const():
-                        shape0 = node.inputs[0].ScalarTo1DTensor()
-                if not shape1:
-                    if node.inputs[1].is_const():
-                        shape1 = node.inputs[1].ScalarTo1DTensor()
             if (
                 shape0
                 and shape1
