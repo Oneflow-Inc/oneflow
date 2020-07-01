@@ -66,7 +66,7 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
     if len(axis) == 0:
         return input_tensor
 
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
             flow.user_op_builder(name)
             .Op("reduce_sum")

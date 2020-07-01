@@ -29,18 +29,6 @@ Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id
   return Maybe<void>::Ok();
 }
 
-Maybe<const char*> DeviceTag4DeviceType(DeviceType device_type) {
-  if (device_type == kCPU) { return "cpu"; }
-  if (device_type == kGPU) { return "gpu"; }
-  return Error::DeviceTagNotFound() << "invalid";
-}
-
-Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
-  if (device_tag == "cpu") { return DeviceType::kCPU; }
-  if (device_tag == "gpu") { return DeviceType::kGPU; }
-  return Error::DeviceTagNotFound() << "device tag `" << device_tag << "' not found";
-}
-
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
   ParallelDesc parallel_desc;
   JUST(parallel_desc.MaybeInit(parallel_conf));

@@ -22,7 +22,10 @@ Maybe<void> Cluster::WorkerLoop() {
 
     JobSet job_set;
     Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
-    { Oneflow oneflow(job_set); }
+    {
+      Oneflow oneflow;
+      JUST(oneflow.Init(job_set));
+    }
     Global<SessionGlobalObjectsScope>::Delete();
   }
   ClusterControl::HaltBarrier();

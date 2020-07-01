@@ -17,7 +17,7 @@ def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
     Analogous to `tf.linalg.matmul <https://www.tensorflow.org/api_docs/python/tf/linalg/matmul>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         assert len(a.shape) == len(b.shape)
         assert len(a.shape) >= 2
         if name is None:
