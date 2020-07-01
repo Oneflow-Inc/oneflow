@@ -1,4 +1,5 @@
 #include "oneflow/core/job_completer/op_graph_pass.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
@@ -10,11 +11,11 @@ class IndexedSlicesOptimizerRewritePass final : public OpGraphPass {
     return GlobalJobDesc().job_conf().has_indexed_slices_optimizer_conf()
            && GlobalJobDesc().job_conf().indexed_slices_optimizer_conf().enable();
   }
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
-void IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
-                                              JobBuilder* job_builder) const {
+Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
+                                                     JobBuilder* job_builder) const {
   const PbRpf<std::string>& include_op_names =
       GlobalJobDesc().job_conf().indexed_slices_optimizer_conf().include_op_names().op_name();
   const std::set<std::string> include_op_name_set(
@@ -25,20 +26,18 @@ void IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     std::string indices_lbn;
     std::string values_lbn;
     std::string model_op_name;
-    std::function<void(OperatorConf * new_optimizer_op_conf, const std::string& indices,
-                       const std::string& values)>
+    std::function<void(OperatorConf* /*new_optimizer_op_conf*/, const std::string& /*indices*/,
+                       const std::string& /*values*/)>
         BuildOptimizer;
-    if (src_op_conf.has_gather_ms0_grad_conf()) {
-      const GatherMs0GradOpConf& gather_ms0_grad_conf = src_op_conf.gather_ms0_grad_conf();
-      indices_lbn = gather_ms0_grad_conf.indices();
-      values_lbn = gather_ms0_grad_conf.out_diff();
-    } else if (src_op_conf.has_unsorted_segment_sum_conf()) {
-      const UnsortedSegmentSumOpConf& unsorted_segment_sum_conf =
-          src_op_conf.unsorted_segment_sum_conf();
-      if (unsorted_segment_sum_conf.axis() == 0) {
-        indices_lbn = unsorted_segment_sum_conf.segment_ids();
-        values_lbn = unsorted_segment_sum_conf.data();
-      }
+    if (!src_op_conf.has_user_conf()) { return; }
+    const user_op::UserOpConfWrapper src_op(src_op_conf);
+    if (src_op.op_type_name() == "unsorted_segment_sum" && src_op.attr<int64_t>("axis") == 0) {
+      indices_lbn = src_op.input("segment_ids", 0);
+      values_lbn = src_op.input("data", 0);
+    } else if (src_op.op_type_name() == "unsorted_segment_sum_like"
+               && src_op.attr<int64_t>("axis") == 0) {
+      indices_lbn = src_op.input("segment_ids", 0);
+      values_lbn = src_op.input("data", 0);
     } else {
       return;
     }
@@ -138,6 +137,7 @@ void IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     job_builder->DelOps({src_op_conf, dst_op_conf});
     job_builder->AddOps(dst_node->parallel_desc().parallel_conf(), {new_optimizer_op_conf});
   });
+  return Maybe<void>::Ok();
 }
 
 REGISTER_FUNCTION_PASS("IndexedSlicesOptimizerRewritePass", IndexedSlicesOptimizerRewritePass);

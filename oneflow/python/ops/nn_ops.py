@@ -1,18 +1,17 @@
 from __future__ import absolute_import
 
-import os
-import random
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.id_util as id_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow
-from oneflow.python.oneflow_export import oneflow_export
-
 import collections
 import os
+import random
+
 import oneflow as flow
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.remote_blob as remote_blob_util
+from oneflow.python.oneflow_export import oneflow_export
+
 
 @oneflow_export("nn.conv2d")
 def conv2d(
@@ -48,9 +47,7 @@ def conv2d(
     if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
         raise ValueError('data_format must be "NHWC" or "NCHW".')
 
-    channel_pos = (
-        "channels_first" if data_format.startswith("NC") else "channels_last"
-    )
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
 
     if dilations is None:
         dilations = [1, 1]
@@ -64,14 +61,14 @@ def conv2d(
         else:
             raise ValueError("dilations must be an int or a list.")
 
-    if os.getenv("ENABLE_USER_OP") == 'True':
+    if os.getenv("ENABLE_USER_OP") != "False":
         if channel_pos == "channels_first":
             kernel_size_list = filters.shape[2:4]
         elif channel_pos == "channels_last":
             kernel_size_list = filters.shape[-3:-1]
         else:
             raise ValueError("invalid data_format")
-        assert(isinstance(kernel_size_list, tuple))
+        assert isinstance(kernel_size_list, tuple)
         assert isinstance(groups, int)
         assert groups > 0
         if groups > 1:
@@ -86,25 +83,29 @@ def conv2d(
             else:
                 raise ValueError("invalid data_format")
         return (
-                flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
-                .Op("conv2d")
-                .Input("in", [input])
-                .Input("weight", [filters])
-                .Output("out")
-                .Attr("filters", filters.shape[0], "AttrTypeInt32")
-                .Attr("padding", padding.lower(), "AttrTypeString")
-                .Attr("data_format", channel_pos, "AttrTypeString")
-                .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
-                .Attr("strides", strides, "AttrTypeListInt32")
-                .Attr("dilation_rate", dilations, "AttrTypeListInt32")
-                .Attr("groups", groups, "AttrTypeInt32")
-                .Build()
-                .InferAndTryRun()
-                .RemoteBlobList()[0]
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("Conv2d_")
+            )
+            .Op("conv2d")
+            .Input("in", [input])
+            .Input("weight", [filters])
+            .Output("out")
+            .Attr("filters", filters.shape[0], "AttrTypeInt32")
+            .Attr("padding", padding.lower(), "AttrTypeString")
+            .Attr("data_format", channel_pos, "AttrTypeString")
+            .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
+            .Attr("strides", strides, "AttrTypeListInt32")
+            .Attr("dilation_rate", dilations, "AttrTypeListInt32")
+            .Attr("groups", groups, "AttrTypeInt32")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
         )
     else:
         op_conf = op_conf_util.OperatorConf()
-        setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Conv2d_"))
+        setattr(
+            op_conf, "name", name if name is not None else id_util.UniqueStr("Conv2d_")
+        )
         setattr(op_conf.conv_2d_conf, "in", input.unique_name)
         op_conf.conv_2d_conf.out = "out"
         op_conf.conv_2d_conf.weight = filters.unique_name
@@ -143,6 +144,156 @@ def conv2d(
         return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export("nn.batch_normalization")
+def batch_normalization(
+    x, mean, variance, offset, scale, variance_epsilon, axis=-1, name=None
+):
+    r"""
+    This op does not fully align with tf.nn.batch_normalization. mean, variable, offset and scale
+    are always 1D. Users need to specify "axis" to 1 for NCHW data format.
+
+    """
+    if os.getenv("ENABLE_USER_OP") == "False":
+        raise ValueError("nn.batch_normalization is not supported in non-user-op mode")
+
+    assert axis >= -len(x.shape) and axis < len(x.shape)
+    if axis < 0:
+        axis += len(x.shape)
+
+    if name is None:
+        name = id_util.UniqueStr("BatchNorm_")
+
+    builder = (
+        flow.user_op_builder(name)
+        .Op("normalization")
+        .Input("x", [x])
+        .Input("moving_mean", [mean])
+        .Input("moving_variance", [variance])
+        .Input("gamma", [scale])
+        .Input("beta", [offset])
+        .Output("y")
+        .Attr("axis", axis, "AttrTypeInt32")
+        .Attr("epsilon", variance_epsilon, "AttrTypeFloat")
+        .Attr("training", False, "AttrTypeBool")
+        # momentum is not used
+        .Attr("momentum", 0.0, "AttrTypeFloat")
+    )
+    return builder.Build().InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("nn.compat_conv2d")
+def tf_conv2d(
+    input,
+    filters,
+    strides,
+    padding,
+    data_format="NHWC",
+    dilations=None,
+    groups=1,
+    name=None,
+):
+    assert len(input.static_shape) == 4
+    assert len(filters.static_shape) == 4
+    NDims = 2
+    if isinstance(strides, (list, tuple)):
+        assert len(strides) == 2, ValueError(
+            "strides length must be 2 when passed as a list."
+        )
+    elif isinstance(strides, int):
+        strides = [strides, strides]
+    else:
+        raise ValueError("strides must be an int or a list.")
+
+    if padding.upper() != "SAME" and padding.upper() != "VALID":
+        raise ValueError('padding must be "SAME" or "VALID".')
+
+    if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
+        raise ValueError('data_format must be "NHWC" or "NCHW".')
+
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
+
+    if dilations is None:
+        dilations = [1, 1]
+    else:
+        if isinstance(dilations, (list, tuple)):
+            assert len(dilations) == 2, ValueError(
+                "dilations length must be 2 when passed as a list."
+            )
+        elif isinstance(dilations, int):
+            dilations = [dilations, dilations]
+        else:
+            raise ValueError("dilations must be an int or a list.")
+
+    assert os.getenv("ENABLE_USER_OP") != "False"
+    if channel_pos == "channels_first":
+        input_size = input.static_shape[2:4]
+        kernel_size_list = filters.static_shape[2:4]
+    elif channel_pos == "channels_last":
+        input_size = input.static_shape[-3:-1]
+        kernel_size_list = filters.static_shape[-3:-1]
+    else:
+        raise ValueError("invalid data_format")
+    # add pad op if needs odd padding
+    if padding.upper() == "SAME":
+        padding_left = [0] * NDims
+        padding_right = [0] * NDims
+        for i in range(NDims):
+            effective_filter_size = (kernel_size_list[i] - 1) * dilations[i] + 1
+            tmp_output_size = (input_size[i] + strides[i] - 1) // strides[i]
+            padding_needed = max(
+                0,
+                (tmp_output_size - 1) * strides[i]
+                + effective_filter_size
+                - input_size[i],
+            )
+            padding_left[i] = padding_needed // 2
+            padding_right[i] = padding_needed - padding_needed // 2
+        if padding_left != padding_right:
+            assert data_format.upper() == "NCHW"
+            input = flow.pad(
+                input,
+                [
+                    (0, 0),
+                    (0, 0),
+                    (padding_left[0], padding_right[0]),
+                    (padding_left[1], padding_right[1]),
+                ],
+                name=name + "_pad" if name is not None else None,
+            )
+            padding = "VALID"
+    assert isinstance(kernel_size_list, (list, tuple))
+    assert isinstance(groups, int)
+    assert groups > 0
+    if groups > 1:
+        if data_format.upper() == "NCHW":
+            assert groups <= filters.static_shape[0]
+            assert filters.static_shape[0] % groups == 0
+            assert groups <= input.static_shape[1]
+            assert input.static_shape[1] % groups == 0
+            assert filters.static_shape[1] == input.static_shape[1] // groups
+        elif data_format.upper() == "NHWC":
+            raise ValueError("data_format NHWC not support groups > 1")
+        else:
+            raise ValueError("invalid data_format")
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
+        .Op("conv2d")
+        .Input("in", [input])
+        .Input("weight", [filters])
+        .Output("out")
+        .Attr("filters", filters.static_shape[0], "AttrTypeInt32")
+        .Attr("padding", padding.lower(), "AttrTypeString")
+        .Attr("data_format", channel_pos, "AttrTypeString")
+        .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
+        .Attr("strides", strides, "AttrTypeListInt32")
+        .Attr("dilation_rate", dilations, "AttrTypeListInt32")
+        .Attr("groups", groups, "AttrTypeInt32")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("nn.bias_add")
 def bias_add(value, bias, data_format=None, name=None):
     r"""
@@ -161,12 +312,11 @@ def bias_add(value, bias, data_format=None, name=None):
         elif data_format.startswith("N") and data_format.endswith("C"):
             bias_add_axis = len(value.shape) - 1
         else:
-            raise ValueError(
-                "data_format must be of the form `N...C` or `NC...`"
-            )
+            raise ValueError("data_format must be of the form `N...C` or `NC...`")
 
-    if os.getenv("ENABLE_USER_OP") == 'True':
-        return (oneflow.user_op_builder(name)
+    if os.getenv("ENABLE_USER_OP") != "False":
+        return (
+            flow.user_op_builder(name)
             .Op("bias_add")
             .Input("a", [value])
             .Input("b", [bias])
@@ -175,7 +325,7 @@ def bias_add(value, bias, data_format=None, name=None):
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]
-            )
+        )
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name)
@@ -188,6 +338,7 @@ def bias_add(value, bias, data_format=None, name=None):
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
         return remote_blob_util.RemoteBlob(lbi)
+
 
 @oneflow_export("nn.max_pool1d")
 def max_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
@@ -207,9 +358,11 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     Analogous to `tf.nn.max_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool2d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
-            oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("MaxPool2D_"))
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("MaxPool2D_")
+            )
             .Op("max_pool_2d")
             .Input("x", [input])
             .Output("y")
@@ -223,12 +376,7 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
         op.Attr("pool_size", pool_size, "AttrTypeListInt32")
         strides = _GetSequence(strides, 2, "strides")
         op.Attr("strides", strides, "AttrTypeListInt32")
-        return (
-            op
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
+        return op.Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -261,9 +409,11 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     Analogous to `tf.nn.avg_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool2d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
-            oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("AvgPool2D_"))
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("AvgPool2D_")
+            )
             .Op("avg_pool_2d")
             .Input("x", [input])
             .Output("y")
@@ -277,12 +427,7 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
         op.Attr("pool_size", pool_size, "AttrTypeListInt32")
         strides = _GetSequence(strides, 2, "strides")
         op.Attr("strides", strides, "AttrTypeListInt32")
-        return (
-            op
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
+        return op.Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -292,12 +437,8 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
         )
         setattr(op_conf.average_pooling_2d_conf, "in", input.unique_name)
         setattr(op_conf.average_pooling_2d_conf, "out", "out")
-        op_conf.average_pooling_2d_conf.pool_size[:] = _GetSequence(
-            ksize, 2, "ksize"
-        )
-        op_conf.average_pooling_2d_conf.strides[:] = _GetSequence(
-            strides, 2, "strides"
-        )
+        op_conf.average_pooling_2d_conf.pool_size[:] = _GetSequence(ksize, 2, "ksize")
+        op_conf.average_pooling_2d_conf.strides[:] = _GetSequence(strides, 2, "strides")
         assert padding in ["VALID", "SAME"]
         setattr(op_conf.average_pooling_2d_conf, "padding", padding)
         assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
@@ -319,9 +460,11 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     Analogous to `tf.nn.max_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool3d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
-            oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("MaxPool3D_"))
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("MaxPool3D_")
+            )
             .Op("max_pool_3d")
             .Input("x", [input])
             .Output("y")
@@ -335,12 +478,7 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
         op.Attr("pool_size", pool_size, "AttrTypeListInt32")
         strides = _GetSequence(strides, 3, "strides")
         op.Attr("strides", strides, "AttrTypeListInt32")
-        return (
-            op
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
+        return op.Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -373,9 +511,11 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     Analogous to `tf.nn.avg_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool3d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
-            oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("AvgPool3D_"))
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("AvgPool3D_")
+            )
             .Op("avg_pool_3d")
             .Input("x", [input])
             .Output("y")
@@ -389,12 +529,7 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
         op.Attr("pool_size", pool_size, "AttrTypeListInt32")
         strides = _GetSequence(strides, 3, "strides")
         op.Attr("strides", strides, "AttrTypeListInt32")
-        return (
-            op
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
+        return op.Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -404,12 +539,8 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
         )
         setattr(op_conf.average_pooling_3d_conf, "in", input.unique_name)
         setattr(op_conf.average_pooling_3d_conf, "out", "out")
-        op_conf.average_pooling_3d_conf.pool_size[:] = _GetSequence(
-            ksize, 3, "ksize"
-        )
-        op_conf.average_pooling_3d_conf.strides[:] = _GetSequence(
-            strides, 3, "strides"
-        )
+        op_conf.average_pooling_3d_conf.pool_size[:] = _GetSequence(ksize, 3, "ksize")
+        op_conf.average_pooling_3d_conf.strides[:] = _GetSequence(strides, 3, "strides")
         assert padding in ["VALID", "SAME"]
         setattr(op_conf.average_pooling_3d_conf, "padding", padding)
         assert data_format in ["NDHWC", "NCDHW"]
@@ -429,7 +560,8 @@ def _softmax_need_transpose(x, axis):
     assert type(axis) is int
     dim_num = len(x.shape)
     assert dim_num >= 2
-    if axis < 0: axis += dim_num
+    if axis < 0:
+        axis += dim_num
     assert axis >= 1
     assert axis < dim_num
 
@@ -451,7 +583,7 @@ def softmax(logits, axis=None, name=None):
     if axis is None:
         axis = -1
 
-    if os.getenv("ENABLE_USER_OP") != 'True':
+    if os.getenv("ENABLE_USER_OP") == "False":
         assert type(axis) is int
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -470,10 +602,12 @@ def softmax(logits, axis=None, name=None):
 
     need_transpose, permute = _softmax_need_transpose(logits, axis)
     if need_transpose:
-        logits = oneflow.transpose(logits, perm=permute)
+        logits = flow.transpose(logits, perm=permute)
 
     out = (
-        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Softmax_"))
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Softmax_")
+        )
         .Op("softmax")
         .Input("in", [logits])
         .Output("out")
@@ -483,7 +617,7 @@ def softmax(logits, axis=None, name=None):
     )
 
     if need_transpose:
-        out = oneflow.transpose(out, perm=permute)
+        out = flow.transpose(out, perm=permute)
     return out
 
 
@@ -492,7 +626,7 @@ def softmax_grad(y, dy, axis=None, name=None):
     if axis is None:
         axis = -1
 
-    if os.getenv("ENABLE_USER_OP") != 'True':
+    if os.getenv("ENABLE_USER_OP") == "False":
         assert type(axis) is int
         op_conf = op_conf_util.OperatorConf()
 
@@ -502,8 +636,8 @@ def softmax_grad(y, dy, axis=None, name=None):
         need_transpose, permute = _softmax_need_transpose(y, axis)
 
         if need_transpose:
-            y = oneflow.transpose(y, perm=permute)
-            dy = oneflow.transpose(dy, perm=permute)
+            y = flow.transpose(y, perm=permute)
+            dy = flow.transpose(dy, perm=permute)
         setattr(op_conf.softmax_grad_conf, "y", y.unique_name)
         setattr(op_conf.softmax_grad_conf, "dy", dy.unique_name)
 
@@ -516,16 +650,18 @@ def softmax_grad(y, dy, axis=None, name=None):
         dx = remote_blob_util.RemoteBlob(lbi)
 
         if need_transpose:
-            dx = oneflow.transpose(dx, perm=permute)
+            dx = flow.transpose(dx, perm=permute)
         return dx
 
     need_transpose, permute = _softmax_need_transpose(logits, axis)
     if need_transpose:
-        y = oneflow.transpose(y, perm=permute)
-        dy = oneflow.transpose(dy, perm=permute)
+        y = flow.transpose(y, perm=permute)
+        dy = flow.transpose(dy, perm=permute)
 
     dx = (
-        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Softmax_"))
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Softmax_")
+        )
         .Op("softmax_grad")
         .Input("y", [y])
         .Input("dy", [dy])
@@ -536,32 +672,33 @@ def softmax_grad(y, dy, axis=None, name=None):
     )
 
     if need_transpose:
-        dx = oneflow.transpose(dx, perm=permute)
+        dx = flow.transpose(dx, perm=permute)
     return dx
 
+
 @oneflow_export("nn.sparse_cross_entropy")
-def sparse_cross_entropy(
-    labels=None, prediction=None, name=None
-):
+def sparse_cross_entropy(labels=None, prediction=None, name=None):
     assert labels is not None
     assert prediction is not None
 
-    if os.getenv("ENABLE_USER_OP") == 'True':
+    if os.getenv("ENABLE_USER_OP") != "False":
         if len(labels.shape) == len(prediction.shape):
             assert labels.shape[-1] == 1
-            labels = flow.squeeze(labels, axis = [-1])
+            labels = flow.squeeze(labels, axis=[-1])
         else:
             assert len(labels.shape) == len(prediction.shape) - 1
 
         return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("SparseCrossEntropy_"))
-        .Op("sparse_cross_entropy")
-        .Input("prediction", [prediction])
-        .Input("label", [labels])
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("SparseCrossEntropy_")
+            )
+            .Op("sparse_cross_entropy")
+            .Input("prediction", [prediction])
+            .Input("label", [labels])
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
         )
     else:
         op_conf = op_conf_util.OperatorConf()
@@ -571,13 +708,9 @@ def sparse_cross_entropy(
             name if name is not None else id_util.UniqueStr("SparseCrossEntropy_"),
         )
         setattr(
-            op_conf.sparse_cross_entropy_conf,
-            "prediction",
-            prediction.unique_name,
+            op_conf.sparse_cross_entropy_conf, "prediction", prediction.unique_name,
         )
-        setattr(
-            op_conf.sparse_cross_entropy_conf, "label", labels.unique_name
-        )
+        setattr(op_conf.sparse_cross_entropy_conf, "label", labels.unique_name)
         setattr(op_conf.sparse_cross_entropy_conf, "out", "out")
         compile_context.CurJobAddOp(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
@@ -585,10 +718,38 @@ def sparse_cross_entropy(
         lbi.blob_name = "out"
         return remote_blob_util.RemoteBlob(lbi)
 
+
+@oneflow_export("nn.softmax_cross_entropy_with_logits")
+def softmax_cross_entropy_with_logits(labels=None, logits=None, name=None):
+    r"""
+    Analogous to `tf.nn.softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/softmax_cross_entropy_with_logits>`_
+
+    """
+
+    assert labels is not None
+    assert logits is not None
+
+    assert labels.shape == logits.shape
+    assert labels.dtype == logits.dtype
+
+    prob, out = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SoftmaxCrossEntropy_")
+        )
+        .Op("softmax_cross_entropy")
+        .Input("prediction", [logits])
+        .Input("label", [labels])
+        .Output("prob")
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    return out
+
+
 @oneflow_export("nn.sparse_softmax_cross_entropy_with_logits")
-def sparse_softmax_cross_entropy_with_logits(
-    labels=None, logits=None, name=None
-):
+def sparse_softmax_cross_entropy_with_logits(labels=None, logits=None, name=None):
     r"""
     Analogous to `tf.nn.sparse_softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sparse_softmax_cross_entropy_with_logits>`_
 
@@ -596,15 +757,19 @@ def sparse_softmax_cross_entropy_with_logits(
     assert labels is not None
     assert logits is not None
 
-    if os.getenv("ENABLE_USER_OP") == 'True':
+    if os.getenv("ENABLE_USER_OP") != "False":
         if len(labels.shape) == len(logits.shape):
             assert labels.shape[-1] == 1
-            labels = flow.squeeze(labels, axis = [-1])
+            labels = flow.squeeze(labels, axis=[-1])
         else:
             assert len(labels.shape) == len(logits.shape) - 1
 
         prob, out = (
-            flow.user_op_builder(name if name is not None else id_util.UniqueStr("SparseSoftmaxCrossEntropy_"))
+            flow.user_op_builder(
+                name
+                if name is not None
+                else id_util.UniqueStr("SparseSoftmaxCrossEntropy_")
+            )
             .Op("sparse_softmax_cross_entropy")
             .Input("prediction", [logits])
             .Input("label", [labels])
@@ -613,15 +778,14 @@ def sparse_softmax_cross_entropy_with_logits(
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()
-            )
+        )
         return out
     else:
         return sparse_cross_entropy(labels=labels, prediction=softmax(logits))
 
+
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")
-def sigmoid_cross_entropy_with_logits(
-    labels=None, logits=None, name=None
-):  
+def sigmoid_cross_entropy_with_logits(labels=None, logits=None, name=None):
     r"""
     Analogous to `tf.nn.sigmoid_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>`_
 
@@ -644,6 +808,7 @@ def sigmoid_cross_entropy_with_logits(
     lbi.blob_name = "loss"
     return remote_blob_util.RemoteBlob(lbi)
 
+
 def _GetSequence(value, n, name):
     """Formats value from input"""
     if value is None:
@@ -658,16 +823,17 @@ def _GetSequence(value, n, name):
         return list(value)
     else:
         raise ValueError(
-            "{} should be of length 1 or {} but was {}".format(
-                name, n, current_n
-            )
+            "{} should be of length 1 or {} but was {}".format(name, n, current_n)
         )
+
 
 @oneflow_export("nn.random_mask_like")
 def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
     assert rate is not None and rate >= 0.0 and rate < 1.0
     mask_op = (
-        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("RandomMaskLike_"))
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("RandomMaskLike_")
+        )
         .Op("random_mask_like")
         .Input("like", [like])
         .Output("out")
@@ -676,17 +842,15 @@ def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
     if seed is not None:
         mask_op.Attr("seed", seed, "AttrTypeInt64")
     else:
-        mask_op.Attr("seed", random.randint(-2**63 + 1, 2**63 - 1), "AttrTypeInt64")
-        
+        mask_op.Attr(
+            "seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1), "AttrTypeInt64"
+        )
+
     if noise_shape is not None:
         assert 0, "noise_shape will be supported later."
         assert isinstance(noise_shape, (list, tuple))
-    return (
-        mask_op
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
+    return mask_op.Build().InferAndTryRun().RemoteBlobList()[0]
+
 
 @oneflow_export("nn.dropout")
 def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
@@ -694,7 +858,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
     Analogous to `tf.nn.dropout <https://www.tensorflow.org/api_docs/python/tf/nn/dropout>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") != 'True':
+    if os.getenv("ENABLE_USER_OP") == "False":
         # dropout op
         op_conf = op_conf_util.OperatorConf()
         if name is None:
@@ -705,7 +869,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
         setattr(op_conf.dropout_conf, "out", "out")
         # random mask like op
         mask_op_conf = op_conf_util.OperatorConf()
-        mask_op_conf.name = "RandomMask4" + op_conf.name;
+        mask_op_conf.name = "RandomMask4" + op_conf.name
         setattr(mask_op_conf.random_mask_like_conf, "like", x.unique_name)
         setattr(mask_op_conf.random_mask_like_conf, "out", "out")
         if noise_shape is not None:
@@ -729,11 +893,15 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
         return remote_blob_util.RemoteBlob(lbi)
-    
+
     assert rate is not None and rate >= 0.0 and rate < 1.0
-    mask = random_mask_like(x, rate, seed, noise_shape) 
+    if not flow.current_global_function_desc().IsTrainable() or rate == 0.0:
+        return x
+    mask = random_mask_like(x, rate, seed, noise_shape)
     return (
-        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Dropout_"))
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Dropout_")
+        )
         .Op("dropout")
         .Input("in", [x])
         .Input("mask", [mask])
@@ -744,33 +912,33 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
         .RemoteBlobList()[0]
     )
 
+
 @oneflow_export("nn.conv2d_transpose")
 def deconv2d(
     value=None,
     filter=None,
     output_shape=None,
     strides=None,
-    padding='VALID',
-    data_format='NHWC',
+    padding="VALID",
+    data_format="NHWC",
     name=None,
     input=None,
     filters=None,
-    dilations=None
+    dilations=None,
 ):
     r"""2d transposed convolution
 
     Args:
-        value: 4-d `Blob`
-        filter: filter of transposed convolution, usually a variable
-        output_shape: Not supported yet
-        strides: `int` or `int list`
-        padding: `'VALID'` or `'SAME'`
-        data_format: `'NHWC'` or `'NCHW'`
-        name: This operator's name
-        input: Alias for value
-        filters: Alias for filter
-        dilations: Not supported yet
-
+    value: 4-d `Blob`
+    filter: filter of transposed convolution, usually a variable
+    output_shape: A 1-D Tensor representing the output shape of the deconvolution op
+    strides: `int` or `int list`
+    padding: `'VALID'` or `'SAME'`
+    data_format: `'NHWC'` or `'NCHW'`
+    name: This operator's name
+    input: Alias for value
+    filters: Alias for filter
+    dilations: The dilation factor for each dimension of input.
     Returns:
         A `Blob` with the same type as `value`.
 
@@ -778,9 +946,11 @@ def deconv2d(
         ValueError: shapes of `filter` and `input` must match.
     """
     assert (value is not None) ^ (
-        input is not None), "only one of `input` and `value` could be not None"
+        input is not None
+    ), "only one of `input` and `value` could be not None"
     assert (filter is not None) ^ (
-        filters is not None), "only one of `filter` and `filters` could be not None"
+        filters is not None
+    ), "only one of `filter` and `filters` could be not None"
     filters = filters or filter
     input = input or value
 
@@ -820,9 +990,7 @@ def deconv2d(
     else:
         raise ValueError('data_format must be "NHWC" or "NCHW".')
 
-    channel_pos = (
-        "channels_first" if data_format.startswith("NC") else "channels_last"
-    )
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
 
     # strides
     if isinstance(strides, (list, tuple)):
@@ -834,17 +1002,67 @@ def deconv2d(
     else:
         raise ValueError("strides must be an int or a list.")
 
-    if padding.upper() != "VALID":
-        raise ValueError('padding must be "VALID".')
+    # check padding needed
+    if padding.upper() == "VALID":
+        for i in range(NDims):
+            effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
+            assert (output_shape[i] + strides[i] - effective_filter_size) // strides[
+                i
+            ] == input_shape[i]
+    elif padding.upper() == "SAME":
+        padding_left = [0] * NDims
+        padding_right = [0] * NDims
+        for i in range(NDims):
+            assert (output_shape[i] + strides[i] - 1) // strides[i] == input_shape[i]
+            effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
+            padding_needed = max(
+                0,
+                (input_shape[i] - 1) * strides[i]
+                + effective_filter_size
+                - output_shape[i],
+            )
+            padding_left[i] = padding_needed // 2
+            padding_right[i] = padding_needed - padding_needed // 2
+    else:
+        raise ValueError('padding must be "SAME" or "VALID".')
+    # add pad op if needs odd padding
+    if padding.upper() == "SAME" and padding_left != padding_right:
+        assert data_format.upper() == "NCHW"
+        padded_output_shape = [0] * NDims
+        for i in range(NDims):
+            padded_output_shape[i] = (
+                output_shape[i] + padding_left[i] + padding_right[i]
+            )
+        input = (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("Conv2d_")
+            )
+            .Op("deconv2d")
+            .Input("in", [input])
+            .Input("weight", [filters])
+            .Output("out")
+            .Attr("filters", channels, "AttrTypeInt32")
+            .Attr("padding", "valid", "AttrTypeString")
+            .Attr("data_format", channel_pos, "AttrTypeString")
+            .Attr("kernel_size", kernel_size, "AttrTypeListInt32")
+            .Attr("strides", strides, "AttrTypeListInt32")
+            .Attr("dilation_rate", dilations, "AttrTypeListInt32")
+            .Attr("output_shape", padded_output_shape, "AttrTypeListInt32")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+        return flow.pad_grad(
+            input,
+            [
+                (0, 0),
+                (0, 0),
+                (padding_left[0], padding_right[0]),
+                (padding_left[1], padding_right[1]),
+            ],
+            name=name + "_pad_grad" if name is not None else None,
+        )
 
-    # output padding
-    output_padding = [0] * NDims
-    for i in range(NDims):
-        effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
-        assert (output_shape[i] + strides[i] - effective_filter_size) // strides[i] == input_shape[i]
-        tmp_output_size = (input_shape[i] - 1) * strides[i] + effective_filter_size
-        output_padding[i] = output_shape[i] - tmp_output_size
-    
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
         .Op("deconv2d")
@@ -857,16 +1075,19 @@ def deconv2d(
         .Attr("kernel_size", kernel_size, "AttrTypeListInt32")
         .Attr("strides", strides, "AttrTypeListInt32")
         .Attr("dilation_rate", dilations, "AttrTypeListInt32")
-        .Attr("output_padding", output_padding, "AttrTypeListInt32")
+        .Attr("output_shape", output_shape, "AttrTypeListInt32")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
+
 @oneflow_export("nn.leaky_relu")
 def leaky_relu(x, alpha=0.2, name=None):
     return (
-        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("LeakyRelu_"))
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("LeakyRelu_")
+        )
         .Op("leaky_relu")
         .Input("x", [x])
         .Output("y")

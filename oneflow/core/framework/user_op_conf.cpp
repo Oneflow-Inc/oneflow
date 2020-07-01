@@ -11,6 +11,22 @@ namespace user_op {
 
 UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) : op_conf_(op_conf) {
   CHECK(op_conf_.has_user_conf());
+  for (const auto& kv : op_conf_.user_conf().attr()) {
+    UserOpAttrVal::ValueCase value_case = kv.second.value_case();
+    switch (value_case) {
+#define CASE_ENTRY(field, cpp_type, attr_type)                                              \
+  /* UserOpAttrVal::ValueCase has the same order and naming convention as UserOpAttrType */ \
+  case (static_cast<UserOpAttrVal::ValueCase>(attr_type)):                                  \
+    CHECK(attrs_                                                                            \
+              .emplace(kv.first, std::make_shared<TypedAttrVal<cpp_type>>(                  \
+                                     AttrValAccessor<cpp_type>::Attr(kv.second)))           \
+              .second);                                                                     \
+    break;
+      OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
+#undef CASE_ENTRY
+      default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
+    };
+  }
 }
 
 const OperatorConf& UserOpConfWrapper::op_conf() const { return op_conf_; }
@@ -63,11 +79,14 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
 
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \
   template<>                                                                                       \
-  cpp_type UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {                 \
-    CHECK(op_conf_.user_conf().attr().find(attr_name) != op_conf_.user_conf().attr().end());       \
-    UserOpAttrVal val = op_conf_.user_conf().attr().at(attr_name);                                 \
-    CHECK(val.has_##field());                                                                      \
-    return AttrValAccessor<cpp_type>::Attr(val);                                                   \
+  const cpp_type& UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {          \
+    auto it = attrs_.find(attr_name);                                                              \
+    if (it != attrs_.end()) {                                                                      \
+      return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();                 \
+    } else {                                                                                       \
+      LOG(FATAL) << "Cannot find the attr: " << attr_name                                          \
+                 << " with UserOpAttrType: " << static_cast<int32_t>(attr_type);                   \
+    }                                                                                              \
   }                                                                                                \
                                                                                                    \
   template<>                                                                                       \
@@ -275,7 +294,6 @@ Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf) 
   // check input and output valid
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->input(), op_def.input()));
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->output(), op_def.output()));
-  ret.mutable_user_conf()->set_all_outputs_constant(op_def.all_outputs_constant());
   // check attr valid by user
   JUST(val->check_fn(user_op::UserOpDefWrapper(op_def), user_op::UserOpConfWrapper(ret)));
   return ret;

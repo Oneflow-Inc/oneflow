@@ -6,9 +6,7 @@ namespace oneflow {
 #define REGISTER_SQUEEZE_KERNEL(D)                                                              \
   REGISTER_USER_KERNEL("squeeze")                                                               \
       .SetCreateFn<CopyDataContentKernel<DeviceType::D>>()                                      \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                     \
-        return ctx.device_type() == DeviceType::D;                                              \
-      })                                                                                        \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::D)                               \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));                      \

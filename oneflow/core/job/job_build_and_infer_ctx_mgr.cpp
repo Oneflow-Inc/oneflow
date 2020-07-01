@@ -24,6 +24,11 @@ JobBuildAndInferCtx* LazyJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job
   return new LazyJobBuildAndInferCtx(job, job_id);
 }
 
+JobBuildAndInferCtx* EagerJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job,
+                                                                         int64_t job_id) const {
+  return new EagerJobBuildAndInferCtx(job, job_id);
+}
+
 Maybe<JobBuildAndInferCtx*> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
     const std::string& job_name) {
   CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) != job_name2infer_ctx_.end())
@@ -33,7 +38,8 @@ Maybe<JobBuildAndInferCtx*> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
 
 Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() const {
   CHECK_OR_RETURN(has_cur_job_) << JobBuildAndInferError::kNoJobBuildAndInferCtx
-                                << "current has not job name";
+                                << "current JobBuildAndInferCtx was closed, job name: "
+                                << cur_job_name_;
   return cur_job_name_;
 }
 
@@ -55,16 +61,23 @@ Maybe<void> JobBuildAndInferCtxMgr::AddLbiAndDiffWatcherUuidPair(
   return Maybe<void>::Ok();
 }
 
-void JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
-  if (!has_cur_job_) { return; }
+Maybe<void> JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
+  VirtualCloseJob();
+  if (!has_cur_job_) { return Maybe<void>::Ok(); }
   has_cur_job_ = false;
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  if (job_desc == nullptr) { return; }
-  CHECK_EQ(job_desc->job_name(), cur_job_name_);
-  CHECK_EQ(job_desc->job_id(), job_set_.job_size() - 1);
+  if (job_desc == nullptr) { return Maybe<void>::Ok(); }
+  CHECK_EQ_OR_RETURN(job_desc->job_name(), cur_job_name_);
+  CHECK_EQ_OR_RETURN(job_desc->job_id(), job_set_.job_size() - 1);
   Global<JobDesc>::Delete();
+  return Maybe<void>::Ok();
 }
 
-COMMAND(Global<EagerExecutionOption>::SetAllocated(new EagerExecutionOption()));
+void EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
+  mut_job_set()->clear_job();
+  clear_job_name2infer_ctx();
+}
+
+COMMAND(Global<bool, EagerExecutionOption>::SetAllocated(new bool(false)));
 
 }  // namespace oneflow

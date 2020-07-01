@@ -108,6 +108,12 @@ REGISTER_USER_OP("gather_nd")
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
       return Maybe<void>::Ok();
     })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
+      CHECK(indices_modifier != nullptr);
+      indices_modifier->set_requires_grad(false);
+    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       OptInt64* indices_batch_axis = ctx->BatchAxis4ArgNameAndIndex("indices", 0);
       if (indices_batch_axis->has_value()) {
@@ -159,6 +165,12 @@ REGISTER_USER_OP("scatter_nd")
                       == *ctx->BatchAxis4ArgNameAndIndex("updates", 0));
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
       return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
+      CHECK(indices_modifier != nullptr);
+      indices_modifier->set_requires_grad(false);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& indices_desc =
@@ -246,7 +258,13 @@ REGISTER_USER_OP("tensor_scatter_nd_update")
     .Output("out")
     .SetTensorDescInferFn(InferTensorScatterNdOptTensorDesc)
     .SetBatchAxisInferFn(InferTensorScatterNdOptBatchAxis)
-    .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures);
+    .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures)
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
+      CHECK(indices_modifier != nullptr);
+      indices_modifier->set_requires_grad(false);
+    });
 
 REGISTER_USER_OP("tensor_scatter_nd_add")
     .Input("params")
@@ -255,7 +273,13 @@ REGISTER_USER_OP("tensor_scatter_nd_add")
     .Output("out")
     .SetTensorDescInferFn(InferTensorScatterNdOptTensorDesc)
     .SetBatchAxisInferFn(InferTensorScatterNdOptBatchAxis)
-    .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures);
+    .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures)
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
+      CHECK(indices_modifier != nullptr);
+      indices_modifier->set_requires_grad(false);
+    });
 
 REGISTER_USER_OP_GRAD("gather_nd")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {

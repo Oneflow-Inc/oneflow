@@ -22,11 +22,11 @@ REGISTER_FUNCTION_CONFIG_DEF().Bool(
     "enable_float_compute_for_half_gemm", false,
     "true means that the type of intermedia value is float when compute half gemm");
 
-template<typename T>
-class MatmulGpuFloatingKernel final : public user_op::OpKernel {
+template<DeviceType device_type, typename T>
+class MatmulFloatingKernel final : public user_op::OpKernel {
  public:
-  MatmulGpuFloatingKernel() = default;
-  ~MatmulGpuFloatingKernel() = default;
+  MatmulFloatingKernel() = default;
+  ~MatmulFloatingKernel() = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
@@ -41,22 +41,22 @@ class MatmulGpuFloatingKernel final : public user_op::OpKernel {
 
     int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
-    NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
-                                            GetOneVal<T>(), a->dptr<T>(), b->dptr<T>(),
-                                            GetZeroVal<T>(), out->mut_dptr<T>());
+    NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k, GetOneVal<T>(),
+                                       a->dptr<T>(), b->dptr<T>(), GetZeroVal<T>(),
+                                       out->mut_dptr<T>());
   }
 };
 
-#define REGISTER_MATMUL_GPU_KERNEL(dtype)                                                        \
-  REGISTER_USER_KERNEL("matmul").SetCreateFn<MatmulGpuFloatingKernel<dtype>>().SetIsMatchedPred( \
-      [](const user_op::KernelRegContext& ctx) {                                                 \
-        return ctx.device_type() == DeviceType::kGPU                                             \
-               && ctx.TensorDesc4ArgNameAndIndex("a", 0)->data_type()                            \
-                      == GetDataType<dtype>::value;                                              \
-      })
+#define REGISTER_MATMUL_KERNEL(device, dtype)               \
+  REGISTER_USER_KERNEL("matmul")                            \
+      .SetCreateFn<MatmulFloatingKernel<device, dtype>>()   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value));
 
-REGISTER_MATMUL_GPU_KERNEL(float);
-REGISTER_MATMUL_GPU_KERNEL(double);
+REGISTER_MATMUL_KERNEL(DeviceType::kCPU, float);
+REGISTER_MATMUL_KERNEL(DeviceType::kCPU, double);
+REGISTER_MATMUL_KERNEL(DeviceType::kGPU, float);
+REGISTER_MATMUL_KERNEL(DeviceType::kGPU, double);
 
 class MatmulGpuHalfKernel final : public user_op::OpKernel {
  public:
@@ -89,17 +89,15 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
   }
 };
 
-REGISTER_USER_KERNEL("matmul").SetCreateFn<MatmulGpuHalfKernel>().SetIsMatchedPred(
-    [](const user_op::KernelRegContext& ctx) {
-      return ctx.device_type() == DeviceType::kGPU
-             && ctx.TensorDesc4ArgNameAndIndex("a", 0)->data_type() == DataType::kFloat16;
-    });
+REGISTER_USER_KERNEL("matmul").SetCreateFn<MatmulGpuHalfKernel>().SetIsMatchedHob(
+    (user_op::HobDeviceType() == DeviceType::kGPU)
+    & (user_op::HobDataType("a", 0) == DataType::kFloat16));
 
-template<typename T>
-class BatchMatmulGpuFloatingKernel final : public user_op::OpKernel {
+template<DeviceType device_type, typename T>
+class BatchMatmulFloatingKernel final : public user_op::OpKernel {
  public:
-  BatchMatmulGpuFloatingKernel() = default;
-  ~BatchMatmulGpuFloatingKernel() = default;
+  BatchMatmulFloatingKernel() = default;
+  ~BatchMatmulFloatingKernel() = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
@@ -119,29 +117,28 @@ class BatchMatmulGpuFloatingKernel final : public user_op::OpKernel {
 
     size_t batch_size = a->shape().Count(0, num_axes - 2);
     T** buf_dptr = reinterpret_cast<T**>(tmp_buf->mut_dptr<void>());
-    NewKernelUtil<DeviceType::kGPU>::OFBatchedGemm(
-        ctx->device_ctx(), trans_a, trans_b, batch_size, m, n, k, GetOneVal<T>(), a->dptr<T>(),
-        b->dptr<T>(), GetZeroVal<T>(), out->mut_dptr<T>(), buf_dptr);
+    NewKernelUtil<device_type>::OFBatchedGemm(ctx->device_ctx(), trans_a, trans_b, batch_size, m, n,
+                                              k, GetOneVal<T>(), a->dptr<T>(), b->dptr<T>(),
+                                              GetZeroVal<T>(), out->mut_dptr<T>(), buf_dptr);
   }
 };
 
-#define REGISTER_BATCH_MATMUL_GPU_KERNEL(dtype)                           \
-  REGISTER_USER_KERNEL("batch_matmul")                                    \
-      .SetCreateFn<BatchMatmulGpuFloatingKernel<dtype>>()                 \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {        \
-        return ctx.device_type() == DeviceType::kGPU                      \
-               && ctx.TensorDesc4ArgNameAndIndex("a", 0)->data_type()     \
-                      == GetDataType<dtype>::value;                       \
-      })                                                                  \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                 \
-        user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0); \
-        size_t num_axes = a->shape().NumAxes();                           \
-        size_t batch_num = a->shape().Count(0, num_axes - 2);             \
-        return sizeof(int64_t) * 3 * batch_num;                           \
+#define REGISTER_BATCH_MATMUL_KERNEL(device, dtype)                                   \
+  REGISTER_USER_KERNEL("batch_matmul")                                                \
+      .SetCreateFn<BatchMatmulFloatingKernel<device, dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                           \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
+        user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);             \
+        size_t num_axes = a->shape().NumAxes();                                       \
+        size_t batch_num = a->shape().Count(0, num_axes - 2);                         \
+        return sizeof(int64_t) * 3 * batch_num;                                       \
       })
 
-REGISTER_BATCH_MATMUL_GPU_KERNEL(float);
-REGISTER_BATCH_MATMUL_GPU_KERNEL(double);
+REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, float);
+REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, double);
+REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, float);
+REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, double);
 
 class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
  public:
@@ -182,10 +179,8 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("batch_matmul")
     .SetCreateFn<BatchMatmulGpuHalfKernel>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      return ctx.device_type() == DeviceType::kGPU
-             && ctx.TensorDesc4ArgNameAndIndex("a", 0)->data_type() == DataType::kFloat16;
-    })
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
+                     & (user_op::HobDataType("a", 0) == DataType::kFloat16))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);
       size_t num_axes = a->shape().NumAxes();

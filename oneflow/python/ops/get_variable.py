@@ -1,16 +1,19 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.session_context as session_context
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.distribute as distribute_util
-import oneflow.python.experimental.name_scope as name_scope
+import os
+
+import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.python.experimental.name_scope as name_scope
 import oneflow.python.framework.c_api_util as c_api_util
-from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.session_context as session_context
+import oneflow.python.framework.id_util as id_util
 
-import os
+from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("get_variable")
@@ -38,7 +41,9 @@ def get_variable(
 
     """
     assert isinstance(name, str)
-    assert isinstance(shape, (list, tuple)), "param shape should be a list or tuple of dimension"
+    assert isinstance(
+        shape, (list, tuple)
+    ), "param shape should be a list or tuple of dimension"
 
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
@@ -85,7 +90,9 @@ def _GenerateVariableOpConf(
     if dtype is not None:
         op_conf.variable_conf.data_type = dtype
 
-    root_path = compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
+    root_path = (
+        compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
+    )
     dir_path = os.path.join(root_path, name)
     file_path = os.path.join(dir_path, "out")
     if root_path and os.path.isfile(file_path):
@@ -124,3 +131,25 @@ def _CreateVariableBlob(op_conf, parallel_conf):
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.variable_conf.out
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("assign")
+def assign(ref, value, dtype=None, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Assign_")
+
+    if os.getenv("ENABLE_USER_OP") != "False":
+        op = (
+            flow.consistent_user_op_builder(name)
+            .Op("assign")
+            .Input("ref", [ref])
+            .Input("value", [value])
+            .Build()
+        )
+        op.InferAndTryRun()
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(op_conf, "name", name)
+        op_conf.assign_conf.ref = ref.unique_name
+        op_conf.assign_conf.value = value.unique_name
+        compile_context.CurJobAddConsistentOp(op_conf)

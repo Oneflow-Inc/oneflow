@@ -1,19 +1,16 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
+import argparse
 import os
 import time
-import argparse
 from datetime import datetime
 
-import oneflow as flow
-
-import data_loader
-import vgg_model
-import resnet_model
 import alexnet_model
+import data_loader
 import inceptionv3_model
+import oneflow as flow
+import resnet_model
+import vgg_model
 
 parser = argparse.ArgumentParser(description="flags for cnn benchmark")
 
@@ -130,7 +127,7 @@ if args.precision == "float16":
         func_config.tensorrt.use_fp16()
 
 
-@flow.function(func_config)
+@flow.global_function(func_config)
 def InferenceNet():
 
     total_device_num = args.node_num * args.gpu_num_per_node
@@ -163,7 +160,7 @@ def main():
         print("{} = {}".format(arg, getattr(args, arg)))
     print("-".ljust(66, "-"))
     print("Time stamp: {}".format(str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))))
-    
+
     flow.env.grpc_use_no_signal()
     flow.env.log_dir(args.log_dir)
 

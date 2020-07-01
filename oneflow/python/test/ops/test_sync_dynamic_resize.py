@@ -1,10 +1,8 @@
-import oneflow as flow
-import numpy as np
 from collections import OrderedDict
 
-from test_util import GenArgList
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
+import numpy as np
+import oneflow as flow
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
 def test_sync_dynamic_resize(_):
@@ -24,7 +22,7 @@ def test_sync_dynamic_resize(_):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def TestJob(
             x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type]),
             size=flow.FixedTensorDef((1,), dtype=type_name_to_flow_type[size_type]),
@@ -34,5 +32,9 @@ def test_sync_dynamic_resize(_):
 
         size = np.random.randint(0, x_shape[0])
         x = np.random.rand(*x_shape).astype(type_name_to_np_type[data_type])
-        y = TestJob(x, np.array([size]).astype(type_name_to_np_type[size_type])).get().ndarray_list()[0]
+        y = (
+            TestJob(x, np.array([size]).astype(type_name_to_np_type[size_type]))
+            .get()
+            .ndarray_list()[0]
+        )
         assert np.array_equal(y, x[:size])

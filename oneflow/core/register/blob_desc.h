@@ -24,7 +24,7 @@ class BlobDesc final {
         is_body_disabled_(is_body_disabled),
         is_dynamic_(is_dynamic) {}
 
-  static const int32_t kAlignSize = 256;
+  static const int32_t kAlignSize = 512;
 
   BlobDesc& operator=(const BlobDesc&);
 

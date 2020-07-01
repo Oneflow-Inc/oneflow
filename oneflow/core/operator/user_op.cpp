@@ -1,6 +1,5 @@
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/operator/user_op_util.h"
-#include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/infer_util.h"
@@ -28,38 +27,6 @@ user_op::TensorDesc GenTensorDescFromBlobDesc(const BlobDesc* blob_desc) {
 }
 
 }  // namespace
-
-class UserOp final : public Operator {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(UserOp);
-  UserOp() = default;
-  ~UserOp() = default;
-
-  void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override { return op_conf().user_conf(); }
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-                             std::function<void(OpContext*)> EnrollOpCtx) const override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext*, const SbpSignature* sbp_signature,
-                                std::function<void(OpContext*)> EnrollOpCtx) const override;
-
- private:
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
-  Maybe<void> InferBatchAxis(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
-  Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override;
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
-      std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const override;
-
-  const user_op::OpRegistrationVal* val_;
-};
 
 class UserOpKernelRegContext final : public user_op::KernelRegContext {
  public:
@@ -315,13 +282,12 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
                                    const SbpSignature* sbp_signature,
                                    std::function<void(OpContext*)> EnrollOpCtx) const {
   JUST(InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx));
-
   // tmp buffer size must be inferred after out shape/dtype
   UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
                                GetBlobDesc4BnInOp);
-  const user_op::KernelRegistrationVal* kernel_reg_val = user_op::LookUpInKernelRegistry(
+  const user_op::KernelRegistrationVal* kernel_reg_val = JUST(user_op::LookUpInKernelRegistry(
       op_conf().user_conf().op_type_name(),
-      UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx));
+      UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx)));
   CHECK_OR_RETURN(kernel_reg_val != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry !";
 
@@ -400,12 +366,12 @@ Maybe<void> UserOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-LogicalBlobId UserOp::ibn2lbi(const std::string& input_bn) const {
+LogicalBlobId UserOp::lbi4ibn(const std::string& input_bn) const {
   auto pair = GenUnRepeatedBn(input_bn);
   return GenLogicalBlobId(op_conf().user_conf().input().at(pair.first).s(pair.second));
 }
 
-LogicalBlobId UserOp::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId UserOp::lbi4obn(const std::string& output_bn) const {
   auto pair = GenUnRepeatedBn(output_bn);
   auto ret = GenLogicalBlobId(op_conf().user_conf().output().at(pair.first).s(pair.second));
   CHECK_EQ(ret.op_name(), op_conf().name());
@@ -466,6 +432,23 @@ Maybe<void> UserOp::GetSbpSignatures(
     }
   }
   return Maybe<void>::Ok();
+}
+
+Symbol<OperatorConf> UserOp::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
+  op_conf.set_name("undefined-op-name");
+  UserOpConf* user_op_conf = op_conf.mutable_user_conf();
+  for (auto& pair : *user_op_conf->mutable_input()) {
+    for (auto& str : *pair.second.mutable_s()) { str = "undefined-op-name/undefined-ibn"; }
+  }
+  for (auto& pair : *user_op_conf->mutable_output()) {
+    std::string prefix = "undefined-op-name/";
+    prefix += pair.first;
+    prefix += "_";
+    int i = 0;
+    for (auto& str : *pair.second.mutable_s()) { str = prefix + std::to_string(i++); }
+  }
+  return SymbolOf(op_conf);
 }
 
 void UserOp::VirtualGenKernelConf(

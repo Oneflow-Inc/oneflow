@@ -26,11 +26,24 @@ else()
   project(oneflow C CXX)
 endif()
 
+if (NOT DEFINED USE_CXX11_ABI)
+  if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5))
+    set(USE_CXX11_ABI OFF)
+  else()
+    set(USE_CXX11_ABI ON)
+  endif()
+endif()
+
 if (WITH_XLA)
   add_definitions(-DWITH_XLA)
 endif()
 if (WITH_TENSORRT)
   add_definitions(-DWITH_TENSORRT)
+endif()
+if (USE_CXX11_ABI)
+  add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
+else()
+  add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 endif()
 
 enable_testing()
@@ -41,6 +54,9 @@ set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
 set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"
   CACHE PATH "Where the third party headers and libs are put")
+
+set(THIRD_PARTY_SUBMODULE_DIR "${PROJECT_SOURCE_DIR}/build/third_party"
+  CACHE PATH "Where the third party submodules are")
 
 # Modules
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
