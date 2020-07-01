@@ -22,7 +22,7 @@ HashMap<std::string, std::vector<KernelRegistrationVal>>* MutKernelRegistry() {
 std::string GetErrorMsgOfSearchedOp(const KernelRegContext& ctx) {
   const auto& op_conf = ctx.user_op_conf();
   std::stringstream ss;
-  ss << " The info of Op node are "
+  ss << " The Info of OperatorConf are "
      << "\n op_name: " << op_conf.op_name() << "\n op_type_name: " << op_conf.op_type_name()
      << "\n DeviceType_Name: " << DeviceType_Name(ctx.device_type());
   for (const auto& pair : ctx.inputs()) {
@@ -49,8 +49,9 @@ Maybe<const KernelRegistrationVal*> LookUpInKernelRegistry(const std::string& op
   const auto registry = MutKernelRegistry();
   auto it = registry->find(op_type_name);
   if (it == registry->end()) {
-    return Error::OpKernelNotFoundError({})
-           << "There is no kernel registered for current Op node. " << GetErrorMsgOfSearchedOp(ctx);
+    return Error::OpKernelNotFoundError("There is no kernel registered for Current OperatorConf. ",
+                                        {})
+           << GetErrorMsgOfSearchedOp(ctx);
   }
 
   const KernelRegistrationVal* ret = nullptr;
@@ -63,8 +64,8 @@ Maybe<const KernelRegistrationVal*> LookUpInKernelRegistry(const std::string& op
             debug_msgs.emplace_back(local_reg_val.is_matched_hob.DebugStr(ctx));
           }
         }
-        return Error::MultipleOpKernelsMatchedError(debug_msgs)
-               << "There are more than one kernels satisfy current Op node. "
+        return Error::MultipleOpKernelsMatchedError(
+                   "There are more than one kernels matching Current OperatorConf. ", debug_msgs)
                << GetErrorMsgOfSearchedOp(ctx);
       }
       ret = &reg_val;
@@ -75,8 +76,9 @@ Maybe<const KernelRegistrationVal*> LookUpInKernelRegistry(const std::string& op
     for (const auto& reg_val : it->second) {
       debug_msgs.emplace_back(reg_val.is_matched_hob.DebugStr(ctx));
     }
-    return Error::OpKernelNotFoundError(debug_msgs)
-           << "Cannot find the kernel satisfies current Op node. " << GetErrorMsgOfSearchedOp(ctx);
+    return Error::OpKernelNotFoundError("Cannot find the kernel matching Current OperatorConf. ",
+                                        debug_msgs)
+           << GetErrorMsgOfSearchedOp(ctx);
   }
 
   return ret;
