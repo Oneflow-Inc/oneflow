@@ -119,7 +119,7 @@ def _GetSequence(value, n, name):
 
 def test_pool(_):
     arg_dict = OrderedDict()
-    is_user_op = os.getenv("ENABLE_USER_OP") == "True"
+    is_user_op = os.getenv("ENABLE_USER_OP") != "False"
     if is_user_op:
         arg_dict["device_type"] = ["gpu", "cpu"]
     else:
