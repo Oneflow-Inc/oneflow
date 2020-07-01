@@ -35,7 +35,7 @@ hob::HobContextGetter<KernelRegContext, DeviceType> HobDeviceType() {
 hob::HobContextGetter<KernelRegContext, DataType> HobDataType(const std::string& tensor_name,
                                                               int tensor_idx) {
   std::ostringstream string_stream;
-  string_stream << "tensor \'" << tensor_name << "\' data_type";
+  string_stream << "data_type of tensor \'" << tensor_name << "\'";
   return hob::HobContextGetter<KernelRegContext, DataType>(
       string_stream.str(), [tensor_name, tensor_idx](const KernelRegContext& ctx) {
         const user_op::TensorDesc* desc = ctx.TensorDesc4ArgNameAndIndex(tensor_name, tensor_idx);
