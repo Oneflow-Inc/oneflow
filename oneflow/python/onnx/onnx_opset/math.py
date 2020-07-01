@@ -26,13 +26,9 @@ logger = logging.getLogger(__name__)
 
 
 @flow_op(["broadcast_add", "scalar_add_by_tensor"], onnx_op="Add")
-@flow_op(
-    ["broadcast_sub", "scalar_sub_by_tensor"], onnx_op="Sub", flow_ibns=["x", "y"]
-)
+@flow_op(["broadcast_sub", "scalar_sub_by_tensor"], onnx_op="Sub", flow_ibns=["x", "y"])
 @flow_op(["multiply", "broadcast_mul", "scalar_mul_by_tensor"], onnx_op="Mul")
-@flow_op(
-    ["broadcast_div", "scalar_div_by_tensor"], onnx_op="Div", flow_ibns=["x", "y"]
-)
+@flow_op(["broadcast_div", "scalar_div_by_tensor"], onnx_op="Div", flow_ibns=["x", "y"])
 class BroadcastOp(common.BroadcastOp):
     pass
 
