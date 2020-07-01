@@ -5,7 +5,7 @@ src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
 wheel_path=${ONEFLOW_WHEEL_PATH:-"$PWD/ci_tmp"}
 
 if [ -d "$wheel_path" ]; then
-    ll $wheel_path
+    ls -la $wheel_path
     pip3 install --user $wheel_path/*.whl
 elif [ -e "$wheel_path" ]; then
     pip3 install --user "$wheel_path"
