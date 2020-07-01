@@ -29,7 +29,7 @@ class OfBlob(object):
     @property
     def shape(self):
         num_axes = oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
-        dst_ndarray = np.ndarray(num_axes, dtype=np.int64)
+        dst_ndarray = np.zeros(num_axes, dtype=np.int64)
         oneflow_api.OfBlob_CopyShapeToNumpy(self.of_blob_ptr_, dst_ndarray)
         return tuple(dst_ndarray.tolist())
 
@@ -85,12 +85,10 @@ class OfBlob(object):
         tensor_list = []
         oneflow_api.OfBlob_ResetTensorIterator(self.of_blob_ptr_)
         while oneflow_api.OfBlob_CurTensorIteratorEqEnd(self.of_blob_ptr_) == False:
-            shape_tensor = np.ndarray(self.num_axes, dtype=np.int64)
+            shape_tensor = np.zeros(self.num_axes, dtype=np.int64)
             oneflow_api.OfBlob_CurTensorCopyShapeTo(self.of_blob_ptr_, shape_tensor)
             shape = tuple(shape_tensor.tolist())
-            tensor = np.ndarray(
-                shape, dtype=convert_of_dtype_to_numpy_dtype(self.dtype)
-            )
+            tensor = np.zeros(shape, dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
             copy_method(self.of_blob_ptr_, tensor)
             tensor_list.append(tensor)
             oneflow_api.OfBlob_IncTensorIterator(self.of_blob_ptr_)
