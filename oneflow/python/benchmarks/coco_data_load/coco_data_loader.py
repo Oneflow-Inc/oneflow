@@ -95,7 +95,7 @@ def _make_data_load_fn():
 
     cfg = COCODataLoadConfig()
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def data_load_fn():
         return coco_data_load(cfg, 0, 1)
 
