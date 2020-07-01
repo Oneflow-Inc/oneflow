@@ -26,7 +26,7 @@ def BoxingTo(builder, x_blob_object, op_arg_parallel_attr):
     conditional_functions = [
         CopyH2D,
         CopyD2H,
-        SingleDeviceBoxing,
+        NoBoxing,
         BroadcastOneToMany,
         Sequential((BroadcastOneToMany, ReplaceBlobParallelDesc("cpu")), CopyH2D),
         Sequential((CopyD2H, ReplaceBlobDeviceTag("cpu")), BroadcastOneToMany),
@@ -149,15 +149,18 @@ def CopyHD(builder, x_blob_object, op_arg_parallel_attr):
     return BuildCopyHdInstruction(builder, x_blob_object, op_device_tag)
 
 
-MatchSingleDeviceBoxing = (
+MatchNoBoxing = (
     boxing_hob.MasterMachineOnly
     & (boxing_hob.blob_parallel_desc == boxing_hob.op_arg_parallel_desc)
-    & (boxing_hob.blob_parallel_desc.parallel_num == 1)
+    & (
+        (boxing_hob.blob_sbp_parallel == boxing_hob.op_arg_sbp_parallel)
+        | (boxing_hob.blob_parallel_desc.parallel_num == 1)
+    )
 )
 
 
-@enable_if.condition(MatchSingleDeviceBoxing)
-def SingleDeviceBoxing(builder, x_blob_object, op_arg_parallel_attr):
+@enable_if.condition(MatchNoBoxing)
+def NoBoxing(builder, x_blob_object, op_arg_parallel_attr):
     return x_blob_object
 
 
