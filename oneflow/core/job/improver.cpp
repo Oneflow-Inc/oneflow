@@ -667,12 +667,6 @@ void Improver::ForEachInferredMemBlockCriticalSection(
 void Improver::Init(const AvailableMemDesc& amd, const Plan& naive_plan) {
   start_mem_block_id_ = Global<IDMgr>::Get()->NewMemBlockId();
   amd_ = amd;
-  record_load_task_num_.assign(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum(), 0);
-  for (const TaskProto& task_proto : naive_plan.task()) {
-    if (task_proto.task_type() == TaskType::kRecordLoad) {
-      record_load_task_num_.at(Global<IDMgr>::Get()->MachineId4ActorId(task_proto.task_id())) += 1;
-    }
-  }
 }
 
 Maybe<Plan> Improver::GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd,
