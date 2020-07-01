@@ -3,17 +3,24 @@ import numpy as np
 import tensorflow as tf
 import oneflow as flow
 from collections import OrderedDict
-import oneflow.core.common.data_type_pb2 as data_type_util
-
+import cv2
 
 from test_util import GenArgList
+
+
+def _read_images_by_cv(image_files):
+    images = [
+        cv2.cvtColor(cv2.imread(image_file), cv2.COLOR_BGR2RGB).astype(np.uint8)
+        for image_file in image_files
+    ]
+    return [cv2.resize(image, (512, 512)) for image in images]
 
 
 def test(device_type):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.double)
+    func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
     def CreateWriter():
@@ -21,27 +28,27 @@ def test(device_type):
 
     @flow.global_function(func_config)
     def ScalarJob(
-        value=flow.MirroredTensorDef((1,), dtype=data_type_util.kDouble),
-        step=flow.MirroredTensorDef((1,), dtype=data_type_util.kInt64),
-        tag=flow.MirroredTensorDef((20,), dtype=data_type_util.kInt8),
+        value=flow.MirroredTensorDef((1,), dtype=flow.float),
+        step=flow.MirroredTensorDef((1,), dtype=flow.int64),
+        tag=flow.MirroredTensorDef((20,), dtype=flow.int8),
     ):
         with flow.device_prior_placement(device_type, "0:0"):
             flow.summary.scalar(value, step, tag)
 
     @flow.global_function(func_config)
     def HistogramJob(
-        value=flow.FixedTensorDef((2, 3, 4), dtype=data_type_util.kDouble),
-        step=flow.FixedTensorDef((1,), dtype=data_type_util.kInt64),
-        tag=flow.FixedTensorDef((9,), dtype=data_type_util.kInt8),
+        value=flow.FixedTensorDef((2, 3, 4), dtype=flow.float),
+        step=flow.FixedTensorDef((1,), dtype=flow.int64),
+        tag=flow.FixedTensorDef((9,), dtype=flow.int8),
     ):
         with flow.device_prior_placement(device_type, "0:0"):
             flow.summary.histogram(value, step, tag)
 
     @flow.global_function(func_config)
     def TextJob(
-        value=flow.MirroredTensorDef((6,), dtype=data_type_util.kInt8),
-        step=flow.MirroredTensorDef((1,), dtype=data_type_util.kInt64),
-        tag=flow.MirroredTensorDef((10,), dtype=data_type_util.kInt8),
+        value=flow.MirroredTensorDef((6,), dtype=flow.int8),
+        step=flow.MirroredTensorDef((1,), dtype=flow.int64),
+        tag=flow.MirroredTensorDef((10,), dtype=flow.int8),
     ):
         with flow.device_prior_placement(device_type, "0:0"):
             flow.summary.text(value, step, tag)
@@ -49,13 +56,23 @@ def test(device_type):
     # OneFlow
     @flow.global_function(func_config)
     def PbJob(
-        value=flow.MirroredTensorDef((1000,), dtype=data_type_util.kInt8),
-        step=flow.MirroredTensorDef((1,), dtype=data_type_util.kInt64),
+        value=flow.MirroredTensorDef((1000,), dtype=flow.int8),
+        step=flow.MirroredTensorDef((1,), dtype=flow.int64),
     ):
         with flow.device_prior_placement(device_type, "0:0"):
             flow.summary.pb(value, step=step)
 
+    @flow.global_function(func_config)
+    def ImageJob(
+        value=flow.MirroredTensorDef(shape=(100, 2000, 2000, 4), dtype=flow.uint8),
+        step=flow.MirroredTensorDef((1,), dtype=flow.int64),
+        tag=flow.MirroredTensorDef((10,), dtype=flow.int8),
+    ):
+        with flow.device_prior_placement(device_type, "0:0"):
+            flow.summary.image(value, step=step, tag=tag)
+
     CreateWriter()
+
     # write text
     t = ["vgg16", "resnet50", "mask-rcnn", "yolov3"]
     pb = flow.text(t)
@@ -65,17 +82,13 @@ def test(device_type):
 
     # write hparams
     hparams = {
-        flow.HParam("learning_rate", flow.RealInterval(1e-2, 1e-1)): 0.02,
-        flow.HParam("dense_layers", flow.IntInterval(2, 7)): 5,
-        flow.HParam("optimizer", flow.Discrete(["adam", "sgd"])): "adam",
-        flow.HParam("accuracy", flow.RealInterval(1e-2, 1e-1)): 0.001,
-        flow.HParam(
-            "magic",
-            flow.Discrete([False, True]),
-            display_name="~*~ Magic ~*~",
-            description="descriptive",
-        ): True,
-        "dropout": 0.3,
+        flow.HParam("learning_rate", flow.RealRange(1e-2, 1e-1)): 0.02,
+        flow.HParam("dense_layers", flow.IntegerRange(2, 7)): 5,
+        flow.HParam("optimizer", flow.ValueSet(["adam", "sgd"])): "adam",
+        flow.HParam("accuracy", flow.RealRange(1e-2, 1e-1)): 0.001,
+        flow.HParam("magic", flow.ValueSet([False, True])): True,
+        "dropout": 0.6,
+        "conv1": "good",
     }
     pb2 = flow.hparams_pb(hparams)
     value = np.array(list(str(pb2).encode("ascii")), dtype=np.int8)
@@ -85,7 +98,7 @@ def test(device_type):
 
     # write scalar
     for idx in range(10):
-        value = np.array([idx], dtype=np.float64)
+        value = np.array([idx], dtype=np.float32)
         step = np.array([idx], dtype=np.int64)
         tag = np.array(list("scalar".encode("ascii")), dtype=np.int8)
         ScalarJob([value], [step], [tag])
@@ -100,10 +113,29 @@ def test(device_type):
     # )
 
     for idx in range(10):
-        value = np.random.rand(2, 3, 4).astype(np.float64)
+        value = np.random.rand(2, 3, 4).astype(np.float32)
         step = np.array([idx], dtype=np.int64)
         tag = np.array(list("histogram".encode("ascii")), dtype=np.int8)
         HistogramJob(value, step, tag)
+
+
+    flow.exception_projector()
+
+    # write image
+    image_files = ["./image1.png", "./Lena.png"]
+    images = _read_images_by_cv(image_files)
+    images = np.array(images, dtype=np.uint8)
+    # image_shapes = [image.shape for image in images]
+    # print(image_shapes)
+    imageRed = np.ones([512, 512, 3]).astype(np.uint8)
+    Red = np.array([0, 255, 255], dtype=np.uint8)
+    imageNew = np.multiply(imageRed, Red)
+    imageNew = np.expand_dims(imageNew, axis=0)
+    images = np.concatenate((images, imageNew), axis=0)
+    # images1 = (np.random.rand(1, 512, 512, 3) * 100).astype(np.uint8)
+    step = np.array([1], dtype=np.int64)
+    tag = np.array(list("image".encode("ascii")), dtype=np.int8)
+    ImageJob([images], [step], [tag])
 
 
 test("cpu")

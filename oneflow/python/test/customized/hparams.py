@@ -15,10 +15,42 @@ import oneflow.customized.utils.summary_pb2 as summary_pb2
 import oneflow.python.test.customized.metadata as metadata
 import oneflow.customized.utils.event_pb2 as event_pb2
 import oneflow.customized.utils.tensor_pb2 as tensor_pb2
+import oneflow.customized.utils.projector_pb2 as projector_pb2
 from oneflow.python.oneflow_export import oneflow_export
 
 
 import oneflow as flow
+
+
+@oneflow_export("exception_projector")
+def exception_projector():
+    value = np.random.rand(100,).astype(np.float32)
+    summary_projector = projector_pb2.SummaryProjector()
+    summary_projector.metadata.type = projector_pb2.MetaData.ProjectorType.EXCEPTION
+    projector = summary_projector.projector.add()
+    set_projector(projector, "tag1", 10, value)
+    filename = "/home/zjhushengjian/oneflow/projector.gradient.1593592184.v2"
+    print(summary_projector)
+    with open(filename, "wb") as f:
+        f.write(summary_projector.SerializeToString())
+        f.flush()
+
+
+def set_tensor(tensor: projector_pb2.Tensor, value):
+    for d in value.shape:
+        td = tensor.shape.dim.add()
+        td.size = d
+    tensor.dtype = str(value.dtype)
+    tensor.content = value.tobytes()
+    return
+
+
+def set_projector(pro, tag, step, value, label=None):
+    pro.tag = str(tag)
+    pro.step = step
+    pro.WALL_TIME = time.time()
+    set_tensor(pro.value, value)
+    return
 
 
 # write text
@@ -65,46 +97,6 @@ def make_tensor_proto(values, dtype=None, shape=None):
 
 
 NULL_TENSOR = make_tensor_proto([], tensor_pb2.DT_FLOAT, (0,))
-
-
-@oneflow_export("hparams")
-def hparams(hparams, trial_id=None, start_time_secs=None):
-    pb = hparams_pb(
-        hparams=hparams, trial_id=trial_id, start_time_secs=start_time_secs,
-    )
-    return _write_summary("hparams", pb)
-
-
-def _write_summary(name, pb):
-    raw_pb = pb.SerializeToString()
-
-    event = event_pb2.Event(summary=pb)
-    event.wall_time = 22222
-    event.step = 0
-    # event.summary = summary_pb2.Summary(pb)
-
-    event_pb = event.SerializeToString()
-
-    filename = "/home/zjhushengjian/oneflow/events.out.tfevents.2222.oneflow-15.v2"
-    with open(filename, "wb") as f:
-        f.write(event_pb)
-
-    # summary_scope = (
-    #     getattr(tf.summary.experimental, "summary_scope", None)
-    #     or tf.summary.summary_scope
-    # )
-    # with summary_scope(name):
-    #     return tf.summary.experimental.write_raw_pb(raw_pb, step=0)
-
-    # flow.clear_default_session()
-    # func_config = flow.FunctionConfig()
-    # func_config.default_data_type(flow.double)
-    # @flow.function(func_config)
-    # def HparamJob(x=flow.FixedTensorDef(len(raw_pb), ), dtype=flow.kInt8):
-    #     flow.summary.hparam(x, step=0)
-    # HparamJob(np.array(list(raw_pb.encode("ascii")), dtype=np.int8))
-
-    # return flow.summary.hparam(, step=0)
 
 
 @oneflow_export("hparams_pb")
@@ -174,246 +166,115 @@ def _summary_pb(tag, hparams_plugin_data, tensor):
 
 @oneflow_export("Hparam")
 class HParam(object):
-    def __init__(self, name, domain=None, display_name=None, description=None):
-        self._name = name
-        self._domain = domain
-        self._display_name = display_name
-        self._description = description
-        if not isinstance(self._domain, (Domain, type(None))):
-            raise ValueError("not a domain: %r" % (self._domain,))
-
-    def __str__(self):
-        return "<HParam %r: %s>" % (self._name, self._domain)
+    def __init__(self, name, dtype=None):
+        self.name_ = name
+        self.dtype_ = dtype
+        if not isinstance(self.dtype_, (IntegerRange, RealRange, ValueSet, type(None))):
+            raise ValueError(
+                "Hparam dtype must be: (IntegerRange, RealRange, ValueSet) : %r"
+                % (self.dtype_,)
+            )
 
     def __repr__(self):
-        fields = [
-            ("name", self._name),
-            ("domain", self._domain),
-            ("display_name", self._display_name),
-            ("description", self._description),
+        hparam_info = [
+            ("name", self.name_),
+            ("dtype", self.dtype_),
         ]
-        fields_string = ", ".join("%s=%r" % (k, v) for (k, v) in fields)
-        return "HParam(%s)" % fields_string
+        for (key, value) in hparam_info:
+            hparam_str = ", ".join("%s=%r" % (key, value))
+        return "HParam(%s)" % hparam_str
 
     @property
     def name(self):
-        return self._name
+        return self.name_
 
     @property
-    def domain(self):
-        return self._domain
-
-    @property
-    def display_name(self):
-        return self._display_name
-
-    @property
-    def description(self):
-        return self._description
-
-
-@six.add_metaclass(abc.ABCMeta)
-class Domain(object):
-    @abc.abstractproperty
     def dtype(self):
-        """Data type of this domain: `float`, `int`, `str`, or `bool`."""
-        pass
-
-    @abc.abstractmethod
-    def sample_uniform(self, rng=random):
-        """Sample a value from this domain uniformly at random.
-
-        Args:
-          rng: A `random.Random` interface; defaults to the `random` module
-            itself.
-
-        Raises:
-          IndexError: If the domain is empty.
-        """
-        pass
-
-    @abc.abstractmethod
-    def update_hparam_info(self, hparam_info):
-        """Update an `HParamInfo` proto to include this domain.
-
-        This should update the `type` field on the proto and exactly one of
-        the `domain` variants on the proto.
-
-        Args:
-          hparam_info: An `api_pb2.HParamInfo` proto to modify.
-        """
-        pass
+        return self.dtype_
 
 
-@oneflow_export("IntInterval")
-class IntInterval(Domain):
-    """A domain that takes on all integer values in a closed interval."""
-
-    def __init__(self, min_value=None, max_value=None):
-        """Create an `IntInterval`.
-
-        Args:
-          min_value: The lower bound (inclusive) of the interval.
-          max_value: The upper bound (inclusive) of the interval.
-
-        Raises:
-          TypeError: If `min_value` or `max_value` is not an `int`.
-          ValueError: If `min_value > max_value`.
-        """
-        if not isinstance(min_value, int):
-            raise TypeError("min_value must be an int: %r" % (min_value,))
+@oneflow_export("IntegerRange")
+class IntegerRange(object):
+    def __init__(self, min_value, max_value):
         if not isinstance(max_value, int):
-            raise TypeError("max_value must be an int: %r" % (max_value,))
+            raise TypeError("max_value is not an integer value: %r" % (max_value,))
+        if not isinstance(min_value, int):
+            raise TypeError("min_value is not an integer value: %r" % (min_value,))
         if min_value > max_value:
-            raise ValueError("%r > %r" % (min_value, max_value))
-        self._min_value = min_value
-        self._max_value = max_value
-
-    def __str__(self):
-        return "[%s, %s]" % (self._min_value, self._max_value)
+            raise ValueError(
+                "max_value must bigger than min_value: %r > %r" % (min_value, max_value)
+            )
+        self.min_value_ = min_value
+        self.max_value_ = max_value
 
     def __repr__(self):
-        return "IntInterval(%r, %r)" % (self._min_value, self._max_value)
-
-    @property
-    def dtype(self):
-        return int
+        return "IntegerRange(%r, %r)" % (self.min_value_, self.max_value_)
 
     @property
     def min_value(self):
-        return self._min_value
+        return self.min_value_
 
     @property
     def max_value(self):
-        return self._max_value
-
-    def sample_uniform(self, rng=random):
-        return rng.randint(self._min_value, self._max_value)
-
-    def update_hparam_info(self, hparam_info):
-        hparam_info.type = api_pb2.DATA_TYPE_FLOAT64  # TODO(#1998): Add int dtype.
-        hparam_info.domain_interval.min_value = self._min_value
-        hparam_info.domain_interval.max_value = self._max_value
+        return self.max_value_
 
 
-@oneflow_export("RealInterval")
-class RealInterval(Domain):
-    """A domain that takes on all real values in a closed interval."""
-
-    def __init__(self, min_value=None, max_value=None):
-        """Create a `RealInterval`.
-
-        Args:
-          min_value: The lower bound (inclusive) of the interval.
-          max_value: The upper bound (inclusive) of the interval.
-
-        Raises:
-          TypeError: If `min_value` or `max_value` is not an `float`.
-          ValueError: If `min_value > max_value`.
-        """
-        if not isinstance(min_value, float):
-            raise TypeError("min_value must be a float: %r" % (min_value,))
+@oneflow_export("RealRange")
+class RealRange(object):
+    def __init__(self, min_value, max_value):
         if not isinstance(max_value, float):
-            raise TypeError("max_value must be a float: %r" % (max_value,))
+            raise TypeError("max_value is not an float value: %r" % (max_value,))
+        if not isinstance(min_value, float):
+            raise TypeError("min_value is not an float value: %r" % (min_value,))
         if min_value > max_value:
-            raise ValueError("%r > %r" % (min_value, max_value))
-        self._min_value = min_value
-        self._max_value = max_value
-
-    def __str__(self):
-        return "[%s, %s]" % (self._min_value, self._max_value)
+            raise ValueError(
+                "max_value must bigger than min_value: %r > %r" % (min_value, max_value)
+            )
+        self.min_value_ = min_value
+        self.max_value_ = max_value
 
     def __repr__(self):
-        return "RealInterval(%r, %r)" % (self._min_value, self._max_value)
-
-    @property
-    def dtype(self):
-        return float
+        return "RealRange(%r, %r)" % (self.min_value_, self.max_value_)
 
     @property
     def min_value(self):
-        return self._min_value
+        return self.min_value_
 
     @property
     def max_value(self):
-        return self._max_value
-
-    def sample_uniform(self, rng=random):
-        return rng.uniform(self._min_value, self._max_value)
-
-    def update_hparam_info(self, hparam_info):
-        hparam_info.type = api_pb2.DATA_TYPE_FLOAT64
-        hparam_info.domain_interval.min_value = self._min_value
-        hparam_info.domain_interval.max_value = self._max_value
+        return self.max_value_
 
 
-@oneflow_export("Discrete")
-class Discrete(Domain):
-    """A domain that takes on a fixed set of values.
-
-    These values may be of any (single) domain type.
-    """
-
+@oneflow_export("ValueSet")
+class ValueSet(object):
     def __init__(self, values, dtype=None):
-        """Construct a discrete domain.
-
-        Args:
-          values: A iterable of the values in this domain.
-          dtype: The Python data type of values in this domain: one of
-            `int`, `float`, `bool`, or `str`. If `values` is non-empty,
-            `dtype` may be `None`, in which case it will be inferred as the
-            type of the first element of `values`.
-
-        Raises:
-          ValueError: If `values` is empty but no `dtype` is specified.
-          ValueError: If `dtype` or its inferred value is not `int`,
-            `float`, `bool`, or `str`.
-          TypeError: If an element of `values` is not an instance of
-            `dtype`.
-        """
-        self._values = list(values)
+        self.values_ = list(values)
         if dtype is None:
-            if self._values:
-                dtype = type(self._values[0])
+            if self.values_:
+                dtype = type(self.values_[0])
             else:
                 raise ValueError("Empty domain with no dtype specified")
         if dtype not in (int, float, bool, str):
             raise ValueError("Unknown dtype: %r" % (dtype,))
-        self._dtype = dtype
-        for value in self._values:
-            if not isinstance(value, self._dtype):
+        self.dtype_ = dtype
+        for value in self.values_:
+            if not isinstance(value, self.dtype_):
                 raise TypeError(
                     "dtype mismatch: not isinstance(%r, %s)"
-                    % (value, self._dtype.__name__)
+                    % (value, self.dtype_.__name__)
                 )
-        self._values.sort()
-
-    def __str__(self):
-        return "{%s}" % (", ".join(repr(x) for x in self._values))
+        self.values_.sort()
 
     def __repr__(self):
-        return "Discrete(%r)" % (self._values,)
+        return "ValueSet(%r)" % (self.values_,)
 
     @property
     def dtype(self):
-        return self._dtype
+        return self.dtype_
 
     @property
     def values(self):
-        return list(self._values)
-
-    def sample_uniform(self, rng=random):
-        return rng.choice(self._values)
-
-    def update_hparam_info(self, hparam_info):
-        hparam_info.type = {
-            int: api_pb2.DATA_TYPE_FLOAT64,  # TODO(#1998): Add int dtype.
-            float: api_pb2.DATA_TYPE_FLOAT64,
-            bool: api_pb2.DATA_TYPE_BOOL,
-            str: api_pb2.DATA_TYPE_STRING,
-        }[self._dtype]
-        hparam_info.ClearField("domain_discrete")
-        hparam_info.domain_discrete.extend(self._values)
+        return list(self.values_)
 
 
 @oneflow_export("Metric")

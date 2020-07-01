@@ -51,5 +51,16 @@ REGISTER_USER_OP("write_pb")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
+REGISTER_USER_OP("write_image")
+    .Input("in")
+    .Input("step")
+    .Input("tag")
+    //.Input("max_images")
+    //.Input("bad_color")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+
 }  // namespace
 }  // namespace oneflow

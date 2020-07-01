@@ -41,6 +41,22 @@ message HistogramProto {
   repeated double bucket = 7 [packed = true];
 };
 
+message Image {
+    // Dimensions of the image.
+    required int32 height = 1;
+    required int32 width = 2;
+    // Valid colorspace values are
+    //   1 - grayscale
+    //   2 - grayscale + alpha
+    //   3 - RGB
+    //   4 - RGBA
+    //   5 - DIGITAL_YUV
+    //   6 - BGRA
+    required int32 colorspace = 3;
+    // Image data in encoded format.  All image formats supported by
+    // image_codec::CoderUtil can be stored here.
+    required bytes encoded_image_string = 4;
+};
 
 message Summary {
   message Value {
@@ -63,7 +79,7 @@ message Summary {
     oneof value {
       float simple_value = 2;
       bytes obsolete_old_style_histogram = 3;
-      //Image image = 4;
+      Image image = 4;
       HistogramProto histo = 5;
       //Audio audio = 6;
       TensorProto tensor = 8;

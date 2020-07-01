@@ -78,3 +78,23 @@ def write_pb(value, step=None, name=None):
         .Build()
         .InferAndTryRun()
     )
+
+
+@oneflow_export("summary.image")
+# def write_image(data, step=None, bad_color=None, tag=None, max_images=None, name=None):
+def write_image(value, step=None, tag=None, name=None):
+    if name is None:
+        name = id_util.UniqueStr("WriteImage_")
+    if tag is None:
+        tag = "image"
+    (
+        flow.user_op_builder(name)
+        .Op("write_image")
+        .Input("in", [value])
+        .Input("step", [step])
+        .Input("tag", [tag])
+        #        .Input("max_images", [max_images])
+        #        .Input("bad_color", [bad_color])
+        .Build()
+        .InferAndTryRun()
+    )

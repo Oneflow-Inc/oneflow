@@ -14,6 +14,11 @@
 #include <time.h>
 #include <memory>
 
+#include <png.h>
+#include <zlib.h>
+#include <opencv2/opencv.hpp>
+#define PNG_LIBPNG_VER_STRING "1.6.24"
+
 namespace oneflow {
 
 namespace {
@@ -30,6 +35,122 @@ void PatchPluginName(SummaryMetadata* metadata, const char* name) {
   }
 }
 
+void StringWriter(png_structp png_ptr, png_bytep data, png_size_t length) {
+  std::string* const s = reinterpret_cast<std::string*>(png_get_io_ptr(png_ptr));
+  s->append(reinterpret_cast<const char*>(data), length);
+}
+
+void StringWriterFlush(png_structp png_ptr) {}
+
+void ErrorHandler(png_structp png_ptr, png_const_charp msg) {
+  VLOG(1) << "PNG error: " << msg;
+  longjmp(png_jmpbuf(png_ptr), 1);
+}
+
+void WarningHandler(png_structp png_ptr, png_const_charp msg) {
+  LOG(WARNING) << "PNG warning: " << msg;
+}
+bool WriteImageToBuffer(const uint8_t* image, int width, int height, int row_bytes,
+                        int num_channels, int channel_bits, int compression,
+                        std::string* png_string) {
+  CHECK_NOTNULL(image);
+  CHECK_NOTNULL(png_string);
+  if (width == 0 || height == 0) return false;
+
+  png_string->resize(0);
+  png_infop info_ptr = nullptr;
+  png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
+  if (png_ptr == nullptr) return false;
+  if (setjmp(png_jmpbuf(png_ptr))) {
+    png_destroy_write_struct(&png_ptr, info_ptr ? &info_ptr : nullptr);
+    return false;
+  }
+  info_ptr = png_create_info_struct(png_ptr);
+  if (info_ptr == nullptr) {
+    png_destroy_write_struct(&png_ptr, nullptr);
+    return false;
+  }
+  int color_type = -1;
+  switch (num_channels) {
+    case 1: color_type = PNG_COLOR_TYPE_GRAY; break;
+    case 2: color_type = PNG_COLOR_TYPE_GRAY_ALPHA; break;
+    case 3: color_type = PNG_COLOR_TYPE_RGB; break;
+    case 4: color_type = PNG_COLOR_TYPE_RGB_ALPHA; break;
+    default: png_destroy_write_struct(&png_ptr, &info_ptr); return false;
+  }
+  png_set_write_fn(png_ptr, png_string, StringWriter, StringWriterFlush);
+  if (compression < 0) compression = Z_DEFAULT_COMPRESSION;
+  png_set_compression_level(png_ptr, compression);
+  png_set_compression_mem_level(png_ptr, MAX_MEM_LEVEL);
+  // There used to be a call to png_set_filter here turning off filtering
+  // entirely, but it produced pessimal compression ratios.  I'm not sure
+  // why it was there.
+  png_set_IHDR(png_ptr, info_ptr, width, height, channel_bits, color_type, PNG_INTERLACE_NONE,
+               PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+  png_write_info(png_ptr, info_ptr);
+  png_byte* row = reinterpret_cast<png_byte*>(const_cast<uint8_t*>(image));
+  for (; height--; row += row_bytes) {
+    png_write_row(png_ptr, row);
+    auto j = row;
+  }
+
+  png_write_end(png_ptr, nullptr);
+  png_destroy_write_struct(&png_ptr, &info_ptr);
+  return true;
+}
+
+Maybe<void> AddImageToSummary(
+    const user_op::Tensor* tensor, const std::string& tag,
+    //                              const int64_t max_images, const user_op::Tensor* bad_color,
+    Summary* s) {
+  SummaryMetadata metadata;
+  PatchPluginName(&metadata, kImagePluginName);
+  if (!(tensor->shape().NumAxes() == 4
+        && (tensor->shape().At(3) == 1 || tensor->shape().At(3) == 3
+            || tensor->shape().At(3) == 4))) {
+    UNIMPLEMENTED();
+  }
+  if (!(tensor->shape().At(0) < (1LL << 31) && tensor->shape().At(1) < (1LL << 31)
+        && tensor->shape().At(2) < (1LL << 31)
+        && (tensor->shape().At(1) * tensor->shape().At(2)) < (1LL << 29))) {
+    UNIMPLEMENTED();
+  }
+  const int64_t batch_size = static_cast<int64_t>(tensor->shape().At(0));
+  const int64_t h = static_cast<int64_t>(tensor->shape().At(1));
+  const int64_t w = static_cast<int64_t>(tensor->shape().At(2));
+  const int64_t hw = h * w;
+  const int64_t depth = static_cast<int64_t>(tensor->shape().At(3));
+  const int channel_bits = 8;
+  const int compression = -1;
+  if (tensor->data_type() == DataType::kUInt8 || tensor->data_type() == DataType::kInt8
+      || tensor->data_type() == DataType::kChar) {
+    //  const int N = std::min(max_images, batch_size);
+    const int N = batch_size;
+    auto ith_image = [tensor, batch_size, hw, depth](int i) {
+      auto values = tensor->dptr<uint8_t>();
+      uint8_t* image_ptr = (uint8_t*)malloc(sizeof(uint8_t) * hw * depth);
+      FOR_RANGE(int, j, 0, hw* depth) { image_ptr[j] = values[i * hw * depth + j]; }
+      return image_ptr;
+    };
+    for (int i = 0; i < N; ++i) {
+      Summary::Value* v = s->add_value();
+      *v->mutable_metadata() = metadata;
+      v->set_tag(tag + std::to_string(i));
+      Image* si = v->mutable_image();
+      si->set_height(h);
+      si->set_width(w);
+      si->set_colorspace(depth);
+      auto image = ith_image(i);
+      if (!WriteImageToBuffer(image, w, h, w * depth, depth, channel_bits, compression,
+                              si->mutable_encoded_image_string()))
+        UNIMPLEMENTED();
+      // WriteImageToBuffer(image, w, h, w * depth, depth, channel_bits, compression,
+      //                   si->mutable_encoded_image_string());
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> AddScalarToSummary(const float& value, const std::string& tag, Summary* s) {
   SummaryMetadata metadata;
   PatchPluginName(&metadata, kScalarPluginName);
@@ -38,6 +159,16 @@ Maybe<void> AddScalarToSummary(const float& value, const std::string& tag, Summa
   *v->mutable_metadata() = metadata;
   v->set_simple_value(value);
   return Maybe<void>::Ok();
+}
+
+void WriteImage(const int64_t step, const user_op::Tensor* tensor, const std::string& tag) {
+  //, const int64_t max_images, const user_op::Tensor* bad_color) {
+  Event e;
+  e.set_step(step);
+  e.set_wall_time(envtime::GetWallTime());
+  //  AddImageToSummary(tensor, tag, max_images, bad_color, e.mutable_summary());
+  AddImageToSummary(tensor, tag, e.mutable_summary());
+  return Global<EventsWriter>::Get()->WriteEvent(e);
 }
 
 void WriteScalar(int64_t step, const float& value, const std::string& tag) {
@@ -49,6 +180,7 @@ void WriteScalar(int64_t step, const float& value, const std::string& tag) {
   Global<EventsWriter>::Get()->WriteEvent(e);
 }
 
+template<typename T>
 Maybe<void> AddHistogramToSummary(const user_op::Tensor& value, const std::string& tag,
                                   Summary* s) {
   SummaryMetadata metadata;
@@ -58,7 +190,7 @@ Maybe<void> AddHistogramToSummary(const user_op::Tensor& value, const std::strin
   *v->mutable_metadata() = metadata;
   histogram::Histogram histo;
   for (int64_t i = 0; i < value.shape().elem_cnt(); i++) {
-    double double_val = value.dptr<double>()[i];
+    double double_val = value.dptr<T>()[i];
     // float double_val = value.dptr<float>()[i];
     // TF_RETURN_IF_ERROR(TensorValueAt<double>(t, i, &double_val));
 
@@ -193,11 +325,12 @@ void AddTextToSummary(const user_op::Tensor& value, const std::string& tag, Summ
   if (value.data_type() == DataType::kInt8) { AsProtoField(v->mutable_tensor(), value); }
 }
 
+template<typename T>
 void WriteHistogram(const float& step, const user_op::Tensor& value, const std::string& tag) {
   Event e;
   e.set_step(step);
   e.set_wall_time(envtime::GetWallTime());
-  AddHistogramToSummary(value, tag, e.mutable_summary());
+  AddHistogramToSummary<T>(value, tag, e.mutable_summary());
   Global<EventsWriter>::Get()->WriteEvent(e);
 }
 
@@ -209,6 +342,7 @@ void WriteText(const float& step, const user_op::Tensor& value, const std::strin
   Global<EventsWriter>::Get()->WriteEvent(e);
 }
 
+template<typename T>
 class WriteScalarOp final : public user_op::OpKernel {
  public:
   WriteScalarOp() = default;
@@ -220,20 +354,29 @@ class WriteScalarOp final : public user_op::OpKernel {
     const user_op::Tensor* tag = ctx->Tensor4ArgNameAndIndex("tag", 0);
     const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("in", 0);
 
-    double* dvalue = const_cast<double*>(value->dptr<double>());
-    CHECK_NOTNULL(dvalue);
+    T* tvalue = const_cast<T*>(value->dptr<T>());
+    CHECK_NOTNULL(tvalue);
     int64_t* istep = const_cast<int64_t*>(step->dptr<int64_t>());
     CHECK_NOTNULL(istep);
     int8_t* ctag = const_cast<int8_t*>(tag->dptr<int8_t>());
     CHECK_NOTNULL(ctag);
-    WriteScalar(istep[0], dvalue[0], reinterpret_cast<char*>(ctag));
+    WriteScalar(istep[0], static_cast<double>(tvalue[0]), reinterpret_cast<char*>(ctag));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-REGISTER_USER_KERNEL("write_scalar")
-    .SetCreateFn<WriteScalarOp>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
+#define REGISTER_SCALAR_USER_KERNEL(dtype)                                            \
+  REGISTER_USER_KERNEL("write_scalar")                                                \
+      .SetCreateFn<WriteScalarOp<dtype>>()                                            \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
+        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0); \
+        return in_desc->data_type() == GetDataType<dtype>::value;                     \
+      });
+
+REGISTER_SCALAR_USER_KERNEL(double)
+REGISTER_SCALAR_USER_KERNEL(float)
+REGISTER_SCALAR_USER_KERNEL(int64_t)
+REGISTER_SCALAR_USER_KERNEL(int32_t)
 
 class CreateSummaryWriterOp final : public user_op::OpKernel {
  public:
@@ -252,6 +395,7 @@ REGISTER_USER_KERNEL("create_summary_writer")
     .SetCreateFn<CreateSummaryWriterOp>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
 
+template<typename T>
 class WriteHistogramOp final : public user_op::OpKernel {
  public:
   WriteHistogramOp() = default;
@@ -266,14 +410,24 @@ class WriteHistogramOp final : public user_op::OpKernel {
     CHECK_NOTNULL(istep);
     int8_t* ctag = const_cast<int8_t*>(tag->dptr<int8_t>());
     CHECK_NOTNULL(ctag);
-    WriteHistogram(static_cast<float>(istep[0]), *value, reinterpret_cast<char*>(ctag));
+    WriteHistogram<T>(static_cast<float>(istep[0]), *value, reinterpret_cast<char*>(ctag));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-REGISTER_USER_KERNEL("write_histogram")
-    .SetCreateFn<WriteHistogramOp>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
+#define REGISTER_HISTOGRAM_USER_KERNEL(dtype)                                         \
+  REGISTER_USER_KERNEL("write_histogram")                                             \
+      .SetCreateFn<WriteHistogramOp<dtype>>()                                         \
+      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
+        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0); \
+        return in_desc->data_type() == GetDataType<dtype>::value;                     \
+      });
+
+REGISTER_HISTOGRAM_USER_KERNEL(double)
+REGISTER_HISTOGRAM_USER_KERNEL(float)
+REGISTER_HISTOGRAM_USER_KERNEL(int64_t)
+REGISTER_HISTOGRAM_USER_KERNEL(int32_t)
+REGISTER_HISTOGRAM_USER_KERNEL(int8_t)
 
 class WriteTextOp final : public user_op::OpKernel {
  public:
@@ -325,6 +479,35 @@ class WritePb final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("write_pb")
     .SetCreateFn<WritePb>()
+    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
+
+class WriteImageOp final : public user_op::OpKernel {
+ public:
+  WriteImageOp() = default;
+  ~WriteImageOp() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* step = ctx->Tensor4ArgNameAndIndex("step", 0);
+    const user_op::Tensor* tag = ctx->Tensor4ArgNameAndIndex("tag", 0);
+    const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("in", 0);
+    // const user_op::Tensor* bad_color = ctx->Tensor4ArgNameAndIndex("bad_color", 0);
+    // const user_op::Tensor* max_images = ctx->Tensor4ArgNameAndIndex("max_images", 0);
+    int64_t* istep = const_cast<int64_t*>(step->dptr<int64_t>());
+    CHECK_NOTNULL(istep);
+    char* ctag = const_cast<char*>(tag->dptr<char>());
+    CHECK_NOTNULL(ctag);
+    // int64_t* imax_images = const_cast<int64_t*>(max_images->dptr<int64_t>());
+    // CHECK_NOTNULL(imax_images);
+    // WriteImage(static_cast<int64_t>(istep[0]), value, ctag, static_cast<int64_t>(imax_images[0]),
+    //           bad_color);
+    WriteImage(static_cast<int64_t>(istep[0]), value, ctag);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+REGISTER_USER_KERNEL("write_image")
+    .SetCreateFn<WriteImageOp>()
     .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
 
 }  // namespace
