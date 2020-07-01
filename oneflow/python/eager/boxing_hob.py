@@ -91,6 +91,22 @@ def SameDeviceIds(context):
     return blob_device_ids == op_device_ids
 
 
+@bool_functor("blob's devices contained in op_arg's devices")
+def BlobDeviceIdsContainedInOpArgDevices(context):
+    x_blob_object, op_arg_parallel_attr = context
+    return op_arg_parallel_attr.parallel_desc_symbol.Containing(
+        x_blob_object.parallel_desc_symbol
+    )
+
+
+@bool_functor("op_arg's devices contained in blob's devices")
+def OpArgDeviceIdsContainedInBlobDevices(context):
+    x_blob_object, op_arg_parallel_attr = context
+    return x_blob_object.parallel_desc_symbol.Containing(
+        op_arg_parallel_attr.parallel_desc_symbol
+    )
+
+
 @hob_context_attr("op_arg_sbp_parallel")
 def op_arg_sbp_parallel(context):
     _, op_arg_parallel_attr = context

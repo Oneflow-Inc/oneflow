@@ -32,7 +32,10 @@ def unique(arg_funcs, context=None, default=None):
             hob_expr = func.__oneflow_condition_hob__
         else:
             raise NotImplementedError
-        conditional_functions.append((hob_expr, func, func.__name__))
+        debug_str = func.__name__
+        if hasattr(func, "__debug_str__"):
+            debug_str = func.__debug_str__
+        conditional_functions.append((hob_expr, func, debug_str))
     matched_func = GetMatchedFunction(conditional_functions, context=context)
     if matched_func is not None:
         return matched_func
