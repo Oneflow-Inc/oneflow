@@ -30,8 +30,8 @@ class flow_op:
         name,
         onnx_op=None,
         domain=constants.ONNX_DOMAIN,
-        flow_inputs=None,
-        flow_outputs=None,
+        flow_ibns=None,
+        flow_obns=None,
         **kwargs
     ):
         """Called decorator from decorator.
@@ -48,8 +48,8 @@ class flow_op:
         self.onnx_op = onnx_op
         self.domain = domain
         self.kwargs = kwargs
-        self.flow_ibns = flow_inputs
-        self.flow_obns = flow_outputs
+        self.flow_ibns = flow_ibns
+        self.flow_obns = flow_obns
 
     def __call__(self, func):
         opset = flow_op._OPSETS.get(self.domain)

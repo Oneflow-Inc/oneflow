@@ -27,11 +27,11 @@ logger = logging.getLogger(__name__)
 
 @flow_op(["broadcast_add", "scalar_add_by_tensor"], onnx_op="Add")
 @flow_op(
-    ["broadcast_sub", "scalar_sub_by_tensor"], onnx_op="Sub", flow_inputs=["x", "y"]
+    ["broadcast_sub", "scalar_sub_by_tensor"], onnx_op="Sub", flow_ibns=["x", "y"]
 )
 @flow_op(["multiply", "broadcast_mul", "scalar_mul_by_tensor"], onnx_op="Mul")
 @flow_op(
-    ["broadcast_div", "scalar_div_by_tensor"], onnx_op="Div", flow_inputs=["x", "y"]
+    ["broadcast_div", "scalar_div_by_tensor"], onnx_op="Div", flow_ibns=["x", "y"]
 )
 class BroadcastOp(common.BroadcastOp):
     pass
@@ -61,7 +61,7 @@ class AddN:
         pass
 
 
-@flow_op("bias_add", onnx_op="Add", flow_inputs=["a", "b"])
+@flow_op("bias_add", onnx_op="Add", flow_ibns=["a", "b"])
 class BiasAdd(common.BroadcastOp):
     @classmethod
     def Version_6(cls, ctx, node, **kwargs):
@@ -397,7 +397,7 @@ class Sign:
             )
 
 
-@flow_op(["matmul", "batch_matmul"], "MatMul", flow_inputs=["a", "b"])
+@flow_op(["matmul", "batch_matmul"], "MatMul", flow_ibns=["a", "b"])
 class MatMul:
     @classmethod
     def Version_1(cls, ctx, node, **kwargs):
@@ -664,8 +664,8 @@ class DirectOp:
         _AddCastToOutput(ctx, node)
 
 
-@flow_op("broadcast_logical_and", onnx_op="And", flow_inputs=["x", "y"])
-@flow_op("broadcast_logical_or", onnx_op="Or", flow_inputs=["x", "y"])
+@flow_op("broadcast_logical_and", onnx_op="And", flow_ibns=["x", "y"])
+@flow_op("broadcast_logical_or", onnx_op="Or", flow_ibns=["x", "y"])
 class BroadcastOp(common.BroadcastOp):
     @classmethod
     def Version_1(cls, ctx, node, **kwargs):
@@ -676,7 +676,7 @@ class BroadcastOp(common.BroadcastOp):
 @flow_op(
     ["broadcast_equal", "broadcast_not_equal"],
     ["Equal", "NotEqual"],
-    flow_inputs=["x", "y"],
+    flow_ibns=["x", "y"],
 )
 class Equal:
     @classmethod
@@ -727,7 +727,7 @@ class Equal:
 
 
 @flow_op(
-    ["broadcast_greater", "broadcast_less"], ["Greater", "Less"], flow_inputs=["x", "y"]
+    ["broadcast_greater", "broadcast_less"], ["Greater", "Less"], flow_ibns=["x", "y"]
 )
 class GreaterLess:
     @classmethod
@@ -746,8 +746,8 @@ class GreaterLess:
         _AddCastToInputs(ctx, node, supported_dtypes, target_dtype)
 
 
-@flow_op("broadcast_greater_equal", onnx_op="Less", flow_inputs=["x", "y"])
-@flow_op("broadcast_less_equal", onnx_op="Greater", flow_inputs=["x", "y"])
+@flow_op("broadcast_greater_equal", onnx_op="Less", flow_ibns=["x", "y"])
+@flow_op("broadcast_less_equal", onnx_op="Greater", flow_ibns=["x", "y"])
 class GreaterLessEqual:
     @classmethod
     def Version_7(cls, ctx, node, **kwargs):

@@ -223,7 +223,7 @@ def conv_kernel_shape(ctx, node, input_idx, spatial=2):
     return kernel_shape
 
 
-@flow_op(["conv2d"], flow_inputs=["in", "weight"])
+@flow_op(["conv2d"], flow_ibns=["in", "weight"])
 class ConvOp:
     @classmethod
     def Version_1(cls, ctx, node, **kwargs):
@@ -251,23 +251,22 @@ class ConvOp:
 class PoolOp:
     @classmethod
     def Version_1(cls, ctx, node, **kwargs):
-        cls._convert(ctx, node, **kwargs)
+        cls._Convert(ctx, node, **kwargs)
 
     @classmethod
     def Version_10(cls, ctx, node, **kwargs):
-        cls._convert(ctx, node, **kwargs)
+        cls._Convert(ctx, node, **kwargs)
 
     @classmethod
     def Version_11(cls, ctx, node, **kwargs):
         # no change
-        cls._convert(ctx, node, **kwargs)
+        cls._Convert(ctx, node, **kwargs)
 
     @classmethod
-    def _convert(cls, ctx, node, **kwargs):
+    def _Convert(cls, ctx, node, **kwargs):
         # T output = MaxPool(T input, @list(int) ksize, @list(int) strides, @string padding, @string data_format)
         # T Y = MaxPool(T X, @AttrType.STRING auto_pad, @AttrType.INTS kernel_shape, @AttrType.INTS pads,
         #               @AttrType.INTS strides)
-        # above seems wrong - input[1] is ksize, input[2] is strides
         if len(node.input) < 3:
             kernel_shape_flow = node.get_attr("pool_size").ints
             strides_flow = node.get_attr("strides").ints
@@ -321,7 +320,7 @@ class Pad:
 
 @flow_op(
     ["normalization"],
-    flow_inputs=["x", "gamma", "beta", "moving_mean", "moving_variance"],
+    flow_ibns=["x", "gamma", "beta", "moving_mean", "moving_variance"],
 )
 class BatchNorm:
     @classmethod

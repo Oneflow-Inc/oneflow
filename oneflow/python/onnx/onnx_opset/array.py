@@ -319,7 +319,7 @@ def _MakeGatherNd(ctx, params, indices, output, scope_name, t_params, shapes, dt
     )
 
 
-@flow_op("gather_nd", onnx_op="GatherND", flow_inputs=["params", "indices"])
+@flow_op("gather_nd", onnx_op="GatherND", flow_ibns=["params", "indices"])
 class GatherND:
     @classmethod
     def Version_1(cls, ctx, node, **kwargs):
