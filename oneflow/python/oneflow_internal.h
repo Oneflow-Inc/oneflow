@@ -26,7 +26,7 @@ std::string CurrentResource(std::string* error_str) {
 }
 
 std::string EnvResource(std::string* error_str) {
-  return oneflow::EnvResource().GetDataAndSerializedErrorProto(error_str, "");
+  return oneflow::EnvResource().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 void EnableEagerExecution(bool enable_eager_execution) {
@@ -105,7 +105,7 @@ std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& p
 
 std::string GetOpAttribute4OpConf(const std::string& serialized_op_conf, std::string* error_str) {
   return oneflow::GetOpAttribute4OpConf(serialized_op_conf)
-      .GetDataAndSerializedErrorProto(error_str, "");
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
