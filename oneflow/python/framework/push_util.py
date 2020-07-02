@@ -56,7 +56,7 @@ def _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_value):
         for v in arg_value:
             assert isinstance(v, numpy.ndarray)
             assert len(v.shape) == len(arg_blob_def.shape)
-            assert numpy.prod(v) <= numpy.prod(arg_blob_def.shape)
+            assert numpy.prod(v.shape) <= numpy.prod(arg_blob_def.shape)
     elif isinstance(arg_blob_def, input_blob_util.MirroredTensorListDef):
         raise NotImplementedError
     else:

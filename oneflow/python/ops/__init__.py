@@ -25,7 +25,7 @@ def InputOpByArgBlobDef(blob_def):
 
 
 def ReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
-    return enable_if.unique(LazyReturnRemoteBlob, EagerReturnRemoteBlob)(
+    return enable_if.unique([LazyReturnRemoteBlob, EagerReturnRemoteBlob])(
         remote_blob, allow_cpu_return_op
     )
 
