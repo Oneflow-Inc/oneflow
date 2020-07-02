@@ -34,11 +34,11 @@ class ComposeHob(BoolFunctor):
     def _GetLhsContext(self, ctx):
         ctx_id = tuple(map(id, ctx))
         if ctx_id not in self.ctx_id2lhs_context_:
-            x_blob_object, _ = ctx
+            produced_blob_object, _ = ctx
             blob_object = BlobObject(
-                object_id=x_blob_object.object_id,
-                op_arg_parallel_attr=x_blob_object.op_arg_parallel_attr,
-                op_arg_blob_attr=x_blob_object.op_arg_blob_attr,
+                object_id=produced_blob_object.object_id,
+                op_arg_parallel_attr=produced_blob_object.op_arg_parallel_attr,
+                op_arg_blob_attr=produced_blob_object.op_arg_blob_attr,
                 release=None,
             )
             value = (
@@ -51,16 +51,16 @@ class ComposeHob(BoolFunctor):
     def _GetRhsContext(self, ctx):
         ctx_id = tuple(map(id, ctx))
         if ctx_id not in self.ctx_id2rhs_context_:
-            x_blob_object, op_arg_parallel_attr = ctx
+            produced_blob_object, consumer_op_arg_parallel_attr = ctx
             medium_blob_object = BlobObject(
-                object_id=x_blob_object.object_id,
+                object_id=produced_blob_object.object_id,
                 op_arg_parallel_attr=self._GetMediumOpArgParallelAttr(ctx),
-                op_arg_blob_attr=x_blob_object.op_arg_blob_attr,
+                op_arg_blob_attr=produced_blob_object.op_arg_blob_attr,
                 release=None,
             )
             value = (
                 medium_blob_object,
-                op_arg_parallel_attr,
+                consumer_op_arg_parallel_attr,
             )
             self.ctx_id2rhs_context_[ctx_id] = value
         return self.ctx_id2rhs_context_[ctx_id]
@@ -75,57 +75,50 @@ class ComposeHob(BoolFunctor):
 
 @bool_functor("MasterMachineOnly")
 def MasterMachineOnly(context):
-    x_blob_object, op_arg_parallel_attr = context
-    blob_device_ids = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
-    arg_parallel_desc_symbol = op_arg_parallel_attr.parallel_desc_symbol
+    produced_blob_object, consumer_op_arg_parallel_attr = context
+    blob_device_ids = (
+        produced_blob_object.parallel_desc_symbol.machine_id2device_id_list
+    )
+    arg_parallel_desc_symbol = consumer_op_arg_parallel_attr.parallel_desc_symbol
     op_arg_device_ids = arg_parallel_desc_symbol.machine_id2device_id_list
     return list(blob_device_ids.keys()) == [0] and list(op_arg_device_ids.keys()) == [0]
 
 
-@bool_functor("SameDeviceIds")
-def SameDeviceIds(context):
-    x_blob_object, op_arg_parallel_attr = context
-    blob_device_ids = x_blob_object.parallel_desc_symbol.machine_id2device_id_list
-    arg_parallel_desc_symbol = op_arg_parallel_attr.parallel_desc_symbol
-    op_device_ids = arg_parallel_desc_symbol.machine_id2device_id_list
-    return blob_device_ids == op_device_ids
-
-
-@bool_functor("blob's devices contained in op_arg's devices")
-def BlobDeviceIdsContainedInOpArgDevices(context):
-    x_blob_object, op_arg_parallel_attr = context
-    return op_arg_parallel_attr.parallel_desc_symbol.Containing(
-        x_blob_object.parallel_desc_symbol
+@bool_functor("producer's devices contained in consumer's devices")
+def ProducerDevicesContainedInConsumerDevices(context):
+    produced_blob_object, consumer_op_arg_parallel_attr = context
+    return consumer_op_arg_parallel_attr.parallel_desc_symbol.Containing(
+        produced_blob_object.parallel_desc_symbol
     )
 
 
-@bool_functor("op_arg's devices contained in blob's devices")
-def OpArgDeviceIdsContainedInBlobDevices(context):
-    x_blob_object, op_arg_parallel_attr = context
-    return x_blob_object.parallel_desc_symbol.Containing(
-        op_arg_parallel_attr.parallel_desc_symbol
+@bool_functor("consumer's devices contained in producer's devices")
+def ConsumerDevicesContainedInProducerDevices(context):
+    produced_blob_object, consumer_op_arg_parallel_attr = context
+    return produced_blob_object.parallel_desc_symbol.Containing(
+        consumer_op_arg_parallel_attr.parallel_desc_symbol
     )
 
 
-@hob_context_attr("op_arg_sbp_parallel")
-def op_arg_sbp_parallel(context):
-    _, op_arg_parallel_attr = context
-    return op_arg_parallel_attr.sbp_parallel
+@hob_context_attr("consumer_sbp_parallel")
+def consumer_sbp_parallel(context):
+    _, consumer_op_arg_parallel_attr = context
+    return consumer_op_arg_parallel_attr.sbp_parallel
 
 
-@hob_context_attr("blob_sbp_parallel")
-def blob_sbp_parallel(context):
-    x_blob_object, _ = context
-    return x_blob_object.op_arg_parallel_attr.sbp_parallel
+@hob_context_attr("producer_sbp_parallel")
+def producer_sbp_parallel(context):
+    produced_blob_object, _ = context
+    return produced_blob_object.op_arg_parallel_attr.sbp_parallel
 
 
-@hob_context_attr("blob_parallel_desc")
-def blob_parallel_desc(context):
-    x_blob_object, op_arg_parallel_attr = context
-    return x_blob_object.op_arg_parallel_attr.parallel_desc_symbol
+@hob_context_attr("producer_parallel_desc")
+def producer_parallel_desc(context):
+    produced_blob_object, consumer_op_arg_parallel_attr = context
+    return produced_blob_object.op_arg_parallel_attr.parallel_desc_symbol
 
 
-@hob_context_attr("op_arg_parallel_desc")
-def op_arg_parallel_desc(context):
-    x_blob_object, op_arg_parallel_attr = context
-    return op_arg_parallel_attr.parallel_desc_symbol
+@hob_context_attr("consumer_parallel_desc")
+def consumer_parallel_desc(context):
+    produced_blob_object, consumer_op_arg_parallel_attr = context
+    return consumer_op_arg_parallel_attr.parallel_desc_symbol
