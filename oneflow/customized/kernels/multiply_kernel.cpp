@@ -39,7 +39,8 @@ class MultiplyKernel final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MULTIPLY_KERNEL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MULTIPLY_KERNEL, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
 #undef REGISTER_MULTIPLY_KERNEL
 
 }  // namespace oneflow
