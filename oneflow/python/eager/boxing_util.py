@@ -28,7 +28,7 @@ def BoxingTo(builder, x_blob_object, op_arg_parallel_attr):
         CopyD2H,
         NoBoxing,
         BroadcastOneToMany,
-        Sequential((BroadcastOneToMany, ReplaceBlobParallelDesc("cpu")), CopyH2D),
+        Sequential((BroadcastOneToMany, BroadcastBlobParallelDesc("cpu")), CopyH2D),
         Sequential((CopyD2H, ReplaceBlobDeviceTag("cpu")), BroadcastOneToMany),
         BroadcastManyToOne,
         Sequential((BroadcastManyToOne, ReplaceBlobParallelDesc("cpu")), CopyH2D),
@@ -203,6 +203,24 @@ def ReplaceBlobParallelDesc(new_device_tag):
         return op_arg_util.OpArgParallelAttribute(
             new_parallel_desc_symbol,
             x_parallel_attr.sbp_parallel,
+            x_parallel_attr.opt_mirrored_parallel,
+        )
+
+    return GetOpArgParallelAttr
+
+
+def BroadcastBlobParallelDesc(new_device_tag):
+    def GetOpArgParallelAttr(builder, x_blob_object, op_arg_parallal_attr):
+        x_parallel_attr = x_blob_object.op_arg_parallel_attr
+        parallel_desc_sym = op_arg_parallal_attr.parallel_desc_symbol
+        new_parallel_desc_symbol = TryReplaceDeviceTag(
+            builder, parallel_desc_sym, new_device_tag
+        )
+        sbp_parallel = sbp_parallel_pb.SbpParallel()
+        sbp_parallel.broadcast_parallel.SetInParent()
+        return op_arg_util.OpArgParallelAttribute(
+            new_parallel_desc_symbol,
+            sbp_parallel,
             x_parallel_attr.opt_mirrored_parallel,
         )
 
