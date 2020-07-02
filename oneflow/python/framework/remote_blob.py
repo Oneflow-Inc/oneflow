@@ -14,6 +14,9 @@ import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.gradient_util as gradient_util
+import oneflow.python.eager.boxing_util as boxing_util
+import oneflow.python.framework.op_arg_util as op_arg_util
+import oneflow.core.job.placement_pb2 as placement_proto_pb
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
 
@@ -217,10 +220,10 @@ class EagerBlobMixin(object):
     def blob_object(self):
         return self.blob_object_
 
-    def numpy(self, rank):
+    def numpy(self, rank=None):
         raise NotImplementedError
 
-    def numpy_list(self, rank):
+    def numpy_list(self, rank=None):
         raise NotImplementedError
 
     def numpy_mirrored_list(self):
@@ -289,10 +292,36 @@ class EagerConsistentBlob(EagerBlobMixin, ConsistentBlob):
         ConsistentBlob.__init__(self, lbi, **kw)
         self._Init(blob_object)
 
-    def numpy(self, rank):
-        assert rank is None
+    def numpy(self, rank=None):
         assert self.is_tensor_list is not True
-        raise NotImplementedError
+
+        def FetchBlobNumpy(blob_object):
+            consistent_blob_name = None
+
+            def BoxingToSingleDevice(builder):
+                parallel_conf = placement_proto_pb.ParallelConf()
+                parallel_conf.device_name.append(
+                    "{}:{}:{}".format(0, blob_object.parallel_desc_symbol.device_tag, 0)
+                )
+                tmp_parallel_desc_symbol = builder.GetParallelDescSymbol(parallel_conf)
+                tmp_op_arg_parallel_attr = op_arg_util.OpArgParallelAttribute(
+                    tmp_parallel_desc_symbol,
+                    blob_object.op_arg_parallel_attr.sbp_parallel,
+                    blob_object.op_arg_parallel_attr.opt_mirrored_parallel,
+                )
+                tmp_blob_object = boxing_util.BoxingTo(
+                    builder, blob_object, tmp_op_arg_parallel_attr
+                )
+                nonlocal consistent_blob_name
+                consistent_blob_name = "{}-consistent".format(self.unique_name)
+                if not blob_register.HasObject4BlobName(consistent_blob_name):
+                    blob_register.SetObject4BlobName(consistent_blob_name, tmp_blob_object)
+
+            vm_util.LogicalRun(BoxingToSingleDevice)
+            return eager_blob_util.EagerPhysicalBlob(consistent_blob_name).numpy()
+
+        blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object_)
+        return blob_cache.GetCachedNumpy(FetchBlobNumpy)
 
 
 class EagerMirroredBlob(EagerBlobMixin, MirroredBlob):
@@ -300,11 +329,11 @@ class EagerMirroredBlob(EagerBlobMixin, MirroredBlob):
         MirroredBlob.__init__(self, lbi, **kw)
         self._Init(blob_object)
 
-    def numpy(self, rank):
-        assert rank is not None
+    def numpy(self, rank=None):
         assert self.is_tensor_list is not True
-
         ndarray_list = self.numpy_mirrored_list()
+        if rank is None:
+            return ndarray_list
         return ndarray_list[rank]
 
     def numpy_mirrored_list(self):

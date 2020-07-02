@@ -45,32 +45,31 @@ def test_eager_output(test_case):
     )
 
 
-# def test_eager_multi_output(test_case):
-#     if os.getenv("ENABLE_USER_OP") != "True":
-#         return
+def test_eager_multi_output(test_case):
+    if os.getenv("ENABLE_USER_OP") != "True":
+        return
 
-#     flow.clear_default_session()
-#     flow.enable_eager_execution()
+    flow.clear_default_session()
+    flow.enable_eager_execution()
 
-#     @flow.global_function()
-#     def foo_job():
-#         x = flow.constant(1, shape=(2, 5), dtype=flow.float)
-#         y = flow.get_variable(
-#             name="var",
-#             shape=(64, 4),
-#             dtype=flow.float,
-#             initializer=flow.zeros_initializer(),
-#         )
-#         print("x type:", type(x))
-#         print("y type:", type(y))
-#         return x, y
+    @flow.global_function()
+    def foo_job():
+        x = flow.constant(1, shape=(2, 5), dtype=flow.float)
+        y = flow.get_variable(
+            name="var",
+            shape=(64, 4),
+            dtype=flow.float,
+            initializer=flow.zeros_initializer(),
+        )
+        return x, y
 
-#     x, y = foo_job().get()
-#     print(x)
-#     print(y)
-#     # test_case.assertTrue(
-#     #     np.array_equal(np.ones(shape=(2, 5), dtype=np.single), ret.ndarray_list()[0])
-#     # )
+    x, y = foo_job().get()
+    test_case.assertTrue(
+        np.array_equal(np.ones(shape=(2, 5), dtype=np.single), x.ndarray_list()[0])
+    )
+    test_case.assertTrue(
+        np.array_equal(np.zeros(shape=(64, 4), dtype=np.single), y.ndarray())
+    )
 
 
 def test_eager_input(test_case):

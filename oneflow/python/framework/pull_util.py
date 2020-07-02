@@ -280,5 +280,4 @@ class _EagerConsistentBlobGetter(_EagerBlobGetter):
         super().__init__(eager_consistent_blob)
 
     def MakeLocalBlob(self):
-        raise NotImplementedError
-        # return local_blob_util.MakeLocalBlob4EagerConsistentBlob(self.eager_blob_)
+        return local_blob_util.MakeLocalBlob4EagerConsistentBlob(self.eager_blob_)
