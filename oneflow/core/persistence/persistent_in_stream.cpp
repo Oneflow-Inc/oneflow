@@ -1,11 +1,26 @@
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/persistence/binary_in_stream_with_local_copy.h"
 #include "oneflow/core/persistence/binary_in_stream_without_local_copy.h"
-#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include <cstring>
 
 namespace oneflow {
+
+namespace {
+
+constexpr size_t kDefaultBufferSize = 32 * 1024;  // 32KB
+
+size_t GetBufferSize() {
+  if (Global<const IOConf>::Get()->has_persistence_buf_byte()) {
+    const int64_t buffer_size = Global<const IOConf>::Get()->persistence_buf_byte();
+    CHECK_GT(buffer_size, 0);
+    return buffer_size;
+  } else {
+    return kDefaultBufferSize;
+  }
+}
+
+}  // namespace
 
 PersistentInStream::PersistentInStream(fs::FileSystem* fs,
                                        const std::vector<std::string>& file_paths, uint64_t offset,
@@ -25,7 +40,7 @@ PersistentInStream::PersistentInStream(fs::FileSystem* fs,
     stream_scanner_.reset(new AcyclicStreamScanner(fs, streams, offset));
   }
 
-  buffer_.resize(Global<const IOConf>::Get()->persistence_buf_byte() + 1);
+  buffer_.resize(GetBufferSize() + 1);
   cur_buf_begin_ = buffer_.data();
   cur_buf_end_ = buffer_.data();
   *cur_buf_end_ = '\0';
