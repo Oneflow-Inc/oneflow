@@ -285,7 +285,7 @@ REGISTER_USER_OP_GRAD("normalization")
         if (op.NeedGenGradTensor4OpInput("gamma", 0)) {
           // TODO(liujuncheng): delete identity op when boxing support separated regsts
           const auto identity =
-              user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_gamma_identity")
+              user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_gamma_diff_identity")
                   .Op("identity")
                   .Input("in", grad_op.output("gamma_diff", 0))
                   .Output("out")
@@ -297,7 +297,7 @@ REGISTER_USER_OP_GRAD("normalization")
         if (op.NeedGenGradTensor4OpInput("beta", 0)) {
           // TODO(liujuncheng): delete identity op when boxing support separated regsts
           const auto identity =
-              user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_beta_identity")
+              user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_beta_diff_identity")
                   .Op("identity")
                   .Input("in", grad_op.output("beta_diff", 0))
                   .Output("out")
