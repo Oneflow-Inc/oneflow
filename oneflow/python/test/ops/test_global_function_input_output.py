@@ -102,9 +102,11 @@ def test_eager_input_fixed(test_case):
     output = input + 1.0
 
     @flow.global_function()
-    def foo_job(x_def=flow.FixedTensorDef(shape=(10, ), dtype=flow.float)):
-        y = x_def + flow.ones_like(x_def, dtype=flow.float)
+    def foo_job(x_def=flow.FixedTensorDef(shape=(10,), dtype=flow.float)):
+        y = x_def + flow.constant(1.0, shape=(1,), dtype=flow.float)
         test_case.assertTrue(np.allclose(y.numpy_mirrored_list()[0], output))
+
+    foo_job(input)
 
 
 def test_eager_multi_input(test_case):
@@ -127,3 +129,22 @@ def test_eager_multi_input(test_case):
         test_case.assertTrue(np.allclose(y.numpy_mirrored_list()[0], output))
 
     foo_job([input_1], [input_2])
+
+
+def test_eager_input_output(test_case):
+    if os.getenv("ENABLE_USER_OP") != "True":
+        return
+
+    flow.clear_default_session()
+    flow.enable_eager_execution()
+
+    input = np.random.rand(5, 4).astype(np.single)
+    output = input * 2.0
+
+    @flow.global_function()
+    def foo_job(x_def=flow.MirroredTensorDef(shape=(5, 4), dtype=flow.float)):
+        y = x_def * flow.constant(2.0, shape=(1,), dtype=flow.float)
+        return y
+
+    ret = foo_job([input]).get()
+    test_case.assertTrue(np.allclose(output, ret.ndarray_list()[0]))

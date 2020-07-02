@@ -76,10 +76,9 @@ def MakeLocalBlob4EagerMirrorBlob(eager_mirror_blob):
 
 
 def MakeLocalBlob4EagerConsistentBlob(eager_consistent_blob):
-    raise NotImplementedError
-    # assert isinstance(eager_consistent_blob, remote_blob_util.EagerConsistentBlob)
-    # if eager_consistent_blob.is_tensor_list:
-    #     raise NotImplementedError
+    assert isinstance(eager_consistent_blob, remote_blob_util.EagerConsistentBlob)
+    if eager_consistent_blob.is_tensor_list:
+        raise NotImplementedError
 
     # assert eager_consistent_blob.batch_axis is not None
     # print("#" * 20, eager_consistent_blob.batch_axis)
@@ -88,6 +87,7 @@ def MakeLocalBlob4EagerConsistentBlob(eager_consistent_blob):
     #     numpy_array_list, axis=eager_consistent_blob.batch_axis
     # )
     # return LocalFixedTensor(concated_numpy_array)
+    raise NotImplementedError
 
 
 non_override_field = set(

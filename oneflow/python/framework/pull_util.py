@@ -261,6 +261,9 @@ class _EagerBlobGetter(object):
         self.local_tensor_ = self.MakeLocalBlob()
         return self.local_tensor_
 
+    def MakeLocalBlob(self):
+        raise NotImplementedError
+
 
 class _EagerMirrorBlobGetter(_EagerBlobGetter):
     def __init__(self, eager_mirror_blob):
@@ -277,4 +280,5 @@ class _EagerConsistentBlobGetter(_EagerBlobGetter):
         super().__init__(eager_consistent_blob)
 
     def MakeLocalBlob(self):
-        return local_blob_util.MakeLocalBlob4EagerConsistentBlob(self.eager_blob_)
+        raise NotImplementedError
+        # return local_blob_util.MakeLocalBlob4EagerConsistentBlob(self.eager_blob_)
