@@ -99,6 +99,13 @@ Error Error::MemoryZoneOutOfMemory(int64_t machine_id, int64_t mem_zone_id, uint
   return error;
 }
 
+Error Error::LossBlobNotFoundError(const std::string& error_summary) {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_loss_blob_not_found_error();
+  error->set_error_summary(error_summary);
+  return error;
+}
+
 Error Error::GradientFunctionNotFound() {
   auto error = std::make_shared<ErrorProto>();
   error->mutable_gradient_function_not_found_error();
