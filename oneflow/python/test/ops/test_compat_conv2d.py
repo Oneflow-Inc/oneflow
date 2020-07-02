@@ -60,7 +60,7 @@ def compare_with_tensorflow(
             )
             weight_shape = (
                 filters,
-                int(x.static_shape[1] / groups),
+                int(x.shape[1] / groups),
                 kernel_size,
                 kernel_size,
             )
