@@ -13,7 +13,7 @@ namespace oneflow {
 class Oneflow final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Oneflow);
-  Oneflow(){};
+  Oneflow() {}
   ~Oneflow();
 
   Maybe<void> Init(const oneflow::JobSet& job_set);
