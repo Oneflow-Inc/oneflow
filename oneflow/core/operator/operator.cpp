@@ -841,6 +841,10 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
     return bn_in_op2blob_desc[bn_in_op].get();
   };
   JUST(InferOpOutBlobDescs(op.get(), BlobDesc4BnInOp));
+  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc*> {
+    CHECK_OR_RETURN(bn_in_op2blob_desc.find(bn_in_op) != bn_in_op2blob_desc.end());
+    return bn_in_op2blob_desc[bn_in_op].get();
+  }));
   return op;
 }
 

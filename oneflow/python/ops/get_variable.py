@@ -5,6 +5,7 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.device_util as device_util
+import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -79,8 +80,6 @@ def get_eager_variable(
     assert isinstance(
         shape, (list, tuple)
     ), "param shape should be a list or tuple of dimension"
-    # TODO(lixinqi) only BroadcastDistribute supported yet
-    assert isinstance(distribute, distribute_util.BroadcastDistribute)
 
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
@@ -244,8 +243,16 @@ def InitVariableBlob(var_op_conf, var_blob):
 
 def _Assign(var_blob_object, value_blob_object):
     def BuildAssignInstruction(builder):
-        tmp_blob_object = boxing_util.OneToManyBroadcastBlobReference(
-            builder, value_blob_object, var_blob_object.parallel_desc_symbol
+        new_parallel_desc_symbol = boxing_util.TryReplaceDeviceTag(
+            builder, var_blob_object.parallel_desc_symbol, "cpu"
+        )
+        consumer_op_arg_parallel_attr = op_arg_util.OpArgParallelAttribute(
+            new_parallel_desc_symbol,
+            var_blob_object.op_arg_parallel_attr.sbp_parallel,
+            var_blob_object.op_arg_parallel_attr.opt_mirrored_parallel,
+        )
+        tmp_blob_object = boxing_util.BoxingTo(
+            builder, value_blob_object, consumer_op_arg_parallel_attr
         )
         boxing_util.Assign(builder, var_blob_object, tmp_blob_object)
 
