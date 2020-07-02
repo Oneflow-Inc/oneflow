@@ -40,7 +40,9 @@ class Maybe<
     return str;
   }
 
-  T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const {
+  template<typename Type = T>
+  Type GetDataAndSerializedErrorProto(std::string* error_str, const Type& default_for_error) const {
+    static_assert(std::is_same<T, Type>::value, "error type for argument 1");
     if (IsOk()) {
       google::protobuf::TextFormat::PrintToString(ErrorProto(), error_str);
       return *Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
