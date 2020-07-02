@@ -65,20 +65,6 @@ def _WrapConcatWithCast(ctx, node):
 @flow_op("reshape", "Reshape")
 class Reshape:
     @classmethod
-    def Version_1(cls, ctx, node, **kwargs):
-        # T output = Reshape(T tensor, Tshape shape, @type Tshape)
-        # T reshaped = Reshape(T data, @INTS shape) - but takes a optional 2nd input for shape
-        return
-        shape_node = node.inputs[1]
-        shape = shape_node.get_tensor_value()
-        if shape is None:
-            logger.error("Reshape on node %s does not have a const shape", node.name)
-            return
-        ctx.RemoveInput(node, node.input[1])
-        node.set_attr("shape", shape)
-        ctx.set_shape(node.output[0], shape)
-
-    @classmethod
     def Version_5(cls, ctx, node, **kwargs):
         dtype = ctx.get_dtype(node.output[0])
         need_casting = dtype in [

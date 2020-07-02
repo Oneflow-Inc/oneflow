@@ -676,20 +676,6 @@ class BroadcastOp(common.BroadcastOp):
 )
 class Equal:
     @classmethod
-    def Version_1(cls, ctx, node, **kwargs):
-        _AddCastToOutput(ctx, node)
-        need_not = node.type == "NotEqual"
-        common.BroadcastOp.Version_1(ctx, node, **kwargs)
-        if need_not:
-            node.type = "Equal"
-            output_name = node.output[0]
-            not_node = ctx.InsertNewNodeOnOutput(
-                "Not", output_name, name=id_util.UniqueStr(node.name)
-            )
-            ctx.CopyShape(output_name, not_node.output[0])
-            ctx.copy_dtype(output_name, not_node.output[0])
-
-    @classmethod
     def Version_7(cls, ctx, node, **kwargs):
         # T2 output = Equal(T1, x, T1 y), T1 \in {bool, int32, int64}
         _AddCastToOutput(ctx, node)
@@ -726,11 +712,6 @@ class Equal:
     ["broadcast_greater", "broadcast_less"], ["Greater", "Less"], flow_ibns=["x", "y"]
 )
 class GreaterLess:
-    @classmethod
-    def Version_1(cls, ctx, node, **kwargs):
-        _AddCastToOutput(ctx, node)
-        common.BroadcastOp.Version_1(ctx, node, **kwargs)
-
     @classmethod
     def Version_7(cls, ctx, node, **kwargs):
         _AddCastToOutput(ctx, node)

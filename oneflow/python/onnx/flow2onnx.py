@@ -275,9 +275,7 @@ def ProcessFlowGraph(
         flow_graph, shape_override
     )
 
-    g = Graph(
-        onnx_nodes, model_save_dir, output_shapes, dtypes, opset, extra_opset,
-    )
+    g = Graph(onnx_nodes, model_save_dir, output_shapes, dtypes, opset, extra_opset,)
 
     # create ops mapping for the desired opsets
     ops_mapping = handler.flow_op.CreateMapping(g.opset, g.extra_opset)
