@@ -192,8 +192,8 @@ def tf_conv2d(
     groups=1,
     name=None,
 ):
-    assert len(input.static_shape) == 4
-    assert len(filters.static_shape) == 4
+    assert len(input.shape) == 4
+    assert len(filters.shape) == 4
     NDims = 2
     if isinstance(strides, (list, tuple)):
         assert len(strides) == 2, ValueError(
@@ -226,11 +226,11 @@ def tf_conv2d(
 
     assert os.getenv("ENABLE_USER_OP") != "False"
     if channel_pos == "channels_first":
-        input_size = input.static_shape[2:4]
-        kernel_size_list = filters.static_shape[2:4]
+        input_size = input.shape[2:4]
+        kernel_size_list = filters.shape[2:4]
     elif channel_pos == "channels_last":
-        input_size = input.static_shape[-3:-1]
-        kernel_size_list = filters.static_shape[-3:-1]
+        input_size = input.shape[-3:-1]
+        kernel_size_list = filters.shape[-3:-1]
     else:
         raise ValueError("invalid data_format")
     # add pad op if needs odd padding
@@ -266,11 +266,11 @@ def tf_conv2d(
     assert groups > 0
     if groups > 1:
         if data_format.upper() == "NCHW":
-            assert groups <= filters.static_shape[0]
-            assert filters.static_shape[0] % groups == 0
-            assert groups <= input.static_shape[1]
-            assert input.static_shape[1] % groups == 0
-            assert filters.static_shape[1] == input.static_shape[1] // groups
+            assert groups <= filters.shape[0]
+            assert filters.shape[0] % groups == 0
+            assert groups <= input.shape[1]
+            assert input.shape[1] % groups == 0
+            assert filters.shape[1] == input.shape[1] // groups
         elif data_format.upper() == "NHWC":
             raise ValueError("data_format NHWC not support groups > 1")
         else:
@@ -281,7 +281,7 @@ def tf_conv2d(
         .Input("in", [input])
         .Input("weight", [filters])
         .Output("out")
-        .Attr("filters", filters.static_shape[0], "AttrTypeInt32")
+        .Attr("filters", filters.shape[0], "AttrTypeInt32")
         .Attr("padding", padding.lower(), "AttrTypeString")
         .Attr("data_format", channel_pos, "AttrTypeString")
         .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")

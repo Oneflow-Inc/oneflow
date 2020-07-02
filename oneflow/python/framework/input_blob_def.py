@@ -115,7 +115,7 @@ class FixedTensorDef(ArgBlobDef):
     A `numpy.ndarray` takes a `FixedTensorDef`'s place must have a identical shape.
     For instance::
         
-        @oneflow.function
+        @oneflow.global_function
         def train(
             image_blob=oneflow.FixedTensorDef(
                 shape=(2, 255, 255, 3), dtype=flow.float32
@@ -174,7 +174,7 @@ class MirroredTensorDef(ArgBlobDef):
     A `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
     For instance::
         
-        @oneflow.function
+        @oneflow.global_function
         def train(
             image_blob=oneflow.MirroredTensorDef(
                 shape=(2, 255, 255, 3), dtype=flow.float32
@@ -240,7 +240,7 @@ class MirroredTensorListDef(ArgBlobDef):
     A `list` of `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
     For instance::
         
-        @oneflow.function
+        @oneflow.global_function
         def train(
             image_blob=oneflow.MirroredTensorListDef(
                 shape=(2, 255, 255, 3), dtype=flow.float32
