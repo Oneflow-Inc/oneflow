@@ -17,14 +17,34 @@ import oneflow
 
 
 def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):
-    x_opt_mirrored_parallel = (
+    hob_context = (produced_blob_object, consumer_op_arg_parallel_attr)
+    if enable_if.get_condition_hob(NoBoxing)(hob_context):
+        return produced_blob_object
+
+    producer_opt_mirrored_parallel = (
         produced_blob_object.op_arg_parallel_attr.opt_mirrored_parallel
     )
-    op_arg_opt_mirrored_parallel = consumer_op_arg_parallel_attr.opt_mirrored_parallel
-    assert x_opt_mirrored_parallel == op_arg_opt_mirrored_parallel, (
-        "\nx_arg_attribute: %s\nconsumer_op_arg_parallel_attr: %s"
+    consumer_opt_mirrored_parallel = consumer_op_arg_parallel_attr.opt_mirrored_parallel
+    assert producer_opt_mirrored_parallel == consumer_opt_mirrored_parallel, (
+        "\nproducer_op_arg_parallel_attr: %s\nconsumer_op_arg_parallel_attr: %s"
         % (produced_blob_object.op_arg_parallel_attr, consumer_op_arg_parallel_attr)
     )
+
+    def default(get_failed_info, *args, **kwargs):
+        raise NotImplementedError(
+            "%s\n"
+            "no boxing method found.\n"
+            "logical_blob_name: %s\n"
+            "x_arg_attribute: %s\n"
+            "consumer_op_arg_parallel_attr: %s\n"
+            % (
+                get_failed_info(),
+                produced_blob_object.op_arg_blob_attr.logical_blob_name,
+                produced_blob_object.op_arg_parallel_attr,
+                consumer_op_arg_parallel_attr,
+            )
+        )
+
     conditional_functions = [
         CopyH2D,
         CopyD2H,
@@ -43,22 +63,6 @@ def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):
         Sequential((CopyH2D, ReplaceBlobParallelDesc("gpu")), NcclAllReduce),
         Sequential((NcclAllReduce, GetBroadcastOpArgParallelAttr), CopyD2H),
     ]
-
-    def default(get_failed_info, *args, **kwargs):
-        raise NotImplementedError(
-            "%s\n"
-            "no boxing method found.\n"
-            "logical_blob_name: %s\n"
-            "x_arg_attribute: %s\n"
-            "consumer_op_arg_parallel_attr: %s\n"
-            % (
-                get_failed_info(),
-                produced_blob_object.op_arg_blob_attr.logical_blob_name,
-                produced_blob_object.op_arg_parallel_attr,
-                consumer_op_arg_parallel_attr,
-            )
-        )
-
     function = enable_if.unique(
         conditional_functions,
         context=(produced_blob_object, consumer_op_arg_parallel_attr),
