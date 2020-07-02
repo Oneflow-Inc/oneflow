@@ -138,7 +138,7 @@ def assign(ref, value, dtype=None, name=None):
     if name is None:
         name = id_util.UniqueStr("Assign_")
 
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
             flow.consistent_user_op_builder(name)
             .Op("assign")
