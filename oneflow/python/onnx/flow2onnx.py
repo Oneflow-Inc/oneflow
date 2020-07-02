@@ -33,7 +33,7 @@ import os.path
 logger = logging.getLogger(__name__)
 
 
-def OneflowToOnnxNaive(graph, shape_override):
+def FlowToOnnxNaive(graph, shape_override):
     """
     Convert node from oneflow format to onnx format.
     Convert the oneflow nodes into an onnx graph with minimal rewrites so
@@ -271,7 +271,7 @@ def ProcessFlowGraph(
     if shape_override is None:
         shape_override = {}
 
-    (onnx_nodes, op_cnt, attr_cnt, dtypes, output_shapes,) = OneflowToOnnxNaive(
+    (onnx_nodes, op_cnt, attr_cnt, dtypes, output_shapes,) = FlowToOnnxNaive(
         flow_graph, shape_override
     )
 

@@ -483,7 +483,7 @@ class Graph(object):
                 op_name_scope=n.name + "_" + "graph_outputs",
             )
             self.CopyShape(new_output_name, o)
-            self.copy_dtype(new_output_name, o)
+            self.CopyDtype(new_output_name, o)
 
     def CreateNewGraphWithSameConfig(self):
         """Create a clean graph inheriting current graph's configuration."""
@@ -904,7 +904,7 @@ class Graph(object):
         node = self.get_node_by_output(name, search_in_parent_graphs=True)
         node.graph._dtypes[name] = dtype
 
-    def copy_dtype(self, src_name, dst_name):
+    def CopyDtype(self, src_name, dst_name):
         """Copy dtype from another node."""
         dtype = self.get_dtype(src_name)
         self.set_dtype(dst_name, dtype)
