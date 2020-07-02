@@ -472,11 +472,11 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
     ibn2sbp_infer_hint.emplace(ibn,
                                SbpInferHint(parallel_desc, logical_blob_desc, sbp, batch_axis));
   }
-  const auto& BatchAxis4Lbi = [&](const LogicalBlobId& lbi) -> Maybe<const OptInt64*> {
-    return op_node->BatchAxis4Lbi(lbi);
+  const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const OptInt64*> {
+    return op_node->op().BatchAxis4BnInOp(bn_in_op);
   };
   CHECK_JUST(InferOpSbpSignature(op_node->mut_op(), sbp_sig_conf, op_node->parallel_desc(),
-                                 ibn2sbp_infer_hint, BatchAxis4Lbi));
+                                 ibn2sbp_infer_hint, BatchAxis4BnInOp));
   op_node->InitLbi2SbpParallel();
 }
 
