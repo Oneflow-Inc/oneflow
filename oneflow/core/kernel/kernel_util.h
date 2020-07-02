@@ -203,6 +203,7 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::va
                    const int incy);
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
 };
 
 // GPU, Integral, Floating
@@ -305,6 +306,7 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::va
       public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
                    const int incy);
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
 };
 
 using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
