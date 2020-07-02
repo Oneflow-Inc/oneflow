@@ -52,7 +52,6 @@ class Improver final {
 
   int32_t start_mem_block_id_;
   AvailableMemDesc amd_;
-  std::vector<int32_t> record_load_task_num_;
 };
 
 }  // namespace oneflow
