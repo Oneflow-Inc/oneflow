@@ -55,17 +55,6 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     std::string device_id_str;
     JUST(ParseDeviceNameConf(device_name, &mchn_id, &device_tag, &device_id_str));
     machine_id_set.insert(mchn_id);
-    if (device_tag == "cpu") {
-      CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice
-                      || device_type_ == DeviceType::kCPU);
-      device_type_ = DeviceType::kCPU;
-    } else if (device_tag == "gpu") {
-      CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice
-                      || device_type_ == DeviceType::kGPU);
-      device_type_ = DeviceType::kGPU;
-    } else {
-      OF_UNIMPLEMENTED() << "device type not supported";
-    }
     if (machine_id_set.find(mchn_id) == machine_id_set.end()) {
       sorted_machine_ids_.push_back(mchn_id);
     }
@@ -74,18 +63,27 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
       device_id_str = device_id_str + "-" + device_id_str;
       minus_pos = device_id_str.find("-");
     }
-    int64_t min_id = oneflow_cast<int64_t>(device_id_str.substr(0, minus_pos));
-    int64_t max_id = oneflow_cast<int64_t>(device_id_str.substr(minus_pos + 1));
-    CHECK_LE_OR_RETURN(min_id, max_id);
-    for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
-      if (device_type_ == DeviceType::kGPU) {
-        CHECK_LT_OR_RETURN(dev_phy_id, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()));
-      }
-      machine_id2sorted_dev_phy_ids_[mchn_id].push_back(dev_phy_id);
-    }
+    JUST(CheckWithResourceDesc(device_tag, mchn_id,
+                               oneflow_cast<int64_t>(device_id_str.substr(0, minus_pos)),
+                               oneflow_cast<int64_t>(device_id_str.substr(minus_pos + 1))));
   }
   ClearUp();
   SanityCheck();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ParallelDesc::CheckWithResourceDesc(const std::string& device_tag, int64_t mchn_id,
+                                                int64_t min_id, int64_t max_id) {
+  DeviceType device_type = JUST(DeviceType4DeviceTag(device_tag));
+  CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice || device_type_ == device_type);
+  device_type_ = device_type;
+  CHECK_LE_OR_RETURN(min_id, max_id);
+  for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
+    if (device_type_ == DeviceType::kGPU) {
+      CHECK_LT_OR_RETURN(dev_phy_id, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()));
+    }
+    machine_id2sorted_dev_phy_ids_[mchn_id].push_back(dev_phy_id);
+  }
   return Maybe<void>::Ok();
 }
 
