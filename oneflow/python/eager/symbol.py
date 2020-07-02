@@ -38,6 +38,9 @@ class ParallelDescSymbol(Symbol):
             and lhs.machine_id2device_id_list_ == rhs.machine_id2device_id_list_
         )
 
+    def __str__(self):
+        return str(self.parallel_conf)
+
     @property
     def parallel_conf(self):
         return self.data
@@ -53,3 +56,21 @@ class ParallelDescSymbol(Symbol):
     @property
     def machine_id2device_id_list(self):
         return self.machine_id2device_id_list_
+
+    def Containing(self, other):
+        if self.device_tag != other.device_tag:
+            return False
+        return _GlobalDeviceIdsContaining(
+            self.machine_id2device_id_list, other.machine_id2device_id_list,
+        )
+
+
+def _GlobalDeviceIdsContaining(bigger, smaller):
+    for machine_id, device_ids in smaller.items():
+        if machine_id not in bigger:
+            return False
+        bigger_device_ids = bigger[machine_id]
+        for device_id in device_ids:
+            if device_id not in bigger_device_ids:
+                return False
+    return True

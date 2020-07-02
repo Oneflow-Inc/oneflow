@@ -98,7 +98,9 @@ def _CloneArgBlobDef(args):
         return type(args)(_CloneArgBlobDef(x) for x in args)
     if isinstance(args, dict):
         return {k: _CloneArgBlobDef(v) for k, v in args}
-    raise NotImplementedError("oneflow.function only accepts nested input blob defs")
+    raise NotImplementedError(
+        "oneflow.global_function only accepts nested input blob defs"
+    )
 
 
 def _RecursiveMakeInputBlobs(input_blob_def):
@@ -109,7 +111,7 @@ def _RecursiveMakeInputBlobs(input_blob_def):
     if isinstance(input_blob_def, dict):
         return {k: _RecursiveMakeInputBlobs(v) for k, v in input_blob_def.items()}
     raise NotImplementedError(
-        "oneflow.function accepts "
+        "oneflow.global_function accepts "
         + "ArgBlobDefs or list/tuple/dict nested ArgBlobDefs as argument"
     )
 
@@ -128,6 +130,6 @@ def _RecursiveMakeRetRemoteBlobs(remote_blobs, kwarg):
             k: _RecursiveMakeRetRemoteBlobs(v, kwarg) for k, v in remote_blobs.items()
         }
     raise NotImplementedError(
-        "oneflow.function returns "
+        "oneflow.global_function returns "
         + "RemoteBlob or list/tuple/dict nested RemoteBlob only"
     )

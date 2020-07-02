@@ -22,11 +22,11 @@ bool IsOpTypeNameCpuSupportOnly(const std::string& op_type_name, std::string* er
 }
 
 std::string CurrentResource(std::string* error_str) {
-  return oneflow::CurrentResource().GetDataAndSerializedErrorProto(error_str, "");
+  return oneflow::CurrentResource().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 std::string EnvResource(std::string* error_str) {
-  return oneflow::EnvResource().GetDataAndSerializedErrorProto(error_str, "");
+  return oneflow::EnvResource().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 void EnableEagerExecution(bool enable_eager_execution) {
@@ -75,15 +75,16 @@ void StopGlobalSession(std::string* error_str) {
 }
 
 std::string GetSerializedInterUserJobInfo(std::string* error_str) {
-  return oneflow::GetSerializedInterUserJobInfo().GetDataAndSerializedErrorProto(error_str, "");
+  return oneflow::GetSerializedInterUserJobInfo().GetDataAndSerializedErrorProto(error_str,
+                                                                                 std::string(""));
 }
 
 std::string GetSerializedJobSet(std::string* error_str) {
-  return oneflow::GetSerializedJobSet().GetDataAndSerializedErrorProto(error_str, "");
+  return oneflow::GetSerializedJobSet().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 std::string GetFunctionConfigDef(std::string* error_str) {
-  return oneflow::GetFunctionConfigDef().GetDataAndSerializedErrorProto(error_str, "");
+  return oneflow::GetFunctionConfigDef().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb, std::string* error_str) {
@@ -99,18 +100,27 @@ long DeviceType4DeviceTag(const std::string& device_tag, std::string* error_str)
 std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& parallel_conf,
                                                             std::string* error_str) {
   return oneflow::GetSerializedMachineId2DeviceIdListOFRecord(parallel_conf)
-      .GetDataAndSerializedErrorProto(error_str, "");
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
+}
+
+std::string InferOpConf(const std::string& serialized_op_conf,
+                        const std::string& serialized_op_input_signature,
+                        const std::string& serialized_parallel_conf, bool is_mirrored,
+                        std::string* error_str) {
+  return oneflow::InferOpConf(serialized_op_conf, serialized_op_input_signature,
+                              serialized_parallel_conf, is_mirrored)
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 std::string GetOpAttribute4OpConf(const std::string& serialized_op_conf, std::string* error_str) {
   return oneflow::GetOpAttribute4OpConf(serialized_op_conf)
-      .GetDataAndSerializedErrorProto(error_str, "");
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
                                        std::string* error_str) {
   return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf)
-      .GetDataAndSerializedErrorProto(error_str, "");
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 void RunLogicalInstruction(const std::string& vm_instruction_list,

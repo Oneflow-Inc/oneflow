@@ -129,7 +129,8 @@ Maybe<void> StartGlobalSession() {
   CHECK_ISNULL_OR_RETURN(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
   Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
-  Global<Oneflow>::New(job_set);
+  Global<Oneflow>::New();
+  JUST(Global<Oneflow>::Get()->Init(job_set));
   return Maybe<void>::Ok();
 }
 
@@ -196,6 +197,23 @@ Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
   return PbMessage2TxtString(*JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
+}
+
+Maybe<std::string> InferOpConf(const std::string& op_conf_str,
+                               const std::string& upstream_signature_str,
+                               const std::string& parallel_conf_str, bool is_mirrored) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
+  UpstreamSignature upstream_signature;
+  CHECK_OR_RETURN(TxtString2PbMessage(upstream_signature_str, &upstream_signature))
+      << "UpstreamSignature parse failed";
+  ParallelConf parallel_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
+      << "ParallelConf parse failed";
+  const auto& op = JUST(ConstructAndInferOp(op_conf, upstream_signature, parallel_conf, is_mirrored,
+                                            GlobalJobDesc()));
+  const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
+  return PbMessage2TxtString(*op_attribute);
 }
 
 Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {

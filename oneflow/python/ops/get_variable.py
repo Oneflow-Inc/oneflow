@@ -8,6 +8,7 @@ import oneflow.python.framework.device_util as device_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
@@ -256,8 +257,11 @@ def _ModelInit(var_op_conf):
     bn_in_op2blob_object = {}
 
     def BuildModeInitInstruction(builder):
-        op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
+        upstream_signature = op_attribute_pb.UpstreamSignature()
         parallel_conf = oneflow.placement.current_scope().default_parallel_conf
+        op_attribute = c_api_util.InferOpConf(
+            op_conf, upstream_signature, parallel_conf, is_mirrored=False
+        )
         builder.StatelessCall(
             op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
         )
