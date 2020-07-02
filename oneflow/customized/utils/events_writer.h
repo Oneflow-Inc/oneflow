@@ -9,6 +9,7 @@
 
 #include <sys/time.h>
 #include <time.h>
+#include <mutex>
 
 #define MAX_QUEUE_NUM 10
 #define FLUSH_MILLIS 2 * 60 * 1000
@@ -53,6 +54,7 @@ class EventsWriter {
   uint64_t last_flush_;
   std::vector<std::unique_ptr<Event>> queue_;
   // int num_outstanding_events_;
+  std::mutex queue_mutex;
   OF_DISALLOW_COPY(EventsWriter);
 };
 

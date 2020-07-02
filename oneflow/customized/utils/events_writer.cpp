@@ -77,7 +77,9 @@ Maybe<void> EventsWriter::WriteRecord(const std::string& data) {
 }
 
 void EventsWriter::AppendQueue(std::unique_ptr<Event> event) {
+  queue_mutex.lock();
   queue_.emplace_back(std::move(event));
+  queue_mutex.unlock();
   if (queue_.size() > max_queue_
       || envtime::CurrentMircoTime() - last_flush_ > 1000 * flush_millis_) {
     InternalFlush();
@@ -85,8 +87,10 @@ void EventsWriter::AppendQueue(std::unique_ptr<Event> event) {
 }
 
 void EventsWriter::InternalFlush() {
+  queue_mutex.lock();
   for (const std::unique_ptr<Event>& e : queue_) { WriteEvent(*e); }
   queue_.clear();
+  queue_mutex.unlock();
   Flush();
   last_flush_ = envtime::CurrentMircoTime();
 }
@@ -105,6 +109,7 @@ Maybe<void> EventsWriter::Flush() {
 
 Maybe<void> EventsWriter::Close() {
   Maybe<void> status = Flush();
+  queue_mutex.unlock();
   if (writable_file_ != nullptr) {
     writable_file_->Close();
     writable_file_.reset(nullptr);

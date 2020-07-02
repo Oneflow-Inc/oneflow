@@ -53,6 +53,17 @@ def set_projector(pro, tag, step, value, label=None):
     return
 
 
+def as_bytes(bytes_or_text, encoding="utf-8"):
+    if isinstance(bytes_or_text, bytearray):
+        return bytes(bytes_or_text)
+    elif isinstance(bytes_or_text, six.text_type):
+        return bytes_or_text.encode(encoding)
+    elif isinstance(bytes_or_text, bytes):
+        return bytes_or_text
+    else:
+        raise TypeError("Expected binary or unicode string, got %r" % (bytes_or_text,))
+
+
 # write text
 @oneflow_export("text")
 def text(text):
@@ -66,7 +77,7 @@ def text(text):
             dtype=tensor_pb2.DT_STRING, tensor_shape=tensor_shape,
         )
         for idx in range(text_size):
-            tensor.string_val.append(str.encode(text[idx]))
+            tensor.string_val.append(as_bytes(text[idx]))  # str.encode(text[idx]))
         summary = summary_pb2.Summary()
         value = summary.value.add(
             tag="text",
