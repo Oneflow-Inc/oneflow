@@ -200,9 +200,8 @@ class NonTraceableEagerLogicalUserOp(UserOp):
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
 
         def BuildInstruction(builder):
-            with blob_register.BnInOp2BlobObjectScope(
-                op_attribute
-            ) as bn_in_op2blob_object:
+            get_scope = blob_register.BnInOp2BlobObjectScope
+            with get_scope(op_attribute) as bn_in_op2blob_object:
                 parallel_conf = oneflow.placement.current_scope().default_parallel_conf
                 builder.StatelessCall(
                     op_attribute,

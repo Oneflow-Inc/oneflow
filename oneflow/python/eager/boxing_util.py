@@ -6,7 +6,6 @@ import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.op_arg_util as op_arg_util
-import oneflow.python.framework.env_util as env_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.lib.core.high_order_bool as high_order_bool
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -201,7 +200,7 @@ def NcclAllReduce(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     bn_in_op2blob_object = dict(in_0=produced_blob_object)
     builder.BoxingStatelessCall(
         op_attribute,
-        parallel_conf=env_util.GetEnvDefaultParallelConf("gpu"),
+        parallel_conf=parallel_conf,
         bn_in_op2blob_object=bn_in_op2blob_object,
     )
     y_blob_object = bn_in_op2blob_object["out_0"]
