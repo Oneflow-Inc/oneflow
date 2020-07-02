@@ -93,6 +93,8 @@ message MemoryZoneOutOfMemory {
   repeated string available = 5;
 }
 
+message LossBlobNotFoundError { }
+
 message UnkownError { }
 
 message ErrorStackFrame {
@@ -117,6 +119,7 @@ message ErrorProto {
     OpKernelNotFoundError op_kernel_not_found_error = 21;
     MultipleOpKernelsMatchedError multiple_op_kernels_matched_error = 22;
     MemoryZoneOutOfMemory memory_zone_out_of_memory = 23;
+    LossBlobNotFoundError loss_blob_not_found_error = 24;
     UnkownError unknown_error = 100;
   }
 }
