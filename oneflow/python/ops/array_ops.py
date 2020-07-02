@@ -713,36 +713,23 @@ def identity(x, name=None):
     r"""Return a `Blob` has identical content and data type to input `Blob`. Analogous to `tf.identity <https://www.tensorflow.org/api_docs/python/tf/identity>`_
 
     Args:
-        x: a `Blob`
+        input: a `Blob`
         name: name of this operator. `None` by default
     
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") == "False":
-        if name is None:
-            name = id_util.UniqueStr("Identity_")
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = name
-        setattr(op_conf.identity_conf, "in", x.unique_name)
-        op_conf.identity_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
-    else:
-        return (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("Identity_")
-            )
-            .Op("identity")
-            .Input("in", [x])
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
+    if name is None:
+        name = id_util.UniqueStr("Identity_")
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    setattr(op_conf.identity_conf, "in", x.unique_name)
+    op_conf.identity_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("identity_n")
