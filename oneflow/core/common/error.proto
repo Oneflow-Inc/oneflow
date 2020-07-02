@@ -93,9 +93,7 @@ message MemoryZoneOutOfMemory {
   repeated string available = 5;
 }
 
-message LossBlobNotFoundError {
-  repeated string loss_operator_name = 1;
-}
+message LossBlobNotFoundError { }
 
 message UnkownError { }
 

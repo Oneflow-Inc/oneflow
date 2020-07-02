@@ -55,12 +55,7 @@ Maybe<void> GetLossOpNodes(const OpGraph& op_graph, std::list<OpNode*>* loss_op_
       loss_op_nodes->push_back(op_node);
     }
   });
-  if (loss_op_nodes->size() <= 0) {
-    std::vector<std::string> debug_msgs;
-    for (const auto& op_name : loss_op_names) { debug_msgs.emplace_back(op_name); }
-    return Error::LossBlobNotFoundError("Loss operator nodes not found at autograd time.",
-                                        debug_msgs);
-  }
+  if (loss_op_nodes->empty()) { return Error::LossBlobNotFoundError("Loss blob not found."); }
   return Maybe<void>::Ok();
 }
 
