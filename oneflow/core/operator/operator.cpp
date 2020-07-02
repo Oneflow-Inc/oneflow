@@ -783,18 +783,22 @@ Maybe<void> InferMirroredSignature(Operator* op, const UpstreamSignature& upstre
 Maybe<void> CheckOpInputSignature(const Operator& op, const UpstreamSignature& upstream_signature) {
   for (const auto& ibn : op.input_bns()) {
     {
+      CHECK_OR_RETURN(upstream_signature.has_logical_blob_desc_signature());
       const auto& map = upstream_signature.logical_blob_desc_signature().bn_in_op2blob_desc();
       CHECK_OR_RETURN(map.find(ibn) != map.end());
     }
     {
+      CHECK_OR_RETURN(upstream_signature.has_sbp_signature());
       const auto& map = upstream_signature.sbp_signature().bn_in_op2sbp_parallel();
       CHECK_OR_RETURN(map.find(ibn) != map.end());
     }
     {
+      CHECK_OR_RETURN(upstream_signature.has_mirrored_signature());
       const auto& map = upstream_signature.mirrored_signature().bn_in_op2opt_mirrored_parallel();
       CHECK_OR_RETURN(map.find(ibn) != map.end());
     }
     {
+      CHECK_OR_RETURN(upstream_signature.has_batch_axis_signature());
       const auto& map = upstream_signature.batch_axis_signature().bn_in_op2batch_axis();
       CHECK_OR_RETURN(map.find(ibn) != map.end());
     }

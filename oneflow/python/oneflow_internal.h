@@ -103,6 +103,15 @@ std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& p
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
+std::string InferOpConf(const std::string& serialized_op_conf,
+                        const std::string& serialized_op_input_signature,
+                        const std::string& serialized_parallel_conf, bool is_mirrored,
+                        std::string* error_str) {
+  return oneflow::InferOpConf(serialized_op_conf, serialized_op_input_signature,
+                              serialized_parallel_conf, is_mirrored)
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
+}
+
 std::string GetOpAttribute4OpConf(const std::string& serialized_op_conf, std::string* error_str) {
   return oneflow::GetOpAttribute4OpConf(serialized_op_conf)
       .GetDataAndSerializedErrorProto(error_str, std::string(""));

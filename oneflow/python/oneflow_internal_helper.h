@@ -199,6 +199,23 @@ Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
   return PbMessage2TxtString(*JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
 }
 
+Maybe<std::string> InferOpConf(const std::string& op_conf_str,
+                               const std::string& upstream_signature_str,
+                               const std::string& parallel_conf_str, bool is_mirrored) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
+  UpstreamSignature upstream_signature;
+  CHECK_OR_RETURN(TxtString2PbMessage(upstream_signature_str, &upstream_signature))
+      << "UpstreamSignature parse failed";
+  ParallelConf parallel_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
+      << "ParallelConf parse failed";
+  const auto& op = JUST(ConstructAndInferOp(op_conf, upstream_signature, parallel_conf, is_mirrored,
+                                            GlobalJobDesc()));
+  const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
+  return PbMessage2TxtString(*op_attribute);
+}
+
 Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
