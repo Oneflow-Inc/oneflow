@@ -8,14 +8,16 @@ class ForeignCallback {
   ForeignCallback() = default;
   virtual ~ForeignCallback() = default;
 
-  virtual void EagerInterpret(const std::string& op_attribute_str,
-                              const std::string& parallel_conf_str) const {
+  virtual void EagerMirroredCast(const std::string& op_attribute_str,
+                                 const std::string& parallel_conf_str) const {
     UNIMPLEMENTED();
   }
-  virtual void EagerCastToMirrored(const std::string& op_attribute_str,
-                                   const std::string& parallel_conf_str) const {
+  virtual void EagerInterpretCompletedOp(const std::string& op_attribute_str,
+                                         const std::string& parallel_conf_str) const {
     UNIMPLEMENTED();
   }
+
+  virtual void OfBlobCall(int64_t unique_id, int64_t ofblob_ptr) const { UNIMPLEMENTED(); }
 };
 
 }  // namespace oneflow

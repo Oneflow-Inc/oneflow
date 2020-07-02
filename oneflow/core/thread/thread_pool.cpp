@@ -3,7 +3,7 @@
 namespace oneflow {
 
 ThreadPool::ThreadPool(int32_t thread_num)
-    : work_chans_(thread_num), threads_(thread_num), cur_chan_idx_(0) {
+    : work_chans_(thread_num), threads_(thread_num), work_cnt_(0) {
   FOR_RANGE(int32_t, i, 0, thread_num) {
     Channel<std::function<void()>>* chan = &(work_chans_.at(i));
     threads_[i] = std::thread([chan]() {
@@ -20,14 +20,10 @@ ThreadPool::~ThreadPool() {
   }
 }
 
-void ThreadPool::AddWork(std::function<void()> work) {
-  if (work_chans_.size() > 1) {
-    std::unique_lock<std::mutex> lck(cur_chan_idx_mtx_);
-    work_chans_.at(cur_chan_idx_).Send(work);
-    cur_chan_idx_ = (cur_chan_idx_ + 1) % work_chans_.size();
-  } else {
-    work_chans_.at(cur_chan_idx_).Send(work);
-  }
+void ThreadPool::AddWork(const std::function<void()>& work) {
+  const size_t cur_chan_idx =
+      work_cnt_.fetch_add(1, std::memory_order_relaxed) % work_chans_.size();
+  work_chans_.at(cur_chan_idx).Send(work);
 }
 
 }  // namespace oneflow

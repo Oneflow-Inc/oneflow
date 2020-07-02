@@ -29,19 +29,6 @@ Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id
   return Maybe<void>::Ok();
 }
 
-std::string DeviceTag4DeviceType(DeviceType device_type) {
-  if (device_type == kCPU) { return "cpu"; }
-  if (device_type == kGPU) { return "gpu"; }
-  UNIMPLEMENTED();
-  return "";
-}
-
-Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
-  if (device_tag == "cpu") { return DeviceType::kCPU; }
-  if (device_tag == "gpu") { return DeviceType::kGPU; }
-  return Error::DeviceTagNotFound() << "device tag `" << device_tag << "' not found";
-}
-
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
   ParallelDesc parallel_desc;
   JUST(parallel_desc.MaybeInit(parallel_conf));
@@ -137,7 +124,7 @@ void ParallelDesc::ClearUp() {
 void ParallelDesc::set_device_type(DeviceType device_type) {
   if (device_type == device_type_) { return; }
   device_type_ = device_type;
-  const std::string& tag = DeviceTag4DeviceType(device_type);
+  const char* tag = CHECK_JUST(DeviceTag4DeviceType(device_type));
   FOR_RANGE(int64_t, i, 0, parallel_conf_.device_name_size()) {
     ResetDeviceTag(parallel_conf_.mutable_device_name(i), tag);
   }
@@ -157,7 +144,7 @@ Maybe<void> ParallelDesc::SanityCheck() {
 
 ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) const {
   ParallelConf parallel_conf;
-  std::string device_tag = DeviceTag4DeviceType(device_type());
+  const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(device_type()));
   std::string machine_id = std::to_string(MachineIdForParallelId(parallel_id));
   std::string device_id = std::to_string(DeviceIdForParallelId(parallel_id));
   parallel_conf.add_device_name(machine_id + ":" + device_tag + ":" + device_id);

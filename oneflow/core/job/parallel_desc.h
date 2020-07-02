@@ -7,11 +7,10 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/record/record.pb.h"
+#include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 
-std::string DeviceTag4DeviceType(DeviceType device_type);
-Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag);
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
 
 Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
