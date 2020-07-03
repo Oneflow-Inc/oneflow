@@ -267,16 +267,32 @@ class Operator {
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
-  void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff);
-  void EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff);
-  void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num);
-  void EnrollRepeatedOutputBn(const std::string& obn_prefix);
+
+  using OBModifierFieldSetter = std::function<void(OutputBlobModifier*)>;
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff,
+                              OBModifierFieldSetter ob_modifier_field_setter =
+                                  [](OutputBlobModifier*) {});
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff,
+                              OBModifierFieldSetter ob_modifier_field_setter =
+                                  [](OutputBlobModifier*) {});
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num,
+                              OBModifierFieldSetter ob_modifier_field_setter =
+                                  [](OutputBlobModifier*) {});
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix,
+                              OBModifierFieldSetter ob_modifier_field_setter =
+                                  [](OutputBlobModifier*) {});
   void EnrollConstBufBn(const std::string& cbbn);
 
   InputBlobModifier* EnrollInputBn(const std::string& ibn, bool has_diff);
   InputBlobModifier* EnrollInputBn(const std::string& ibn) { return EnrollInputBn(ibn, true); }
-  OutputBlobModifier* EnrollOutputBn(const std::string& obn, bool has_diff);
-  OutputBlobModifier* EnrollOutputBn(const std::string& obn) { return EnrollOutputBn(obn, true); }
+  OutputBlobModifier* EnrollOutputBn(const std::string& obn, bool has_diff,
+                                     OBModifierFieldSetter ob_modifier_field_setter =
+                                         [](OutputBlobModifier*) {});
+  OutputBlobModifier* EnrollOutputBn(const std::string& obn,
+                                     OBModifierFieldSetter ob_modifier_field_setter =
+                                         [](OutputBlobModifier*) {}) {
+    return EnrollOutputBn(obn, true, ob_modifier_field_setter);
+  }
 
   void StrFieldTolower(const std::string& field_name);
 
