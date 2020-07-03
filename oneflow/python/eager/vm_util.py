@@ -219,6 +219,19 @@ class InstructionsBuilder(object):
     def WatchBlobBody(self, blob_object, callback):
         return self._WatchBlob("WatchBlobBody", blob_object, callback)
 
+    def PackPhysicalBlobsToLogicalBlob(
+        self, physical_blob_objects, op_arg_parallel_attr, op_arg_blob_attr
+    ):
+        logical_blob_object = self._NewBlobObject(
+            op_arg_parallel_attr, op_arg_blob_attr
+        )
+        self._ReplaceMirrored(
+            op_arg_parallel_attr.parallel_desc_symbol,
+            [logical_blob_object],
+            physical_blob_objects,
+        )
+        return logical_blob_object
+
     def UnpackLogicalBlobToPhysicalBlobs(self, blob_object):
         parallel_desc_symbol = blob_object.parallel_desc_symbol
         parallel_conf = parallel_desc_symbol.parallel_conf
