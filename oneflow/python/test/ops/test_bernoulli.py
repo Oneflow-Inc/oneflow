@@ -19,6 +19,7 @@ def test_bernoulli(test_case):
     y = BernoulliJob(x).get().ndarray()
     test_case.assertTrue(np.array_equal(y, x))
 
+
 def test_bernoulli_mirrored(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
