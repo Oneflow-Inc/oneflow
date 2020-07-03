@@ -10,6 +10,7 @@ import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/framework/user_op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
+import "oneflow/core/graph/boxing/collective_boxing.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -127,6 +128,7 @@ message Conv1DOpConf {
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
   optional string bias = 14;
+  optional int32 groups = 15 [default = 1];
 }
 
 message Conv2DOpConf {
@@ -141,6 +143,7 @@ message Conv2DOpConf {
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
   optional string bias = 14;
+  optional int32 groups = 15 [default = 1];
 }
 
 message Conv3DOpConf {
@@ -155,6 +158,7 @@ message Conv3DOpConf {
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
   optional string bias = 14;
+  optional int32 groups = 15 [default = 1];
 }
 
 message ConvConf {
@@ -164,6 +168,7 @@ message ConvConf {
   repeated int32 kernel_size = 4;
   repeated int32 strides = 5;
   repeated int32 dilation_rate = 6;
+  required int32 groups = 7;
 }
 
 message ConvDataGradOpConf {
@@ -364,24 +369,6 @@ message SparseCrossEntropyGradOpConf {
   required string prediction_diff = 4;
 }
 
-message SparseSoftmaxCrossEntropyLossOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  optional ScalarReductionType reduction = 4 [default = kSumOverN];
-  optional float weight_scalar = 5 [default = 1.0];
-  optional string weight = 6;
-}
-
-message SparseCrossEntropyLossOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  optional ScalarReductionType reduction = 4 [default = kSumOverN];
-  optional float weight_scalar = 5 [default = 1.0];
-  optional string weight = 6;
-}
-
 message SigmoidCrossEntropyOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -397,14 +384,6 @@ message SigmoidCrossEntropyGradOpConf {
   required DataType label_type = 5;
 }
 
-message IdentityLossOpConf {
-  required string prediction = 1;
-  required string loss = 2;
-  optional ScalarReductionType reduction = 3 [default = kSumOverN];
-  optional float weight_scalar = 4 [default = 1.0];
-  optional string weight = 5;
-}
-
 message DistributeConcatOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -415,11 +394,13 @@ message DistributeSplitOpConf {
   required string in = 1;
   repeated string out = 2;
   required int32 axis = 3;
+  optional bool is_variable_ref = 4 [default = false];
 }
 
 message DistributeCloneOpConf {
   required string in = 1;
   repeated string out = 2;
+  optional bool is_variable_ref = 3 [default = false];
 }
 
 message DistributeAddOpConf {
@@ -729,10 +710,7 @@ message GeluGradOpConf {
 }
 
 message ReduceSumOpConf {
-  oneof in_conf {
-    string in = 1; // For User
-    LogicalBlobId in_sys = 2; // For System
-  }
+  required string in = 1;
   required string out = 3;
   repeated int32 axis = 4;
   optional bool keep_dims = 5 [default = false];
@@ -1045,23 +1023,6 @@ message NcclReduceScatterOpConf {
 message NcclAllGatherOpConf {
 }
 
-message NcclTupleBroadcastOpConf {
-  optional string tick = 1;
-  repeated string in = 2;
-  repeated string out = 3;
-  repeated int64 root = 4;
-  repeated DataType data_type = 5;
-  repeated ShapeProto shape = 6;
-  optional int64 nccl_order_hint = 7 [default = 0];
-}
-
-message NcclTupleReduceOpConf {
-  repeated string in = 1;
-  repeated string out = 2;
-  repeated int64 root = 3;
-  optional int64 nccl_order_hint = 4 [default = 0];
-}
-
 message ReduceSplitOpConf {
   required string in = 1;
   repeated string out = 2;
@@ -1080,14 +1041,6 @@ message ReduceAddOpConf {
 
 message ReduceGatherOpConf {
   optional int32 in_num = 1 [default = 0];
-}
-
-message AccuracyOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  optional int32 top_k = 3 [default = 1];
-  required string accuracy = 4;
-  optional string weight = 5;
 }
 
 message MatmulOpConf {
@@ -1116,16 +1069,6 @@ message MultiplyOpConf {
 enum Norm {
   L1 = 1;
   L2 = 2;
-}
-
-message HingeLossOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  optional ScalarReductionType reduction = 4 [default = kSumOverN];
-  optional float weight_scalar = 5 [default = 1.0];
-  optional string weight = 6;
-  optional Norm norm = 7[default = L1];
 }
 
 message PackOpConf {
@@ -1165,6 +1108,14 @@ message UnsortedSegmentSumOpConf {
   required string out = 3;
   required int64 axis = 4;
   required int64 num_segments = 5;
+}
+
+message UnsortedSegmentSumLikeOpConf {
+  required string data = 1;
+  required string segment_ids = 2;
+  required string like = 3;
+  required string out = 4;
+  required int64 axis = 5;
 }
 
 message GatherMs0GradOpConf {
@@ -1459,13 +1410,6 @@ message TopKOpConf {
   optional bool sorted = 4 [default = true];
 }
 
-message L2NormalizeOpConf {
-  required string in = 1;
-  required string out = 2;
-  required int32 axis = 3 [default = -1];
-  optional float epsilon = 4 [default = 1e-12];
-}
-
 message KeepHeaderOnlyOpConf {
   repeated string in = 1;
   repeated string out = 2;
@@ -1527,7 +1471,7 @@ message AccTickOpConf {
 }
 
 message ModelInitOpConf {
-  required string tick = 1;
+  optional string tick = 1;
   repeated string out = 2;
   repeated string variable_op_name = 3;
   repeated VariableOpConf original_variable_conf = 4;
@@ -1548,6 +1492,23 @@ message AllReduceFacadeOpConf {
 message IdentityOpConf {
   required string in = 1;
   required string out = 2;
+}
+
+message CopyOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message CastToMirroredOpConf {
+  required string in = 1;
+  required string out = 2;
+  required SbpParallel sbp_parallel = 3;
+}
+
+message CastFromMirroredOpConf {
+  required string in = 1;
+  required string out = 2;
+  required SbpParallel sbp_parallel = 3;
 }
 
 message CaseOpConf {
@@ -1624,18 +1585,6 @@ message XrtLaunchOpConf {
   // Sbp signatures of each function node.
   map<string, SbpSignature> sbp_signatures = 8;
   optional bool model_update = 9 [default = false];
-}
-
-message NcclBoxingReduceScatterOpConf {
-  required LogicalBlobId lbi = 1;
-}
-
-message NcclBoxingAllGatherOpConf {
-  required LogicalBlobId lbi = 1;
-}
-
-message NcclBoxingAllReduceOpConf {
-  required LogicalBlobId lbi = 1;
 }
 
 message ModelInitV2OpConf {
@@ -1802,6 +1751,45 @@ message SyncDynamicResizeOpConf {
   required int64 axis = 4;
 }
 
+message ArgWhereOpConf {
+  required string in = 1;
+  required string out = 2;
+  required string out_size = 3;
+  optional DataType data_type = 4 [default = kInt32];
+}
+
+message BroadcastToCompatibleWithOpConf {
+  required string x = 1;
+  repeated string compatible = 2;
+  required string y = 3;
+}
+
+message TensorBufferToTensorListOpConf {
+  required string in = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+  required DataType data_type = 4;
+}
+
+message TensorListToTensorBufferOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message TensorListSplitOpConf {
+  required string in = 1;
+  repeated string out = 2;
+}
+
+message CollectiveBoxingGenericOpConf {
+  required LogicalBlobId lbi = 1;
+  required boxing.collective.RankDesc rank_desc = 2;
+}
+
+message BoxingIdentityOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1809,6 +1797,7 @@ message OperatorConf {
   optional bool enable_cudnn = 5;
   optional int64 cudnn_buf_limit_mbyte = 6;
   repeated string ctrl_in_op_name = 7;
+  optional int64 logical_object_id = 8;
   oneof op_type {
     // system op
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;
@@ -1853,14 +1842,9 @@ message OperatorConf {
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
     ReturnOpConf return_conf = 146;
-    NcclTupleBroadcastOpConf nccl_tuple_broadcast_conf = 147;
-    NcclTupleReduceOpConf nccl_tuple_reduce_conf = 148;
     PartialTickOpConf partial_tick_conf = 149;
     LazyAdamModelUpdateOpConf lazy_adam_model_update_conf = 150;
     ForeignWatchOpConf foreign_watch_conf = 151;
-    NcclBoxingReduceScatterOpConf nccl_boxing_reduce_scatter_conf = 152;
-    NcclBoxingAllGatherOpConf nccl_boxing_all_gather_conf = 153;
-    NcclBoxingAllReduceOpConf nccl_boxing_all_reduce_conf = 154;
     DistributeConcatOpConf distribute_concat_conf = 155;
     DistributeSplitOpConf distribute_split_conf = 156;
     DistributeCloneOpConf distribute_clone_conf = 157;
@@ -1874,6 +1858,11 @@ message OperatorConf {
     IndexedSlicesLazyAdamModelUpdateOpConf indexed_slices_lazy_adam_model_update_conf = 165;
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
+    TensorBufferToTensorListOpConf tensor_buffer_to_tensor_list_conf = 168;
+    TensorListToTensorBufferOpConf tensor_list_to_tensor_buffer_conf = 169;
+    CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
+    BoxingIdentityOpConf boxing_identity_conf = 171;
+    TensorListSplitOpConf tensor_list_split_conf = 172;
     UserOpConf user_conf = 199;
     
     // domain op
@@ -1904,10 +1893,6 @@ message OperatorConf {
     TanHOpConf tanh_conf = 226;
     ReluOpConf relu_conf = 227;
     SoftmaxOpConf softmax_conf = 228;
-    SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 229;
-    HingeLossOpConf hinge_loss_conf = 230;
-    SparseSoftmaxCrossEntropyLossOpConf sparse_softmax_cross_entropy_loss_conf = 231;
-    AccuracyOpConf accuracy_conf = 232;
     PrintOpConf print_conf = 233;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
@@ -1921,10 +1906,8 @@ message OperatorConf {
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     OneHotOpConf one_hot_conf = 258;
-    IdentityLossOpConf identity_loss_conf = 259;
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
-    L2NormalizeOpConf l2_normalize_conf = 264;
     PReluOpConf prelu_conf = 265;
     ReluGradOpConf relu_grad_conf = 266;
     GeluGradOpConf gelu_grad_conf = 267;
@@ -1971,7 +1954,11 @@ message OperatorConf {
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
-
+    UnsortedSegmentSumLikeOpConf unsorted_segment_sum_like_conf = 341;
+    ArgWhereOpConf arg_where_conf = 342;
+    CopyOpConf copy_conf = 343;
+    CastToMirroredOpConf cast_to_mirrored_conf = 344;
+    CastFromMirroredOpConf cast_from_mirrored_conf = 345;
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op
@@ -1999,6 +1986,7 @@ message OperatorConf {
     SquareSumOpConf square_sum_conf = 522;
     BroadcastMaximumOpConf broadcast_maximum_conf = 523;
     BroadcastMinimumOpConf broadcast_minimum_conf = 524;
+    BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;

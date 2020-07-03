@@ -11,7 +11,7 @@ void PrintOp::InitFromOpConf() {
 
 const PbMessage& PrintOp::GetCustomizedConf() const { return op_conf().print_conf(); }
 
-LogicalBlobId PrintOp::ibn2lbi(const std::string& input_bn) const {
+LogicalBlobId PrintOp::lbi4ibn(const std::string& input_bn) const {
   CHECK_STREQ(input_bn.substr(0, 3).c_str(), "in_");
   return GenLogicalBlobId(
       op_conf().print_conf().in(oneflow_cast<int32_t>(input_bn.substr(3))).lbn());

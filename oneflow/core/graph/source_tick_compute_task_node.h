@@ -20,6 +20,7 @@ class SourceTickCompTaskNode final : public CompTaskNode {
 
  private:
   void InferProducedDataRegstTimeShape() override;
+  bool IsIndependent() const override { return true; }
 };
 
 }  // namespace oneflow

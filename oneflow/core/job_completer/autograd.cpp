@@ -3,6 +3,7 @@
 #include "oneflow/core/job_completer/clone_grad.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
@@ -43,7 +44,7 @@ void CheckNotReachableAmongOpNodes(const OpGraph& op_graph, const std::list<OpNo
   }
 }
 
-void GetLossOpNodes(const OpGraph& op_graph, std::list<OpNode*>* loss_op_nodes) {
+Maybe<void> GetLossOpNodes(const OpGraph& op_graph, std::list<OpNode*>* loss_op_nodes) {
   const auto& train_conf = GetTrainConf();
   HashSet<std::string> loss_op_names;
   for (const std::string& loss_lbn : train_conf.loss_lbn()) {
@@ -54,12 +55,13 @@ void GetLossOpNodes(const OpGraph& op_graph, std::list<OpNode*>* loss_op_nodes) 
       loss_op_nodes->push_back(op_node);
     }
   });
-  CHECK_GT(loss_op_nodes->size(), 0);
+  if (loss_op_nodes->empty()) { return Error::LossBlobNotFoundError("Loss blob not found."); }
+  return Maybe<void>::Ok();
 }
 
-void GetLossOpNodesAndAscendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
+Maybe<void> GetLossOpNodesAndAscendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
   std::list<OpNode*> starts;
-  GetLossOpNodes(op_graph, &starts);
+  JUST(GetLossOpNodes(op_graph, &starts));
   auto ForEachNextNode = [&](OpNode* op_node, const std::function<void(OpNode*)>& Handler) {
     for (OpEdge* edge : op_node->in_edges()) {
       if (AnyLbiWithDiffLbi(edge)) { Handler(edge->src_node()); }
@@ -67,14 +69,16 @@ void GetLossOpNodesAndAscendants(const OpGraph& op_graph, HashSet<OpNode*>* op_n
   };
   op_graph.BfsForEachNode(starts, ForEachNextNode,
                           [&](OpNode* op_node) { op_nodes->emplace(op_node); });
+  return Maybe<void>::Ok();
 }
 
-std::function<bool(OpNode*)> MakePredicatorNeedBackwardOp(const OpGraph& op_graph) {
+Maybe<void> MakePredicatorNeedBackwardOp(const OpGraph& op_graph,
+                                         std::function<bool(OpNode*)>* NeedBackwardOp) {
   auto var_op_nodes_and_descendants = std::make_shared<HashSet<OpNode*>>();
   GetVariableOpNodesAndDescendants(op_graph, var_op_nodes_and_descendants.get());
   auto loss_op_nodes_and_ascendants = std::make_shared<HashSet<OpNode*>>();
-  GetLossOpNodesAndAscendants(op_graph, loss_op_nodes_and_ascendants.get());
-  return [var_op_nodes_and_descendants, loss_op_nodes_and_ascendants](OpNode* op_node) {
+  JUST(GetLossOpNodesAndAscendants(op_graph, loss_op_nodes_and_ascendants.get()));
+  *NeedBackwardOp = [var_op_nodes_and_descendants, loss_op_nodes_and_ascendants](OpNode* op_node) {
     if (var_op_nodes_and_descendants->find(op_node) == var_op_nodes_and_descendants->end()) {
       return false;
     }
@@ -89,6 +93,7 @@ std::function<bool(OpNode*)> MakePredicatorNeedBackwardOp(const OpGraph& op_grap
     }
     return false;
   };
+  return Maybe<void>::Ok();
 }
 
 std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasDiff4LbiOpName(
@@ -210,16 +215,18 @@ void ScaleModelDiffByDynamicLossInstanceNum(
   }
 }
 
-std::function<OpNode*(const std::string&)> MakeGetterLossOpNode4OpName(const OpGraph& op_graph) {
+Maybe<void> MakeGetterLossOpNode4OpName(
+    const OpGraph& op_graph, std::function<OpNode*(const std::string&)>* LossOpNode4OpName) {
   std::list<OpNode*> loss_nodes;
-  GetLossOpNodes(op_graph, &loss_nodes);
+  JUST(GetLossOpNodes(op_graph, &loss_nodes));
   auto loss_op_name2op_node = std::make_shared<HashMap<std::string, OpNode*>>();
   for (OpNode* op_node : loss_nodes) {
     CHECK(loss_op_name2op_node->emplace(op_node->op().op_name(), op_node).second);
   }
-  return [loss_op_name2op_node](const std::string& op_name) -> OpNode* {
+  *LossOpNode4OpName = [loss_op_name2op_node](const std::string& op_name) -> OpNode* {
     return loss_op_name2op_node->at(op_name);
   };
+  return Maybe<void>::Ok();
 }
 
 void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_pairs,
@@ -440,35 +447,44 @@ void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>*
                           [&](OpNode* op_node) { op_nodes->emplace(op_node); });
 }
 
-void GenerateBackwardOpConfWrapperStruct::Call(
+Maybe<void> GenerateBackwardOpConfWrapperStruct::Call(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) const {
-  if (func_) {
-    (*func_)(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
-  } else if (naive_func_) {
+  if (naive_func_) {
     (*naive_func_)(op, op_confs, DiffLbi4BnInOp);
+  } else if (maybe_func_) {
+    JUST((*maybe_func_)(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN() << "\nNo gradient function found\n"
+                                << PbMessage2TxtString(op.op_conf());
   }
+  return Maybe<void>::Ok();
 }
 
-void GenerateBackwardOpConfIf(
+Maybe<void> GenerateBackwardOpConfIf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   std::unique_ptr<GenerateBackwardOpConfWrapperStruct> obj;
-  obj.reset(NewObj<GenerateBackwardOpConfWrapperStruct>(op.op_conf().op_type_case()));
-  obj->Call(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
+  const auto& op_type_case = op.op_conf().op_type_case();
+  if (!IsClassRegistered<GenerateBackwardOpConfWrapperStruct>(op_type_case)) {
+    return Error::GradientFunctionNotFound() << PbMessage2TxtString(op.op_conf());
+  }
+  obj.reset(NewObj<GenerateBackwardOpConfWrapperStruct>(op_type_case));
+  return obj->Call(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
 }
 
-void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
-              HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi) {
-  auto NeedBackwardOp = MakePredicatorNeedBackwardOp(op_graph);
+Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
+                     HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi) {
+  std::function<bool(OpNode*)> NeedBackwardOp;
+  JUST(MakePredicatorNeedBackwardOp(op_graph, &NeedBackwardOp));
   std::list<OpNode*> loss_nodes;
-  GetLossOpNodes(op_graph, &loss_nodes);
+  JUST(GetLossOpNodes(op_graph, &loss_nodes));
   CheckNotReachableAmongOpNodes(op_graph, loss_nodes);
-  for (OpNode* loss_node : loss_nodes) { CHECK(NeedBackwardOp(loss_node)); }
+  for (OpNode* loss_node : loss_nodes) {
+    CHECK(NeedBackwardOp(loss_node)) << loss_node->op().op_name();
+  }
 
   // generate ones lbi as loss's diff
   HashMap<OpBlobArg, LogicalBlobId> out_oba2out_diff_lbi;
@@ -488,7 +504,10 @@ void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
   auto HasDiff4LbiOpName = MakePredicatorHasDiff4LbiOpName(op_graph, NeedBackwardOp);
   HashMap<OpBlobArg, LogicalBlobId> in_oba2in_diff_lbi;
   HashMap<OpBlobArg, LogicalBlobId> out_oba2clone_bw_add_out_lbi;
-  op_graph.TopoForEachNode(loss_nodes, ForEachOutNode, ForEachInNode, [&](OpNode* op_node) {
+  std::list<OpNode*> topo_nodes;
+  op_graph.TopoForEachNode(loss_nodes, ForEachOutNode, ForEachInNode,
+                           [&](OpNode* op_node) { topo_nodes.push_back(op_node); });
+  for (OpNode* op_node : topo_nodes) {
     const auto& op_name = op_node->op().op_name();
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
       const auto& input_bns = op_node->op().input_bns();
@@ -505,6 +524,7 @@ void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
       } else {
         LOG(FATAL) << "diff lbi for bn in op not found, bn: " << op_name << "/" << bn;
       }
+      return nullptr;
     };
     auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
       return op_graph.GetLogicalBlobDesc(op_node->op().BnInOp2Lbi(bn));
@@ -512,19 +532,21 @@ void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
     GenerateCloneGradOpIfNeed(*op_node, job_builder, in_oba2in_diff_lbi, &out_oba2out_diff_lbi,
                               &out_oba2clone_bw_add_out_lbi);
     std::vector<OperatorConf> ops;
-    GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
+    JUST(GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), ops);
-  });
+  }
   OpBlobArgPairs fw_bw_oba_pairs;
   CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi, out_oba2clone_bw_add_out_lbi,
                    *job_builder, &fw_bw_oba_pairs);
   BindFwBwObaPairs(op_graph, fw_bw_oba_pairs, job_builder);
   CalcOutLbi2OutDiffLbi(op_graph, out_oba2out_diff_lbi, out_lbi2out_diff_lbi);
+  return Maybe<void>::Ok();
 }
 
-void ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
-                                     HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
-  auto LossOpNode4OpName = MakeGetterLossOpNode4OpName(op_graph);
+Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
+                                            HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
+  std::function<OpNode*(const std::string&)> LossOpNode4OpName;
+  JUST(MakeGetterLossOpNode4OpName(op_graph, &LossOpNode4OpName));
   const auto& train_conf = GetTrainConf();
   HashMap<LogicalBlobId, OpNode*> loss_lbi2op_node;
   for (const auto& loss_lbn : train_conf.loss_lbn()) {
@@ -577,6 +599,7 @@ void ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_bu
     ScaleModelDiffByConstantLossInstanceNum(op_graph, job_builder, lbi2diff_lbi,
                                             blob_desc->shape().elem_cnt());
   }
+  return Maybe<void>::Ok();
 }
 
 void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,

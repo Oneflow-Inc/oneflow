@@ -15,7 +15,7 @@ const PbMessage& ReduceScatterOp::GetCustomizedConf() const {
   return op_conf().reduce_scatter_conf();
 }
 
-LogicalBlobId ReduceScatterOp::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId ReduceScatterOp::lbi4obn(const std::string& output_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
   ret.set_blob_name(output_bn);
@@ -38,6 +38,12 @@ Maybe<void> ReduceScatterOp::InferBlobDescs(
     out_blob->mut_shape() = Shape({model_elem_cnt / out_num});
   }
   return Maybe<void>::Ok();
+}
+
+Symbol<OperatorConf> ReduceScatterOp::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
+  op_conf.set_name("undefined-op-name");
+  return SymbolOf(op_conf);
 }
 
 REGISTER_OP(OperatorConf::kReduceScatterConf, ReduceScatterOp);

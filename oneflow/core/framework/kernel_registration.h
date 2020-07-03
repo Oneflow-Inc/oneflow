@@ -2,11 +2,13 @@
 #define ONEFLOW_CORE_FRAMEWORK_KERNEL_REGISTRATION_H_
 
 #include "oneflow/core/framework/registrar.h"
+#include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/common/high_order_bool.h"
 
 namespace oneflow {
 
@@ -27,8 +29,13 @@ class KernelRegContext {
   virtual const ParallelContext& parallel_ctx() const = 0;
   virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
+  virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
+  virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
+
+  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+
   template<typename T>
-  T GetAttr(const std::string& attr_name) const {
+  T Attr(const std::string& attr_name) const {
     return user_op_conf_.attr<T>(attr_name);
   }
 
@@ -40,19 +47,19 @@ class KernelRegContext {
   UserOpConfWrapper user_op_conf_;
 };
 
-using CreateFn = std::function<OpKernel*(const KernelInitContext&)>;
-using IsMatchedPredicator = std::function<bool(const KernelRegContext&)>;
+using CreateFn = std::function<const OpKernel*()>;
 using InferTmpSizeFn = std::function<size_t(InferContext*)>;
 using AddInplaceArgPair = std::function<Maybe<void>(
     const std::string& out_arg_name, int32_t out_arg_index, const std::string& in_arg_name,
     int32_t in_arg_index, bool is_mutable)>;
 using InplaceProposalFn = std::function<Maybe<void>(const InferContext&, AddInplaceArgPair)>;
+using IsMatchedHob = hob::BoolFunctorPtr<user_op::KernelRegContext>;
 
 struct KernelRegistrationVal {
   CreateFn create_fn;
-  IsMatchedPredicator is_matched_fn;
   InferTmpSizeFn infer_tmp_size_fn;
   InplaceProposalFn inplace_proposal_fn;
+  IsMatchedHob is_matched_hob;
 };
 
 struct KernelRegistryWrapper final {
@@ -62,22 +69,31 @@ struct KernelRegistryWrapper final {
   KernelRegistrationVal reg_val;
 };
 
+bool IsStateless4OpTypeName(const std::string& op_type_name);
+
 class KernelRegistryWrapperBuilder final {
  public:
   KernelRegistryWrapperBuilder(const std::string& op_type_name);
-  KernelRegistryWrapperBuilder& SetCreateFn(CreateFn fn);
-  KernelRegistryWrapperBuilder& SetIsMatchedPred(IsMatchedPredicator fn);
+  template<typename T>
+  KernelRegistryWrapperBuilder& SetCreateFn() {
+    //    static_assert(sizeof(OpKernel) == sizeof(T), "no data member allowed in derived
+    //    OpKernel");
+    return SetCreateFn([]() -> const OpKernel* { return NewOpKernel<T>(); });
+  }
+  KernelRegistryWrapperBuilder& SetIsMatchedHob(IsMatchedHob hob);
   KernelRegistryWrapperBuilder& SetInferTmpSizeFn(InferTmpSizeFn fn);
   KernelRegistryWrapperBuilder& SetInplaceProposalFn(InplaceProposalFn fn);
 
   KernelRegistryWrapper Build();
 
  private:
+  KernelRegistryWrapperBuilder& SetCreateFn(CreateFn fn);
+
   KernelRegistryWrapper wrapper_;
 };
 
-const KernelRegistrationVal* LookUpInKernelRegistry(const std::string& op_type_name,
-                                                    const KernelRegContext&);
+Maybe<const KernelRegistrationVal*> LookUpInKernelRegistry(const std::string& op_type_name,
+                                                           const KernelRegContext&);
 
 std::vector<std::string> GetAllUserOpInKernelRegistry();
 

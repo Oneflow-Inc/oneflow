@@ -1,5 +1,6 @@
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -18,27 +19,14 @@ void ResetDeviceTag(std::string* device_name, const std::string& device_tag) {
 Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
                                 std::string* device_tag, std::string* device_id_str) {
   size_t second_delimiter_pos = device_name.rfind(":");
-  OF_CHECK_NE(second_delimiter_pos, std::string::npos);
+  CHECK_NE_OR_RETURN(second_delimiter_pos, std::string::npos);
   size_t first_delimiter_pos = device_name.rfind(":", second_delimiter_pos - 1);
-  OF_CHECK_NE(first_delimiter_pos, std::string::npos);
+  CHECK_NE_OR_RETURN(first_delimiter_pos, std::string::npos);
   *mchn_id = oneflow_cast<int64_t>(device_name.substr(0, first_delimiter_pos));
   *device_tag =
       device_name.substr(first_delimiter_pos + 1, second_delimiter_pos - first_delimiter_pos - 1);
   *device_id_str = device_name.substr(second_delimiter_pos + 1);
   return Maybe<void>::Ok();
-}
-
-std::string DeviceTag4DeviceType(DeviceType device_type) {
-  if (device_type == kCPU) { return "cpu"; }
-  if (device_type == kGPU) { return "gpu"; }
-  UNIMPLEMENTED();
-  return "";
-}
-
-Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
-  if (device_tag == "cpu") { return DeviceType::kCPU; }
-  if (device_tag == "gpu") { return DeviceType::kGPU; }
-  return Error::DeviceTagNotFound() << "device tag `" << device_tag << "' not found";
 }
 
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
@@ -68,10 +56,12 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     JUST(ParseDeviceNameConf(device_name, &mchn_id, &device_tag, &device_id_str));
     machine_id_set.insert(mchn_id);
     if (device_tag == "cpu") {
-      OF_CHECK(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kCPU);
+      CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice
+                      || device_type_ == DeviceType::kCPU);
       device_type_ = DeviceType::kCPU;
     } else if (device_tag == "gpu") {
-      OF_CHECK(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kGPU);
+      CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice
+                      || device_type_ == DeviceType::kGPU);
       device_type_ = DeviceType::kGPU;
     } else {
       OF_UNIMPLEMENTED() << "device type not supported";
@@ -86,10 +76,10 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     }
     int64_t min_id = oneflow_cast<int64_t>(device_id_str.substr(0, minus_pos));
     int64_t max_id = oneflow_cast<int64_t>(device_id_str.substr(minus_pos + 1));
-    OF_CHECK_LE(min_id, max_id);
+    CHECK_LE_OR_RETURN(min_id, max_id);
     for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
       if (device_type_ == DeviceType::kGPU) {
-        OF_CHECK_LT(dev_phy_id, Global<ResourceDesc>::Get()->GpuDeviceNum());
+        CHECK_LT_OR_RETURN(dev_phy_id, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()));
       }
       machine_id2sorted_dev_phy_ids_[mchn_id].push_back(dev_phy_id);
     }
@@ -134,7 +124,7 @@ void ParallelDesc::ClearUp() {
 void ParallelDesc::set_device_type(DeviceType device_type) {
   if (device_type == device_type_) { return; }
   device_type_ = device_type;
-  const std::string& tag = DeviceTag4DeviceType(device_type);
+  const char* tag = CHECK_JUST(DeviceTag4DeviceType(device_type));
   FOR_RANGE(int64_t, i, 0, parallel_conf_.device_name_size()) {
     ResetDeviceTag(parallel_conf_.mutable_device_name(i), tag);
   }
@@ -146,7 +136,7 @@ Maybe<void> ParallelDesc::SanityCheck() {
     if (device_num_of_each_machine_ == -1) {
       device_num_of_each_machine_ = pair.second.size();
     } else {
-      OF_CHECK_EQ(device_num_of_each_machine_, pair.second.size());
+      CHECK_EQ_OR_RETURN(device_num_of_each_machine_, pair.second.size());
     }
   }
   return Maybe<void>::Ok();
@@ -154,7 +144,7 @@ Maybe<void> ParallelDesc::SanityCheck() {
 
 ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) const {
   ParallelConf parallel_conf;
-  std::string device_tag = DeviceTag4DeviceType(device_type());
+  const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(device_type()));
   std::string machine_id = std::to_string(MachineIdForParallelId(parallel_id));
   std::string device_id = std::to_string(DeviceIdForParallelId(parallel_id));
   parallel_conf.add_device_name(machine_id + ":" + device_tag + ":" + device_id);
@@ -167,6 +157,13 @@ int64_t ParallelDesc::MachineIdForParallelId(int64_t parallel_id) const {
 
 int64_t ParallelDesc::DeviceIdForParallelId(int64_t parallel_id) const {
   return parallel_id2device_id_.at(parallel_id);
+}
+
+bool ParallelDesc::Containing(int64_t machine_id, int64_t device_id) const {
+  const auto& machine_iter = machine_id2sorted_dev_phy_ids_.find(machine_id);
+  if (machine_iter == machine_id2sorted_dev_phy_ids_.end()) { return false; }
+  const auto& vec = machine_iter->second;
+  return std::find(vec.begin(), vec.end(), device_id) != vec.end();
 }
 
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
@@ -182,7 +179,7 @@ ParallelConf GenParallelConfOfCpuZeroOnMaster() {
 
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   ParallelConf parallel_conf;
-  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->TotalMachineNum()) {
+  FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())) {
     parallel_conf.add_device_name(std::to_string(i) + ":cpu:0");
   }
   return parallel_conf;

@@ -1,15 +1,19 @@
-import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import argparse
 import os
-import numpy
 from datetime import datetime
+
+import numpy
+import oneflow as flow
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+
 # import hook
 
 # DATA_DIR = "/dataset/PNGS/PNG228/of_record"
 DATA_DIR = "/dataset/PNGS/PNG228/of_record_repeated"
 MODEL_LOAD = "/dataset/PNGS/cnns_model_for_test/resnet50/models/of_model"
-MODEL_SAVE = "./output/model_save-{}".format(str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S")))
+MODEL_SAVE = "./output/model_save-{}".format(
+    str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
+)
 NODE_LIST = "192.168.1.12,192.168.1.14"
 
 IMAGE_SIZE = 228
@@ -17,30 +21,49 @@ BLOCK_COUNTS = [3, 4, 6, 3]
 BLOCK_FILTERS = [256, 512, 1024, 2048]
 BLOCK_FILTERS_INNER = [64, 128, 256, 512]
 
+
 class DLNetSpec(object):
-  def __init__(self):
-    self.batch_size = 8
-    self.data_part_num = 32
-    self.eval_dir = DATA_DIR
-    self.train_dir = DATA_DIR
-    self.model_save_dir = MODEL_SAVE
-    self.model_load_dir = MODEL_LOAD
-    self.num_nodes = 1
-    self.gpu_num_per_node = 1
-    self.iter_num = 10
+    def __init__(self, enable_auto_mixed_precision):
+        self.batch_size = 8
+        self.data_part_num = 32
+        self.eval_dir = DATA_DIR
+        self.train_dir = DATA_DIR
+        self.model_save_dir = MODEL_SAVE
+        self.model_load_dir = MODEL_LOAD
+        self.num_nodes = 1
+        self.gpu_num_per_node = 1
+        self.iter_num = 10
+        self.enable_auto_mixed_precision = enable_auto_mixed_precision
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
-parser.add_argument("-m", "--multinode", default=False, action="store_true", required=False)
+parser.add_argument(
+    "-m", "--multinode", default=False, action="store_true", required=False
+)
 parser.add_argument("-n", "--node_list", type=str, default=NODE_LIST, required=False)
-parser.add_argument("-s", "--skip_scp_binary", default=False, action="store_true", required=False)
-parser.add_argument("-c","--scp_binary_without_uuid",default=False,action="store_true",required=False)
-parser.add_argument("-r", "--remote_by_hand", default=False, action="store_true", required=False)
+parser.add_argument(
+    "-s", "--skip_scp_binary", default=False, action="store_true", required=False
+)
+parser.add_argument(
+    "-c",
+    "--scp_binary_without_uuid",
+    default=False,
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
+    "-r", "--remote_by_hand", default=False, action="store_true", required=False
+)
 parser.add_argument("-e", "--eval_dir", type=str, default=DATA_DIR, required=False)
 parser.add_argument("-t", "--train_dir", type=str, default=DATA_DIR, required=False)
-parser.add_argument("-load", "--model_load_dir", type=str, default=MODEL_LOAD, required=False)
-parser.add_argument("-save", "--model_save_dir", type=str, default=MODEL_SAVE, required=False)
+parser.add_argument(
+    "-load", "--model_load_dir", type=str, default=MODEL_LOAD, required=False
+)
+parser.add_argument(
+    "-save", "--model_save_dir", type=str, default=MODEL_SAVE, required=False
+)
 parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
 parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
 
@@ -55,9 +78,7 @@ def _data_load(args, data_dir):
         shape=(IMAGE_SIZE, IMAGE_SIZE, 3),
         dtype=flow.float,
         codec=flow.data.ImageCodec([flow.data.ImagePreprocessor("bgr2rgb")]),
-        preprocessors=[
-            flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))
-        ],
+        preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
     )
 
     label_blob_conf = flow.data.BlobConf(
@@ -67,8 +88,11 @@ def _data_load(args, data_dir):
     node_num = args.num_nodes
     total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
     return flow.data.decode_ofrecord(
-        data_dir, (label_blob_conf, image_blob_conf),
-        batch_size=total_batch_size, data_part_num=args.data_part_num, name="decode",
+        data_dir,
+        (label_blob_conf, image_blob_conf),
+        batch_size=total_batch_size,
+        data_part_num=args.data_part_num,
+        name="decode",
     )
 
 
@@ -85,7 +109,7 @@ def _conv2d(
 ):
     weight = flow.get_variable(
         name + "-weight",
-        shape=(filters, input.static_shape[1], kernel_size, kernel_size),
+        shape=(filters, input.shape[1], kernel_size, kernel_size),
         dtype=input.dtype,
         initializer=weight_initializer,
         trainable=g_trainable,
@@ -121,9 +145,7 @@ def conv2d_affine(
     return output
 
 
-def bottleneck_transformation(
-    input, block_name, filters, filters_inner, strides
-):
+def bottleneck_transformation(input, block_name, filters, filters_inner, strides):
     a = conv2d_affine(
         input,
         block_name + "_branch2a",
@@ -162,18 +184,12 @@ def residual_block(input, block_name, filters, filters_inner, strides_init):
     return flow.keras.activations.relu(shortcut + bottleneck)
 
 
-def residual_stage(
-    input, stage_name, counts, filters, filters_inner, stride_init=2
-):
+def residual_stage(input, stage_name, counts, filters, filters_inner, stride_init=2):
     output = input
     for i in range(counts):
         block_name = "%s_%d" % (stage_name, i)
         output = residual_block(
-            output,
-            block_name,
-            filters,
-            filters_inner,
-            stride_init if i == 0 else 1,
+            output, block_name, filters, filters_inner, stride_init if i == 0 else 1,
         )
 
     return output
@@ -186,12 +202,7 @@ def resnet_conv_x_body(input, on_stage_end=lambda x: x):
     ):
         stage_name = "res%d" % (i + 2)
         output = residual_stage(
-            output,
-            stage_name,
-            counts,
-            filters,
-            filters_inner,
-            1 if i == 0 else 2,
+            output, stage_name, counts, filters, filters_inner, 1 if i == 0 else 2,
         )
         on_stage_end(output)
         g_output_key.append(stage_name)
@@ -210,12 +221,7 @@ def resnet_stem(input):
     conv1_bn = conv1
 
     pool1 = flow.nn.avg_pool2d(
-        conv1_bn,
-        ksize=3,
-        strides=2,
-        padding="VALID",
-        data_format="NCHW",
-        name="pool1",
+        conv1_bn, ksize=3, strides=2, padding="VALID", data_format="NCHW", name="pool1",
     )
     g_output_key.append("pool1")
     g_output.append(pool1)
@@ -233,12 +239,7 @@ def resnet50(args, data_dir):
         stem = resnet_stem(images)
         body = resnet_conv_x_body(stem, lambda x: x)
         pool5 = flow.nn.avg_pool2d(
-            body,
-            ksize=7,
-            strides=1,
-            padding="VALID",
-            data_format="NCHW",
-            name="pool5",
+            body, ksize=7, strides=1, padding="VALID", data_format="NCHW", name="pool5",
         )
         g_output_key.append("pool5")
         g_output.append(pool5)
@@ -278,7 +279,9 @@ def main(args):
     train_config.default_data_type(flow.float)
     train_config.train.primary_lr(0.0032)
     train_config.train.model_update_conf(dict(naive_conf={}))
-    @flow.function(train_config)
+    train_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
+
+    @flow.global_function(train_config)
     def TrainNet():
         _set_trainable(True)
         loss = resnet50(args, args.train_dir)
@@ -287,7 +290,9 @@ def main(args):
 
     eval_config = flow.FunctionConfig()
     eval_config.default_data_type(flow.float)
-    @flow.function(eval_config)
+    eval_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
+
+    @flow.global_function(eval_config)
     def evaluate():
         with flow.distribute.consistent_strategy():
             _set_trainable(False)
@@ -318,11 +323,14 @@ def main(args):
         #     print(fmt_str.format(i, "eval loss:", eval))
 
         #     check_point.save(MODEL_SAVE + "_" + str(i))
-        
+
     # save loss to file
-    loss_file = "{}n{}c.npy".format(str(args.num_nodes), str(args.gpu_num_per_node * args.num_nodes))
+    loss_file = "{}n{}c.npy".format(
+        str(args.num_nodes), str(args.gpu_num_per_node * args.num_nodes)
+    )
     loss_path = "./of_loss/resnet50"
-    if not os.path.exists(loss_path): os.makedirs(loss_path)
+    if not os.path.exists(loss_path):
+        os.makedirs(loss_path)
     numpy.save(os.path.join(loss_path, loss_file), loss)
 
 
@@ -347,8 +355,15 @@ if __name__ == "__main__":
         else:
             flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
     num_nodes = len(args.node_list.strip().split(",")) if args.multinode else 1
-    print("Traning resnet50: num_gpu_per_node = {}, num_nodes = {}.".format(args.gpu_num_per_node, num_nodes))
+    print(
+        "Traning resnet50: num_gpu_per_node = {}, num_nodes = {}.".format(
+            args.gpu_num_per_node, num_nodes
+        )
+    )
     main(args)
-    if (args.multinode and args.skip_scp_binary is False
-        and args.scp_binary_without_uuid is False):
-      flow.deprecated.delete_worker()
+    if (
+        args.multinode
+        and args.skip_scp_binary is False
+        and args.scp_binary_without_uuid is False
+    ):
+        flow.deprecated.delete_worker()

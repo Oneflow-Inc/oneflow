@@ -1,8 +1,7 @@
 #ifndef ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 #define ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/data_type.h"
 
 #ifdef WITH_CUDA
 
@@ -101,6 +100,7 @@ class CudaCurrentDeviceGuard final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaCurrentDeviceGuard)
   explicit CudaCurrentDeviceGuard(int32_t dev_id);
+  CudaCurrentDeviceGuard();
   ~CudaCurrentDeviceGuard();
 
  private:

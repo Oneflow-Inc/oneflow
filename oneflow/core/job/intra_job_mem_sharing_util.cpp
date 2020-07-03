@@ -55,6 +55,7 @@ void GenRegstDescId2RegstDesc(Plan* plan,
 struct MemoryChain {
   std::vector<TaskProto*> sorted_tasks;
   HashSet<RegstDescProto*> mem_reused_regsts;
+  int64_t total_mem_reused_size = 0;
 };
 
 void InitMemoryChains(Plan* plan,
@@ -79,6 +80,7 @@ void InitMemoryChains(Plan* plan,
           && regst_desc->regst_desc_type().has_data_regst_desc()
           && Shape(regst_desc->regst_desc_type().data_regst_desc().time_shape()) == meta_shape) {
         CHECK(mem_chain->mem_reused_regsts.insert(regst_desc).second);
+        mem_chain->total_mem_reused_size += RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
       }
     }
   }
@@ -105,6 +107,9 @@ void InitMemoryChains(Plan* plan,
 bool TryMergeMemChain2MergedChains(
     std::vector<MemoryChain*>* merged_chains, MemoryChain* mem_chain,
     const std::function<bool(const MemoryChain*, const MemoryChain*)>& IsStrictOrderL2R) {
+  std::sort(merged_chains->begin(), merged_chains->end(), [&](MemoryChain* lhs, MemoryChain* rhs) {
+    return lhs->total_mem_reused_size > rhs->total_mem_reused_size;
+  });
   for (MemoryChain* merged_chain : *merged_chains) {
     if (IsStrictOrderL2R(merged_chain, mem_chain)) {
       merged_chain->sorted_tasks.insert(merged_chain->sorted_tasks.end(),
@@ -112,6 +117,7 @@ bool TryMergeMemChain2MergedChains(
                                         mem_chain->sorted_tasks.end());
       merged_chain->mem_reused_regsts.insert(mem_chain->mem_reused_regsts.begin(),
                                              mem_chain->mem_reused_regsts.end());
+      merged_chain->total_mem_reused_size += mem_chain->total_mem_reused_size;
       return true;
     }
   }

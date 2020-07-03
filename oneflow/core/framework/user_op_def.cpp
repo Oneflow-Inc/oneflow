@@ -64,7 +64,7 @@ bool UserOpDefWrapper::AttrHasDefaultVal(const std::string& name) const {
     CHECK(AttrHasDefaultVal(name));                                                       \
     const UserOpAttrVal& default_val = attrs_.at(name)->default_val();                    \
     CHECK_EQ(static_cast<int>(attr_type), default_val.value_case());                      \
-    return AttrValAccessor<cpp_type>::GetAttr(default_val);                               \
+    return AttrValAccessor<cpp_type>::Attr(default_val);                                  \
   }
 
 OF_PP_FOR_EACH_TUPLE(ATTR_TYPE_SPECIALIZATION, ATTR_SEQ)

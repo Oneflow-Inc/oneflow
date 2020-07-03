@@ -16,7 +16,7 @@ class NormalizationOp : public TrtOpKernel {
     Shape in_shape = ctx->InputShape("in");
     CHECK_GE(in_shape.NumAxes(), 2);
 
-    float epsilon = ctx->GetAttr<float>("epsilon");
+    float epsilon = ctx->Attr<float>("epsilon");
 
     nvinfer1::Weights gamma = ctx->Weight("gamma");
     nvinfer1::Weights beta = ctx->Weight("beta");

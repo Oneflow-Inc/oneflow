@@ -75,19 +75,51 @@ enum BoxingError {
   kNotSupported = 1;
 }
 
+message GradientFunctionNotFoundError { }
+
+message OpKernelNotFoundError {
+  repeated string op_kernels_not_found_debug_str = 1;
+}
+
+message MultipleOpKernelsMatchedError {
+  repeated string matched_op_kernels_debug_str = 1;
+}
+
+message MemoryZoneOutOfMemory {
+  repeated string machine_id = 1;
+  repeated string mem_zone_id = 2;
+  repeated string device_tag = 3;
+  repeated string required = 4;
+  repeated string available = 5;
+}
+
+message LossBlobNotFoundError { }
+
 message UnkownError { }
 
+message ErrorStackFrame {
+  required string location = 1;
+  required string function = 2;
+}
+
 message ErrorProto {
-  optional string msg = 1 [default = ""];
+  optional string error_summary = 1 [default = ""];
+  optional string msg = 2 [default = ""];
+  repeated ErrorStackFrame stack_frame = 3;
   oneof error_type {
-    ConfigAssertFailedError config_assert_failed_error = 2;
-    ConfigResourceUnavailableError config_resource_unavailable_error = 3;
-    JobBuildAndInferError job_build_and_infer_error = 4;
-    ProtoParseFailedError proto_parse_failed_error = 5;
-    CheckFailed check_failed = 6;
-    TodoError todo_error = 7;
-    UnimplementedError unimplemented_error = 8;
-    BoxingError boxing_error = 9;
+    ConfigAssertFailedError config_assert_failed_error = 12;
+    ConfigResourceUnavailableError config_resource_unavailable_error = 13;
+    JobBuildAndInferError job_build_and_infer_error = 14;
+    ProtoParseFailedError proto_parse_failed_error = 15;
+    CheckFailed check_failed = 16;
+    TodoError todo_error = 17;
+    UnimplementedError unimplemented_error = 18;
+    BoxingError boxing_error = 19;
+    GradientFunctionNotFoundError gradient_function_not_found_error = 20;
+    OpKernelNotFoundError op_kernel_not_found_error = 21;
+    MultipleOpKernelsMatchedError multiple_op_kernels_matched_error = 22;
+    MemoryZoneOutOfMemory memory_zone_out_of_memory = 23;
+    LossBlobNotFoundError loss_blob_not_found_error = 24;
     UnkownError unknown_error = 100;
   }
 }

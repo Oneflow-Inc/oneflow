@@ -63,38 +63,33 @@ void CpuTopK(DeviceCtx* ctx, const T* in_ptr, int32_t* indices_ptr, int32_t inst
 template<typename T>
 class TopKCpuKernel final : public user_op::OpKernel {
  public:
-  TopKCpuKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
   TopKCpuKernel() = default;
   ~TopKCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
-    const int32_t k = std::min(ctx->GetAttr<int32_t>("k"), instance_size);
+    const int32_t k = std::min(ctx->Attr<int32_t>("k"), instance_size);
     int32_t* indices_ptr = tmp_buffer ? tmp_buffer->mut_dptr<int32_t>() : nullptr;
     CpuTopK(ctx->device_ctx(), in->dptr<T>(), indices_ptr, instance_num, instance_size, k,
-            ctx->GetAttr<bool>("sorted"), out->mut_dptr<int32_t>());
-  };
+            ctx->Attr<bool>("sorted"), out->mut_dptr<int32_t>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_TOP_K_KERNEL(dtype)                                                    \
-  REGISTER_USER_KERNEL("top_k")                                                             \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                     \
-        return new TopKCpuKernel<dtype>(ctx);                                               \
-      })                                                                                    \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {                 \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);       \
-        return ctx.device_type() == DeviceType::kCPU                                        \
-               && in_desc->data_type() == GetDataType<dtype>::value;                        \
-      })                                                                                    \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                          \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                        \
-        return ctx->GetAttr<int32_t>("k") > 1 ? in_shape->elem_cnt() * sizeof(int32_t) : 0; \
+#define REGISTER_CPU_TOP_K_KERNEL(dtype)                                                 \
+  REGISTER_USER_KERNEL("top_k")                                                          \
+      .SetCreateFn<TopKCpuKernel<dtype>>()                                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                    \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))   \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                \
+        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                     \
+        return ctx->Attr<int32_t>("k") > 1 ? in_shape->elem_cnt() * sizeof(int32_t) : 0; \
       });
 
 REGISTER_CPU_TOP_K_KERNEL(float)

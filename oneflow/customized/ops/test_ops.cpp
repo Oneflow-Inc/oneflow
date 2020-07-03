@@ -3,10 +3,33 @@
 
 namespace oneflow {
 
+namespace {
+
+void PrintSbpLog(SbpSignatureList* sbp_list) {
+  for (const auto& sbp_sign : sbp_list->sbp_signature()) {
+    std::cout << "cclog: one sbp sign: ";
+    for (const auto& pair : sbp_sign.bn_in_op2sbp_parallel()) {
+      std::cout << " bn: " << pair.first;
+      if (pair.second.has_split_parallel()) {
+        std::cout << " Split axis = " << pair.second.split_parallel().axis();
+      } else if (pair.second.has_broadcast_parallel()) {
+        std::cout << " Broadcast ";
+      } else if (pair.second.has_partial_sum_parallel()) {
+        std::cout << " PartialSum ";
+      } else {
+        std::cout << " ERROR !";
+      }
+    }
+    std::cout << std::endl;
+  }
+}
+
+}  // namespace
+
 REGISTER_USER_OP("ccrelu")
     .Input("in")
     .Output("out")
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       *out_shape = *in_shape;
@@ -15,16 +38,7 @@ REGISTER_USER_OP("ccrelu")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
-      // SbpSignatureBuilder()
-      //     .Split("in", 0, 0)
-      //     .Split("out", 0, 0)
-      //     .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 
@@ -32,7 +46,7 @@ REGISTER_USER_OP("ccrelu_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
@@ -43,11 +57,11 @@ REGISTER_USER_OP("ccrelu_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split("y", 0, 0)
-          .Split("dy", 0, 0)
-          .Split("dx", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("y", 0), 0)
+          .Split(user_op::OpArg("dy", 0), 0)
+          .Split(user_op::OpArg("dx", 0), 0)
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -70,10 +84,10 @@ REGISTER_USER_OP("TestReshape")
     .Input("in")
     .Output("out")
     .Attr("shape", UserOpAttrType::kAtShape)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      Shape conf_shape = ctx->GetAttr<Shape>("shape");
+      const Shape& conf_shape = ctx->Attr<Shape>("shape");
       CHECK_EQ(in_shape->NumAxes(), conf_shape.NumAxes());
       *out_shape = conf_shape;
       return Maybe<void>::Ok();
@@ -83,10 +97,10 @@ REGISTER_USER_OP("TestReshape4KeepHeaderOnly")
     .Input("in")
     .Output("out")
     .Attr("shape", UserOpAttrType::kAtShape)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      Shape conf_shape = ctx->GetAttr<Shape>("shape");
+      const Shape& conf_shape = ctx->Attr<Shape>("shape");
       CHECK_EQ(in_shape->elem_cnt(), conf_shape.elem_cnt());
       *out_shape = conf_shape;
       return Maybe<void>::Ok();
@@ -96,7 +110,7 @@ REGISTER_USER_OP("TestReshapeLike4KeepHeaderOnly")
     .Input("in")
     .Input("like")
     .Output("out")
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
@@ -104,7 +118,9 @@ REGISTER_USER_OP("TestReshapeLike4KeepHeaderOnly")
       *out_shape = *like_shape;
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn) {
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper& conf) {
+      CHECK_EQ(conf.input_size("like"), 1);
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_arg_modifier != nullptr);
       like_arg_modifier->set_use_header_only(true);
@@ -127,12 +143,9 @@ REGISTER_USER_OP_GRAD("TestReshape4KeepHeaderOnly")
 
 REGISTER_USER_OP("TestSource")
     .Output("out")
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       *out_shape = Shape({5});
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     })
@@ -141,9 +154,7 @@ REGISTER_USER_OP("TestSource")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split(ctx->outputs(), 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 
@@ -151,7 +162,7 @@ REGISTER_USER_OP("TestMultiOutputOrder")
     .Input("in")
     .Output("out1")
     .Output("out2")
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out1_shape = ctx->Shape4ArgNameAndIndex("out1", 0);
       Shape* out2_shape = ctx->Shape4ArgNameAndIndex("out2", 0);
@@ -162,28 +173,22 @@ REGISTER_USER_OP("TestMultiOutputOrder")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      SbpSignatureBuilder()
-          .Split(ctx->outputs(), 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
     .Output("out")
     .Attr("out_num", UserOpAttrType::kAtInt64)
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      int64_t out_num = ctx->GetAttr<int64_t>("out_num");
+      int64_t out_num = ctx->Attr<int64_t>("out_num");
       const ParallelContext& parallel_ctx = ctx->parallel_ctx();
       BalancedSplitter bs(out_num, parallel_ctx.parallel_num());
       *out_shape = Shape({bs.At(parallel_ctx.parallel_id()).size()});
 
       const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       CHECK(out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == 0);
-
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     })
@@ -195,9 +200,7 @@ REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
       int64_t parallel_num = ctx->parallel_num();
       DeviceType device_type = ctx->device_type();
       if (device_type == DeviceType::kCPU && parallel_num > 1) {
-        SbpSignatureBuilder()
-            .Split(ctx->outputs(), 0)
-            .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+        ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       }
       return Maybe<void>::Ok();
     });
@@ -206,7 +209,7 @@ REGISTER_USER_OP("TestMultiInput")
     .Input("x1")
     .Input("x2")
     .Output("y")
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x1_shape = ctx->Shape4ArgNameAndIndex("x1", 0);
       Shape* x2_shape = ctx->Shape4ArgNameAndIndex("x2", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
@@ -215,12 +218,10 @@ REGISTER_USER_OP("TestMultiInput")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& x1_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
+      FOR_RANGE(int64_t, i, 0, x1_tensor.shape().NumAxes()) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+      }
       return Maybe<void>::Ok();
     });
 
@@ -230,7 +231,7 @@ REGISTER_USER_OP("TestMultiInputGrad")
     .Input("y_diff")
     .Output("x1_diff")
     .Output("x2_diff")
-    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x1_shape = ctx->Shape4ArgNameAndIndex("x1", 0);
       Shape* x2_shape = ctx->Shape4ArgNameAndIndex("x2", 0);
       Shape* x1_diff_shape = ctx->Shape4ArgNameAndIndex("x1_diff", 0);
@@ -240,12 +241,10 @@ REGISTER_USER_OP("TestMultiInputGrad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
-      SbpSignatureBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
-          .Build(ctx->sbp_sig_list());
+      const user_op::TensorDesc& x1_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
+      FOR_RANGE(int64_t, i, 0, x1_tensor.shape().NumAxes()) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+      }
       return Maybe<void>::Ok();
     });
 
@@ -265,6 +264,83 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
         op.BindGradTensorWithOpInput(test_multi_input_grad_op.output("x2_diff", 0), "x2", 0);
         AddOp(test_multi_input_grad_op);
       }
+    });
+
+REGISTER_USER_OP("TestDynamicSource")
+    .Output("out")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      // Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      // bool* is_dynamic = ctx->IsDynamic4ArgNameAndIndex("out", 0);
+      // *is_dynamic = true;
+      // *out_shape = Shape({5});
+      // *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_tensor->mut_shape() = Shape({5});
+      *out_tensor->mut_data_type() = DataType::kFloat;
+      out_tensor->set_is_dynamic(true);
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("TestRandomSource")
+    .Output("out")
+    .Attr("seed", UserOpAttrType::kAtInt64)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_tensor->mut_shape() = Shape({5});
+      *out_tensor->mut_data_type() = DataType::kFloat;
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("TestDataTypeAttr")
+    .Input("in")
+    .Output("out")
+    .Attr("output_type", UserOpAttrType::kAtDataType)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      *out_shape = *in_shape;
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->Attr<DataType>("output_type");
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
+    .Input("in")
+    .Output("out", 3)
+    .Attr("out_shapes", UserOpAttrType::kAtListShape)
+    .Attr("out_types", UserOpAttrType::kAtListDataType)
+    .Attr("string_list", UserOpAttrType::kAtListString)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const auto& out_shapes = ctx->Attr<std::vector<Shape>>("out_shapes");
+      const auto& out_types = ctx->Attr<std::vector<DataType>>("out_types");
+      const auto& string_list = ctx->Attr<std::vector<std::string>>("string_list");
+      FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
+        *ctx->Shape4ArgNameAndIndex("out", i) = out_shapes.at(i);
+        *ctx->Dtype4ArgNameAndIndex("out", i) = out_types.at(i);
+      }
+      CHECK_GT_OR_RETURN(string_list.size(), 0);
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_CPU_ONLY_USER_OP("cpu_only_relu_test")
+    .Input("in")
+    .Output("out")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const auto* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      auto* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_desc = *in_desc;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

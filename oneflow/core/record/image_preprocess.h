@@ -3,7 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 #include "oneflow/core/record/image.pb.h"
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 

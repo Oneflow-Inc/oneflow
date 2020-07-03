@@ -1,36 +1,45 @@
 import unittest
-import numpy as np
 
+import numpy as np
 import oneflow as flow
 
 config = flow.function_config()
+
 
 def make_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
-    @flow.function(config)
-    def matmul_job(a=flow.FixedTensorDef(a_shape, dtype=dtype),
-                   b=flow.FixedTensorDef(b_shape, dtype=dtype)):
+    @flow.global_function(config)
+    def matmul_job(
+        a=flow.FixedTensorDef(a_shape, dtype=dtype),
+        b=flow.FixedTensorDef(b_shape, dtype=dtype),
+    ):
         return flow.matmul(a, b, transpose_a=trans_a, transpose_b=trans_b)
+
     return matmul_job
+
 
 def make_xla_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
-    @flow.function(config)
-    def xla_matmul_job(a=flow.FixedTensorDef(a_shape, dtype=dtype),
-                       b=flow.FixedTensorDef(b_shape, dtype=dtype)):
+    @flow.global_function(config)
+    def xla_matmul_job(
+        a=flow.FixedTensorDef(a_shape, dtype=dtype),
+        b=flow.FixedTensorDef(b_shape, dtype=dtype),
+    ):
         return flow.matmul(a, b, transpose_a=trans_a, transpose_b=trans_b)
+
     return xla_matmul_job
+
 
 class TestMatmul(unittest.TestCase):
     def make_shape(self, m, n, transpose):
-      if transpose:
-        return (n, m)
-      else:
-        return (m, n)
+        if transpose:
+            return (n, m)
+        else:
+            return (m, n)
 
     def _test_body(self, a, b, trans_a, trans_b, dtype=np.float32):
         f1 = make_job(a.shape, b.shape, trans_a, trans_b)
@@ -55,7 +64,7 @@ class TestMatmul(unittest.TestCase):
         a = np.random.random(shape_a).astype(dtype)
         b = np.random.random(shape_b).astype(dtype)
         self._test_body(a, b, trans_a, trans_b, dtype=dtype)
-    
+
     def test_ones1x1x1_input(self):
         print("run test_ones1x1x1_input: ")
         self._test_ones_body(1, 1, 1, False, False)
@@ -98,5 +107,6 @@ class TestMatmul(unittest.TestCase):
         self._test_random_body(10, 10, 2, True, False)
         self._test_random_body(10, 10, 2, True, True)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

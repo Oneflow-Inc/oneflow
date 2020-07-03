@@ -14,17 +14,17 @@ class AutoLearningRate final : public OpGraphPass {
 
   bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
 
-  void Apply(const OpGraph& op_graph, Job* job) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override;
 };
 
-void AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
+Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
   JobBuilder job_builder(job);
   const TrainConf& train_conf = job->job_conf().train_conf();
   auto AddScheduleOp = [&](const std::string& op_name, const float learning_rate) -> std::string {
-    const ParallelConf& parallel_conf =
-        op_graph.OpNode4OpName(GenLogicalBlobId(train_conf.train_step_lbn()).op_name())
-            ->parallel_desc()
-            .parallel_conf();
+    const class oneflow::OpNode* op_node =
+        op_graph.OpNode4OpName(GenLogicalBlobId(train_conf.train_step_lbn()).op_name());
+    CHECK_OR_RETURN(op_node != nullptr) << "op node not fould in op graph, op name: " << op_name;
+    const ParallelConf& parallel_conf = op_node->parallel_desc().parallel_conf();
     const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
     if (model_update_conf.has_warmup_conf() || model_update_conf.has_learning_rate_decay()) {
       OperatorConf schedule_op_conf{};
@@ -70,6 +70,7 @@ void AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
           train_conf.primary_lr_lbn());
     }
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_FUNCTION_PASS("AutoLearningRate", AutoLearningRate);

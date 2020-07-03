@@ -22,8 +22,8 @@ class SliceBoxingOp : public Operator {
   virtual void VirtualInitFromOpConf(){};
 
  private:
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
+  LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
+  LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };
 
 class SliceBoxingCopyOp final : public SliceBoxingOp {
@@ -57,11 +57,11 @@ void SliceBoxingOp::InitFromOpConf() {
   VirtualInitFromOpConf();
 }
 
-LogicalBlobId SliceBoxingOp::ibn2lbi(const std::string& input_bn) const {
+LogicalBlobId SliceBoxingOp::lbi4ibn(const std::string& input_bn) const {
   return GetCustomizedBoxingConf().lbi();
 }
 
-LogicalBlobId SliceBoxingOp::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId SliceBoxingOp::lbi4obn(const std::string& output_bn) const {
   return GetCustomizedBoxingConf().lbi();
 }
 
@@ -106,7 +106,7 @@ const PbMessage& SliceBoxingCopyOp::GetCustomizedConf() const {
 
 Symbol<OperatorConf> SliceBoxingCopyOp::GetOpConfWithoutOpNameAndLbn() const {
   OperatorConf op_conf(this->op_conf());
-  op_conf.set_name("");
+  op_conf.set_name("undefined-op-name");
   CHECK(op_conf.has_slice_boxing_copy_conf());
   auto* boxing_conf = op_conf.mutable_slice_boxing_copy_conf();
   LogicalBlobId empty_logical_blob_id{};
@@ -128,7 +128,7 @@ void SliceBoxingAddOp::VirtualInferBlobDescs(
 
 Symbol<OperatorConf> SliceBoxingAddOp::GetOpConfWithoutOpNameAndLbn() const {
   OperatorConf op_conf(this->op_conf());
-  op_conf.set_name("");
+  op_conf.set_name("undefined-op-name");
   CHECK(op_conf.has_slice_boxing_add_conf());
   auto* boxing_conf = op_conf.mutable_slice_boxing_add_conf();
   LogicalBlobId empty_logical_blob_id{};

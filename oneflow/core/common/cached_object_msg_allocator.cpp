@@ -3,12 +3,6 @@
 
 namespace oneflow {
 
-namespace {
-
-int RoundUpShift(std::size_t size) { return (static_cast<int>(std::log2(size)) + 1); }
-
-}  // namespace
-
 ObjMsgMemBlock* ObjMsgMemBlock::PlacementNew(char* mem_ptr, ObjMsgChunk* obj_msg_chunk) {
   ObjMsgMemBlock* ret = new (mem_ptr) ObjMsgMemBlock();
   ret->chunk_ = obj_msg_chunk;
@@ -75,6 +69,10 @@ void ObjMsgSizedMemPool::Prefetch(ObjMsgChunkList* free_list) {
 
 void ObjMsgSizedMemPool::AppendToFreeList(ObjMsgChunkList* free_list) {
   free_list->MoveTo(mut_free_chunk_list());
+}
+
+int CachedObjectMsgAllocatorBase::RoundUpShift(std::size_t size) const {
+  return std::max<int>(kMemSizeShiftMin, (static_cast<int>(std::log2(size)) + 1));
 }
 
 char* CachedObjectMsgAllocatorBase::RoundUpAllocate(std::mutex* mutex, std::size_t size) {

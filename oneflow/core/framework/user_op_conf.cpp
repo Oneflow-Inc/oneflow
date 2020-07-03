@@ -11,6 +11,22 @@ namespace user_op {
 
 UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) : op_conf_(op_conf) {
   CHECK(op_conf_.has_user_conf());
+  for (const auto& kv : op_conf_.user_conf().attr()) {
+    UserOpAttrVal::ValueCase value_case = kv.second.value_case();
+    switch (value_case) {
+#define CASE_ENTRY(field, cpp_type, attr_type)                                              \
+  /* UserOpAttrVal::ValueCase has the same order and naming convention as UserOpAttrType */ \
+  case (static_cast<UserOpAttrVal::ValueCase>(attr_type)):                                  \
+    CHECK(attrs_                                                                            \
+              .emplace(kv.first, std::make_shared<TypedAttrVal<cpp_type>>(                  \
+                                     AttrValAccessor<cpp_type>::Attr(kv.second)))           \
+              .second);                                                                     \
+    break;
+      OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
+#undef CASE_ENTRY
+      default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
+    };
+  }
 }
 
 const OperatorConf& UserOpConfWrapper::op_conf() const { return op_conf_; }
@@ -25,32 +41,59 @@ const std::string& UserOpConfWrapper::op_type_name() const {
 
 const std::string& UserOpConfWrapper::input(const std::string& arg_name, int32_t index) const {
   auto it = op_conf_.user_conf().input().find(arg_name);
-  CHECK(it != op_conf_.user_conf().input().end());
+  CHECK(it != op_conf_.user_conf().input().end())
+      << "arg_name: " << arg_name << ", index: " << index;
   CHECK(index >= 0 && index < it->second.s_size());
   return it->second.s(index);
 }
 
 const std::string& UserOpConfWrapper::output(const std::string& arg_name, int32_t index) const {
   auto it = op_conf_.user_conf().output().find(arg_name);
-  CHECK(it != op_conf_.user_conf().output().end());
+  CHECK(it != op_conf_.user_conf().output().end())
+      << "arg_name: " << arg_name << ", index: " << index;
   CHECK(index >= 0 && index < it->second.s_size());
   return it->second.s(index);
 }
 
+bool UserOpConfWrapper::has_input(const std::string& arg_name, int32_t index) const {
+  auto it = op_conf_.user_conf().input().find(arg_name);
+  return (it != op_conf_.user_conf().input().end());
+}
+
+bool UserOpConfWrapper::has_output(const std::string& arg_name, int32_t index) const {
+  auto it = op_conf_.user_conf().output().find(arg_name);
+  return (it != op_conf_.user_conf().output().end());
+}
+
+int32_t UserOpConfWrapper::input_size(const std::string& arg_name) const {
+  auto it = op_conf_.user_conf().input().find(arg_name);
+  if (it == op_conf_.user_conf().input().end()) { return 0; }
+  return it->second.s_size();
+}
+
+int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
+  auto it = op_conf_.user_conf().output().find(arg_name);
+  if (it == op_conf_.user_conf().output().end()) { return 0; }
+  return it->second.s_size();
+}
+
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \
   template<>                                                                                       \
-  cpp_type UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {                 \
-    CHECK(op_conf_.user_conf().attr().find(attr_name) != op_conf_.user_conf().attr().end());       \
-    UserOpAttrVal val = op_conf_.user_conf().attr().at(attr_name);                                 \
-    CHECK(val.has_##field());                                                                      \
-    return AttrValAccessor<cpp_type>::GetAttr(val);                                                \
+  const cpp_type& UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {          \
+    auto it = attrs_.find(attr_name);                                                              \
+    if (it != attrs_.end()) {                                                                      \
+      return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();                 \
+    } else {                                                                                       \
+      LOG(FATAL) << "Cannot find the attr: " << attr_name                                          \
+                 << " with UserOpAttrType: " << static_cast<int32_t>(attr_type);                   \
+    }                                                                                              \
   }                                                                                                \
                                                                                                    \
   template<>                                                                                       \
   UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Attr<cpp_type>(const std::string& attr_name, \
                                                                      const cpp_type& val) {        \
     UserOpAttrVal attr_val;                                                                        \
-    AttrValAccessor<cpp_type>::SetAttr(val, &attr_val);                                            \
+    AttrValAccessor<cpp_type>::Attr(val, &attr_val);                                               \
     attr_.emplace(attr_name, attr_val);                                                            \
     return *this;                                                                                  \
   }
@@ -70,7 +113,9 @@ UserOpWrapper::UserOpWrapper(
         std::string bn = GenRepeatedBn(pair.first, i);
         const BlobDesc& blob_desc = LogicalBlobDesc4BnInOp(bn);
         CHECK((&blob_desc) != nullptr);
-        TensorDesc tensor_desc(blob_desc.shape(), blob_desc.data_type());
+        BlobDescProto proto;
+        blob_desc.ToProto(&proto);
+        TensorDesc tensor_desc(proto);
         CHECK(bn2tensor_desc_.emplace(bn, tensor_desc).second);
       }
     }
@@ -82,16 +127,20 @@ UserOpWrapper::UserOpWrapper(
 bool UserOpWrapper::NeedGenGradTensor4OpInput(const std::string& input_arg_name,
                                               int32_t index) const {
   auto it = op_conf().user_conf().input().find(input_arg_name);
-  CHECK(it != op_conf().user_conf().input().end());
-  CHECK(index >= 0 && index < it->second.s_size());
+  CHECK(it != op_conf().user_conf().input().end())
+      << "arg_name: " << input_arg_name << ", index: " << index;
+  CHECK(index >= 0 && index < it->second.s_size())
+      << "arg_name: " << input_arg_name << ", index: " << index;
   return diff_fn_(GenRepeatedBn(input_arg_name, index)) != nullptr;
 }
 
 std::string UserOpWrapper::GetGradTensorWithOpOutput(const std::string& output_arg_name,
                                                      int32_t index) const {
   auto it = op_conf().user_conf().output().find(output_arg_name);
-  CHECK(it != op_conf().user_conf().output().end());
-  CHECK(index >= 0 && index < it->second.s_size());
+  CHECK(it != op_conf().user_conf().output().end())
+      << "arg_name: " << output_arg_name << ", index: " << index;
+  CHECK(index >= 0 && index < it->second.s_size())
+      << "arg_name: " << output_arg_name << ", index: " << index;
   return GenLogicalBlobName(*diff_fn_(GenRepeatedBn(output_arg_name, index)));
 }
 

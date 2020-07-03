@@ -11,7 +11,7 @@
 namespace oneflow {
 
 Maybe<void> Cluster::WorkerLoop() {
-  OF_CHECK(!Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(!Global<MachineCtx>::Get()->IsThisMachineMaster());
   while (ClusterControl::WorkerReceiveHalt() == false) {
     ConfigProto config_proto;
     Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
@@ -22,7 +22,10 @@ Maybe<void> Cluster::WorkerLoop() {
 
     JobSet job_set;
     Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
-    { Oneflow oneflow(job_set); }
+    {
+      Oneflow oneflow;
+      JUST(oneflow.Init(job_set));
+    }
     Global<SessionGlobalObjectsScope>::Delete();
   }
   ClusterControl::HaltBarrier();

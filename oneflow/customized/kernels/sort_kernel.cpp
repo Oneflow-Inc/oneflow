@@ -6,12 +6,11 @@ namespace oneflow {
 template<typename T>
 class CpuSortKernel final : public user_op::OpKernel {
  public:
-  CpuSortKernel(const user_op::KernelInitContext& ctx) : user_op::OpKernel(ctx) {}
   CpuSortKernel() = default;
   ~CpuSortKernel() = default;
 
  private:
-  void Compute(user_op::KernelContext* ctx) override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
@@ -19,7 +18,7 @@ class CpuSortKernel final : public user_op::OpKernel {
                              in->shape().elem_cnt() * sizeof(T));
     const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
-    const std::string& direction = ctx->GetAttr<std::string>("direction");
+    const std::string& direction = ctx->Attr<std::string>("direction");
     const bool is_ascending = direction == "ASCENDING";
     const bool is_descending = direction == "DESCENDING";
     FOR_RANGE(int32_t, i, 0, instance_num) {
@@ -32,19 +31,14 @@ class CpuSortKernel final : public user_op::OpKernel {
         UNIMPLEMENTED();
       }
     }
-  };
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_SORT_KERNEL(dtype)                                                 \
-  REGISTER_USER_KERNEL("sort")                                                          \
-      .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {                 \
-        return new CpuSortKernel<dtype>(ctx);                                           \
-      })                                                                                \
-      .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) {             \
-        const user_op::TensorDesc* out_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        return ctx.device_type() == DeviceType::kCPU                                    \
-               && out_desc->data_type() == GetDataType<dtype>::value;                   \
-      });
+#define REGISTER_CPU_SORT_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("sort").SetCreateFn<CpuSortKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                \
+      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_SORT_KERNEL(float)
 REGISTER_CPU_SORT_KERNEL(double)

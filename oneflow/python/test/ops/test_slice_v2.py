@@ -19,7 +19,7 @@ def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=N
     if dynamic is True:
         func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def slice(input_blob=flow.MirroredTensorDef(shape=input_shape, dtype=dtype)):
             return do_slice(input_blob, index_args)
 
@@ -29,7 +29,7 @@ def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=N
     else:
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 
-        @flow.function(func_config)
+        @flow.global_function(func_config)
         def slice(input_blob=flow.FixedTensorDef(shape=input_shape, dtype=dtype)):
             return do_slice(input_blob, index_args)
 
@@ -73,7 +73,13 @@ def test_slice_with_collapse_dims(test_case):
     input = np.random.rand(2, 5, 4, 4, 3).astype(np.float32)
     results = [input[:, 0:2, :, :, 1:None]]
     args = [
-        [(None, None, None), (0, 2, None), (None, None, None), (None, None, None), (1, None, None)]
+        [
+            (None, None, None),
+            (0, 2, None),
+            (None, None, None),
+            (None, None, None),
+            (1, None, None),
+        ]
     ]
     outputs = _run_slice(input, args)
     _check(test_case, results, outputs)
@@ -166,7 +172,7 @@ def test_slice_grad(test_case):
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def slice(input_blob=flow.FixedTensorDef(shape=(2, 5, 4), dtype=flow.float)):
         x = flow.get_variable(
             shape=(2, 5, 4),

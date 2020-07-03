@@ -177,6 +177,7 @@ class fixed_vector final {
     return pos;
   }
   iterator erase(iterator first, iterator last) {
+    if (first >= last) { return last; }
     MoveNToBegin(last, last - first);
     return first;
   }

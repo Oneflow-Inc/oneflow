@@ -1,6 +1,7 @@
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/actor/actor.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -16,7 +17,7 @@ void Thread::AddTask(const TaskProto& task) {
 }
 
 void Thread::EnqueueActorMsg(const ActorMsg& msg) {
-  if (Global<ResourceDesc>::Get()->thread_enable_local_message_queue()
+  if (Global<ResourceDesc, ForSession>::Get()->thread_enable_local_message_queue()
       && std::this_thread::get_id() == actor_thread_.get_id()) {
     local_msg_queue_.push(msg);
   } else {

@@ -1,0 +1,6 @@
+pycocotools
+opencv-python
+sphinx
+recommonmark
+scipy
+pillow

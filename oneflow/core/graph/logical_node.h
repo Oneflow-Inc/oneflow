@@ -190,7 +190,6 @@ DECLARE_NAIVE_LOGICAL_NODE(DistributeConcatLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DistributeSplitLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(AccuracyLogicalNode);
 
 class MdDiffAccLogicalNode final : public LogicalNode {
  public:
@@ -279,32 +278,6 @@ DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceSplitLogicalNode, false);
   }
 
 DECLARE_FACADE_LOGICAL_NODE(AllReduceFacadeLogicalNode);
-
-class NcclTupleBroadcastLogicalNode : public LogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(NcclTupleBroadcastLogicalNode);
-
- private:
-  void FixCompTaskNode(CompTaskNode* task_node) const override {
-    RankContext* rank_ctx = task_node->mut_parallel_ctx()->mutable_rank_ctx();
-    rank_ctx->set_rank_set_id(node_id() << 32);
-    rank_ctx->set_rank_id(task_node->parallel_ctx()->parallel_id());
-    rank_ctx->set_rank_num(task_node->parallel_ctx()->parallel_num());
-  }
-};
-
-class NcclTupleReduceLogicalNode : public LogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(NcclTupleReduceLogicalNode);
-
- private:
-  void FixCompTaskNode(CompTaskNode* task_node) const override {
-    RankContext* rank_ctx = task_node->mut_parallel_ctx()->mutable_rank_ctx();
-    rank_ctx->set_rank_set_id(node_id() << 32);
-    rank_ctx->set_rank_id(task_node->parallel_ctx()->parallel_id());
-    rank_ctx->set_rank_num(task_node->parallel_ctx()->parallel_num());
-  }
-};
 
 }  // namespace oneflow
 
