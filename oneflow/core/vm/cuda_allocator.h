@@ -73,12 +73,25 @@ class CudaAllocator final : public Allocator {
     return std::min(kBinNumSize - 1, static_cast<int32_t>(63 ^ __builtin_clzll(value)));
   }
 
+  // Try find free Piece which size is larger than aligned_size in Bins.
+  // Return nullptr when find failure
   Piece* FindPiece(size_t aligned_size);
+
+  // Insert the free Piece to the appropriate Bin which bin size is smaller than piece
   void InsertPiece2Bin(Piece* piece);
+
+  // Create new empty Piece or recycle a Piece from recycle_piece_list_
   Piece* AllocatePiece();
+  // Delete a Piece and move in the linked list recycle_piece_list_
   void DeallocatePiece(Piece* piece);
+
+  // Insert a {piece->ptr, piece} pair into the ptr2piece_ map for search Piece when call
+  // Deallocate()
   void MarkPiece(Piece* piece);
+  // Erase the {piece->ptr, piece} pair from ptr2piece_ because the ptr is useless
+  // Usually call before DeallocatePiece()
   void UnMarkPiece(Piece* piece);
+
   void MergeNeighbourFreePiece(Piece* lhs, Piece* rhs);
   void RemovePieceFromBin(Piece* piece);
 
