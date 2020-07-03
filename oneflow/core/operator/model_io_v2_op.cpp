@@ -54,13 +54,15 @@ class ModelInitV2Op : public Operator {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
-    FOR_RANGE(int64_t, i, 0, JUST(LogicalBlobDesc4Ibn("ref"))->shape().NumAxes()) {
-      SbpSignatureBuilder().Split("ref", i).Split("out", 0).Broadcast("tick").Build(
-          sbp_sig_list->mutable_sbp_signature()->Add());
-    }
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())["ref"] =
+        JUST(SbpInferHint4Ibn("ref"))->sbp_parallel();
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())["out"].mutable_split_parallel()->set_axis(0);
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())["tick"].mutable_broadcast_parallel();
     return Maybe<void>::Ok();
   }
 
@@ -101,17 +103,16 @@ class ModelLoadV2Op : public Operator {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
-    FOR_RANGE(int64_t, i, 0, JUST(LogicalBlobDesc4Ibn("ref"))->shape().NumAxes()) {
-      SbpSignatureBuilder()
-          .Broadcast("path")
-          .Split("ref", i)
-          .Split("out", 0)
-          .Broadcast("tick")
-          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-    }
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())["ref"] =
+        JUST(SbpInferHint4Ibn("ref"))->sbp_parallel();
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())["tick"].mutable_broadcast_parallel();
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())["path"].mutable_broadcast_parallel();
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())["out"].mutable_split_parallel()->set_axis(0);
     return Maybe<void>::Ok();
   }
 
@@ -156,19 +157,18 @@ class ModelSaveV2Op final : public Operator {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
-    FOR_RANGE(int64_t, i, 0, JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes()) {
-      SbpSignatureBuilder()
-          .Broadcast("path")
-          .Split("in", i)
-          .Split("out", 0)
-          .Broadcast("tick")
-          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-    }
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())["in"] =
+        JUST(SbpInferHint4Ibn("in"))->sbp_parallel();
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())["tick"].mutable_broadcast_parallel();
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())["path"].mutable_broadcast_parallel();
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())["out"].mutable_split_parallel()->set_axis(0);
     return Maybe<void>::Ok();
-  };
+  }
 
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
