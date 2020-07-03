@@ -46,7 +46,7 @@ T* GetImgMutDptr(user_op::Tensor* tensor, int64_t idx) {
 
 template<typename T>
 const T* GetImgDptr(const user_op::Tensor* tensor, int64_t idx) {
-  return GetImgMutDptr<T>(const_cast<user_op::Tensor*>(tensor), idx);
+  return tensor->dptr<T>() + tensor->shape().Count(1) * idx;
 }
 
 size_t CalcElemNumOfColBuf(const ShapeView& out_shape, const ShapeView& weight_shape,

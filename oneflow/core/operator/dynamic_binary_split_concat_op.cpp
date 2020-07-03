@@ -27,10 +27,9 @@ class DynamicBinarySplitOp final : public Operator {
 void DynamicBinarySplitOp::InitFromOpConf() {
   CHECK(op_conf().has_dynamic_binary_split_conf());
   EnrollInputBn("in");
-  OBModifierFieldSetter ob_modifier_field_setter = [](OutputBlobModifier* ob_modifier) {
+  EnrollRepeatedOutputBnWithSetter("out", [](OutputBlobModifier* ob_modifier) {
     ob_modifier->set_header_infered_before_compute(false);
-  };
-  EnrollRepeatedOutputBn("out", ob_modifier_field_setter);
+  });
 }
 
 const PbMessage& DynamicBinarySplitOp::GetCustomizedConf() const {

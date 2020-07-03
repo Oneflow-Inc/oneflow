@@ -57,11 +57,62 @@ void Kernel::CheckSameDim0ValidNum(
   UNIMPLEMENTED();
 }
 
+void Kernel::SetOutputBlobProducerInferAccessChecker(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForEachObnAndIsHeaderInferedBeforeCompute(BnInOp2Blob, [&](const std::string& obn, bool _) {
+    BnInOp2Blob(obn)->set_blob_access_checker(Global<BlobAccessCheckerIf<true, false>>::Get());
+  });
+}
+
+void Kernel::SetOutputBlobProducerComputeAccessChecker(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForEachObnAndIsHeaderInferedBeforeCompute(
+      BnInOp2Blob, [&](const std::string& obn, bool is_header_infered_before_compute) {
+        const BlobAccessChecker* checker = nullptr;
+        if (is_header_infered_before_compute) {
+          checker = Global<BlobAccessCheckerIf<false, true>>::Get();
+        } else {
+          checker = Global<BlobAccessCheckerIf<true, true>>::Get();
+        }
+        BnInOp2Blob(obn)->set_blob_access_checker(checker);
+      });
+}
+
+void Kernel::SetOutputBlobConsumerAccessChecker(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForEachObnAndIsMutableByConsumer(BnInOp2Blob, [&](const std::string& obn, bool is_mutable) {
+    const BlobAccessChecker* checker = nullptr;
+    if (is_mutable) {
+      checker = Global<BlobAccessCheckerIf<false, true>>::Get();
+    } else {
+      checker = Global<BlobAccessCheckerIf<false, false>>::Get();
+    }
+    BnInOp2Blob(obn)->set_blob_access_checker(checker);
+  });
+}
+
+void Kernel::SetInputBlobProducerAccessChecker(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForEachIbnAndIsMutableByProducer(BnInOp2Blob, [&](const std::string& ibn, bool is_mutable) {
+    const BlobAccessChecker* checker = nullptr;
+    if (is_mutable) {
+      checker = Global<BlobAccessCheckerIf<false, true>>::Get();
+    } else {
+      checker = Global<BlobAccessCheckerIf<false, false>>::Get();
+    }
+    BnInOp2Blob(ibn)->set_blob_access_checker(checker);
+  });
+}
+
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  SetOutputBlobProducerInferAccessChecker(BnInOp2Blob);
   ForwardHeader(ctx, BnInOp2Blob);
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
+  SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob);
+  SetInputBlobProducerAccessChecker(BnInOp2Blob);
   ForwardDataContent(ctx, BnInOp2Blob);
+  SetOutputBlobConsumerAccessChecker(BnInOp2Blob);
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,

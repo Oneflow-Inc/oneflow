@@ -502,8 +502,7 @@ void Operator::EmplaceLbi2Obn(const LogicalBlobId& lbi, const std::string& obn) 
   CHECK(lbi2obn_.emplace(lbi, obn).second);
 }
 
-OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_diff,
-                                             OBModifierFieldSetter ob_modifier_field_setter) {
+OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   LogicalBlobId lbi = lbi4obn(obn);
   EmplaceLbi2Obn(lbi, obn);
   auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_obn2output_blob_modifier();
@@ -512,31 +511,51 @@ OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_di
   CHECK(mut_bn_in_op2lbi()->insert({obn, lbi}).second);
   auto* ret = MutOutputBlobModifier4Obn(obn);
   ret->set_requires_grad(has_diff);
-  ob_modifier_field_setter(ret);
   return ret;
 }
 
-void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff,
-                                      OBModifierFieldSetter ob_modifier_field_setter) {
+void Operator::EnrollRepeatedOutputBnWithSetter(
+    const std::string& obn_prefix, int32_t num, bool has_diff,
+    const std::function<void(OutputBlobModifier*)>& ModifierSetter) {
   FOR_RANGE(int32_t, i, 0, num) {
-    EnrollOutputBn(GenRepeatedBn(obn_prefix, i), has_diff, ob_modifier_field_setter);
+    ModifierSetter(EnrollOutputBn(GenRepeatedBn(obn_prefix, i), has_diff));
   }
 }
 
-void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff,
-                                      OBModifierFieldSetter ob_modifier_field_setter) {
+void Operator::EnrollRepeatedOutputBnWithSetter(
+    const std::string& obn_prefix, bool has_diff,
+    const std::function<void(OutputBlobModifier*)>& ModifierSetter) {
+  EnrollRepeatedOutputBnWithSetter(obn_prefix,
+                                   GetPbRpfFromCustomizedConf<std::string>(obn_prefix).size(),
+                                   has_diff, ModifierSetter);
+}
+
+void Operator::EnrollRepeatedOutputBnWithSetter(
+    const std::string& obn_prefix, int32_t num,
+    const std::function<void(OutputBlobModifier*)>& ModifierSetter) {
+  EnrollRepeatedOutputBnWithSetter(obn_prefix, num, true, ModifierSetter);
+}
+
+void Operator::EnrollRepeatedOutputBnWithSetter(
+    const std::string& obn_prefix, const std::function<void(OutputBlobModifier*)>& ModifierSetter) {
+  EnrollRepeatedOutputBnWithSetter(obn_prefix, true, ModifierSetter);
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff) {
+  FOR_RANGE(int32_t, i, 0, num) { EnrollOutputBn(GenRepeatedBn(obn_prefix, i), has_diff); }
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff) {
   EnrollRepeatedOutputBn(obn_prefix, GetPbRpfFromCustomizedConf<std::string>(obn_prefix).size(),
-                         has_diff, ob_modifier_field_setter);
+                         has_diff);
 }
 
-void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num,
-                                      OBModifierFieldSetter ob_modifier_field_setter) {
-  EnrollRepeatedOutputBn(obn_prefix, num, true, ob_modifier_field_setter);
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num) {
+  EnrollRepeatedOutputBn(obn_prefix, num, true);
 }
 
-void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix,
-                                      OBModifierFieldSetter ob_modifier_field_setter) {
-  EnrollRepeatedOutputBn(obn_prefix, true, ob_modifier_field_setter);
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix) {
+  EnrollRepeatedOutputBn(obn_prefix, true);
 }
 
 void Operator::EnrollConstBufBn(const std::string& cbbn) {
