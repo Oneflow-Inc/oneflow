@@ -36,12 +36,13 @@ class InitOpKernelObjectInstructionType final : public vm::InstructionType {
     CHECK_EQ(view->op_conf_size(), view->op_size());
     const auto* operand_job_desc = instruction->operand_type(view->job_desc());
     CHECK_NOTNULL(operand_job_desc);
-    const auto& job_desc_object = operand_job_desc->Get<vm::ObjectWrapper<JobDesc>>();
+    const auto& job_desc_object = *CHECK_JUST(operand_job_desc->Get<vm::ObjectWrapper<JobDesc>>());
     for (int i = 0; i < view->op_size(); ++i) {
       CHECK_GT(view->op(i).logical_object_id(), 0);
       const auto* operand_op_conf = instruction->operand_type(view->op_conf(i));
       CHECK_NOTNULL(operand_op_conf);
-      const auto& op_conf_object = operand_op_conf->Get<vm::ObjectWrapper<OperatorConf>>();
+      const auto& op_conf_object =
+          *CHECK_JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConf>>());
       CHECK(op_conf_object->has_user_conf());
       vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(view->op(i));
       const auto& parallel_desc = instruction->parallel_desc();
@@ -100,11 +101,11 @@ Maybe<void> ForEachIbnAndBlobObject(vm::Instruction* instruction, const T& args,
   FOR_RANGE(int, i, 0, args.ibn_size()) {
     const auto* operand_ibn = instruction->operand_type(args.ibn(i));
     CHECK_NOTNULL_OR_RETURN(operand_ibn);
-    const std::string& bn_in_op = operand_ibn->template Get<vm::StringObject>().str();
+    const std::string& bn_in_op = JUST(operand_ibn->template Get<vm::StringObject>())->str();
     const auto* operand_input_blob = instruction->operand_type(args.input_blob(i));
     CHECK_NOTNULL_OR_RETURN(operand_input_blob)
         << "bn_in_op: " << bn_in_op << ", object_id: " << args.input_blob(i).logical_object_id();
-    const auto& blob_object = operand_input_blob->template Get<BlobObject>();
+    const auto& blob_object = *JUST(operand_input_blob->template Get<BlobObject>());
     JUST(Callback(bn_in_op, blob_object));
   }
   return Maybe<void>::Ok();
@@ -117,7 +118,7 @@ Maybe<void> ForEachObnAndBlobObject(vm::Instruction* instruction, const T& args,
   FOR_RANGE(int, i, 0, args.obn_size()) {
     const auto* operand_obn = instruction->operand_type(args.obn(i));
     CHECK_NOTNULL_OR_RETURN(operand_obn);
-    const std::string& bn_in_op = operand_obn->template Get<vm::StringObject>().str();
+    const std::string& bn_in_op = JUST(operand_obn->template Get<vm::StringObject>())->str();
     auto* operand_output_blob = instruction->mut_operand_type(args.output_blob(i));
     CHECK_NOTNULL_OR_RETURN(operand_output_blob) << "obn: " << bn_in_op;
     auto* blob_object = operand_output_blob->template Mut<BlobObject>();
@@ -127,7 +128,7 @@ Maybe<void> ForEachObnAndBlobObject(vm::Instruction* instruction, const T& args,
   FOR_RANGE(int, i, 0, args.mut2_obn_size()) {
     const auto* operand_obn = instruction->operand_type(args.mut2_obn(i));
     CHECK_NOTNULL_OR_RETURN(operand_obn);
-    const std::string& bn_in_op = operand_obn->template Get<vm::StringObject>().str();
+    const std::string& bn_in_op = JUST(operand_obn->template Get<vm::StringObject>())->str();
     auto* operand_output_blob = instruction->mut_operand_type(args.mut2_output_blob(i));
     CHECK_NOTNULL_OR_RETURN(operand_output_blob) << "obn: " << bn_in_op;
     auto* blob_object = operand_output_blob->template Mut<BlobObject>();
@@ -387,9 +388,12 @@ T* GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type,
                      const StatelessCallOpKernelInstrOperand& args) {
   const auto* operand_job_desc = instruction->operand_type(args.job_desc());
   CHECK_NOTNULL(operand_job_desc);
-  const auto& job_desc_ptr = operand_job_desc->Get<vm::ObjectWrapper<JobDesc>>().GetPtr();
+  const auto& job_desc_ptr =
+      CHECK_JUST(operand_job_desc->Get<vm::ObjectWrapper<JobDesc>>())->GetPtr();
   const auto& op_conf =
-      instruction->mut_operand_type(args.op_conf())->Get<vm::ObjectWrapper<OperatorConf>>().Get();
+      CHECK_JUST(
+          instruction->mut_operand_type(args.op_conf())->Get<vm::ObjectWrapper<OperatorConf>>())
+          ->Get();
   vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(args.shared_opkernel());
   CHECK(!rw_mutexed_object->has_object() || rw_mutexed_object->Has<OpKernelObject>()
         || rw_mutexed_object->Has<SystemOpKernelObject>());
