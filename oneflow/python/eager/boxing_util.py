@@ -115,6 +115,27 @@ def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):
             ),
             NaiveCpuConcatSplit,
         ),
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                NaiveCpuConcatSplit,
+                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+                boxing_middle.ConsumerSbpParallel,
+            ),
+            CopyH2D,
+        ),
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                CopyD2H,
+                boxing_middle.ReplaceProducerDeviceTag("cpu"),
+                boxing_middle.ProducerSbpParallel,
+            ),
+            boxing_middle.BoxingToMiddle(
+                NaiveCpuConcatSplit,
+                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+                boxing_middle.ConsumerSbpParallel,
+            ),
+            CopyH2D,
+        ),
     ]
     function = enable_if.unique(
         conditional_functions,
@@ -531,6 +552,7 @@ def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag)
         )
     sbp_parallel = bn_in_op2blob_object["out"].op_arg_parallel_attr.sbp_parallel
     sbp_parallel.CopyFrom(produced_blob_object.op_arg_parallel_attr.sbp_parallel)
+    bn_in_op2blob_object["out"].InitOpArgBlobAttr(produced_blob_object.op_arg_blob_attr)
     return bn_in_op2blob_object["out"]
 
 
