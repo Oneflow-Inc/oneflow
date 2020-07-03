@@ -783,18 +783,22 @@ Maybe<void> InferMirroredSignature(Operator* op, const UpstreamSignature& upstre
 Maybe<void> CheckOpInputSignature(const Operator& op, const UpstreamSignature& upstream_signature) {
   for (const auto& ibn : op.input_bns()) {
     {
+      CHECK_OR_RETURN(upstream_signature.has_logical_blob_desc_signature());
       const auto& map = upstream_signature.logical_blob_desc_signature().bn_in_op2blob_desc();
       CHECK_OR_RETURN(map.find(ibn) != map.end());
     }
     {
+      CHECK_OR_RETURN(upstream_signature.has_sbp_signature());
       const auto& map = upstream_signature.sbp_signature().bn_in_op2sbp_parallel();
       CHECK_OR_RETURN(map.find(ibn) != map.end());
     }
     {
+      CHECK_OR_RETURN(upstream_signature.has_mirrored_signature());
       const auto& map = upstream_signature.mirrored_signature().bn_in_op2opt_mirrored_parallel();
       CHECK_OR_RETURN(map.find(ibn) != map.end());
     }
     {
+      CHECK_OR_RETURN(upstream_signature.has_batch_axis_signature());
       const auto& map = upstream_signature.batch_axis_signature().bn_in_op2batch_axis();
       CHECK_OR_RETURN(map.find(ibn) != map.end());
     }
@@ -837,6 +841,10 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
     return bn_in_op2blob_desc[bn_in_op].get();
   };
   JUST(InferOpOutBlobDescs(op.get(), BlobDesc4BnInOp));
+  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc*> {
+    CHECK_OR_RETURN(bn_in_op2blob_desc.find(bn_in_op) != bn_in_op2blob_desc.end());
+    return bn_in_op2blob_desc[bn_in_op].get();
+  }));
   return op;
 }
 
