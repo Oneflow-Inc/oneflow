@@ -222,6 +222,30 @@ class InstructionsBuilder(object):
     def PackPhysicalBlobsToLogicalBlob(
         self, physical_blob_objects, op_arg_parallel_attr, op_arg_blob_attr
     ):
+        parallel_desc_symbol = op_arg_parallel_attr.parallel_desc_symbol
+        machine_id2device_ids = parallel_desc_symbol.machine_id2device_id_list
+        _, device_tag, _ = parallel_desc_symbol.parallel_conf.device_name[0].split(":")
+        machine_device_ids = set()
+        for physical_blob_object in physical_blob_objects:
+            phy_paralle_desc_sym = physical_blob_object.parallel_desc_symbol
+            assert (
+                phy_paralle_desc_sym.parallel_num == 1
+            ), phy_paralle_desc_sym.parallel_num
+            assert phy_paralle_desc_sym.device_tag == device_tag, "%s v.s. %s" % (
+                phy_paralle_desc_sym.device_tag,
+                device_tag,
+            )
+            phy_machine_id2device_ids = phy_paralle_desc_sym.machine_id2device_id_list
+            machine_id = list(phy_machine_id2device_ids.keys())[0]
+            pair = (machine_id, phy_machine_id2device_ids[machine_id][0])
+            machine_device_ids.add(pair)
+
+        for machine_id, device_ids in machine_id2device_ids.items():
+            for device_id in device_ids:
+                assert (machine_id, device_id) in machine_device_ids, "%s not in %s" % (
+                    (machine_id, device_id),
+                    machine_device_ids,
+                )
         logical_blob_object = self._NewBlobObject(
             op_arg_parallel_attr, op_arg_blob_attr
         )
@@ -232,18 +256,29 @@ class InstructionsBuilder(object):
         )
         return logical_blob_object
 
-    def UnpackLogicalBlobToPhysicalBlobs(self, blob_object):
-        parallel_desc_symbol = blob_object.parallel_desc_symbol
-        parallel_conf = parallel_desc_symbol.parallel_conf
-        _, device_tag, _ = parallel_conf.device_name[0].split(":")
-        machine_id2device_ids = placement_ctx.MakeMachineId2DeviceIdList(parallel_conf)
+    def GetPhysicalParallelDescSymbols(self, parallel_desc_symbol):
+        machine_id2device_ids = parallel_desc_symbol.machine_id2device_id_list
+        _, device_tag, _ = parallel_desc_symbol.parallel_conf.device_name[0].split(":")
+        phy_parallel_desc_symbols = []
 
-        def GetPhysicalBlob(machine_id, device_id):
+        def AppendPhyParallelDescSymbol(machine_id, device_id):
             parallel_conf = placement_pb_util.ParallelConf()
             parallel_conf.device_name.append(
                 "%d:%s:%d" % (machine_id, device_tag, device_id)
             )
-            parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
+            phy_parallel_desc_symbols.append(self.GetParallelDescSymbol(parallel_conf))
+
+        for machine_id, device_ids in machine_id2device_ids.items():
+            for device_id in device_ids:
+                AppendPhyParallelDescSymbol(machine_id, device_id)
+        return phy_parallel_desc_symbols
+
+    def UnpackLogicalBlobToPhysicalBlobs(self, blob_object):
+        phy_parallel_desc_symbols = self.GetPhysicalParallelDescSymbols(
+            blob_object.parallel_desc_symbol
+        )
+
+        def GetPhysicalBlob(parallel_desc_sym):
             op_arg_parallel_attr = op_arg_util.MakeMirroredOpArgParallelAttribute(
                 parallel_desc_sym
             )
@@ -252,12 +287,11 @@ class InstructionsBuilder(object):
             )
             return pyhsical_blob_object
 
-        physical_blob_objects = []
-        for machine_id, device_ids in machine_id2device_ids.items():
-            for device_id in device_ids:
-                physical_blob_objects.append(GetPhysicalBlob(machine_id, device_id))
+        physical_blob_objects = [
+            GetPhysicalBlob(symbol) for symbol in phy_parallel_desc_symbols
+        ]
         self._ReplaceMirrored(
-            parallel_desc_symbol, physical_blob_objects, [blob_object]
+            blob_object.parallel_desc_symbol, physical_blob_objects, [blob_object]
         )
         return physical_blob_objects
 
