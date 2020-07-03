@@ -24,7 +24,7 @@ class ParallelDesc final {
   ParallelDesc(const ParallelDesc&) = default;
   ParallelDesc(const ParallelConf& user_conf);
   Maybe<void> MaybeInit(const ParallelConf& user_conf);
-  Maybe<void> CheckWithResourceDesc(int64_t dev_phy_id, const ResourceDesc& resource_desc);
+  Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
 
   // Getters
   DeviceType device_type() const { return device_type_; }
