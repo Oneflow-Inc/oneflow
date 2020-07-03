@@ -1947,9 +1947,6 @@ message OperatorConf {
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
     SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
     ParallelCastOpConf parallel_cast_conf = 336;
-    ModelInitV2OpConf model_init_v2_conf = 308;
-    ModelLoadV2OpConf model_load_v2_conf = 309;
-    ModelSaveV2OpConf model_save_v2_conf = 310;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
@@ -1959,6 +1956,9 @@ message OperatorConf {
     CopyOpConf copy_conf = 343;
     CastToMirroredOpConf cast_to_mirrored_conf = 344;
     CastFromMirroredOpConf cast_from_mirrored_conf = 345;
+    ModelInitV2OpConf model_init_v2_conf = 346;
+    ModelLoadV2OpConf model_load_v2_conf = 347;
+    ModelSaveV2OpConf model_save_v2_conf = 348;
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op
