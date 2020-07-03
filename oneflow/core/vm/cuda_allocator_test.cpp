@@ -39,6 +39,22 @@ TEST(CudaAllocator, cuda_allocator) {
     a->Deallocate(ptrs.at(i), 1);
   }
 
+  ptrs.clear();
+  for (int i = 0; i < 2048; ++i) {
+    char* ptr = nullptr;
+    a->Allocate(&ptr, 10000);
+    ASSERT_TRUE(ptr != nullptr);
+    ptrs.push_back(ptr);
+  }
+  std::sort(ptrs.begin(), ptrs.end());
+  for (int i = 0; i < 2048; ++i) {
+    if (i > 0) {
+      ASSERT_TRUE(ptrs.at(i) != ptrs.at(i - 1));
+      ASSERT_TRUE(std::abs(ptrs.at(i) - ptrs.at(i - 1)) >= kCudaMemAllocAlignSize);
+    }
+    a->Deallocate(ptrs.at(i), 10000);
+  }
+
   char* data_ptr_1 = nullptr;
   a->Allocate(&data_ptr_1, 2048 * sizeof(float));
 

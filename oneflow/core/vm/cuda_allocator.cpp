@@ -1,5 +1,6 @@
 #include "oneflow/core/vm/cuda_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
+#include <iostream>
 
 namespace oneflow {
 namespace vm {
@@ -15,24 +16,7 @@ static const size_t kPieceSplitThreshold = 128 << 20;  // 128MiB
 }  // namespace
 
 CudaAllocator::CudaAllocator(int64_t device_id)
-    : Allocator(), device_id_(device_id), recycle_piece_list_(nullptr) {
-  cudaSetDevice(device_id_);
-  size_t free_bytes = -1;
-  size_t total_bytes = -1;
-  const size_t remain_bytes = 50 * 1048576;
-  CudaCheck(cudaMemGetInfo(&free_bytes, &total_bytes));
-  size_t allocate_bytes = 1048576;
-  // if free bytes > 100MiB, malloc normal; else malloc 1MiB if could
-  if (free_bytes > 2 * remain_bytes) {
-    allocate_bytes = std::min(free_bytes - remain_bytes, static_cast<size_t>(free_bytes * 0.95));
-  }
-  total_memory_bytes_ = CudaMemAlignedBytes(allocate_bytes);
-  CHECK_LE(total_memory_bytes_, free_bytes)
-      << " Error! Create CudaAllocator need at least " << total_memory_bytes_
-      << " bytes free memory, but only " << free_bytes
-      << " free bytes in GPU device_id: " << device_id;
-  CudaCheck(cudaMalloc(&mem_ptr_, total_memory_bytes_));
-
+    : Allocator(), device_id_(device_id), total_memory_bytes_(0), recycle_piece_list_(nullptr) {
   bins_.resize(kBinNumSize);
   for (int i = 0; i < kBinNumSize; ++i) {
     size_t bin_size = BinSize4BinNum(i);
@@ -42,22 +26,15 @@ CudaAllocator::CudaAllocator(int64_t device_id)
     CHECK_EQ(BinNum4BinSize(bin_size * 2 - 1), i);
     CHECK_EQ(BinNum4BinSize(bin_size * 2), i == (kBinNumSize - 1) ? i : i + 1);
   }
-
-  Piece* piece = AllocatePiece();
-  piece->size = total_memory_bytes_;
-  piece->ptr = mem_ptr_;
-  piece->prev = nullptr;
-  piece->next = nullptr;
-  piece->is_free = true;
-  piece->bin_num = kInvalidBinNum;
-  CHECK(IsAlignedSize(piece->size));
-  InsertPiece2Bin(piece);
-  MarkPiece(piece);
 }
 
 CudaAllocator::~CudaAllocator() {
+  if (total_memory_bytes_ == 0) {
+    CHECK_EQ(mem_ptr2block_.size(), 0);
+    return;
+  }
   cudaSetDevice(device_id_);
-  CudaCheck(cudaFree(mem_ptr_));
+  for (auto& pair : mem_ptr2block_) { CudaCheck(cudaFree(pair.first)); }
 }
 
 void CudaAllocator::InsertPiece2Bin(Piece* piece) {
@@ -160,6 +137,72 @@ void CudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   DeallocatePiece(rhs);
 }
 
+bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
+  CHECK(IsAlignedSize(aligned_size));
+
+  size_t allocate_bytes = 1048576;  // 1MiB base size
+  allocate_bytes = std::max(allocate_bytes, aligned_size);
+
+  cudaSetDevice(device_id_);
+  size_t free_bytes = -1;
+  size_t total_bytes = -1;
+  CudaCheck(cudaMemGetInfo(&free_bytes, &total_bytes));
+  const size_t remain_bytes = 50 * 1048576;
+  const size_t available_bytes = free_bytes - remain_bytes;  // remain at least 50MiB memory
+
+  // growth double total memory bytes if could
+  if (total_memory_bytes_ > 0) {
+    allocate_bytes = std::max(allocate_bytes, std::min(total_memory_bytes_, available_bytes));
+  }
+  const size_t final_allocate_bytes = CudaMemAlignedBytes(allocate_bytes);
+
+  if (final_allocate_bytes > available_bytes) { return false; }
+
+  if (final_allocate_bytes < aligned_size) { return false; }
+
+  char* mem_ptr = nullptr;
+  if (cudaMalloc(&mem_ptr, final_allocate_bytes) != cudaSuccess) { return false; }
+
+  // extend sucess
+  total_memory_bytes_ += final_allocate_bytes;
+
+  Piece* piece = AllocatePiece();
+  piece->size = final_allocate_bytes;
+  piece->ptr = mem_ptr;
+  piece->prev = nullptr;
+  piece->next = nullptr;
+  piece->is_free = true;
+  piece->bin_num = kInvalidBinNum;
+  InsertPiece2Bin(piece);
+  MarkPiece(piece);
+
+  CHECK(mem_ptr2block_.emplace(mem_ptr, Block(piece)).second);
+
+  return true;
+}
+
+bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
+  size_t total_free_bytes = 0;
+  for (const auto& pair : mem_ptr2block_) {
+    const Block& block = pair.second;
+    if (block.start_piece->is_free && block.start_piece->next == nullptr
+        && block.start_piece->prev == nullptr) {
+      CHECK_EQ(block.size, block.start_piece->size) << " Error in CudaAllocator Merge memory Piece";
+      CHECK_EQ(block.ptr, block.start_piece->ptr);
+      CHECK_EQ(block.ptr, pair.first);
+      RemovePieceFromBin(block.start_piece);
+      UnMarkPiece(block.start_piece);
+      DeallocatePiece(block.start_piece);
+
+      CudaCheck(cudaFree(pair.first));
+
+      total_free_bytes += block.size;
+    }
+  }
+
+  return total_free_bytes > 0;
+}
+
 void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   if (size == 0) {
     *mem_ptr = nullptr;
@@ -168,6 +211,16 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   size_t aligned_size = CudaMemAlignedBytes(size);
 
   Piece* piece = FindPiece(aligned_size);
+  if (piece == nullptr) {
+    if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
+  }
+
+  if (piece == nullptr) {
+    if (DeallocateFreeBlockForGarbageCollection() && AllocateBlockToExtendTotalMem(aligned_size)) {
+      piece = FindPiece(aligned_size);
+    }
+  }
+
   CHECK(piece != nullptr) << "Error! : Out of memory when allocate size : " << size;
   CHECK_NOTNULL(piece->ptr);
   CHECK(ptr2piece_.find(piece->ptr) != ptr2piece_.end());
@@ -179,7 +232,7 @@ void CudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
 
   auto it = ptr2piece_.find(mem_ptr);
   CHECK(it != ptr2piece_.end()) << "Error! : Try deallocate mem_ptr non-existent. mem ptr = "
-                                << mem_ptr;
+                                << mem_ptr << " size = " << size;
   Piece* piece = it->second;
   CHECK_NOTNULL(piece);
   CHECK_EQ(piece->ptr, mem_ptr);

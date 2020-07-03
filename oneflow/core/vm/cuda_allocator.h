@@ -20,6 +20,11 @@ class CudaAllocator final : public Allocator {
   static constexpr int32_t kInvalidBinNum = -1;
   static constexpr int32_t kBinNumSize = 20;
 
+  // Piece is the basic memory unit of CudaAllocator.
+  // A Piece is either is free(is_free = true) or in used(is_free = false).
+  // If the Piece is_free = true, the pointer to the piece will be stored in the Bin structure of
+  // the corresponding BinSize. Pieces are stored in a linked list. The Piece's prev and next are
+  // continuous with the current Piece in physical memory.
   struct Piece {
     size_t size = 0;
     char* ptr = nullptr;
@@ -29,6 +34,17 @@ class CudaAllocator final : public Allocator {
     int32_t bin_num = kInvalidBinNum;
   };
 
+  // Bin is a structure that stores a set of pieces which is free and has similar size, and
+  // these Pieces are arger than the size of bin
+  //
+  // CudaAllocator has a set of Bin structures according to the binary multiple increasing relation,
+  // which is used to quickly index and find the free Piece of appropriate size when Allocate()
+  //
+  // The size of the smallest bin is 512 (512 is the smallest unit Allocated by CudaAllocator,
+  // and the memory size of all Allocated will be multiples of 512, 512 is kCudaMemAllocAlignSize).
+  // The size of each Bin is twice the size of the previous Bin, like
+  //    BinNum:   Bin0, Bin1, Bin2, Bin3, ..., Bin19
+  //    BinSize:  512, 1024, 2048, 4096, ... , 512MB
   struct Bin {
     size_t size = 0;
 
@@ -39,6 +55,15 @@ class CudaAllocator final : public Allocator {
       }
     };
     std::set<Piece*, PieceCmp> pieces;
+  };
+
+  // Block is large physical memory that is actually allocated.
+  // There maybe many consecutive disjoint Pieces distributed on the Block memory
+  struct Block {
+    size_t size = 0;
+    char* ptr = nullptr;
+    Piece* start_piece = nullptr;
+    Block(Piece* p) : size(p->size), ptr(p->ptr), start_piece(p) {}
   };
 
   size_t BinSize4BinNum(int32_t bin_num) { return kCudaMemAllocAlignSize << bin_num; }
@@ -57,9 +82,12 @@ class CudaAllocator final : public Allocator {
   void MergeNeighbourFreePiece(Piece* lhs, Piece* rhs);
   void RemovePieceFromBin(Piece* piece);
 
+  bool AllocateBlockToExtendTotalMem(size_t aligned_size);
+  bool DeallocateFreeBlockForGarbageCollection();
+
   int64_t device_id_;
   size_t total_memory_bytes_;
-  char* mem_ptr_;  // maybe ptr list for dynamic growth
+  HashMap<char*, Block> mem_ptr2block_;
 
   std::vector<Bin> bins_;
   std::vector<std::unique_ptr<Piece>> pieces_;
