@@ -200,6 +200,7 @@ bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
     }
   }
 
+  total_memory_bytes_ -= total_free_bytes;
   return total_free_bytes > 0;
 }
 
