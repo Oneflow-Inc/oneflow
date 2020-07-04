@@ -32,7 +32,6 @@ Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
   ParallelDesc parallel_desc;
   JUST(parallel_desc.MaybeInit(parallel_conf));
-  parallel_desc.CheckWithResourceDesc(*(Global<ResourceDesc, ForSession>::Get()));
   auto machine2device_list = std::make_shared<OFRecord>();
   auto* features = machine2device_list->mutable_feature();
   for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
@@ -51,15 +50,20 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
 
 Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   parallel_conf_ = user_conf;
+  HashSet<int64_t> machine_id_set;
   device_type_ = DeviceType::kInvalidDevice;
   for (const std::string& device_name : parallel_conf_.device_name()) {
     int64_t mchn_id;
     std::string device_tag;
     std::string device_id_str;
     JUST(ParseDeviceNameConf(device_name, &mchn_id, &device_tag, &device_id_str));
+    machine_id_set.insert(mchn_id);
     DeviceType device_type = JUST(DeviceType4DeviceTag(device_tag));
     CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice || device_type_ == device_type);
     device_type_ = device_type;
+    if (machine_id_set.find(mchn_id) == machine_id_set.end()) {
+      sorted_machine_ids_.push_back(mchn_id);
+    }
     int64_t minus_pos = device_id_str.find("-");
     if (minus_pos == std::string::npos) {
       device_id_str = device_id_str + "-" + device_id_str;
