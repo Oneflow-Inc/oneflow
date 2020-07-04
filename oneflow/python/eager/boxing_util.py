@@ -1,17 +1,20 @@
 from __future__ import absolute_import
 
 import oneflow.python.eager.symbol as symbol_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
+import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.lib.core.high_order_bool as high_order_bool
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.core.job.placement_pb2 as placement_proto_pb
+import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_hob as boxing_hob
+import oneflow.python.eager.boxing_middle as boxing_middle
+import random
 import oneflow
 
 
@@ -48,19 +51,121 @@ def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):
         CopyH2D,
         CopyD2H,
         NoBoxing,
+        CpuManyOneToOne,
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                CopyD2H,
+                boxing_middle.ReplaceProducerDeviceTag("cpu"),
+                boxing_middle.ProducerSbpParallel,
+            ),
+            CpuManyOneToOne,
+        ),
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                CpuManyOneToOne,
+                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+                boxing_middle.ConsumerSbpParallel,
+            ),
+            CopyH2D,
+        ),
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                CopyD2H,
+                boxing_middle.ReplaceProducerDeviceTag("cpu"),
+                boxing_middle.ProducerSbpParallel,
+            ),
+            boxing_middle.BoxingToMiddle(
+                CpuManyOneToOne,
+                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+                boxing_middle.ConsumerSbpParallel,
+            ),
+            CopyH2D,
+        ),
         # e.g. 0:cpu:0 -> 0:cpu:0-3
         BroadcastOneToMany,
         # e.g. 0:cpu:0 -> 0:gpu:0-3
         # ==>   0:cpu:0 -> 0:cpu:0-3 -> 0:gpu:0-3
-        Sequential((BroadcastOneToMany, BroadcastBlobParallelDesc("cpu")), CopyH2D),
-        Sequential((CopyD2H, ReplaceBlobDeviceTag("cpu")), BroadcastOneToMany),
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                BroadcastOneToMany,
+                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+                boxing_middle.BroadcastParallel,
+            ),
+            CopyH2D,
+        ),
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                CopyD2H,
+                boxing_middle.ReplaceProducerDeviceTag("cpu"),
+                boxing_middle.ProducerSbpParallel,
+            ),
+            BroadcastOneToMany,
+        ),
         BroadcastManyToOne,
-        Sequential((BroadcastManyToOne, ReplaceBlobParallelDesc("cpu")), CopyH2D),
-        Sequential((BroadcastManyToOne, ReplaceBlobParallelDesc("gpu")), CopyD2H),
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                BroadcastManyToOne,
+                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+                boxing_middle.ProducerSbpParallel,
+            ),
+            CopyH2D,
+        ),
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                BroadcastManyToOne,
+                boxing_middle.ReplaceConsumerDeviceTag("gpu"),
+                boxing_middle.ProducerSbpParallel,
+            ),
+            CopyD2H,
+        ),
         # e.g. 0:gpu:0-3 -> 0:gpu:0-3 (P->B)
         NcclAllReduce,
-        Sequential((CopyH2D, ReplaceBlobParallelDesc("gpu")), NcclAllReduce),
-        Sequential((NcclAllReduce, GetBroadcastOpArgParallelAttr), CopyD2H),
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                CopyH2D,
+                boxing_middle.ReplaceConsumerDeviceTag("gpu"),
+                boxing_middle.ProducerSbpParallel,
+            ),
+            NcclAllReduce,
+        ),
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                NcclAllReduce,
+                boxing_middle.ProducerParallelDesc,
+                boxing_middle.BroadcastParallel,
+            ),
+            CopyD2H,
+        ),
+        NaiveCpuConcatSplit,
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                CopyD2H,
+                boxing_middle.ReplaceProducerDeviceTag("cpu"),
+                boxing_middle.ProducerSbpParallel,
+            ),
+            NaiveCpuConcatSplit,
+        ),
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                NaiveCpuConcatSplit,
+                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+                boxing_middle.ConsumerSbpParallel,
+            ),
+            CopyH2D,
+        ),
+        Sequential(
+            boxing_middle.BoxingToMiddle(
+                CopyD2H,
+                boxing_middle.ReplaceProducerDeviceTag("cpu"),
+                boxing_middle.ProducerSbpParallel,
+            ),
+            boxing_middle.BoxingToMiddle(
+                NaiveCpuConcatSplit,
+                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+                boxing_middle.ConsumerSbpParallel,
+            ),
+            CopyH2D,
+        ),
     ]
     function = enable_if.unique(
         conditional_functions,
@@ -97,23 +202,14 @@ def ComposeBoxing(lhs_boxing, rhs_boxing, get_medium_op_arg_parallel_attr):
 
 
 def Sequential(*boxing_methods):
-    def GetBoxingMethodWithDefault(boxing_method):
-        if isinstance(boxing_method, tuple):
-            assert len(boxing_method) == 2
-            return boxing_method
-        else:
-
-            def Default(_0, produced_blob_object, _):
-                return produced_blob_object.op_arg_parallel_attr
-
-            return boxing_method, Default
-
-    assert not isinstance(boxing_methods[-1], tuple)
+    assert not isinstance(boxing_methods[-1], boxing_middle.BoxingToMiddle)
     composed = boxing_methods[-1]
-    for pair in boxing_methods[-2::-1]:
-        boxing_method, medium_getter = GetBoxingMethodWithDefault(pair)
+    for boxing_to_middle in boxing_methods[-2::-1]:
+        assert isinstance(boxing_to_middle, boxing_middle.BoxingToMiddle)
         composed = ComposeBoxing(
-            boxing_method, composed, get_medium_op_arg_parallel_attr=medium_getter
+            boxing_to_middle.boxing_method,
+            composed,
+            boxing_to_middle.get_middle_op_arg_parallel_attr,
         )
     return composed
 
@@ -164,6 +260,40 @@ def CopyHD(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return BuildCopyHdInstruction(builder, produced_blob_object, op_device_tag)
 
 
+MatchCpuManyOneToOne = (
+    boxing_hob.MasterMachineOnly
+    & (boxing_hob.producer_parallel_desc.device_tag == "cpu")
+    & (boxing_hob.consumer_parallel_desc.device_tag == "cpu")
+    & (boxing_hob.producer_parallel_desc != boxing_hob.consumer_parallel_desc)
+    & (
+        boxing_hob.producer_parallel_desc.parallel_num
+        == boxing_hob.consumer_parallel_desc.parallel_num
+    )
+    & (boxing_hob.producer_parallel_desc.parallel_num > 1)
+    & (boxing_hob.producer_sbp_parallel == boxing_hob.consumer_sbp_parallel)
+)
+
+
+@enable_if.condition(MatchCpuManyOneToOne)
+def CpuManyOneToOne(builder, produced_blob_object, consumer_op_arg_parallel_attr):
+    def get_identity_physical_in_blob_objects(
+        builder,
+        produced_blob_object,
+        consumer_op_arg_parallel_attr,
+        physical_in_blob_objects,
+        boxing_parallel_desc_symbol,
+        out_parallel_num,
+    ):
+        return physical_in_blob_objects
+
+    return NaiveCpuRefPhysicalBlobObjectsScope(
+        builder,
+        produced_blob_object,
+        consumer_op_arg_parallel_attr,
+        get_physical_out_blob_objects=get_identity_physical_in_blob_objects,
+    )
+
+
 MatchNoBoxing = (
     boxing_hob.MasterMachineOnly
     & (boxing_hob.producer_parallel_desc == boxing_hob.consumer_parallel_desc)
@@ -208,64 +338,211 @@ def NcclAllReduce(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return y_blob_object
 
 
-def ReplaceBlobParallelDesc(new_device_tag):
-    def GetOpArgParallelAttr(builder, produced_blob_object, op_arg_parallal_attr):
-        x_parallel_attr = produced_blob_object.op_arg_parallel_attr
-        parallel_desc_sym = op_arg_parallal_attr.parallel_desc_symbol
-        new_parallel_desc_symbol = TryReplaceDeviceTag(
-            builder, parallel_desc_sym, new_device_tag
+MatchSplitOneToMany = (
+    (boxing_hob.producer_parallel_desc.parallel_num == 1)
+    & (boxing_hob.consumer_parallel_desc.parallel_num > 1)
+    & boxing_hob.consumer_sbp_parallel.HasField("split_parallel")
+)
+
+MatchConcatManyToOne = (
+    (boxing_hob.consumer_parallel_desc.parallel_num == 1)
+    & (boxing_hob.producer_parallel_desc.parallel_num > 1)
+    & boxing_hob.producer_sbp_parallel.HasField("split_parallel")
+)
+
+MatchConcatManyToSplitMany = (
+    (boxing_hob.producer_parallel_desc.parallel_num > 1)
+    & (boxing_hob.consumer_parallel_desc.parallel_num > 1)
+    & boxing_hob.producer_sbp_parallel.HasField("split_parallel")
+    & boxing_hob.consumer_sbp_parallel.HasField("split_parallel")
+    & (
+        (boxing_hob.producer_sbp_parallel != boxing_hob.consumer_sbp_parallel)
+        | (
+            boxing_hob.producer_parallel_desc.parallel_num
+            != boxing_hob.consumer_parallel_desc.parallel_num
         )
-        return op_arg_util.OpArgParallelAttribute(
-            new_parallel_desc_symbol,
-            x_parallel_attr.sbp_parallel,
-            x_parallel_attr.opt_mirrored_parallel,
-        )
-
-    return GetOpArgParallelAttr
-
-
-def BroadcastBlobParallelDesc(new_device_tag):
-    def GetOpArgParallelAttr(builder, produced_blob_object, op_arg_parallal_attr):
-        x_parallel_attr = produced_blob_object.op_arg_parallel_attr
-        parallel_desc_sym = op_arg_parallal_attr.parallel_desc_symbol
-        new_parallel_desc_symbol = TryReplaceDeviceTag(
-            builder, parallel_desc_sym, new_device_tag
-        )
-        sbp_parallel = sbp_parallel_pb.SbpParallel()
-        sbp_parallel.broadcast_parallel.SetInParent()
-        return op_arg_util.OpArgParallelAttribute(
-            new_parallel_desc_symbol,
-            sbp_parallel,
-            x_parallel_attr.opt_mirrored_parallel,
-        )
-
-    return GetOpArgParallelAttr
-
-
-def ReplaceBlobDeviceTag(new_device_tag):
-    def GetOpArgParallelAttr(builder, produced_blob_object, op_arg_parallal_attr):
-        x_parallel_attr = produced_blob_object.op_arg_parallel_attr
-        new_parallel_desc_symbol = TryReplaceDeviceTag(
-            builder, x_parallel_attr.parallel_desc_symbol, new_device_tag
-        )
-        return op_arg_util.OpArgParallelAttribute(
-            new_parallel_desc_symbol,
-            x_parallel_attr.sbp_parallel,
-            x_parallel_attr.opt_mirrored_parallel,
-        )
-
-    return GetOpArgParallelAttr
-
-
-def GetBroadcastOpArgParallelAttr(builder, produced_blob_object, op_arg_parallal_attr):
-    x_parallel_attr = produced_blob_object.op_arg_parallel_attr
-    sbp_parallel = sbp_parallel_pb.SbpParallel()
-    sbp_parallel.broadcast_parallel.SetInParent()
-    return op_arg_util.OpArgParallelAttribute(
-        x_parallel_attr.parallel_desc_symbol,
-        sbp_parallel,
-        x_parallel_attr.opt_mirrored_parallel,
     )
+)
+
+
+MatchNaiveCpuConcatSplit = (
+    boxing_hob.MasterMachineOnly
+    & (boxing_hob.producer_parallel_desc.device_tag == "cpu")
+    & (boxing_hob.consumer_parallel_desc.device_tag == "cpu")
+    & (MatchSplitOneToMany | MatchConcatManyToOne | MatchConcatManyToSplitMany)
+)
+
+
+@enable_if.condition(MatchNaiveCpuConcatSplit)
+def NaiveCpuConcatSplit(builder, produced_blob_object, consumer_op_arg_parallel_attr):
+    return NaiveCpuRefPhysicalBlobObjectsScope(
+        builder,
+        produced_blob_object,
+        consumer_op_arg_parallel_attr,
+        get_physical_out_blob_objects=NaiveBoxingToPhysicalBlobObjects,
+    )
+
+
+def NaiveCpuRefPhysicalBlobObjectsScope(
+    builder,
+    produced_blob_object,
+    consumer_op_arg_parallel_attr,
+    get_physical_out_blob_objects,
+):
+    physical_in_blob_objects = UnpackLogicalBoxingBlobObjectToPhysical(
+        builder, produced_blob_object
+    )
+    out_parallel_num = consumer_op_arg_parallel_attr.parallel_desc_symbol.parallel_num
+    boxing_parallel_desc_symbol = GetConcatSplitBoxingParallelDescSymbol(
+        builder,
+        produced_blob_object.parallel_desc_symbol,
+        max(len(physical_in_blob_objects), out_parallel_num),
+    )
+    physical_in_blob_objects = RefBlobObjectWithParallelDesc(
+        builder,
+        physical_in_blob_objects,
+        [boxing_parallel_desc_symbol] * len(physical_in_blob_objects),
+    )
+    physical_output_blob_objects = get_physical_out_blob_objects(
+        builder=builder,
+        produced_blob_object=produced_blob_object,
+        consumer_op_arg_parallel_attr=consumer_op_arg_parallel_attr,
+        physical_in_blob_objects=physical_in_blob_objects,
+        boxing_parallel_desc_symbol=boxing_parallel_desc_symbol,
+        out_parallel_num=out_parallel_num,
+    )
+    phy_parallel_desc_symbols = builder.GetPhysicalParallelDescSymbols(
+        consumer_op_arg_parallel_attr.parallel_desc_symbol
+    )
+    physical_output_blob_objects = RefBlobObjectWithParallelDesc(
+        builder, physical_output_blob_objects, phy_parallel_desc_symbols
+    )
+    return PackPhysicalBoxingBlobObjectsToLogical(
+        builder,
+        physical_output_blob_objects,
+        consumer_op_arg_parallel_attr,
+        produced_blob_object.op_arg_blob_attr,
+    )
+
+
+def NaiveBoxingToPhysicalBlobObjects(
+    builder,
+    produced_blob_object,
+    consumer_op_arg_parallel_attr,
+    physical_in_blob_objects,
+    boxing_parallel_desc_symbol,
+    out_parallel_num,
+):
+    op_attribute = ConstructConcatSplitBoxingOpConf(
+        produced_blob_object,
+        consumer_op_arg_parallel_attr,
+        len(physical_in_blob_objects),
+        out_parallel_num,
+    )
+    return BuildConcatSplitBoxing(
+        builder,
+        op_attribute,
+        physical_in_blob_objects,
+        boxing_parallel_desc_symbol,
+        out_parallel_num,
+    )
+
+
+def RefBlobObjectWithParallelDesc(
+    builder, physical_blob_objects, phy_parallel_desc_symbols
+):
+    assert len(physical_blob_objects) == len(
+        phy_parallel_desc_symbols
+    ), "%s v.s. %s" % (len(physical_blob_objects), len(phy_parallel_desc_symbols))
+
+    def RefWithParallelDesc(physical_blob_object, phy_parallel_desc_symbol):
+        if physical_blob_object.parallel_desc_symbol == phy_parallel_desc_symbol:
+            return physical_blob_object
+        return builder.BroadcastBlobReference(
+            physical_blob_object, phy_parallel_desc_symbol
+        )
+
+    return [
+        RefWithParallelDesc(*pair)
+        for pair in zip(physical_blob_objects, phy_parallel_desc_symbols)
+    ]
+
+
+def PackPhysicalBoxingBlobObjectsToLogical(
+    builder, physical_blob_objects, op_arg_parallel_attr, op_arg_blob_attr
+):
+    if len(physical_blob_objects) == 1:
+        return physical_blob_objects[0]
+    return builder.PackPhysicalBlobsToLogicalBlob(
+        physical_blob_objects, op_arg_parallel_attr, op_arg_blob_attr
+    )
+
+
+def BuildConcatSplitBoxing(
+    builder,
+    op_attribute,
+    physical_in_blob_objects,
+    boxing_parallel_desc_symbol,
+    out_parallel_num,
+):
+    bn_in_op2blob_object = {}
+    for i in range(len(physical_in_blob_objects)):
+        bn_in_op2blob_object["in_%s" % i] = physical_in_blob_objects[i]
+    builder.BoxingStatelessCall(
+        op_attribute,
+        parallel_conf=boxing_parallel_desc_symbol.parallel_conf,
+        bn_in_op2blob_object=bn_in_op2blob_object,
+    )
+    return [bn_in_op2blob_object["out_%s" % i] for i in range(out_parallel_num)]
+
+
+def ConstructConcatSplitBoxingOpConf(
+    produced_blob_object,
+    consumer_op_arg_parallel_attr,
+    in_parallel_num,
+    out_parallel_num,
+):
+    op_conf = op_conf_pb.OperatorConf()
+    op_conf.name = "undefined_boxing_op_name"
+    op_conf.boxing_conf.lbi.op_name = "undefined_boxing_op_name"
+    op_conf.boxing_conf.lbi.blob_name = "undefined_boxing_blob_name"
+    op_conf.boxing_conf.in_num = in_parallel_num
+    op_conf.boxing_conf.out_num = out_parallel_num
+    in_sbp_parallel = produced_blob_object.op_arg_parallel_attr.sbp_parallel
+    if in_sbp_parallel.HasField("split_parallel"):
+        in_axis = in_sbp_parallel.split_parallel.axis
+    else:
+        assert in_parallel_num == 1
+        in_axis = 0
+    op_conf.boxing_conf.concat_box.axis = in_axis
+    out_sbp_parallel = consumer_op_arg_parallel_attr.sbp_parallel
+    if out_sbp_parallel.HasField("split_parallel"):
+        out_axis = out_sbp_parallel.split_parallel.axis
+    else:
+        assert out_parallel_num == 1
+        out_axis = 0
+    op_conf.boxing_conf.split_box.axis = out_axis
+    shape = produced_blob_object.op_arg_blob_attr.shape
+    op_conf.boxing_conf.split_box.part_num.extend(
+        BalancedSplit(shape[out_axis], out_parallel_num)
+    )
+    return c_api_util.GetOpAttribute4OpConf(op_conf)
+
+
+def GetConcatSplitBoxingParallelDescSymbol(
+    builder, blob_parallel_desc_symbol, max_parallel_num
+):
+    random_rank_id = random.randint(0, max_parallel_num - 1)
+    parallel_conf = placement_pb.ParallelConf()
+    for machine_id, _ in blob_parallel_desc_symbol.machine_id2device_id_list.items():
+        parallel_conf.device_name.append("%s:cpu:%s" % (machine_id, random_rank_id))
+    return builder.GetParallelDescSymbol(parallel_conf)
+
+
+def UnpackLogicalBoxingBlobObjectToPhysical(builder, produced_blob_object):
+    if produced_blob_object.parallel_desc_symbol.parallel_num == 1:
+        return [produced_blob_object]
+    return builder.UnpackLogicalBlobToPhysicalBlobs(produced_blob_object)
 
 
 MatchBroadcastOneToMany = (
@@ -346,7 +623,7 @@ def BuildCopyHdInstruction(builder, produced_blob_object, to_device_tag):
 
 
 def _MakeCopyHdOpConfAndRetLbi():
-    op_conf = op_conf_util.OperatorConf()
+    op_conf = op_conf_pb.OperatorConf()
     op_conf.name = "copy_hd"
     op_conf.device_type = c_api_util.DeviceType4DeviceTag("gpu")
     setattr(op_conf.copy_conf, "in", "%s/in" % op_conf.name)
@@ -386,11 +663,12 @@ def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag)
         )
     sbp_parallel = bn_in_op2blob_object["out"].op_arg_parallel_attr.sbp_parallel
     sbp_parallel.CopyFrom(produced_blob_object.op_arg_parallel_attr.sbp_parallel)
+    bn_in_op2blob_object["out"].InitOpArgBlobAttr(produced_blob_object.op_arg_blob_attr)
     return bn_in_op2blob_object["out"]
 
 
 def _AssignOpConf():
-    op_conf = op_conf_util.OperatorConf()
+    op_conf = op_conf_pb.OperatorConf()
     op_conf.name = "assign"
     op_conf.assign_conf.ref = "assign/ref"
     op_conf.assign_conf.value = "assign/value"
@@ -436,33 +714,26 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
 
 
 def TryReplaceDeviceTag(builder, parallel_desc_symbol, device_tag):
-    if parallel_desc_symbol.device_tag == device_tag:
-        return parallel_desc_symbol
-    else:
-        return ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=builder)
+    return boxing_middle.TryReplaceDeviceTag(builder, parallel_desc_symbol, device_tag)
 
 
 def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
-    assert parallel_desc_symbol.device_tag != device_tag
-    parallel_conf = placement_proto_pb.ParallelConf()
-    for device_name in parallel_desc_symbol.parallel_conf.device_name:
-        triple = device_name.split(":")
-        parallel_conf.device_name.append(
-            "%s:%s:%s" % (triple[0], device_tag, triple[2])
-        )
-    if builder is None:
-        return symbol_util.ParallelDescSymbol(
-            parallel_desc_symbol.symbol_id, parallel_conf, device_tag
-        )
-    else:
-        return builder.GetParallelDescSymbol(parallel_conf)
+    return boxing_middle.ReplaceDeviceTag(
+        parallel_desc_symbol, device_tag, builder=builder
+    )
 
 
 def _GetEagerNcclAllReduce(parallel_conf):
-    op_conf = op_conf_util.OperatorConf()
+    op_conf = op_conf_pb.OperatorConf()
     op_conf.name = "eager_nccl_all_reduce"
     op_conf.user_conf.op_type_name = "eager_nccl_all_reduce"
     op_conf.user_conf.input["in"].s.append("eager_nccl_all_reduce/in_0")
     op_conf.user_conf.output["out"].s.append("eager_nccl_all_reduce/out_0")
     op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
     return c_api_util.GetOpAttribute4OpConf(op_conf)
+
+
+def BalancedSplit(total, part_size):
+    base = int(total / part_size)
+    remainder = total % part_size
+    return [base + int(i < remainder) for i in range(part_size)]
