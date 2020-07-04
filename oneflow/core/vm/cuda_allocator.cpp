@@ -166,6 +166,8 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   // extend sucess
   total_memory_bytes_ += final_allocate_bytes;
 
+  LOG(INFO) << "cclog: Extend bytes: " << final_allocate_bytes;
+
   Piece* piece = AllocatePiece();
   piece->size = final_allocate_bytes;
   piece->ptr = mem_ptr;
@@ -183,24 +185,65 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
 
 bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
   size_t total_free_bytes = 0;
+
+  LOG(INFO) << "cclog: Do Garbage. ";
+
+  HashSet<char*> free_block_ptrs;
   for (const auto& pair : mem_ptr2block_) {
     const Block& block = pair.second;
-    if (block.start_piece->is_free && block.start_piece->next == nullptr
-        && block.start_piece->prev == nullptr) {
-      CHECK_EQ(block.size, block.start_piece->size) << " Error in CudaAllocator Merge memory Piece";
-      CHECK_EQ(block.ptr, block.start_piece->ptr);
-      CHECK_EQ(block.ptr, pair.first);
-      RemovePieceFromBin(block.start_piece);
-      UnMarkPiece(block.start_piece);
-      DeallocatePiece(block.start_piece);
+    LOG(INFO) << "cclog: block size = " << block.size
+              << " start_piece : is_free = " << block.start_piece->is_free
+              << " next = " << block.start_piece->next << " prev = " << block.start_piece->prev;
 
-      CudaCheck(cudaFree(pair.first));
+    bool all_free = true;
+    Piece* p = block.start_piece;
+    while (p != nullptr) {
+      if (!(p->is_free)) {
+        all_free = false;
+        break;
+      }
+      p = p->next;
+    }
 
+    if (all_free) {
       total_free_bytes += block.size;
+      free_block_ptrs.insert(pair.first);
     }
   }
 
   total_memory_bytes_ -= total_free_bytes;
+
+  if (total_free_bytes > 0) {
+    LOG(WARNING) << "CudaAllocator try deallocate free block for garbage collection. "
+                 << " deallocate free bytes : " << total_free_bytes;
+    cudaSetDevice(device_id_);
+    for (char* ptr : free_block_ptrs) {
+      auto it = mem_ptr2block_.find(ptr);
+      CHECK(it != mem_ptr2block_.end());
+      const Block& block = it->second;
+
+      // delete all Piece on Block
+      size_t piece_size_sum = 0;
+      Piece* p = block.start_piece;
+      CHECK_EQ(block.ptr, block.start_piece->ptr);
+      CHECK_EQ(block.ptr, ptr);
+      while (p != nullptr) {
+        Piece* next_p = p->next;
+        piece_size_sum += p->size;
+        RemovePieceFromBin(p);
+        UnMarkPiece(p);
+        DeallocatePiece(p);
+        p = next_p;
+      }
+      CHECK_EQ(block.size, piece_size_sum);
+
+      mem_ptr2block_.erase(it);
+      CudaCheck(cudaFree(ptr));
+    }
+  }
+
+  LOG(INFO) << "cclog: Down Garbage, free size =  " << total_free_bytes;
+
   return total_free_bytes > 0;
 }
 
@@ -245,12 +288,14 @@ void CudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   Piece* next_p = piece->next;
   Piece* prev_p = piece->prev;
 
-  if (next_p != nullptr && next_p->is_free && next_p->ptr == piece->ptr + piece->size) {
+  if (next_p != nullptr && next_p->is_free) {
+    CHECK_EQ(next_p->ptr, piece->ptr + piece->size);
     RemovePieceFromBin(next_p);
     MergeNeighbourFreePiece(piece, next_p);
   }
 
-  if (prev_p != nullptr && prev_p->is_free && piece->ptr == prev_p->ptr + piece->size) {
+  if (prev_p != nullptr && prev_p->is_free) {
+    CHECK_EQ(piece->ptr, prev_p->ptr + prev_p->size);
     RemovePieceFromBin(prev_p);
     MergeNeighbourFreePiece(prev_p, piece);
     last_piece_insert_to_bin = prev_p;
