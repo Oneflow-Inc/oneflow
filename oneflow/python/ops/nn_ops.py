@@ -61,7 +61,7 @@ def conv2d(
         else:
             raise ValueError("dilations must be an int or a list.")
 
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         if channel_pos == "channels_first":
             kernel_size_list = filters.shape[2:4]
         elif channel_pos == "channels_last":
@@ -153,7 +153,7 @@ def batch_normalization(
     are always 1D. Users need to specify "axis" to 1 for NCHW data format.
 
     """
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         raise ValueError("nn.batch_normalization is not supported in non-user-op mode")
 
     assert axis >= -len(x.shape) and axis < len(x.shape)
@@ -172,8 +172,6 @@ def batch_normalization(
         .Input("gamma", [scale])
         .Input("beta", [offset])
         .Output("y")
-        .Output("mean")
-        .Output("inv_variance")
         .Attr("axis", axis, "AttrTypeInt32")
         .Attr("epsilon", variance_epsilon, "AttrTypeFloat")
         .Attr("training", False, "AttrTypeBool")
@@ -194,8 +192,8 @@ def tf_conv2d(
     groups=1,
     name=None,
 ):
-    assert len(input.static_shape) == 4
-    assert len(filters.static_shape) == 4
+    assert len(input.shape) == 4
+    assert len(filters.shape) == 4
     NDims = 2
     if isinstance(strides, (list, tuple)):
         assert len(strides) == 2, ValueError(
@@ -226,13 +224,13 @@ def tf_conv2d(
         else:
             raise ValueError("dilations must be an int or a list.")
 
-    assert os.getenv("ENABLE_USER_OP") == "True"
+    assert os.getenv("ENABLE_USER_OP") != "False"
     if channel_pos == "channels_first":
-        input_size = input.static_shape[2:4]
-        kernel_size_list = filters.static_shape[2:4]
+        input_size = input.shape[2:4]
+        kernel_size_list = filters.shape[2:4]
     elif channel_pos == "channels_last":
-        input_size = input.static_shape[-3:-1]
-        kernel_size_list = filters.static_shape[-3:-1]
+        input_size = input.shape[-3:-1]
+        kernel_size_list = filters.shape[-3:-1]
     else:
         raise ValueError("invalid data_format")
     # add pad op if needs odd padding
@@ -268,11 +266,11 @@ def tf_conv2d(
     assert groups > 0
     if groups > 1:
         if data_format.upper() == "NCHW":
-            assert groups <= filters.static_shape[0]
-            assert filters.static_shape[0] % groups == 0
-            assert groups <= input.static_shape[1]
-            assert input.static_shape[1] % groups == 0
-            assert filters.static_shape[1] == input.static_shape[1] // groups
+            assert groups <= filters.shape[0]
+            assert filters.shape[0] % groups == 0
+            assert groups <= input.shape[1]
+            assert input.shape[1] % groups == 0
+            assert filters.shape[1] == input.shape[1] // groups
         elif data_format.upper() == "NHWC":
             raise ValueError("data_format NHWC not support groups > 1")
         else:
@@ -283,7 +281,7 @@ def tf_conv2d(
         .Input("in", [input])
         .Input("weight", [filters])
         .Output("out")
-        .Attr("filters", filters.static_shape[0], "AttrTypeInt32")
+        .Attr("filters", filters.shape[0], "AttrTypeInt32")
         .Attr("padding", padding.lower(), "AttrTypeString")
         .Attr("data_format", channel_pos, "AttrTypeString")
         .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
@@ -316,7 +314,7 @@ def bias_add(value, bias, data_format=None, name=None):
         else:
             raise ValueError("data_format must be of the form `N...C` or `NC...`")
 
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return (
             flow.user_op_builder(name)
             .Op("bias_add")
@@ -360,7 +358,7 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     Analogous to `tf.nn.max_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool2d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("MaxPool2D_")
@@ -411,7 +409,7 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     Analogous to `tf.nn.avg_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool2d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("AvgPool2D_")
@@ -462,7 +460,7 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     Analogous to `tf.nn.max_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool3d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("MaxPool3D_")
@@ -513,7 +511,7 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     Analogous to `tf.nn.avg_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool3d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         op = (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("AvgPool3D_")
@@ -585,7 +583,7 @@ def softmax(logits, axis=None, name=None):
     if axis is None:
         axis = -1
 
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         assert type(axis) is int
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -628,7 +626,7 @@ def softmax_grad(y, dy, axis=None, name=None):
     if axis is None:
         axis = -1
 
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         assert type(axis) is int
         op_conf = op_conf_util.OperatorConf()
 
@@ -683,7 +681,7 @@ def sparse_cross_entropy(labels=None, prediction=None, name=None):
     assert labels is not None
     assert prediction is not None
 
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         if len(labels.shape) == len(prediction.shape):
             assert labels.shape[-1] == 1
             labels = flow.squeeze(labels, axis=[-1])
@@ -759,7 +757,7 @@ def sparse_softmax_cross_entropy_with_logits(labels=None, logits=None, name=None
     assert labels is not None
     assert logits is not None
 
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         if len(labels.shape) == len(logits.shape):
             assert labels.shape[-1] == 1
             labels = flow.squeeze(labels, axis=[-1])
@@ -860,7 +858,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
     Analogous to `tf.nn.dropout <https://www.tensorflow.org/api_docs/python/tf/nn/dropout>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         # dropout op
         op_conf = op_conf_util.OperatorConf()
         if name is None:

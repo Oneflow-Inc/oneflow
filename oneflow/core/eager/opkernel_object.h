@@ -10,6 +10,7 @@ namespace oneflow {
 
 class KernelCtx;
 class Blob;
+class ParallelContext;
 
 namespace eager {
 
@@ -41,7 +42,8 @@ class OpKernelObject : public vm::Object {
     opkernel_state_ = opkernel_state;
   }
 
-  void ResetOpAndKernel(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
+  void ResetOpAndKernel(const ParallelContext* parallel_ctx,
+                        const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
 
   const BlobObject& tmp_buffer_blob_object() const { return *tmp_buffer_blob_object_; }
   BlobObject* mut_tmp_buffer_blob_object() { return tmp_buffer_blob_object_.get(); }
@@ -82,7 +84,8 @@ class SystemOpKernelObject : public vm::Object {
 
   const Kernel& kernel() const { return *kernel_; }
 
-  void ResetKernel(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
+  void ResetKernel(const ParallelContext* parallel_ctx,
+                   const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
 
  private:
   void InferBlobDescs(const Operator& op,
