@@ -37,7 +37,7 @@ def two_stage_reduce(x, axis=None, keepdims=False, op_type_name=None, name=None)
         device_ids,
     ) in current_placement_scope.machine_id2device_id_list.items():
         for device_id in device_ids:
-            with flow.device_prior_placement(
+            with flow.fixed_placement(
                 device_tag, str(machine_id) + ":" + str(device_id)
             ):
                 device_stage_out, device_stage_count = reduce_device_stage(
