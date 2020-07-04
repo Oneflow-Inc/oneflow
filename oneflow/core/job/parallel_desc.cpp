@@ -43,7 +43,10 @@ Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
   return machine2device_list;
 }
 
-ParallelDesc::ParallelDesc(const ParallelConf& user_conf) { CHECK_JUST(MaybeInit(user_conf)); }
+ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
+  CHECK_JUST(MaybeInit(user_conf));
+  CHECK_JUST(CheckWithResourceDesc(*(Global<ResourceDesc, ForSession>::Get())));
+}
 
 Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   parallel_conf_ = user_conf;
@@ -55,17 +58,9 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     std::string device_id_str;
     JUST(ParseDeviceNameConf(device_name, &mchn_id, &device_tag, &device_id_str));
     machine_id_set.insert(mchn_id);
-    if (device_tag == "cpu") {
-      CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice
-                      || device_type_ == DeviceType::kCPU);
-      device_type_ = DeviceType::kCPU;
-    } else if (device_tag == "gpu") {
-      CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice
-                      || device_type_ == DeviceType::kGPU);
-      device_type_ = DeviceType::kGPU;
-    } else {
-      OF_UNIMPLEMENTED() << "device type not supported";
-    }
+    DeviceType device_type = JUST(DeviceType4DeviceTag(device_tag));
+    CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice || device_type_ == device_type);
+    device_type_ = device_type;
     if (machine_id_set.find(mchn_id) == machine_id_set.end()) {
       sorted_machine_ids_.push_back(mchn_id);
     }
@@ -78,14 +73,11 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     int64_t max_id = oneflow_cast<int64_t>(device_id_str.substr(minus_pos + 1));
     CHECK_LE_OR_RETURN(min_id, max_id);
     for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
-      if (device_type_ == DeviceType::kGPU) {
-        CHECK_LT_OR_RETURN(dev_phy_id, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()));
-      }
       machine_id2sorted_dev_phy_ids_[mchn_id].push_back(dev_phy_id);
     }
   }
   ClearUp();
-  SanityCheck();
+  JUST(SanityCheck());
   return Maybe<void>::Ok();
 }
 
@@ -149,6 +141,17 @@ Maybe<void> ParallelDesc::SanityCheck() {
       device_num_of_each_machine_ = pair.second.size();
     } else {
       CHECK_EQ_OR_RETURN(device_num_of_each_machine_, pair.second.size());
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ParallelDesc::CheckWithResourceDesc(const ResourceDesc& resource_desc) {
+  if (device_type_ == DeviceType::kGPU) {
+    for (auto& pair : machine_id2sorted_dev_phy_ids_) {
+      for (int64_t dev_phy_id : pair.second) {
+        CHECK_LT_OR_RETURN(dev_phy_id, resource_desc.GpuDeviceNum());
+      }
     }
   }
   return Maybe<void>::Ok();
