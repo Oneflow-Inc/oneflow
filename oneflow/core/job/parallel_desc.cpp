@@ -32,7 +32,7 @@ Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
   ParallelDesc parallel_desc;
   JUST(parallel_desc.MaybeInit(parallel_conf));
-  JUST(parallel_desc.CheckWithResourceDesc(*(Global<ResourceDesc, ForSession>::Get())));
+  parallel_desc.CheckWithResourceDesc(*(Global<ResourceDesc, ForSession>::Get()));
   auto machine2device_list = std::make_shared<OFRecord>();
   auto* features = machine2device_list->mutable_feature();
   for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
@@ -74,17 +74,6 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   }
   ClearUp();
   JUST(SanityCheck());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> ParallelDesc::CheckWithResourceDesc(const ResourceDesc& resource_desc) {
-  if (device_type_ == DeviceType::kGPU) {
-    for (auto& pair : machine_id2sorted_dev_phy_ids_) {
-      for (int64_t dev_phy_id : pair.second) {
-        CHECK_LT_OR_RETURN(dev_phy_id, resource_desc.GpuDeviceNum());
-      }
-    }
-  }
   return Maybe<void>::Ok();
 }
 
@@ -136,6 +125,17 @@ Maybe<void> ParallelDesc::SanityCheck() {
       device_num_of_each_machine_ = pair.second.size();
     } else {
       CHECK_EQ_OR_RETURN(device_num_of_each_machine_, pair.second.size());
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ParallelDesc::CheckWithResourceDesc(const ResourceDesc& resource_desc) {
+  if (device_type_ == DeviceType::kGPU) {
+    for (auto& pair : machine_id2sorted_dev_phy_ids_) {
+      for (int64_t dev_phy_id : pair.second) {
+        CHECK_LT_OR_RETURN(dev_phy_id, resource_desc.GpuDeviceNum());
+      }
     }
   }
   return Maybe<void>::Ok();
