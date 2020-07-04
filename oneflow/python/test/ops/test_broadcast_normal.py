@@ -103,8 +103,12 @@ def compare_with_tensorflow_grad(
     tf_out, tf_x_diff, tf_y_diff = RunTensorFlowOp(tf_op, x, y)
 
     assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol, equal_nan=True)
-    assert np.allclose(of_x_diff, tf_x_diff, rtol=diff_rtol, atol=diff_atol, equal_nan=True)
-    assert np.allclose(of_y_diff, tf_y_diff, rtol=diff_rtol, atol=diff_atol, equal_nan=True)
+    assert np.allclose(
+        of_x_diff, tf_x_diff, rtol=diff_rtol, atol=diff_atol, equal_nan=True
+    )
+    assert np.allclose(
+        of_y_diff, tf_y_diff, rtol=diff_rtol, atol=diff_atol, equal_nan=True
+    )
     flow.clear_default_session()
 
 
