@@ -137,6 +137,11 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
   return maybe;
 }
 
+inline bool MaybeIsOk(Maybe<void>&& maybe) {
+  if (!maybe.IsOk()) { LOG(ERROR) << "\n" << maybe.GetSerializedError(); }
+  return maybe.IsOk();
+}
+
 #define MAYBE_FAILED_LOC __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
 
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
@@ -164,6 +169,9 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
     }                                                                     \
     maybe.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();           \
   })
+
+#define CHECK_OK(...) CHECK(MaybeIsOk(std::move(__VA_ARGS__)))
+
 #define OF_RETURN_IF_ERROR(...)                                                    \
   const auto& maybe_##__LINE__ = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
   if (!maybe_##__LINE__.IsOk()) {                                                  \
