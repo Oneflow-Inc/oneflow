@@ -17,8 +17,10 @@ def IsValidMode(mode):
 def ModeScope(mode):
     global mode_statck
     mode_statck.insert(0, mode)
-    yield
-    mode_statck.pop(0)
+    try:
+        yield
+    finally:
+        mode_statck.pop(0)
 
 
 mode_statck = [NORMAL_MODE]

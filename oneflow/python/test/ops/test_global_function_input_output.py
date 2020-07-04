@@ -27,7 +27,7 @@ def test_lazy_input_output(test_case):
 
 
 def test_eager_output(test_case):
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         return
 
     flow.clear_default_session()
@@ -46,7 +46,7 @@ def test_eager_output(test_case):
 
 
 def test_eager_multi_output(test_case):
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         return
 
     flow.clear_default_session()
@@ -73,7 +73,7 @@ def test_eager_multi_output(test_case):
 
 
 def test_eager_input(test_case):
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         return
 
     flow.clear_default_session()
@@ -91,7 +91,7 @@ def test_eager_input(test_case):
 
 
 def test_eager_input_fixed(test_case):
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         return
 
     flow.clear_default_session()
