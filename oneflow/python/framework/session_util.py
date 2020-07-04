@@ -26,7 +26,6 @@ from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.eager.blob_register import BlobRegister
-import oneflow.python.eager.blob_register as blob_register_util
 from contextlib import contextmanager
 
 import oneflow

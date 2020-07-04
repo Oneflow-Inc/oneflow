@@ -16,7 +16,7 @@ import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.framework.op_arg_util as op_arg_util
-import oneflow.core.job.placement_pb2 as placement_proto_pb
+import oneflow.core.job.placement_pb2 as placement_pb
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
 
@@ -161,9 +161,6 @@ class LazyMirroredBlob(MirroredBlob):
             self.sub_consistent_blob_list_.append(consistent_blob)
         watch_scope_util.TryWatchOnce(self)
 
-    def numpy_mirrored_list(self):
-        return []
-
     @property
     def sub_consistent_blob_list(self):
         return self.sub_consistent_blob_list_
@@ -226,8 +223,37 @@ class EagerBlobMixin(object):
     def numpy_list(self, rank=None):
         raise NotImplementedError
 
-    def numpy_mirrored_list(self):
-        raise NotImplementedError
+    def _NumpyAt(self, rank):
+        assert self.is_tensor_list is not True
+        assert rank >= 0
+        assert rank < self.blob_object_.parallel_desc_symbol.parallel_num
+        ndarray_list = self._NumpyMirroredList()
+        return ndarray_list[rank]
+
+    def _NumpyMirroredList(self):
+        assert self.is_tensor_list is not True
+        physical_blob_objects = []
+
+        def UnpackLogicalBlobToPhysicalBlobs(builder):
+            nonlocal physical_blob_objects
+            physical_blob_objects = builder.UnpackLogicalBlobToPhysicalBlobs(
+                self.blob_object_
+            )
+
+        def GetPhyBlobNumpy(i, phy_blob_object):
+            name = "{}/{}".format(self.unique_name, i)
+            blob_register.SetObject4BlobName(name, phy_blob_object)
+            return eager_blob_util.EagerPhysicalBlob(name).numpy()
+
+        def FetchBlobNumpyMirroredList(blob_object):
+            vm_util.LogicalRun(UnpackLogicalBlobToPhysicalBlobs)
+            return [
+                GetPhyBlobNumpy(i, phy_blob_object)
+                for i, phy_blob_object in enumerate(physical_blob_objects)
+            ]
+
+        blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object_)
+        return blob_cache.GetCachedNumpyMirroredList(FetchBlobNumpyMirroredList)
 
     @property
     def sub_consistent_blob_list(self):
@@ -293,13 +319,19 @@ class EagerConsistentBlob(EagerBlobMixin, ConsistentBlob):
         self._Init(blob_object)
 
     def numpy(self, rank=None):
+        if rank is None:
+            return self._Numpy()
+        else:
+            return self._NumpyAt(rank)
+
+    def _Numpy(self):
         assert self.is_tensor_list is not True
 
         def FetchBlobNumpy(blob_object):
             consistent_blob_name = None
 
             def BoxingToSingleDevice(builder):
-                parallel_conf = placement_proto_pb.ParallelConf()
+                parallel_conf = placement_pb.ParallelConf()
                 parallel_conf.device_name.append(
                     "{}:{}:{}".format(0, blob_object.parallel_desc_symbol.device_tag, 0)
                 )
@@ -331,33 +363,5 @@ class EagerMirroredBlob(EagerBlobMixin, MirroredBlob):
         MirroredBlob.__init__(self, lbi, **kw)
         self._Init(blob_object)
 
-    def numpy(self, rank=None):
-        assert self.is_tensor_list is not True
-        ndarray_list = self.numpy_mirrored_list()
-        if rank is None:
-            return ndarray_list
-        return ndarray_list[rank]
-
-    def numpy_mirrored_list(self):
-        assert self.is_tensor_list is not True
-        physical_blob_names = []
-
-        def UnpackLogicalBlobToPhysicalBlobs(builder):
-            physical_blob_objects = builder.UnpackLogicalBlobToPhysicalBlobs(
-                self.blob_object_
-            )
-            for i, physical_blob_object in enumerate(physical_blob_objects):
-                blob_name = "{}/{}".format(self.unique_name, i)
-                physical_blob_names.append(blob_name)
-                if not blob_register.HasObject4BlobName(blob_name):
-                    blob_register.SetObject4BlobName(blob_name, physical_blob_object)
-
-        def FetchBlobNumpyMirroredList(blob_object):
-            vm_util.LogicalRun(UnpackLogicalBlobToPhysicalBlobs)
-            return [
-                eager_blob_util.EagerPhysicalBlob(name).numpy()
-                for name in physical_blob_names
-            ]
-
-        blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object_)
-        return blob_cache.GetCachedNumpyMirroredList(FetchBlobNumpyMirroredList)
+    def numpy(self, rank):
+        return self._NumpyAt(rank)
