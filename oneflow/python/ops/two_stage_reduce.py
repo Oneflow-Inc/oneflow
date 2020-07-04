@@ -29,17 +29,26 @@ def two_stage_reduce(x, axis=None, keepdims=False, op_type_name=None, name=None)
     device_stage_count_list = []
     distribute_axis = x.distribute.axis
     x_list = flow.advanced.distribute_split(x, axis=distribute_axis)
-    for i in range(len(x_list)):
-        with flow.device_prior_placement("gpu", "0:" + str(i)):
-            device_stage_out, device_stage_count = reduce_device_stage(
-                x_list[i],
-                axis,
-                op_type_name + "_device_stage",
-                name + "_device_stage" + str(i),
-            )
-            device_stage_out_list.append(device_stage_out)
-            device_stage_count_list.append(device_stage_count)
-
+    current_placement_scope = flow.placement.current_scope()
+    device_tag = current_placement_scope.default_device_tag
+    parallel_id = 0
+    for (
+        machine_id,
+        device_ids,
+    ) in current_placement_scope.machine_id2device_id_list.items():
+        for device_id in device_ids:
+            with flow.fixed_placement(
+                device_tag, str(machine_id) + ":" + str(device_id)
+            ):
+                device_stage_out, device_stage_count = reduce_device_stage(
+                    x_list[parallel_id],
+                    axis,
+                    op_type_name + "_device_stage",
+                    name + "_device_stage" + str(parallel_id),
+                )
+                device_stage_out_list.append(device_stage_out)
+                device_stage_count_list.append(device_stage_count)
+                parallel_id += 1
     device_stage_out = flow.advanced.distribute_concat(
         device_stage_out_list, axis=distribute_axis
     )
