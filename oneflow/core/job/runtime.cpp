@@ -4,7 +4,6 @@
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
-#include "oneflow/core/job/nccl_comm_manager.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/thread/thread_manager.h"
@@ -115,9 +114,6 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
   Global<ThreadMgr>::New(plan);
-#ifdef WITH_CUDA
-  Global<NcclCommMgr>::New(plan);
-#endif  // WITH_CUDA
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
 }
@@ -125,9 +121,6 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
 void Runtime::DeleteAllGlobal() {
   Global<RuntimeJobDescs>::Delete();
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
-#ifdef WITH_CUDA
-  Global<NcclCommMgr>::Delete();
-#endif  // WITH_CUDA
   Global<ThreadMgr>::Delete();
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();

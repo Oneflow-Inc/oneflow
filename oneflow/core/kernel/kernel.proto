@@ -81,10 +81,6 @@ message DecodeOFRecordKernelConf {
   required uint32 random_seed = 1;
 }
 
-message ReduceGatherKernelConf {
-  repeated int64 data_offset = 1;
-}
-
 message SliceKernelConf {
   required ShapeProto in_shape = 1;
 }
@@ -200,7 +196,6 @@ message KernelConf {
     AveragePoolingKernelConf average_pooling_conf = 204;
     MaxPoolingKernelConf max_pooling_conf = 205;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
-    ReduceGatherKernelConf reduce_gather_conf = 350;
     XrtLaunchKernelConf xrt_launch_conf = 353;
     UniqueWithCountsKernelConf unique_with_counts_conf = 354;
     IndexedSlicesReduceSumKernelConf indexed_slices_reduce_sum_conf = 355;

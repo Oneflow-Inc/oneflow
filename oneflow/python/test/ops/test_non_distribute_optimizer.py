@@ -7,7 +7,6 @@ def test_non_distribute_optimizer(test_case):
     flow.config.enable_debug_mode(True)
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    func_config.enable_all_reduce_group(True)
     func_config.train.primary_lr(5)
     func_config.train.model_update_conf(dict(naive_conf={}))
     func_config.enable_non_distributed_optimizer(True)
@@ -33,7 +32,6 @@ def _test_two_job_non_distribute_optimizer(test_case):
 
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    func_config.enable_all_reduce_group(True)
     func_config.train.primary_lr(5)
     func_config.train.model_update_conf(dict(naive_conf={}))
     func_config.enable_non_distributed_optimizer(True)
@@ -51,7 +49,6 @@ def _test_non_distribute_optimizer_var_as_loss(test_case):
     flow.config.enable_debug_mode(True)
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    func_config.enable_all_reduce_group(True)
     func_config.train.primary_lr(5)
     func_config.train.model_update_conf(dict(naive_conf={}))
     func_config.enable_non_distributed_optimizer(True)
