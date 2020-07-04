@@ -147,3 +147,27 @@ def test_eager_input_output(test_case):
 
     ret = foo_job([input]).get()
     test_case.assertTrue(np.allclose(output, ret.ndarray_list()[0]))
+
+
+# TODO: system op need manaully register blob_object in default_blob_register or bw_blob_register
+# def test_eager_system_op(test_case):
+#     if os.getenv("ENABLE_USER_OP") != "True":
+#         return
+
+#     flow.clear_default_session()
+#     flow.enable_eager_execution()
+
+#     input = np.random.rand(5, 4).astype(np.single)
+
+#     @flow.global_function()
+#     # def foo_job(x_def=flow.FixedTensorDef(shape=(5, 4), dtype=flow.float)):
+#     def foo_job():
+#         x = flow.constant(1, shape=(5, 4), dtype=flow.float)
+#         y = flow.identity(x)
+#         print(y.numpy_mirrored_list())
+#         # y = flow.identity(x_def)
+#         # return y
+
+#     foo_job()
+#     # ret = foo_job(input).get()
+#     # test_case.assertTrue(np.allclose(input, ret.ndarray()))
