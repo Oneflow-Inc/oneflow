@@ -315,7 +315,9 @@ class EagerConsistentBlob(EagerBlobMixin, ConsistentBlob):
                 nonlocal consistent_blob_name
                 consistent_blob_name = "{}-consistent".format(self.unique_name)
                 if not blob_register.HasObject4BlobName(consistent_blob_name):
-                    blob_register.SetObject4BlobName(consistent_blob_name, tmp_blob_object)
+                    blob_register.SetObject4BlobName(
+                        consistent_blob_name, tmp_blob_object
+                    )
 
             vm_util.LogicalRun(BoxingToSingleDevice)
             return eager_blob_util.EagerPhysicalBlob(consistent_blob_name).numpy()
