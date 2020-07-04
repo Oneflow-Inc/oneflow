@@ -32,10 +32,18 @@ void AssignOp::InitFromOpConf() {
 
 const PbMessage& AssignOp::GetCustomizedConf() const { return op_conf().assign_conf(); }
 
+std::string DebugString(const BlobDesc& blob_desc) {
+  BlobDescProto blob_desc_proto;
+  blob_desc.ToProto(&blob_desc_proto);
+  return blob_desc_proto.DebugString();
+}
+
 Maybe<void> AssignOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("ref") == *GetBlobDesc4BnInOp("value"));
+  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("ref") == *GetBlobDesc4BnInOp("value"))
+      << "\nref_blob_desc: " << DebugString(*GetBlobDesc4BnInOp("ref"))
+      << "\nvalue_blob_desc: " << DebugString(*GetBlobDesc4BnInOp("value"));
   return Maybe<void>::Ok();
 }
 
