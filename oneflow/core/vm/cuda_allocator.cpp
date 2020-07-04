@@ -166,8 +166,6 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   // extend sucess
   total_memory_bytes_ += final_allocate_bytes;
 
-  LOG(INFO) << "cclog: Extend bytes: " << final_allocate_bytes;
-
   Piece* piece = AllocatePiece();
   piece->size = final_allocate_bytes;
   piece->ptr = mem_ptr;
@@ -185,16 +183,9 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
 
 bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
   size_t total_free_bytes = 0;
-
-  LOG(INFO) << "cclog: Do Garbage. ";
-
   HashSet<char*> free_block_ptrs;
   for (const auto& pair : mem_ptr2block_) {
     const Block& block = pair.second;
-    LOG(INFO) << "cclog: block size = " << block.size
-              << " start_piece : is_free = " << block.start_piece->is_free
-              << " next = " << block.start_piece->next << " prev = " << block.start_piece->prev;
-
     bool all_free = true;
     Piece* p = block.start_piece;
     while (p != nullptr) {
@@ -241,8 +232,6 @@ bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
       CudaCheck(cudaFree(ptr));
     }
   }
-
-  LOG(INFO) << "cclog: Down Garbage, free size =  " << total_free_bytes;
 
   return total_free_bytes > 0;
 }

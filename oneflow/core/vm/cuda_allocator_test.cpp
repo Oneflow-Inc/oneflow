@@ -70,26 +70,6 @@ TEST(CudaAllocator, cuda_allocator) {
 
   a->Deallocate(data_ptr_2, 4096 * sizeof(double));
   a->Deallocate(data_ptr_1, 2048 * sizeof(float));
-
-  ptrs.clear();
-  for (int i = 0; i < 2048; ++i) {
-    char* ptr = nullptr;
-    a->Allocate(&ptr, 1048576 * 3);
-    ASSERT_TRUE(ptr != nullptr);
-    ptrs.push_back(ptr);
-  }
-  std::sort(ptrs.begin(), ptrs.end());
-  for (int i = 0; i < 2048; ++i) {
-    if (i > 0) {
-      ASSERT_TRUE(ptrs.at(i) != ptrs.at(i - 1));
-      ASSERT_TRUE(std::abs(ptrs.at(i) - ptrs.at(i - 1)) >= kCudaMemAllocAlignSize);
-    }
-    a->Deallocate(ptrs.at(i), 1048576 * 3);
-  }
-  char* data_ptr_3 = nullptr;
-  size_t mb1 = 1048576;
-  a->Allocate(&data_ptr_3, mb1 * 6500);
-  a->Deallocate(data_ptr_3, mb1 * 6500);
 }
 
 }  // namespace vm
