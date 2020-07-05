@@ -6,7 +6,7 @@
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
-#include "oneflow/core/vm/storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/object_wrapper.h"
 
 namespace oneflow {
@@ -31,7 +31,8 @@ class InitSymbolInstructionType final : public InstructionType {
     FOR_RANGE(int, i, 0, args->serialized_logical_object_id_size()) {
       const auto& operand = args->serialized_logical_object_id(i);
       int64_t logical_object_id = operand.logical_object_id();
-      const auto& serialized_conf = Global<Storage<SerializedT>>::Get()->Get(logical_object_id);
+      const auto& serialized_conf =
+          Global<SymbolStorage<SerializedT>>::Get()->Get(logical_object_id);
       auto* rw_mutexed_object = instruction->mut_operand_type(operand);
       rw_mutexed_object->Init<ObjectWrapper<T>>(serialized_conf);
     }

@@ -2,7 +2,7 @@
 #include "oneflow/core/eager/eager_symbol.pb.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/instruction.pb.h"
-#include "oneflow/core/vm/storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -18,16 +18,19 @@ void StorageAdd(const EagerSymbol& symbol) {
   int64_t symbol_id = symbol.symbol_id();
   if (symbol.has_string_symbol()) {
     const auto& str = std::make_shared<std::string>(symbol.string_symbol());
-    Global<vm::Storage<std::string>>::Get()->Add(symbol_id, str);
+    Global<vm::SymbolStorage<std::string>>::Get()->Add(symbol_id, str);
+  } else if (symbol.has_scope_symbol()) {
+    const auto& scope = std::make_shared<ScopeProto>(symbol.scope_symbol());
+    Global<vm::SymbolStorage<ScopeProto>>::Get()->Add(symbol_id, scope);
   } else if (symbol.has_job_conf_symbol()) {
     const auto& job_conf = std::make_shared<JobConfigProto>(symbol.job_conf_symbol());
-    Global<vm::Storage<JobConfigProto>>::Get()->Add(symbol_id, job_conf);
+    Global<vm::SymbolStorage<JobConfigProto>>::Get()->Add(symbol_id, job_conf);
   } else if (symbol.has_parallel_conf_symbol()) {
     const auto& parallel_conf = std::make_shared<ParallelConf>(symbol.parallel_conf_symbol());
-    Global<vm::Storage<ParallelConf>>::Get()->Add(symbol_id, parallel_conf);
+    Global<vm::SymbolStorage<ParallelConf>>::Get()->Add(symbol_id, parallel_conf);
   } else if (symbol.has_op_conf_symbol()) {
     const auto& op_conf = std::make_shared<OperatorConf>(symbol.op_conf_symbol());
-    Global<vm::Storage<OperatorConf>>::Get()->Add(symbol_id, op_conf);
+    Global<vm::SymbolStorage<OperatorConf>>::Get()->Add(symbol_id, op_conf);
   } else {
     UNIMPLEMENTED();
   }

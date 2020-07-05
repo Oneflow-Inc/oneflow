@@ -4,7 +4,7 @@
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
-#include "oneflow/core/vm/storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/object_wrapper.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -49,7 +49,7 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
           ObjectMsgPtr<MirroredObject>::NewFrom(vm->mut_allocator(), logical_object.Mutable(), 0);
       {
         const auto& serialized_conf =
-            Global<Storage<ParallelConf>>::Get()->Get(view->logical_object_id(i));
+            Global<SymbolStorage<ParallelConf>>::Get()->Get(view->logical_object_id(i));
         auto* rw_mutexed_object = mirrored_object->mut_rw_mutexed_object();
         rw_mutexed_object->Init<ObjectWrapper<ParallelDesc>>(serialized_conf);
       }
@@ -57,7 +57,7 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
     }
   }
 };
-COMMAND(Global<Storage<ParallelConf>>::SetAllocated(new Storage<ParallelConf>()));
+COMMAND(Global<SymbolStorage<ParallelConf>>::SetAllocated(new SymbolStorage<ParallelConf>()));
 COMMAND(RegisterInstructionType<NewParallelDescSymbolInstructionType>("NewParallelDescSymbol"));
 
 }  // namespace vm

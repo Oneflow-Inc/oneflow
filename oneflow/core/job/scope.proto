@@ -1,0 +1,15 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/job/job.proto";
+import "oneflow/core/job/placement.proto";
+import "oneflow/core/job/mirrored_parallel.proto";
+
+message ScopeProto {
+  required int64 scope_symbol_id = 1;
+  optional int64 parent_scope_symbol_id = 2;
+  optional JobConfigProto global_function_conf = 3;
+  optional ParallelConf parallel_conf = 4; 
+  optional OptMirroredParallel opt_mirrored_parallel_conf = 5;
+  repeated string scope_op_name_prefixes = 6;
+}

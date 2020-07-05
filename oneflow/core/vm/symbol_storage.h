@@ -8,13 +8,13 @@ namespace oneflow {
 namespace vm {
 
 template<typename T>
-class Storage final {
+class SymbolStorage final {
  public:
-  Storage(const Storage&) = delete;
-  Storage(Storage&&) = delete;
+  SymbolStorage(const SymbolStorage&) = delete;
+  SymbolStorage(SymbolStorage&&) = delete;
 
-  Storage() = default;
-  ~Storage() = default;
+  SymbolStorage() = default;
+  ~SymbolStorage() = default;
 
   bool Has(int64_t logical_object_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
