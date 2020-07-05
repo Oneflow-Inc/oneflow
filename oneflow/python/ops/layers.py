@@ -199,7 +199,7 @@ def layer_norm(
     Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         name = name if name is not None else id_util.UniqueStr("LayerNorm_")
         op = (
             flow.user_op_builder(name)
@@ -379,7 +379,7 @@ def batch_normalization(
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
 
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         if center:
             beta = flow.get_variable(
                 name=name + "-beta",

@@ -15,9 +15,14 @@ inline void CheckTensorBufferDataType(DataType val) {
 
 class TensorBuffer {
  public:
+  struct Deleter {
+    void operator()(void* ptr) { MemoryAllocatorImpl::DeallocateUnPinnedHostMem(ptr); }
+  };
+  typedef std::unique_ptr<void, Deleter> BufferType;
+
   OF_DISALLOW_COPY_AND_MOVE(TensorBuffer);
   TensorBuffer()
-      : shape_(Shape()), data_(nullptr), data_type_(DataType::kInvalidDataType), num_bytes_(0) {}
+      : data_(nullptr), num_bytes_(0), shape_(Shape()), data_type_(DataType::kInvalidDataType) {}
   virtual ~TensorBuffer() = default;
 
   const Shape& shape() const { return shape_; }
@@ -59,8 +64,7 @@ class TensorBuffer {
   void reserve(size_t new_num_bytes) {
     if (new_num_bytes <= num_bytes_) { return; }
     data_.reset();
-    data_.reset(MemoryAllocatorImpl::AllocateUnPinnedHostMem(new_num_bytes),
-                MemoryAllocatorImpl::DeallocateUnPinnedHostMem);
+    data_.reset(MemoryAllocatorImpl::AllocateUnPinnedHostMem(new_num_bytes));
     num_bytes_ = new_num_bytes;
   }
 
@@ -99,16 +103,23 @@ class TensorBuffer {
     memcpy(mut_data(), src.data(), nbytes());
   }
 
+  void Swap(TensorBuffer* lhs) {
+    data_.swap(lhs->data_);
+    std::swap(num_bytes_, lhs->num_bytes_);
+    std::swap(shape_, lhs->shape_);
+    std::swap(data_type_, lhs->data_type_);
+  }
+
  private:
   // TODO(chengcheng)
   static double growth_factor_;
   static double shrink_threshold_;
   static constexpr size_t kTensorBufferAlignedSize = 1024;
 
-  Shape shape_;
-  std::shared_ptr<void> data_;
-  DataType data_type_;
+  BufferType data_;
   size_t num_bytes_;
+  Shape shape_;
+  DataType data_type_;
 };
 
 #define BUFFER_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(TensorBuffer, DataType::kTensorBuffer)

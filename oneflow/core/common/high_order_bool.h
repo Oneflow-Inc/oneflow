@@ -6,6 +6,8 @@
 #include <sstream>
 #include <functional>
 
+#include "oneflow/core/common/to_string.h"
+
 namespace oneflow {
 
 namespace hob {
@@ -148,11 +150,12 @@ class HighOrderBoolFunctor final : public hob::BoolFunctor<T> {
 
   std::string DebugStr(const T& ctx, bool display_result) const override {
     std::ostringstream string_stream;
-    string_stream << "\"" << debug_str_ << "\"";
+    string_stream << "(" << debug_str_;
     if (display_result) {
       std::string boolResult = bool_fn_(ctx) ? "True" : "False";
-      string_stream << "[" << boolResult << "]";
+      string_stream << " [" << boolResult << "]";
     }
+    string_stream << ")";
     return string_stream.str();
   }
 
@@ -165,7 +168,7 @@ template<typename ContextT, typename T>
 class HobContextGetter final {
  public:
   HobContextGetter(const T& const_value)
-      : debug_str_(std::to_string(const_value)),
+      : debug_str_(ToString(const_value)),
         context_getter_([const_value](const ContextT&) { return const_value; }) {}
   HobContextGetter(const std::string& debug_str,
                    const std::function<T(const ContextT&)>& context_getter)
