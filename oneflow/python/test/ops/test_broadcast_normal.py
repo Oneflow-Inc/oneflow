@@ -102,9 +102,13 @@ def compare_with_tensorflow_grad(
     of_out, of_x_diff, of_y_diff, = RunOneflowOp(device_type, flow_op, x, y, data_type)
     tf_out, tf_x_diff, tf_y_diff = RunTensorFlowOp(tf_op, x, y)
 
-    assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol)
-    assert np.allclose(of_x_diff, tf_x_diff, rtol=diff_rtol, atol=diff_atol)
-    assert np.allclose(of_y_diff, tf_y_diff, rtol=diff_rtol, atol=diff_atol)
+    assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol, equal_nan=True)
+    assert np.allclose(
+        of_x_diff, tf_x_diff, rtol=diff_rtol, atol=diff_atol, equal_nan=True
+    )
+    assert np.allclose(
+        of_y_diff, tf_y_diff, rtol=diff_rtol, atol=diff_atol, equal_nan=True
+    )
     flow.clear_default_session()
 
 
@@ -157,7 +161,7 @@ def compare_with_tensorflow(
     of_out = FlowJob(x, y).get().ndarray()
     # Tensorflow
     tf_out = tf_op(x, y).numpy()
-    assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol)
+    assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol, equal_nan=True)
     flow.clear_default_session()
 
 
