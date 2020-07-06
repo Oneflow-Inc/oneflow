@@ -526,7 +526,9 @@ def ConstructConcatSplitBoxingOpConf(
     op_conf.boxing_conf.split_box.part_num.extend(
         BalancedSplit(shape[out_axis], out_parallel_num)
     )
-    return c_api_util.GetOpAttribute4OpConf(op_conf)
+    return c_api_util.GetOpAttribute4OpConf(
+        op_conf, oneflow.scope.current_scope().symbol_id
+    )
 
 
 def GetConcatSplitBoxingParallelDescSymbol(
@@ -638,7 +640,9 @@ def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag)
     x_devices = produced_blob_object.parallel_desc_symbol.machine_id2device_id_list
     x_device_tag = produced_blob_object.parallel_desc_symbol.device_tag
     bn_in_op2blob_object = {"in": produced_blob_object}
-    op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
+    op_attribute = c_api_util.GetOpAttribute4OpConf(
+        op_conf, oneflow.scope.current_scope().symbol_id
+    )
     assert to_device_tag != x_device_tag, (to_device_tag, x_device_tag)
     if to_device_tag == "cpu" and x_device_tag == "gpu":
         x_parallel_conf = produced_blob_object.parallel_desc_symbol.parallel_conf
@@ -687,7 +691,9 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
     ref_device_tag = ref_blob_object.parallel_desc_symbol.device_tag
     value_device_tag = value_blob_object.parallel_desc_symbol.device_tag
     bn_in_op2blob_object = {"ref": ref_blob_object, "value": value_blob_object}
-    op_attribute = c_api_util.GetOpAttribute4OpConf(op_conf)
+    op_attribute = c_api_util.GetOpAttribute4OpConf(
+        op_conf, oneflow.scope.current_scope().symbol_id
+    )
     if ref_device_tag == value_device_tag:
         builder.BoxingStatelessCall(
             op_attribute,
@@ -730,7 +736,9 @@ def _GetEagerNcclAllReduce(parallel_conf):
     op_conf.user_conf.input["in"].s.append("eager_nccl_all_reduce/in_0")
     op_conf.user_conf.output["out"].s.append("eager_nccl_all_reduce/out_0")
     op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
-    return c_api_util.GetOpAttribute4OpConf(op_conf)
+    return c_api_util.GetOpAttribute4OpConf(
+        op_conf, oneflow.scope.current_scope().symbol_id
+    )
 
 
 def BalancedSplit(total, part_size):

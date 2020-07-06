@@ -112,8 +112,9 @@ std::string InferOpConf(const std::string& serialized_op_conf,
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
-std::string GetOpAttribute4OpConf(const std::string& serialized_op_conf, std::string* error_str) {
-  return oneflow::GetOpAttribute4OpConf(serialized_op_conf)
+std::string GetOpAttribute4OpConf(const std::string& serialized_op_conf, int64_t scope_symbol_id,
+                                  std::string* error_str) {
+  return oneflow::GetOpAttribute4OpConf(serialized_op_conf, scope_symbol_id)
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 

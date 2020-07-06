@@ -144,7 +144,9 @@ class EagerPhysicalUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
+        op_attribute = c_api_util.GetOpAttribute4OpConf(
+            self.op_conf_, oneflow.scope.current_scope().symbol_id
+        )
 
         def BuildInstruction(builder):
             with blob_register.BnInOp2BlobObjectScope(
@@ -197,7 +199,9 @@ class NonTraceableEagerLogicalUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
+        op_attribute = c_api_util.GetOpAttribute4OpConf(
+            self.op_conf_, oneflow.scope.current_scope().symbol_id
+        )
 
         def BuildInstruction(builder):
             get_scope = blob_register.BnInOp2BlobObjectScope

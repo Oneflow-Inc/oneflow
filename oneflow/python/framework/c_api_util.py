@@ -192,10 +192,10 @@ def InferOpConf(op_conf_proto, upstream_signature, parallel_conf, is_mirrored):
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 
-def GetOpAttribute4OpConf(op_conf_proto):
+def GetOpAttribute4OpConf(op_conf_proto, scope_symbol_id):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
     op_attribute_str, error_str = oneflow_internal.GetOpAttribute4OpConf(
-        serialized_op_conf
+        serialized_op_conf, scope_symbol_id
     )
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
