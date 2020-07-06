@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.session_context as session_context
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
@@ -83,7 +83,7 @@ def get_eager_variable(
 
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
-    sess = session_context.GetDefaultSession()
+    sess = session_ctx.GetDefaultSession()
     var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
 
     if job_var_blob is None:
@@ -132,7 +132,7 @@ def get_lazy_variable(
 
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
-    sess = session_context.GetDefaultSession()
+    sess = session_ctx.GetDefaultSession()
     var_blob, _ = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
 
     if var_blob is not None:
@@ -263,17 +263,23 @@ def _ModelInit(var_op_conf):
     op_conf, lbi = _GetModelInitAndLbi(var_op_conf)
     bn_in_op2blob_object = {}
 
+    def BuildNotMirroredScope(old_scope, builder):
+        return old_scope.BuildWithNewIsMirrored(builder, False)
+
     def BuildModeInitInstruction(builder):
         upstream_signature = op_attribute_pb.UpstreamSignature()
         parallel_conf = oneflow.placement.current_scope().default_parallel_conf
+        scope_symbol_id = oneflow.scope.current_scope().symbol_id
         op_attribute = c_api_util.InferOpConf(
-            op_conf, upstream_signature, parallel_conf, is_mirrored=False
+            op_conf, upstream_signature, scope_symbol_id
         )
         builder.StatelessCall(
             op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
         )
 
-    vm_util.LogicalRun(BuildModeInitInstruction)
+    sess = session_ctx.GetDefaultSession()
+    with sess.NewCurrentScope(sess.MakeScope(BuildNotMirroredScope)):
+        vm_util.LogicalRun(BuildModeInitInstruction)
     return bn_in_op2blob_object["out_0"]
 
 

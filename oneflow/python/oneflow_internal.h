@@ -104,11 +104,9 @@ std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& p
 }
 
 std::string InferOpConf(const std::string& serialized_op_conf,
-                        const std::string& serialized_op_input_signature,
-                        const std::string& serialized_parallel_conf, bool is_mirrored,
+                        const std::string& serialized_op_input_signature, int64_t scope_symbol_id,
                         std::string* error_str) {
-  return oneflow::InferOpConf(serialized_op_conf, serialized_op_input_signature,
-                              serialized_parallel_conf, is_mirrored)
+  return oneflow::InferOpConf(serialized_op_conf, serialized_op_input_signature, scope_symbol_id)
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 

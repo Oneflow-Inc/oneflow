@@ -18,7 +18,7 @@ class Scope final {
   ~Scope() = default;
 
   Maybe<const JobDesc*> job_desc() const;
-  Maybe<const ParallelDesc*> parallel_desc(const OperatorConf& op_conf) const;
+  Maybe<const ParallelDesc*> GetParallelDesc(const OperatorConf& op_conf) const;
 
   const OptMirroredParallel& opt_mirrored_parallel_conf() const {
     return scope_proto_.opt_mirrored_parallel_conf();

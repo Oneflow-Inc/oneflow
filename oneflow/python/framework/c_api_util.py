@@ -176,15 +176,11 @@ def CurJobBuildAndInferCtx_Complete():
         raise JobBuildAndInferError(error)
 
 
-def InferOpConf(op_conf_proto, upstream_signature, parallel_conf, is_mirrored):
+def InferOpConf(op_conf_proto, upstream_signature, scope_symbol_id):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
     serialized_upstream_sig = str(text_format.MessageToString(upstream_signature))
-    serialized_parallel_conf = str(text_format.MessageToString(parallel_conf))
     op_attribute_str, error_str = oneflow_internal.InferOpConf(
-        serialized_op_conf,
-        serialized_upstream_sig,
-        serialized_parallel_conf,
-        is_mirrored,
+        serialized_op_conf, serialized_upstream_sig, scope_symbol_id,
     )
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):

@@ -26,7 +26,7 @@ Maybe<const JobDesc*> Scope::job_desc() const {
   return job_desc_.get();
 }
 
-Maybe<const ParallelDesc*> Scope::parallel_desc(const OperatorConf& op_conf) const {
+Maybe<const ParallelDesc*> Scope::GetParallelDesc(const OperatorConf& op_conf) const {
   if (IsClassRegistered<OnlyCpuSupportPredicator>(op_conf.op_type_case())) {
     return host_parallel_desc_.get();
   } else {
