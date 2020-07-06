@@ -219,10 +219,13 @@ Maybe<std::string> InferOpConf(const std::string& op_conf_str,
 Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
-  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
-  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
-  const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
-  std::shared_ptr<Operator> op = ConstructOp(op_conf, JUST(scope.job_desc()));
+  const JobDesc* job_desc = nullptr;
+  if (op_conf.has_scope_symbol_id()) {
+    const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+    const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
+    job_desc = JUST(scope.job_desc());
+  }
+  std::shared_ptr<Operator> op = ConstructOp(op_conf, job_desc);
   std::shared_ptr<OpAttribute> op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
   auto* mirrored_map =
       op_attribute->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel();

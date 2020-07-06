@@ -10,6 +10,8 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.python.framework.hob as hob
 
 
 def InputOpByArgBlobDef(blob_def):
@@ -22,7 +24,18 @@ def InputOpByArgBlobDef(blob_def):
     return remote_blob_util.RemoteBlob(blob_def.lbi)
 
 
-def RetOpByRemoteBlob(remote_blob, allow_cpu_return_op=True):
+def ReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
+    return enable_if.unique([LazyReturnRemoteBlob, EagerReturnRemoteBlob])(
+        remote_blob, allow_cpu_return_op
+    )
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def LazyReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
+    assert isinstance(
+        remote_blob,
+        (remote_blob_util.LazyMirroredBlob, remote_blob_util.LazyConsistentBlob),
+    )
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr("Return_")
     setattr(op_conf.return_conf, "in", remote_blob.unique_name)
@@ -34,3 +47,10 @@ def RetOpByRemoteBlob(remote_blob, allow_cpu_return_op=True):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+def EagerReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
+    assert allow_cpu_return_op is True
+    assert isinstance(remote_blob, remote_blob_util.EagerBlobMixin)
+    return remote_blob

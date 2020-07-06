@@ -12,10 +12,12 @@ import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.runtime_mode as runtime_mode
+import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
+
 from oneflow.python.lib.core.box import Box
 import oneflow
 
@@ -28,7 +30,7 @@ def Compile(session, function_desc, config_proto):
 
 def EagerRun(session, function_desc, config_proto, args):
     with InterpretScope(session, function_desc, config_proto):
-        ret = _InterpretJob(function_desc)
+        ret = _InterpretGlobalFunction(function_desc, args)
         c_api_util.CurJobBuildAndInferCtx_Complete()
     return ret
 
@@ -77,8 +79,15 @@ def _CompileJob(function_desc):
     func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(ret, kwarg)
 
 
-def _InterpretJob(function_desc):
-    return _CompileJob(function_desc)
+def _InterpretGlobalFunction(function_desc, args):
+    func = function_desc.job_func
+    func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
+    inputs = push_util.MakeEagerInputBlobs(func.__oneflow_input_blob_defs__, args)
+    kwarg = dict(
+        allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
+    )
+    ret = func(*inputs)
+    return _RecursiveMakeRetRemoteBlobs(ret, kwarg)
 
 
 @contextmanager
@@ -125,7 +134,7 @@ def _RecursiveMakeRetRemoteBlobs(remote_blobs, kwarg):
     if remote_blobs is None:
         return None
     if isinstance(remote_blobs, remote_blob_util.BlobDef):
-        return ops.RetOpByRemoteBlob(remote_blobs, **kwarg)
+        return ops.ReturnRemoteBlob(remote_blobs, **kwarg)
     if isinstance(remote_blobs, (tuple, list)):
         return type(remote_blobs)(
             _RecursiveMakeRetRemoteBlobs(x, kwarg) for x in remote_blobs

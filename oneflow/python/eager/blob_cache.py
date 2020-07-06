@@ -23,6 +23,7 @@ class BlobCache(object):
         self.body_cache_ = None
         self.delegate_blob_object_ = {}
         self.numpy_mirrored_list_ = None
+        self.numpy_ = None
 
     @property
     def blob_object(self):
@@ -48,6 +49,11 @@ class BlobCache(object):
         if self.numpy_mirrored_list_ is None:
             self.numpy_mirrored_list_ = fetch(self.blob_object_)
         return self.numpy_mirrored_list_
+
+    def GetCachedNumpy(self, fetch):
+        if self.numpy_ is None:
+            self.numpy_ = fetch(self.blob_object_)
+        return self.numpy_
 
     def __del__(self):
         for key in list(self.delegate_blob_object_.keys()):

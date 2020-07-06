@@ -43,6 +43,10 @@ Maybe<void> InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 
+Symbol<OperatorConf> InputOp::GetOpConfWithoutOpNameAndLbn() const {
+  return SymbolOf(this->op_conf());
+}
+
 REGISTER_OP(OperatorConf::kInputConf, InputOp);
 REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kInputConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kInputConf);

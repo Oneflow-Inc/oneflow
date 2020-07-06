@@ -18,12 +18,14 @@ import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.eager.vm_util as vm_util
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.framework.function_desc import FunctionDesc
-from oneflow.python.framework.pull_util import FutureRemoteBlobs
+from oneflow.python.framework.pull_util import (
+    LazyFutureRemoteBlobs,
+    EagerFutureRemoteBlobs,
+)
 from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.eager.blob_register import BlobRegister
-import oneflow.python.eager.blob_register as blob_register_util
 from contextlib import contextmanager
 
 import oneflow
@@ -118,7 +120,6 @@ class Session(object):
     def NewCurrentScope(self, scope):
         job_name = scope.job_desc_symbol.data.job_name
         old_scope = self.GetCurrentScope(job_name)
-        assert scope.parent_scope_symbol is old_scope
         self.job_name2current_scope_[job_name] = scope
         try:
             yield
@@ -206,11 +207,16 @@ class Session(object):
         remote_blobs = self.LaunchUserJob(job_func, *arg)
         if remote_blobs is None:
             return
-        return FutureRemoteBlobs(self).SetResult(remote_blobs).Inited()
+        return LazyFutureRemoteBlobs(self).SetResult(remote_blobs).Inited()
 
     def EagerRun(self, function_desc, *arg):
         with self._EagerGlobalFunctionDescScope(function_desc):
-            return compiler.EagerRun(self, function_desc, self.config_proto, arg)
+            remote_blobs = compiler.EagerRun(
+                self, function_desc, self.config_proto, arg
+            )
+            if remote_blobs is None:
+                return
+            return EagerFutureRemoteBlobs().SetResult(remote_blobs).Inited()
 
     def LaunchUserJob(self, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING
