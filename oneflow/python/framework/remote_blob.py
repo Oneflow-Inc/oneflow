@@ -217,6 +217,12 @@ class EagerBlobMixin(object):
     def blob_object(self):
         return self.blob_object_
 
+    def numpy_size(self):
+        return self.blob_object_.parallel_desc_symbol.parallel_num
+
+    def numpy_list_size(self):
+        return self.blob_object_.parallel_desc_symbol.parallel_num
+
     def numpy(self, rank=None):
         raise NotImplementedError
 
@@ -287,7 +293,7 @@ class EagerBlobMixin(object):
 
     @property
     def is_dynamic(self):
-        return True
+        return self.blob_object_.is_dynamic
 
     @property
     def disable_boxing(self):

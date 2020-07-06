@@ -30,8 +30,7 @@ def Compile(session, function_desc, config_proto):
 
 def EagerRun(session, function_desc, config_proto, args):
     with InterpretScope(session, function_desc, config_proto):
-        _InterpretGlobalFunction(function_desc, args)
-        ret = function_desc.job_func.__oneflow_output_remote_blobs__
+        ret = _InterpretGlobalFunction(function_desc, args)
         c_api_util.CurJobBuildAndInferCtx_Complete()
     return ret
 
@@ -88,7 +87,7 @@ def _InterpretGlobalFunction(function_desc, args):
         allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
     )
     ret = func(*inputs)
-    func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(ret, kwarg)
+    return _RecursiveMakeRetRemoteBlobs(ret, kwarg)
 
 
 @contextmanager

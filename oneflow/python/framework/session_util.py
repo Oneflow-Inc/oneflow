@@ -120,7 +120,6 @@ class Session(object):
     def NewCurrentScope(self, scope):
         job_name = scope.job_desc_symbol.data.job_name
         old_scope = self.GetCurrentScope(job_name)
-        assert scope.parent_scope_symbol is old_scope
         self.job_name2current_scope_[job_name] = scope
         try:
             yield

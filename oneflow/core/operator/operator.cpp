@@ -24,8 +24,8 @@ DataType GetDataTypeFromBnInOpVec(
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   OperatorConf* this_op_conf = op_attribute_.mutable_op_conf();
   *this_op_conf = op_conf;
-  if (job_desc().IsPredict()) { this_op_conf->set_trainable(false); }
-  if (this_op_conf->has_enable_cudnn() == false) {
+  if (has_job_desc() && job_desc().IsPredict()) { this_op_conf->set_trainable(false); }
+  if (has_job_desc() && this_op_conf->has_enable_cudnn() == false) {
     this_op_conf->set_enable_cudnn(job_desc().EnableCudnn());
   }
   InitFromOpConf();
@@ -153,6 +153,7 @@ Maybe<void> Operator::InferOutputBlobTimeShape(
   if (input_bns().empty() == false) {
     *time_shape = *GetTimeShape4BnInOp(input_bns().Get(0));
   } else {
+    CHECK_OR_RETURN(has_job_desc());
     *time_shape = Shape({job_desc().TotalBatchNum(), job_desc().NumOfPiecesInBatch()});
   }
   return Maybe<void>::Ok();
@@ -372,6 +373,7 @@ int64_t Operator::cudnn_buf_limit_byte() const {
   if (op_conf().has_cudnn_buf_limit_mbyte()) {
     cudnn_buf_limit_mbyte = op_conf().cudnn_buf_limit_mbyte();
   } else {
+    CHECK(has_job_desc());
     cudnn_buf_limit_mbyte = job_desc().cudnn_buf_limit_mbyte();
   }
   return cudnn_buf_limit_mbyte * 1024 * 1024;

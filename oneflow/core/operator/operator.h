@@ -304,6 +304,7 @@ class Operator {
   void set_job_desc(const JobDesc* job_desc) { job_desc_ = job_desc; }
 
   virtual void EmplaceLbi2Obn(const LogicalBlobId& lbi, const std::string& obn);
+  bool has_job_desc() const { return job_desc_ != nullptr; }
 
   OpAttribute op_attribute_;
   const JobDesc* job_desc_;
