@@ -681,42 +681,24 @@ def sparse_cross_entropy(labels=None, prediction=None, name=None):
     assert labels is not None
     assert prediction is not None
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        if len(labels.shape) == len(prediction.shape):
-            assert labels.shape[-1] == 1
-            labels = flow.squeeze(labels, axis=[-1])
-        else:
-            assert len(labels.shape) == len(prediction.shape) - 1
-
-        return (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("SparseCrossEntropy_")
-            )
-            .Op("sparse_cross_entropy")
-            .Input("prediction", [prediction])
-            .Input("label", [labels])
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
+    if len(labels.shape) == len(prediction.shape):
+        assert labels.shape[-1] == 1
+        labels = flow.squeeze(labels, axis=[-1])
     else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("SparseCrossEntropy_"),
+        assert len(labels.shape) == len(prediction.shape) - 1
+
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SparseCrossEntropy_")
         )
-        setattr(
-            op_conf.sparse_cross_entropy_conf, "prediction", prediction.unique_name,
-        )
-        setattr(op_conf.sparse_cross_entropy_conf, "label", labels.unique_name)
-        setattr(op_conf.sparse_cross_entropy_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+        .Op("sparse_cross_entropy")
+        .Input("prediction", [prediction])
+        .Input("label", [labels])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("nn.softmax_cross_entropy_with_logits")
