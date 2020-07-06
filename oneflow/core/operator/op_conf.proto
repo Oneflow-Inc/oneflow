@@ -356,19 +356,6 @@ enum ScalarReductionType {
   kSumOverNonZeroWeight = 3;
 }
 
-message SparseCrossEntropyOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string out = 3;
-}
-
-message SparseCrossEntropyGradOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string dy = 3;
-  required string prediction_diff = 4;
-}
-
 message SigmoidCrossEntropyOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -1772,7 +1759,6 @@ message OperatorConf {
     LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
-    SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
     PReluOpConf prelu_conf = 265;
     ReluGradOpConf relu_grad_conf = 266;
@@ -1781,7 +1767,6 @@ message OperatorConf {
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
     LayerNormGradOpConf layer_norm_grad_conf = 272;
     LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
-    SparseCrossEntropyGradOpConf sparse_cross_entropy_grad_conf= 274;
     UnsortedSegmentSumOpConf unsorted_segment_sum_conf = 275;
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;
