@@ -557,6 +557,10 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
   }
 }
 
+KU_INTEGRAL_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
+}
+
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                                \
   template struct CpuKernelUtilIf<type_cpp, KernelUtil<DeviceType::kCPU, type_cpp>>; \
   template struct KernelUtil<DeviceType::kCPU, type_cpp>;

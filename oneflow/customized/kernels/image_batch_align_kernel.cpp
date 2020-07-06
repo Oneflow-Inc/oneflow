@@ -32,17 +32,6 @@ struct ImageCopier final {
 #undef MAKE_COPY_FROM_TENSOR_BUFFER_SWITCH_ENTRY
 };
 
-template<typename T>
-struct ImageBatchAlignIsMatchedPred {
-  static bool Impl(const user_op::KernelRegContext& ctx) {
-    const user_op::TensorDesc* in_tensor = ctx.TensorDesc4ArgNameAndIndex("in", 0);
-    const user_op::TensorDesc* out_tensor = ctx.TensorDesc4ArgNameAndIndex("out", 0);
-    return ctx.device_type() == DeviceType::kCPU
-           && in_tensor->data_type() == DataType::kTensorBuffer
-           && out_tensor->data_type() == GetDataType<T>::value;
-  }
-};
-
 }  // namespace
 
 template<typename T>
@@ -90,10 +79,12 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_IMAGE_BATCH_ALIGN_KERNEL(dtype)   \
-  REGISTER_USER_KERNEL("image_batch_align")        \
-      .SetCreateFn<ImageBatchAlignKernel<dtype>>() \
-      .SetIsMatchedPred(ImageBatchAlignIsMatchedPred<dtype>::Impl);
+#define REGISTER_IMAGE_BATCH_ALIGN_KERNEL(dtype)                                    \
+  REGISTER_USER_KERNEL("image_batch_align")                                         \
+      .SetCreateFn<ImageBatchAlignKernel<dtype>>()                                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)               \
+                       & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer) \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_IMAGE_BATCH_ALIGN_KERNEL(uint8_t)
 REGISTER_IMAGE_BATCH_ALIGN_KERNEL(float)

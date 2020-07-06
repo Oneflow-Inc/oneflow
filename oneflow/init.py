@@ -20,11 +20,6 @@ except Exception as _e:
     pass
 
 import oneflow.python.__export_symbols__
-import oneflow.python.oneflow_export as oneflow_export
-for field, api in oneflow_export.exported._SubApi().items(): locals()[field] = api
-if 'field' in locals(): del field
-if 'api' in locals(): del api
-del oneflow_export
 
 import atexit
 import oneflow.python.framework.c_api_util

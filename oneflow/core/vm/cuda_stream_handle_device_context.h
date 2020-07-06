@@ -50,7 +50,7 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx {
 };
 
 #endif  // WITH_CUDA
-}
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_DEVICE_CUDA_STREAM_HANDLE_DEVICE_CONTEXT_H_

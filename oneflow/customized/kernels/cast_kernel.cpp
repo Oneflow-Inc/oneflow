@@ -65,12 +65,9 @@ class CastKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CAST_KERNEL(device)                                               \
-  REGISTER_USER_KERNEL("cast").SetCreateFn<CastKernel<device>>().SetIsMatchedPred( \
-      [](const KernelRegContext& ctx) {                                            \
-        if (ctx.device_type() == device) { return true; }                          \
-        return false;                                                              \
-      });
+#define REGISTER_CAST_KERNEL(device)                                              \
+  REGISTER_USER_KERNEL("cast").SetCreateFn<CastKernel<device>>().SetIsMatchedHob( \
+      user_op::HobDeviceType() == device);
 
 REGISTER_CAST_KERNEL(DeviceType::kCPU)
 REGISTER_CAST_KERNEL(DeviceType::kGPU)

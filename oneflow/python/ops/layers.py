@@ -44,7 +44,7 @@ def dense(
     )
 
     if model_distribute is distribute_util.split(0):
-        assert in_num_axes is 2  # model distribute is hard for reshape split dim 1
+        assert in_num_axes == 2  # model distribute is hard for reshape split dim 1
 
     weight = flow.get_variable(
         name="{}-weight".format(name_prefix),
@@ -199,7 +199,7 @@ def layer_norm(
     Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         name = name if name is not None else id_util.UniqueStr("LayerNorm_")
         op = (
             flow.user_op_builder(name)
@@ -250,7 +250,7 @@ def layer_norm(
             else len(inputs.shape) + begin_params_axis
         )
         param_shape = inputs.shape[begin_params_axis:]
-        if len(param_shape) is 0:
+        if len(param_shape) == 0:
             param_shape = (1,)
         if center:
             beta = flow.get_variable(
@@ -379,7 +379,7 @@ def batch_normalization(
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
 
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         if center:
             beta = flow.get_variable(
                 name=name + "-beta",
