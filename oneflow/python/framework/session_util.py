@@ -4,7 +4,6 @@ import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.vm.instruction_pb2 as instr_util
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
-import oneflow.core.job.job_pb2 as job_util
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler

@@ -176,11 +176,11 @@ def CurJobBuildAndInferCtx_Complete():
         raise JobBuildAndInferError(error)
 
 
-def InferOpConf(op_conf_proto, upstream_signature, scope_symbol_id):
+def InferOpConf(op_conf_proto, upstream_signature):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
     serialized_upstream_sig = str(text_format.MessageToString(upstream_signature))
     op_attribute_str, error_str = oneflow_internal.InferOpConf(
-        serialized_op_conf, serialized_upstream_sig, scope_symbol_id,
+        serialized_op_conf, serialized_upstream_sig,
     )
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
@@ -188,10 +188,10 @@ def InferOpConf(op_conf_proto, upstream_signature, scope_symbol_id):
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 
-def GetOpAttribute4OpConf(op_conf_proto, scope_symbol_id):
+def GetOpAttribute4OpConf(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
     op_attribute_str, error_str = oneflow_internal.GetOpAttribute4OpConf(
-        serialized_op_conf, scope_symbol_id
+        serialized_op_conf
     )
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):

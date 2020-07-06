@@ -202,24 +202,26 @@ Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
 }
 
 Maybe<std::string> InferOpConf(const std::string& op_conf_str,
-                               const std::string& upstream_signature_str, int64_t scope_symbol_id) {
+                               const std::string& upstream_signature_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
+  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
   UpstreamSignature upstream_signature;
   CHECK_OR_RETURN(TxtString2PbMessage(upstream_signature_str, &upstream_signature))
       << "UpstreamSignature parse failed";
   const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
-  const auto& scope = scope_storage.Get(scope_symbol_id);
+  const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
   const auto& op = JUST(ConstructAndInferOp(op_conf, upstream_signature, scope));
   const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
   return PbMessage2TxtString(*op_attribute);
 }
 
-Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str, int64_t scope_symbol_id) {
+Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
+  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
   const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
-  const auto& scope = scope_storage.Get(scope_symbol_id);
+  const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
   std::shared_ptr<Operator> op = ConstructOp(op_conf, JUST(scope.job_desc()));
   std::shared_ptr<OpAttribute> op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
   auto* mirrored_map =
