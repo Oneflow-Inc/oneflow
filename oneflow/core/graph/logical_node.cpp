@@ -241,7 +241,7 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("DistributeSplit"
   OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)    \
   OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)        \
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)  \
-  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                  
+  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \
