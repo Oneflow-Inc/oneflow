@@ -48,6 +48,11 @@ class ScopeSymbol(Symbol):
             scope_proto.opt_mirrored_parallel_conf.ClearField("mirrored_parallel")
         return builder.GetScopeSymbol(scope_proto, self)
 
+    def BuildWithNewScopeName(self, builder, scope_name):
+        scope_proto = self._CloneScopeProto()
+        scope_proto.scope_op_name_prefixes.append(scope_name)
+        return builder.GetScopeSymbol(scope_proto, self)
+
     def _CloneScopeProto(self):
         scope_proto = scope_pb.ScopeProto()
         scope_proto.CopyFrom(self.data)
