@@ -216,16 +216,13 @@ class ValueSet(object):
         if dtype is None:
             if self.values_:
                 dtype = type(self.values_[0])
-            else:
-                raise ValueError("Empty domain with no dtype specified")
         if dtype not in (int, float, bool, str):
-            raise ValueError("Unknown dtype: %r" % (dtype,))
+            raise ValueError("Value type must in (int, float, bool, str), %r is not supported!" % (dtype,))
         self.dtype_ = dtype
         for value in self.values_:
             if not isinstance(value, self.dtype_):
                 raise TypeError(
-                    "dtype mismatch: not isinstance(%r, %s)"
-                    % (value, self.dtype_.__name__)
+                    "The type of value is not supported! value: %r type: %s" % (value, self.dtype_.__name__)
                 )
         self.values_.sort()
 
@@ -243,40 +240,23 @@ class ValueSet(object):
 
 @oneflow_export("Metric")
 class Metric(object):
-    """A metric in an experiment.
+    def __init__(self, value, dtype=None):
+        if dtype is None:
+            if self.value_:
+                dtype = type(self.value_[0])
+        if dtype not in (int, float):
+            raise ValueError("Value type must in (int, float), %r is not supported!" % (dtype,))
+        self.dtype_ = dtype
+        if not isinstance(value, self.dtype_):
+            raise TypeError(
+                    "The type of value is not supported! value: %r type: %s" % (value, self.dtype_.__name__)
+            )
+        self.value_ = value
 
-    A metric is a real-valued function of a model. Each metric is
-    associated with a TensorBoard scalar summary, which logs the
-    metric's value as the model trains.
-    """
+    @property
+    def dtype(self):
+        return self.dtype_
 
-    TRAINING = 1
-    VALIDATION = 2
-
-    def __init__(
-        self, tag, group=None, display_name=None, description=None, dataset_type=None,
-    ):
-        """
-
-        Args:
-          tag: The tag name of the scalar summary that corresponds to this
-            metric (as a `str`).
-          group: An optional string listing the subdirectory under the
-            session's log directory containing summaries for this metric.
-            For instance, if summaries for training runs are written to
-            events files in `ROOT_LOGDIR/SESSION_ID/train`, then `group`
-            should be `"train"`. Defaults to the empty string: i.e.,
-            summaries are expected to be written to the session logdir.
-          display_name: An optional human-readable display name.
-          description: An optional Markdown string with a human-readable
-            description of this metric, to appear in TensorBoard.
-          dataset_type: Either `Metric.TRAINING` or `Metric.VALIDATION`, or
-            `None`.
-        """
-        self._tag = tag
-        self._group = group
-        self._display_name = display_name
-        self._description = description
-        self._dataset_type = dataset_type
-        if self._dataset_type not in (None, Metric.TRAINING, Metric.VALIDATION):
-            raise ValueError("invalid dataset type: %r" % (self._dataset_type,))
+    @property
+    def value(self):
+        return self.value_

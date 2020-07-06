@@ -43,13 +43,11 @@ class WriteScalar final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_SCALAR_USER_KERNEL(dtype)                                            \
-  REGISTER_USER_KERNEL("write_scalar")                                                \
-      .SetCreateFn<WriteScalar<dtype>>()                                              \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0); \
-        return in_desc->data_type() == GetDataType<dtype>::value;                     \
-      });
+#define REGISTER_SCALAR_USER_KERNEL(dtype)                            \
+  REGISTER_USER_KERNEL("write_scalar")                                \
+      .SetCreateFn<WriteScalar<dtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_SCALAR_USER_KERNEL(double)
 REGISTER_SCALAR_USER_KERNEL(float)
@@ -72,7 +70,7 @@ class CreateSummaryWriter final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("create_summary_writer")
     .SetCreateFn<CreateSummaryWriter>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) { return true; });
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
 
 template<typename T>
 class WriteHistogram final : public user_op::OpKernel {
@@ -95,13 +93,11 @@ class WriteHistogram final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_HISTOGRAM_USER_KERNEL(dtype)                                         \
-  REGISTER_USER_KERNEL("write_histogram")                                             \
-      .SetCreateFn<WriteHistogram<dtype>>()                                           \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0); \
-        return in_desc->data_type() == GetDataType<dtype>::value;                     \
-      });
+#define REGISTER_HISTOGRAM_USER_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("write_histogram")                             \
+      .SetCreateFn<WriteHistogram<dtype>>()                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_HISTOGRAM_USER_KERNEL(double)
 REGISTER_HISTOGRAM_USER_KERNEL(float)
@@ -131,11 +127,8 @@ class WritePb final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("write_pb")
     .SetCreateFn<WritePb<int8_t>>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);
-      return ctx.device_type() == DeviceType::kCPU
-             && in_desc->data_type() == GetDataType<int8_t>::value;
-    });
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("in", 0) == GetDataType<int8_t>::value));
 
 template<typename T>
 class WriteImage final : public user_op::OpKernel {
@@ -160,11 +153,8 @@ class WriteImage final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("write_image")
     .SetCreateFn<WriteImage<uint8_t>>()
-    .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {
-      const user_op::TensorDesc* in_desc = ctx.TensorDesc4ArgNameAndIndex("in", 0);
-      return ctx.device_type() == DeviceType::kCPU
-             && in_desc->data_type() == GetDataType<uint8_t>::value;
-    });
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("in", 0) == GetDataType<uint8_t>::value));
 
 }  // namespace
 }  // namespace oneflow

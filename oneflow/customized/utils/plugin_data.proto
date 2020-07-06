@@ -24,4 +24,6 @@ message SessionStartInfo {
 
   // The time the session started in seconds since epoch.
   required double start_time_secs = 5;
+
+  map<string, google.protobuf.Value> metric = 6;
 }

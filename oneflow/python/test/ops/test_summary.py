@@ -99,20 +99,21 @@ def test(device_type):
     #     step = np.array([i], dtype=np.int64)
     #     PbJob([value], [step])
 
-    # # write hparams
-    # hparams = {
-    #     flow.HParam("learning_rate", flow.RealRange(1e-2, 1e-1)): 0.02,
-    #     flow.HParam("dense_layers", flow.IntegerRange(2, 7)): 5,
-    #     flow.HParam("optimizer", flow.ValueSet(["adam", "sgd"])): "adam",
-    #     flow.HParam("accuracy", flow.RealRange(1e-2, 1e-1)): 0.001,
-    #     flow.HParam("magic", flow.ValueSet([False, True])): True,
-    #     "dropout": 0.6,
-    # }
-    # pb2 = flow.hparams(hparams)
-    # value = np.array(list(str(pb2).encode("ascii")), dtype=np.int8)
-    # step = np.array([0], dtype=np.int64)
-    # tag = np.array(list("hparams".encode("ascii")), dtype=np.int8)
-    # PbJob([value], [step])
+    # write hparams
+    hparams = {
+        flow.HParam("learning_rate", flow.RealRange(1e-2, 1e-1)): 0.02,
+        flow.HParam("dense_layers", flow.IntegerRange(2, 7)): 5,
+        flow.HParam("optimizer", flow.ValueSet(["adam", "sgd"])): "adam",
+        flow.HParam("accuracy", flow.RealRange(1e-2, 1e-1)): 0.001,
+        flow.HParam("magic", flow.ValueSet([False, True])): True,
+        flow.Metric("loss", float): 0.02
+        "dropout": 0.6,
+    }
+    pb2 = flow.hparams(hparams)
+    value = np.array(list(str(pb2).encode("ascii")), dtype=np.int8)
+    step = np.array([0], dtype=np.int64)
+    tag = np.array(list("hparams".encode("ascii")), dtype=np.int8)
+    PbJob([value], [step])
 
     # # write scalar
     # for idx in range(10):
@@ -157,32 +158,32 @@ def test(device_type):
     # tag = np.array(list("image".encode("ascii")), dtype=np.int8)
     # ImageJob([images], [step], [tag])
 
-    # # write summary projectors
-    # value = np.random.rand(10, 10, 10).astype(np.float32)
-    # label = (np.random.rand(10) * 10).astype(np.int64)
-    # x = (np.random.rand(10, 10, 10) * 255).astype(np.uint8)
-    # sample_name = "sample"
-    # sample_type = "image"
-    # step = 1
-    # tag_exception = "exception_projector"
-    # tag_embedding = "embedding_projector"
-    # ExceptionJob(
-    #     value=value,
-    #     step=step,
-    #     tag=tag_exception,
-    #     sample_name=sample_name,
-    #     sample_type=sample_type,
-    #     x=x,
-    # )
-    # EmbeddingJob(
-    #     value=value,
-    #     label=label,
-    #     step=step,
-    #     tag=tag_embedding,
-    #     sample_name=sample_name,
-    #     sample_type=sample_type,
-    #     x=x,
-    # )
+    # write summary projectors
+    value = np.random.rand(10, 10, 10).astype(np.float32)
+    label = (np.random.rand(10) * 10).astype(np.int64)
+    x = (np.random.rand(10, 10, 10) * 255).astype(np.uint8)
+    sample_name = "sample"
+    sample_type = "image"
+    step = 1
+    tag_exception = "exception_projector"
+    tag_embedding = "embedding_projector"
+    ExceptionJob(
+        value=value,
+        step=step,
+        tag=tag_exception,
+        sample_name=sample_name,
+        sample_type=sample_type,
+        x=x,
+    )
+    EmbeddingJob(
+        value=value,
+        label=label,
+        step=step,
+        tag=tag_embedding,
+        sample_name=sample_name,
+        sample_type=sample_type,
+        x=x,
+    )
 
 
 test("cpu")
