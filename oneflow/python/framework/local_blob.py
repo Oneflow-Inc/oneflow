@@ -67,12 +67,12 @@ def MergeLocalBlobs(local_blob_list, mirrored_blob):
         return LocalFixedTensor(ndarray)
 
 
-def MakeLocalBlob4EagerMirrorBlob(eager_mirror_blob):
-    assert isinstance(eager_mirror_blob, remote_blob_util.EagerMirroredBlob)
-    if eager_mirror_blob.is_tensor_list:
+def MakeLocalBlob4EagerMirroredBlob(eager_mirrored_blob):
+    assert isinstance(eager_mirrored_blob, remote_blob_util.EagerMirroredBlob)
+    if eager_mirrored_blob.is_tensor_list:
         raise NotImplementedError
-
-    return LocalMirroredTensor(eager_mirror_blob.numpy())
+    blob = eager_mirrored_blob
+    return LocalMirroredTensor([blob.numpy(i) for i in range(blob.numpy_size())])
 
 
 def MakeLocalBlob4EagerConsistentBlob(eager_consistent_blob):

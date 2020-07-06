@@ -228,7 +228,7 @@ class EagerFutureRemoteBlobs(FutureRemoteBlobs):
         elif isinstance(remote_blobs, dict):
             return {k: self._MakeRemoteBlobGetters(v) for k, v in remote_blobs.items()}
         elif isinstance(remote_blobs, remote_blob_util.EagerMirroredBlob):
-            return _EagerMirrorBlobGetter(remote_blobs)
+            return _EagerMirroredBlobGetter(remote_blobs)
         elif isinstance(remote_blobs, remote_blob_util.EagerConsistentBlob):
             return _EagerConsistentBlobGetter(remote_blobs)
         else:
@@ -265,13 +265,13 @@ class _EagerBlobGetter(object):
         raise NotImplementedError
 
 
-class _EagerMirrorBlobGetter(_EagerBlobGetter):
+class _EagerMirroredBlobGetter(_EagerBlobGetter):
     def __init__(self, eager_mirror_blob):
         assert isinstance(eager_mirror_blob, remote_blob_util.EagerMirroredBlob)
         super().__init__(eager_mirror_blob)
 
     def MakeLocalBlob(self):
-        return local_blob_util.MakeLocalBlob4EagerMirrorBlob(self.eager_blob_)
+        return local_blob_util.MakeLocalBlob4EagerMirroredBlob(self.eager_blob_)
 
 
 class _EagerConsistentBlobGetter(_EagerBlobGetter):

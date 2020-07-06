@@ -36,7 +36,6 @@ def test_eager_output(test_case):
     @flow.global_function()
     def foo_job():
         x = flow.constant(1, shape=(2, 5), dtype=flow.float)
-        # print(x.numpy_mirrored_list())
         return x
 
     ret = foo_job().get()
@@ -85,7 +84,7 @@ def test_eager_input(test_case):
     @flow.global_function()
     def foo_job(x_def=flow.MirroredTensorDef(shape=(2, 5), dtype=flow.float)):
         y = flow.math.relu(x_def)
-        test_case.assertTrue(np.allclose(y.numpy_mirrored_list()[0], output))
+        test_case.assertTrue(np.allclose(y.numpy(0), output))
 
     foo_job([input])
 
@@ -103,7 +102,7 @@ def test_eager_input_fixed(test_case):
     @flow.global_function()
     def foo_job(x_def=flow.FixedTensorDef(shape=(10,), dtype=flow.float)):
         y = x_def + flow.constant(1.0, shape=(1,), dtype=flow.float)
-        test_case.assertTrue(np.allclose(y.numpy_mirrored_list()[0], output))
+        test_case.assertTrue(np.allclose(y.numpy(0), output))
 
     foo_job(input)
 
@@ -125,7 +124,7 @@ def test_eager_multi_input(test_case):
         y_def=flow.MirroredTensorDef(shape=(1,), dtype=flow.float),
     ):
         y = x_def * y_def
-        test_case.assertTrue(np.allclose(y.numpy_mirrored_list()[0], output))
+        test_case.assertTrue(np.allclose(y.numpy(0), output))
 
     foo_job([input_1], [input_2])
 
@@ -164,7 +163,7 @@ def test_eager_input_output(test_case):
 #     def foo_job():
 #         x = flow.constant(1, shape=(5, 4), dtype=flow.float)
 #         y = flow.identity(x)
-#         print(y.numpy_mirrored_list())
+#         print([y.numpy(i) for i in range(y.numpy_size())])
 #         # y = flow.identity(x_def)
 #         # return y
 
