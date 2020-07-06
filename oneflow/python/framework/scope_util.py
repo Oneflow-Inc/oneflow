@@ -27,6 +27,10 @@ class ScopeSymbol(Symbol):
         return self.job_desc_symbol_
 
     @property
+    def device_parallel_desc_symbol(self):
+        return self.device_parallel_desc_symbol_
+
+    @property
     def parent_scope_symbol(self):
         return self.parent_scope_symbol_
 

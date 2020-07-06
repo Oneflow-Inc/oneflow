@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import uuid
 
+import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
@@ -11,6 +12,8 @@ import oneflow.python.framework.watcher as watcher_util
 from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
 from oneflow.python.framework.remote_blob import ConsistentBlob, MirroredBlob
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.eager as eager_util
+import oneflow
 
 
 @oneflow_export("watch")
@@ -28,7 +31,12 @@ def Watch(blob_watched, handler_or_prompt=None):
         op_conf.name = id_util.UniqueStr("ForeignWatch_")
         setattr(op_conf.foreign_watch_conf, "in", blob_watched.unique_name)
         op_conf.foreign_watch_conf.handler_uuid = handler_uuid
-        compile_context.CurJobAddOp(op_conf, blob_watched.parallel_conf)
+        device_name = blob_watched.parallel_conf.device_name[0]
+        tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
+            blob_watched.parallel_conf
+        )
+        with oneflow.fixed_placement(*tag_and_dev_ids):
+            compile_context.CurJobAddOp(op_conf)
         watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
     elif isinstance(blob_watched, MirroredBlob):
         handlers = _MakeSubConsistentBlobHandlers(blob_watched, handler)

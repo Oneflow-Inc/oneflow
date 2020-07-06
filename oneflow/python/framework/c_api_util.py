@@ -210,26 +210,20 @@ def CheckAndCompleteUserOpConf(op_conf_proto):
     return text_format.Parse(new_op_conf, op_conf_util.OperatorConf())
 
 
-def CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf_proto, parallel_conf_proto):
+def CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    serialized_parallel_conf = str(text_format.MessageToString(parallel_conf_proto))
     add_and_infer = oneflow_internal.CurJobBuildAndInferCtx_AddAndInferConsistentOp
-    op_attribute_str, error_str = add_and_infer(
-        serialized_op_conf, serialized_parallel_conf
-    )
+    op_attribute_str, error_str = add_and_infer(serialized_op_conf)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 
-def CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf_proto, parallel_conf_proto):
+def CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    serialized_parallel_conf = str(text_format.MessageToString(parallel_conf_proto))
     add_and_infer = oneflow_internal.CurJobBuildAndInferCtx_AddAndInferMirroredOp
-    op_attribute_str, error_str = add_and_infer(
-        serialized_op_conf, serialized_parallel_conf
-    )
+    op_attribute_str, error_str = add_and_infer(serialized_op_conf)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)

@@ -464,12 +464,16 @@ class InstructionsBuilder(object):
     def _CheckRefInBlobObjectParallelDesc(
         self, op_attribute, op_parallel_desc_sym, bn_in_op2blob_object={}
     ):
+        op_conf = op_attribute.op_conf
         for ibn in op_attribute.input_bns:
             ibn2modifier = op_attribute.arg_modifier_signature.ibn2input_blob_modifier
             if not ibn2modifier[ibn].is_mutable:
                 continue
             ref_blob_object = bn_in_op2blob_object[ibn]
-            assert op_parallel_desc_sym == ref_blob_object.parallel_desc_symbol
+            assert op_parallel_desc_sym == ref_blob_object.parallel_desc_symbol, (
+                "op_conf: %s\n%s\nv.s.\n%s"
+                % (op_conf, op_parallel_desc_sym, ref_blob_object.parallel_desc_symbol)
+            )
 
     def _GetMut2OperandBlobObjects(
         self, op_attribute, parallel_desc_sym, bn_in_op2blob_object={}

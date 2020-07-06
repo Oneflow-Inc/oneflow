@@ -98,8 +98,7 @@ def get_eager_variable(
             random_seed=random_seed,
             distribute=distribute,
         )
-        op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
-        op_attribute = compile_context.CurJobAddConsistentOp(op_conf, parallel_conf)
+        op_attribute = compile_context.CurJobAddConsistentOp(op_conf)
         if var_blob is None:
             var_blob = _CreateEagerVariableBlob(op_attribute)
             InitVariableBlob(op_conf, var_blob)
@@ -150,8 +149,7 @@ def get_lazy_variable(
             random_seed=random_seed,
             distribute=distribute,
         )
-        op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
-        var_blob = _CreateVariableBlob(op_conf, parallel_conf)
+        var_blob = _CreateVariableBlob(op_conf)
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
 
     return var_blob
@@ -210,8 +208,8 @@ def _GenerateVariableOpConf(
     return op_conf
 
 
-def _CreateVariableBlob(op_conf, parallel_conf):
-    compile_context.CurJobAddConsistentOp(op_conf, parallel_conf)
+def _CreateVariableBlob(op_conf):
+    compile_context.CurJobAddConsistentOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.variable_conf.out

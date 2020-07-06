@@ -27,7 +27,12 @@ Maybe<const JobDesc*> Scope::job_desc() const {
 }
 
 Maybe<const ParallelDesc*> Scope::GetParallelDesc(const OperatorConf& op_conf) const {
-  if (IsClassRegistered<OnlyCpuSupportPredicator>(op_conf.op_type_case())) {
+  using OnlyCpuSupport = OnlyCpuSupportPredicator;
+  CHECK_OR_RETURN(IsClassRegistered<OnlyCpuSupport>(op_conf.op_type_case()))
+      << ": op_type_case = " << op_conf.op_type_case();
+  auto* ptr = NewObj<OnlyCpuSupport>(op_conf.op_type_case());
+  bool only_cpu_supported = *std::unique_ptr<OnlyCpuSupport>(ptr);
+  if (op_conf.device_type() == DeviceType::kCPU || only_cpu_supported) {
     return host_parallel_desc_.get();
   } else {
     return device_parallel_desc_.get();

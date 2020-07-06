@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.hob as hob
@@ -47,6 +48,9 @@ def InterpretScope(session, function_desc, config_proto):
         distribute_strategy = distribute_util.DistributeMirroredStrategy()
     is_mirrored = isinstance(
         distribute_strategy, distribute_util.DistributeMirroredStrategy
+    )
+    tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
+        placement_scope.default_parallel_conf
     )
     scope = _MakeInitialScope(job_conf, *tag_and_dev_ids, is_mirrored)
     with _JobBuildAndInferCtx(job_conf.job_name), placement_scope, distribute_strategy:

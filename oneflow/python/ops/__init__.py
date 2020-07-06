@@ -27,15 +27,9 @@ def RetOpByRemoteBlob(remote_blob, allow_cpu_return_op=True):
     op_conf.name = id_util.UniqueStr("Return_")
     setattr(op_conf.return_conf, "in", remote_blob.unique_name)
     op_conf.return_conf.out = "out"
-    parallel_conf = placement_proto_pb.ParallelConf()
-    parallel_conf.CopyFrom(remote_blob.parallel_conf)
     if allow_cpu_return_op:
         op_conf.device_type = c_api_util.DeviceType4DeviceTag("cpu")
-        for i in range(len(parallel_conf.device_name)):
-            parallel_conf.device_name[i] = re.sub(
-                ":\w+:", ":cpu:", parallel_conf.device_name[i]
-            )
-    compile_context.CurJobAddOp(op_conf, parallel_conf)
+    compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
