@@ -6,7 +6,9 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("inter_job_reuse_mem_strategy")
-def inter_job_reuse_mem_strategy(strategy_str, job_set=None, **kwargs):
+def inter_job_reuse_mem_strategy(
+    strategy_str: str, job_set: object = None, **kwargs: dict
+) -> None:
     r"""Set memory sharing strategy for job set.
 
     Args:

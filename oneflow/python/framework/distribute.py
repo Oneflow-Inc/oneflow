@@ -24,7 +24,7 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
 
 
 @oneflow_export("distribute.mirrored_strategy_enabled")
-def MirroredStrategyEnabled():
+def MirroredStrategyEnabled() -> bool:
     r"""
 
     Returns:
@@ -52,7 +52,7 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
 
 
 @oneflow_export("distribute.consistent_strategy_enabled")
-def ConsistentStrategyEnabled():
+def ConsistentStrategyEnabled() -> bool:
     r"""
 
     Returns:
@@ -63,24 +63,24 @@ def ConsistentStrategyEnabled():
 
 
 @oneflow_export("distribute.split")
-def split(axis):
+def split(axis: int) -> object:
     assert type(axis) is int
     assert str(axis) in _axis_str2split_axis_obj, "not a valid split. expected: [0, 11)"
     return _axis_str2split_axis_obj[str(axis)]
 
 
 @oneflow_export("distribute.broadcast")
-def broadcast():
+def broadcast() -> object:
     return _broadcast
 
 
 @oneflow_export("distribute.auto")
-def auto():
+def auto() -> object:
     return _auto
 
 
 @oneflow_export("distribute.assert_is_valid_distribute")
-def assert_is_valid_distribute(distribute):
+def assert_is_valid_distribute(distribute: object) -> None:
     assert isinstance(
         distribute, Distribute
     ), """not a valid distribute policy. 
