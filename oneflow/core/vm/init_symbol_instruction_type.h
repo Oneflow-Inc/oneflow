@@ -18,7 +18,7 @@ FLAT_MSG_VIEW_BEGIN(SymbolInstrOperand);
 FLAT_MSG_VIEW_END(SymbolInstrOperand);
 // clang-format on
 
-template<typename T, typename SerializedT>
+template<typename T>
 class InitSymbolInstructionType final : public InstructionType {
  public:
   InitSymbolInstructionType() = default;
@@ -31,10 +31,9 @@ class InitSymbolInstructionType final : public InstructionType {
     FOR_RANGE(int, i, 0, args->serialized_logical_object_id_size()) {
       const auto& operand = args->serialized_logical_object_id(i);
       int64_t logical_object_id = operand.logical_object_id();
-      const auto& serialized_conf =
-          Global<SymbolStorage<SerializedT>>::Get()->Get(logical_object_id);
+      const auto& symbol = Global<SymbolStorage<T>>::Get()->GetPtr(logical_object_id);
       auto* rw_mutexed_object = instruction->mut_operand_type(operand);
-      rw_mutexed_object->Init<ObjectWrapper<T>>(serialized_conf);
+      rw_mutexed_object->Init<ObjectWrapper<T>>(symbol);
     }
   }
   void Compute(Instruction* instruction) const override {

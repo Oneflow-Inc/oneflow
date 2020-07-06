@@ -7,18 +7,17 @@
 namespace oneflow {
 namespace eager {
 
-COMMAND(Global<vm::SymbolStorage<ScopeProto>>::SetAllocated(new vm::SymbolStorage<ScopeProto>()));
-using ScopeInstr = vm::InitSymbolInstructionType<Scope, ScopeProto>;
+COMMAND(Global<vm::SymbolStorage<Scope>>::SetAllocated(new vm::SymbolStorage<Scope>()));
+using ScopeInstr = vm::InitSymbolInstructionType<Scope>;
 COMMAND(vm::RegisterInstructionType<ScopeInstr>("InitScopeSymbol"));
 
-COMMAND(Global<vm::SymbolStorage<JobConfigProto>>::SetAllocated(
-    new vm::SymbolStorage<JobConfigProto>()));
-using JobDescInstr = vm::InitSymbolInstructionType<JobDesc, JobConfigProto>;
+COMMAND(Global<vm::SymbolStorage<JobDesc>>::SetAllocated(new vm::SymbolStorage<JobDesc>()));
+using JobDescInstr = vm::InitSymbolInstructionType<JobDesc>;
 COMMAND(vm::RegisterInstructionType<JobDescInstr>("InitJobDescSymbol"));
 
 COMMAND(
     Global<vm::SymbolStorage<OperatorConf>>::SetAllocated(new vm::SymbolStorage<OperatorConf>()));
-using OperatorConfInstr = vm::InitSymbolInstructionType<OperatorConf, OperatorConf>;
+using OperatorConfInstr = vm::InitSymbolInstructionType<OperatorConf>;
 COMMAND(vm::RegisterInstructionType<OperatorConfInstr>("InitOperatorConfSymbol"));
 
 }  // namespace eager

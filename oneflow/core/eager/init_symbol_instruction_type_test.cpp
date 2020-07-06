@@ -10,10 +10,10 @@
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/object_wrapper.h"
+#include "oneflow/core/eager/eager_symbol_storage.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -31,7 +31,7 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = vm::IdUtil::NewLogicalSymbolId();
-  Global<vm::SymbolStorage<SerializedT>>::Get()->Add(symbol_id, std::make_shared<SerializedT>());
+  Global<vm::SymbolStorage<T>>::Get()->Add(symbol_id, SerializedT());
   list.EmplaceBack(vm::NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
   list.EmplaceBack(vm::NewInstruction(instr_type_name)->add_init_symbol_operand(symbol_id));
   vm->Receive(&list);

@@ -48,16 +48,16 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
       auto mirrored_object =
           ObjectMsgPtr<MirroredObject>::NewFrom(vm->mut_allocator(), logical_object.Mutable(), 0);
       {
-        const auto& serialized_conf =
-            Global<SymbolStorage<ParallelConf>>::Get()->Get(view->logical_object_id(i));
+        const auto& parallel_desc =
+            Global<SymbolStorage<ParallelDesc>>::Get()->GetPtr(view->logical_object_id(i));
         auto* rw_mutexed_object = mirrored_object->mut_rw_mutexed_object();
-        rw_mutexed_object->Init<ObjectWrapper<ParallelDesc>>(serialized_conf);
+        rw_mutexed_object->Init<ObjectWrapper<ParallelDesc>>(parallel_desc);
       }
       CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
     }
   }
 };
-COMMAND(Global<SymbolStorage<ParallelConf>>::SetAllocated(new SymbolStorage<ParallelConf>()));
+COMMAND(Global<SymbolStorage<ParallelDesc>>::SetAllocated(new SymbolStorage<ParallelDesc>()));
 COMMAND(RegisterInstructionType<NewParallelDescSymbolInstructionType>("NewParallelDescSymbol"));
 
 }  // namespace vm

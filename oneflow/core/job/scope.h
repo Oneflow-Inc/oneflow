@@ -8,6 +8,8 @@
 
 namespace oneflow {
 
+class OperatorConf;
+
 class Scope final {
  public:
   Scope(const Scope&) = delete;
@@ -16,7 +18,7 @@ class Scope final {
   ~Scope() = default;
 
   Maybe<const JobDesc*> job_desc() const;
-  Maybe<const ParallelDesc*> parallel_desc() const;
+  Maybe<const ParallelDesc*> parallel_desc(const OperatorConf& op_conf) const;
 
   const OptMirroredParallel& opt_mirrored_parallel_conf() const {
     return scope_proto_.opt_mirrored_parallel_conf();
@@ -27,7 +29,8 @@ class Scope final {
 
   const ScopeProto scope_proto_;
   std::shared_ptr<JobDesc> job_desc_;
-  std::shared_ptr<ParallelDesc> parallel_desc_;
+  std::shared_ptr<ParallelDesc> device_parallel_desc_;
+  std::shared_ptr<ParallelDesc> host_parallel_desc_;
 };
 
 }  // namespace oneflow

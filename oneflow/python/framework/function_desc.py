@@ -83,6 +83,7 @@ def GetCurrentLazyGlobalFunctionDesc():
 
 @oneflow_export("current_global_function_desc")
 def api_current_global_function_desc():
-    return enable_if.unique(
-        GetCurrentLazyGlobalFunctionDesc, GetCurrentEagerGlobalFunctionDesc
-    )()
+    api_func = enable_if.unique(
+        [GetCurrentLazyGlobalFunctionDesc, GetCurrentEagerGlobalFunctionDesc]
+    )
+    return api_func()
