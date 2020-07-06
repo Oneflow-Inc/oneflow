@@ -61,7 +61,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
 
   // other
   virtual int64_t GetAreaId() const = 0;
-  virtual bool MayConsumeModelDiff() const { return false; }
 
  protected:
   LogicalNode() {}
