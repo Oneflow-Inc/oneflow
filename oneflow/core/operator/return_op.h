@@ -24,6 +24,7 @@ class ReturnOp final : public Operator {
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
+  Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 };
 
 }  // namespace oneflow

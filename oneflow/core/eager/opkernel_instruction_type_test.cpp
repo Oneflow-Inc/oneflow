@@ -10,10 +10,10 @@
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/storage.h"
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/object_wrapper.h"
+#include "oneflow/core/eager/eager_symbol_storage.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -28,14 +28,14 @@ using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 int64_t NewJobDescSymbol(InstructionMsgList* list,
                          const std::shared_ptr<JobConfigProto>& job_conf) {
   int64_t job_desc_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::Storage<JobConfigProto>>::Get()->Add(job_desc_id, job_conf);
+  Global<vm::SymbolStorage<JobDesc>>::Get()->Add(job_desc_id, *job_conf);
   list->EmplaceBack(vm::NewInstruction("InitJobDescSymbol")->add_init_symbol_operand(job_desc_id));
   return job_desc_id;
 }
 
 int64_t NewOpConfSymbol(InstructionMsgList* list, const std::shared_ptr<OperatorConf>& op_conf) {
   int64_t op_conf_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::Storage<OperatorConf>>::Get()->Add(op_conf_id, op_conf);
+  Global<vm::SymbolStorage<OperatorConf>>::Get()->Add(op_conf_id, *op_conf);
   list->EmplaceBack(
       vm::NewInstruction("InitOperatorConfSymbol")->add_init_symbol_operand(op_conf_id));
   return op_conf_id;

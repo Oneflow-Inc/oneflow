@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -9,7 +10,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.framework.placement_context as placement_ctx
-
+import os
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
 
@@ -48,7 +49,11 @@ def api_assign(ref, value, validate_shape=None, use_locking=None, name=None):
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     op_conf = _AssignOpConf(ref, value, name=name)
-    compile_context.CurJobAddOp(op_conf, ref.parallel_conf)
+    device_tag, machine_device_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
+        ref.parallel_conf
+    )
+    with oneflow.fixed_placement(device_tag, machine_device_ids):
+        compile_context.CurJobAddOp(op_conf)
     return ref
 
 

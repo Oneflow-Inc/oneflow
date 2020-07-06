@@ -3,6 +3,7 @@
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/job/scope.h"
 
 namespace oneflow {
 
@@ -810,11 +811,11 @@ Maybe<void> CheckOpInputSignature(const Operator& op, const UpstreamSignature& u
 
 Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const UpstreamSignature& upstream_signature,
-                                    const ParallelConf& parallel_conf, bool is_mirrored,
-                                    const JobDesc& job_desc) {
-  const auto& op = ConstructOp(op_conf, &job_desc);
+                                    const Scope& scope) {
+  const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
+  bool is_mirrored = scope.opt_mirrored_parallel_conf().has_mirrored_parallel();
+  const auto& op = ConstructOp(op_conf, JUST(scope.job_desc()));
   JUST(CheckOpInputSignature(*op, upstream_signature));
-  ParallelDesc parallel_desc(parallel_conf);
   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc;
   for (const auto& ibn : op->input_bns()) {
     const auto& map = upstream_signature.logical_blob_desc_signature().bn_in_op2blob_desc();

@@ -1,3 +1,23 @@
+def HasSymbol4Id(symbol_id):
+    global id2symbol
+    return symbol_id in id2symbol
+
+
+def GetSymbol4Id(symbol_id):
+    global id2symbol
+    assert symbol_id in id2symbol
+    return id2symbol[symbol_id]
+
+
+def SetSymbol4Id(symbol_id, symbol):
+    global id2symbol
+    assert symbol_id not in id2symbol
+    id2symbol[symbol_id] = symbol
+
+
+id2symbol = {}
+
+
 def HasSymbol4String(string):
     global string2symbol
     return string in string2symbol
@@ -72,3 +92,22 @@ def SetSymbol4SerializedParallelConf(serialized_parallel_conf, symbol):
 
 
 serialized_parallel_conf2symbol = {}
+
+
+def HasSymbol4SerializedScopeProto(serialized_scope_proto):
+    global serialized_scope_proto2symbol
+    return serialized_scope_proto in serialized_scope_proto2symbol
+
+
+def GetSymbol4SerializedScopeProto(serialized_scope_proto):
+    global serialized_scope_proto2symbol
+    return serialized_scope_proto2symbol[serialized_scope_proto]
+
+
+def SetSymbol4SerializedScopeProto(serialized_scope_proto, symbol):
+    assert not HasSymbol4SerializedScopeProto(serialized_scope_proto)
+    global serialized_scope_proto2symbol
+    serialized_scope_proto2symbol[serialized_scope_proto] = symbol
+
+
+serialized_scope_proto2symbol = {}

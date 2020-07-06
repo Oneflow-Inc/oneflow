@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.session_context as session_context
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
@@ -83,7 +83,7 @@ def get_eager_variable(
 
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
-    sess = session_context.GetDefaultSession()
+    sess = session_ctx.GetDefaultSession()
     var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
 
     if job_var_blob is None:
@@ -98,18 +98,24 @@ def get_eager_variable(
             random_seed=random_seed,
             distribute=distribute,
         )
-        op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
-        op_attribute = compile_context.CurJobAddConsistentOp(op_conf, parallel_conf)
+        op_attribute = compile_context.CurJobAddConsistentOp(op_conf)
         if var_blob is None:
             var_blob = _CreateEagerVariableBlob(op_attribute)
             InitVariableBlob(op_conf, var_blob)
+        job_var_blob = var_blob
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
     else:
         assert var_blob is not None
     bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
     bw_blob_register.TrySetObject4BlobName(var_blob.unique_name, var_blob.blob_object)
-    assert var_blob.shape == shape
-    assert var_blob.dtype == dtype
+    assert var_blob.shape == job_var_blob.shape, "%s v.s. %s" % (
+        var_blob.shape,
+        job_var_blob.shape,
+    )
+    assert var_blob.dtype == job_var_blob.dtype, "%s v.s. %s" % (
+        var_blob.dtype,
+        job_var_blob.dtype,
+    )
     return var_blob
 
 
@@ -132,13 +138,10 @@ def get_lazy_variable(
 
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
-    sess = session_context.GetDefaultSession()
-    var_blob, _ = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
+    sess = session_ctx.GetDefaultSession()
+    var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
 
-    if var_blob is not None:
-        assert var_blob.shape == shape
-        assert var_blob.dtype == dtype
-    else:
+    if job_var_blob is None:
         op_conf = _GenerateVariableOpConf(
             name=name,
             shape=shape,
@@ -150,11 +153,21 @@ def get_lazy_variable(
             random_seed=random_seed,
             distribute=distribute,
         )
-        op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
-        var_blob = _CreateVariableBlob(op_conf, parallel_conf)
-        sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
-
-    return var_blob
+        job_var_blob = _CreateVariableBlob(op_conf)
+        sess.StashVariableBlob4Job(job_name, op_conf.name, job_var_blob)
+        if var_blob is None:
+            var_blob = job_var_blob
+    else:
+        assert var_blob is not None
+    assert var_blob.shape == job_var_blob.shape, "%s v.s. %s" % (
+        var_blob.shape,
+        job_var_blob.shape,
+    )
+    assert var_blob.dtype == job_var_blob.dtype, "%s v.s. %s" % (
+        var_blob.dtype,
+        job_var_blob.dtype,
+    )
+    return job_var_blob
 
 
 def _GenerateVariableOpConf(
@@ -210,8 +223,8 @@ def _GenerateVariableOpConf(
     return op_conf
 
 
-def _CreateVariableBlob(op_conf, parallel_conf):
-    compile_context.CurJobAddConsistentOp(op_conf, parallel_conf)
+def _CreateVariableBlob(op_conf):
+    compile_context.CurJobAddConsistentOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.variable_conf.out
@@ -263,17 +276,21 @@ def _ModelInit(var_op_conf):
     op_conf, lbi = _GetModelInitAndLbi(var_op_conf)
     bn_in_op2blob_object = {}
 
+    def BuildNotMirroredScope(old_scope, builder):
+        return old_scope.BuildWithNewIsMirrored(builder, False)
+
     def BuildModeInitInstruction(builder):
         upstream_signature = op_attribute_pb.UpstreamSignature()
         parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-        op_attribute = c_api_util.InferOpConf(
-            op_conf, upstream_signature, parallel_conf, is_mirrored=False
-        )
+        op_conf.scope_symbol_id = oneflow.scope.current_scope().symbol_id
+        op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
         builder.StatelessCall(
             op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
         )
 
-    vm_util.LogicalRun(BuildModeInitInstruction)
+    sess = session_ctx.GetDefaultSession()
+    with sess.NewCurrentScope(sess.MakeScope(BuildNotMirroredScope)):
+        vm_util.LogicalRun(BuildModeInitInstruction)
     return bn_in_op2blob_object["out_0"]
 
 

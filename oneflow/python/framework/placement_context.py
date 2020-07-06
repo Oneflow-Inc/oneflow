@@ -3,11 +3,13 @@ from __future__ import absolute_import
 import collections
 import re
 
-import oneflow.core.job.placement_pb2 as placement_proto_pb
+import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.device_util as device_util
 import oneflow.python.framework.op_util as op_util
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.scope_util as scope_util
+import oneflow
 
 
 class PlacementScope(object):
@@ -23,6 +25,17 @@ class PlacementScope(object):
             self.default_parallel_conf_
         )
         self.parallel_size_ = GetParallelSize(self.machine_id2device_id_list_)
+        self.scope_context_ = None
+        sess = session_ctx.GetDefaultSession()
+        # bypass the first PlacementScope for avoiding None old_scope
+        if sess.is_running and len(sess.placement_scope_stack) > 0:
+
+            def BuildScope(old_scope, builder):
+                return old_scope.BuildWithNewParallelDesc(
+                    builder, device_tag, machine_device_ids
+                )
+
+            self.scope_context_ = sess.NewCurrentScope(sess.MakeScope(BuildScope))
 
     @property
     def is_physical_placement(self):
@@ -57,9 +70,13 @@ class PlacementScope(object):
 
     def __enter__(self):
         PlacementScopeStackPush(self)
+        if self.scope_context_ is not None:
+            self.scope_context_.__enter__()
 
     def __exit__(self, *args):
         assert self == PlacementScopeStackPop()
+        if self.scope_context_ is not None:
+            self.scope_context_.__exit__(*args)
 
 
 class FixedPlacementScope(PlacementScope):
@@ -150,13 +167,14 @@ def MakeParallelConf(device_tag, machine_device_ids):
         pair = machine_device_id.split(":")
         device_names.append("%s:%s:%s" % (pair[0], device_tag, pair[1]))
 
-    parallel_conf = placement_proto_pb.ParallelConf()
+    parallel_conf = placement_pb.ParallelConf()
     parallel_conf.device_name.extend(device_names)
     return parallel_conf
 
 
 def MakeMachineId2DeviceIdList(parallel_conf):
     parallel_conf_str = parallel_conf.SerializeToString()
+    global _parallel_conf_str2ofrecord
     if parallel_conf_str not in _parallel_conf_str2ofrecord:
         ofrecord = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(
             parallel_conf

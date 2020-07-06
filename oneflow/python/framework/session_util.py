@@ -4,7 +4,6 @@ import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.vm.instruction_pb2 as instr_util
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
-import oneflow.core.job.job_pb2 as job_util
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
@@ -16,6 +15,7 @@ import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.object_cache as object_cache
+import oneflow.python.eager.vm_util as vm_util
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.framework.pull_util import (
@@ -46,6 +46,7 @@ class Session(object):
         self.job_name2var_name2var_blob_ = {}
         self.var_name2var_blob_ = {}
         self.job_name2name_scope_stack_ = {}
+        self.job_name2current_scope_ = {}
         self.eager_global_function_desc_stack_ = []
         self._UpdateFunctionFlagName2DefaultVal()
         self.instruction_list_ = instr_util.InstructionListProto()
@@ -102,6 +103,41 @@ class Session(object):
     def backward_blob_register(self):
         return self.backward_blob_register_
 
+    def MakeScope(self, build_func):
+        scope = None
+        old_scope = oneflow.scope.current_scope()
+        assert old_scope is not None
+
+        def BuildScope(builder):
+            nonlocal scope
+            scope = build_func(old_scope, builder)
+            assert scope is not None
+
+        vm_util.LogicalRun(BuildScope)
+        return scope
+
+    @contextmanager
+    def NewCurrentScope(self, scope):
+        job_name = scope.job_desc_symbol.data.job_name
+        old_scope = self.GetCurrentScope(job_name)
+        assert scope.parent_scope_symbol is old_scope
+        self.job_name2current_scope_[job_name] = scope
+        try:
+            yield
+        finally:
+            assert self.GetCurrentScope(job_name) is scope
+            self.job_name2current_scope_[job_name] = old_scope
+
+    def InitNoneScope(self, job_name):
+        if job_name not in self.job_name2current_scope_:
+            assert isinstance(job_name, str)
+            self.job_name2current_scope_[job_name] = None
+        assert self.job_name2current_scope_[job_name] is None, "job_name: %s" % job_name
+
+    def GetCurrentScope(self, job_name):
+        assert job_name in self.job_name2current_scope_, "job_name: %s" % job_name
+        return self.job_name2current_scope_[job_name]
+
     def GetLazyFunctionDesc(self, job_name):
         if job_name in self.job_name2function_desc_:
             return self.job_name2function_desc_[job_name]
@@ -134,7 +170,7 @@ class Session(object):
         c_api_util.InitGlobalSession(self.config_proto)
         if not c_api_util.EagerExecutionEnabled():
             for job_name, func_desc in self.job_name2function_desc_.items():
-                compiler.Compile(func_desc, self.config_proto)
+                compiler.Compile(self, func_desc, self.config_proto)
             self.job_name2var_name2var_blob_ = dict()
             assert len(self.job_name2function_desc_.items()) > 0
             c_api_util.StartGlobalSession()
@@ -176,7 +212,9 @@ class Session(object):
 
     def EagerRun(self, function_desc, *arg):
         with self._EagerGlobalFunctionDescScope(function_desc):
-            remote_blobs = compiler.EagerRun(function_desc, self.config_proto, arg)
+            remote_blobs = compiler.EagerRun(
+                self, function_desc, self.config_proto, arg
+            )
             if remote_blobs is None:
                 return
             return EagerFutureRemoteBlobs().SetResult(remote_blobs).Inited()
@@ -292,6 +330,14 @@ def clear_default_session():
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
     c_api_util.EnableEagerExecution(False)
+
+
+@oneflow_export("scope.current_scope")
+def current_scope():
+    r""" Return current scope
+    """
+    job_name = oneflow.current_global_function_desc().job_config_proto.job_name
+    return session_ctx.GetDefaultSession().GetCurrentScope(job_name)
 
 
 @oneflow_export("sync_default_session")

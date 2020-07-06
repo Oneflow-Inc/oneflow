@@ -21,6 +21,7 @@
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/scope.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/op_registration.h"
@@ -29,6 +30,7 @@
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/eager/eager_util.h"
+#include "oneflow/core/eager/eager_symbol_storage.h"
 
 namespace oneflow {
 
@@ -200,18 +202,16 @@ Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
 }
 
 Maybe<std::string> InferOpConf(const std::string& op_conf_str,
-                               const std::string& upstream_signature_str,
-                               const std::string& parallel_conf_str, bool is_mirrored) {
+                               const std::string& upstream_signature_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
+  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
   UpstreamSignature upstream_signature;
   CHECK_OR_RETURN(TxtString2PbMessage(upstream_signature_str, &upstream_signature))
       << "UpstreamSignature parse failed";
-  ParallelConf parallel_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
-      << "ParallelConf parse failed";
-  const auto& op = JUST(ConstructAndInferOp(op_conf, upstream_signature, parallel_conf, is_mirrored,
-                                            GlobalJobDesc()));
+  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
+  const auto& op = JUST(ConstructAndInferOp(op_conf, upstream_signature, scope));
   const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
   return PbMessage2TxtString(*op_attribute);
 }
@@ -219,7 +219,10 @@ Maybe<std::string> InferOpConf(const std::string& op_conf_str,
 Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
-  std::shared_ptr<Operator> op = ConstructOp(op_conf, &GlobalJobDesc());
+  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
+  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
+  std::shared_ptr<Operator> op = ConstructOp(op_conf, JUST(scope.job_desc()));
   std::shared_ptr<OpAttribute> op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
   auto* mirrored_map =
       op_attribute->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel();

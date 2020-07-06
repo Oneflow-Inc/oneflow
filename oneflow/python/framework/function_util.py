@@ -4,7 +4,6 @@ import copy
 import functools
 import re
 
-import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if

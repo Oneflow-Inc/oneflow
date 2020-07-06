@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-import oneflow.core.job.job_pb2 as job_util
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
 
 from contextlib import contextmanager
 
@@ -17,7 +17,7 @@ def JobConfScope(job_conf):
 
 
 def GetInitialJobConf(job_name):
-    job_conf = job_util.JobConfigProto()
+    job_conf = job_conf_pb.JobConfigProto()
     job_conf.job_name = job_name
     return job_conf
 

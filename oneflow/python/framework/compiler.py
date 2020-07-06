@@ -2,9 +2,9 @@ from __future__ import absolute_import
 
 from contextlib import contextmanager
 
-import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.hob as hob
@@ -13,6 +13,8 @@ import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.push_util as push_util
+import oneflow.python.framework.scope_util as scope_util
+import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
 
@@ -20,14 +22,14 @@ from oneflow.python.lib.core.box import Box
 import oneflow
 
 
-def Compile(function_desc, config_proto):
-    with InterpretScope(function_desc, config_proto):
+def Compile(session, function_desc, config_proto):
+    with InterpretScope(session, function_desc, config_proto):
         _CompileJob(function_desc)
         c_api_util.CurJobBuildAndInferCtx_Complete()
 
 
-def EagerRun(function_desc, config_proto, args):
-    with InterpretScope(function_desc, config_proto):
+def EagerRun(session, function_desc, config_proto, args):
+    with InterpretScope(session, function_desc, config_proto):
         _InterpretGlobalFunction(function_desc, args)
         ret = function_desc.job_func.__oneflow_output_remote_blobs__
         c_api_util.CurJobBuildAndInferCtx_Complete()
@@ -35,7 +37,7 @@ def EagerRun(function_desc, config_proto, args):
 
 
 @contextmanager
-def InterpretScope(function_desc, config_proto):
+def InterpretScope(session, function_desc, config_proto):
     job_conf = function_desc.job_config_proto
     job_conf.job_name = function_desc.job_func.__name__
     placement_scope = function_desc.function_attribute.default_placement_scope
@@ -47,11 +49,24 @@ def InterpretScope(function_desc, config_proto):
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:
         distribute_strategy = distribute_util.DistributeMirroredStrategy()
-
+    is_mirrored = isinstance(
+        distribute_strategy, distribute_util.DistributeMirroredStrategy
+    )
+    tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
+        placement_scope.default_parallel_conf
+    )
+    scope = _MakeInitialScope(job_conf, *tag_and_dev_ids, is_mirrored)
     with _JobBuildAndInferCtx(job_conf.job_name), placement_scope, distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
-            yield
+            with _SessionInitialScope(session, scope):
+                yield
+
+
+def _SessionInitialScope(session, scope):
+    job_name = scope.job_desc_symbol.data.job_name
+    session.InitNoneScope(job_name)
+    return session.NewCurrentScope(scope)
 
 
 def _CompileJob(function_desc):
@@ -133,3 +148,16 @@ def _RecursiveMakeRetRemoteBlobs(remote_blobs, kwarg):
         "oneflow.global_function returns "
         + "RemoteBlob or list/tuple/dict nested RemoteBlob only"
     )
+
+
+def _MakeInitialScope(job_conf, device_tag, machine_device_ids, is_mirrored):
+    scope = None
+
+    def BuildInitialScope(builder):
+        nonlocal scope
+        scope = scope_util.BuildInitialScope(
+            builder, job_conf, device_tag, machine_device_ids, is_mirrored
+        )
+
+    vm_util.LogicalRun(BuildInitialScope)
+    return scope

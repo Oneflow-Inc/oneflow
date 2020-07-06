@@ -36,7 +36,7 @@ def GetLazyCurJobConfigProto():
 logged_op_confs = set({})
 
 
-def CurJobAddOp(op_conf, parallel_conf=None):
+def CurJobAddOp(op_conf, scope_symbol=None):
     # TODO: tsai: remove this debug code when transition ends
     import os
 
@@ -49,29 +49,26 @@ def CurJobAddOp(op_conf, parallel_conf=None):
             print("non-user op added: {}".format(op_type))
             logged_op_confs.add(op_type)
     if distribute_ctx.IsMirroredStrategyEnabled():
-        return CurJobAddMirroredOp(op_conf, parallel_conf)
-    return CurJobAddConsistentOp(op_conf, parallel_conf)
+        return CurJobAddMirroredOp(op_conf, scope_symbol)
+    return CurJobAddConsistentOp(op_conf, scope_symbol)
 
 
-def CurJobAddConsistentOp(op_conf, parallel_conf=None):
-    op_conf, parallel_conf = GetOpConfAndParallelConf(op_conf, parallel_conf)
-    return c_api_util.CurJobBuildAndInferCtx_AddAndInferConsistentOp(
-        op_conf, parallel_conf
-    )
-
-
-def CurJobAddMirroredOp(op_conf, parallel_conf=None):
-    assert not hob.consistent_view_enabled(None)
-    op_conf, parallel_conf = GetOpConfAndParallelConf(op_conf, parallel_conf)
-    return c_api_util.CurJobBuildAndInferCtx_AddAndInferMirroredOp(
-        op_conf, parallel_conf
-    )
-
-
-def GetOpConfAndParallelConf(op_conf, parallel_conf=None):
-    name_scope.PrependOpNamePrefixIfNeed(op_conf)
+def CurJobAddConsistentOp(op_conf, scope_symbol=None):
+    if scope_symbol is None:
+        scope_symbol = oneflow.scope.current_scope()
+    op_conf.scope_symbol_id = scope_symbol.symbol_id
     if not op_conf.HasField("device_type"):
-        op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(op_conf)
-    if parallel_conf is None:
-        parallel_conf = placement_context.ParallelConf4OpConf(op_conf)
-    return op_conf, parallel_conf
+        device_tag = scope_symbol.device_parallel_desc_symbol.device_tag
+        op_conf.device_type = c_api_util.DeviceType4DeviceTag(device_tag)
+    return c_api_util.CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf)
+
+
+def CurJobAddMirroredOp(op_conf, scope_symbol=None):
+    assert not hob.consistent_view_enabled(None)
+    if scope_symbol is None:
+        scope_symbol = oneflow.scope.current_scope()
+    op_conf.scope_symbol_id = scope_symbol.symbol_id
+    if not op_conf.HasField("device_type"):
+        device_tag = scope_symbol.device_parallel_desc_symbol.device_tag
+        op_conf.device_type = c_api_util.DeviceType4DeviceTag(device_tag)
+    return c_api_util.CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf)

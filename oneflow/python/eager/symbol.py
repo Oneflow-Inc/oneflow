@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.python.framework.c_api_util as c_api_util
 import functools
 
 
@@ -22,9 +22,7 @@ class ParallelDescSymbol(Symbol):
     def __init__(self, symbol_id, parallel_conf, device_tag):
         Symbol.__init__(self, symbol_id, parallel_conf)
         self.device_tag_ = device_tag
-        self.machine_id2device_id_list_ = placement_ctx.MakeMachineId2DeviceIdList(
-            parallel_conf
-        )
+        self.machine_id2device_id_list_ = MakeMachineId2DeviceIdList(parallel_conf)
         sub_parallel_nums = [len(v) for k, v in self.machine_id2device_id_list_.items()]
         self.parallel_num_ = functools.reduce(lambda a, b: a + b, sub_parallel_nums, 0)
         self.hash_ = hash(self.device_tag_) ^ hash(str(self.machine_id2device_id_list_))
@@ -74,3 +72,19 @@ def _GlobalDeviceIdsContaining(bigger, smaller):
             if device_id not in bigger_device_ids:
                 return False
     return True
+
+
+def MakeMachineId2DeviceIdList(parallel_conf):
+    parallel_conf_str = parallel_conf.SerializeToString()
+    global _parallel_conf_str2ofrecord
+    if parallel_conf_str not in _parallel_conf_str2ofrecord:
+        ofrecord = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(
+            parallel_conf
+        )
+        _parallel_conf_str2ofrecord[parallel_conf_str] = {
+            int(k): list(v.int32_list.value) for k, v in ofrecord.feature.items()
+        }
+    return _parallel_conf_str2ofrecord[parallel_conf_str]
+
+
+_parallel_conf_str2ofrecord = {}

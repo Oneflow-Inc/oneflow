@@ -1,17 +1,23 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/init_symbol_instruction_type.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/scope.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 namespace eager {
 
-COMMAND(Global<vm::Storage<JobConfigProto>>::SetAllocated(new vm::Storage<JobConfigProto>()));
-using JobDescInstr = vm::InitSymbolInstructionType<JobDesc, JobConfigProto>;
+COMMAND(Global<vm::SymbolStorage<Scope>>::SetAllocated(new vm::SymbolStorage<Scope>()));
+using ScopeInstr = vm::InitSymbolInstructionType<Scope>;
+COMMAND(vm::RegisterInstructionType<ScopeInstr>("InitScopeSymbol"));
+
+COMMAND(Global<vm::SymbolStorage<JobDesc>>::SetAllocated(new vm::SymbolStorage<JobDesc>()));
+using JobDescInstr = vm::InitSymbolInstructionType<JobDesc>;
 COMMAND(vm::RegisterInstructionType<JobDescInstr>("InitJobDescSymbol"));
 
-COMMAND(Global<vm::Storage<OperatorConf>>::SetAllocated(new vm::Storage<OperatorConf>()));
-using OperatorConfInstr = vm::InitSymbolInstructionType<OperatorConf, OperatorConf>;
+COMMAND(
+    Global<vm::SymbolStorage<OperatorConf>>::SetAllocated(new vm::SymbolStorage<OperatorConf>()));
+using OperatorConfInstr = vm::InitSymbolInstructionType<OperatorConf>;
 COMMAND(vm::RegisterInstructionType<OperatorConfInstr>("InitOperatorConfSymbol"));
 
 }  // namespace eager

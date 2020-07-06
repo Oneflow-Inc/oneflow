@@ -24,6 +24,7 @@ struct OpContext {
 
 class LogicalNode;
 class MirroredSigInferHint;
+class Scope;
 
 class Operator {
  public:
@@ -421,8 +422,7 @@ bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
 
 Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const UpstreamSignature& upstream_signature,
-                                    const ParallelConf& parallel_conf, bool is_mirrored,
-                                    const JobDesc& job_desc);
+                                    const Scope& scope);
 
 }  // namespace oneflow
 

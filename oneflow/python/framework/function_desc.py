@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-import oneflow.core.job.job_pb2 as job_util
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
@@ -19,7 +19,7 @@ class FunctionAttribute(object):
 class FunctionDesc(object):
     def __init__(self, job_func=None, job_config_proto=None, function_attribute=None):
         if job_config_proto is None:
-            job_config_proto = job_util.JobConfigProto()
+            job_config_proto = job_conf_pb.JobConfigProto()
         if function_attribute is None:
             function_attribute = FunctionAttribute()
         self.job_func = job_func
@@ -83,6 +83,7 @@ def GetCurrentLazyGlobalFunctionDesc():
 
 @oneflow_export("current_global_function_desc")
 def api_current_global_function_desc():
-    return enable_if.unique(
-        GetCurrentLazyGlobalFunctionDesc, GetCurrentEagerGlobalFunctionDesc
-    )()
+    api_func = enable_if.unique(
+        [GetCurrentLazyGlobalFunctionDesc, GetCurrentEagerGlobalFunctionDesc]
+    )
+    return api_func()
