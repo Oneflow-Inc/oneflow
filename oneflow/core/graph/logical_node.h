@@ -182,12 +182,6 @@ DECLARE_NAIVE_LOGICAL_NODE(DistributeSplitLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
 
-class MdDiffAccLogicalNode final : public LogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(MdDiffAccLogicalNode);
-  bool MayConsumeModelDiff() const override { return true; }
-};
-
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(WaitAndSendIds);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ForeignInput);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ForeignOutput);

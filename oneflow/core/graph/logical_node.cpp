@@ -1,7 +1,6 @@
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/optimizer_compute_task_node.h"
-#include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
@@ -226,9 +225,6 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("RecordLoad"
                               "Decode",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
-                              "NormalMdUpdt",
-                              BldSubTskGphToNormalMdUpdt);
 
 REGISTER_BLD_SUB_TSK_GPH_MTHD("*"
                               "DistributeConcat",
@@ -245,8 +241,7 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("DistributeSplit"
   OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)    \
   OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)        \
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)  \
-  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataForwardArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)
+  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                  
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \
