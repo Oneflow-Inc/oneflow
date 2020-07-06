@@ -102,13 +102,20 @@ def get_eager_variable(
         if var_blob is None:
             var_blob = _CreateEagerVariableBlob(op_attribute)
             InitVariableBlob(op_conf, var_blob)
+        job_var_blob = var_blob
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
     else:
         assert var_blob is not None
     bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
     bw_blob_register.TrySetObject4BlobName(var_blob.unique_name, var_blob.blob_object)
-    assert var_blob.shape == shape
-    assert var_blob.dtype == dtype
+    assert var_blob.shape == job_var_blob.shape, "%s v.s. %s" % (
+        var_blob.shape,
+        job_var_blob.shape,
+    )
+    assert var_blob.dtype == job_var_blob.dtype, "%s v.s. %s" % (
+        var_blob.dtype,
+        job_var_blob.dtype,
+    )
     return var_blob
 
 
@@ -132,12 +139,9 @@ def get_lazy_variable(
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_ctx.GetDefaultSession()
-    var_blob, _ = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
+    var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
 
-    if var_blob is not None:
-        assert var_blob.shape == shape
-        assert var_blob.dtype == dtype
-    else:
+    if job_var_blob is None:
         op_conf = _GenerateVariableOpConf(
             name=name,
             shape=shape,
@@ -149,10 +153,21 @@ def get_lazy_variable(
             random_seed=random_seed,
             distribute=distribute,
         )
-        var_blob = _CreateVariableBlob(op_conf)
-        sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
-
-    return var_blob
+        job_var_blob = _CreateVariableBlob(op_conf)
+        sess.StashVariableBlob4Job(job_name, op_conf.name, job_var_blob)
+        if var_blob is None:
+            var_blob = job_var_blob
+    else:
+        assert var_blob is not None
+    assert var_blob.shape == job_var_blob.shape, "%s v.s. %s" % (
+        var_blob.shape,
+        job_var_blob.shape,
+    )
+    assert var_blob.dtype == job_var_blob.dtype, "%s v.s. %s" % (
+        var_blob.dtype,
+        job_var_blob.dtype,
+    )
+    return job_var_blob
 
 
 def _GenerateVariableOpConf(
