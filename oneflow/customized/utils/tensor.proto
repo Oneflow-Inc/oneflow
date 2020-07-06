@@ -1,8 +1,6 @@
 syntax = "proto2";
 package oneflow;
 
-
-// Protocol buffer representing a tensor.
 message TensorProto {
   required TDataType dtype = 1;
 
@@ -26,11 +24,6 @@ message TensorProto {
   // reduce serialization overhead during RPC call by avoiding serialization of
   // many repeated small items.
   optional bytes tensor_content = 4;
-
-  // Type specific representations that make it easy to create tensor protos in
-  // all languages.  Only the representation corresponding to "dtype" can
-  // be set.  The values hold the flattened representation of the tensor in
-  // row major order.
 
   // DT_HALF, DT_BFLOAT16. Note that since protobuf has no int16 type, we'll
   // have some pointless zero padding for each value here.
@@ -62,12 +55,6 @@ message TensorProto {
   // and imaginary parts of i-th double precision complex.
   repeated double dcomplex_val = 12 [packed = true];
 
-  // DT_RESOURCE
-  //repeated ResourceHandleProto resource_handle_val = 14;
-
-  // DT_VARIANT
-  //repeated VariantTensorDataProto variant_val = 15;
-
   // DT_UINT32
   repeated uint32 uint32_val = 16 [packed = true];
 
@@ -75,50 +62,12 @@ message TensorProto {
   repeated uint64 uint64_val = 17 [packed = true];
 };
 
-// Protocol buffer representing the serialization format of DT_VARIANT tensors.
-message VariantTensorDataProto {
-  // Name of the type of objects being serialized.
-  required string type_name = 1;
-  // Portions of the object that are not Tensors.
-  required bytes metadata = 2;
-  // Tensors contained within objects being serialized.
-  repeated TensorProto tensors = 3;
-}
-
-
-// Dimensions of a tensor.
 message TensorShapeProto {
-  // One dimension of the tensor.
   message Dim {
-    // Size of the tensor in that dimension.
-    // This value must be >= -1, but values of -1 are reserved for "unknown"
-    // shapes (values of -1 mean "unknown" dimension).  Certain wrappers
-    // that work with TensorShapeProto may fail at runtime when deserializing
-    // a TensorShapeProto containing a dim value of -1.
     required int64 size = 1;
-
-    // Optional name of the tensor dimension.
     optional string name = 2;
   };
-
-  // Dimensions of the tensor, such as {"input", 30}, {"output", 40}
-  // for a 30 x 40 2D tensor.  If an entry has size -1, this
-  // corresponds to a dimension of unknown size. The names are
-  // optional.
-  //
-  // The order of entries in "dim" matters: It indicates the layout of the
-  // values in the tensor in-memory representation.
-  //
-  // The first entry in "dim" is the outermost dimension used to layout the
-  // values, the last entry is the innermost dimension.  This matches the
-  // in-memory layout of RowMajor Eigen tensors.
-  //
-  // If "dim.size()" > 0, "unknown_rank" must be false.
   repeated Dim dim = 2;
-
-  // If true, the number of dimensions in the shape is unknown.
-  //
-  // If true, "dim.size()" must be 0.
   optional bool unknown_rank = 3;
 };
 
@@ -154,30 +103,4 @@ enum TDataType {
   DT_VARIANT = 21;  // Arbitrary C++ data types
   DT_UINT32 = 22;
   DT_UINT64 = 23;
-
-  // Do not use!  These are only for parameters.  Every enum above
-  // should have a corresponding value below (verified by types_test).
-  DT_FLOAT_REF = 101;
-  DT_DOUBLE_REF = 102;
-  DT_INT32_REF = 103;
-  DT_UINT8_REF = 104;
-  DT_INT16_REF = 105;
-  DT_INT8_REF = 106;
-  DT_STRING_REF = 107;
-  DT_COMPLEX64_REF = 108;
-  DT_INT64_REF = 109;
-  DT_BOOL_REF = 110;
-  DT_QINT8_REF = 111;
-  DT_QUINT8_REF = 112;
-  DT_QINT32_REF = 113;
-  DT_BFLOAT16_REF = 114;
-  DT_QINT16_REF = 115;
-  DT_QUINT16_REF = 116;
-  DT_UINT16_REF = 117;
-  DT_COMPLEX128_REF = 118;
-  DT_HALF_REF = 119;
-  DT_RESOURCE_REF = 120;
-  DT_VARIANT_REF = 121;
-  DT_UINT32_REF = 122;
-  DT_UINT64_REF = 123;
 }

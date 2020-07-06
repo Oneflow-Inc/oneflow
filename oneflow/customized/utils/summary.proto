@@ -3,25 +3,13 @@ package oneflow;
 
 import "oneflow/customized/utils/tensor.proto";
 
-// A SummaryMetadata encapsulates information on which plugins are able to make
-// use of a certain summary value.
 message SummaryMetadata {
   message PluginData {
-    // The name of the plugin this data pertains to.
     required string plugin_name = 1;
-
-    // The content to store for the plugin. The best practice is for this to be
-    // a binary serialized protocol buffer.
     optional bytes content = 2;
   }
-
-  // Data that associates a summary with a certain plugin.
   required PluginData plugin_data = 1;
-
-  // Display name for viewing in TensorBoard.
   optional string display_name = 2;
-
-  // Longform readable description of the summary sequence. Markdown supported.
   optional string summary_description = 3;
 };
 
@@ -31,51 +19,22 @@ message HistogramProto {
   required double num = 3;
   required double sum = 4;
   required double sum_squares = 5;
-
-  // Parallel arrays encoding the bucket boundaries and the bucket values.
-  // bucket(i) is the count for the bucket i.  The range for
-  // a bucket is:
-  //   i == 0:  -DBL_MAX .. bucket_limit(0)
-  //   i != 0:  bucket_limit(i-1) .. bucket_limit(i)
   repeated double bucket_limit = 6 [packed = true];
   repeated double bucket = 7 [packed = true];
 };
 
 message Image {
-    // Dimensions of the image.
     required int32 height = 1;
     required int32 width = 2;
-    // Valid colorspace values are
-    //   1 - grayscale
-    //   2 - grayscale + alpha
-    //   3 - RGB
-    //   4 - RGBA
-    //   5 - DIGITAL_YUV
-    //   6 - BGRA
     required int32 colorspace = 3;
-    // Image data in encoded format.  All image formats supported by
-    // image_codec::CoderUtil can be stored here.
     required bytes encoded_image_string = 4;
 };
 
 message Summary {
   message Value {
-    // This field is deprecated and will not be set.
     optional string node_name = 7;
-
-    // Tag name for the data. Used by TensorBoard plugins to organize data. Tags
-    // are often organized by scope (which contains slashes to convey
-    // hierarchy). For example: foo/bar/0
     required string tag = 1;
-
-    // Contains metadata on the summary value such as which plugins may use it.
-    // Take note that many summary values may lack a metadata field. This is
-    // because the FileWriter only keeps a metadata object on the first summary
-    // value with a certain tag for each tag. TensorBoard then remembers which
-    // tags are associated with which plugins. This saves space.
     optional SummaryMetadata metadata = 9;
-
-    // Value associated with the tag.
     oneof value {
       float simple_value = 2;
       bytes obsolete_old_style_histogram = 3;
@@ -85,7 +44,5 @@ message Summary {
       TensorProto tensor = 8;
     }
   }
-
-  // Set of values for the summary.
   repeated Value value = 1;
 }

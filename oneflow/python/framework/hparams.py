@@ -4,15 +4,12 @@ from __future__ import print_function
 
 import numpy as np
 import six
-import abc
 import hashlib
-import random
 import json
 import time
 
 import oneflow.customized.utils.plugin_data_pb2 as plugin_data_pb2
 import oneflow.customized.utils.summary_pb2 as summary_pb2
-import oneflow.python.test.customized.metadata as metadata
 import oneflow.customized.utils.event_pb2 as event_pb2
 import oneflow.customized.utils.tensor_pb2 as tensor_pb2
 import oneflow.customized.utils.projector_pb2 as projector_pb2
@@ -20,37 +17,6 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 import oneflow as flow
-
-
-@oneflow_export("exception_projector")
-def exception_projector():
-    value = np.random.rand(100,).astype(np.float32)
-    summary_projector = projector_pb2.SummaryProjector()
-    summary_projector.metadata.type = projector_pb2.MetaData.ProjectorType.EXCEPTION
-    projector = summary_projector.projector.add()
-    set_projector(projector, "tag1", 10, value)
-    filename = "/home/zjhushengjian/oneflow/projector.gradient.1593592184.v2"
-    print(summary_projector)
-    with open(filename, "wb") as f:
-        f.write(summary_projector.SerializeToString())
-        f.flush()
-
-
-def set_tensor(tensor: projector_pb2.Tensor, value):
-    for d in value.shape:
-        td = tensor.shape.dim.add()
-        td.size = d
-    tensor.dtype = str(value.dtype)
-    tensor.content = value.tobytes()
-    return
-
-
-def set_projector(pro, tag, step, value, label=None):
-    pro.tag = str(tag)
-    pro.step = step
-    pro.WALL_TIME = time.time()
-    set_tensor(pro.value, value)
-    return
 
 
 def as_bytes(bytes_or_text, encoding="utf-8"):
@@ -66,8 +32,10 @@ def as_bytes(bytes_or_text, encoding="utf-8"):
 
 # write text
 @oneflow_export("text")
-def text(text):
+def text(text, tag=None):
     if isinstance(text, (tuple, list)) and len(text) > 0:
+        if not isinstance(tag, str) or tag is None:
+            tag = "text"
         text_size = len(text)
         tensor_shape = tensor_pb2.TensorShapeProto()
         dim = tensor_shape.dim.add()
@@ -80,7 +48,7 @@ def text(text):
             tensor.string_val.append(as_bytes(text[idx]))  # str.encode(text[idx]))
         summary = summary_pb2.Summary()
         value = summary.value.add(
-            tag="text",
+            tag=tag,
             metadata=summary_pb2.SummaryMetadata(
                 plugin_data=summary_pb2.SummaryMetadata.PluginData(plugin_name="text")
             ),
@@ -89,90 +57,75 @@ def text(text):
         return summary
 
 
-def AddFloatsToProto(proto, values):
-    proto.float_val.extend([np.asscalar(x) for x in values])
-
-
-def make_tensor_proto(values, dtype=None, shape=None):
-    nparray = np.empty(shape, dtype=np.float)
-    tshape = tensor_pb2.TensorShapeProto()
-    dim = tshape.dim.add()
+def _get_tensor(values, dtype=None, shape=None):
+    array = np.empty(shape, dtype=np.float)
+    tensor_shape = tensor_pb2.TensorShapeProto()
+    dim = tensor_shape.dim.add()
     dim.size = 0
 
     tensor_proto = tensor_pb2.TensorProto(
-        dtype=tensor_pb2.DT_FLOAT, tensor_shape=tshape,
+        dtype=tensor_pb2.DT_FLOAT, tensor_shape=tensor_shape,
     )
-    proto_values = nparray.ravel()
-    AddFloatsToProto(tensor_proto, proto_values)
+    proto_values = array.ravel()
+    tensor_proto.float_val.extend([np.asscalar(x) for x in proto_values])
     return tensor_proto
 
 
-NULL_TENSOR = make_tensor_proto([], tensor_pb2.DT_FLOAT, (0,))
-
-
-@oneflow_export("hparams_pb")
-def hparams_pb(hparams, trial_id=None, start_time_secs=None):
-    if start_time_secs is None:
-        start_time_secs = time.time()
-    hparams = _normalize_hparams(hparams)
-    group_name = _derive_session_group_name(trial_id, hparams)
+@oneflow_export("hparams")
+def hparams(hparams):
+    hparams = _get_hparams_dict(hparams)
+    jparams = json.dumps(hparams, sort_keys=True, separators=(",", ":"))
+    group_name = hashlib.sha256(jparams.encode("utf-8")).hexdigest()
 
     session_start_info = plugin_data_pb2.SessionStartInfo(
-        group_name=group_name, start_time_secs=start_time_secs,
+        group_name=group_name, start_time_secs=time.time(),
     )
-    for hp_name in sorted(hparams):
-        hp_value = hparams[hp_name]
-        if isinstance(hp_value, bool):
-            session_start_info.hparams[hp_name].bool_value = hp_value
-        elif isinstance(hp_value, (float, int)):
-            session_start_info.hparams[hp_name].number_value = hp_value
-        elif isinstance(hp_value, six.string_types):
-            session_start_info.hparams[hp_name].string_value = hp_value
+    for key in sorted(hparams):
+        value = hparams[key]
+        if isinstance(value, str):
+            session_start_info.hparams[key].string_value = value
+        elif isinstance(value, (float, int)):
+            session_start_info.hparams[key].number_value = value
+        elif isinstance(value, bool):
+            session_start_info.hparams[key].bool_value = value
         else:
-            raise TypeError(
-                "hparams[%r] = %r, of unsupported type %r"
-                % (hp_name, hp_value, type(hp_value))
-            )
+            raise TypeError("the type of value: %r is not supported!" % value)
 
-    return _summary_pb(
-        metadata.SESSION_START_INFO_TAG,
-        plugin_data_pb2.HParamsPluginData(session_start_info=session_start_info),
-        NULL_TENSOR,
+    summary = summary_pb2.Summary()
+    summary_metadata = _get_metadata(
+        plugin_data_pb2.HParamsPluginData(session_start_info=session_start_info)
+    )
+    summary.value.add(
+        tag="_hparams_/session_start_info",
+        metadata=summary_metadata,
+        tensor=_get_tensor([], tensor_pb2.DT_FLOAT, (0,)),
+    )
+    return summary
+
+
+def _get_metadata(hparams_plugin_data):
+    plugin_data = plugin_data_pb2.HParamsPluginData()
+    plugin_data.CopyFrom(hparams_plugin_data)
+    plugin_data.version = 0
+    return summary_pb2.SummaryMetadata(
+        plugin_data=summary_pb2.SummaryMetadata.PluginData(
+            plugin_name="hparams", content=plugin_data.SerializeToString()
+        )
     )
 
 
-def _normalize_hparams(hparams):
-    result = {}
-    for (k, v) in six.iteritems(hparams):
-        if isinstance(k, HParam):
-            k = k.name
-        if k in result:
-            raise ValueError("multiple values specified for hparam %r" % (k,))
-        result[k] = _normalize_numpy_value(v)
-    return result
-
-
-def _normalize_numpy_value(value):
-    if isinstance(value, np.generic):
-        return value.item()
-    else:
-        return value
-
-
-def _derive_session_group_name(trial_id, hparams):
-    if trial_id is not None:
-        if not isinstance(trial_id, six.string_types):
-            raise TypeError("`trial_id` should be a `str`, but got: %r" % (trial_id,))
-        return trial_id
-    jparams = json.dumps(hparams, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(jparams.encode("utf-8")).hexdigest()
-
-
-def _summary_pb(tag, hparams_plugin_data, tensor):
-    summary = summary_pb2.Summary()
-    summary_metadata = metadata.create_summary_metadata(hparams_plugin_data)
-    value = summary.value.add(tag=tag, metadata=summary_metadata, tensor=tensor)
-    return summary
+def _get_hparams_dict(hparams):
+    hparams_dict = {}
+    for (key, value) in dict.items(hparams):
+        if isinstance(key, HParam):
+            key = key.name
+        if key in hparams_dict:
+            raise ValueError("the key is already exist %r" % (key,))
+        if isinstance(value, np.generic):
+            hparams_dict[key] = value.item()
+        else:
+            hparams_dict[key] = value
+    return hparams_dict
 
 
 @oneflow_export("Hparam")
@@ -327,11 +280,3 @@ class Metric(object):
         self._dataset_type = dataset_type
         if self._dataset_type not in (None, Metric.TRAINING, Metric.VALIDATION):
             raise ValueError("invalid dataset type: %r" % (self._dataset_type,))
-
-    def as_proto(self):
-        return api_pb2.MetricInfo(
-            name=api_pb2.MetricName(group=self._group, tag=self._tag,),
-            display_name=self._display_name,
-            description=self._description,
-            dataset_type=self._dataset_type,
-        )

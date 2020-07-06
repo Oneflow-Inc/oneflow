@@ -121,8 +121,6 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
 #endif  // WITH_CUDA
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
-
-  Global<EventsWriter>::New();
 }
 
 void Runtime::DeleteAllGlobal() {
@@ -139,8 +137,6 @@ void Runtime::DeleteAllGlobal() {
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
-
-  Global<EventsWriter>::Delete();
 }
 
 }  // namespace oneflow

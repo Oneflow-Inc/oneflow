@@ -37,21 +37,12 @@ def test(device_type):
 
     @flow.global_function(func_config)
     def HistogramJob(
-        value=flow.MirroredTensorDef((80, 80, 80), dtype=flow.float),
+        value=flow.MirroredTensorDef((200, 200, 200, 200), dtype=flow.float),
         step=flow.MirroredTensorDef((1,), dtype=flow.int64),
         tag=flow.MirroredTensorDef((9,), dtype=flow.int8),
     ):
         with flow.device_prior_placement(device_type, "0:0"):
             flow.summary.histogram(value, step, tag)
-
-    @flow.global_function(func_config)
-    def TextJob(
-        value=flow.MirroredTensorDef((6,), dtype=flow.int8),
-        step=flow.MirroredTensorDef((1,), dtype=flow.int64),
-        tag=flow.MirroredTensorDef((10,), dtype=flow.int8),
-    ):
-        with flow.device_prior_placement(device_type, "0:0"):
-            flow.summary.text(value, step, tag)
 
     # OneFlow
     @flow.global_function(func_config)
@@ -71,30 +62,57 @@ def test(device_type):
         with flow.device_prior_placement(device_type, "0:0"):
             flow.summary.image(value, step=step, tag=tag)
 
+    def ExceptionJob(value, step, tag, sample_name=None, sample_type=None, x=None):
+        logdir = "/home/zjhushengjian/oneflow"
+        flow.exception_projector(
+            value=value,
+            step=step,
+            tag=tag,
+            logdir=logdir,
+            sample_name=sample_name,
+            sample_type=sample_type,
+            x=x,
+        )
+
+    def EmbeddingJob(
+        value, label, step, tag, sample_name=None, sample_type=None, x=None
+    ):
+        logdir = "/home/zjhushengjian/oneflow"
+        flow.embedding_projector(
+            value=value,
+            label=label,
+            step=step,
+            tag=tag,
+            logdir=logdir,
+            sample_name=sample_name,
+            sample_type=sample_type,
+            x=x,
+        )
+
     CreateWriter()
 
-    # write text
-    for i in range(10):
-        t = ["vgg16", "resnet50", "mask-rcnn", "yolov3"]
-        pb = flow.text(t)
-        value = np.array(list(str(pb).encode("ascii")), dtype=np.int8)
-        step = np.array([1], dtype=np.int64)
-        PbJob([value], [step])
+    # # write text
+    # for i in range(10):
+    #     t = ["vgg16", "resnet50", "mask-rcnn", "yolov3"]
+    #     pb = flow.text(t)
+    #     value = np.array(list(str(pb).encode("ascii")), dtype=np.int8)
+    #     step = np.array([i], dtype=np.int64)
+    #     PbJob([value], [step])
 
-    # write hparams
-    hparams = {
-        flow.HParam("learning_rate", flow.RealRange(1e-2, 1e-1)): 0.02,
-        flow.HParam("dense_layers", flow.IntegerRange(2, 7)): 5,
-        flow.HParam("optimizer", flow.ValueSet(["adam", "sgd"])): "adam",
-        flow.HParam("accuracy", flow.RealRange(1e-2, 1e-1)): 0.001,
-        flow.HParam("magic", flow.ValueSet([False, True])): True,
-        "dropout": 0.6,
-    }
-    pb2 = flow.hparams_pb(hparams)
-    value = np.array(list(str(pb2).encode("ascii")), dtype=np.int8)
-    step = np.array([0], dtype=np.int64)
-    tag = np.array(list("hparams".encode("ascii")), dtype=np.int8)
-    PbJob([value], [step])
+    # # write hparams
+    # hparams = {
+    #     flow.HParam("learning_rate", flow.RealRange(1e-2, 1e-1)): 0.02,
+    #     flow.HParam("dense_layers", flow.IntegerRange(2, 7)): 5,
+    #     flow.HParam("optimizer", flow.ValueSet(["adam", "sgd"])): "adam",
+    #     flow.HParam("accuracy", flow.RealRange(1e-2, 1e-1)): 0.001,
+    #     flow.HParam("magic", flow.ValueSet([False, True])): True,
+    #     "dropout": 0.6,
+    # }
+    # pb2 = flow.hparams(hparams)
+    # value = np.array(list(str(pb2).encode("ascii")), dtype=np.int8)
+    # step = np.array([0], dtype=np.int64)
+    # tag = np.array(list("hparams".encode("ascii")), dtype=np.int8)
+    # PbJob([value], [step])
 
     # # write scalar
     # for idx in range(10):
@@ -112,16 +130,19 @@ def test(device_type):
     #     dtype=np.float64,
     # )
 
-    # for idx in range(1):
-    #     value = np.random.rand(80,80,80).astype(np.float32)
-    #     step = np.array([idx], dtype=np.int64)
-    #     tag = np.array(list("histogram".encode("ascii")), dtype=np.int8)
-    #     HistogramJob([value], [step], [tag])
+    for idx in range(1):
+        value = np.random.rand(100, 100, 100, 100).astype(np.float32)
+        step = np.array([idx], dtype=np.int64)
+        tag = np.array(list("histogram".encode("ascii")), dtype=np.int8)
+        HistogramJob([value], [step], [tag])
 
     # flow.exception_projector()
 
-    # # write image
-    # image_files = ["./image1.png", "./Lena.png"]
+    # write image
+    # image_files = [
+    #     "/home/zjhushengjian/oneflow/image1.png",
+    #     "/home/zjhushengjian/oneflow/Lena.png",
+    # ]
     # images = _read_images_by_cv(image_files)
     # images = np.array(images, dtype=np.uint8)
     # # image_shapes = [image.shape for image in images]
@@ -135,6 +156,33 @@ def test(device_type):
     # step = np.array([1], dtype=np.int64)
     # tag = np.array(list("image".encode("ascii")), dtype=np.int8)
     # ImageJob([images], [step], [tag])
+
+    # # write summary projectors
+    # value = np.random.rand(10, 10, 10).astype(np.float32)
+    # label = (np.random.rand(10) * 10).astype(np.int64)
+    # x = (np.random.rand(10, 10, 10) * 255).astype(np.uint8)
+    # sample_name = "sample"
+    # sample_type = "image"
+    # step = 1
+    # tag_exception = "exception_projector"
+    # tag_embedding = "embedding_projector"
+    # ExceptionJob(
+    #     value=value,
+    #     step=step,
+    #     tag=tag_exception,
+    #     sample_name=sample_name,
+    #     sample_type=sample_type,
+    #     x=x,
+    # )
+    # EmbeddingJob(
+    #     value=value,
+    #     label=label,
+    #     step=step,
+    #     tag=tag_embedding,
+    #     sample_name=sample_name,
+    #     sample_type=sample_type,
+    #     x=x,
+    # )
 
 
 test("cpu")

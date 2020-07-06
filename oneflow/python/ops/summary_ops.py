@@ -50,21 +50,6 @@ def write_histogram(value, step, tag, name=None):
     )
 
 
-@oneflow_export("summary.text")
-def write_text(value, step, tag, name=None):
-    if name is None:
-        name = id_util.UniqueStr("WriteText_")
-    (
-        flow.user_op_builder(name)
-        .Op("write_text")
-        .Input("in", [value])
-        .Input("step", [step])
-        .Input("tag", [tag])
-        .Build()
-        .InferAndTryRun()
-    )
-
-
 @oneflow_export("summary.pb")
 def write_pb(value, step=None, name=None):
     if name is None:
