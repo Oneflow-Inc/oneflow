@@ -45,8 +45,7 @@ class ReduceKernel final : public user_op::OpKernel {
   REGISTER_REDUCE_XPU_KERNEL("reduce_min", BinaryFuncMin, device, dtype)   \
   REGISTER_REDUCE_XPU_KERNEL("reduce_any", BinaryFuncAny, device, dtype)   \
   REGISTER_REDUCE_XPU_KERNEL("reduce_all", BinaryFuncAll, device, dtype)   \
-  REGISTER_REDUCE_XPU_KERNEL("reduce_sum", BinaryFuncSum, device, dtype)   \
-  REGISTER_REDUCE_XPU_KERNEL("reduce_max", BinaryFuncMax, device, dtype)
+  REGISTER_REDUCE_XPU_KERNEL("reduce_sum", BinaryFuncSum, device, dtype)
 
 #define REGISTER_REDUCE_KERNEL(dtype)                    \
   REGISTER_REDUCE_BY_DEVICETYPE(DeviceType::kCPU, dtype) \

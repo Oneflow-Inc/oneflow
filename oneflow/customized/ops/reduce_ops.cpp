@@ -49,11 +49,6 @@ void GeneratePartialSbp<BinaryFuncSum>(user_op::SbpContext* ctx, int64_t axis) {
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
 }
 
-template<>
-void GeneratePartialSbp<BinaryFuncMax>(user_op::SbpContext* ctx, int64_t axis) {
-  ctx->NewBuilder().Split(ctx->inputs(), axis).Split(ctx->outputs(), axis).Build();
-}
-
 template<template<typename> class binary_func>
 Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("input_tensor", 0);
@@ -92,7 +87,6 @@ REGISTER_REDUCE_USER_OP("reduce_all", BinaryFuncAll)
 REGISTER_REDUCE_USER_OP("reduce_min", BinaryFuncMin)
 REGISTER_REDUCE_USER_OP("reduce_prod", BinaryFuncProd)
 REGISTER_REDUCE_USER_OP("reduce_sum", BinaryFuncSum)
-REGISTER_REDUCE_USER_OP("reduce_max", BinaryFuncMax)
 
 REGISTER_USER_OP_GRAD("reduce_sum")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {

@@ -47,11 +47,12 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     user_op::UserOpConfWrapperBuilder reduce_max_device_stage_builder(
         op_name + "-split_softmax_reduce_max_device_stage");
     user_op::UserOpConfWrapper reduce_max_device_stage_op =
-        reduce_max_device_stage_builder.Op("reduce_max")
-            .Input("input_tensor", op_prediction_blob_name)
-            .Output("output_tensor")
+        reduce_max_device_stage_builder.Op("reduce_max_device_stage")
+            .Input("in", op_prediction_blob_name)
+            .Output("out")
+            .Output("mask")
+            .Output("count")
             .Attr("axis", axis_vec)
-            .Attr("keepdims", true)
             .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(),
                         {reduce_max_device_stage_op.op_conf()});
@@ -59,10 +60,10 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     const int32_t split_axis =
         node->LogicalBlobDesc4Lbi(node->op().BnInOp2Lbi("prediction_0")).shape().NumAxes() - 1;
     SbpSignature reduce_max_device_stage_sbp_signature;
-    (*reduce_max_device_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["input_tensor_0"]
+    (*reduce_max_device_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["in_0"]
         .mutable_split_parallel()
         ->set_axis(split_axis);
-    (*reduce_max_device_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["output_tensor_0"]
+    (*reduce_max_device_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["out_0"]
         .mutable_split_parallel()
         ->set_axis(split_axis);
     (*job_builder->mutable_job_parallel_view_conf()
@@ -72,9 +73,11 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     user_op::UserOpConfWrapperBuilder reduce_max_global_stage_builder(
         op_name + "-split_softmax_reduce_max_global_stage");
     user_op::UserOpConfWrapper reduce_max_global_stage_op =
-        reduce_max_global_stage_builder.Op("reduce_max")
-            .Input("input_tensor", reduce_max_device_stage_op.output("output_tensor", 0))
-            .Output("output_tensor")
+        reduce_max_global_stage_builder.Op("reduce_min_global_stage")
+            .Input("in", reduce_max_device_stage_op.output("out", 0))
+            .Input("device_count", reduce_max_device_stage_op.output("count", 0))
+            .Output("out")
+            .Output("mask")
             .Attr("axis", axis_vec)
             .Attr("keepdims", true)
             .Build();
@@ -82,9 +85,9 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
                         {reduce_max_global_stage_op.op_conf()});
 
     SbpSignature reduce_max_global_stage_sbp_signature;
-    (*reduce_max_global_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["input_tensor_0"]
+    (*reduce_max_global_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["in_0"]
         .mutable_broadcast_parallel();
-    (*reduce_max_global_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["output_tensor_0"]
+    (*reduce_max_global_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["out_0"]
         .mutable_broadcast_parallel();
     (*job_builder->mutable_job_parallel_view_conf()
           ->mutable_op_name2sbp_signature_conf())[reduce_max_global_stage_op.op_name()] =
@@ -94,7 +97,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     user_op::UserOpConfWrapper broadcast_sub_max_op =
         sub_max_builder.Op("broadcast_sub")
             .Input("x", op_prediction_blob_name)
-            .Input("y", reduce_max_global_stage_op.output("output_tensor", 0))
+            .Input("y", reduce_max_global_stage_op.output("out", 0))
             .Output("z")
             .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(), {broadcast_sub_max_op.op_conf()});
