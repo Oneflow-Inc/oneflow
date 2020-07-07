@@ -24,7 +24,8 @@ def test(device_type):
 
     @flow.global_function(func_config)
     def CreateWriter():
-        flow.summary.create_summary_writer("/home/zjhushengjian/oneflow")
+        with flow.device_prior_placement(device_type, "0:0"):
+            flow.summary.create_summary_writer("/home/zjhushengjian/oneflow")
 
     @flow.global_function(func_config)
     def ScalarJob(
@@ -37,7 +38,7 @@ def test(device_type):
 
     @flow.global_function(func_config)
     def HistogramJob(
-        value=flow.MirroredTensorDef((200, 200, 200, 200), dtype=flow.float),
+        value=flow.MirroredTensorDef((200, 200, 200), dtype=flow.float),
         step=flow.MirroredTensorDef((1,), dtype=flow.int64),
         tag=flow.MirroredTensorDef((9,), dtype=flow.int8),
     ):
@@ -91,13 +92,13 @@ def test(device_type):
 
     CreateWriter()
 
-    # # write text
-    # for i in range(10):
-    #     t = ["vgg16", "resnet50", "mask-rcnn", "yolov3"]
-    #     pb = flow.text(t)
-    #     value = np.array(list(str(pb).encode("ascii")), dtype=np.int8)
-    #     step = np.array([i], dtype=np.int64)
-    #     PbJob([value], [step])
+    # write text
+    for i in range(10):
+        t = ["vgg16", "resnet50", "mask-rcnn", "yolov3"]
+        pb = flow.text(t)
+        value = np.array(list(str(pb).encode("ascii")), dtype=np.int8)
+        step = np.array([i], dtype=np.int64)
+        PbJob([value], [step])
 
     # write hparams
     hparams = {
@@ -106,7 +107,7 @@ def test(device_type):
         flow.HParam("optimizer", flow.ValueSet(["adam", "sgd"])): "adam",
         flow.HParam("accuracy", flow.RealRange(1e-2, 1e-1)): 0.001,
         flow.HParam("magic", flow.ValueSet([False, True])): True,
-        flow.Metric("loss", float): 0.02
+        flow.Metric("loss", float): 0.02,
         "dropout": 0.6,
     }
     pb2 = flow.hparams(hparams)
@@ -115,12 +116,12 @@ def test(device_type):
     tag = np.array(list("hparams".encode("ascii")), dtype=np.int8)
     PbJob([value], [step])
 
-    # # write scalar
-    # for idx in range(10):
-    #     value = np.array([idx], dtype=np.float32)
-    #     step = np.array([idx], dtype=np.int64)
-    #     tag = np.array(list("scalar".encode("ascii")), dtype=np.int8)
-    #     ScalarJob([value], [step], [tag])
+    # write scalar
+    for idx in range(10):
+        value = np.array([idx], dtype=np.float32)
+        step = np.array([idx], dtype=np.int64)
+        tag = np.array(list("scalar".encode("ascii")), dtype=np.int8)
+        ScalarJob([value], [step], [tag])
 
     # write histogram
     # value = np.array(
@@ -132,7 +133,7 @@ def test(device_type):
     # )
 
     for idx in range(1):
-        value = np.random.rand(100, 100, 100, 100).astype(np.float32)
+        value = np.random.rand(100, 100, 100).astype(np.float32)
         step = np.array([idx], dtype=np.int64)
         tag = np.array(list("histogram".encode("ascii")), dtype=np.int8)
         HistogramJob([value], [step], [tag])
@@ -140,23 +141,23 @@ def test(device_type):
     # flow.exception_projector()
 
     # write image
-    # image_files = [
-    #     "/home/zjhushengjian/oneflow/image1.png",
-    #     "/home/zjhushengjian/oneflow/Lena.png",
-    # ]
-    # images = _read_images_by_cv(image_files)
-    # images = np.array(images, dtype=np.uint8)
-    # # image_shapes = [image.shape for image in images]
-    # # print(image_shapes)
-    # imageRed = np.ones([512, 512, 3]).astype(np.uint8)
-    # Red = np.array([0, 255, 255], dtype=np.uint8)
-    # imageNew = np.multiply(imageRed, Red)
-    # imageNew = np.expand_dims(imageNew, axis=0)
-    # images = np.concatenate((images, imageNew), axis=0)
-    # # images1 = (np.random.rand(1, 512, 512, 3) * 100).astype(np.uint8)
-    # step = np.array([1], dtype=np.int64)
-    # tag = np.array(list("image".encode("ascii")), dtype=np.int8)
-    # ImageJob([images], [step], [tag])
+    image_files = [
+        "/home/zjhushengjian/oneflow/image1.png",
+        "/home/zjhushengjian/oneflow/Lena.png",
+    ]
+    images = _read_images_by_cv(image_files)
+    images = np.array(images, dtype=np.uint8)
+    # image_shapes = [image.shape for image in images]
+    # print(image_shapes)
+    imageRed = np.ones([512, 512, 3]).astype(np.uint8)
+    Red = np.array([0, 255, 255], dtype=np.uint8)
+    imageNew = np.multiply(imageRed, Red)
+    imageNew = np.expand_dims(imageNew, axis=0)
+    images = np.concatenate((images, imageNew), axis=0)
+    # images1 = (np.random.rand(1, 512, 512, 3) * 100).astype(np.uint8)
+    step = np.array([1], dtype=np.int64)
+    tag = np.array(list("image".encode("ascii")), dtype=np.int8)
+    ImageJob([images], [step], [tag])
 
     # write summary projectors
     value = np.random.rand(10, 10, 10).astype(np.float32)

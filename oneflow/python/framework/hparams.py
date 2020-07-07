@@ -73,7 +73,7 @@ def _get_tensor(values, dtype=None, shape=None):
 
 @oneflow_export("hparams")
 def hparams(hparams):
-    hparams = _get_hparams_dict(hparams)
+    hparams, metrics = _get_hparams_dict(hparams)
     jparams = json.dumps(hparams, sort_keys=True, separators=(",", ":"))
     group_name = hashlib.sha256(jparams.encode("utf-8")).hexdigest()
 
@@ -88,6 +88,12 @@ def hparams(hparams):
             session_start_info.hparams[key].number_value = value
         elif isinstance(value, bool):
             session_start_info.hparams[key].bool_value = value
+        else:
+            raise TypeError("the type of value: %r is not supported!" % value)
+    for key in metrics:
+        value = metrics[key]
+        if isinstance(value, (float, int)):
+            session_start_info.metrics[key].number_value = value
         else:
             raise TypeError("the type of value: %r is not supported!" % value)
 
@@ -116,17 +122,24 @@ def _get_metadata(hparams_plugin_data):
 
 def _get_hparams_dict(hparams):
     hparams_dict = {}
+    metrics_dict = {}
     for (key, value) in dict.items(hparams):
+        if key in hparams_dict or key in metrics_dict:
+            raise ValueError("the key is already exist %r" % (key,))
         if isinstance(key, HParam):
             key = key.name
-        if key in hparams_dict:
-            raise ValueError("the key is already exist %r" % (key,))
-        if isinstance(value, np.generic):
-            hparams_dict[key] = value.item()
-        else:
-            hparams_dict[key] = value
-    return hparams_dict
+        if isinstance(key, Metric):
+            metrics_dict[key.name] = _get_value(value)
+            continue      
+        hparams_dict[key] = _get_value(value)
+    return hparams_dict, metrics_dict
 
+
+def _get_value(value):
+    if isinstance(value, np.generic):
+        return value.item()
+    else:
+        return value
 
 @oneflow_export("Hparam")
 class HParam(object):
@@ -138,15 +151,6 @@ class HParam(object):
                 "Hparam dtype must be: (IntegerRange, RealRange, ValueSet) : %r"
                 % (self.dtype_,)
             )
-
-    def __repr__(self):
-        hparam_info = [
-            ("name", self.name_),
-            ("dtype", self.dtype_),
-        ]
-        for (key, value) in hparam_info:
-            hparam_str = ", ".join("%s=%r" % (key, value))
-        return "HParam(%s)" % hparam_str
 
     @property
     def name(self):
@@ -171,9 +175,6 @@ class IntegerRange(object):
         self.min_value_ = min_value
         self.max_value_ = max_value
 
-    def __repr__(self):
-        return "IntegerRange(%r, %r)" % (self.min_value_, self.max_value_)
-
     @property
     def min_value(self):
         return self.min_value_
@@ -196,9 +197,6 @@ class RealRange(object):
             )
         self.min_value_ = min_value
         self.max_value_ = max_value
-
-    def __repr__(self):
-        return "RealRange(%r, %r)" % (self.min_value_, self.max_value_)
 
     @property
     def min_value(self):
@@ -226,9 +224,6 @@ class ValueSet(object):
                 )
         self.values_.sort()
 
-    def __repr__(self):
-        return "ValueSet(%r)" % (self.values_,)
-
     @property
     def dtype(self):
         return self.dtype_
@@ -240,23 +235,18 @@ class ValueSet(object):
 
 @oneflow_export("Metric")
 class Metric(object):
-    def __init__(self, value, dtype=None):
+    def __init__(self, name, dtype=None):
+        self.name_ = name
         if dtype is None:
-            if self.value_:
-                dtype = type(self.value_[0])
+            dtype = float
         if dtype not in (int, float):
             raise ValueError("Value type must in (int, float), %r is not supported!" % (dtype,))
         self.dtype_ = dtype
-        if not isinstance(value, self.dtype_):
-            raise TypeError(
-                    "The type of value is not supported! value: %r type: %s" % (value, self.dtype_.__name__)
-            )
-        self.value_ = value
+
+    @property
+    def name(self):
+        return self.name_
 
     @property
     def dtype(self):
         return self.dtype_
-
-    @property
-    def value(self):
-        return self.value_

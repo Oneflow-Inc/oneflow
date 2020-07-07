@@ -2,64 +2,19 @@ syntax = "proto2";
 package oneflow;
 
 message TensorProto {
-  required TDataType dtype = 1;
-
-  // Shape of the tensor.  TODO(touts): sort out the 0-rank issues.
+  required TensorDataType dtype = 1;
   required TensorShapeProto tensor_shape = 2;
-
-  // Only one of the representations below is set, one of "tensor_contents" and
-  // the "xxx_val" attributes.  We are not using oneof because as oneofs cannot
-  // contain repeated fields it would require another extra set of messages.
-
-  // Version number.
-  //
-  // In version 0, if the "repeated xxx" representations contain only one
-  // element, that element is repeated to fill the shape.  This makes it easy
-  // to represent a constant Tensor with a single value.
   optional int32 version_number = 3;
-
-  // Serialized raw tensor content from either Tensor::AsProtoTensorContent or
-  // memcpy in tensorflow::grpc::EncodeTensorToByteBuffer. This representation
-  // can be used for all tensor types. The purpose of this representation is to
-  // reduce serialization overhead during RPC call by avoiding serialization of
-  // many repeated small items.
   optional bytes tensor_content = 4;
-
-  // DT_HALF, DT_BFLOAT16. Note that since protobuf has no int16 type, we'll
-  // have some pointless zero padding for each value here.
-  repeated int32 half_val = 13 [packed = true];
-
-  // DT_FLOAT.
   repeated float float_val = 5 [packed = true];
-
-  // DT_DOUBLE.
   repeated double double_val = 6 [packed = true];
-
-  // DT_INT32, DT_INT16, DT_INT8, DT_UINT8.
   repeated int32 int_val = 7 [packed = true];
-
-  // DT_STRING
   repeated bytes string_val = 8;
-
-  // DT_COMPLEX64. scomplex_val(2*i) and scomplex_val(2*i+1) are real
-  // and imaginary parts of i-th single precision complex.
-  repeated float scomplex_val = 9 [packed = true];
-
-  // DT_INT64
-  repeated int64 int64_val = 10 [packed = true];
-
-  // DT_BOOL
-  repeated bool bool_val = 11 [packed = true];
-
-  // DT_COMPLEX128. dcomplex_val(2*i) and dcomplex_val(2*i+1) are real
-  // and imaginary parts of i-th double precision complex.
-  repeated double dcomplex_val = 12 [packed = true];
-
-  // DT_UINT32
-  repeated uint32 uint32_val = 16 [packed = true];
-
-  // DT_UINT64
-  repeated uint64 uint64_val = 17 [packed = true];
+  repeated int64 int64_val = 9 [packed = true];
+  repeated bool bool_val = 10 [packed = true];
+  repeated uint32 uint32_val = 11 [packed = true];
+  repeated uint64 uint64_val = 12 [packed = true];
+  repeated int32 half_val = 13 [packed = true];
 };
 
 message TensorShapeProto {
@@ -68,18 +23,11 @@ message TensorShapeProto {
     optional string name = 2;
   };
   repeated Dim dim = 2;
-  optional bool unknown_rank = 3;
 };
 
 
-
-enum TDataType {
-  // Not a legal value for DataType.  Used to indicate a DataType field
-  // has not been set.
+enum TensorDataType {
   DT_INVALID = 0;
-
-  // Data types that all computation devices are expected to be
-  // capable to support.
   DT_FLOAT = 1;
   DT_DOUBLE = 2;
   DT_INT32 = 3;
@@ -87,20 +35,9 @@ enum TDataType {
   DT_INT16 = 5;
   DT_INT8 = 6;
   DT_STRING = 7;
-  DT_COMPLEX64 = 8;  // Single-precision complex
-  DT_INT64 = 9;
-  DT_BOOL = 10;
-  DT_QINT8 = 11;     // Quantized int8
-  DT_QUINT8 = 12;    // Quantized uint8
-  DT_QINT32 = 13;    // Quantized int32
-  DT_BFLOAT16 = 14;  // Float32 truncated to 16 bits.  Only for cast ops.
-  DT_QINT16 = 15;    // Quantized int16
-  DT_QUINT16 = 16;   // Quantized uint16
-  DT_UINT16 = 17;
-  DT_COMPLEX128 = 18;  // Double-precision complex
-  DT_HALF = 19;
-  DT_RESOURCE = 20;
-  DT_VARIANT = 21;  // Arbitrary C++ data types
-  DT_UINT32 = 22;
-  DT_UINT64 = 23;
+  DT_INT64 = 8;
+  DT_UINT16 = 9;
+  DT_HALF = 10;
+  DT_UINT32 = 11;
+  DT_UINT64 = 12;
 }

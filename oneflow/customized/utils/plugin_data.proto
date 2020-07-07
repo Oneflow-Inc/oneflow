@@ -4,7 +4,6 @@ package oneflow;
 import "google/protobuf/struct.proto";
 
 message HParamsPluginData {
-  // The version of the plugin data schema.
   required int32 version = 1;
   oneof data {
     SessionStartInfo session_start_info = 3;
@@ -12,18 +11,8 @@ message HParamsPluginData {
 }
 
 message SessionStartInfo {
-  // A map describing the hyperparameter values for the session.
-  // Maps each hyperparameter name to its value.
-  // Currently only scalars are supported.
   map<string, google.protobuf.Value> hparams = 1;
-
-  // The name of the session group containing this session. If empty, the
-  // group name is taken to be the session id (so this session is the only
-  // member of its group).
-  required string group_name = 4;
-
-  // The time the session started in seconds since epoch.
-  required double start_time_secs = 5;
-
-  map<string, google.protobuf.Value> metric = 6;
+  required string group_name = 2;
+  required double start_time_secs = 3;
+  map<string, google.protobuf.Value> metrics = 4;
 }
