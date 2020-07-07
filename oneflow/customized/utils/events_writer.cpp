@@ -22,14 +22,13 @@ Maybe<void> EventsWriter::Init(const std::string& logdir) {
 Maybe<void> EventsWriter::TryToInit() {
   if (!filename_.empty()) {
     if (!file_system_->FileExists(filename_)) {
-      // Todo
-      return Maybe<void>::Ok();
+       LOG(WARNING) << "Event log file was lost, attempting create a new log file!";
     } else {
       return Maybe<void>::Ok();
     }
   }
 
-  int32_t current_time = envtime::CurrentMircoTime() / 1000000;
+  int32_t current_time = envtime::CurrentSecondTime();
   char hostname[255];
   CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
 

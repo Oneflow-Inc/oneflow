@@ -3,7 +3,6 @@ package oneflow;
 
 import "oneflow/core/framework/user_op_attr.proto";
 
-// Represents the graph of operations
 message GraphDef {
   repeated NodeDef node = 1;
   required int32 version = 2 [deprecated = true];

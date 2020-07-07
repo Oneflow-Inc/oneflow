@@ -10,9 +10,8 @@
 #include <png.h>
 #include <zlib.h>
 #include <memory>
-#include <opencv2/opencv.hpp>
 #include <type_traits>
-#define PNG_LIBPNG_VER_STRING "1.6.24"
+#define USER_LIBPNG_VER_STRING "1.6.24"
 
 namespace oneflow {
 
@@ -21,7 +20,6 @@ namespace {
 const char* kScalarPluginName = "scalars";
 const char* kHistogramPluginName = "histograms";
 const char* kImagePluginName = "images";
-const char* kAudioPluginName = "audio";
 
 void SetPluginData(SummaryMetadata* metadata, const char* name) {
   if (metadata->plugin_data().plugin_name().empty()) {
@@ -56,23 +54,19 @@ Maybe<void> AddHistogramToSummary(const user_op::Tensor& value, const std::strin
   return Maybe<void>::Ok();
 }
 
-void StringWriter(png_structp png_ptr, png_bytep data, png_size_t length) {
+void WriteImageDataFn(png_structp png_ptr, png_bytep data, png_size_t length) {
   std::string* const s = reinterpret_cast<std::string*>(png_get_io_ptr(png_ptr));
   s->append(reinterpret_cast<const char*>(data), length);
 }
 
-void StringWriterFlush(png_structp png_ptr) {}
-
-bool WriteImageToBuffer(const uint8_t* image, int width, int height, int row_bytes,
-                        int num_channels, int channel_bits, int compression,
+bool WriteImageToBuffer(const uint8_t* image, int width, int height, int depth,
                         std::string* png_string) {
   CHECK_NOTNULL(image);
   CHECK_NOTNULL(png_string);
   if (width == 0 || height == 0) return false;
-
   png_string->resize(0);
   png_infop info_ptr = nullptr;
-  png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
+  png_structp png_ptr = png_create_write_struct(USER_LIBPNG_VER_STRING, 0, 0, 0);
   if (png_ptr == nullptr) return false;
   if (setjmp(png_jmpbuf(png_ptr))) {
     png_destroy_write_struct(&png_ptr, info_ptr ? &info_ptr : nullptr);
@@ -84,26 +78,23 @@ bool WriteImageToBuffer(const uint8_t* image, int width, int height, int row_byt
     return false;
   }
   int color_type = -1;
-  switch (num_channels) {
+  switch (depth) {
     case 1: color_type = PNG_COLOR_TYPE_GRAY; break;
     case 2: color_type = PNG_COLOR_TYPE_GRAY_ALPHA; break;
     case 3: color_type = PNG_COLOR_TYPE_RGB; break;
     case 4: color_type = PNG_COLOR_TYPE_RGB_ALPHA; break;
     default: png_destroy_write_struct(&png_ptr, &info_ptr); return false;
   }
-  png_set_write_fn(png_ptr, png_string, StringWriter, StringWriterFlush);
-  if (compression < 0) compression = Z_DEFAULT_COMPRESSION;
-  png_set_compression_level(png_ptr, compression);
+  const int bit_depth = 8;
+  png_set_write_fn(png_ptr, png_string, WriteImageDataFn, nullptr);
+  png_set_compression_level(png_ptr, Z_DEFAULT_COMPRESSION);
   png_set_compression_mem_level(png_ptr, MAX_MEM_LEVEL);
-  png_set_IHDR(png_ptr, info_ptr, width, height, channel_bits, color_type, PNG_INTERLACE_NONE,
+  png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type, PNG_INTERLACE_NONE,
                PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
   png_write_info(png_ptr, info_ptr);
   png_byte* row = reinterpret_cast<png_byte*>(const_cast<uint8_t*>(image));
-  for (; height--; row += row_bytes) {
-    png_write_row(png_ptr, row);
-    auto j = row;
-  }
-
+  int row_bytes = width * depth;
+  for (; height--; row += row_bytes) png_write_row(png_ptr, row);
   png_write_end(png_ptr, nullptr);
   png_destroy_write_struct(&png_ptr, &info_ptr);
   return true;
@@ -127,27 +118,27 @@ Maybe<void> AddImageToSummary(const user_op::Tensor* tensor, const std::string& 
   const int64_t w = static_cast<int64_t>(tensor->shape().At(2));
   const int64_t hw = h * w;
   const int64_t depth = static_cast<int64_t>(tensor->shape().At(3));
-  const int channel_bits = 8;
-  const int compression = -1;
-  if (tensor->data_type() == DataType::kUInt8 || tensor->data_type() == DataType::kInt8
-      || tensor->data_type() == DataType::kChar) {
+  if (tensor->data_type() == DataType::kUInt8) {
     auto ith_image = [tensor, hw, depth](int i) {
-      auto values = tensor->dptr<uint8_t>();
-      uint8_t* image_ptr = (uint8_t*)malloc(sizeof(uint8_t) * hw * depth);
-      FOR_RANGE(int, j, 0, hw* depth) { image_ptr[j] = values[i * hw * depth + j]; }
-      return image_ptr;
+      auto images = tensor->dptr<uint8_t>();
+      uint8_t* image_i = (uint8_t*)malloc(sizeof(uint8_t) * hw * depth);
+      memcpy(image_i, images + i * hw * depth, hw * depth);
+      return image_i;
     };
     for (int i = 0; i < batch_size; ++i) {
       Summary::Value* v = s->add_value();
       *v->mutable_metadata() = metadata;
-      v->set_tag(tag + std::to_string(i));
+      if (batch_size == 1) {
+        v->set_tag(tag);
+      } else {
+        v->set_tag(tag + std::to_string(i));
+      }
       Image* si = v->mutable_image();
       si->set_height(h);
       si->set_width(w);
       si->set_colorspace(depth);
       auto image = ith_image(i);
-      if (!WriteImageToBuffer(image, w, h, w * depth, depth, channel_bits, compression,
-                              si->mutable_encoded_image_string()))
+      if (!WriteImageToBuffer(image, w, h, depth, si->mutable_encoded_image_string()))
         UNIMPLEMENTED();
     }
   }
