@@ -51,6 +51,8 @@ class JobBuildAndInferCtx {
   const Job& job() const;
   Maybe<void> CheckJob() const;
 
+  std::string GetJobStructureGraphStr() const;
+
   virtual Maybe<void> Complete() = 0;
 
  protected:

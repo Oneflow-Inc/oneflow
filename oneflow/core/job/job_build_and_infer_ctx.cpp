@@ -5,6 +5,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/job/foreign_callback.h"
+#include <google/protobuf/text_format.h>
 
 namespace oneflow {
 
@@ -969,6 +970,88 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(
   *IsLbiBackwardUsed = [backward_used_lbis](const LogicalBlobId& lbi) {
     return backward_used_lbis->find(lbi) != backward_used_lbis->end();
   };
+}
+
+namespace {
+
+std::string OpConf2ClassName(const OperatorConf& op_conf) {
+  if (op_conf.has_user_conf()) {
+    return op_conf.user_conf().op_type_name();
+  } else if (op_conf.has_variable_conf()) {
+    return "variable";
+  } else if (op_conf.has_decode_ofrecord_conf()) {
+    return "decode_ofrecord";
+  } else if (op_conf.has_input_conf()) {
+    return "input";
+  } else if (op_conf.has_output_conf()) {
+    return "output";
+  } else {
+    return "system_op";
+  }
+}
+
+}  // namespace
+
+std::string JobBuildAndInferCtx::GetJobStructureGraphStr() const {
+  std::string ret;
+  HashSet<std::string> input_op_names;
+  HashSet<std::string> output_op_names;
+  ret += "        \"layers\": [";
+  bool is_first = true;
+
+  for (const auto& pair : op_name2op_) {
+    if (is_first) {
+      ret += "\n";
+    } else {
+      ret += ",\n";
+    }
+    const Operator* op = pair.second.get();
+    const std::string& op_name = pair.first;
+    HashSet<std::string> inbound_nodes;
+    for (const auto& ibn : op->input_bns()) {
+      const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
+      if (op_name2op_.find(lbi.op_name()) != op_name2op_.end()) {
+        inbound_nodes.insert(lbi.op_name());
+      }
+    }
+    std::string class_name = OpConf2ClassName(op->op_conf());
+    std::string layer_config_str;
+    google::protobuf::TextFormat::PrintToString(op->op_conf(), &layer_config_str);
+
+    if (op->op_conf().has_input_conf()) { input_op_names.insert(op_name); }
+
+    if (op->op_conf().has_output_conf()) { output_op_names.insert(op_name); }
+
+    ret += "        {\n";
+    ret += ("            \"class_name\": \"" + class_name + "\",\n");
+    ret += ("            \"config\": \"" + layer_config_str + "\",\n");
+    ret += ("            \"name\": \"" + op_name + "\",\n");
+    ret += "            \"inbound_nodes\": [";
+
+    bool is_inbound_first = true;
+    for (const auto& in_node_name : inbound_nodes) {
+      if (is_inbound_first) {
+        ret += "\n";
+      } else {
+        ret += ",\n";
+      }
+      ret += ("\"" + in_node_name + "\"");
+      if (is_inbound_first) { is_inbound_first = false; }
+    }
+    ret += "\n";
+    ret += "            ]\n";
+    ret += "        }";
+    if (is_first) { is_first = false; }
+  }
+
+  ret += "        ],\n";
+  ret += "        \"input_layers\": [\n";
+  // input layers iis in input_op_names
+  ret += "        ],\n";
+  ret += "        \"output_layers\": [\n";
+  // output layers iis in input_op_names
+  ret += "        ]\n";
+  return ret;
 }
 
 }  // namespace oneflow
