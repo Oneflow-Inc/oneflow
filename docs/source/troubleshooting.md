@@ -87,7 +87,7 @@
         pip3 install -r dev-requirements.txt
         ```
 
-- gdb warning `ptrace: Operation not permitted.`
+- get gdb warning `ptrace: Operation not permitted.` and gdb command `bt` prints no backtrace
     - You might get this warning when debugging OneFlow with gdb inside a docker container. Try add these flags when launching your container:
         ```
         docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined
