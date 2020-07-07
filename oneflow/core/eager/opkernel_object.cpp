@@ -4,16 +4,12 @@ namespace oneflow {
 namespace eager {
 
 void OpKernelObject::ResetOpAndKernel(
+    const ParallelContext* parallel_ctx,
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   auto op = ConstructOp(op_conf_, device_type_, job_desc_.get());
-  ParallelContext parallel_ctx;
-  {
-    parallel_ctx.set_parallel_id(0);
-    parallel_ctx.set_parallel_num(1);
-  }
   std::unique_ptr<OpContext> op_ctx;
-  InferBlobDescs(*op, BlobDesc4BnInOp, &parallel_ctx, &op_ctx);
-  NewPartialInitializedKernel(*op, BlobDesc4BnInOp, &parallel_ctx, op_ctx.get());
+  InferBlobDescs(*op, BlobDesc4BnInOp, parallel_ctx, &op_ctx);
+  NewPartialInitializedKernel(*op, BlobDesc4BnInOp, parallel_ctx, op_ctx.get());
 }
 
 void OpKernelObject::InferBlobDescs(
@@ -41,16 +37,12 @@ void OpKernelObject::NewPartialInitializedKernel(
 }
 
 void SystemOpKernelObject::ResetKernel(
+    const ParallelContext* parallel_ctx,
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   auto op = ConstructOp(op_conf_, device_type_, job_desc_.get());
-  ParallelContext parallel_ctx;
-  {
-    parallel_ctx.set_parallel_id(0);
-    parallel_ctx.set_parallel_num(1);
-  }
   std::unique_ptr<OpContext> op_ctx;
-  InferBlobDescs(*op, BlobDesc4BnInOp, &parallel_ctx, &op_ctx);
-  ResetKernel(*op, BlobDesc4BnInOp, &parallel_ctx, op_ctx.get());
+  InferBlobDescs(*op, BlobDesc4BnInOp, parallel_ctx, &op_ctx);
+  ResetKernel(*op, BlobDesc4BnInOp, parallel_ctx, op_ctx.get());
 }
 
 void SystemOpKernelObject::InferBlobDescs(

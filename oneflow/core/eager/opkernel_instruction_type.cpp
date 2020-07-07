@@ -36,12 +36,13 @@ class InitOpKernelObjectInstructionType final : public vm::InstructionType {
     CHECK_EQ(view->op_conf_size(), view->op_size());
     const auto* operand_job_desc = instruction->operand_type(view->job_desc());
     CHECK_NOTNULL(operand_job_desc);
-    const auto& job_desc_object = operand_job_desc->Get<vm::ObjectWrapper<JobDesc>>();
+    const auto& job_desc_object = *CHECK_JUST(operand_job_desc->Get<vm::ObjectWrapper<JobDesc>>());
     for (int i = 0; i < view->op_size(); ++i) {
       CHECK_GT(view->op(i).logical_object_id(), 0);
       const auto* operand_op_conf = instruction->operand_type(view->op_conf(i));
       CHECK_NOTNULL(operand_op_conf);
-      const auto& op_conf_object = operand_op_conf->Get<vm::ObjectWrapper<OperatorConf>>();
+      const auto& op_conf_object =
+          *CHECK_JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConf>>());
       CHECK(op_conf_object->has_user_conf());
       vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(view->op(i));
       const auto& parallel_desc = instruction->parallel_desc();
@@ -100,11 +101,11 @@ Maybe<void> ForEachIbnAndBlobObject(vm::Instruction* instruction, const T& args,
   FOR_RANGE(int, i, 0, args.ibn_size()) {
     const auto* operand_ibn = instruction->operand_type(args.ibn(i));
     CHECK_NOTNULL_OR_RETURN(operand_ibn);
-    const std::string& bn_in_op = operand_ibn->template Get<vm::StringObject>().str();
+    const std::string& bn_in_op = JUST(operand_ibn->template Get<vm::StringObject>())->str();
     const auto* operand_input_blob = instruction->operand_type(args.input_blob(i));
     CHECK_NOTNULL_OR_RETURN(operand_input_blob)
         << "bn_in_op: " << bn_in_op << ", object_id: " << args.input_blob(i).logical_object_id();
-    const auto& blob_object = operand_input_blob->template Get<BlobObject>();
+    const auto& blob_object = *JUST(operand_input_blob->template Get<BlobObject>());
     JUST(Callback(bn_in_op, blob_object));
   }
   return Maybe<void>::Ok();
@@ -117,7 +118,7 @@ Maybe<void> ForEachObnAndBlobObject(vm::Instruction* instruction, const T& args,
   FOR_RANGE(int, i, 0, args.obn_size()) {
     const auto* operand_obn = instruction->operand_type(args.obn(i));
     CHECK_NOTNULL_OR_RETURN(operand_obn);
-    const std::string& bn_in_op = operand_obn->template Get<vm::StringObject>().str();
+    const std::string& bn_in_op = JUST(operand_obn->template Get<vm::StringObject>())->str();
     auto* operand_output_blob = instruction->mut_operand_type(args.output_blob(i));
     CHECK_NOTNULL_OR_RETURN(operand_output_blob) << "obn: " << bn_in_op;
     auto* blob_object = operand_output_blob->template Mut<BlobObject>();
@@ -127,7 +128,7 @@ Maybe<void> ForEachObnAndBlobObject(vm::Instruction* instruction, const T& args,
   FOR_RANGE(int, i, 0, args.mut2_obn_size()) {
     const auto* operand_obn = instruction->operand_type(args.mut2_obn(i));
     CHECK_NOTNULL_OR_RETURN(operand_obn);
-    const std::string& bn_in_op = operand_obn->template Get<vm::StringObject>().str();
+    const std::string& bn_in_op = JUST(operand_obn->template Get<vm::StringObject>())->str();
     auto* operand_output_blob = instruction->mut_operand_type(args.mut2_output_blob(i));
     CHECK_NOTNULL_OR_RETURN(operand_output_blob) << "obn: " << bn_in_op;
     auto* blob_object = operand_output_blob->template Mut<BlobObject>();
@@ -300,7 +301,10 @@ Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruc
   }
   std::function<BlobDesc*(const std::string&)> BlobDesc4BnInOp;
   JUST(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj, &BlobDesc4BnInOp));
-  opkernel_obj->ResetOpAndKernel(BlobDesc4BnInOp);
+  ParallelContext parallel_ctx;
+  JUST(instruction->parallel_desc()->GetParallelContext(
+      &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
+  opkernel_obj->ResetOpAndKernel(&parallel_ctx, BlobDesc4BnInOp);
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string&, BlobObject* blob_object) -> Maybe<void> {
                                  blob_object->mutable_blob();
@@ -324,7 +328,10 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
   }
   std::function<BlobDesc*(const std::string&)> BlobDesc4BnInOp;
   JUST(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj, &BlobDesc4BnInOp));
-  opkernel_obj->ResetKernel(BlobDesc4BnInOp);
+  ParallelContext parallel_ctx;
+  JUST(instruction->parallel_desc()->GetParallelContext(
+      &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
+  opkernel_obj->ResetKernel(&parallel_ctx, BlobDesc4BnInOp);
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string&, BlobObject* blob_object) -> Maybe<void> {
                                  blob_object->mutable_blob();
@@ -354,7 +361,7 @@ Maybe<void> OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instr
     JUST(MakeBlob4BnInOp(instruction, args, opkernel_obj, &Blob4BnInOp));
     EagerKernel* eager_kernel = opkernel_obj->mut_kernel();
     const auto& old_state = opkernel_obj->opkernel_state();
-    new_state = eager_kernel->EagerModelForward(old_state, device_ctx, Blob4BnInOp);
+    new_state = eager_kernel->EagerForward(old_state, device_ctx, Blob4BnInOp);
   }
   opkernel_obj->reset_opkernel_state(new_state);
   return Maybe<void>::Ok();
@@ -377,54 +384,88 @@ Maybe<void> OpKernelCompute(SystemOpKernelObject* opkernel_obj, vm::Instruction*
 }
 
 template<typename T>
-T* GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type,
-                     const StatelessCallOpKernelInstrOperand& args) {
+Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type,
+                            const StatelessCallOpKernelInstrOperand& args) {
   const auto* operand_job_desc = instruction->operand_type(args.job_desc());
-  CHECK_NOTNULL(operand_job_desc);
-  const auto& job_desc_ptr = operand_job_desc->Get<vm::ObjectWrapper<JobDesc>>().GetPtr();
-  const auto& op_conf =
-      instruction->mut_operand_type(args.op_conf())->Get<vm::ObjectWrapper<OperatorConf>>().Get();
+  CHECK_NOTNULL_OR_RETURN(operand_job_desc);
+  const auto& job_desc_ptr = JUST(operand_job_desc->Get<vm::ObjectWrapper<JobDesc>>())->GetPtr();
+  const auto* operand_op_conf = instruction->mut_operand_type(args.op_conf());
+  const auto& op_conf = JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConf>>())->Get();
   vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(args.shared_opkernel());
-  CHECK(!rw_mutexed_object->has_object() || rw_mutexed_object->Has<OpKernelObject>()
-        || rw_mutexed_object->Has<SystemOpKernelObject>());
+  CHECK_OR_RETURN(!rw_mutexed_object->has_object() || rw_mutexed_object->Has<OpKernelObject>()
+                  || rw_mutexed_object->Has<SystemOpKernelObject>());
   const auto& parallel_desc = instruction->parallel_desc();
-  CHECK(static_cast<bool>(parallel_desc));
-  CHECK_EQ(device_type, parallel_desc->device_type());
+  CHECK_OR_RETURN(static_cast<bool>(parallel_desc));
+  CHECK_EQ_OR_RETURN(device_type, parallel_desc->device_type());
   rw_mutexed_object->reset_object();
   return rw_mutexed_object->Init<T>(op_conf, job_desc_ptr, device_type);
 }
 
 }  // namespace
 
-void CallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
+Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction) const {
   FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   auto* opkernel_obj = instruction->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
-  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
+  DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
   int64_t device_id = instruction->stream().device_id();
   const auto& mem_case = MakeMemCase(device_type, device_id);
-  CHECK_JUST(OpKernelInfer(opkernel_obj, instruction, args.Get(), mem_case, device_type));
+  JUST(OpKernelInfer(opkernel_obj, instruction, args.Get(), mem_case, device_type));
+  return Maybe<void>::Ok();
+}
+
+void CallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
+  CHECK_OK(MaybeInfer(instruction))
+      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
+      << "\ndevice_id: " << instruction->stream().device_id() << "\nparallel_conf:\n"
+      << PbMessage2TxtString(instruction->parallel_desc()->parallel_conf());
+}
+
+Maybe<void> CallOpKernelInstructionType::MaybeCompute(vm::Instruction* instruction) const {
+  FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
+  auto* opkernel_obj = instruction->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
+  JUST(OpKernelCompute(opkernel_obj, instruction, args.Get()));
+  return Maybe<void>::Ok();
 }
 
 void CallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
-  FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
-  auto* opkernel_obj = instruction->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
-  CHECK_JUST(OpKernelCompute(opkernel_obj, instruction, args.Get()));
+  CHECK_OK(MaybeCompute(instruction))
+      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
+      << "\ndevice_id: " << instruction->stream().device_id() << "\nparallel_conf:\n"
+      << PbMessage2TxtString(instruction->parallel_desc()->parallel_conf());
+}
+
+Maybe<void> UserStatelessCallOpKernelInstructionType::MaybeInfer(
+    vm::Instruction* instruction) const {
+  FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
+  DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
+  int64_t device_id = instruction->stream().device_id();
+  auto* opkernel = JUST(GetSharedOpKernel<OpKernelObject>(instruction, device_type, args.Get()));
+  const auto& mem_case = MakeMemCase(device_type, device_id);
+  JUST(OpKernelInfer(opkernel, instruction, args.Get(), mem_case, device_type));
+  return Maybe<void>::Ok();
 }
 
 void UserStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
-  FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
-  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
-  int64_t device_id = instruction->stream().device_id();
-  auto* opkernel = GetSharedOpKernel<OpKernelObject>(instruction, device_type, args.Get());
-  const auto& mem_case = MakeMemCase(device_type, device_id);
-  CHECK_JUST(OpKernelInfer(opkernel, instruction, args.Get(), mem_case, device_type));
+  CHECK_OK(MaybeInfer(instruction))
+      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
+      << "\ndevice_id: " << instruction->stream().device_id() << "\nparallel_conf:\n"
+      << PbMessage2TxtString(instruction->parallel_desc()->parallel_conf());
 }
 
-void UserStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
+Maybe<void> UserStatelessCallOpKernelInstructionType::MaybeCompute(
+    vm::Instruction* instruction) const {
   FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   auto* opkernel_obj =
       instruction->mut_operand_type(args->shared_opkernel())->Mut<OpKernelObject>();
-  CHECK_JUST(OpKernelCompute(opkernel_obj, instruction, args.Get()));
+  JUST(OpKernelCompute(opkernel_obj, instruction, args.Get()));
+  return Maybe<void>::Ok();
+}
+
+void UserStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
+  CHECK_OK(MaybeCompute(instruction))
+      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
+      << "\ndevice_id: " << instruction->stream().device_id() << "\nparallel_conf:\n"
+      << PbMessage2TxtString(instruction->parallel_desc()->parallel_conf());
 }
 
 std::shared_ptr<MemoryCase> SystemStatelessCallOpKernelInstructionType::GetOutBlobMemCase(
@@ -432,20 +473,39 @@ std::shared_ptr<MemoryCase> SystemStatelessCallOpKernelInstructionType::GetOutBl
   return MakeMemCase(device_type, device_id);
 }
 
-void SystemStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
+Maybe<void> SystemStatelessCallOpKernelInstructionType::MaybeInfer(
+    vm::Instruction* instruction) const {
   FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
-  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(this->device_tag()));
+  DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
   int64_t device_id = instruction->stream().device_id();
-  auto* opkernel = GetSharedOpKernel<SystemOpKernelObject>(instruction, device_type, args.Get());
+  auto* opkernel =
+      JUST(GetSharedOpKernel<SystemOpKernelObject>(instruction, device_type, args.Get()));
   const auto& mem_case = GetOutBlobMemCase(device_type, device_id);
-  CHECK_JUST(OpKernelInfer(opkernel, instruction, args.Get(), mem_case, device_type));
+  JUST(OpKernelInfer(opkernel, instruction, args.Get(), mem_case, device_type));
+  return Maybe<void>::Ok();
 }
 
-void SystemStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
+void SystemStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
+  CHECK_OK(MaybeInfer(instruction))
+      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
+      << "\ndevice_id: " << instruction->stream().device_id() << "\nparallel_conf:\n"
+      << PbMessage2TxtString(instruction->parallel_desc()->parallel_conf());
+}
+
+Maybe<void> SystemStatelessCallOpKernelInstructionType::MaybeCompute(
+    vm::Instruction* instruction) const {
   FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   auto* opkernel_obj =
       instruction->mut_operand_type(args->shared_opkernel())->Mut<SystemOpKernelObject>();
-  CHECK_JUST(OpKernelCompute(opkernel_obj, instruction, args.Get()));
+  JUST(OpKernelCompute(opkernel_obj, instruction, args.Get()));
+  return Maybe<void>::Ok();
+}
+
+void SystemStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
+  CHECK_OK(MaybeCompute(instruction))
+      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
+      << "\ndevice_id: " << instruction->stream().device_id() << "\nparallel_conf:\n"
+      << PbMessage2TxtString(instruction->parallel_desc()->parallel_conf());
 }
 
 void WatchBlob(vm::Instruction* instruction) {

@@ -91,7 +91,7 @@ const std::shared_ptr<ParallelDesc>& VirtualMachine::GetInstructionParallelDesc(
   CHECK_NOTNULL(logical_object);
   auto* map = logical_object->mut_global_device_id2mirrored_object();
   CHECK_EQ(map->size(), 1);
-  return map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>().GetPtr();
+  return CHECK_JUST(map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>())->GetPtr();
 }
 
 MirroredObject* VirtualMachine::MutMirroredObject(int64_t logical_object_id,
