@@ -1,23 +1,19 @@
 from __future__ import absolute_import
 
-from typing import Any, Union
-
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.ops.user_op_builder as user_op_builder
 from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("categorical_ordinal_encode")
 def categorical_ordinal_encode(
-    table: remote_blob_util.ConsistentBlob,
+    table: remote_blob_util.BlobDef,
     size: int,
-    input_tensor: remote_blob_util.ConsistentBlob,
+    input_tensor: remote_blob_util.BlobDef,
     hash_precomputed: bool = True,
     name: str = None,
-) -> remote_blob_util.ConsistentBlob:
+) -> remote_blob_util.BlobDef:
     assert hash_precomputed is True
     return (
         flow.user_op_builder(name or id_util.UniqueStr("CategoricalOrdinalEncode_"))
@@ -35,11 +31,11 @@ def categorical_ordinal_encode(
 
 @oneflow_export("layers.categorical_ordinal_encoder")
 def categorical_ordinal_encoder(
-    input_tensor: remote_blob_util.ConsistentBlob,
+    input_tensor: remote_blob_util.BlobDef,
     capacity: int,
     hash_precomputed: bool = True,
     name: str = None,
-) -> remote_blob_util.ConsistentBlob:
+) -> remote_blob_util.BlobDef:
     assert hash_precomputed is True
     name_prefix = (
         name if name is not None else id_util.UniqueStr("CategoricalOrdinalEncoder_")

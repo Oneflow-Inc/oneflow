@@ -8,17 +8,16 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.ops.user_op_builder as user_op_builder
 import oneflow.python.framework.input_blob_def as input_blob_util
+import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("layers.dense")
 def dense(
-    inputs: remote_blob_util.ConsistentBlob,
+    inputs: remote_blob_util.BlobDef,
     units: int,
-    activation: remote_blob_util.ConsistentBlob = None,
+    activation: remote_blob_util.BlobDef = None,
     use_bias: bool = True,
     kernel_initializer: op_conf_util.InitializerConf = None,
     bias_initializer: op_conf_util.InitializerConf = None,
@@ -27,7 +26,7 @@ def dense(
     trainable: bool = True,
     name: str = None,
     model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
-) -> remote_blob_util.ConsistentBlob:
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.keras.layers.Dense <https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense>`_
 
@@ -96,7 +95,7 @@ def dense(
 
 @oneflow_export("layers.conv2d")
 def conv2d(
-    inputs: remote_blob_util.ConsistentBlob,
+    inputs: remote_blob_util.BlobDef,
     filters: int,
     kernel_size: int = 1,
     strides: int = 1,
@@ -104,7 +103,7 @@ def conv2d(
     data_format: str = "NCHW",
     dilation_rate: int = 1,
     groups: int = 1,
-    activation: remote_blob_util.ConsistentBlob = None,
+    activation: remote_blob_util.BlobDef = None,
     use_bias: bool = True,
     kernel_initializer: op_conf_util.InitializerConf = None,
     bias_initializer: op_conf_util.InitializerConf = None,
@@ -114,7 +113,7 @@ def conv2d(
     name: str = None,
     weight_name: str = None,
     bias_name: str = None,
-) -> remote_blob_util.ConsistentBlob:
+) -> remote_blob_util.BlobDef:
     name_prefix = name if name is not None else id_util.UniqueStr("Conv2D_")
     if isinstance(kernel_size, int):
         kernel_size = (kernel_size, kernel_size)
@@ -294,13 +293,13 @@ def layer_norm(
 
 @oneflow_export("layers.layer_norm_grad")
 def layer_norm_grad(
-    dy: input_blob_util.FixedTensorDef,
-    x: input_blob_util.FixedTensorDef,
-    mean: input_blob_util.FixedTensorDef,
-    inv_variance: input_blob_util.FixedTensorDef,
+    dy: input_blob_util.ArgBlobDef,
+    x: input_blob_util.ArgBlobDef,
+    mean: input_blob_util.ArgBlobDef,
+    inv_variance: input_blob_util.ArgBlobDef,
     begin_norm_axis: int = 1,
     name: str = None,
-) -> remote_blob_util.ConsistentBlob:
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
     setattr(op_conf, "name", name)
@@ -320,9 +319,9 @@ def layer_norm_grad(
 
 @oneflow_export("layers.layer_norm_param_grad")
 def layer_norm_param_grad(
-    dy: input_blob_util.FixedTensorDef,
-    norm: input_blob_util.FixedTensorDef,
-    gamma: input_blob_util.FixedTensorDef,
+    dy: input_blob_util.ArgBlobDef,
+    norm: input_blob_util.ArgBlobDef,
+    gamma: input_blob_util.ArgBlobDef,
     begin_params_axis: int = -1,
     name: str = None,
 ) -> tuple:
@@ -357,7 +356,7 @@ def layer_norm_param_grad(
 
 @oneflow_export("layers.batch_normalization")
 def batch_normalization(
-    inputs: remote_blob_util.ConsistentBlob,
+    inputs: remote_blob_util.BlobDef,
     axis: int = -1,
     momentum: float = 0.99,
     epsilon: float = 0.001,
@@ -372,7 +371,7 @@ def batch_normalization(
     trainable: bool = True,
     training: bool = True,
     name: str = None,
-) -> remote_blob_util.ConsistentBlob:
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.keras.layers.BatchNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization>`_
 
