@@ -9,19 +9,20 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.ops.user_op_builder as user_op_builder
 from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("layers.prelu")
 def prelu(
-    inputs,
-    alpha_initializer=None,
-    alpha_regularizer=None,
-    shared_axes=None,
-    trainable=True,
-    name=None,
-    model_distribute=distribute_util.broadcast(),
-):
+    inputs: remote_blob_util.MirroredBlob,
+    alpha_initializer: op_conf_util.InitializerConf = None,
+    alpha_regularizer: op_conf_util.RegularizerConf = None,
+    shared_axes: tuple = None,
+    trainable: bool = True,
+    name: str = None,
+    model_distribute: distribute_util.BroadcastDistribute = distribute_util.broadcast(),
+) -> remote_blob_util.MirroredBlob:
     alpha_shape = list(inputs.shape[1:])
     if shared_axes is not None:
         for i in shared_axes:

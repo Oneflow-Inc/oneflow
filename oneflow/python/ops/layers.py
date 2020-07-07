@@ -9,23 +9,25 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.ops.user_op_builder as user_op_builder
+import oneflow.python.framework.input_blob_def as input_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("layers.dense")
 def dense(
-    inputs,
-    units,
-    activation=None,
-    use_bias=True,
-    kernel_initializer=None,
-    bias_initializer=None,
-    kernel_regularizer=None,
-    bias_regularizer=None,
-    trainable=True,
-    name=None,
-    model_distribute=distribute_util.broadcast(),
-):
+    inputs: remote_blob_util.ConsistentBlob,
+    units: int,
+    activation: remote_blob_util.ConsistentBlob = None,
+    use_bias: bool = True,
+    kernel_initializer: op_conf_util.InitializerConf = None,
+    bias_initializer: op_conf_util.InitializerConf = None,
+    kernel_regularizer: op_conf_util.RegularizerConf = None,
+    bias_regularizer: op_conf_util.RegularizerConf = None,
+    trainable: bool = True,
+    name: str = None,
+    model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
+) -> remote_blob_util.ConsistentBlob:
     r"""
     Analogous to `tf.keras.layers.Dense <https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense>`_
 
@@ -94,25 +96,25 @@ def dense(
 
 @oneflow_export("layers.conv2d")
 def conv2d(
-    inputs,
-    filters,
-    kernel_size=1,
-    strides=1,
-    padding="VALID",
-    data_format="NCHW",
-    dilation_rate=1,
-    groups=1,
-    activation=None,
-    use_bias=True,
-    kernel_initializer=None,
-    bias_initializer=None,
-    kernel_regularizer=None,
-    bias_regularizer=None,
-    trainable=True,
-    name=None,
-    weight_name=None,
-    bias_name=None,
-):
+    inputs: remote_blob_util.ConsistentBlob,
+    filters: int,
+    kernel_size: int = 1,
+    strides: int = 1,
+    padding: str = "VALID",
+    data_format: str = "NCHW",
+    dilation_rate: int = 1,
+    groups: int = 1,
+    activation: remote_blob_util.ConsistentBlob = None,
+    use_bias: bool = True,
+    kernel_initializer: op_conf_util.InitializerConf = None,
+    bias_initializer: op_conf_util.InitializerConf = None,
+    kernel_regularizer: op_conf_util.RegularizerConf = None,
+    bias_regularizer: op_conf_util.RegularizerConf = None,
+    trainable: bool = True,
+    name: str = None,
+    weight_name: str = None,
+    bias_name: str = None,
+) -> remote_blob_util.ConsistentBlob:
     name_prefix = name if name is not None else id_util.UniqueStr("Conv2D_")
     if isinstance(kernel_size, int):
         kernel_size = (kernel_size, kernel_size)
@@ -186,15 +188,15 @@ def conv2d(
 
 @oneflow_export("layers.layer_norm")
 def layer_norm(
-    inputs,
-    center=True,
-    scale=True,
-    trainable=True,
-    begin_norm_axis=1,
-    begin_params_axis=-1,
-    epsilon=1e-5,
-    name=None,
-):
+    inputs: remote_blob_util.BlobDef,
+    center: bool = True,
+    scale: bool = True,
+    trainable: bool = True,
+    begin_norm_axis: int = 1,
+    begin_params_axis: int = -1,
+    epsilon: float = 1e-5,
+    name: str = None,
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
 
@@ -292,8 +294,13 @@ def layer_norm(
 
 @oneflow_export("layers.layer_norm_grad")
 def layer_norm_grad(
-    dy, x, mean, inv_variance, begin_norm_axis=1, name=None,
-):
+    dy: input_blob_util.FixedTensorDef,
+    x: input_blob_util.FixedTensorDef,
+    mean: input_blob_util.FixedTensorDef,
+    inv_variance: input_blob_util.FixedTensorDef,
+    begin_norm_axis: int = 1,
+    name: str = None,
+) -> remote_blob_util.ConsistentBlob:
     op_conf = op_conf_util.OperatorConf()
     name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
     setattr(op_conf, "name", name)
@@ -313,8 +320,12 @@ def layer_norm_grad(
 
 @oneflow_export("layers.layer_norm_param_grad")
 def layer_norm_param_grad(
-    dy, norm, gamma, begin_params_axis=-1, name=None,
-):
+    dy: input_blob_util.FixedTensorDef,
+    norm: input_blob_util.FixedTensorDef,
+    gamma: input_blob_util.FixedTensorDef,
+    begin_params_axis: int = -1,
+    name: str = None,
+) -> tuple:
     op_conf = op_conf_util.OperatorConf()
     name = name if name is not None else id_util.UniqueStr("LayerNormParamGrad_")
     setattr(op_conf, "name", name)
@@ -346,22 +357,22 @@ def layer_norm_param_grad(
 
 @oneflow_export("layers.batch_normalization")
 def batch_normalization(
-    inputs,
-    axis=-1,
-    momentum=0.99,
-    epsilon=0.001,
-    center=True,
-    scale=True,
-    beta_initializer=None,
-    gamma_initializer=None,
-    beta_regularizer=None,
-    gamma_regularizer=None,
-    moving_mean_initializer=None,
-    moving_variance_initializer=None,
-    trainable=True,
-    training=True,
-    name=None,
-):
+    inputs: remote_blob_util.ConsistentBlob,
+    axis: int = -1,
+    momentum: float = 0.99,
+    epsilon: float = 0.001,
+    center: bool = True,
+    scale: bool = True,
+    beta_initializer: op_conf_util.InitializerConf = None,
+    gamma_initializer: op_conf_util.InitializerConf = None,
+    beta_regularizer: op_conf_util.RegularizerConf = None,
+    gamma_regularizer: op_conf_util.RegularizerConf = None,
+    moving_mean_initializer: op_conf_util.InitializerConf = None,
+    moving_variance_initializer: op_conf_util.InitializerConf = None,
+    trainable: bool = True,
+    training: bool = True,
+    name: str = None,
+) -> remote_blob_util.ConsistentBlob:
     r"""
     Analogous to `tf.keras.layers.BatchNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization>`_
 
