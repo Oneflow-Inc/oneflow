@@ -11,9 +11,9 @@ import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import oneflow.python.eager.object as object_util
-import oneflow.python.eager.object_cache as object_cache
+import oneflow.python.eager.object_storage as object_storage
 import oneflow.python.eager.symbol as symbol_util
-import oneflow.python.eager.symbol_cache as symbol_cache
+import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.id_util as id_util
@@ -306,56 +306,60 @@ class InstructionsBuilder(object):
         return ref_blob_object
 
     def GetSymbol4String(self, string):
-        if symbol_cache.HasSymbol4String(string):
-            return symbol_cache.GetSymbol4String(string)
+        if symbol_storage.HasSymbol4String(string):
+            return symbol_storage.GetSymbol4String(string)
         symbol_id = self._NewSymbolId4String(string)
         symbol = symbol_util.Symbol(symbol_id, string)
-        symbol_cache.SetSymbol4Id(symbol_id, symbol)
-        symbol_cache.SetSymbol4String(string, symbol)
+        symbol_storage.SetSymbol4Id(symbol_id, symbol)
+        symbol_storage.SetSymbol4String(string, symbol)
         return symbol
 
     def GetJobConfSymbol(self, job_conf):
-        if symbol_cache.HasSymbol4JobConf(job_conf):
-            return symbol_cache.GetSymbol4JobConf(job_conf)
+        if symbol_storage.HasSymbol4JobConf(job_conf):
+            return symbol_storage.GetSymbol4JobConf(job_conf)
         symbol_id = self._NewSymbolId4JobConf(job_conf)
         symbol = symbol_util.Symbol(symbol_id, job_conf)
-        symbol_cache.SetSymbol4Id(symbol_id, symbol)
-        symbol_cache.SetSymbol4JobConf(job_conf, symbol)
+        symbol_storage.SetSymbol4Id(symbol_id, symbol)
+        symbol_storage.SetSymbol4JobConf(job_conf, symbol)
         return symbol
 
     def GetParallelDescSymbol(self, parallel_conf):
         _, device_tag, _ = parallel_conf.device_name[0].split(":")
         serialized_parallel_conf = parallel_conf.SerializeToString()
-        if symbol_cache.HasSymbol4SerializedParallelConf(serialized_parallel_conf):
-            return symbol_cache.GetSymbol4SerializedParallelConf(
+        if symbol_storage.HasSymbol4SerializedParallelConf(serialized_parallel_conf):
+            return symbol_storage.GetSymbol4SerializedParallelConf(
                 serialized_parallel_conf
             )
         symbol_id = self._NewSymbolId4ParallelConf(parallel_conf)
         symbol = symbol_util.ParallelDescSymbol(symbol_id, parallel_conf, device_tag)
-        symbol_cache.SetSymbol4Id(symbol_id, symbol)
-        symbol_cache.SetSymbol4SerializedParallelConf(serialized_parallel_conf, symbol)
+        symbol_storage.SetSymbol4Id(symbol_id, symbol)
+        symbol_storage.SetSymbol4SerializedParallelConf(
+            serialized_parallel_conf, symbol
+        )
         return symbol
 
     def GetScopeSymbol(self, scope_proto, parent_scope_symbol=None):
         symbol_id = self._NewSymbolId4Scope(scope_proto)
         serialized_scope_proto = scope_proto.SerializeToString()
-        if symbol_cache.HasSymbol4SerializedScopeProto(serialized_scope_proto):
-            return symbol_cache.GetSymbol4SerializedScopeProto(serialized_scope_proto)
+        if symbol_storage.HasSymbol4SerializedScopeProto(serialized_scope_proto):
+            return symbol_storage.GetSymbol4SerializedScopeProto(serialized_scope_proto)
         symbol = scope_util.ScopeSymbol(symbol_id, scope_proto, parent_scope_symbol)
-        symbol_cache.SetSymbol4Id(symbol_id, symbol)
-        symbol_cache.SetSymbol4SerializedScopeProto(serialized_scope_proto, symbol)
+        symbol_storage.SetSymbol4Id(symbol_id, symbol)
+        symbol_storage.SetSymbol4SerializedScopeProto(serialized_scope_proto, symbol)
         return symbol
 
     def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_desc_sym):
-        if object_cache.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
-            return object_cache.GetSharedOpKernelObject4ParallelConfSymbol(
+        if object_storage.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
+            return object_storage.GetSharedOpKernelObject4ParallelConfSymbol(
                 parallel_desc_sym
             )
         object_id = self._NewSharedOpKernelObjectId4ParallelConfSymbolId(
             parallel_desc_sym
         )
         obj = object_util.Object(object_id, parallel_desc_sym)
-        object_cache.SetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym, obj)
+        object_storage.SetSharedOpKernelObject4ParallelConfSymbol(
+            parallel_desc_sym, obj
+        )
         return obj
 
     @contextmanager
@@ -401,24 +405,24 @@ class InstructionsBuilder(object):
 
     def _GetOpConfSymbol(self, op_conf):
         serialized_op_conf = op_conf.SerializeToString()
-        if symbol_cache.HasSymbol4SerializedOpConf(serialized_op_conf):
-            return symbol_cache.GetSymbol4SerializedOpConf(serialized_op_conf)
+        if symbol_storage.HasSymbol4SerializedOpConf(serialized_op_conf):
+            return symbol_storage.GetSymbol4SerializedOpConf(serialized_op_conf)
         symbol_id = self._NewSymbolId4OpConf(op_conf)
         symbol = symbol_util.Symbol(symbol_id, op_conf)
-        symbol_cache.SetSymbol4Id(symbol_id, symbol)
-        symbol_cache.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
+        symbol_storage.SetSymbol4Id(symbol_id, symbol)
+        symbol_storage.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
         return symbol
 
     def _SystemGetOpConfSymbol(self, op_conf):
         new_op_conf = op_conf_util.OperatorConf()
         new_op_conf.CopyFrom(op_conf)
         serialized_op_conf = new_op_conf.SerializeToString()
-        if symbol_cache.HasSymbol4SerializedOpConf(serialized_op_conf):
-            return symbol_cache.GetSymbol4SerializedOpConf(serialized_op_conf)
+        if symbol_storage.HasSymbol4SerializedOpConf(serialized_op_conf):
+            return symbol_storage.GetSymbol4SerializedOpConf(serialized_op_conf)
         symbol_id = self._NewSymbolId4OpConf(new_op_conf)
         symbol = symbol_util.Symbol(symbol_id, new_op_conf)
-        symbol_cache.SetSymbol4Id(symbol_id, symbol)
-        symbol_cache.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
+        symbol_storage.SetSymbol4Id(symbol_id, symbol)
+        symbol_storage.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
         return symbol
 
     def _GetConstOperandBlobObjects(self, op_attribute, blob_object4ibn=None):
