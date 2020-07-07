@@ -147,7 +147,9 @@ def _FeedValueToInputPhysicalBlob(blob_def, blob_object, arg_ndarray, rank):
         assert isinstance(arg_ndarray, numpy.ndarray)
 
         def FeedBody(ofblob):
-            assert ofblob.shape == arg_ndarray.shape
+            assert ofblob.shape == arg_ndarray.shape, "%s v.s. %s"%(
+                ofblob.shape, arg_ndarray.shape
+            )
             if ofblob.CopyFromNdarray(arg_ndarray) is False:
                 raise ValueError
 
