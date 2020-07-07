@@ -356,19 +356,6 @@ enum ScalarReductionType {
   kSumOverNonZeroWeight = 3;
 }
 
-message SparseCrossEntropyOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string out = 3;
-}
-
-message SparseCrossEntropyGradOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string dy = 3;
-  required string prediction_diff = 4;
-}
-
 message SigmoidCrossEntropyOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -977,28 +964,6 @@ message NormalizationGradOpConf {
   required float epsilon = 10;
 }
 
-message RandomMaskLikeOpConf {
-  required string like = 1;
-  required string out = 2;
-  required double rate = 3;
-  optional ShapeProto noise_shape = 4;
-  optional int64 seed = 5;
-}
-
-message DropoutOpConf {
-  required string mask = 1;
-  required string in = 2;
-  required string out = 3;
-  required float scale = 4;
-}
-
-message DropoutGradOpConf {
-  required string mask = 1;
-  required string dy = 2;
-  required string dx = 3;
-  required float scale = 4;
-}
-
 message TransposeOpConf {
   required string in = 1;
   required string out = 2;
@@ -1327,13 +1292,6 @@ message ConstantOpConf {
   optional ShapeProto shape = 3;
   optional DataType data_type = 4;
   optional InitializerConf initializer = 5;
-}
-
-message OneHotOpConf {
-  required string indices = 1;
-  required string out = 2;
-  required int64 depth = 3;
-  optional DataType data_type = 4;
 }
 
 message ScalarAddOpConf {
@@ -1852,10 +1810,8 @@ message OperatorConf {
     MaxPooling2DOpConf max_pooling_2d_conf = 211;
     AveragePooling3DOpConf average_pooling_3d_conf = 212;
     MaxPooling3DOpConf max_pooling_3d_conf = 213;
-    RandomMaskLikeOpConf random_mask_like_conf = 214;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
     NormalizationOpConf normalization_conf = 217;
-    DropoutOpConf dropout_conf = 218;
     ReduceSumOpConf reduce_sum_conf = 219;
     AddOpConf add_conf = 220;
     MatmulOpConf matmul_conf = 221;
@@ -1878,18 +1834,14 @@ message OperatorConf {
     LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
-    OneHotOpConf one_hot_conf = 258;
-    SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
     PReluOpConf prelu_conf = 265;
     ReluGradOpConf relu_grad_conf = 266;
     GeluGradOpConf gelu_grad_conf = 267;
     SliceGradOpConf slice_grad_conf = 269;
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
-    DropoutGradOpConf dropout_grad_conf = 271;
     LayerNormGradOpConf layer_norm_grad_conf = 272;
     LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
-    SparseCrossEntropyGradOpConf sparse_cross_entropy_grad_conf= 274;
     UnsortedSegmentSumOpConf unsorted_segment_sum_conf = 275;
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;

@@ -681,42 +681,24 @@ def sparse_cross_entropy(labels=None, prediction=None, name=None):
     assert labels is not None
     assert prediction is not None
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        if len(labels.shape) == len(prediction.shape):
-            assert labels.shape[-1] == 1
-            labels = flow.squeeze(labels, axis=[-1])
-        else:
-            assert len(labels.shape) == len(prediction.shape) - 1
-
-        return (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("SparseCrossEntropy_")
-            )
-            .Op("sparse_cross_entropy")
-            .Input("prediction", [prediction])
-            .Input("label", [labels])
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
+    if len(labels.shape) == len(prediction.shape):
+        assert labels.shape[-1] == 1
+        labels = flow.squeeze(labels, axis=[-1])
     else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("SparseCrossEntropy_"),
+        assert len(labels.shape) == len(prediction.shape) - 1
+
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SparseCrossEntropy_")
         )
-        setattr(
-            op_conf.sparse_cross_entropy_conf, "prediction", prediction.unique_name,
-        )
-        setattr(op_conf.sparse_cross_entropy_conf, "label", labels.unique_name)
-        setattr(op_conf.sparse_cross_entropy_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+        .Op("sparse_cross_entropy")
+        .Input("prediction", [prediction])
+        .Input("label", [labels])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("nn.softmax_cross_entropy_with_logits")
@@ -858,42 +840,6 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
     Analogous to `tf.nn.dropout <https://www.tensorflow.org/api_docs/python/tf/nn/dropout>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") == "False":
-        # dropout op
-        op_conf = op_conf_util.OperatorConf()
-        if name is None:
-            op_conf.name = id_util.UniqueStr("Dropout_")
-        else:
-            op_conf.name = name
-        setattr(op_conf.dropout_conf, "in", x.unique_name)
-        setattr(op_conf.dropout_conf, "out", "out")
-        # random mask like op
-        mask_op_conf = op_conf_util.OperatorConf()
-        mask_op_conf.name = "RandomMask4" + op_conf.name
-        setattr(mask_op_conf.random_mask_like_conf, "like", x.unique_name)
-        setattr(mask_op_conf.random_mask_like_conf, "out", "out")
-        if noise_shape is not None:
-            assert isinstance(noise_shape, (list, tuple))
-            mask_op_conf.random_mask_like_conf.noise_shape.dim.extend(list(noise_shape))
-        if seed is not None:
-            setattr(mask_op_conf.random_mask_like_conf, "seed", seed)
-        assert rate is not None and rate >= 0.0 and rate < 1.0
-        setattr(mask_op_conf.random_mask_like_conf, "rate", rate)
-        compile_context.CurJobAddOp(mask_op_conf)
-        mask_lbi = logical_blob_id_util.LogicalBlobId()
-        mask_lbi.op_name = mask_op_conf.name
-        mask_lbi.blob_name = "out"
-        mask_blob = remote_blob_util.RemoteBlob(mask_lbi)
-
-        setattr(op_conf.dropout_conf, "mask", mask_blob.unique_name)
-        setattr(op_conf.dropout_conf, "scale", 1.0 / (1.0 - rate))
-
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
-
     assert rate is not None and rate >= 0.0 and rate < 1.0
     if not flow.current_global_function_desc().IsTrainable() or rate == 0.0:
         return x

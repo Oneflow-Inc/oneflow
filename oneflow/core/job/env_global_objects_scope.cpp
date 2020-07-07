@@ -1,5 +1,6 @@
 #include <cuda.h>
 #include <thread>
+#include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -64,6 +65,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<MachineCtx>::New(this_mchn_id);
   Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));
+  Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
   Global<EagerJobBuildAndInferCtxMgr>::New();
   Global<EagerNcclCommMgr>::New();
@@ -74,6 +76,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<EagerNcclCommMgr>::Delete();
   Global<EagerJobBuildAndInferCtxMgr>::Delete();
   Global<vm::VirtualMachineScope>::Delete();
+  Global<ThreadPool>::Delete();
   if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
     Global<ResourceDesc, ForSession>::Delete();
   }
