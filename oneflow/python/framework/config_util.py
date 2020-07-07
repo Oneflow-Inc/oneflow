@@ -220,6 +220,18 @@ def persistence_buf_byte(val):
     sess.config_proto.io_conf.persistence_buf_byte = val
 
 
+@oneflow_export("config.enable_model_io_v2")
+def api_enable_model_io_v2(val):
+    return enable_if.unique([enable_model_io_v2, do_nothing])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_model_io_v2(val):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.io_conf.enable_model_io_v2 = val
+
+
 @oneflow_export("config.collect_act_event")
 def api_collect_act_event(val=True):
     return enable_if.unique([collect_act_event, do_nothing])(val=True)
