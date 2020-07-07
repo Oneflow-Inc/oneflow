@@ -217,12 +217,16 @@ class ValueSet(object):
             if self.values_:
                 dtype = type(self.values_[0])
         if dtype not in (int, float, bool, str):
-            raise ValueError("Value type must in (int, float, bool, str), %r is not supported!" % (dtype,))
+            raise ValueError(
+                "Value type must in (int, float, bool, str), %r is not supported!"
+                % (dtype,)
+            )
         self.dtype_ = dtype
         for value in self.values_:
             if not isinstance(value, self.dtype_):
                 raise TypeError(
-                    "The type of value is not supported! value: %r type: %s" % (value, self.dtype_.__name__)
+                    "The type of value is not supported! value: %r type: %s"
+                    % (value, self.dtype_.__name__)
                 )
         self.values_.sort()
 
@@ -245,11 +249,14 @@ class Metric(object):
             if self.value_:
                 dtype = type(self.value_[0])
         if dtype not in (int, float):
-            raise ValueError("Value type must in (int, float), %r is not supported!" % (dtype,))
+            raise ValueError(
+                "Value type must in (int, float), %r is not supported!" % (dtype,)
+            )
         self.dtype_ = dtype
         if not isinstance(value, self.dtype_):
             raise TypeError(
-                    "The type of value is not supported! value: %r type: %s" % (value, self.dtype_.__name__)
+                "The type of value is not supported! value: %r type: %s"
+                % (value, self.dtype_.__name__)
             )
         self.value_ = value
 

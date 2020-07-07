@@ -73,6 +73,30 @@ Maybe<void> JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
   return Maybe<void>::Ok();
 }
 
+std::string JobBuildAndInferCtxMgr::structure_graph() const {
+  std::string structure_graph_str = "[";
+  bool is_first = true;
+  for (const auto& pair : job_name2infer_ctx_) {
+    if (is_first) {
+      structure_graph_str += "\n";
+    } else {
+      structure_graph_str += ",\n";
+    }
+    structure_graph_str += "{\n";
+    structure_graph_str += "    \"class_name\": \"Model\",\n";
+    structure_graph_str += "    \"config\": {\n";
+    structure_graph_str += ("        \"name\": \"" + pair.first + "\",\n");
+    structure_graph_str += pair.second->GetJobStructureGraphStr();
+    structure_graph_str += "    },\n";
+    structure_graph_str += "    \"backend\": \"oneflow\"\n";
+    structure_graph_str += "}";
+    if (is_first) { is_first = false; }
+  }
+  structure_graph_str += "\n";
+  structure_graph_str += "]";
+  return structure_graph_str;
+}
+
 void EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
   mut_job_set()->clear_job();
   clear_job_name2infer_ctx();

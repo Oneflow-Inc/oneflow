@@ -106,7 +106,7 @@ def test(device_type):
         flow.HParam("optimizer", flow.ValueSet(["adam", "sgd"])): "adam",
         flow.HParam("accuracy", flow.RealRange(1e-2, 1e-1)): 0.001,
         flow.HParam("magic", flow.ValueSet([False, True])): True,
-        flow.Metric("loss", float): 0.02
+        flow.Metric("loss", float): 0.02,
         "dropout": 0.6,
     }
     pb2 = flow.hparams(hparams)
