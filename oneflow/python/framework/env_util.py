@@ -5,10 +5,10 @@ from contextlib import closing
 
 import oneflow.core.job.env_pb2 as env_pb
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
-from typing import Any
 
 
 @oneflow_export("env.init")
@@ -28,7 +28,7 @@ def env_init():
 
 
 @oneflow_export("env.current_resource", "current_resource")
-def api_get_current_resource() -> str:
+def api_get_current_resource() -> resource_util.Resource:
     return enable_if.unique([get_current_resource])()
 
 
@@ -48,7 +48,7 @@ def get_current_machine_id() -> int:
 
 
 @oneflow_export("env.machine")
-def api_machine(*val: Any) -> None:
+def api_machine(*val: list) -> None:
     r"""Set machines' hostnames.  For instance::
 
         oneflow.env.machine([{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}])

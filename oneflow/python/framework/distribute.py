@@ -105,7 +105,7 @@ def auto() -> AutoDistribute:
 
 
 @oneflow_export("distribute.assert_is_valid_distribute")
-def assert_is_valid_distribute(distribute: object) -> None:
+def assert_is_valid_distribute(distribute: Distribute) -> None:
     assert isinstance(
         distribute, Distribute
     ), """not a valid distribute policy. 

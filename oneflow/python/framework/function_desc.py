@@ -62,6 +62,6 @@ class FunctionDesc(object):
 
 
 @oneflow_export("current_global_function_desc")
-def GetCurrentGlobalFunctionDesc() -> str:
+def GetCurrentGlobalFunctionDesc() -> FunctionDesc:
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
