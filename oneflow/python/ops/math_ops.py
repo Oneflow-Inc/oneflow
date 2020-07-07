@@ -8,6 +8,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -105,9 +106,13 @@ def multiply(x, y, name=None):
 @oneflow_export("math.divide")
 def divide(x, y, name=None):
     if isinstance(x, (int, float)):
-        raise NotImplementedError
+        return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
     elif isinstance(y, (int, float)):
-        raise NotImplementedError
+        if y == 0 or y == 0.0:
+            y = 0.0
+        else:
+            y = 1.0 / (float(y))
+        return scalar_mul(x, y, name)
     elif x.shape == y.shape:
         # TODO: add element-wise op
         return broadcast_div(x, y, name)
@@ -581,7 +586,7 @@ def relu(x, name=None):
 @oneflow_export("math.sigmoid")
 def sigmoid(x, name=None):
     r"""Computes sigmoid of `x` element-wise.
-    
+
     Args:
         x: Input `Blob`.
     Returns:
