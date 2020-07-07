@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import collections
 import os
 import random
-
+from typing import Union, Any
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -15,15 +15,15 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("nn.conv2d")
 def conv2d(
-    input,
-    filters,
-    strides,
-    padding,
-    data_format="NHWC",
-    dilations=None,
-    groups=1,
-    name=None,
-):
+    input: remote_blob_util.BlobDef,
+    filters: remote_blob_util.BlobDef,
+    strides: int,
+    padding: str,
+    data_format: str = "NHWC",
+    dilations: Union(int, list, tuple) = None,
+    groups: int = 1,
+    name: str = None,
+) -> remote_blob_util.BlobDef :
     r"""2d convolution 
 
     Analogous to `tf.nn.conv2d <https://www.tensorflow.org/api_docs/python/tf/nn/conv2d>`_
@@ -146,8 +146,15 @@ def conv2d(
 
 @oneflow_export("nn.batch_normalization")
 def batch_normalization(
-    x, mean, variance, offset, scale, variance_epsilon, axis=-1, name=None
-):
+    x: remote_blob_util.BlobDef, 
+    mean: remote_blob_util.BlobDef, 
+    variance: remote_blob_util.BlobDef, 
+    offset: remote_blob_util.BlobDef, 
+    scale: remote_blob_util.BlobDef,
+    variance_epsilon: float, 
+    axis: int = -1, 
+    name: str =None
+) -> remote_blob_util.BlobDef:
     r"""
     This op does not fully align with tf.nn.batch_normalization. mean, variable, offset and scale
     are always 1D. Users need to specify "axis" to 1 for NCHW data format.
@@ -183,15 +190,15 @@ def batch_normalization(
 
 @oneflow_export("nn.compat_conv2d")
 def tf_conv2d(
-    input,
-    filters,
-    strides,
-    padding,
-    data_format="NHWC",
-    dilations=None,
-    groups=1,
-    name=None,
-):
+    input: remote_blob_util.BlobDef,
+    filters: remote_blob_util.BlobDef,
+    strides: int,
+    padding: str,
+    data_format: str = "NHWC",
+    dilations: Union(int, list, tuple) =None,
+    groups: int = 1,
+    name: str = None,
+) -> remote_blob_util.BlobDef:
     assert len(input.shape) == 4
     assert len(filters.shape) == 4
     NDims = 2
@@ -295,7 +302,12 @@ def tf_conv2d(
 
 
 @oneflow_export("nn.bias_add")
-def bias_add(value, bias, data_format=None, name=None):
+def bias_add(
+    value: remote_blob_util.BlobDef, 
+    bias: remote_blob_util.BlobDef, 
+    data_format: str = None, 
+    name: str = None
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.bias_add <https://www.tensorflow.org/api_docs/python/tf/nn/bias_add>`_
 
@@ -341,19 +353,40 @@ def bias_add(value, bias, data_format=None, name=None):
 
 
 @oneflow_export("nn.max_pool1d")
-def max_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
+def max_pool1d(
+    input: remote_blob_util.BlobDef, 
+    ksize: Union(int, list, tuple), 
+    strides: Union(int, list, tuple), 
+    padding: str, 
+    data_format: str = "NWC", 
+    name: str = None
+) -> remote_blob_util.BlobDef:
     # TODO: fix cuDNN bugs in pooling_1d
     raise NotImplementedError
 
 
 @oneflow_export("nn.avg_pool1d")
-def avg_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
+def avg_pool1d(
+    input: remote_blob_util.BlobDef, 
+    ksize: Union(int, list, tuple), 
+    strides: Union(int, list, tuple), 
+    padding: str, 
+    data_format: str = "NWC", 
+    name: str =None
+) -> remote_blob_util.BlobDef:
     # TODO: fix cuDNN bugs in pooling_1d
     raise NotImplementedError
 
 
 @oneflow_export("nn.max_pool2d")
-def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
+def max_pool2d(
+    input: remote_blob_util.BlobDef, 
+    ksize: Union(int, list, tuple), 
+    strides: Union(int, list, tuple), 
+    padding: str, 
+    data_format: str = "NHWC", 
+    name: str = None
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.max_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool2d>`_
 
@@ -404,7 +437,14 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
 
 
 @oneflow_export("nn.avg_pool2d")
-def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
+def avg_pool2d(
+    input: remote_blob_util.BlobDef, 
+    ksize: Union(int, list, tuple), 
+    strides: Union(int, list, tuple), 
+    padding: str, 
+    data_format: str = "NHWC", 
+    name: str = None
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.avg_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool2d>`_
 
@@ -455,7 +495,14 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
 
 
 @oneflow_export("nn.max_pool3d")
-def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
+def max_pool3d(
+    input: remote_blob_util.BlobDef, 
+    ksize: Union(int, list, tuple), 
+    strides: Union(int, list, tuple), 
+    padding: str, 
+    data_format: str = "NDHWC", 
+    name: str = None
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.max_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool3d>`_
 
@@ -506,7 +553,14 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
 
 
 @oneflow_export("nn.avg_pool3d")
-def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
+def avg_pool3d(
+    input: remote_blob_util.BlobDef, 
+    ksize: Union(int, list, tuple), 
+    strides: Union(int, list, tuple), 
+    padding: str, 
+    data_format: str = "NDHWC", 
+    name: str = None
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.avg_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool3d>`_
 
@@ -575,7 +629,11 @@ def _softmax_need_transpose(x, axis):
 
 
 @oneflow_export("nn.softmax")
-def softmax(logits, axis=None, name=None):
+def softmax(
+    logits: remote_blob_util.BlobDef, 
+    axis: int = None, 
+    name: str = None
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.softmax <https://www.tensorflow.org/api_docs/python/tf/nn/softmax>`_
 
@@ -622,7 +680,12 @@ def softmax(logits, axis=None, name=None):
 
 
 @oneflow_export("nn.softmax_grad")
-def softmax_grad(y, dy, axis=None, name=None):
+def softmax_grad(
+    y: remote_blob_util.BlobDef, 
+    dy: remote_blob_util.BlobDef, 
+    axis: int = None, 
+    name: str = None
+) -> remote_blob_util.BlobDef:
     if axis is None:
         axis = -1
 
@@ -677,7 +740,11 @@ def softmax_grad(y, dy, axis=None, name=None):
 
 
 @oneflow_export("nn.sparse_cross_entropy")
-def sparse_cross_entropy(labels=None, prediction=None, name=None):
+def sparse_cross_entropy(
+    labels: remote_blob_util.BlobDef = None, 
+    prediction: remote_blob_util.BlobDef =None, 
+    name: str = None
+) -> remote_blob_util.BlobDef:
     assert labels is not None
     assert prediction is not None
 
@@ -702,7 +769,11 @@ def sparse_cross_entropy(labels=None, prediction=None, name=None):
 
 
 @oneflow_export("nn.softmax_cross_entropy_with_logits")
-def softmax_cross_entropy_with_logits(labels=None, logits=None, name=None):
+def softmax_cross_entropy_with_logits(
+    labels: remote_blob_util.BlobDef = None, 
+    logits: remote_blob_util.BlobDef = None, 
+    name=None
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/softmax_cross_entropy_with_logits>`_
 
@@ -731,7 +802,11 @@ def softmax_cross_entropy_with_logits(labels=None, logits=None, name=None):
 
 
 @oneflow_export("nn.sparse_softmax_cross_entropy_with_logits")
-def sparse_softmax_cross_entropy_with_logits(labels=None, logits=None, name=None):
+def sparse_softmax_cross_entropy_with_logits(
+    labels: remote_blob_util.BlobDef = None, 
+    logits: remote_blob_util.BlobDef = None, 
+    name: str = None
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.sparse_softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sparse_softmax_cross_entropy_with_logits>`_
 
@@ -767,7 +842,11 @@ def sparse_softmax_cross_entropy_with_logits(labels=None, logits=None, name=None
 
 
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")
-def sigmoid_cross_entropy_with_logits(labels=None, logits=None, name=None):
+def sigmoid_cross_entropy_with_logits(
+    labels: remote_blob_util.blob_desc = None, 
+    logits: remote_blob_util.BlobDef = None, 
+    name: str = None
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.sigmoid_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>`_
 
@@ -810,7 +889,13 @@ def _GetSequence(value, n, name):
 
 
 @oneflow_export("nn.random_mask_like")
-def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
+def random_mask_like(
+    like: remote_blob_util.BlobDef, 
+    rate: float, 
+    seed: int = None, 
+    noise_shape: Union(list, tuple) = None, 
+    name: str = None
+) -> remote_blob_util.BlobDef:
     assert rate is not None and rate >= 0.0 and rate < 1.0
     mask_op = (
         flow.user_op_builder(
@@ -835,7 +920,13 @@ def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
 
 
 @oneflow_export("nn.dropout")
-def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
+def dropout(
+    x: remote_blob_util.BlobDef, 
+    noise_shape: remote_blob_util.BlobDef = None, 
+    seed: int = None, 
+    name: str = None, 
+    rate: float = None
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.dropout <https://www.tensorflow.org/api_docs/python/tf/nn/dropout>`_
 
@@ -861,17 +952,17 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
 
 @oneflow_export("nn.conv2d_transpose")
 def deconv2d(
-    value=None,
-    filter=None,
-    output_shape=None,
-    strides=None,
-    padding="VALID",
-    data_format="NHWC",
-    name=None,
-    input=None,
-    filters=None,
-    dilations=None,
-):
+    value: remote_blob_util.BlobDef = None,
+    filter: remote_blob_util.BlobDef = None,
+    output_shape: remote_blob_util.BlobDef = None,
+    strides: Union(int, list, tuple) = None,
+    padding: str = "VALID",
+    data_format: str = "NHWC",
+    name: str = None,
+    input: remote_blob_util.BlobDef =None,
+    filters: remote_blob_util.BlobDef =None,
+    dilations: Union(int, list, tuple)=None,
+) -> remote_blob_util.BlobDef:
     r"""2d transposed convolution
 
     Args:
@@ -1029,7 +1120,11 @@ def deconv2d(
 
 
 @oneflow_export("nn.leaky_relu")
-def leaky_relu(x, alpha=0.2, name=None):
+def leaky_relu(
+    x: remote_blob_util.BlobDef, 
+    alpha: float = 0.2, 
+    name: str = None
+) -> remote_blob_util.blob_desc:
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("LeakyRelu_")
