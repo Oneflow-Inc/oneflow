@@ -14,7 +14,6 @@ import oneflow.python.framework.job_instance as job_instance_util
 import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.eager.object_cache as object_cache
 import oneflow.python.eager.vm_util as vm_util
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.framework.function_desc import FunctionDesc
