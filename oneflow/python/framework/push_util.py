@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import oneflow
-import oneflow.python.framework.input_blob_def as input_blob_util
+import oneflow.python.framework.input_blob_def as input_blob_def
 import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.compile_context as compile_context
@@ -32,7 +32,7 @@ def _AsyncPushArg(session, arg_blob_def, arg_ndarray):
         for k, blob_def in arg_blob_def.items():
             _AsyncPushArg(session, blob_def, arg_ndarray[k])
     else:
-        assert isinstance(arg_blob_def, input_blob_util.ArgBlobDef)
+        assert isinstance(arg_blob_def, input_blob_def.ArgBlobDef)
         arg_blob_def.CheckAndAsyncPush(session, arg_ndarray)
 
 
@@ -48,16 +48,16 @@ def MakeEagerInputBlobs(arg_blob_def_tup, arg_ndarray_tup):
 
 
 def _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_value):
-    if isinstance(arg_blob_def, input_blob_util.FixedTensorDef):
+    if isinstance(arg_blob_def, input_blob_def.FixedTensorDef):
         assert isinstance(arg_value, numpy.ndarray)
         assert arg_blob_def.shape == arg_value.shape
-    elif isinstance(arg_blob_def, input_blob_util.MirroredTensorDef):
+    elif isinstance(arg_blob_def, input_blob_def.MirroredTensorDef):
         assert isinstance(arg_value, (list, tuple))
         for v in arg_value:
             assert isinstance(v, numpy.ndarray)
             assert len(v.shape) == len(arg_blob_def.shape)
             assert numpy.prod(v.shape) <= numpy.prod(arg_blob_def.shape)
-    elif isinstance(arg_blob_def, input_blob_util.MirroredTensorListDef):
+    elif isinstance(arg_blob_def, input_blob_def.MirroredTensorListDef):
         raise NotImplementedError
     else:
         raise NotImplementedError
@@ -82,7 +82,16 @@ def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
         _FeedValueToInputPhysicalBlob(
             arg_blob_def, physical_blob_object, arg_ndarray, i
         )
-    return remote_blob_util.RemoteBlob(lbi, blob_object=arg_blob_object)
+    blob_class = None
+    if isinstance(arg_blob_def, input_blob_def.FixedTensorDef):
+        blob_class = remote_blob_util.EagerConsistentBlob
+    elif isinstance(arg_blob_def, input_blob_def.MirroredTensorDef):
+        blob_class = remote_blob_util.EagerMirroredBlob
+    elif isinstance(arg_blob_def, input_blob_def.MirroredTensorListDef):
+        blob_class = remote_blob_util.EagerMirroredBlob
+    else:
+        raise NotImplementedError
+    return blob_class(lbi, blob_object=arg_blob_object)
 
 
 def _MakeInputBlobObject(arg_blob_def):
@@ -119,7 +128,7 @@ def _GetPhysicalBlobObjects(logical_blob_object, lbi):
 
 
 def _MakeInputOpConfAndRetLbi(arg_blob_def):
-    assert isinstance(arg_blob_def, input_blob_util.ArgBlobDef)
+    assert isinstance(arg_blob_def, input_blob_def.ArgBlobDef)
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr("Input_")
     op_conf.input_conf.out = "out"
@@ -131,10 +140,10 @@ def _MakeInputOpConfAndRetLbi(arg_blob_def):
 
 
 def _FeedValueToInputPhysicalBlob(blob_def, blob_object, arg_ndarray, rank):
-    assert isinstance(blob_def, input_blob_util.ArgBlobDef)
+    assert isinstance(blob_def, input_blob_def.ArgBlobDef)
     assert isinstance(blob_object, object_util.BlobObject)
 
-    if isinstance(blob_def, input_blob_util.FixedTensorDef):
+    if isinstance(blob_def, input_blob_def.FixedTensorDef):
         assert isinstance(arg_ndarray, numpy.ndarray)
 
         def FeedBody(ofblob):
@@ -148,7 +157,7 @@ def _FeedValueToInputPhysicalBlob(blob_def, blob_object, arg_ndarray, rank):
         vm_util.PhysicalRun(BuildFeedInstruction)
         python_callback.DeleteRegisteredCallback(FeedBody)
 
-    elif isinstance(blob_def, input_blob_util.MirroredTensorDef):
+    elif isinstance(blob_def, input_blob_def.MirroredTensorDef):
         assert isinstance(arg_ndarray, (list, tuple))
         op_arg_parallel_num = (
             blob_object.op_arg_parallel_attr.parallel_desc_symbol.parallel_num
@@ -176,7 +185,7 @@ def _FeedValueToInputPhysicalBlob(blob_def, blob_object, arg_ndarray, rank):
         python_callback.DeleteRegisteredCallback(FeedHeader)
         python_callback.DeleteRegisteredCallback(FeedBody)
 
-    elif isinstance(blob_def, input_blob_util.MirroredTensorListDef):
+    elif isinstance(blob_def, input_blob_def.MirroredTensorListDef):
         raise NotImplementedError
     else:
         raise NotImplementedError

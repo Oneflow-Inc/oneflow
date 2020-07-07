@@ -9,6 +9,8 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.watcher as watcher_util
+import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.python.framework.hob as hob
 from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
 from oneflow.python.framework.remote_blob import ConsistentBlob, MirroredBlob
 from oneflow.python.oneflow_export import oneflow_export
@@ -24,6 +26,25 @@ def Watch(blob_watched, handler_or_prompt=None):
         blob_watched: a `Blob`
         handler_or_prompt: a function has an argument of a `Blob`
     """
+    api = enable_if.unique([EagerWatch, LazyWatch])
+    return api(blob_watched, handler_or_prompt)
+
+
+@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+def EagerWatch(blob_watched, handler_or_prompt=None):
+    handler = _MakeHandler(handler_or_prompt)
+    if isinstance(blob_watched, ConsistentBlob):
+        local_blob = local_blob_util.MakeLocalBlob4EagerConsistentBlob(blob_watched)
+        handler(local_blob)
+    elif isinstance(blob_watched, MirroredBlob):
+        local_blob = local_blob_util.MakeLocalBlob4EagerMirroredBlob(blob_watched)
+        handler(local_blob)
+    else:
+        raise NotImplementedError
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def LazyWatch(blob_watched, handler_or_prompt=None):
     handler = _MakeHandler(handler_or_prompt)
     if isinstance(blob_watched, ConsistentBlob):
         handler_uuid = str(uuid.uuid1())
