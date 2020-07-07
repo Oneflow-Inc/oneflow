@@ -293,7 +293,7 @@ class EagerBlobMixin(object):
 
     @property
     def is_dynamic(self):
-        return self.blob_object_.is_dynamic
+        return self.blob_object_.op_arg_blob_attr.is_dynamic
 
     @property
     def disable_boxing(self):

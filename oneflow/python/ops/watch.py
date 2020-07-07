@@ -66,7 +66,7 @@ def LazyWatch(blob_watched, handler_or_prompt=None):
             blob_watched.sub_consistent_blob_list, handlers
         ):
             assert isinstance(consistent_blob, ConsistentBlob)
-            Watch(consistent_blob, sub_handler)
+            LazyWatch(consistent_blob, sub_handler)
     else:
         raise NotImplementedError
 

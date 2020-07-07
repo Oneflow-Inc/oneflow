@@ -7,6 +7,7 @@ import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.op_arg_util as op_arg_util
+import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.lib.core.high_order_bool as high_order_bool
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -524,7 +525,7 @@ def ConstructConcatSplitBoxingOpConf(
     op_conf.boxing_conf.split_box.axis = out_axis
     shape = produced_blob_object.op_arg_blob_attr.shape
     op_conf.boxing_conf.split_box.part_num.extend(
-        BalancedSplit(shape[out_axis], out_parallel_num)
+        balanced_splitter.BalancedPartNums(shape[out_axis], out_parallel_num)
     )
     return c_api_util.GetOpAttribute4OpConf(op_conf)
 
@@ -732,8 +733,3 @@ def _GetEagerNcclAllReduce(parallel_conf):
     op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
     return c_api_util.GetOpAttribute4OpConf(op_conf)
 
-
-def BalancedSplit(total, part_size):
-    base = int(total / part_size)
-    remainder = total % part_size
-    return [base + int(i < remainder) for i in range(part_size)]

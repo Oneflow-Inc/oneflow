@@ -2,7 +2,9 @@ from __future__ import absolute_import
 
 import oneflow
 import oneflow.python.framework.input_blob_def as input_blob_def
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.python_callback as python_callback
+import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
@@ -12,6 +14,7 @@ import oneflow.python.eager.object as object_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import numpy
+from functools import reduce
 
 
 def AsyncPush(session, job_func, *arg):
@@ -72,16 +75,15 @@ def _MakeReleaser4InputBlobObject(lbi, rank):
 
     return ReleaseInputBlobObject
 
-
 def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
     _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_ndarray)
     arg_blob_object, lbi = _MakeInputBlobObject(arg_blob_def)
     physical_blob_objects = _GetPhysicalBlobObjects(arg_blob_object, lbi)
+    feed_ctx = FeedContext(arg_blob_object.op_arg_parallel_attr, arg_ndarray)
     for i, physical_blob_object in enumerate(physical_blob_objects):
         arg_blob_object.add_releaser(_MakeReleaser4InputBlobObject(lbi, i))
-        _FeedValueToInputPhysicalBlob(
-            arg_blob_def, physical_blob_object, arg_ndarray, i
-        )
+        feed_ctx.set_rank(i)
+        _FeedValueToInputPhysicalBlob(feed_ctx, arg_blob_def, physical_blob_object)
     blob_class = None
     if isinstance(arg_blob_def, input_blob_def.FixedTensorDef):
         blob_class = remote_blob_util.EagerConsistentBlob
@@ -100,7 +102,8 @@ def _MakeInputBlobObject(arg_blob_def):
 
     def BuildInputInstruction(builder):
         op_attribute = compile_context.CurJobAddOp(input_op_conf)
-        parallel_conf = oneflow.placement.current_scope().default_parallel_conf
+        scope = oneflow.scope.current_scope()
+        parallel_conf = scope.device_parallel_desc_symbol.parallel_conf
         builder.StatelessCall(
             op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
         )
@@ -139,18 +142,70 @@ def _MakeInputOpConfAndRetLbi(arg_blob_def):
     return op_conf, lbi
 
 
-def _FeedValueToInputPhysicalBlob(blob_def, blob_object, arg_ndarray, rank):
+class FeedContext(object):
+    def __init__(self, op_arg_parallel_attr, arg_ndarray, rank = 0):
+        self.op_arg_parallel_attr_ = op_arg_parallel_attr
+        self.arg_ndarray_ = arg_ndarray
+        self.rank_ = rank
+        # balanced_range is used in split_parallel
+        self.balanced_range_ = None
+
+    def set_rank(self, rank):
+        self.rank_ = rank
+
+    def GetFixedTensor(self, logical_shape):
+        assert isinstance(self.arg_ndarray_, numpy.ndarray)
+        assert self.arg_ndarray_.shape == logical_shape, "%s v.s. %s"%(
+                self.arg_ndarray_.shape, logical_shape)
+        sbp_parallel = self.op_arg_parallel_attr_.sbp_parallel
+        parallel_num = self.op_arg_parallel_attr_.parallel_desc_symbol.parallel_num
+        if sbp_parallel.HasField("broadcast_parallel") or parallel_num == 1:
+            return self.arg_ndarray_
+        elif sbp_parallel.HasField("split_parallel"):
+            axis = sbp_parallel.split_parallel.axis
+            start, end = self._GetBalancedRanges(logical_shape[axis])[self.rank_]
+            slc = [slice(None)] * len(logical_shape)
+            slc[axis] = slice(start, end)
+            ndarray = self.arg_ndarray_[tuple(slc)]
+            return ndarray
+        else:
+            raise NotImplementedError
+
+    def _GetBalancedRanges(self, dim):
+        parallel_num = self.op_arg_parallel_attr_.parallel_desc_symbol.parallel_num
+        if self.balanced_range_ is None:
+            self.balanced_range_ = balanced_splitter.BalancedRanges(dim, parallel_num)
+        return self.balanced_range_
+
+    def GetMirroredTensor(self, static_shape):
+        capacity = reduce(lambda x, y: x * y, static_shape, 1)
+        assert isinstance(self.arg_ndarray_, (list, tuple))
+        parallel_num = self.op_arg_parallel_attr_.parallel_desc_symbol.parallel_num
+        assert len(self.arg_ndarray_) == parallel_num
+        assert all(isinstance(a, numpy.ndarray) for a in self.arg_ndarray_)
+        assert self.rank_ >= 0
+        assert self.rank_ < parallel_num
+        ndarray = self.arg_ndarray_[self.rank_]
+        elem_cnt = reduce(lambda x, y: x * y, ndarray.shape, 1)
+        assert elem_cnt <= capacity, "%s v.s. %s"%(elem_cnt, capacity)
+        return ndarray
+
+def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
     assert isinstance(blob_def, input_blob_def.ArgBlobDef)
     assert isinstance(blob_object, object_util.BlobObject)
 
     if isinstance(blob_def, input_blob_def.FixedTensorDef):
-        assert isinstance(arg_ndarray, numpy.ndarray)
 
         def FeedBody(ofblob):
-            assert ofblob.shape == arg_ndarray.shape, "%s v.s. %s"%(
-                ofblob.shape, arg_ndarray.shape
+            ndarray = feed_ctx.GetFixedTensor(blob_def.shape)
+            dtype = dtype_util.convert_of_dtype_to_numpy_dtype(ofblob.dtype)
+            assert ndarray.dtype == dtype, "%s v.s. %s"%(
+                ndarray.dtype, dtype
             )
-            if ofblob.CopyFromNdarray(arg_ndarray) is False:
+            assert ndarray.shape == ofblob.static_shape, "%s v.s. %s"%(
+                    ndarray.shape, ofblob.static_shape
+            )
+            if ofblob.CopyFromNdarray(ndarray) is False:
                 raise ValueError
 
         def BuildFeedInstruction(builder):
@@ -160,23 +215,18 @@ def _FeedValueToInputPhysicalBlob(blob_def, blob_object, arg_ndarray, rank):
         python_callback.DeleteRegisteredCallback(FeedBody)
 
     elif isinstance(blob_def, input_blob_def.MirroredTensorDef):
-        assert isinstance(arg_ndarray, (list, tuple))
-        op_arg_parallel_num = (
-            blob_object.op_arg_parallel_attr.parallel_desc_symbol.parallel_num
-        )
-        assert len(arg_ndarray) == 1 or len(arg_ndarray) == op_arg_parallel_num
-        assert all(isinstance(a, numpy.ndarray) for a in arg_ndarray)
-        assert rank >= 0 and rank < op_arg_parallel_num
 
         def FeedHeader(ofblob):
-            ndarray = arg_ndarray[0] if len(arg_ndarray) == 1 else arg_ndarray[rank]
+            ndarray = feed_ctx.GetMirroredTensor(ofblob.static_shape)
             assert isinstance(ndarray, numpy.ndarray)
             ofblob.set_shape(ndarray.shape)
 
         def FeedBody(ofblob):
-            value = arg_ndarray[0] if len(arg_ndarray) == 1 else arg_ndarray[rank]
-            assert isinstance(value, numpy.ndarray)
-            if ofblob.CopyFromNdarray(value) is False:
+            ndarray = feed_ctx.GetMirroredTensor(ofblob.static_shape)
+            assert isinstance(ndarray, numpy.ndarray)
+            dtype = dtype_util.convert_of_dtype_to_numpy_dtype(ofblob.dtype)
+            assert ndarray.dtype == dtype, "%s v.s. %s"%(ndarray.dtype, dtype)
+            if ofblob.CopyFromNdarray(ndarray) is False:
                 raise ValueError
 
         def BuildFeedInstruction(builder):
