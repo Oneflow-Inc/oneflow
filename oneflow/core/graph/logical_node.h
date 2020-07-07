@@ -191,12 +191,6 @@ DECLARE_NAIVE_LOGICAL_NODE(DistributeSplitLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
 
-class MdDiffAccLogicalNode final : public LogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(MdDiffAccLogicalNode);
-  bool MayConsumeModelDiff() const override { return true; }
-};
-
 class ReduceLogicalNode : public LogicalNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceLogicalNode);
