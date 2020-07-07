@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from oneflow.python.eager.symbol import Symbol
-import oneflow.python.eager.symbol_cache as symbol_cache
+import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.core.job.scope_pb2 as scope_pb
 import collections
@@ -12,13 +12,13 @@ class ScopeSymbol(Symbol):
     def __init__(self, symbol_id, scope_proto, parent_scope_symbol=None):
         Symbol.__init__(self, symbol_id, scope_proto)
         self.parent_scope_symbol_ = parent_scope_symbol
-        self.job_desc_symbol_ = symbol_cache.GetSymbol4Id(
+        self.job_desc_symbol_ = symbol_storage.GetSymbol4Id(
             scope_proto.job_desc_symbol_id
         )
-        self.device_parallel_desc_symbol_ = symbol_cache.GetSymbol4Id(
+        self.device_parallel_desc_symbol_ = symbol_storage.GetSymbol4Id(
             scope_proto.device_parallel_desc_symbol_id
         )
-        self.host_parallel_desc_symbol_ = symbol_cache.GetSymbol4Id(
+        self.host_parallel_desc_symbol_ = symbol_storage.GetSymbol4Id(
             scope_proto.host_parallel_desc_symbol_id
         )
 
