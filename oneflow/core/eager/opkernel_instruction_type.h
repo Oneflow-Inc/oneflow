@@ -56,7 +56,7 @@ class SystemStatelessCallOpKernelInstructionType : public vm::InstructionType {
   virtual const char* device_tag() const = 0;
 };
 
-class WatchBlobHeaderInstructionType : public vm::InstructionType {
+class FetchBlobHeaderInstructionType : public vm::InstructionType {
  public:
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override {
@@ -64,14 +64,14 @@ class WatchBlobHeaderInstructionType : public vm::InstructionType {
   }
 
  protected:
-  WatchBlobHeaderInstructionType() = default;
-  virtual ~WatchBlobHeaderInstructionType() = default;
+  FetchBlobHeaderInstructionType() = default;
+  virtual ~FetchBlobHeaderInstructionType() = default;
 
  private:
   virtual const char* device_tag() const = 0;
 };
 
-class WatchBlobBodyInstructionType : public vm::InstructionType {
+class FetchBlobBodyInstructionType : public vm::InstructionType {
  public:
   void Infer(vm::Instruction* instruction) const override {
     // do nothing
@@ -79,8 +79,8 @@ class WatchBlobBodyInstructionType : public vm::InstructionType {
   void Compute(vm::Instruction* instruction) const override;
 
  protected:
-  WatchBlobBodyInstructionType() = default;
-  virtual ~WatchBlobBodyInstructionType() = default;
+  FetchBlobBodyInstructionType() = default;
+  virtual ~FetchBlobBodyInstructionType() = default;
 
  private:
   virtual const char* device_tag() const = 0;

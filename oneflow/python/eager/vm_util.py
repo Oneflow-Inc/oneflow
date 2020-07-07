@@ -214,11 +214,11 @@ class InstructionsBuilder(object):
         self._TryClearObject(blob_object)
         self._DeleteObject(blob_object)
 
-    def WatchBlobHeader(self, blob_object, callback):
-        return self._WatchBlob("WatchBlobHeader", blob_object, callback)
+    def FetchBlobHeader(self, blob_object, callback):
+        return self._FetchBlob("FetchBlobHeader", blob_object, callback)
 
-    def WatchBlobBody(self, blob_object, callback):
-        return self._WatchBlob("WatchBlobBody", blob_object, callback)
+    def FetchBlobBody(self, blob_object, callback):
+        return self._FetchBlob("FetchBlobBody", blob_object, callback)
 
     def PackPhysicalBlobsToLogicalBlob(
         self, physical_blob_objects, op_arg_parallel_attr, op_arg_blob_attr
@@ -651,7 +651,7 @@ class InstructionsBuilder(object):
         eager_symbol.op_conf_symbol.CopyFrom(op_conf)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
-    def _WatchBlob(self, instruction_name, blob_object, fetcher):
+    def _FetchBlob(self, instruction_name, blob_object, fetcher):
         unique_callback_id = python_callback.GetIdForRegisteredCallback(fetcher)
         instruction = instr_util.InstructionProto()
         device_tag = blob_object.parallel_desc_symbol.device_tag

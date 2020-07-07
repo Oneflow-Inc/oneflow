@@ -519,12 +519,12 @@ void FeedOrFetchBlob(vm::Instruction* instruction) {
   Global<ForeignCallback>::Get()->OfBlobCall(args->unique_callback_id(), of_blob_ptr);
 }
 
-void WatchBlobHeaderInstructionType::Infer(vm::Instruction* instruction) const {
-  FeedOrFetchBlob<WatchBlobInstrOperand>(instruction);
+void FetchBlobHeaderInstructionType::Infer(vm::Instruction* instruction) const {
+  FeedOrFetchBlob<FetchBlobInstrOperand>(instruction);
 }
 
-void WatchBlobBodyInstructionType::Compute(vm::Instruction* instruction) const {
-  FeedOrFetchBlob<WatchBlobInstrOperand>(instruction);
+void FetchBlobBodyInstructionType::Compute(vm::Instruction* instruction) const {
+  FeedOrFetchBlob<FetchBlobInstrOperand>(instruction);
 }
 
 void FeedBlobInstructionType::Compute(vm::Instruction* instruction) const {

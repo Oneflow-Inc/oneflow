@@ -61,7 +61,7 @@ class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 def FetchTensorBlobAsNumpyList(parallel_size, blob_object):
     def AsyncFetchBlobBody(Yield):
         fetcher = _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield)
-        vm_util.PhysicalRun(lambda builder: builder.WatchBlobBody(blob_object, fetcher))
+        vm_util.PhysicalRun(lambda builder: builder.FetchBlobBody(blob_object, fetcher))
         python_callback.DeleteRegisteredCallback(fetcher)
 
     return async_util.Await(parallel_size, AsyncFetchBlobBody)
@@ -81,7 +81,7 @@ def _FetchBlobHeader(blob_object):
     def AsyncFetchBlobHeader(Yield):
         fetcher = _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield)
         vm_util.PhysicalRun(
-            lambda builder: builder.WatchBlobHeader(blob_object, fetcher)
+            lambda builder: builder.FetchBlobHeader(blob_object, fetcher)
         )
         python_callback.DeleteRegisteredCallback(fetcher)
 

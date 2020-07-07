@@ -90,29 +90,29 @@ class CudaCopyD2HSystemStatelessCallOpKernelInstructionType final
 COMMAND(vm::RegisterInstructionType<CudaCopyD2HSystemStatelessCallOpKernelInstructionType>(
     "gpu.copy_d2h.SystemStatelessCallOpKernel"));
 
-class GpuWatchBlobHeaderInstructionType final : public WatchBlobHeaderInstructionType {
+class GpuFetchBlobHeaderInstructionType final : public FetchBlobHeaderInstructionType {
  public:
-  GpuWatchBlobHeaderInstructionType() = default;
-  ~GpuWatchBlobHeaderInstructionType() override = default;
+  GpuFetchBlobHeaderInstructionType() = default;
+  ~GpuFetchBlobHeaderInstructionType() override = default;
 
   using stream_type = vm::CudaStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<GpuWatchBlobHeaderInstructionType>("gpu.WatchBlobHeader"));
+COMMAND(vm::RegisterInstructionType<GpuFetchBlobHeaderInstructionType>("gpu.FetchBlobHeader"));
 
-class GpuWatchBlobBodyInstructionType final : public WatchBlobBodyInstructionType {
+class GpuFetchBlobBodyInstructionType final : public FetchBlobBodyInstructionType {
  public:
-  GpuWatchBlobBodyInstructionType() = default;
-  ~GpuWatchBlobBodyInstructionType() override = default;
+  GpuFetchBlobBodyInstructionType() = default;
+  ~GpuFetchBlobBodyInstructionType() override = default;
 
   using stream_type = vm::CudaStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<GpuWatchBlobBodyInstructionType>("gpu.WatchBlobBody"));
+COMMAND(vm::RegisterInstructionType<GpuFetchBlobBodyInstructionType>("gpu.FetchBlobBody"));
 
 class GpuFeedBlobInstructionType final : public FeedBlobInstructionType {
  public:

@@ -53,10 +53,10 @@ FLAT_MSG_VIEW_BEGIN(StatelessCallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::Mut2Operand, mut2_output_blob);
 FLAT_MSG_VIEW_END(StatelessCallOpKernelInstrOperand);
 
-FLAT_MSG_VIEW_BEGIN(WatchBlobInstrOperand);
+FLAT_MSG_VIEW_BEGIN(FetchBlobInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstOperand, blob);
   FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
-FLAT_MSG_VIEW_END(WatchBlobInstrOperand);
+FLAT_MSG_VIEW_END(FetchBlobInstrOperand);
 
 FLAT_MSG_VIEW_BEGIN(FeedBlobInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::Mut2Operand, blob);
