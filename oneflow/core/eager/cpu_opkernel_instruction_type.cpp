@@ -77,5 +77,17 @@ class CpuWatchBlobBodyInstructionType final : public WatchBlobBodyInstructionTyp
 };
 COMMAND(vm::RegisterInstructionType<CpuWatchBlobBodyInstructionType>("cpu.WatchBlobBody"));
 
+class CpuFeedBlobInstructionType final : public FeedBlobInstructionType {
+ public:
+  CpuFeedBlobInstructionType() = default;
+  ~CpuFeedBlobInstructionType() override = default;
+
+  using stream_type = vm::CpuStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<CpuFeedBlobInstructionType>("cpu.FeedBlob"));
+
 }  // namespace eager
 }  // namespace oneflow

@@ -114,5 +114,17 @@ class GpuWatchBlobBodyInstructionType final : public WatchBlobBodyInstructionTyp
 };
 COMMAND(vm::RegisterInstructionType<GpuWatchBlobBodyInstructionType>("gpu.WatchBlobBody"));
 
+class GpuFeedBlobInstructionType final : public FeedBlobInstructionType {
+ public:
+  GpuFeedBlobInstructionType() = default;
+  ~GpuFeedBlobInstructionType() override = default;
+
+  using stream_type = vm::CudaStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<GpuFeedBlobInstructionType>("gpu.FeedBlob"));
+
 }  // namespace eager
 }  // namespace oneflow

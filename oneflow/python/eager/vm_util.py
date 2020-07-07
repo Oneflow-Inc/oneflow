@@ -657,7 +657,17 @@ class InstructionsBuilder(object):
         device_tag = blob_object.parallel_desc_symbol.device_tag
         instruction.instr_type_name = "%s.%s" % (device_tag, instruction_name)
         instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
-        instruction.operand.append(_MutOperand(blob_object.object_id))
+        instruction.operand.append(_ConstOperand(blob_object.object_id))
+        instruction.operand.append(_Int64Operand(unique_callback_id))
+        self.instruction_list_.instruction.append(instruction)
+
+    def FeedBlob(self, blob_object, feeder):
+        unique_callback_id = python_callback.GetIdForRegisteredCallback(feeder)
+        instruction = instr_util.InstructionProto()
+        device_tag = blob_object.parallel_desc_symbol.device_tag
+        instruction.instr_type_name = "%s.%s" % (device_tag, "FeedBlob")
+        instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
+        instruction.operand.append(_Mut2Operand(blob_object.object_id))
         instruction.operand.append(_Int64Operand(unique_callback_id))
         self.instruction_list_.instruction.append(instruction)
 

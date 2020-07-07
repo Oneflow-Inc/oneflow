@@ -86,6 +86,21 @@ class WatchBlobBodyInstructionType : public vm::InstructionType {
   virtual const char* device_tag() const = 0;
 };
 
+class FeedBlobInstructionType : public vm::InstructionType {
+ public:
+  void Infer(vm::Instruction* instruction) const override {
+    // do nothing
+  }
+  void Compute(vm::Instruction* instruction) const override;
+
+ protected:
+  FeedBlobInstructionType() = default;
+  virtual ~FeedBlobInstructionType() = default;
+
+ private:
+  virtual const char* device_tag() const = 0;
+};
+
 }  // namespace eager
 }  // namespace oneflow
 

@@ -508,21 +508,27 @@ void SystemStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instru
       << PbMessage2TxtString(instruction->parallel_desc()->parallel_conf());
 }
 
-void WatchBlob(vm::Instruction* instruction) {
-  FlatMsgView<WatchBlobInstrOperand> args(instruction->instr_msg().operand());
+template<typename T>
+void FeedOrFetchBlob(vm::Instruction* instruction) {
+  FlatMsgView<T> args(instruction->instr_msg().operand());
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  auto* blob_object = instruction->mut_operand_type(args->blob())->Mut<BlobObject>();
+  auto* rw_mutext_blob = instruction->mut_operand_type(args->blob());
+  auto* blob_object = rw_mutext_blob->template Mut<BlobObject>();
   OfBlob of_blob(device_ctx, blob_object->mut_blob());
   int64_t of_blob_ptr = reinterpret_cast<int64_t>(&of_blob);
   Global<ForeignCallback>::Get()->OfBlobCall(args->unique_callback_id(), of_blob_ptr);
 }
 
 void WatchBlobHeaderInstructionType::Infer(vm::Instruction* instruction) const {
-  WatchBlob(instruction);
+  FeedOrFetchBlob<WatchBlobInstrOperand>(instruction);
 }
 
 void WatchBlobBodyInstructionType::Compute(vm::Instruction* instruction) const {
-  WatchBlob(instruction);
+  FeedOrFetchBlob<WatchBlobInstrOperand>(instruction);
+}
+
+void FeedBlobInstructionType::Compute(vm::Instruction* instruction) const {
+  FeedOrFetchBlob<FeedBlobInstrOperand>(instruction);
 }
 
 }  // namespace eager

@@ -209,17 +209,12 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
                 raise ValueError
 
         def BuildFeedInstruction(builder):
-            builder.WatchBlobBody(blob_object, FeedBody)
+            builder.FeedBlob(blob_object, FeedBody)
 
         vm_util.PhysicalRun(BuildFeedInstruction)
         python_callback.DeleteRegisteredCallback(FeedBody)
 
     elif isinstance(blob_def, input_blob_def.MirroredTensorDef):
-
-        def FeedHeader(ofblob):
-            ndarray = feed_ctx.GetMirroredTensor(ofblob.static_shape)
-            assert isinstance(ndarray, numpy.ndarray)
-            ofblob.set_shape(ndarray.shape)
 
         def FeedBody(ofblob):
             ndarray = feed_ctx.GetMirroredTensor(ofblob.static_shape)
@@ -230,8 +225,7 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
                 raise ValueError
 
         def BuildFeedInstruction(builder):
-            builder.WatchBlobHeader(blob_object, FeedHeader)
-            builder.WatchBlobBody(blob_object, FeedBody)
+            builder.FeedBlob(blob_object, FeedBlob)
 
         vm_util.PhysicalRun(BuildFeedInstruction)
         python_callback.DeleteRegisteredCallback(FeedHeader)

@@ -54,9 +54,14 @@ FLAT_MSG_VIEW_BEGIN(StatelessCallOpKernelInstrOperand);
 FLAT_MSG_VIEW_END(StatelessCallOpKernelInstrOperand);
 
 FLAT_MSG_VIEW_BEGIN(WatchBlobInstrOperand);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, blob);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstOperand, blob);
   FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
 FLAT_MSG_VIEW_END(WatchBlobInstrOperand);
+
+FLAT_MSG_VIEW_BEGIN(FeedBlobInstrOperand);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::Mut2Operand, blob);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
+FLAT_MSG_VIEW_END(FeedBlobInstrOperand);
 // clang-format on
 
 }  // namespace eager
