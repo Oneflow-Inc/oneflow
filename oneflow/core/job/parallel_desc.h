@@ -62,6 +62,7 @@ class ParallelDesc final {
   ParallelDesc() = default;
   void ClearUp();
   Maybe<void> SanityCheck();
+  Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
 
   DeviceType device_type_;
   ParallelConf parallel_conf_;

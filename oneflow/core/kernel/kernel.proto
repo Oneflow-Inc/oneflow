@@ -7,6 +7,7 @@ import "oneflow/core/common/dtype_signature.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/placement.proto";
+import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/register/blob_desc.proto";
 
@@ -126,6 +127,11 @@ message GatherMs0GradKernelConf {
   required DataType indices_data_type = 2;
 }
 
+message ModelIoV2KernelConf {
+  repeated TensorSliceViewProto slice_view = 1;
+  required ParallelContext parallel_ctx = 2;
+}
+
 message UserKernelConf {
   map<string, BlobDescProto> bn_in_op2blob_desc = 1;
   required ParallelContext parallel_ctx = 2;
@@ -220,6 +226,7 @@ message KernelConf {
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
     GatherMs0KernelConf gather_ms0_conf = 414;
     GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
+    ModelIoV2KernelConf model_io_v2_conf = 418;
     BroadcastToCompatibleWithKernelConf broadcast_to_compatible_with_conf = 428;
   }
 }

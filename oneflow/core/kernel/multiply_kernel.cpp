@@ -33,6 +33,6 @@ const PbMessage& MultiplyKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().multiply_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMultiplyConf, MultiplyKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMultiplyConf, MultiplyKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

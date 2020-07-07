@@ -311,17 +311,17 @@ def enable_eager_execution(val=True):
 
 
 @oneflow_export("enable_eager_execution")
-def api_enable_eager_execution(val=True):
+def api_enable_eager_execution(val: bool = True) -> None:
     return enable_if.unique([enable_eager_execution])(val)
 
 
 @oneflow_export("eager_execution_enabled")
-def api_eager_execution_enabled():
+def api_eager_execution_enabled() -> bool:
     return c_api_util.EagerExecutionEnabled()
 
 
 @oneflow_export("clear_default_session")
-def clear_default_session():
+def clear_default_session() -> None:
     r"""Clear the default session. All compiled OneFlow functions will be deleted.
 
     """
@@ -339,7 +339,7 @@ def current_scope():
 
 
 @oneflow_export("sync_default_session")
-def sync_default_session():
+def sync_default_session() -> None:
     r"""Synchronize the default session. Block until every synchronous OneFlow function and its callback finishes running.
 
     """
