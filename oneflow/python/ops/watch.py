@@ -5,6 +5,7 @@ import uuid
 import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.local_blob as local_blob_util
@@ -78,6 +79,24 @@ def WatchDiff(blob_watched, handler_or_prompt=None):
         blob_watched: a `Blob`
         handler_or_prompt: a function has an argument of a `Blob`
     """
+    api = enable_if.unique([EagerWatchDiff, LazyWatchDiff])
+    return api(blob_watched, handler_or_prompt)
+
+
+@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+def EagerWatchDiff(blob_watched, handler_or_prompt=None):
+    handler = _MakeHandler(handler_or_prompt)
+    handler_uuid = str(uuid.uuid1())
+    lbi_and_uuid = LbiAndDiffWatcherUuidPair()
+    lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
+    lbi_and_uuid.watcher_uuid = handler_uuid
+    c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
+    uuid2watch_handler = session_ctx.GetDefaultSession().uuid2watch_handler
+    uuid2watch_handler[handler_uuid] = lambda x: EagerWatch(x, handler_or_prompt)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def LazyWatchDiff(blob_watched, handler_or_prompt=None):
     handler = _MakeHandler(handler_or_prompt)
     if isinstance(blob_watched, ConsistentBlob):
         handler_uuid = str(uuid.uuid1())
@@ -92,7 +111,7 @@ def WatchDiff(blob_watched, handler_or_prompt=None):
             blob_watched.sub_consistent_blob_list, handlers
         ):
             assert isinstance(consistent_blob, ConsistentBlob)
-            WatchDiff(consistent_blob, sub_handler)
+            LazyWatchDiff(consistent_blob, sub_handler)
     else:
         raise NotImplementedError
 

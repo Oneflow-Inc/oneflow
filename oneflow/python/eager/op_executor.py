@@ -19,6 +19,8 @@ def Interpret(op_attribute, parallel_conf_str, blob_register):
     parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
     if op_attribute.op_conf.HasField("variable_conf"):
         return _FindOrCreateVarBlobObject(op_attribute, parallel_conf, blob_register)
+    if op_attribute.op_conf.HasField("foreign_watch_conf"):
+        return _Watch(op_attribute, parallel_conf, blob_register)
     return _NaiveInterpret(op_attribute, parallel_conf, blob_register)
 
 
@@ -52,6 +54,19 @@ def _FindOrCreateVarBlobObject(op_attribute, parallel_conf, blob_register):
     sess.StashVariableBlob4Job(job_name, op_attribute.op_conf.name, var_blob)
     return var_blob
 
+def _Watch(op_attribute, parallel_conf, blob_register):
+    lbi = op_attribute.arg_signature.bn_in_op2lbi["in"]
+    uuid = op_attribute.op_conf.foreign_watch_conf.handler_uuid
+    lbn = "%s/%s"%(lbi.op_name, lbi.blob_name)
+    in_blob_object = blob_register.GetObject4BlobName(lbn)
+    if in_blob_object.op_arg_parallel_attr.is_mirrored():
+        blob = remote_blob_util.EagerMirroredBlob(lbi, in_blob_object)
+    else:
+        blob = remote_blob_util.EagerConsistentBlob(lbi, in_blob_object)
+    uuid2watch_handler = session_ctx.GetDefaultSession().uuid2watch_handler
+    assert uuid in uuid2watch_handler
+    uuid2watch_handler[uuid](blob)
+    del uuid2watch_handler[uuid]
 
 def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
     def BuildInstruction(builder):

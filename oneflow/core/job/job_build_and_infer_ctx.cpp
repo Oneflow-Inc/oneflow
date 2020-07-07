@@ -922,6 +922,7 @@ Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   JUST(DoPass("AutoTrainStep"));
   JUST(DoPass("AutoLearningRate"));
   JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+  JUST(DoPass("AddLbiDiffWatcherOpConfs"));
   JUST(EagerRunOps(job(), &executed_op_names_, &ForeignCallback::EagerInterpretCompletedOp));
   return Maybe<void>::Ok();
 }
