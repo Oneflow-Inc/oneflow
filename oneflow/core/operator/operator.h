@@ -33,7 +33,7 @@ class Operator {
   virtual ~Operator() = default;
 
   //
-  void InitFromOpConf(const OperatorConf& op_conf);
+  void Init(const OperatorConf& op_conf, const JobDesc* job_desc);
   virtual void InitFromOpConf() = 0;
 
   virtual LogicalNode* NewProperLogicalNode() const;
@@ -300,9 +300,6 @@ class Operator {
     return op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi();
   }
 
-  friend std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc*);
-  void set_job_desc(const JobDesc* job_desc) { job_desc_ = job_desc; }
-
   virtual void EmplaceLbi2Obn(const LogicalBlobId& lbi, const std::string& obn);
   bool has_job_desc() const { return job_desc_ != nullptr; }
 
@@ -313,6 +310,8 @@ class Operator {
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
 std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn);
+
+bool IsCpuOnly(const OperatorConf& op_conf);
 
 struct OnlyCpuSupportPredicator {
   OnlyCpuSupportPredicator(bool only_cpu) : only_cpu_(only_cpu) {}

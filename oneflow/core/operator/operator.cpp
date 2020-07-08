@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/job/scope.h"
@@ -19,9 +20,19 @@ DataType GetDataTypeFromBnInOpVec(
   return DataType::kInvalidDataType;
 }
 
+std::shared_ptr<Operator> CheckAndConstructOp(const OperatorConf& op_conf, const JobDesc* job_desc) {
+  Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
+  if (IsCpuOnly(op_conf)) {
+    CHECK_EQ(op_conf.device_type(), DeviceType::kCPU);
+  }
+  rptr->Init(op_conf, job_desc);
+  return std::shared_ptr<Operator>(rptr);
+}
+
 }  // namespace
 
-void Operator::InitFromOpConf(const OperatorConf& op_conf) {
+void Operator::Init(const OperatorConf& op_conf, const JobDesc* conf_job_desc) {
+  job_desc_ = conf_job_desc;
   OperatorConf* this_op_conf = op_attribute_.mutable_op_conf();
   *this_op_conf = op_conf;
   if (has_job_desc() && job_desc().IsPredict()) { this_op_conf->set_trainable(false); }
@@ -509,25 +520,28 @@ std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn) {
   return GetFieldNameAndIndex4StrVal(bn);
 }
 
-bool IsOpOnlyCpuSupported(OperatorConf::OpTypeCase op_type_case) {
-  return *std::unique_ptr<OnlyCpuSupportPredicator>(NewObj<OnlyCpuSupportPredicator>(op_type_case));
-}
-
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc* job_desc) {
-  Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
-  if (IsOpOnlyCpuSupported(op_conf.op_type_case())) {
-    CHECK_EQ(op_conf.device_type(), DeviceType::kCPU);
-  }
-  rptr->set_job_desc(job_desc);
-  rptr->InitFromOpConf(op_conf);
-  return std::shared_ptr<Operator>(rptr);
+bool IsCpuOnly(const OperatorConf& op_conf) {
+  OperatorConf::OpTypeCase op_type_case = op_conf.op_type_case();
+  using CpuOnly = OnlyCpuSupportPredicator;
+  auto* ptr = NewObj<CpuOnly>(op_type_case);
+  CHECK(ptr != nullptr) << "op_conf\n" << op_conf.DebugString();
+  if (*std::unique_ptr<CpuOnly>(ptr)) { return true; }
+  if (!op_conf.has_user_conf()) { return false; }
+  auto* registration_val = user_op::LookUpInOpRegistry(op_conf.user_conf().op_type_name());
+  CHECK_NOTNULL(registration_val);
+  return registration_val->cpu_only_supported;
 }
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type,
                                       const JobDesc* job_desc) {
   OperatorConf dev_op_conf = op_conf;
   dev_op_conf.set_device_type(device_type);
-  return ConstructOp(dev_op_conf, job_desc);
+  return CheckAndConstructOp(dev_op_conf, job_desc);
+}
+
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc* job_desc) {
+  if (IsCpuOnly(op_conf)) { return ConstructOp(op_conf, DeviceType::kCPU, job_desc); }
+  return CheckAndConstructOp(op_conf, job_desc);
 }
 
 void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

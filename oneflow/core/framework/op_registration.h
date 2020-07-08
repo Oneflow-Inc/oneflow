@@ -32,6 +32,10 @@ using GetInputArgModifier =
 using InputArgModifyFn = std::function<void(GetInputArgModifier, const UserOpConfWrapper&)>;
 
 struct OpRegistrationVal {
+  OpRegistrationVal(): cpu_only_supported(false), same_output_regst_num(-1) {}
+  ~OpRegistrationVal() = default;
+  bool cpu_only_supported;
+  int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
   TensorDescInferFn tensor_desc_infer_fn;
@@ -40,8 +44,6 @@ struct OpRegistrationVal {
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistrationVal since it is more about
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;
-  bool cpu_only_supported = false;
-  int32_t same_output_regst_num = -1;
 };
 
 struct OpRegistryWrapper final {
