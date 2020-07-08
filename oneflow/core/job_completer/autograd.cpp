@@ -206,15 +206,16 @@ void ScaleModelDiffByDynamicLossInstanceNum(
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
-    OperatorConf broadcast_div_op_conf{};
-    broadcast_div_op_conf.set_name("System-ModelDiffScale-BroadcastDiv_" + NewUniqueId());
-    BroadcastDivOpConf* broadcast_div_conf = broadcast_div_op_conf.mutable_broadcast_div_conf();
-    broadcast_div_conf->set_a(GenLogicalBlobName(diff_lbi));
-    broadcast_div_conf->set_b(GenLogicalBlobName(total_loss_instance_num_lbi));
-    broadcast_div_conf->set_out("out");
-    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {broadcast_div_op_conf});
-    diff_lbi.set_op_name(broadcast_div_op_conf.name());
-    diff_lbi.set_blob_name(broadcast_div_conf->out());
+    auto scalar_div_op = user_op::UserOpConfWrapperBuilder(
+                             "System-ClipGradient-GlobalNorm-ScalarDivByTensor-" + NewUniqueId())
+                             .Op("scalar_div_by_tensor")
+                             .Input("x", GenLogicalBlobName(diff_lbi))
+                             .Input("scalar", GenLogicalBlobName(total_loss_instance_num_lbi))
+                             .Output("y")
+                             .Build();
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_div_op.op_conf()});
+    diff_lbi.set_op_name(scalar_div_op.op_name());
+    diff_lbi.set_blob_name(scalar_div_op.output("y", 0));
   }
 }
 
@@ -422,7 +423,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
     LogicalBlobId& diff_lbi = pair.second;
     auto scalar_mul_op = user_op::UserOpConfWrapperBuilder(
                              "System-ClipGradient-GlobalNorm-ScalarMul-" + NewUniqueId())
-                             .Op("scalar_sub_by_tensor")
+                             .Op("scalar_mul_by_tensor")
                              .Input("x", GenLogicalBlobName(diff_lbi))
                              .Input("scalar", gradient_scale_factor_lbn)
                              .Output("y")
