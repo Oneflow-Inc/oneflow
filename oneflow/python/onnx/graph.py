@@ -8,6 +8,7 @@ oneflow.python.onnx.graph - class to manage graph manipulation on top of onnx
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 import collections
 import copy

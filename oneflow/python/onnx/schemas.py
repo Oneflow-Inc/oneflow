@@ -8,14 +8,15 @@ oneflow.python.onnx.schema
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 import logging
 import copy
 from collections import defaultdict, OrderedDict
 from onnx import defs, helper, TensorProto, OperatorSetIdProto, shape_inference
 
-from . import constants
-from . import util
+from oneflow.python.onnx import constants
+from oneflow.python.onnx import util
 
 logger = logging.getLogger(__name__)
 

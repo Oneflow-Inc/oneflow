@@ -8,6 +8,7 @@ oneflow.python.onnx.oneflow.python.onnx - rewrite oneflow graph to onnx graph
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 import collections
 import sys
@@ -22,7 +23,7 @@ import oneflow
 import oneflow.python.onnx
 import oneflow.python.onnx.onnx_opset  # pylint: disable=unused-import
 from oneflow.python.onnx.graph import Graph
-from . import constants, schemas, util, handler, optimizer
+from oneflow.python.onnx import constants, schemas, util, handler, optimizer
 
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.c_api_util as c_api_util

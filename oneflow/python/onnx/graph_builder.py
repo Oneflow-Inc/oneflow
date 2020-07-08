@@ -5,6 +5,11 @@
 oneflow.python.onnx.graph_helper - class to help building graph, such as helping to make complex node
 """
 
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+
 import numpy as np
 import logging
 from oneflow.python.framework import id_util

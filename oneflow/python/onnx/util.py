@@ -8,6 +8,7 @@ oneflow.python.onnx.util - misc utilities for oneflow.python.onnx
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 import os
 import re
@@ -18,11 +19,11 @@ import six
 import numpy as np
 import oneflow.core.common.data_type_pb2 as data_type_pb2
 from oneflow.python.framework import id_util
+from oneflow.python.onnx import constants
 from google.protobuf import text_format
 import onnx
 from onnx import helper, onnx_pb, defs, numpy_helper
 
-from . import constants
 
 #
 #  mapping dtypes from oneflow to onnx
