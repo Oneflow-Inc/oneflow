@@ -1025,12 +1025,6 @@ message DotOpConf {
   required string out = 4;
 }
 
-message MultiplyOpConf {
-  required string in_0 = 1;
-  required string in_1 = 2;
-  required string out = 4;
-}
-
 enum Norm {
   L1 = 1;
   L2 = 2;
@@ -1843,7 +1837,6 @@ message OperatorConf {
     AddOpConf add_conf = 220;
     MatmulOpConf matmul_conf = 221;
     DotOpConf dot_conf = 222;
-    MultiplyOpConf multiply_conf = 223;
     MaximumOpConf maximum_conf = 224;
     SigmoidOpConf sigmoid_conf = 225;
     TanHOpConf tanh_conf = 226;
