@@ -1481,6 +1481,33 @@ message XrtLaunchOpConf {
   optional bool model_update = 9 [default = false];
 }
 
+message ModelInitV2OpConf {
+  required string ref = 1;
+  required string variable_op_name = 2;
+  required VariableOpConf original_variable_conf = 3;
+  required string out = 4;
+  required string tick = 5;
+}
+
+message ModelLoadV2OpConf {
+  required string path = 1;
+  required string ref = 2;
+  required string variable_op_name = 3;
+  required VariableOpConf original_variable_conf = 4;
+  required string out = 5;
+  required string tick = 6;
+}
+
+
+message ModelSaveV2OpConf {
+  required string path = 1;
+  required string in = 2;
+  required string variable_op_name = 3;
+  required VariableOpConf original_variable_conf = 4;
+  required string out = 5;
+  required string tick = 6;
+}
+
 message ParallelCastOpConf {
   required string in = 1;
   required string out = 2;
@@ -1806,6 +1833,9 @@ message OperatorConf {
     CopyOpConf copy_conf = 343;
     CastToMirroredOpConf cast_to_mirrored_conf = 344;
     CastFromMirroredOpConf cast_from_mirrored_conf = 345;
+    ModelInitV2OpConf model_init_v2_conf = 346;
+    ModelLoadV2OpConf model_load_v2_conf = 347;
+    ModelSaveV2OpConf model_save_v2_conf = 348;
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op
