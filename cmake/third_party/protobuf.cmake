@@ -1,10 +1,11 @@
 include (ExternalProject)
 
-set(PROTOBUF_INCLUDE_DIR ${THIRD_PARTY_DIR}/protobuf/include)
+set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
+
+set(PROTOBUF_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
 set(PROTOBUF_LIBRARY_DIR ${THIRD_PARTY_DIR}/protobuf/lib)
 set(PROTOBUF_BINARY_DIR ${THIRD_PARTY_DIR}/protobuf/bin)
 
-set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
 if(WITH_XLA)
   set(PROTOBUF_URL "https://storage.googleapis.com/mirror.tensorflow.org/github.com/protocolbuffers/protobuf/archive/310ba5ee72661c081129eb878c1bbcec936b20f0.tar.gz")
 else()
@@ -57,15 +58,6 @@ ExternalProject_Add(protobuf
         -DZLIB_ROOT:STRING=${ZLIB_INSTALL}
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
 )
-
-# put protobuf includes in the 'THIRD_PARTY_DIR'
-add_custom_target(protobuf_create_header_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTOBUF_INCLUDE_DIR}
-  DEPENDS protobuf)
-
-add_custom_target(protobuf_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROTOBUF_SRC_DIR} ${PROTOBUF_INCLUDE_DIR}
-  DEPENDS protobuf_create_header_dir)
 
 # put protobuf librarys in the 'THIRD_PARTY_DIR'
 add_custom_target(protobuf_create_library_dir

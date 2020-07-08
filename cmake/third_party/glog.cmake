@@ -33,7 +33,7 @@ set (GLOG_PUBLIC_H
 if(THIRD_PARTY)
 
 ExternalProject_Add(glog
-    DEPENDS gflags_copy_headers_to_destination gflags_copy_libs_to_destination
+    DEPENDS gflags_copy_libs_to_destination
     PREFIX glog
     URL ${glog_URL}
     UPDATE_COMMAND ""

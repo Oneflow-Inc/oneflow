@@ -1,9 +1,8 @@
 include (ExternalProject)
 
-set(GFLAGS_INCLUDE_DIR ${THIRD_PARTY_DIR}/gflags/include)
+set(GFLAGS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include)
 set(GFLAGS_LIBRARY_DIR ${THIRD_PARTY_DIR}/gflags/lib)
 
-set(gflags_HEADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include)
 set(gflags_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/lib)
 set(gflags_URL ${THIRD_PARTY_SUBMODULE_DIR}/gflags/src/gflags)
 
@@ -43,15 +42,6 @@ ExternalProject_Add(gflags
         -DCMAKE_CXX_FLAGS:STRING=-fPIC
         -DGFLAGS_NAMESPACE:STRING=gflags
 )
-
-
-add_custom_target(gflags_create_header_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${GFLAGS_INCLUDE_DIR}
-  DEPENDS gflags)
-
-add_custom_target(gflags_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${gflags_HEADERS_DIR} ${GFLAGS_INCLUDE_DIR}
-    DEPENDS gflags_create_header_dir)
 
 add_custom_target(gflags_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GFLAGS_LIBRARY_DIR}
