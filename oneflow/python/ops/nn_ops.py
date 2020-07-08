@@ -358,49 +358,24 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     Analogous to `tf.nn.max_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool2d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") != "False":
-        op = (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("MaxPool2D_")
-            )
-            .Op("max_pool_2d")
-            .Input("x", [input])
-            .Output("y")
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("MaxPool2D_")
         )
-        assert padding in ["VALID", "SAME"]
-        op.Attr("padding", padding.lower(), "AttrTypeString")
-        assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
-        data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-        op.Attr("data_format", data_format, "AttrTypeString")
-        pool_size = _GetSequence(ksize, 2, "ksize")
-        op.Attr("pool_size", pool_size, "AttrTypeListInt32")
-        strides = _GetSequence(strides, 2, "strides")
-        op.Attr("strides", strides, "AttrTypeListInt32")
-        return op.Build().InferAndTryRun().RemoteBlobList()[0]
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("MaxPool2D_"),
-        )
-        setattr(op_conf.max_pooling_2d_conf, "in", input.unique_name)
-        setattr(op_conf.max_pooling_2d_conf, "out", "out")
-        op_conf.max_pooling_2d_conf.pool_size[:] = _GetSequence(ksize, 2, "ksize")
-        op_conf.max_pooling_2d_conf.strides[:] = _GetSequence(strides, 2, "strides")
-        assert padding in ["VALID", "SAME"]
-        setattr(op_conf.max_pooling_2d_conf, "padding", padding)
-        assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
-        setattr(
-            op_conf.max_pooling_2d_conf,
-            "data_format",
-            "channels_last" if data_format == "NHWC" else "channels_first",
-        )
-        compile_context.CurJobAddOp(op_conf)
-        out_lbi = logical_blob_id_util.LogicalBlobId()
-        setattr(out_lbi, "op_name", op_conf.name)
-        setattr(out_lbi, "blob_name", "out")
-        return remote_blob_util.RemoteBlob(out_lbi)
+        .Op("max_pool_2d")
+        .Input("x", [input])
+        .Output("y")
+    )
+    assert padding in ["VALID", "SAME"]
+    op.Attr("padding", padding.lower(), "AttrTypeString")
+    assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
+    data_format = "channels_last" if data_format == "NHWC" else "channels_first"
+    op.Attr("data_format", data_format, "AttrTypeString")
+    pool_size = _GetSequence(ksize, 2, "ksize")
+    op.Attr("pool_size", pool_size, "AttrTypeListInt32")
+    strides = _GetSequence(strides, 2, "strides")
+    op.Attr("strides", strides, "AttrTypeListInt32")
+    return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("nn.avg_pool2d")
@@ -409,49 +384,24 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     Analogous to `tf.nn.avg_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool2d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") != "False":
-        op = (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("AvgPool2D_")
-            )
-            .Op("avg_pool_2d")
-            .Input("x", [input])
-            .Output("y")
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("AvgPool2D_")
         )
-        assert padding in ["VALID", "SAME"]
-        op.Attr("padding", padding.lower(), "AttrTypeString")
-        assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
-        data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-        op.Attr("data_format", data_format, "AttrTypeString")
-        pool_size = _GetSequence(ksize, 2, "ksize")
-        op.Attr("pool_size", pool_size, "AttrTypeListInt32")
-        strides = _GetSequence(strides, 2, "strides")
-        op.Attr("strides", strides, "AttrTypeListInt32")
-        return op.Build().InferAndTryRun().RemoteBlobList()[0]
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("AveragePool2D_"),
-        )
-        setattr(op_conf.average_pooling_2d_conf, "in", input.unique_name)
-        setattr(op_conf.average_pooling_2d_conf, "out", "out")
-        op_conf.average_pooling_2d_conf.pool_size[:] = _GetSequence(ksize, 2, "ksize")
-        op_conf.average_pooling_2d_conf.strides[:] = _GetSequence(strides, 2, "strides")
-        assert padding in ["VALID", "SAME"]
-        setattr(op_conf.average_pooling_2d_conf, "padding", padding)
-        assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
-        setattr(
-            op_conf.average_pooling_2d_conf,
-            "data_format",
-            "channels_last" if data_format == "NHWC" else "channels_first",
-        )
-        compile_context.CurJobAddOp(op_conf)
-        out_lbi = logical_blob_id_util.LogicalBlobId()
-        setattr(out_lbi, "op_name", op_conf.name)
-        setattr(out_lbi, "blob_name", "out")
-        return remote_blob_util.RemoteBlob(out_lbi)
+        .Op("avg_pool_2d")
+        .Input("x", [input])
+        .Output("y")
+    )
+    assert padding in ["VALID", "SAME"]
+    op.Attr("padding", padding.lower(), "AttrTypeString")
+    assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
+    data_format = "channels_last" if data_format == "NHWC" else "channels_first"
+    op.Attr("data_format", data_format, "AttrTypeString")
+    pool_size = _GetSequence(ksize, 2, "ksize")
+    op.Attr("pool_size", pool_size, "AttrTypeListInt32")
+    strides = _GetSequence(strides, 2, "strides")
+    op.Attr("strides", strides, "AttrTypeListInt32")
+    return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("nn.max_pool3d")
@@ -460,49 +410,24 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     Analogous to `tf.nn.max_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool3d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") != "False":
-        op = (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("MaxPool3D_")
-            )
-            .Op("max_pool_3d")
-            .Input("x", [input])
-            .Output("y")
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("MaxPool3D_")
         )
-        assert padding in ["VALID", "SAME"]
-        op.Attr("padding", padding.lower(), "AttrTypeString")
-        assert data_format in ["NDHWC", "NCDHW"]
-        data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-        op.Attr("data_format", data_format, "AttrTypeString")
-        pool_size = _GetSequence(ksize, 3, "ksize")
-        op.Attr("pool_size", pool_size, "AttrTypeListInt32")
-        strides = _GetSequence(strides, 3, "strides")
-        op.Attr("strides", strides, "AttrTypeListInt32")
-        return op.Build().InferAndTryRun().RemoteBlobList()[0]
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("MaxPool3D_"),
-        )
-        setattr(op_conf.max_pooling_3d_conf, "in", input.unique_name)
-        setattr(op_conf.max_pooling_3d_conf, "out", "out")
-        op_conf.max_pooling_3d_conf.pool_size[:] = _GetSequence(ksize, 3, "ksize")
-        op_conf.max_pooling_3d_conf.strides[:] = _GetSequence(strides, 3, "strides")
-        assert padding in ["VALID", "SAME"]
-        setattr(op_conf.max_pooling_3d_conf, "padding", padding)
-        assert data_format in ["NDHWC", "NCDHW"]
-        setattr(
-            op_conf.max_pooling_3d_conf,
-            "data_format",
-            "channels_last" if data_format == "NDHWC" else "channels_first",
-        )
-        compile_context.CurJobAddOp(op_conf)
-        out_lbi = logical_blob_id_util.LogicalBlobId()
-        setattr(out_lbi, "op_name", op_conf.name)
-        setattr(out_lbi, "blob_name", "out")
-        return remote_blob_util.RemoteBlob(out_lbi)
+        .Op("max_pool_3d")
+        .Input("x", [input])
+        .Output("y")
+    )
+    assert padding in ["VALID", "SAME"]
+    op.Attr("padding", padding.lower(), "AttrTypeString")
+    assert data_format in ["NDHWC", "NCDHW"]
+    data_format = "channels_last" if data_format == "NHWC" else "channels_first"
+    op.Attr("data_format", data_format, "AttrTypeString")
+    pool_size = _GetSequence(ksize, 3, "ksize")
+    op.Attr("pool_size", pool_size, "AttrTypeListInt32")
+    strides = _GetSequence(strides, 3, "strides")
+    op.Attr("strides", strides, "AttrTypeListInt32")
+    return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("nn.avg_pool3d")
@@ -511,49 +436,24 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     Analogous to `tf.nn.avg_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool3d>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") != "False":
-        op = (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("AvgPool3D_")
-            )
-            .Op("avg_pool_3d")
-            .Input("x", [input])
-            .Output("y")
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("AvgPool3D_")
         )
-        assert padding in ["VALID", "SAME"]
-        op.Attr("padding", padding.lower(), "AttrTypeString")
-        assert data_format in ["NDHWC", "NCDHW"]
-        data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-        op.Attr("data_format", data_format, "AttrTypeString")
-        pool_size = _GetSequence(ksize, 3, "ksize")
-        op.Attr("pool_size", pool_size, "AttrTypeListInt32")
-        strides = _GetSequence(strides, 3, "strides")
-        op.Attr("strides", strides, "AttrTypeListInt32")
-        return op.Build().InferAndTryRun().RemoteBlobList()[0]
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("AveragePool3D_"),
-        )
-        setattr(op_conf.average_pooling_3d_conf, "in", input.unique_name)
-        setattr(op_conf.average_pooling_3d_conf, "out", "out")
-        op_conf.average_pooling_3d_conf.pool_size[:] = _GetSequence(ksize, 3, "ksize")
-        op_conf.average_pooling_3d_conf.strides[:] = _GetSequence(strides, 3, "strides")
-        assert padding in ["VALID", "SAME"]
-        setattr(op_conf.average_pooling_3d_conf, "padding", padding)
-        assert data_format in ["NDHWC", "NCDHW"]
-        setattr(
-            op_conf.average_pooling_3d_conf,
-            "data_format",
-            "channels_last" if data_format == "NDHWC" else "channels_first",
-        )
-        compile_context.CurJobAddOp(op_conf)
-        out_lbi = logical_blob_id_util.LogicalBlobId()
-        setattr(out_lbi, "op_name", op_conf.name)
-        setattr(out_lbi, "blob_name", "out")
-        return remote_blob_util.RemoteBlob(out_lbi)
+        .Op("avg_pool_3d")
+        .Input("x", [input])
+        .Output("y")
+    )
+    assert padding in ["VALID", "SAME"]
+    op.Attr("padding", padding.lower(), "AttrTypeString")
+    assert data_format in ["NDHWC", "NCDHW"]
+    data_format = "channels_last" if data_format == "NHWC" else "channels_first"
+    op.Attr("data_format", data_format, "AttrTypeString")
+    pool_size = _GetSequence(ksize, 3, "ksize")
+    op.Attr("pool_size", pool_size, "AttrTypeListInt32")
+    strides = _GetSequence(strides, 3, "strides")
+    op.Attr("strides", strides, "AttrTypeListInt32")
+    return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 def _softmax_need_transpose(x, axis):
