@@ -1212,16 +1212,6 @@ message BroadcastDivGradOpConf {
   optional string temp_storage = 5 [default = "temp_storage"];
 }
 
-message BiasAddOpConf {
-  // inputs
-  required string a = 1;
-  required string b = 2;
-  // output
-  required string out = 3;
-  // conf
-  required int32 axis = 4;
-}
-
 message DimSliceConf {
   optional int32 start = 1 [default = 0];
   optional int32 end = 2 [default = 0];
@@ -1857,7 +1847,6 @@ message OperatorConf {
     GatherOpConf gather_conf = 242;
     BatchGatherOpConf batch_gather_conf = 243;
     SliceOpConf slice_conf = 252;
-    BiasAddOpConf bias_add_conf = 253;
     LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
