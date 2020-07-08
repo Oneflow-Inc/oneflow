@@ -843,7 +843,7 @@ def sparse_softmax_cross_entropy_with_logits(
 
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")
 def sigmoid_cross_entropy_with_logits(
-    labels: remote_blob_util.blob_desc = None, 
+    labels: remote_blob_util.BlobDef = None, 
     logits: remote_blob_util.BlobDef = None, 
     name: str = None
 ) -> remote_blob_util.BlobDef:
@@ -1124,7 +1124,7 @@ def leaky_relu(
     x: remote_blob_util.BlobDef, 
     alpha: float = 0.2, 
     name: str = None
-) -> remote_blob_util.blob_desc:
+) -> remote_blob_util.BlobDef:
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("LeakyRelu_")
