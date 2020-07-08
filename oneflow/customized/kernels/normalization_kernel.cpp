@@ -50,7 +50,7 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
     int32_t n, c, h, w;
     cudnnTensorFormat_t format;
 
-    if (axis != 0 && x->shape().Count(axis + 1) == 1) {
+    if (axis != 0 && x->shape().Count(axis + 1) == 1 && !training) {
       n = x->shape().At(0);
       h = x->shape().Count(1, axis);
       w = 1;
