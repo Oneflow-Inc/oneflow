@@ -9,7 +9,7 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("name_scope", "experimental.name_scope", "deprecated.variable_scope")
 @contextmanager
-def name_scope(name):
+def name_scope(name: str) -> None:
     r"""Create a name scope. All variables within the name scope will have a prefix `[SCOPE NAME]-`. This is for convenience only and has no other effect on the system. 
     Usage::
 

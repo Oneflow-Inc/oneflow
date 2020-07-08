@@ -7,10 +7,13 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Union, Tuple, List, Optional, Sequence, Callable
 
 
 @oneflow_export("advanced.distribute_clone")
-def distribute_clone(x, name=None):
+def distribute_clone(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> Tuple[remote_blob_util.BlobDef]:
     if name is None:
         name = id_util.UniqueStr("DistributeClone_")
     op_conf = op_conf_util.OperatorConf()
@@ -32,7 +35,9 @@ def distribute_clone(x, name=None):
 
 
 @oneflow_export("advanced.distribute_add")
-def distribute_add(xs, name=None):
+def distribute_add(
+    xs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     assert oneflow.placement.current_scope().parallel_size == len(xs)
     if name is None:
         name = id_util.UniqueStr("DistributeAdd_")
@@ -50,7 +55,9 @@ def distribute_add(xs, name=None):
 
 
 @oneflow_export("advanced.distribute_split")
-def distribute_split(x, axis=0, name=None):
+def distribute_split(
+    x: remote_blob_util.BlobDef, axis: int = 0, name: Optional[str] = None
+) -> Tuple[remote_blob_util.BlobDef]:
     if name is None:
         name = id_util.UniqueStr("DistributeSplit_")
     op_conf = op_conf_util.OperatorConf()
@@ -73,7 +80,9 @@ def distribute_split(x, axis=0, name=None):
 
 
 @oneflow_export("advanced.distribute_concat")
-def distribute_concat(xs, axis=0, name=None):
+def distribute_concat(
+    xs: Sequence[remote_blob_util.BlobDef], axis: int = 0, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     assert oneflow.placement.current_scope().parallel_size == len(xs)
     if name is None:
         name = id_util.UniqueStr("DistributeConcat_")
@@ -92,7 +101,13 @@ def distribute_concat(xs, axis=0, name=None):
 
 
 @oneflow_export("advanced.distribute_map")
-def distribute_map(xs, f, axis=0):
+def distribute_map(
+    xs: Union[Sequence[remote_blob_util.BlobDef], remote_blob_util.BlobDef],
+    f: Callable[
+        [remote_blob_util.BlobDef, remote_blob_util.BlobDef], remote_blob_util.BlobDef
+    ],
+    axis: int = 0,
+) -> Tuple[remote_blob_util.BlobDef]:
     _AssertInputOrOutput(xs)
     if isinstance(xs, (list, tuple)) == False:
         xs = [xs]
