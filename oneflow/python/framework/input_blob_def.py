@@ -20,11 +20,7 @@ from functools import reduce
 
 
 class ArgBlobDef(blob_desc.BlobDesc):
-    def __init__(
-        self, shape, dtype, batch_axis, split_axis="same_with_batch_axis", name=None
-    ):
-        if split_axis == "same_with_batch_axis":
-            split_axis = batch_axis
+    def __init__(self, shape, dtype, batch_axis, name=None):
         lbi = lbi_util.LogicalBlobId()
         if name is None:
             name = id_util.UniqueStr("Input_")
@@ -38,7 +34,6 @@ class ArgBlobDef(blob_desc.BlobDesc):
         self.shape_ = shape
         self.dtype_ = dtype
         self.batch_axis_ = batch_axis
-        self.split_axis_ = split_axis
 
     @property
     def shape(self):
@@ -79,6 +74,9 @@ class ArgBlobDef(blob_desc.BlobDesc):
     def AddAndInferOp(self, op_conf):
         raise NotImplementedError
 
+    def EagerAddAndInferOp(self, op_conf):
+        raise NotImplementedError
+
     def CheckAndAsyncPush(self, session, arg_ndarray):
         self._CheckNdarray(arg_ndarray)
         self._AsyncPush(session, arg_ndarray)
@@ -89,24 +87,16 @@ class ArgBlobDef(blob_desc.BlobDesc):
     def _AsyncPush(self, session, arg_ndarray):
         raise NotImplementedError
 
+    def SetBatchAxisAndSplitAxis(self, interface_blob_conf):
+        raise NotImplementedError
+
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
         interface_blob_conf.data_type = self.dtype_
         interface_blob_conf.is_dynamic = self.is_dynamic
         interface_blob_conf.is_tensor_list = self.is_tensor_list
-        if type(self.batch_axis_) is int:
-            assert self.batch_axis_ >= 0
-            interface_blob_conf.batch_axis.value = self.batch_axis_
-        else:
-            assert self.batch_axis_ is None or self.batch_axis_ is False
-            interface_blob_conf.batch_axis.ClearField("value")
-        if type(self.split_axis_) is int:
-            assert self.split_axis_ >= 0
-            interface_blob_conf.split_axis.value = self.split_axis_
-        else:
-            assert self.split_axis_ is None or self.split_axis_ is False
-            interface_blob_conf.split_axis.ClearField("value")
+        self.SetBatchAxisAndSplitAxis(interface_blob_conf)
         return interface_blob_conf
 
 
@@ -129,25 +119,17 @@ class FixedTensorDef(ArgBlobDef):
     """
 
     def __init__(
-        self,
-        shape,
-        dtype=data_type_util.kFloat,
-        batch_axis=0,
-        split_axis="same_with_batch_axis",
-        name=None,
+        self, shape, dtype=data_type_util.kFloat, batch_axis=0, name=None,
     ):
         if type(batch_axis) is int:
             if batch_axis < 0:
                 batch_axis += len(shape)
             assert batch_axis >= 0
             assert batch_axis < len(shape)
+        else:
+            assert batch_axis is None
         ArgBlobDef.__init__(
-            self,
-            shape,
-            dtype=dtype,
-            batch_axis=batch_axis,
-            split_axis=split_axis,
-            name=name,
+            self, shape, dtype=dtype, batch_axis=batch_axis, name=name,
         )
 
     @property
@@ -160,6 +142,18 @@ class FixedTensorDef(ArgBlobDef):
 
     def AddAndInferOp(self, op_conf):
         return compile_context.CurJobAddConsistentOp(op_conf)
+
+    def EagerAddAndInferOp(self, op_conf):
+        return compile_context.CurJobAddConsistentOp(op_conf)
+
+    def SetBatchAxisAndSplitAxis(self, interface_blob_conf):
+        if self.batch_axis is None:
+            interface_blob_conf.batch_axis.ClearField("value")
+            interface_blob_conf.split_axis.ClearField("value")
+        else:
+            assert type(self.batch_axis) is int
+            interface_blob_conf.batch_axis.value = self.batch_axis
+            interface_blob_conf.split_axis.value = self.batch_axis
 
     def _CheckNdarray(self, ndarray):
         assert isinstance(ndarray, np.ndarray)
@@ -212,6 +206,14 @@ class MirroredTensorDef(ArgBlobDef):
         _AddAndInferMirroredOp(
             self.unique_name, op_conf, self.sub_consistent_blob_list_
         )
+
+    def EagerAddAndInferOp(self, op_conf):
+        return compile_context.CurJobAddMirroredOp(op_conf)
+
+    def SetBatchAxisAndSplitAxis(self, interface_blob_conf):
+        assert type(self.batch_axis) is int
+        interface_blob_conf.batch_axis.value = self.batch_axis
+        interface_blob_conf.split_axis.ClearField("value")
 
     def _CheckNdarray(self, ndarray_list):
         assert isinstance(ndarray_list, (list, tuple))
@@ -278,6 +280,14 @@ class MirroredTensorListDef(ArgBlobDef):
         _AddAndInferMirroredOp(
             self.unique_name, op_conf, self.sub_consistent_blob_list_
         )
+
+    def EagerAddAndInferOp(self, op_conf):
+        return compile_context.CurJobAddMirroredOp(op_conf)
+
+    def SetBatchAxisAndSplitAxis(self, interface_blob_conf):
+        assert type(self.batch_axis) is int
+        interface_blob_conf.batch_axis.value = self.batch_axis
+        interface_blob_conf.split_axis.ClearField("value")
 
     def _CheckNdarray(self, ndarray_lists):
         assert isinstance(ndarray_lists, (list, tuple))

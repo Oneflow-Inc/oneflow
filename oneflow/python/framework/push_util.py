@@ -102,7 +102,7 @@ def _MakeInputBlobObject(arg_blob_def):
     bn_in_op2blob_object = {}
 
     def BuildInputInstruction(builder):
-        op_attribute = compile_context.CurJobAddOp(input_op_conf)
+        op_attribute = arg_blob_def.EagerAddAndInferOp(input_op_conf)
         scope = oneflow.scope.current_scope()
         parallel_conf = scope.device_parallel_desc_symbol.parallel_conf
         builder.StatelessCall(

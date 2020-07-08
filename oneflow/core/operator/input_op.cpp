@@ -16,8 +16,10 @@ const PbMessage& InputOp::GetCustomizedConf() const { return op_conf().input_con
 Maybe<void> InputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx,
                                     const SbpSignature* sbp_signature) const {
-  return InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(),
-                                           GetBlobDesc4BnInOp("out"), parallel_ctx);
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  JUST(InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(), out_blob_desc,
+                                         parallel_ctx));
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InputOp::InferBatchAxis(
