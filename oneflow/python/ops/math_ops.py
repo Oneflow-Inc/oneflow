@@ -16,8 +16,8 @@ from oneflow.python.oneflow_export import oneflow_export
 @oneflow_export("math.add")
 def add(
     x: Union[int, float, remote_blob_util.BlobDef],
-    y: Union[int, float, remote_blob_util.BlobDef], 
-    name: str = None
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: str = None,
 ) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
         return scalar_add(y, x, name)
@@ -57,10 +57,7 @@ def _recursive_build_add_n(inputs, name=None):
 
 
 @oneflow_export("math.add_n")
-def add_n(
-    inputs: Union[list, tuple],
-    name: str = None
-) -> remote_blob_util.BlobDef:
+def add_n(inputs: Union[list, tuple], name: str = None) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") == "False":
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -81,8 +78,8 @@ def add_n(
 @oneflow_export("math.subtract")
 def subtract(
     x: Union[int, float, remote_blob_util.BlobDef],
-    y: Union[int, float, remote_blob_util.BlobDef], 
-    name: str = None
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: str = None,
 ) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
         return scalar_add(-1 * y, x, name)
@@ -102,8 +99,8 @@ def subtract(
 @oneflow_export("math.multiply")
 def multiply(
     x: Union[int, float, remote_blob_util.BlobDef],
-    y: Union[int, float, remote_blob_util.BlobDef], 
-    name: str = None
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: str = None,
 ) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
         return scalar_mul(y, x, name)
@@ -122,8 +119,8 @@ def multiply(
 @oneflow_export("math.divide")
 def divide(
     x: Union[int, float, remote_blob_util.BlobDef],
-    y: Union[int, float, remote_blob_util.BlobDef], 
-    name: str = None
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: str = None,
 ) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
         return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
@@ -147,8 +144,8 @@ def divide(
 @oneflow_export("math.mod")
 def floor_mod(
     x: Union[int, float, remote_blob_util.BlobDef],
-    y: Union[int, float, remote_blob_util.BlobDef], 
-    name: str = None
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: str = None,
 ) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
         raise NotImplementedError
@@ -507,10 +504,7 @@ def broadcast_floor_mod(x, y, name=None):
 
 
 @oneflow_export("math.tanh", "keras.activations.tanh")
-def tanh(
-    x: remote_blob_util.BlobDef, 
-    name: str=None
-) -> remote_blob_util.BlobDef:
+def tanh(x: remote_blob_util.BlobDef, name: str = None) -> remote_blob_util.BlobDef:
     r"""Computes hyperbolic tangent of `x` element-wise.
 
     Args:
@@ -543,10 +537,7 @@ def tanh(
 
 
 @oneflow_export("math.gelu", "keras.activations.gelu")
-def gelu(
-    x: remote_blob_util.BlobDef, 
-    name: str = None
-) -> remote_blob_util.BlobDef:
+def gelu(x: remote_blob_util.BlobDef, name: str = None) -> remote_blob_util.BlobDef:
     r"""Gaussian Error Linear Units.
 
     Args:
@@ -581,10 +572,7 @@ def gelu(
 
 
 @oneflow_export("math.relu", "nn.relu")
-def relu(
-    x: remote_blob_util.BlobDef, 
-    name: str = None
-) -> remote_blob_util.BlobDef:
+def relu(x: remote_blob_util.BlobDef, name: str = None) -> remote_blob_util.BlobDef:
     r"""ReLU activation
 
     Args:
@@ -617,10 +605,7 @@ def relu(
 
 
 @oneflow_export("math.sigmoid")
-def sigmoid(
-    x: remote_blob_util.BlobDef, 
-    name: str=None
-) -> remote_blob_util.BlobDef:
+def sigmoid(x: remote_blob_util.BlobDef, name: str = None) -> remote_blob_util.BlobDef:
     r"""Computes sigmoid of `x` element-wise.
 
     Args:
@@ -656,11 +641,11 @@ def sigmoid(
 
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
 def unsorted_segment_sum(
-    data: remote_blob_util.BlobDef, 
-    segment_ids: remote_blob_util.BlobDef, 
+    data: remote_blob_util.BlobDef,
+    segment_ids: remote_blob_util.BlobDef,
     num_segments: int,
     axis: int = 0,
-    name: str = None
+    name: str = None,
 ) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") != "False":
         return (
@@ -697,11 +682,11 @@ def unsorted_segment_sum(
 
 @oneflow_export("math.unsorted_segment_sum_like", "unsorted_segment_sum_like")
 def unsorted_segment_sum_like(
-    data: remote_blob_util.BlobDef, 
-    segment_ids: remote_blob_util.BlobDef, 
+    data: remote_blob_util.BlobDef,
+    segment_ids: remote_blob_util.BlobDef,
     like: remote_blob_util.BlobDef,
     axis: int = 0,
-    name: str = None
+    name: str = None,
 ) -> remote_blob_util.BlobDef:
     if name is None:
         name = id_util.UniqueStr("UnsortedSegmentSumLike_")
@@ -741,9 +726,9 @@ def unsorted_segment_sum_like(
 @oneflow_export("math.unsorted_batch_segment_sum", "unsorted_batch_segment_sum")
 def unsorted_batch_segment_sum(
     data: remote_blob_util.BlobDef,
-    segment_ids: remote_blob_util.BlobDef, 
-    num_segments: int, 
-    name: str = None
+    segment_ids: remote_blob_util.BlobDef,
+    num_segments: int,
+    name: str = None,
 ) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") != "False":
         return (
@@ -780,9 +765,7 @@ def unsorted_batch_segment_sum(
 
 @oneflow_export("cast")
 def cast(
-    x:remote_blob_util.BlobDef, 
-    dtype: int, 
-    name: str = None
+    x: remote_blob_util.BlobDef, dtype: int, name: str = None
 ) -> remote_blob_util.BlobDef:
     r"""Return a `Blob` of given data type `dtype` and indentical shape to `x`
 
@@ -822,9 +805,7 @@ def cast(
 
 @oneflow_export("math.naive_logical_and")
 def naive_logical_and(
-    lhs: remote_blob_util.BlobDef, 
-    rhs: remote_blob_util.BlobDef, 
-    name: str = None
+    lhs: remote_blob_util.BlobDef, rhs: remote_blob_util.BlobDef, name: str = None
 ) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -842,9 +823,7 @@ def naive_logical_and(
 
 @oneflow_export("math.equal")
 def equal(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: str = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: str = None
 ) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_equal", x, y, name)
@@ -866,9 +845,7 @@ def equal(
 
 @oneflow_export("math.not_equal")
 def not_equal(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: str = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: str = None
 ) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
@@ -890,9 +867,7 @@ def not_equal(
 
 @oneflow_export("math.less")
 def less(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: str = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: str = None
 ) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_less", x, y, name)
@@ -914,9 +889,7 @@ def less(
 
 @oneflow_export("math.less_equal")
 def less_equal(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: str = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: str = None
 ) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
@@ -938,9 +911,7 @@ def less_equal(
 
 @oneflow_export("math.greater")
 def greater(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: str = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: str = None
 ) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_greater", x, y, name)
@@ -962,9 +933,7 @@ def greater(
 
 @oneflow_export("math.greater_equal")
 def greater_equal(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: str = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: str = None
 ) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
@@ -986,9 +955,7 @@ def greater_equal(
 
 @oneflow_export("math.logical_and")
 def logical_and(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: str = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: str = None
 ) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
@@ -1010,9 +977,7 @@ def logical_and(
 
 @oneflow_export("math.minimum")
 def broadcast_min(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: str = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: str = None
 ) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_minimum", x, y, name)
@@ -1034,9 +999,7 @@ def broadcast_min(
 
 @oneflow_export("math.maximum")
 def broadcast_max(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: str = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: str = None
 ) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_maximum", x, y, name)
@@ -1058,10 +1021,10 @@ def broadcast_max(
 
 @oneflow_export("math.reduced_shape_elem_cnt")
 def elem_cnt(
-    input_blob: remote_blob_util.BlobDef, 
+    input_blob: remote_blob_util.BlobDef,
     axis: Union[tuple, list] = None,
     dtype: int = None,
-    name: str = None
+    name: str = None,
 ) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -1087,10 +1050,7 @@ def elem_cnt(
 
 @oneflow_export("math.top_k")
 def top_k(
-    input: remote_blob_util.BlobDef, 
-    k: int = 1,
-    sorted: bool = True,
-    name: str = None
+    input: remote_blob_util.BlobDef, k: int = 1, sorted: bool = True, name: str = None
 ) -> remote_blob_util.BlobDef:
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
@@ -1107,8 +1067,7 @@ def top_k(
 
 @oneflow_export("math.argmax")
 def argmax(
-    input: remote_blob_util.BlobDef,
-    name: str = None
+    input: remote_blob_util.BlobDef, name: str = None
 ) -> remote_blob_util.BlobDef:
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
@@ -1123,9 +1082,7 @@ def argmax(
 
 @oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
 def broadcast_to_compatible_with(
-    x: remote_blob_util.BlobDef,
-    compatible: Union[list, tuple],
-    name: str = None
+    x: remote_blob_util.BlobDef, compatible: Union[list, tuple], name: str = None
 ) -> remote_blob_util.BlobDef:
     assert isinstance(compatible, (list, tuple))
     if name is None:
@@ -1150,10 +1107,10 @@ def broadcast_to_compatible_with(
     "math.clip_by_value", "clip_by_value", "clip_by_scalar", "clip", "clamp"
 )
 def clip_by_value(
-    values: remote_blob_util.BlobDef, 
-    min_value: Union[int, float] = None, 
-    max_value: Union[int, float] = None, 
-    name: str = None
+    values: remote_blob_util.BlobDef,
+    min_value: Union[int, float] = None,
+    max_value: Union[int, float] = None,
+    name: str = None,
 ) -> remote_blob_util.BlobDef:
     if name is None:
         name = id_util.UniqueStr("ClipByValue_")
@@ -1195,10 +1152,10 @@ def clip_by_value(
 
 @oneflow_export("math.l2_normalize")
 def l2_normalize(
-    input: remote_blob_util.BlobDef, 
-    axis: int = None, 
-    epsilon: float = 1e-12, 
-    name: str = None
+    input: remote_blob_util.BlobDef,
+    axis: int = None,
+    epsilon: float = 1e-12,
+    name: str = None,
 ) -> remote_blob_util.BlobDef:
     if axis < 0:
         axis += len(input.shape)
@@ -1222,9 +1179,7 @@ def l2_normalize(
 
 @oneflow_export("math.squared_difference")
 def squared_difference(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: str = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: str = None
 ) -> remote_blob_util.BlobDef:
     name_subtract, name_square = None, None
     if name is not None:
