@@ -220,7 +220,7 @@ def Export(
     extra_opset=None,
     shape_override=None,
 ):
-    assert os.getenv("ENABLE_USER_OP") == "True"
+    assert os.getenv("ENABLE_USER_OP") != "False"
     job_set = c_api_util.GetJobSet()
     job_name = job_obj.__name__
     for job in job_set.job:
