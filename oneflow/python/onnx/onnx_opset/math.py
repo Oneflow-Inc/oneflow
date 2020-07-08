@@ -691,7 +691,7 @@ class Equal:
                 "Not", output_name, name=id_util.UniqueStr(node.name)
             )
             ctx.CopyShape(output_name, not_node.output[0])
-            ctx.copy_dtype(output_name, not_node.output[0])
+            ctx.CopyDtype(output_name, not_node.output[0])
 
     @classmethod
     def Version_11(cls, ctx, node, **kwargs):
@@ -705,7 +705,7 @@ class Equal:
                 "Not", output_name, name=id_util.UniqueStr(node.name)
             )
             ctx.CopyShape(output_name, not_node.output[0])
-            ctx.copy_dtype(output_name, not_node.output[0])
+            ctx.CopyDtype(output_name, not_node.output[0])
 
 
 @flow_op(
