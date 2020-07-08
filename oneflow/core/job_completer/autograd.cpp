@@ -156,8 +156,7 @@ void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder
             .Attr<int64_t>("int_operand", 0)
             .Build();
     job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
-    diff_lbi.set_op_name(scalar_mul_op.op_name());
-    diff_lbi.set_blob_name(scalar_mul_op.output("out", 0));
+    diff_lbi = GenLogicalBlobId(scalar_mul_op.output("out", 0));
   }
 }
 
@@ -216,8 +215,7 @@ void ScaleModelDiffByDynamicLossInstanceNum(
             .Output("y")
             .Build();
     job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_div_op.op_conf()});
-    diff_lbi.set_op_name(scalar_div_op.op_name());
-    diff_lbi.set_blob_name(scalar_div_op.output("y", 0));
+    diff_lbi = GenLogicalBlobId(scalar_div_op.output("y", 0));
   }
 }
 
@@ -431,8 +429,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                              .Output("y")
                              .Build();
     job_builder->AddOps(lbi2parallel_desc.at(lbi)->parallel_conf(), {scalar_mul_op.op_conf()});
-    diff_lbi.set_op_name(scalar_mul_op.op_name());
-    diff_lbi.set_blob_name(scalar_mul_op.output("y", 0));
+    diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
   }
 }
 
@@ -627,8 +624,7 @@ void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
             .Attr<int64_t>("int_operand", 0)
             .Build();
     job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
-    diff_lbi.set_op_name(scalar_mul_op.op_name());
-    diff_lbi.set_blob_name(scalar_mul_op.output("out", 0));
+    diff_lbi = GenLogicalBlobId(scalar_mul_op.output("out", 0));
   }
 }
 
