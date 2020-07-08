@@ -1241,51 +1241,6 @@ message SliceGradOpConf {
   repeated DimSliceConf dim_slice_conf = 4;
 }
 
-message LayerNormOpConf {
-  // in
-  required string in = 1;
-  optional string beta = 2;
-  optional string gamma = 3;
-
-  // out
-  required string out = 4;
-  optional string normalized = 5 [default = "normalized"];
-  optional string mean = 6 [default = "mean"];
-  optional string inv_variance = 7 [default = "inv_variance"];
-
-  optional bool center = 8 [default = true];
-  optional bool scale = 9 [default = true];
-  optional int64 begin_norm_axis = 11 [default = 1];
-  optional int64 begin_params_axis = 12 [default = -1];
-  optional double epsilon = 13 [default = 1e-5];
-}
-
-message LayerNormGradOpConf {
-  // in
-  required string dy = 1;
-  required string x = 2;
-  optional string mean = 3;
-  optional string inv_variance = 4;
-  // out
-  required string dx = 5;
-
-  required int64 begin_norm_axis = 6;
-  required double epsilon = 7;
-}
-
-message LayerNormParamGradOpConf {
-  // in
-  required string dy = 1;
-  optional string normalized = 2;
-  optional string gamma = 3;
-  // out
-  optional string normalized_diff = 4;
-  optional string beta_diff = 5;
-  optional string gamma_diff = 6;
-
-  required int64 begin_params_axis = 7;
-}
-
 message ConstantOpConf {
   optional string tick = 1;
   required string out = 2;
@@ -1858,7 +1813,6 @@ message OperatorConf {
     BatchGatherOpConf batch_gather_conf = 243;
     SliceOpConf slice_conf = 252;
     BiasAddOpConf bias_add_conf = 253;
-    LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     ReduceMeanOpConf reduce_mean_conf = 261;
@@ -1867,8 +1821,6 @@ message OperatorConf {
     GeluGradOpConf gelu_grad_conf = 267;
     SliceGradOpConf slice_grad_conf = 269;
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
-    LayerNormGradOpConf layer_norm_grad_conf = 272;
-    LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
     UnsortedSegmentSumOpConf unsorted_segment_sum_conf = 275;
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;
