@@ -811,9 +811,6 @@ def naive_logical_and(
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("LogicalAnd_")
     )
-    setattr(op_conf.logical_and_conf, "lhs", lhs.unique_name)
-    setattr(op_conf.logical_and_conf, "rhs", rhs.unique_name)
-    setattr(op_conf.logical_and_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
