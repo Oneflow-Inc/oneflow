@@ -56,6 +56,25 @@ def SetSymbol4SerializedOpConf(serialized_op_conf, symbol):
 serialized_op_conf2symbol = {}
 
 
+def HasSymbol4SerializedSbpSignature(serialized_sbp_signature):
+    global serialized_sbp_signature2symbol
+    return serialized_sbp_signature in serialized_sbp_signature2symbol
+
+
+def GetSymbol4SerializedSbpSignature(serialized_sbp_signature):
+    global serialized_sbp_signature2symbol
+    return serialized_sbp_signature2symbol[serialized_sbp_signature]
+
+
+def SetSymbol4SerializedSbpSignature(serialized_sbp_signature, symbol):
+    assert not HasSymbol4SerializedSbpSignature(serialized_sbp_signature)
+    global serialized_sbp_signature2symbol
+    serialized_sbp_signature2symbol[serialized_sbp_signature] = symbol
+
+
+serialized_sbp_signature2symbol = {}
+
+
 def HasSymbol4JobConf(job_conf):
     global job_conf_id2symbol
     return id(job_conf) in job_conf_id2symbol

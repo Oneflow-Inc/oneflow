@@ -181,6 +181,7 @@ class InstructionsBuilder(object):
 
         job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
         op_conf_sym = self._GetOpConfSymbol(op_attribute.op_conf)
+        sbp_signature_sym = self._GetSbpSignatureSymbol(op_attribute.sbp_signature)
         opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(
             op_parallel_desc_sym
         )
@@ -204,6 +205,7 @@ class InstructionsBuilder(object):
             op_parallel_desc_sym,
             job_conf_sym,
             op_conf_sym,
+            sbp_signature_sym,
             opkernel_obj,
             const_operand_blob_objects,
             mut1_operand_blob_objects,
@@ -413,16 +415,18 @@ class InstructionsBuilder(object):
         symbol_storage.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
         return symbol
 
-    def _SystemGetOpConfSymbol(self, op_conf):
-        new_op_conf = op_conf_util.OperatorConf()
-        new_op_conf.CopyFrom(op_conf)
-        serialized_op_conf = new_op_conf.SerializeToString()
-        if symbol_storage.HasSymbol4SerializedOpConf(serialized_op_conf):
-            return symbol_storage.GetSymbol4SerializedOpConf(serialized_op_conf)
-        symbol_id = self._NewSymbolId4OpConf(new_op_conf)
-        symbol = symbol_util.Symbol(symbol_id, new_op_conf)
+    def _GetSbpSignatureSymbol(self, sbp_signature):
+        serialized_sbp_signature = sbp_signature.SerializeToString()
+        if symbol_storage.HasSymbol4SerializedSbpSignature(serialized_sbp_signature):
+            return symbol_storage.GetSymbol4SerializedSbpSignature(
+                serialized_sbp_signature
+            )
+        symbol_id = self._NewSymbolId4SbpSignature(sbp_signature)
+        symbol = symbol_util.Symbol(symbol_id, sbp_signature)
         symbol_storage.SetSymbol4Id(symbol_id, symbol)
-        symbol_storage.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
+        symbol_storage.SetSymbol4SerializedSbpSignature(
+            serialized_sbp_signature, symbol
+        )
         return symbol
 
     def _GetConstOperandBlobObjects(self, op_attribute, blob_object4ibn=None):
@@ -534,6 +538,11 @@ class InstructionsBuilder(object):
         self._InitOpConfSymbol(symbol_id, op_conf)
         return symbol_id
 
+    def _NewSymbolId4SbpSignature(self, sbp_signature):
+        symbol_id = self._NewSymbolId()
+        self._InitSbpSignatureSymbol(symbol_id, sbp_signature)
+        return symbol_id
+
     def _NewSharedOpKernelObjectId4ParallelConfSymbolId(self, parallel_desc_sym):
         return self._NewObjectId(parallel_desc_sym)
 
@@ -543,6 +552,7 @@ class InstructionsBuilder(object):
         parallel_desc_sym,
         job_conf_sym,
         op_conf_sym,
+        sbp_signature_sym,
         shared_opkernel_obj,
         const_operand_blob_objects,
         mut1_operand_blob_objects,
@@ -556,6 +566,7 @@ class InstructionsBuilder(object):
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
         instruction.operand.append(_SymbolOperand(job_conf_sym.symbol_id))
         instruction.operand.append(_SymbolOperand(op_conf_sym.symbol_id))
+        instruction.operand.append(_SymbolOperand(sbp_signature_sym.symbol_id))
         instruction.operand.append(_MutOperand(shared_opkernel_obj.object_id))
         instruction.operand.append(_OperandSeparator())
         for ibn_sym, _ in const_operand_blob_objects:
@@ -649,6 +660,16 @@ class InstructionsBuilder(object):
         eager_symbol = eager_symbol_util.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
         eager_symbol.op_conf_symbol.CopyFrom(op_conf)
+        self.eager_symbol_list_.eager_symbol.append(eager_symbol)
+
+    def _InitSbpSignatureSymbol(self, symbol_id, sbp_signature):
+        instruction = instr_util.InstructionProto()
+        instruction.instr_type_name = "InitSbpSignatureSymbol"
+        instruction.operand.append(_InitSymbolOperand(symbol_id))
+        self.instruction_list_.instruction.append(instruction)
+        eager_symbol = eager_symbol_util.EagerSymbol()
+        eager_symbol.symbol_id = symbol_id
+        eager_symbol.sbp_signature_symbol.CopyFrom(sbp_signature)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _FetchBlob(self, instruction_name, blob_object, fetcher):

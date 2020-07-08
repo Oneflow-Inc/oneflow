@@ -301,10 +301,16 @@ Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruc
   }
   std::function<BlobDesc*(const std::string&)> BlobDesc4BnInOp;
   JUST(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj, &BlobDesc4BnInOp));
+  const SbpSignature* sbp_signature = nullptr;
+  {
+    const auto* operand = instruction->operand_type(args.sbp_signature());
+    const auto* sbp_sig_object = JUST(operand->template Get<vm::ObjectWrapper<SbpSignature>>());
+    sbp_signature = &sbp_sig_object->Get();
+  }
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  opkernel_obj->ResetOpAndKernel(&parallel_ctx, BlobDesc4BnInOp);
+  opkernel_obj->ResetOpAndKernel(sbp_signature, &parallel_ctx, BlobDesc4BnInOp);
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string&, BlobObject* blob_object) -> Maybe<void> {
                                  blob_object->mutable_blob();
@@ -328,10 +334,16 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
   }
   std::function<BlobDesc*(const std::string&)> BlobDesc4BnInOp;
   JUST(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj, &BlobDesc4BnInOp));
+  const SbpSignature* sbp_signature = nullptr;
+  {
+    const auto* operand = instruction->operand_type(args.sbp_signature());
+    const auto* sbp_sig_object = JUST(operand->template Get<vm::ObjectWrapper<SbpSignature>>());
+    sbp_signature = &sbp_sig_object->Get();
+  }
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  opkernel_obj->ResetKernel(&parallel_ctx, BlobDesc4BnInOp);
+  opkernel_obj->ResetKernel(sbp_signature, &parallel_ctx, BlobDesc4BnInOp);
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string&, BlobObject* blob_object) -> Maybe<void> {
                                  blob_object->mutable_blob();

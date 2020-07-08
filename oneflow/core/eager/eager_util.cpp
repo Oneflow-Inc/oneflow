@@ -6,6 +6,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
@@ -27,6 +28,8 @@ void StorageAdd(const EagerSymbol& symbol) {
     Global<vm::SymbolStorage<ParallelDesc>>::Get()->Add(symbol_id, symbol.parallel_conf_symbol());
   } else if (symbol.has_op_conf_symbol()) {
     Global<vm::SymbolStorage<OperatorConf>>::Get()->Add(symbol_id, symbol.op_conf_symbol());
+  } else if (symbol.has_sbp_signature_symbol()) {
+    Global<vm::SymbolStorage<SbpSignature>>::Get()->Add(symbol_id, symbol.sbp_signature_symbol());
   } else {
     UNIMPLEMENTED();
   }

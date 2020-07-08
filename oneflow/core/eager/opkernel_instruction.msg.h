@@ -21,6 +21,7 @@ FLAT_MSG_VIEW_END(DeleteOpKernelObjectInstrOperand);
 
 FLAT_MSG_VIEW_BEGIN(CallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, opkernel);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, sbp_signature);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_ibn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, ibn);
@@ -38,6 +39,7 @@ FLAT_MSG_VIEW_END(CallOpKernelInstrOperand);
 FLAT_MSG_VIEW_BEGIN(StatelessCallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, job_desc);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, op_conf);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, sbp_signature);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, shared_opkernel);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_ibn);

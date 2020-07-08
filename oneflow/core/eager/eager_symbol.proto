@@ -4,6 +4,7 @@ package oneflow.eager;
 import "oneflow/core/job/job_conf.proto";
 import "oneflow/core/job/placement.proto";
 import "oneflow/core/job/scope.proto";
+import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/operator/op_conf.proto";
 
 message EagerSymbol {
@@ -14,6 +15,7 @@ message EagerSymbol {
     JobConfigProto job_conf_symbol = 4;
     ParallelConf parallel_conf_symbol = 5;
     OperatorConf op_conf_symbol = 6;
+    SbpSignature sbp_signature_symbol = 7;
   }
 }
 
