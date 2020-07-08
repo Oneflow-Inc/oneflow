@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import os
-
+from typing import Callable, Optional, Union, Tuple
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -17,14 +17,14 @@ from oneflow.python.oneflow_export import oneflow_export
 def dense(
     inputs: remote_blob_util.BlobDef,
     units: int,
-    activation: remote_blob_util.BlobDef = None,
+    activation: Optional[remote_blob_util.BlobDef] = None,
     use_bias: bool = True,
-    kernel_initializer: op_conf_util.InitializerConf = None,
-    bias_initializer: op_conf_util.InitializerConf = None,
-    kernel_regularizer: op_conf_util.RegularizerConf = None,
-    bias_regularizer: op_conf_util.RegularizerConf = None,
+    kernel_initializer: Optional[op_conf_util.InitializerConf] = None,
+    bias_initializer: Optional[op_conf_util.InitializerConf] = None,
+    kernel_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    bias_regularizer: Optional[op_conf_util.RegularizerConf] = None,
     trainable: bool = True,
-    name: str = None,
+    name: Optional[str] = None,
     model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
 ) -> remote_blob_util.BlobDef:
     r"""
@@ -97,22 +97,24 @@ def dense(
 def conv2d(
     inputs: remote_blob_util.BlobDef,
     filters: int,
-    kernel_size: int = 1,
-    strides: int = 1,
+    kernel_size: Union[int, list, tuple] = 1,
+    strides: Union[int, list, tuple] = 1,
     padding: str = "VALID",
     data_format: str = "NCHW",
     dilation_rate: int = 1,
     groups: int = 1,
-    activation: remote_blob_util.BlobDef = None,
+    activation: Optional[
+        Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef]
+    ] = None,
     use_bias: bool = True,
-    kernel_initializer: op_conf_util.InitializerConf = None,
-    bias_initializer: op_conf_util.InitializerConf = None,
-    kernel_regularizer: op_conf_util.RegularizerConf = None,
-    bias_regularizer: op_conf_util.RegularizerConf = None,
+    kernel_initializer: Optional[op_conf_util.InitializerConf] = None,
+    bias_initializer: Optional[op_conf_util.InitializerConf] = None,
+    kernel_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    bias_regularizer: Optional[op_conf_util.RegularizerConf] = None,
     trainable: bool = True,
-    name: str = None,
-    weight_name: str = None,
-    bias_name: str = None,
+    name: Optional[str] = None,
+    weight_name: Optional[str] = None,
+    bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     name_prefix = name if name is not None else id_util.UniqueStr("Conv2D_")
     if isinstance(kernel_size, int):
@@ -194,7 +196,7 @@ def layer_norm(
     begin_norm_axis: int = 1,
     begin_params_axis: int = -1,
     epsilon: float = 1e-5,
-    name: str = None,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
@@ -298,7 +300,7 @@ def layer_norm_grad(
     mean: input_blob_util.ArgBlobDef,
     inv_variance: input_blob_util.ArgBlobDef,
     begin_norm_axis: int = 1,
-    name: str = None,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
@@ -323,8 +325,8 @@ def layer_norm_param_grad(
     norm: input_blob_util.ArgBlobDef,
     gamma: input_blob_util.ArgBlobDef,
     begin_params_axis: int = -1,
-    name: str = None,
-) -> tuple:
+    name: Optional[str] = None,
+) -> Tuple[remote_blob_util.BlobDef]:
     op_conf = op_conf_util.OperatorConf()
     name = name if name is not None else id_util.UniqueStr("LayerNormParamGrad_")
     setattr(op_conf, "name", name)
@@ -362,15 +364,15 @@ def batch_normalization(
     epsilon: float = 0.001,
     center: bool = True,
     scale: bool = True,
-    beta_initializer: op_conf_util.InitializerConf = None,
-    gamma_initializer: op_conf_util.InitializerConf = None,
-    beta_regularizer: op_conf_util.RegularizerConf = None,
-    gamma_regularizer: op_conf_util.RegularizerConf = None,
-    moving_mean_initializer: op_conf_util.InitializerConf = None,
-    moving_variance_initializer: op_conf_util.InitializerConf = None,
+    beta_initializer: Optional[op_conf_util.InitializerConf] = None,
+    gamma_initializer: Optional[op_conf_util.InitializerConf] = None,
+    beta_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    gamma_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    moving_mean_initializer: Optional[op_conf_util.InitializerConf] = None,
+    moving_variance_initializer: Optional[op_conf_util.InitializerConf] = None,
     trainable: bool = True,
     training: bool = True,
-    name: str = None,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.keras.layers.BatchNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization>`_

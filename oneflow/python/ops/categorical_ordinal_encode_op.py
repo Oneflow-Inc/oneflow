@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+from typing import Optional
+
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -12,7 +14,7 @@ def categorical_ordinal_encode(
     size: int,
     input_tensor: remote_blob_util.BlobDef,
     hash_precomputed: bool = True,
-    name: str = None,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     assert hash_precomputed is True
     return (
@@ -34,7 +36,7 @@ def categorical_ordinal_encoder(
     input_tensor: remote_blob_util.BlobDef,
     capacity: int,
     hash_precomputed: bool = True,
-    name: str = None,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     assert hash_precomputed is True
     name_prefix = (
