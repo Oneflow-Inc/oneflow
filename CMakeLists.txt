@@ -1,7 +1,7 @@
 # Minimum CMake required
 cmake_minimum_required(VERSION 3.14.0)
 
-option(THIRD_PARTY "Build third party or oneflow" OFF)
+option(THIRD_PARTY "Build third party or oneflow" ON)
 
 option(USE_CLANG_FORMAT "" OFF)
 option(BUILD_RDMA "" OFF)
@@ -19,12 +19,7 @@ else ()
   set(CUDNN_STATIC ON CACHE BOOL "")
 endif()
 
-# Project
-if(THIRD_PARTY)
-  project(third_party C CXX)
-else()
-  project(oneflow C CXX)
-endif()
+project(oneflow C CXX)
 
 if (NOT DEFINED USE_CXX11_ABI)
   if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5))
@@ -126,7 +121,5 @@ endif()
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-  set(THIRD_PARTY OFF CACHE BOOL "" FORCE)
-else()
-  include(oneflow)
 endif()
+include(oneflow)
