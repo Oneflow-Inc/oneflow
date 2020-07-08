@@ -20,11 +20,10 @@ DataType GetDataTypeFromBnInOpVec(
   return DataType::kInvalidDataType;
 }
 
-std::shared_ptr<Operator> CheckAndConstructOp(const OperatorConf& op_conf, const JobDesc* job_desc) {
+std::shared_ptr<Operator> CheckAndConstructOp(const OperatorConf& op_conf,
+                                              const JobDesc* job_desc) {
   Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
-  if (IsCpuOnly(op_conf)) {
-    CHECK_EQ(op_conf.device_type(), DeviceType::kCPU);
-  }
+  if (IsCpuOnly(op_conf)) { CHECK_EQ(op_conf.device_type(), DeviceType::kCPU); }
   rptr->Init(op_conf, job_desc);
   return std::shared_ptr<Operator>(rptr);
 }

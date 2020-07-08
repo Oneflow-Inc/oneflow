@@ -320,12 +320,14 @@ def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
 
 def _MakePushNdarrayCallback(ndarray):
     copied = np.copy(ndarray)
+
     def Copy(ofblob):
         capacity = reduce(lambda x, y: x * y, ofblob.static_shape, 1)
         elem_cnt = reduce(lambda x, y: x * y, copied.shape, 1)
         assert elem_cnt <= capacity, "%s v.s. %s" % (copied.shape, ofblob.static_shape)
         ofblob.CopyFromNdarray(copied)
-    return Copy 
+
+    return Copy
 
 
 def _MakePushNdarrayListCallback(ndarray_list):

@@ -1,6 +1,7 @@
 import numpy as np
 import oneflow as flow
 
+
 def test_simple(test_case):
     flow.config.gpu_device_num(1)
     data = np.ones((10,), dtype=np.float32)
@@ -13,6 +14,7 @@ def test_simple(test_case):
         flow.watch(x, EqOnes)
 
     ReluJob(data)
+
 
 def test_two_device(test_case):
     flow.config.gpu_device_num(2)

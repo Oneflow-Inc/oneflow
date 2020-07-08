@@ -4,9 +4,7 @@
 
 namespace oneflow {
 
-
 COMMAND(Global<bool, EagerExecution<ForEnv>>::SetAllocated(new bool(false)));
 COMMAND(Global<bool, EagerExecution<ForSession>>::SetAllocated(new bool(false)));
 
-
-}
+}  // namespace oneflow

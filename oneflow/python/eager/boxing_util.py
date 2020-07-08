@@ -732,4 +732,3 @@ def _GetEagerNcclAllReduce(parallel_conf):
     op_conf.user_conf.output["out"].s.append("eager_nccl_all_reduce/out_0")
     op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
     return c_api_util.GetOpAttribute4OpConf(op_conf)
-

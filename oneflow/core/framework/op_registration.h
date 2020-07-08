@@ -32,7 +32,7 @@ using GetInputArgModifier =
 using InputArgModifyFn = std::function<void(GetInputArgModifier, const UserOpConfWrapper&)>;
 
 struct OpRegistrationVal {
-  OpRegistrationVal(): cpu_only_supported(false), same_output_regst_num(-1) {}
+  OpRegistrationVal() : cpu_only_supported(false), same_output_regst_num(-1) {}
   ~OpRegistrationVal() = default;
   bool cpu_only_supported;
   int32_t same_output_regst_num;

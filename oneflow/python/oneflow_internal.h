@@ -39,9 +39,7 @@ void EnableEagerSession(bool enable_eager_execution) {
   *Global<bool, EagerExecution<ForSession>>::Get() = enable_eager_execution;
 }
 
-bool EagerExecutionEnabled() {
-  return oneflow::EagerExecutionEnabled();
-}
+bool EagerExecutionEnabled() { return oneflow::EagerExecutionEnabled(); }
 
 bool IsEnvInited() {
   using namespace oneflow;
