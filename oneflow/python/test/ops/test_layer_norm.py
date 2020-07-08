@@ -99,7 +99,7 @@ def test_layer_norm(_):
         )
         diff = y.ndarray() - y_tf.numpy()
         max_diff = np.max(np.abs(diff))
-        assert np.allclose(y.ndarray(), y_tf.numpy(), rtol=1e-5, atol=1e-3), (
+        assert np.allclose(y.ndarray(), y_tf.numpy(), rtol=1e-5, atol=2e-3), (
             case,
             max_diff,
         )
