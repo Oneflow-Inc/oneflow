@@ -108,7 +108,6 @@ class EagerLogicalUserOp(UserOp):
 
     def InferAndTryRun(self):
         op_attribute = compile_context.CurJobAddOp(self.op_conf_)
-
         def BuildInstruction(builder):
             get_scope = blob_register.BnInOp2BlobObjectScope
             with get_scope(op_attribute) as bn_in_op2blob_object:

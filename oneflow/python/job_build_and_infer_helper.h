@@ -9,10 +9,15 @@
 
 namespace oneflow {
 
+bool EagerExecutionEnabled() {
+  return *Global<bool, EagerExecution<ForEnv>>::Get()
+    || *Global<bool, EagerExecution<ForSession>>::Get();
+}
+
 namespace {
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  if (*Global<bool, EagerExecutionOption>::Get()) {
+  if (EagerExecutionEnabled()) {
     return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
   } else {
     return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());

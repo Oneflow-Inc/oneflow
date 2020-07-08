@@ -12,6 +12,16 @@ import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 
 
+@oneflow_export("env.enable_eager_environment")
+def api_enable_eager_execution(val: bool = True) -> None:
+    return enable_if.unique([enable_eager_environment])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_eager_environment(val=True):
+    return c_api_util.EnableEagerEnvironment(val)
+
+
 @oneflow_export("env.init")
 def api_env_init() -> bool:
     return enable_if.unique([env_init, do_nothing])()

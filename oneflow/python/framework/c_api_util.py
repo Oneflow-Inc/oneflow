@@ -64,8 +64,12 @@ def EnvResource():
     return text_format.Parse(resource, resource_util.Resource())
 
 
-def EnableEagerExecution(enable_eager_execution):
-    return oneflow_internal.EnableEagerExecution(enable_eager_execution)
+def EnableEagerEnvironment(enable_eager_execution):
+    return oneflow_internal.EnableEagerEnvironment(enable_eager_execution)
+
+
+def EnableEagerSession(enable_eager_execution):
+    return oneflow_internal.EnableEagerSession(enable_eager_execution)
 
 
 def EagerExecutionEnabled():

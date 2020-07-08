@@ -8,10 +8,10 @@ import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
-def WatchDiff(enable_eager_execution, test_case, device_type, input_shape, dtype):
+def WatchDiff(test_case, device_type, input_shape, dtype):
     assert device_type in ["gpu", "cpu"]
     assert dtype in ["float32", "double"]
-    flow.enable_eager_execution(enable_eager_execution)
+    flow.clear_default_session()
 
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
@@ -38,7 +38,6 @@ def WatchDiff(enable_eager_execution, test_case, device_type, input_shape, dtype
     check_point = flow.train.CheckPoint()
     check_point.init()
     TrainJob()
-    flow.clear_default_session()
 
 
 def test_watch_diff(test_case):
@@ -47,12 +46,4 @@ def test_watch_diff(test_case):
     arg_dict["input_shape"] = [(10,)]
     arg_dict["dtype"] = ["float32"]
     for arg in GenArgList(arg_dict):
-        WatchDiff(False, test_case, *arg)
-
-def test_eager_watch_diff(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["input_shape"] = [(10,)]
-    arg_dict["dtype"] = ["float32"]
-    for arg in GenArgList(arg_dict):
-        WatchDiff(True, test_case, *arg)
+        WatchDiff(test_case, *arg)
