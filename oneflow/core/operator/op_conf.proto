@@ -494,6 +494,12 @@ message LazyAdamModelUpdateConf {
   optional float epsilon = 3 [default = 1e-8];
 }
 
+message LAMBModelUpdateConf {
+  optional float beta1 = 1 [default = 0.9];
+  optional float beta2 = 2 [default = 0.999];
+  optional float epsilon = 3 [default = 1e-6];
+}
+
 message ExponentialDecayConf {
   required int64 decay_batches = 1;
   required double decay_rate = 2;
@@ -606,6 +612,7 @@ message NormalModelUpdateOpUserConf {
     LARSModelUpdateConf lars_conf = 1003;
     AdamModelUpdateConf adam_conf = 1004;
     LazyAdamModelUpdateConf lazy_adam_conf = 1005;
+    LAMBModelUpdateConf lamb_conf = 1006;
   }
 }
 
@@ -680,6 +687,19 @@ message LazyAdamModelUpdateOpConf {
   required string train_step = 9;
   required string learning_rate = 10;
   optional float weight_decay = 11 [default = 0.0];
+}
+
+message LAMBModelUpdateOpConf {
+  required NormalModelUpdateOpUserConf user_conf = 1;
+  required string m = 2;
+  required string v = 3;
+  optional string beta1_t = 4;
+  optional string beta2_t = 5;
+  required string model_diff = 6;
+  required string model = 7;
+  required string train_step = 8;
+  required string learning_rate = 9;
+  optional float weight_decay = 10 [default = 0.0];
 }
 
 message AccumulateOpConf {
@@ -1836,8 +1856,9 @@ message OperatorConf {
     CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
     BoxingIdentityOpConf boxing_identity_conf = 171;
     TensorListSplitOpConf tensor_list_split_conf = 172;
+    LAMBModelUpdateOpConf lamb_model_update_conf = 173;
     UserOpConf user_conf = 199;
-    
+
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
