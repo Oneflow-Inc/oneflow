@@ -16,6 +16,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+from functools import reduce
 
 
 class ArgBlobDef(blob_desc.BlobDesc):
@@ -319,7 +320,12 @@ def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
 
 def _MakePushNdarrayCallback(ndarray):
     copied = np.copy(ndarray)
-    return lambda ofblob: ofblob.CopyFromNdarray(copied)
+    def Copy(ofblob):
+        capacity = reduce(lambda x, y: x * y, ofblob.static_shape, 1)
+        elem_cnt = reduce(lambda x, y: x * y, copied.shape, 1)
+        assert elem_cnt <= capacity, "%s v.s. %s" % (copied.shape, ofblob.static_shape)
+        ofblob.CopyFromNdarray(copied)
+    return Copy 
 
 
 def _MakePushNdarrayListCallback(ndarray_list):

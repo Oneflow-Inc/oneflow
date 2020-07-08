@@ -187,7 +187,7 @@ class FeedContext(object):
         assert self.rank_ < parallel_num
         ndarray = self.arg_ndarray_[self.rank_]
         elem_cnt = reduce(lambda x, y: x * y, ndarray.shape, 1)
-        assert elem_cnt <= capacity, "%s v.s. %s"%(elem_cnt, capacity)
+        assert elem_cnt <= capacity, "%s v.s. %s"%(ndarray.shape, static_shape)
         return ndarray
 
 def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
@@ -196,7 +196,7 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
 
     if isinstance(blob_def, input_blob_def.FixedTensorDef):
 
-        def FeedBody(ofblob):
+        def FeedBlob(ofblob):
             ndarray = feed_ctx.GetFixedTensor(blob_def.shape)
             dtype = dtype_util.convert_of_dtype_to_numpy_dtype(ofblob.dtype)
             assert ndarray.dtype == dtype, "%s v.s. %s"%(
@@ -209,14 +209,14 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
                 raise ValueError
 
         def BuildFeedInstruction(builder):
-            builder.FeedBlob(blob_object, FeedBody)
+            builder.FeedBlob(blob_object, FeedBlob)
 
         vm_util.PhysicalRun(BuildFeedInstruction)
-        python_callback.DeleteRegisteredCallback(FeedBody)
+        python_callback.DeleteRegisteredCallback(FeedBlob)
 
     elif isinstance(blob_def, input_blob_def.MirroredTensorDef):
 
-        def FeedBody(ofblob):
+        def FeedBlob(ofblob):
             ndarray = feed_ctx.GetMirroredTensor(ofblob.static_shape)
             assert isinstance(ndarray, numpy.ndarray)
             dtype = dtype_util.convert_of_dtype_to_numpy_dtype(ofblob.dtype)
@@ -228,8 +228,7 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
             builder.FeedBlob(blob_object, FeedBlob)
 
         vm_util.PhysicalRun(BuildFeedInstruction)
-        python_callback.DeleteRegisteredCallback(FeedHeader)
-        python_callback.DeleteRegisteredCallback(FeedBody)
+        python_callback.DeleteRegisteredCallback(FeedBlob)
 
     elif isinstance(blob_def, input_blob_def.MirroredTensorListDef):
         raise NotImplementedError
