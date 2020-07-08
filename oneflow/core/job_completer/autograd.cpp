@@ -155,7 +155,7 @@ void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder
             .Build();
     job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
     diff_lbi.set_op_name(scalar_mul_op.op_name());
-    diff_lbi.set_blob_name(scalar_mul_op.output("output", 0));
+    diff_lbi.set_blob_name(scalar_mul_op.output("out", 0));
   }
 }
 
@@ -420,16 +420,16 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
-    OperatorConf scalar_mul_op_conf{};
-    scalar_mul_op_conf.set_name("System-ClipGradient-GlobalNorm-ScalarMul-" + NewUniqueId());
-    ScalarMulByTensorOpConf* scalar_mul_by_tensor_conf =
-        scalar_mul_op_conf.mutable_scalar_mul_by_tensor_conf();
-    scalar_mul_by_tensor_conf->set_in(GenLogicalBlobName(diff_lbi));
-    scalar_mul_by_tensor_conf->set_scalar(gradient_scale_factor_lbn);
-    scalar_mul_by_tensor_conf->set_out("out");
-    job_builder->AddOps(lbi2parallel_desc.at(lbi)->parallel_conf(), {scalar_mul_op_conf});
-    diff_lbi.set_op_name(scalar_mul_op_conf.name());
-    diff_lbi.set_blob_name(scalar_mul_by_tensor_conf->out());
+    auto scalar_mul_op = user_op::UserOpConfWrapperBuilder(
+                             "System-ClipGradient-GlobalNorm-ScalarMul-" + NewUniqueId())
+                             .Op("scalar_sub_by_tensor")
+                             .Input("x", GenLogicalBlobName(diff_lbi))
+                             .Input("scalar", gradient_scale_factor_lbn)
+                             .Output("y")
+                             .Build();
+    job_builder->AddOps(lbi2parallel_desc.at(lbi)->parallel_conf(), {scalar_mul_op.op_conf()});
+    diff_lbi.set_op_name(scalar_mul_op.op_name());
+    diff_lbi.set_blob_name(scalar_mul_op.output("y", 0));
   }
 }
 
