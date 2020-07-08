@@ -206,13 +206,13 @@ void ScaleModelDiffByDynamicLossInstanceNum(
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
-    auto scalar_div_op = user_op::UserOpConfWrapperBuilder(
-                             "System-ClipGradient-GlobalNorm-ScalarDivByTensor-" + NewUniqueId())
-                             .Op("scalar_div_by_tensor")
-                             .Input("x", GenLogicalBlobName(diff_lbi))
-                             .Input("scalar", GenLogicalBlobName(total_loss_instance_num_lbi))
-                             .Output("y")
-                             .Build();
+    auto scalar_div_op =
+        user_op::UserOpConfWrapperBuilder("System-ModelDiffScale-ScalarDiv_" + NewUniqueId())
+            .Op("scalar_div_by_tensor")
+            .Input("x", GenLogicalBlobName(diff_lbi))
+            .Input("scalar", GenLogicalBlobName(total_loss_instance_num_lbi))
+            .Output("y")
+            .Build();
     job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_div_op.op_conf()});
     diff_lbi.set_op_name(scalar_div_op.op_name());
     diff_lbi.set_blob_name(scalar_div_op.output("y", 0));
