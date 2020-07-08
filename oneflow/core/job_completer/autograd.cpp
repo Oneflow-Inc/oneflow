@@ -152,6 +152,8 @@ void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder
             .Output("out")
             .Attr<bool>("has_float_operand", true)
             .Attr<double>("float_operand", scale_factor)
+            .Attr<bool>("has_int_operand", false)
+            .Attr<int64_t>("int_operand", 0)
             .Build();
     job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
     diff_lbi.set_op_name(scalar_mul_op.op_name());
@@ -621,6 +623,8 @@ void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
             .Output("out")
             .Attr<bool>("has_float_operand", true)
             .Attr<double>("float_operand", down_scale_factor)
+            .Attr<bool>("has_int_operand", false)
+            .Attr<int64_t>("int_operand", 0)
             .Build();
     job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
     diff_lbi.set_op_name(scalar_mul_op.op_name());
