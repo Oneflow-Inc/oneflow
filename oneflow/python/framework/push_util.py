@@ -75,6 +75,7 @@ def _MakeReleaser4InputBlobObject(lbi, rank):
 
     return ReleaseInputBlobObject
 
+
 def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
     _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_ndarray)
     arg_blob_object, lbi = _MakeInputBlobObject(arg_blob_def)
@@ -143,7 +144,7 @@ def _MakeInputOpConfAndRetLbi(arg_blob_def):
 
 
 class FeedContext(object):
-    def __init__(self, op_arg_parallel_attr, arg_ndarray, rank = 0):
+    def __init__(self, op_arg_parallel_attr, arg_ndarray, rank=0):
         self.op_arg_parallel_attr_ = op_arg_parallel_attr
         self.arg_ndarray_ = arg_ndarray
         self.rank_ = rank
@@ -155,8 +156,10 @@ class FeedContext(object):
 
     def GetFixedTensor(self, logical_shape):
         assert isinstance(self.arg_ndarray_, numpy.ndarray)
-        assert self.arg_ndarray_.shape == logical_shape, "%s v.s. %s"%(
-                self.arg_ndarray_.shape, logical_shape)
+        assert self.arg_ndarray_.shape == logical_shape, "%s v.s. %s" % (
+            self.arg_ndarray_.shape,
+            logical_shape,
+        )
         sbp_parallel = self.op_arg_parallel_attr_.sbp_parallel
         parallel_num = self.op_arg_parallel_attr_.parallel_desc_symbol.parallel_num
         if sbp_parallel.HasField("broadcast_parallel") or parallel_num == 1:
@@ -187,8 +190,9 @@ class FeedContext(object):
         assert self.rank_ < parallel_num
         ndarray = self.arg_ndarray_[self.rank_]
         elem_cnt = reduce(lambda x, y: x * y, ndarray.shape, 1)
-        assert elem_cnt <= capacity, "%s v.s. %s"%(ndarray.shape, static_shape)
+        assert elem_cnt <= capacity, "%s v.s. %s" % (ndarray.shape, static_shape)
         return ndarray
+
 
 def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
     assert isinstance(blob_def, input_blob_def.ArgBlobDef)
@@ -199,11 +203,10 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
         def FeedBlob(ofblob):
             ndarray = feed_ctx.GetFixedTensor(blob_def.shape)
             dtype = dtype_util.convert_of_dtype_to_numpy_dtype(ofblob.dtype)
-            assert ndarray.dtype == dtype, "%s v.s. %s"%(
-                ndarray.dtype, dtype
-            )
-            assert ndarray.shape == ofblob.static_shape, "%s v.s. %s"%(
-                    ndarray.shape, ofblob.static_shape
+            assert ndarray.dtype == dtype, "%s v.s. %s" % (ndarray.dtype, dtype)
+            assert ndarray.shape == ofblob.static_shape, "%s v.s. %s" % (
+                ndarray.shape,
+                ofblob.static_shape,
             )
             if ofblob.CopyFromNdarray(ndarray) is False:
                 raise ValueError
@@ -220,7 +223,7 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
             ndarray = feed_ctx.GetMirroredTensor(ofblob.static_shape)
             assert isinstance(ndarray, numpy.ndarray)
             dtype = dtype_util.convert_of_dtype_to_numpy_dtype(ofblob.dtype)
-            assert ndarray.dtype == dtype, "%s v.s. %s"%(ndarray.dtype, dtype)
+            assert ndarray.dtype == dtype, "%s v.s. %s" % (ndarray.dtype, dtype)
             if ofblob.CopyFromNdarray(ndarray) is False:
                 raise ValueError
 
