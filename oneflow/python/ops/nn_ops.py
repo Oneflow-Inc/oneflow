@@ -20,7 +20,7 @@ def conv2d(
     strides: int,
     padding: str,
     data_format: str = "NHWC",
-    dilations: Union(int, list, tuple) = None,
+    dilations: Union[int, list, tuple] = None,
     groups: int = 1,
     name: str = None,
 ) -> remote_blob_util.BlobDef :
@@ -195,7 +195,7 @@ def tf_conv2d(
     strides: int,
     padding: str,
     data_format: str = "NHWC",
-    dilations: Union(int, list, tuple) =None,
+    dilations: Union[int, list, tuple] =None,
     groups: int = 1,
     name: str = None,
 ) -> remote_blob_util.BlobDef:
@@ -355,8 +355,8 @@ def bias_add(
 @oneflow_export("nn.max_pool1d")
 def max_pool1d(
     input: remote_blob_util.BlobDef, 
-    ksize: Union(int, list, tuple), 
-    strides: Union(int, list, tuple), 
+    ksize: Union[int, list, tuple], 
+    strides: Union[int, list, tuple], 
     padding: str, 
     data_format: str = "NWC", 
     name: str = None
@@ -368,8 +368,8 @@ def max_pool1d(
 @oneflow_export("nn.avg_pool1d")
 def avg_pool1d(
     input: remote_blob_util.BlobDef, 
-    ksize: Union(int, list, tuple), 
-    strides: Union(int, list, tuple), 
+    ksize: Union[int, list, tuple], 
+    strides: Union[int, list, tuple], 
     padding: str, 
     data_format: str = "NWC", 
     name: str =None
@@ -381,8 +381,8 @@ def avg_pool1d(
 @oneflow_export("nn.max_pool2d")
 def max_pool2d(
     input: remote_blob_util.BlobDef, 
-    ksize: Union(int, list, tuple), 
-    strides: Union(int, list, tuple), 
+    ksize: Union[int, list, tuple], 
+    strides: Union[int, list, tuple], 
     padding: str, 
     data_format: str = "NHWC", 
     name: str = None
@@ -439,8 +439,8 @@ def max_pool2d(
 @oneflow_export("nn.avg_pool2d")
 def avg_pool2d(
     input: remote_blob_util.BlobDef, 
-    ksize: Union(int, list, tuple), 
-    strides: Union(int, list, tuple), 
+    ksize: Union[int, list, tuple], 
+    strides: Union[int, list, tuple], 
     padding: str, 
     data_format: str = "NHWC", 
     name: str = None
@@ -497,8 +497,8 @@ def avg_pool2d(
 @oneflow_export("nn.max_pool3d")
 def max_pool3d(
     input: remote_blob_util.BlobDef, 
-    ksize: Union(int, list, tuple), 
-    strides: Union(int, list, tuple), 
+    ksize: Union[int, list, tuple], 
+    strides: Union[int, list, tuple], 
     padding: str, 
     data_format: str = "NDHWC", 
     name: str = None
@@ -555,8 +555,8 @@ def max_pool3d(
 @oneflow_export("nn.avg_pool3d")
 def avg_pool3d(
     input: remote_blob_util.BlobDef, 
-    ksize: Union(int, list, tuple), 
-    strides: Union(int, list, tuple), 
+    ksize: Union[int, list, tuple], 
+    strides: Union[int, list, tuple], 
     padding: str, 
     data_format: str = "NDHWC", 
     name: str = None
@@ -893,7 +893,7 @@ def random_mask_like(
     like: remote_blob_util.BlobDef, 
     rate: float, 
     seed: int = None, 
-    noise_shape: Union(list, tuple) = None, 
+    noise_shape: Union[list, tuple] = None, 
     name: str = None
 ) -> remote_blob_util.BlobDef:
     assert rate is not None and rate >= 0.0 and rate < 1.0
@@ -955,13 +955,13 @@ def deconv2d(
     value: remote_blob_util.BlobDef = None,
     filter: remote_blob_util.BlobDef = None,
     output_shape: remote_blob_util.BlobDef = None,
-    strides: Union(int, list, tuple) = None,
+    strides: Union[int, list, tuple] = None,
     padding: str = "VALID",
     data_format: str = "NHWC",
     name: str = None,
     input: remote_blob_util.BlobDef =None,
     filters: remote_blob_util.BlobDef =None,
-    dilations: Union(int, list, tuple)=None,
+    dilations: Union[int, list, tuple]=None,
 ) -> remote_blob_util.BlobDef:
     r"""2d transposed convolution
 

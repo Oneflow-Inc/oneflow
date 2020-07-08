@@ -15,12 +15,8 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("math.add")
 def add(
-    x: Union(int, 
-        float, 
-        remote_blob_util.BlobDef),
-    y: Union(int, 
-        float, 
-        remote_blob_util.BlobDef), 
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef], 
     name: str = None
 ) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
@@ -62,7 +58,7 @@ def _recursive_build_add_n(inputs, name=None):
 
 @oneflow_export("math.add_n")
 def add_n(
-    inputs: Union(list, tuple),
+    inputs: Union[list, tuple],
     name: str = None
 ) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") == "False":
@@ -84,12 +80,8 @@ def add_n(
 
 @oneflow_export("math.subtract")
 def subtract(
-    x: Union(int, 
-        float, 
-        remote_blob_util.BlobDef),
-    y: Union(int, 
-        float, 
-        remote_blob_util.BlobDef), 
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef], 
     name: str = None
 ) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
@@ -109,12 +101,8 @@ def subtract(
 
 @oneflow_export("math.multiply")
 def multiply(
-    x: Union(int, 
-        float, 
-        remote_blob_util.BlobDef),
-    y: Union(int, 
-        float, 
-        remote_blob_util.BlobDef), 
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef], 
     name: str = None
 ) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
@@ -133,12 +121,8 @@ def multiply(
 
 @oneflow_export("math.divide")
 def divide(
-    x: Union(int, 
-        float, 
-        remote_blob_util.BlobDef),
-    y: Union(int, 
-        float, 
-        remote_blob_util.BlobDef), 
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef], 
     name: str = None
 ) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
@@ -162,12 +146,8 @@ def divide(
 
 @oneflow_export("math.mod")
 def floor_mod(
-    x: Union(int, 
-        float, 
-        remote_blob_util.BlobDef),
-    y: Union(int, 
-        float, 
-        remote_blob_util.BlobDef), 
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef], 
     name: str = None
 ) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
@@ -801,15 +781,7 @@ def unsorted_batch_segment_sum(
 @oneflow_export("cast")
 def cast(
     x:remote_blob_util.BlobDef, 
-    dtype: Union(
-            oneflow.double,
-            oneflow.float,
-            oneflow.float32,
-            oneflow.float64,
-            oneflow.int32,
-            oneflow.int64,
-            oneflow.int8
-            ), 
+    dtype: int, 
     name: str = None
 ) -> remote_blob_util.BlobDef:
     r"""Return a `Blob` of given data type `dtype` and indentical shape to `x`
@@ -850,8 +822,8 @@ def cast(
 
 @oneflow_export("math.naive_logical_and")
 def naive_logical_and(
-    lhs, 
-    rhs, 
+    lhs: remote_blob_util.BlobDef, 
+    rhs: remote_blob_util.BlobDef, 
     name: str = None
 ) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
@@ -1087,16 +1059,8 @@ def broadcast_max(
 @oneflow_export("math.reduced_shape_elem_cnt")
 def elem_cnt(
     input_blob: remote_blob_util.BlobDef, 
-    axis: Union(tuple, list) = None,
-    dtype: Union(
-            oneflow.double,
-            oneflow.float,
-            oneflow.float32,
-            oneflow.float64,
-            oneflow.int32,
-            oneflow.int64,
-            oneflow.int8
-            ) = None,
+    axis: Union[tuple, list] = None,
+    dtype: int = None,
     name: str = None
 ) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
@@ -1160,7 +1124,7 @@ def argmax(
 @oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
 def broadcast_to_compatible_with(
     x: remote_blob_util.BlobDef,
-    compatible: Union(list, tuple),
+    compatible: Union[list, tuple],
     name: str = None
 ) -> remote_blob_util.BlobDef:
     assert isinstance(compatible, (list, tuple))
@@ -1187,8 +1151,8 @@ def broadcast_to_compatible_with(
 )
 def clip_by_value(
     values: remote_blob_util.BlobDef, 
-    min_value: Union(int, float) = None, 
-    max_value: Union(int, float) = None, 
+    min_value: Union[int, float] = None, 
+    max_value: Union[int, float] = None, 
     name: str = None
 ) -> remote_blob_util.BlobDef:
     if name is None:
