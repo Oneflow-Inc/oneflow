@@ -9,8 +9,7 @@ const LAMBModelUpdateConf& GetLAMBModelUpdateConf(const OperatorConf& op_conf) {
 };
 
 template<typename T>
-void UpdateMomentEstimate(int64_t n, T beta, int32_t p,
-                          const T* model_diff, T* moment) {
+void UpdateMomentEstimate(int64_t n, T beta, int32_t p, const T* model_diff, T* moment) {
   FOR_RANGE(int64_t, i, 0, n) {
     moment[i] = beta * moment[i] + (1 - beta) * std::pow(model_diff[i], p);
   }
@@ -38,24 +37,23 @@ void LAMBMdUpdateKernel<device_type, T>::UpdateModel(
     *beta1_t_blob->mut_dptr<T>() *= lamb_conf.beta1();
     *beta2_t_blob->mut_dptr<T>() *= lamb_conf.beta2();
   }
-  Memset<device_type>(ctx, fw_buf_blob->mut_dptr<T>(), 0,
-                      fw_buf_blob->ByteSizeOfBlobBody());
+  Memset<device_type>(ctx, fw_buf_blob->mut_dptr<T>(), 0, fw_buf_blob->ByteSizeOfBlobBody());
   LAMBMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), learning_rate, weight_decay,
       static_cast<T>(lamb_conf.beta1()), static_cast<T>(lamb_conf.beta2()),
       static_cast<T>(lamb_conf.epsilon()), train_step,
       (beta1_t_blob ? beta1_t_blob->dptr<T>() : nullptr),
       (beta2_t_blob ? beta2_t_blob->dptr<T>() : nullptr), BnInOp2Blob("model_diff")->mut_dptr<T>(),
-      model_blob->mut_dptr<T>(), m_blob->mut_dptr<T>(), v_blob->mut_dptr<T>(), fw_buf_blob->mut_dptr<T>());
+      model_blob->mut_dptr<T>(), m_blob->mut_dptr<T>(), v_blob->mut_dptr<T>(),
+      fw_buf_blob->mut_dptr<T>());
 }
 
 template<typename T>
 class LAMBMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
   static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T weight_decay,
-                          T beta1, T beta2, T epsilon,
-                          const int64_t* train_step, const T* beta1_t, const T* beta2_t,
-                          T* model_diff, T* model, T* m, T* v, T* fw_buf) {
+                          T beta1, T beta2, T epsilon, const int64_t* train_step, const T* beta1_t,
+                          const T* beta2_t, T* model_diff, T* model, T* m, T* v, T* fw_buf) {
     // first-order moment
     UpdateMomentEstimate<T>(n, beta1, 1, model_diff, m);
     // second-order moment

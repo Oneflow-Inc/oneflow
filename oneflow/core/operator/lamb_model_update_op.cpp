@@ -31,7 +31,6 @@ Maybe<void> LAMBModelUpdateOp::MdUpdtVirtualInferBlobDescs(
   *GetBlobDesc4BnInOp("fw_buf") = *model_blob_desc;
   GetBlobDesc4BnInOp("fw_buf")->mut_shape() = Shape({2});
 
-
   return Maybe<void>::Ok();
 }
 

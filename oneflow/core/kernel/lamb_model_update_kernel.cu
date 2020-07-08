@@ -36,31 +36,27 @@ __device__ void CorrectModelDiff(T epsilon, const T* beta1_t, const T* beta2_t, 
 }
 
 template<typename T>
-__device__ void UpdateModel(
-    const float learning_rate, T weight_decay, const T model_diff_val, T* model) {
+__device__ void UpdateModel(const float learning_rate, T weight_decay, const T model_diff_val,
+                            T* model) {
   T model_val = *model;
   *model = model_val - learning_rate * (model_diff_val + weight_decay * model_val);
 }
 
 template<typename T>
-__global__ void UpdateMomentEstimateGpu(
-    int64_t n, T beta1, T beta2, T epsilon, const T* beta1_t, const T* beta2_t,
-    T* model_diff, T* model, T* m, T* v) {
+__global__ void UpdateMomentEstimateGpu(int64_t n, T beta1, T beta2, T epsilon, const T* beta1_t,
+                                        const T* beta2_t, T* model_diff, T* model, T* m, T* v) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     UpdateMomentEstimate<1>(beta1, model_diff[i], &m[i]);
     UpdateMomentEstimate<2>(beta2, model_diff[i], &v[i]);
-    CorrectModelDiff(epsilon, beta1_t, beta2_t, m[i], v[i], &model_diff[i]); 
+    CorrectModelDiff(epsilon, beta1_t, beta2_t, m[i], v[i], &model_diff[i]);
   }
 }
-
 
 template<typename T>
 __global__ void UpdateModelGpu(int64_t n, const float* learning_rate, T weight_decay,
                                const T* fw_buf, T* model_diff, T* model) {
   const float local_lr = fw_buf[0] / fw_buf[1] * (*learning_rate);
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    UpdateModel(local_lr, weight_decay, model_diff[i], &model[i]);
-  }
+  CUDA_1D_KERNEL_LOOP(i, n) { UpdateModel(local_lr, weight_decay, model_diff[i], &model[i]); }
 }
 
 }  // namespace
@@ -72,14 +68,13 @@ class LAMBMdUpdateKernelUtil<DeviceType::kGPU, T> final {
                           T beta1, T beta2, T epsilon, const int64_t* train_step, const T* beta1_t,
                           const T* beta2_t, T* model_diff, T* model, T* m, T* v, T* fw_buf) {
     UpdateMomentEstimateGpu<T>
-          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              n, beta1, beta2, epsilon, beta1_t, beta2_t, model_diff, model, m, v);
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            n, beta1, beta2, epsilon, beta1_t, beta2_t, model_diff, model, m, v);
     KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, &fw_buf[0]);
     KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, &fw_buf[1]);
     KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, 2, fw_buf, fw_buf);
-    UpdateModelGpu<T>
-          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              n, learning_rate, weight_decay, fw_buf, model_diff, model);
+    UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, learning_rate, weight_decay, fw_buf, model_diff, model);
   }
 };
 
