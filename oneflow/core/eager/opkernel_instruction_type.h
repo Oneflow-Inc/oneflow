@@ -33,8 +33,10 @@ class UserStatelessCallOpKernelInstructionType : public vm::InstructionType {
   virtual ~UserStatelessCallOpKernelInstructionType() = default;
 
  private:
-  Maybe<void> MaybeInfer(vm::Instruction* instruction) const;
-  Maybe<void> MaybeCompute(vm::Instruction* instruction) const;
+  Maybe<void> Infer(vm::Instruction* instruction,
+                    const StatelessCallOpKernelInstrOperand& args) const;
+  Maybe<void> Compute(vm::Instruction* instruction,
+                      const StatelessCallOpKernelInstrOperand& args) const;
   virtual const char* device_tag() const = 0;
 };
 
