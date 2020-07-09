@@ -89,8 +89,20 @@ macro(copy_files file_paths source_dir dest_dir target)
   endif()
 endmacro()
 
-function(add_copy_headers_target name src dst dep)
-  add_custom_target(${name} ALL DEPENDS ${dep})
-  file(GLOB_RECURSE headers "${src}/*")
-  copy_files("${headers}" "${src}" "${dst}" ${name})
+function(add_copy_headers_target name src dst)
+  add_custom_target("${name}_create_header_dir"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${dst}"
+  DEPENDS ${name})
+
+  add_custom_target("${name}_copy_headers_to_destination" ALL DEPENDS "${name}_create_header_dir")
+  file(GLOB_RECURSE headers "${src}/*.h")
+  file(GLOB_RECURSE cuda_headers "${src}/*.cuh")
+  file(GLOB_RECURSE hpp_headers "${src}/*.hpp")
+  list(APPEND headers ${cuda_headers})
+  list(APPEND headers ${hpp_headers})
+  foreach(header_file ${headers})
+    file(RELATIVE_PATH relative_file_path ${src} ${header_file})
+    add_custom_command(TARGET "${name}_copy_headers_to_destination" PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header_file} "${dst}/${relative_file_path}")
+  endforeach()
 endfunction()

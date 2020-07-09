@@ -107,13 +107,7 @@ ExternalProject_Add(opencv
 )
 
 # put opencv includes in the 'THIRD_PARTY_DIR'
-add_custom_target(opencv_create_header_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${OPENCV_INCLUDE_DIR}
-  DEPENDS opencv)
-
-add_custom_target(opencv_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${OPENCV_BUILD_INCLUDE_DIR} ${OPENCV_INCLUDE_DIR}
-  DEPENDS opencv_create_header_dir)
+add_copy_headers_target(opencv ${OPENCV_BUILD_INCLUDE_DIR} ${OPENCV_INCLUDE_DIR})
 
 # put opencv librarys in the 'THIRD_PARTY_DIR'
 add_custom_target(opencv_create_library_dir

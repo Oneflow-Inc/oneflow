@@ -44,14 +44,7 @@ ExternalProject_Add(gflags
         -DGFLAGS_NAMESPACE:STRING=gflags
 )
 
-
-add_custom_target(gflags_create_header_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${GFLAGS_INCLUDE_DIR}
-  DEPENDS gflags)
-
-add_custom_target(gflags_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${gflags_HEADERS_DIR} ${GFLAGS_INCLUDE_DIR}
-    DEPENDS gflags_create_header_dir)
+add_copy_headers_target(gflags ${gflags_HEADERS_DIR} ${GFLAGS_INCLUDE_DIR})
 
 add_custom_target(gflags_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GFLAGS_LIBRARY_DIR}

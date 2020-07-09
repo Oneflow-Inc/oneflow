@@ -15,11 +15,6 @@ ExternalProject_Add(cub
     INSTALL_COMMAND ""
 )
 
-add_custom_target(cub_create_header_dir
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CUB_INCLUDE_DIR}/cub
-    DEPENDS cub)
-add_custom_target(cub_copy_headers_to_destination
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CUB_BUILD_INCLUDE} ${CUB_INCLUDE_DIR}/cub
-    DEPENDS cub_create_header_dir)
+add_copy_headers_target(cub ${CUB_BUILD_INCLUDE} ${CUB_INCLUDE_DIR}/cub)
 
 endif(THIRD_PARTY)

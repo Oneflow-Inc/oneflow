@@ -59,13 +59,7 @@ ExternalProject_Add(protobuf
 )
 
 # put protobuf includes in the 'THIRD_PARTY_DIR'
-add_custom_target(protobuf_create_header_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTOBUF_INCLUDE_DIR}
-  DEPENDS protobuf)
-
-add_custom_target(protobuf_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROTOBUF_SRC_DIR} ${PROTOBUF_INCLUDE_DIR}
-  DEPENDS protobuf_create_header_dir)
+add_copy_headers_target(protobuf ${PROTOBUF_SRC_DIR} ${PROTOBUF_INCLUDE_DIR})
 
 # put protobuf librarys in the 'THIRD_PARTY_DIR'
 add_custom_target(protobuf_create_library_dir
