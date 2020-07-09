@@ -108,9 +108,6 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
     }
 #endif
   }
-#ifdef WITH_CUDA
-  InitGlobalCudaDeviceProp();
-#endif
   Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New(plan);
