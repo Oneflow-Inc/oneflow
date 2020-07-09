@@ -63,8 +63,9 @@ add_custom_target(protobuf_create_header_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTOBUF_INCLUDE_DIR}
   DEPENDS protobuf)
 
+add_custom_target(protobuf_copy_headers_to_destination ALL)
 file(GLOB_RECURSE protobuf_headers "${PROTOBUF_SRC_DIR}/*.h")
-copy_files("${protobuf_headers}" "${PROJECT_SOURCE_DIR}" "${PROTOBUF_INCLUDE_DIR}" protobuf_copy_headers_to_destination)
+copy_files("${protobuf_headers}" "${PROTOBUF_SRC_DIR}" "${PROTOBUF_INCLUDE_DIR}" protobuf_copy_headers_to_destination)
 
 # put protobuf librarys in the 'THIRD_PARTY_DIR'
 add_custom_target(protobuf_create_library_dir
