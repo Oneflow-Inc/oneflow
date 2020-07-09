@@ -1288,7 +1288,7 @@ class Graph(object):
                 for g in body_graphs.values():
                     g.ReplaceAllInputs(g.get_nodes(), old_input, new_input)
 
-    def _ExtraceSubGraphNodes(self, dest_node, input_checker=None):
+    def _ExtractSubGraphNodes(self, dest_node, input_checker=None):
         """Return nodes of subgraph ending with dest_node.
         Args:
             dest_node: output node of the subgraph to find
@@ -1320,7 +1320,7 @@ class Graph(object):
                     processing_set.add(node)
         return res_set
 
-    def ExtraceSubGraphNodes(
+    def ExtractSubGraphNodes(
         self, outputs_name, input_checker=None, ignore_unused_placeholder=True
     ):
         """Return nodes of subgraph having output_ids as outputs.
@@ -1338,7 +1338,7 @@ class Graph(object):
 
         for output in outputs_name:
             node = self.get_node_by_output(output, search_in_parent_graphs=False)
-            res_set = res_set.union(self._ExtraceSubGraphNodes(node, input_checker))
+            res_set = res_set.union(self._ExtractSubGraphNodes(node, input_checker))
 
         if not ignore_unused_placeholder:
             # add back placeholder nodes if they are not connected to outputs.
@@ -1357,7 +1357,7 @@ class Graph(object):
 
         # we need keep those placeholders that are used as input of Loop's body graph.
         # some of them are not used in the graph, but still need be there to keep the graph complete.
-        related_nodes = self.ExtraceSubGraphNodes(
+        related_nodes = self.ExtractSubGraphNodes(
             outputs_name, ignore_unused_placeholder=False
         )
         for node in related_nodes:
