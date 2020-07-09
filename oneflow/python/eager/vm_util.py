@@ -452,10 +452,16 @@ class InstructionsBuilder(object):
             ibn_sym = self.GetSymbol4String(ibn)
             ref_blob_object = bn_in_op2blob_object[ibn]
             mut1_operand_blob_objects.append((ibn_sym, ref_blob_object))
-        for obn in op_attribute.output_bns:
+
+        def OutputBns():
             obn2modifier = op_attribute.arg_modifier_signature.obn2output_blob_modifier
-            if not obn2modifier[obn].header_infered_before_compute:
-                continue
+            for obn in op_attribute.output_bns:
+                if obn2modifier[obn].header_infered_before_compute:
+                    yield obn
+            for tmp_bn in op_attribute.tmp_bns:
+                yield tmp_bn
+
+        for obn in OutputBns():
             obn_sym = self.GetSymbol4String(obn)
             op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
                 parallel_desc_sym, op_attribute, obn

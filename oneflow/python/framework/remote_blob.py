@@ -225,9 +225,12 @@ class EagerBlobMixin(object):
 
     def numpy(self, rank=None):
         if rank is None:
-            assert not self.is_dynamic
-            assert not self.is_tensor_list
-            return self._Numpy()
+            if self.numpy_size() == 1:
+                return self._NumpyAt(0)
+            else:
+                assert not self.is_dynamic
+                assert not self.is_tensor_list
+                return self._Numpy()
         else:
             return self._NumpyAt(rank)
 
