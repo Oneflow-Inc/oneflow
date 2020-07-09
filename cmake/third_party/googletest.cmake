@@ -1,9 +1,13 @@
 include (ExternalProject)
 
-set(GOOGLETEST_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/include)
+set(GOOGLETEST_INCLUDE_DIR ${THIRD_PARTY_DIR}/googletest/include)
 set(GOOGLETEST_LIBRARY_DIR ${THIRD_PARTY_DIR}/googletest/lib)
-set(GOOGLEMOCK_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/include)
+set(GOOGLEMOCK_INCLUDE_DIR ${THIRD_PARTY_DIR}/googlemock/include)
 set(GOOGLEMOCK_LIBRARY_DIR ${THIRD_PARTY_DIR}/googlemock/lib)
+
+
+set(googletest_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/include)
+set(googlemock_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/include)
 
 set(googletest_URL ${THIRD_PARTY_SUBMODULE_DIR}/googletest/src/googletest)
 
@@ -54,6 +58,12 @@ add_custom_target(googletest_create_header_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLETEST_INCLUDE_DIR}
   DEPENDS googletest)
 
+# add_custom_target(googletest_copy_headers_to_destination ALL)
+# file(GLOB_RECURSE googletest_headers "${googletest_SRC_INCLUDE_DIR}/*.h")
+# copy_files("${googletest_headers}" "${googletest_SRC_INCLUDE_DIR}" "${GOOGLETEST_INCLUDE_DIR}" googletest_copy_headers_to_destination)
+
+add_copy_headers_target(googletest_copy_headers_to_destination ${googletest_SRC_INCLUDE_DIR} ${GOOGLETEST_INCLUDE_DIR} googletest_create_header_dir)
+
 add_custom_target(googletest_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLETEST_LIBRARY_DIR}
   DEPENDS googletest)
@@ -65,6 +75,8 @@ add_custom_target(googletest_copy_libs_to_destination
 add_custom_target(googlemock_create_header_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLEMOCK_INCLUDE_DIR}
   DEPENDS googletest)
+
+add_copy_headers_target(googlemock_copy_headers_to_destination ${googlemock_SRC_INCLUDE_DIR} ${GOOGLEMOCK_INCLUDE_DIR} googlemock_create_header_dir)
 
 add_custom_target(googlemock_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLEMOCK_LIBRARY_DIR}
