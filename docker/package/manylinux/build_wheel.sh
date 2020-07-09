@@ -10,7 +10,7 @@ cd $ONEFLOW_SRC_DIR
 EXTRA_ONEFLOW_CMAKE_ARGS=""
 PY_VERS=()
 
-while [[ "$#" > 0 ]]; do 
+while [[ "$#" > 0 ]]; do
     case $1 in
         --skip-third-party) SKIP_THIRD_PARTY=1; ;;
         --cache-dir) CACHE_DIR=$2; shift ;;
@@ -35,13 +35,18 @@ fi
 
 THIRD_PARTY_BUILD_DIR=$CACHE_DIR/build-third-party
 if [[ $SKIP_THIRD_PARTY != 1 ]]; then
+    PY_ABI=cp35-cp35m
+    PY_ROOT=/opt/python/${PY_ABI}
+    PY_BIN=${PY_ROOT}/bin/python
     mkdir -p $THIRD_PARTY_BUILD_DIR
     pushd $THIRD_PARTY_BUILD_DIR
 
     cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release \
+        -DPython3_ROOT_DIR=$PY_ROOT \
         -DTHIRD_PARTY_DIR=`pwd`   \
         $ONEFLOW_SRC_DIR
-    make -j`nproc`
+    make -j nccl
+    make -j`nproc` prepare_oneflow_third_party
 
     popd
 fi
