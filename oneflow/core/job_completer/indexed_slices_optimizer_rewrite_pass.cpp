@@ -52,7 +52,8 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
         op_nodes_to_remove.push_back(dst_node);
         dst_node = dst_node->SoleOutEdge()->dst_node();
         continue;
-      } else if (dst_op_conf.has_scalar_mul_conf()) {
+      } else if (dst_op_conf.has_user_conf()
+                 && dst_op_conf.user_conf().op_type_name() == "scalar_mul") {
         if (dst_node->out_edges().size() != 1) { return; }
         op_nodes_apply_to_diff.push_back(dst_node);
         dst_node = dst_node->SoleOutEdge()->dst_node();
@@ -123,9 +124,11 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     for (const OpNode* node : op_nodes_to_remove) { job_builder->DelOps({node->op().op_conf()}); }
     for (const OpNode* node : op_nodes_apply_to_diff) {
       OperatorConf new_conf = node->op().op_conf();
-      if (new_conf.has_scalar_mul_conf()) {
-        new_conf.mutable_scalar_mul_conf()->set_in(values_lbn);
-        values_lbn = GenLogicalBlobName(new_conf.name(), new_conf.scalar_mul_conf().out());
+      if (new_conf.has_user_conf() && new_conf.user_conf().op_type_name() == "scalar_mul") {
+        ReplaceInputLbnInOpCustomizedConf(new_conf.mutable_user_conf(), "in_0",
+                                          GenLogicalBlobName(node->op().BnInOp2Lbi("in_0")),
+                                          values_lbn);
+        values_lbn = GenLogicalBlobName(new_conf.name(), "out_0");
         job_builder->MutOpsOnlyOnce({new_conf});
       } else {
         UNIMPLEMENTED();
