@@ -1,6 +1,6 @@
 function(RELATIVE_PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
   if(NOT ARGN)
-    message(WARNING "Error: RELATIVE_PROTOBUF_GENERATE_CPP() called without any proto files")
+    message(SEND_ERROR "Error: RELATIVE_PROTOBUF_GENERATE_CPP() called without any proto files")
     return()
   endif()
 

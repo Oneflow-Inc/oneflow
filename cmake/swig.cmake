@@ -1,6 +1,6 @@
 function(RELATIVE_SWIG_GENERATE_CPP SRCS HDRS ROOT_DIR)
   if(NOT ARGN)
-    message(WARNING "Error: RELATIVE_SWIG_GENERATE_CPP() called without any .i files")
+    message(SEND_ERROR "Error: RELATIVE_SWIG_GENERATE_CPP() called without any .i files")
     return()
   endif()
 
