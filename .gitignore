@@ -14,3 +14,4 @@ core.*
 /.idea
 manylinux*
 wheelhouse/
+.DS_Store
