@@ -7,4 +7,4 @@ COPY CMakeLists.txt /workspace/CMakeLists.txt
 
 # BUILD DEPENDENCY
 COPY build/third_party /workspace/build/third_party
-RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON .. && make -j
+RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON .. && make -j prepare_oneflow_third_party
