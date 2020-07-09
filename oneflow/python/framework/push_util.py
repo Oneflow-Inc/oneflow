@@ -39,15 +39,23 @@ def _AsyncPushArg(session, arg_blob_def, arg_ndarray):
         arg_blob_def.CheckAndAsyncPush(session, arg_ndarray)
 
 
-def MakeEagerInputBlobs(arg_blob_def_tup, arg_ndarray_tup):
-    assert isinstance(arg_blob_def_tup, (list, tuple))
-    assert isinstance(arg_ndarray_tup, (list, tuple))
-    assert len(arg_blob_def_tup) == len(arg_ndarray_tup)
-
-    return type(arg_blob_def_tup)(
-        _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray)
-        for arg_blob_def, arg_ndarray in zip(arg_blob_def_tup, arg_ndarray_tup)
-    )
+def MakeEagerInputBlobs(arg_blob_def, arg_ndarray):
+    if isinstance(arg_blob_def, (list, tuple)):
+        assert type(arg_blob_def) is type(arg_ndarray)
+        assert len(arg_blob_def) == len(arg_ndarray)
+        return type(arg_blob_def)(
+            MakeEagerInputBlobs(blob_def, ndarray)
+            for blob_def, ndarray in zip(arg_blob_def, arg_ndarray)
+        )
+    elif isinstance(arg_blob_def, dict):
+        assert type(arg_blob_def) is type(arg_ndarray)
+        assert set(arg_blob_def.keys()) == set(arg_ndarray.keys())
+        return {
+            k: MakeEagerInputBlobs(blob_def, arg_ndarray[k])
+            for k, blob_def in arg_blob_def.items()
+        }
+    else:
+        return _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray)
 
 
 def _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_value):
