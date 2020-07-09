@@ -44,7 +44,7 @@ ExternalProject_Add(gflags
         -DGFLAGS_NAMESPACE:STRING=gflags
 )
 
-add_copy_headers_target(gflags ${gflags_HEADERS_DIR} ${GFLAGS_INCLUDE_DIR})
+add_copy_headers_target(NAME gflags SRC ${gflags_HEADERS_DIR} DST ${GFLAGS_INCLUDE_DIR} DEPS gflags)
 
 add_custom_target(gflags_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GFLAGS_LIBRARY_DIR}

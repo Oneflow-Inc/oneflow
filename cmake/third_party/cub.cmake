@@ -15,6 +15,6 @@ ExternalProject_Add(cub
     INSTALL_COMMAND ""
 )
 
-add_copy_headers_target(cub ${CUB_BUILD_INCLUDE} ${CUB_INCLUDE_DIR}/cub)
+add_copy_headers_target(NAME cub SRC ${CUB_BUILD_INCLUDE} DST ${CUB_INCLUDE_DIR}/cub DEPS cub)
 
 endif(THIRD_PARTY)

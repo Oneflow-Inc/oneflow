@@ -107,7 +107,7 @@ ExternalProject_Add(opencv
 )
 
 # put opencv includes in the 'THIRD_PARTY_DIR'
-add_copy_headers_target(opencv ${OPENCV_BUILD_INCLUDE_DIR} ${OPENCV_INCLUDE_DIR})
+add_copy_headers_target(NAME opencv SRC ${OPENCV_BUILD_INCLUDE_DIR} DST ${OPENCV_INCLUDE_DIR} DEPS opencv)
 
 # put opencv librarys in the 'THIRD_PARTY_DIR'
 add_custom_target(opencv_create_library_dir

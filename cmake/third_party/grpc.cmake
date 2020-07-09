@@ -46,7 +46,7 @@ ExternalProject_Add(grpc
         -DZLIB_INCLUDE_DIRS:STRING=${ZLIB_INCLUDE_DIR}
 )
 
-add_copy_headers_target(grpc ${GRPC_INCLUDE_DIRS} ${GRPC_INCLUDE_DIR})
+add_copy_headers_target(NAME grpc SRC ${GRPC_INCLUDE_DIRS} DST ${GRPC_INCLUDE_DIR} DEPS grpc)
 
 add_custom_target(grpc_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GRPC_LIBRARY_DIR}
