@@ -114,6 +114,7 @@ set(oneflow_third_party_dependencies
   protobuf_copy_libs_to_destination
   protobuf_copy_binary_to_destination
   gflags_copy_libs_to_destination
+  glog_copy_headers_to_destination
   glog_copy_libs_to_destination
   googletest_copy_libs_to_destination
   googlemock_copy_libs_to_destination
