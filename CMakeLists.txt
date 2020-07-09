@@ -121,5 +121,7 @@ endif()
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
+else()
+  add_custom_target(prepare_oneflow_third_party ALL)
 endif()
 include(oneflow)
