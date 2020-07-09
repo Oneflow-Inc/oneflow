@@ -18,6 +18,8 @@ class CallOpKernelInstructionType : public vm::InstructionType {
   virtual ~CallOpKernelInstructionType() = default;
 
  private:
+  Maybe<void> MaybeInfer(vm::Instruction* instruction) const;
+  Maybe<void> MaybeCompute(vm::Instruction* instruction) const;
   virtual const char* device_tag() const = 0;
 };
 
@@ -31,6 +33,8 @@ class UserStatelessCallOpKernelInstructionType : public vm::InstructionType {
   virtual ~UserStatelessCallOpKernelInstructionType() = default;
 
  private:
+  Maybe<void> MaybeInfer(vm::Instruction* instruction) const;
+  Maybe<void> MaybeCompute(vm::Instruction* instruction) const;
   virtual const char* device_tag() const = 0;
 };
 
@@ -47,6 +51,8 @@ class SystemStatelessCallOpKernelInstructionType : public vm::InstructionType {
   virtual ~SystemStatelessCallOpKernelInstructionType() = default;
 
  private:
+  Maybe<void> MaybeInfer(vm::Instruction* instruction) const;
+  Maybe<void> MaybeCompute(vm::Instruction* instruction) const;
   virtual const char* device_tag() const = 0;
 };
 

@@ -410,7 +410,7 @@ Maybe<bool> ParseDisableBoxingFlag(const std::string& lbn_with_hint, bool* disab
 Maybe<void> InferOpSbpSignature(
     Operator* op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
     const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
-    std::function<Maybe<const OptInt64*>(const LogicalBlobId&)> BatchAxis4Lbi);
+    std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp);
 
 std::string GetInputLbnInOpCustomizedConf(const PbMessage& msg,
                                           const std::string& fd_name_may_have_idx);
@@ -418,6 +418,11 @@ void ReplaceInputLbnInOpCustomizedConf(PbMessage* msg, const std::string& fd_nam
                                        const std::string& old_val, const std::string& new_val);
 
 bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
+
+Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
+                                    const UpstreamSignature& upstream_signature,
+                                    const ParallelConf& parallel_conf, bool is_mirrored,
+                                    const JobDesc& job_desc);
 
 }  // namespace oneflow
 

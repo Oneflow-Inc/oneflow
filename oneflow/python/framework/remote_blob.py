@@ -92,14 +92,11 @@ class BlobDef(blob_desc.BlobDesc):
     def __rmul__(self, lhs):
         return oneflow.math.multiply(lhs, self)
 
-    def __mul__(self, rhs):
-        return oneflow.math.multiply(self, rhs)
-
-    def __rmul__(self, lhs):
-        return oneflow.math.multiply(lhs, self)
-
     def __truediv__(self, rhs):
         return oneflow.math.divide(self, rhs)
+
+    def __rtruediv__(self, lhs):
+        return oneflow.math.divide(lhs, self)
 
     def __div__(self, rhs):
         return oneflow.math.divide(self, rhs)
