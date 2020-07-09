@@ -29,7 +29,7 @@ function(remove_test_cpp file_group)
     STR_ENDSWITH(${cc_name_we} _test is_test_cc)
     if(${is_test_cc})
       list(REMOVE_ITEM ${file_group} ${cc})
-    endif()    
+    endif()
   endforeach()
   set(${file_group} ${${file_group}} PARENT_SCOPE)
 endfunction()
@@ -82,10 +82,9 @@ macro(copy_files file_paths source_dir dest_dir target)
     foreach(file ${file_paths})
       file(RELATIVE_PATH rel_path "${source_dir}" ${file})
       add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${file}"
         "${dest_dir}/${rel_path}")
     endforeach()
   endif()
 endmacro()
-
