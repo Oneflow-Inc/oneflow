@@ -51,7 +51,7 @@ def MakeLocalBlob(ndarray_lists, consistent_blob):
     return LocalMirroredTensor(
         ndarray_lists[0],
         is_dynamic=consistent_blob.is_dynamic,
-        concat_axis=consistent_blob.batch_axis,
+        concat_axis=consistent_blob.split_axis,
     )
 
 

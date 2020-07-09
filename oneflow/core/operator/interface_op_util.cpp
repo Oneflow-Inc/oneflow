@@ -12,21 +12,21 @@ void CheckShape(const Shape& shape) {
 Maybe<void> GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std::string>& input_bns,
                             const PbRpf<std::string>& output_bns, SbpSignature* sbp_signature,
                             bool is_for_input_op) {
-  if (blob_conf.batch_axis().has_value()) {
+  if (blob_conf.split_axis().has_value()) {
     int64_t num_axes = blob_conf.shape().dim_size();
-    int64_t batch_axis = blob_conf.batch_axis().value();
-    if (batch_axis < 0) { batch_axis += num_axes; }
-    CHECK_GE_OR_RETURN(batch_axis, 0);
-    CHECK_LT_OR_RETURN(batch_axis, num_axes);
+    int64_t split_axis = blob_conf.split_axis().value();
+    if (split_axis < 0) { split_axis += num_axes; }
+    CHECK_GE_OR_RETURN(split_axis, 0);
+    CHECK_LT_OR_RETURN(split_axis, num_axes);
 
     SbpSignatureBuilder sbp_signature_builder;
     if (is_for_input_op) {
       // broadcast tick args for InputOp
       sbp_signature_builder.Broadcast(input_bns);
     } else {
-      sbp_signature_builder.Split(input_bns, batch_axis);
+      sbp_signature_builder.Split(input_bns, split_axis);
     }
-    sbp_signature_builder.Split(output_bns, batch_axis).Build(sbp_signature);
+    sbp_signature_builder.Split(output_bns, split_axis).Build(sbp_signature);
   } else {
     SbpSignatureBuilder().Broadcast(input_bns).Broadcast(output_bns).Build(sbp_signature);
   }
