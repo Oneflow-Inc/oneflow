@@ -851,25 +851,6 @@ class Graph(object):
         )
         self._order_sensitive_inputs.append(new_node)
 
-    def AddGraphInputWithDefault(self, name, default_const, dtype=None, shape=None):
-        """Add placeholderwithdefault."""
-        if dtype is None:
-            dtype = self.get_dtype(name)
-
-        if shape is None:
-            shape = self.get_shape(name)
-
-        default_const_name = id_util.UniqueStr("{}_default".format(name))
-        default_const.output = [default_const_name]
-        new_node = self.MakeNode(
-            "PlaceholderWithDefault",
-            [default_const_name],
-            outputs=[name],
-            dtypes=[dtype],
-            shapes=[shape],
-        )
-        self._order_sensitive_inputs.append(new_node)
-
     def AddGraphOutput(self, name, dtype=None, shape=None):
         """Add node output as graph's output."""
         util.MakeSure(
@@ -1056,27 +1037,8 @@ class Graph(object):
             order_sensitive_placeholders + order_non_sensitive_placeholders
         )
 
-        # create initializers for placeholder with default nodes
         initializers = []
-        placeholder_default_const_ops = []
-        for op in placeholder_ops:
-            if op.type == "PlaceholderWithDefault":
-                util.MakeSure(
-                    op.inputs[0] is not None,
-                    "Cannot find node with output {}".format(op.input[0]),
-                )
-                util.MakeSure(
-                    op.inputs[0].is_const(),
-                    "non-const default value for PlaceholderWithDefault is not supported.",
-                )
-                # copy the tensor value, set its name to current node's output, add as initializer
-                value = op.inputs[0].get_tensor_value(as_list=False)
-                tensor = util.TensorProtoFromNumpy(value, op.output[0], external_data=external_data, export_path=onnx_filename)
-                initializers.append(tensor)
-                placeholder_default_const_ops.append(op.inputs[0])
-
         # create initializers for constant nodes
-        const_ops = [op for op in const_ops if op not in placeholder_default_const_ops]
         for op in const_ops:
             tensor_name = op.output[0]
             tensor = util.TensorProtoFromNumpy(
@@ -1384,12 +1346,6 @@ class Graph(object):
                 if node.is_graph_input():
                     if node not in res_set:
                         res_set.add(node)
-                    if (
-                        node.type == "PlaceholderWithDefault"
-                        and node.inputs[0].is_const()
-                        and node.inputs[0] not in res_set
-                    ):
-                        res_set.add(node.inputs[0])
 
         return list(res_set)
 
@@ -1433,191 +1389,3 @@ class Graph(object):
             if out_consumers.issubset(delete_set):
                 self.RemoveNode(n.name)
 
-
-class GraphUtil(object):
-    """Utilities for Graph manipulation."""
-
-    @staticmethod
-    def OptimizeGraph(graph):
-        return optimizer.optimize_graph(graph)
-
-    @staticmethod
-    def OptimizeGraphProto(onnx_model_proto):
-        """Optimize the model proto, for example: eliminating all useless Transpose pairs.
-
-        Returns:
-            model proto after optimization, if optimizer run successfully
-            or onnx_model_proto, if exceptions happens
-        """
-        try:
-            kwargs = GraphUtil.get_onnx_model_properties(onnx_model_proto)
-            graph = GraphUtil.CreateGraphFromOnnxModel(onnx_model_proto)
-            graph = GraphUtil.OptimizeGraph(graph)
-            model_proto = graph.MakeModel(
-                onnx_model_proto.graph.doc_string,
-                graph_name=onnx_model_proto.graph.name,
-                **kwargs
-            )
-
-            if onnx_model_proto.metadata_props:
-                metadata_props = {
-                    p.key: p.value for p in onnx_model_proto.metadata_props
-                }
-                helper.set_model_props(model_proto, metadata_props)
-            return model_proto
-        except Exception:
-            # sometimes, onnx shape inference will fail for some reason,
-            # return onnx_model_proto for this case
-            logger.warning("Failed to optimize model proto", exc_info=1)
-            return onnx_model_proto
-
-    @staticmethod
-    def get_onnx_model_properties(onnx_model_proto):
-        """Get ModelProto properties"""
-        kwargs = {}
-        if onnx_model_proto.HasField("ir_version"):
-            kwargs["ir_version"] = onnx_model_proto.ir_version
-        if onnx_model_proto.HasField("producer_name"):
-            kwargs["producer_name"] = onnx_model_proto.producer_name
-        if onnx_model_proto.HasField("producer_version"):
-            kwargs["producer_version"] = onnx_model_proto.producer_version
-        if onnx_model_proto.HasField("domain"):
-            kwargs["domain"] = onnx_model_proto.domain
-        if onnx_model_proto.HasField("model_version"):
-            kwargs["model_version"] = onnx_model_proto.model_version
-        if onnx_model_proto.HasField("doc_string"):
-            kwargs["doc_string"] = onnx_model_proto.doc_string
-        kwargs["opset_imports"] = onnx_model_proto.opset_import
-
-        return kwargs
-
-    @staticmethod
-    def CreateGraphFromOnnxModel(onnx_model_proto):
-        """Create Graph loading onnx model proto."""
-        # apply shape inference on the model
-        inferred_model = shape_inference.infer_shapes(onnx_model_proto)
-        graph_proto = inferred_model.graph
-
-        opset_version = None
-        extra_opset = []
-        for opset in onnx_model_proto.opset_import:
-            if not opset.domain:
-                # domain field is None or empty means it is onnx domain
-                opset_version = opset.version
-            else:
-                extra_opset.append(opset)
-
-        util.MakeSure(
-            opset_version is not None, "opset version is not specified for onnx domain"
-        )
-        main_graph = GraphUtil.CreateGraphFromOnnxGraph(
-            graph_proto, opset_version, extra_opset
-        )
-        return main_graph
-
-    @staticmethod
-    def CreateGraphFromOnnxGraph(graph_proto, opset_version=None, extra_opset=None):
-        """Create Graph loading onnx graph proto."""
-        output_shapes = {}
-        output_dtypes = {}
-
-        shapes, dtypes = GraphUtil._ParseShapeAndTypeFromValueInfos(
-            graph_proto.value_info
-        )
-        output_shapes.update(shapes)
-        output_dtypes.update(dtypes)
-
-        shapes, dtypes = GraphUtil._ParseShapeAndTypeFromValueInfos(graph_proto.output)
-        output_shapes.update(shapes)
-        output_dtypes.update(dtypes)
-
-        nodes_to_append = []
-        for n in graph_proto.node:
-            if n.op_type == "Constant":
-                n.op_type = "Const"
-
-            # some pytorch model had empty names - make one up
-            if not n.name:
-                n.name = id_util.UniqueStr("was_empty")
-            nodes_to_append.append(n)
-
-        output_names = []
-        for n in graph_proto.output:
-            output_names.append(n.name)
-
-        g = Graph(
-            nodes_to_append,
-            output_shapes,
-            output_dtypes,
-            None,
-            opset_version,
-            extra_opset,
-            output_names,
-        )
-        const_nodes = GraphUtil._ParseGraphInitializer(g, graph_proto)
-        GraphUtil._ParseGraphInput(g, graph_proto, [n.name for n in const_nodes])
-
-        for n in g.get_nodes():
-            for attr_name, attr_val in n.attr.items():
-                if attr_val.HasField("g"):
-                    # it was assumed that the a.g has inferred shapes/dtypes.
-                    sub_g = GraphUtil.CreateGraphFromOnnxGraph(
-                        attr_val.g, opset_version, extra_opset
-                    )
-                    n.set_body_graph_as_attr(attr_name, sub_g)
-        return g
-
-    @staticmethod
-    def get_node_count_from_onnx_graph(graph_proto):
-        op_cnt = collections.Counter()
-        for n in graph_proto.node:
-            op_cnt[n.op_type] += 1
-        return op_cnt
-
-    @staticmethod
-    def _ParseShapeAndTypeFromValueInfos(value_infos):
-        """Get nodes output shapes and types from value infos."""
-        output_shapes = {}
-        output_dtypes = {}
-        for shape_info in value_infos:
-            type_proto = shape_info.type
-            elem_type = type_proto.tensor_type.elem_type
-            shape = type_proto.tensor_type.shape
-            tuned_shape = []
-            for d in shape.dim:
-                if d.HasField("dim_param"):
-                    tuned_shape.append(-1)
-                elif d.HasField("dim_value"):
-                    tuned_shape.append(d.dim_value)
-                else:
-                    # it is found, some unknown dims is missing after inference.
-                    tuned_shape.append(-1)
-            output_shapes[shape_info.name] = tuned_shape
-            output_dtypes[shape_info.name] = elem_type
-
-        return output_shapes, output_dtypes
-
-    @staticmethod
-    def _ParseGraphInitializer(g, graph_proto):
-        """Get graph initializers and put into Graph object."""
-        const_nodes = []
-        for initializer in graph_proto.initializer:
-            np_val = numpy_helper.to_array(initializer)
-            const_nodes.append(g.MakeConst(initializer.name, np_val))
-
-        return const_nodes
-
-    @staticmethod
-    def _ParseGraphInput(g, graph_proto, const_node_names):
-        """Get graph inputs not defined as initializers and put into Graph object."""
-        shapes, dtypes = GraphUtil._ParseShapeAndTypeFromValueInfos(graph_proto.input)
-        # make sure the input is added in order we read from graph_proto,
-        # because for subgraphs, the input orders matter.
-        for graph_input in graph_proto.input:
-            name = graph_input.name
-            shape = shapes[name]
-            dtype = dtypes[name]
-            if name not in const_node_names:
-                g.AddGraphInput(name, dtype, shape)
-            else:
-                g.AddGraphInputWithDefault(name, g.get_node_by_name(name), dtype, shape)
