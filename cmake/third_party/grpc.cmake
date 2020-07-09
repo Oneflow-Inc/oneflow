@@ -1,8 +1,9 @@
 include (ExternalProject)
 
-set(GRPC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
+set(GRPC_INCLUDE_DIR ${THIRD_PARTY_DIR}/grpc/include)
 set(GRPC_LIBRARY_DIR ${THIRD_PARTY_DIR}/grpc/lib)
 
+set(GRPC_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
 set(GRPC_URL ${THIRD_PARTY_SUBMODULE_DIR}/grpc/src/grpc)
 
 if(WIN32)
@@ -48,6 +49,10 @@ ExternalProject_Add(grpc
 add_custom_target(grpc_create_header_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GRPC_INCLUDE_DIR}
   DEPENDS grpc)
+
+add_custom_target(grpc_copy_headers_to_destination
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${GRPC_INCLUDE_DIRS} ${GRPC_INCLUDE_DIR}
+  DEPENDS grpc_create_header_dir)
 
 add_custom_target(grpc_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GRPC_LIBRARY_DIR}

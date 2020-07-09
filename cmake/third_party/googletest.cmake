@@ -58,11 +58,9 @@ add_custom_target(googletest_create_header_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLETEST_INCLUDE_DIR}
   DEPENDS googletest)
 
-# add_custom_target(googletest_copy_headers_to_destination ALL)
-# file(GLOB_RECURSE googletest_headers "${googletest_SRC_INCLUDE_DIR}/*.h")
-# copy_files("${googletest_headers}" "${googletest_SRC_INCLUDE_DIR}" "${GOOGLETEST_INCLUDE_DIR}" googletest_copy_headers_to_destination)
-
-add_copy_headers_target(googletest_copy_headers_to_destination ${googletest_SRC_INCLUDE_DIR} ${GOOGLETEST_INCLUDE_DIR} googletest_create_header_dir)
+add_custom_target(googletest_copy_headers_to_destination
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${googletest_SRC_INCLUDE_DIR} ${GOOGLETEST_INCLUDE_DIR}
+  DEPENDS googletest_create_header_dir)
 
 add_custom_target(googletest_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLETEST_LIBRARY_DIR}
@@ -76,7 +74,9 @@ add_custom_target(googlemock_create_header_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLEMOCK_INCLUDE_DIR}
   DEPENDS googletest)
 
-add_copy_headers_target(googlemock_copy_headers_to_destination ${googlemock_SRC_INCLUDE_DIR} ${GOOGLEMOCK_INCLUDE_DIR} googlemock_create_header_dir)
+add_custom_target(googlemock_copy_headers_to_destination
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${googlemock_SRC_INCLUDE_DIR} ${GOOGLEMOCK_INCLUDE_DIR}
+  DEPENDS googlemock_create_header_dir)
 
 add_custom_target(googlemock_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLEMOCK_LIBRARY_DIR}
