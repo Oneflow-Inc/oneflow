@@ -813,23 +813,6 @@ def cast(
         return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("math.naive_logical_and")
-def naive_logical_and(
-    lhs: remote_blob_util.BlobDef,
-    rhs: remote_blob_util.BlobDef,
-    name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("LogicalAnd_")
-    )
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-
 @oneflow_export("math.equal")
 def equal(
     x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
