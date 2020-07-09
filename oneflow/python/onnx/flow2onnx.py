@@ -215,11 +215,13 @@ def TopologicalSort(g, continue_on_error):
 def Export(
     job_obj,
     model_save_dir,
+    onnx_filename,
     continue_on_error=False,
     target=None,
     opset=None,
     extra_opset=None,
     shape_override=None,
+    external_data=False,
 ):
     assert os.getenv("ENABLE_USER_OP") != "False"
     job_set = c_api_util.GetJobSet()
@@ -235,9 +237,14 @@ def Export(
                 shape_override=shape_override,
             )
             onnx_graph = optimizer.OptimizeGraph(onnx_graph)
-            model_proto = onnx_graph.MakeModel(job_name)
-            return model_proto
-    return None
+            model_proto = onnx_graph.MakeModel(job_name, onnx_filename, external_data=external_data)
+            with open(onnx_filename, 'wb') as f:
+                try:
+                    f.write(model_proto.SerializeToString())
+                except ValueError as e:
+                    raise ValueError('Error occured when running model_proto.SerializeToString(). If the model is larger than 2GB, please specify external_data=True when calling flow.onnx.export. Original error message:\n{}'.format(e))
+            return
+    raise ValueError('Cannot find job "{}" in jobset'.format(job_name))
 
 
 def ProcessFlowGraph(

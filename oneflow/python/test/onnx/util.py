@@ -5,9 +5,10 @@ import onnx
 from collections import OrderedDict
 import tempfile
 import os
+import shutil
 
 
-def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True):
+def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True, external_data=False, ort_optimize=True):
     check_point = flow.train.CheckPoint()
     if explicit_init:
         # it is a trick to keep check_point.save() from hanging when there is no variable
@@ -21,13 +22,21 @@ def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True
             )
 
         check_point.init()
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        check_point.save(tmpdirname)
-        # TODO(daquexian): a more elegant way?
-        while not os.path.exists(os.path.join(tmpdirname, "snapshot_done")):
-            pass
-        onnx_proto = flow.onnx.export(job_func, tmpdirname, opset=11)
-    sess = ort.InferenceSession(onnx_proto.SerializeToString())
+    flow_weight_dir = tempfile.TemporaryDirectory()
+    check_point.save(flow_weight_dir.name)
+    # TODO(daquexian): a more elegant way?
+    while not os.path.exists(os.path.join(flow_weight_dir.name, "snapshot_done")):
+        pass
+    onnx_model_dir = tempfile.TemporaryDirectory()
+    onnx_model_path = os.path.join(onnx_model_dir.name, 'model.onnx')
+    flow.onnx.export(job_func, flow_weight_dir.name, onnx_model_path, opset=11, external_data=external_data)
+    flow_weight_dir.cleanup()
+    ort_sess_opt = ort.SessionOptions()
+    ort_sess_opt.graph_optimization_level = \
+        ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED if ort_optimize else \
+        ort.GraphOptimizationLevel.ORT_DISABLE_ALL
+    sess = ort.InferenceSession(onnx_model_path, sess_options=ort_sess_opt)
+    onnx_model_dir.cleanup()
     assert len(sess.get_outputs()) == 1
     assert len(sess.get_inputs()) <= 1
     ipt_dict = OrderedDict()

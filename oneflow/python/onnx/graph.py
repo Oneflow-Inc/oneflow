@@ -322,7 +322,7 @@ class Node(object):
         if not t:
             raise ValueError("set tensor value: {} is None".format(self.name))
         t = helper.get_attribute_value(t)
-        onnx_tensor = numpy_helper.from_array(new_val, t.name)
+        onnx_tensor = util.TensorProtoFromNumpy(new_val, t.name)
         del t
         self.set_attr("value", onnx_tensor)
         # track shapes in _output_shapes
@@ -514,7 +514,7 @@ class Graph(object):
             raw: whether to store data at field of raw_data or the specific field according to its dtype
         """
         if raw:
-            onnx_tensor = numpy_helper.from_array(np_val, name)
+            onnx_tensor = util.TensorProtoFromNumpy(np_val, name)
         else:
             onnx_tensor = helper.make_tensor(
                 name,
@@ -732,7 +732,7 @@ class Graph(object):
                         )
                 continue
             if inp.is_const():
-                tensor = numpy_helper.from_array(
+                tensor = util.TensorProtoFromNumpy(
                     inp.get_tensor_value(as_list=False), name=inp.output[0]
                 )
                 initializers.append(tensor)
@@ -1027,7 +1027,7 @@ class Graph(object):
         ret = [x for _, x in sorted(zip(label, ops))]
         self.ResetNodes(ret)
 
-    def MakeGraph(self, doc, graph_name="oneflow.python.onnx"):
+    def MakeGraph(self, doc, onnx_filename, external_data=False, graph_name="oneflow.python.onnx"):
         """
         Create GraphProto for onnx from internal graph.
         Args:
@@ -1071,7 +1071,7 @@ class Graph(object):
                 )
                 # copy the tensor value, set its name to current node's output, add as initializer
                 value = op.inputs[0].get_tensor_value(as_list=False)
-                tensor = numpy_helper.from_array(value, op.output[0])
+                tensor = util.TensorProtoFromNumpy(value, op.output[0], external_data=external_data, export_path=onnx_filename)
                 initializers.append(tensor)
                 placeholder_default_const_ops.append(op.inputs[0])
 
@@ -1079,8 +1079,9 @@ class Graph(object):
         const_ops = [op for op in const_ops if op not in placeholder_default_const_ops]
         for op in const_ops:
             tensor_name = op.output[0]
-            tensor = numpy_helper.from_array(
-                op.get_tensor_value(as_list=False), tensor_name
+            tensor = util.TensorProtoFromNumpy(
+                op.get_tensor_value(as_list=False), tensor_name,
+                external_data=external_data, export_path=onnx_filename
             )
             initializers.append(tensor)
 
@@ -1111,7 +1112,7 @@ class Graph(object):
         return graph
 
     def MakeModel(
-        self, graph_doc, optimize=False, graph_name="oneflow.python.onnx", **kwargs
+        self, graph_doc, onnx_filename, external_data=False, optimize=False, graph_name="oneflow.python.onnx", **kwargs
     ):
         """
         Create final ModelProto for onnx from internal graph.
@@ -1119,7 +1120,7 @@ class Graph(object):
             optimize: optimize graph via onnx
             doc: text for doc string of the model
         """
-        graph = self.MakeGraph(graph_doc, graph_name)
+        graph = self.MakeGraph(graph_doc, onnx_filename, graph_name=graph_name, external_data=external_data)
 
         if "producer_name" not in kwargs:
             kwargs = {"producer_name": "oneflow.python.onnx"}
