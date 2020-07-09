@@ -4,15 +4,17 @@
 namespace oneflow {
 namespace eager {
 
-Blob* BlobObject::mutable_blob() {
-  if (!blob_) { InitBlob(); }
-  return blob_.get();
+Maybe<void> BlobObject::TryInitBlob() {
+  if (!blob_) { JUST(InitBlob()); }
+  return Maybe<void>::Ok();
 }
 
-void BlobObject::InitBlob() {
+Maybe<void> BlobObject::InitBlob() {
+  CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
   rt_blob_desc_.reset(new RtBlobDesc(blob_desc_));
   header_buffer_.reset(new char[rt_blob_desc_->AlignedByteSizeOfBlobBody()]);
   blob_.reset(new Blob(*mem_case_, rt_blob_desc_.get(), header_buffer_.get(), nullptr));
+  return Maybe<void>::Ok();
 }
 
 void BlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {

@@ -13,6 +13,7 @@ import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.ops.user_op_builder as user_op_builder_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
@@ -28,7 +29,7 @@ import os
 def api_get_variable(
     name,
     shape=None,
-    dtype=None,
+    dtype=dtype_util.float32,
     initializer=None,
     regularizer=None,
     trainable=None,
@@ -62,9 +63,7 @@ def api_get_variable(
     )
 
 
-@enable_if.condition(
-    hob.in_global_mode & hob.eager_execution_enabled & ~hob.consistent_view_enabled
-)
+@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def get_eager_variable(
     name,
     shape=None,
@@ -185,8 +184,8 @@ def _GenerateVariableOpConf(
     op_conf.name = name
     op_conf.variable_conf.shape.dim.extend(shape)
 
-    if dtype is not None:
-        op_conf.variable_conf.data_type = dtype
+    assert dtype is not None
+    op_conf.variable_conf.data_type = dtype
 
     root_path = (
         compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path

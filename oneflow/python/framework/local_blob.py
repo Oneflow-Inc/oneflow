@@ -23,10 +23,7 @@ class LocalMirroredTensor(object):
         return self.ndarray_list_
 
     def ndarray(self):
-        assert self.ndarray_ is not None, "is_dynamic: %s, concat_axis: %s" % (
-            self.is_dynamic_,
-            self.concat_axis_,
-        )
+        assert self.ndarray_ is not None
         return self.ndarray_
 
     def __getattr__(self, attr):
