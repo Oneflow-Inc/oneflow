@@ -10,6 +10,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
+from typing import Text, Optional, Dict, Callable, List
+
 import collections
 import sys
 import traceback
@@ -213,19 +215,19 @@ def TopologicalSort(g, continue_on_error):
 
 @oneflow_export("onnx.export")
 def Export(
-    job_obj,
-    model_save_dir,
-    onnx_filename,
-    continue_on_error=False,
-    opset=None,
-    extra_opset=None,
-    shape_override=None,
-    external_data=False,
+    job_func: Callable,
+    model_save_dir: Text,
+    onnx_filename: Text,
+    continue_on_error: bool=False,
+    opset: Optional[int]=None,
+    extra_opset: Optional[int]=None,
+    shape_override: Optional[Dict[Text, List[int]]]=None,
+    external_data: bool=False,
 ):
     r"""Export a oneflow model into ONNX format.
 
     Args:
-        job_obj: The job function
+        job_func: The job function
         model_save_dir: The directory containing oneflow model weights. Users are expected to call check_point.save(dir), wait for the model saving finishing, and pass the argument 'dir' as model_save_dir.
         onnx_filename: a string for the output filename
         continue_on_error: if an op can't be processed (aka there is no mapping), continue
@@ -236,7 +238,7 @@ def Export(
     """
     assert os.getenv("ENABLE_USER_OP") != "False"
     job_set = c_api_util.GetJobSet()
-    job_name = job_obj.__name__
+    job_name = job_func.__name__
     for job in job_set.job:
         if job.job_conf.job_name == job_name:
             onnx_graph = ProcessFlowGraph(
