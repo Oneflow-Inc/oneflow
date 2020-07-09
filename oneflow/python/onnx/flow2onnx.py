@@ -217,12 +217,23 @@ def Export(
     model_save_dir,
     onnx_filename,
     continue_on_error=False,
-    target=None,
     opset=None,
     extra_opset=None,
     shape_override=None,
     external_data=False,
 ):
+    r"""Export a oneflow model into ONNX format.
+
+    Args:
+        job_obj: The job function
+        model_save_dir: The directory containing oneflow model weights. Users are expected to call check_point.save(dir), wait for the model saving finishing, and pass the argument 'dir' as model_save_dir.
+        onnx_filename: a string for the output filename
+        continue_on_error: if an op can't be processed (aka there is no mapping), continue
+        opset: the opset to be used (int, default is 8)
+        extra_opset: list of extra opset's, for example the opset's used by custom ops
+        shape_override: dict with inputs that override the shapes given by oneflow
+        external_data: Save weights as ONNX external data, usually to bypass the 2GB file size limit of protobuf.
+    """
     assert os.getenv("ENABLE_USER_OP") != "False"
     job_set = c_api_util.GetJobSet()
     job_name = job_obj.__name__
@@ -255,17 +266,6 @@ def ProcessFlowGraph(
     extra_opset=None,
     shape_override=None,
 ):
-    """Convert oneflow graph to onnx graph.
-        Args:
-            flow_graph: oneflow graph
-            continue_on_error: if an op can't be processed (aka there is no mapping), continue
-            opset: the opset to be used (int, default is 8)
-            extra_opset: list of extra opset's, for example the opset's used by custom ops
-            shape_override: dict with inputs that override the shapes given by oneflow
-        Return:
-            the onnx model_proto object
-    """
-
     opset = util.FindOpset(opset)
     logger.info("Using opset <onnx, %s>", opset)
     if opset > schemas.get_max_supported_opset_version():
