@@ -107,7 +107,7 @@ ExternalProject_Add(opencv
 )
 
 # put opencv includes in the 'THIRD_PARTY_DIR'
-add_copy_headers_target(NAME opencv SRC ${OPENCV_BUILD_INCLUDE_DIR} DST ${OPENCV_INCLUDE_DIR} DEPS opencv)
+add_copy_headers_target(NAME opencv SRC ${OPENCV_BUILD_INCLUDE_DIR} DST ${OPENCV_INCLUDE_DIR} DEPS opencv INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/opencv_headers.txt")
 
 # put opencv librarys in the 'THIRD_PARTY_DIR'
 add_custom_target(opencv_create_library_dir
