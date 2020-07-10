@@ -1,5 +1,6 @@
 /build
 /build-*
+/docs/build/
 /dist
 /third_party/
 /examples/**/oneflow
