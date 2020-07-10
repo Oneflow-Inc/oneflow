@@ -72,6 +72,22 @@ REGISTER_USER_KERNEL("create_summary_writer")
     .SetCreateFn<CreateSummaryWriter>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
 
+class FlushEventWriter final : public user_op::OpKernel {
+ public:
+  FlushEventWriter() = default;
+  ~FlushEventWriter() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    Global<EventsWriter>::Get()->Flush();
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+REGISTER_USER_KERNEL("flush_event_writer")
+    .SetCreateFn<FlushEventWriter>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
+
 template<typename T>
 class WriteHistogram final : public user_op::OpKernel {
  public:

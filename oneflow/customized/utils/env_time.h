@@ -13,8 +13,7 @@ static constexpr uint64_t kMircoTimeToSecondTime = 1000ULL * 1000ULL;
 inline uint64_t CurrentNanoTime() {
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
-  return (static_cast<uint64_t>(ts.tv_sec) * kSecondToNanoTime
-          + static_cast<uint64_t>(ts.tv_nsec));
+  return (static_cast<uint64_t>(ts.tv_sec) * kSecondToNanoTime + static_cast<uint64_t>(ts.tv_nsec));
 }
 
 inline uint64_t CurrentMircoTime() { return CurrentNanoTime() / kMicroTimeToNanoTime; }

@@ -150,39 +150,39 @@ Maybe<void> AddImageToSummary(const user_op::Tensor* tensor, const std::string& 
 template<typename T>
 struct EventWriteHelper<DeviceType::kCPU, T> {
   static void WritePbToFile(int64_t step, const std::string& value) {
-    Event e;
+    std::unique_ptr<Event> e{new Event};
     Summary sum;
     TxtString2PbMessage(value, &sum);
-    e.set_step(step);
-    e.set_wall_time(envtime::GetWallTime());
-    *e.mutable_summary() = sum;
-    Global<EventsWriter>::Get()->WriteEvent(e);
+    e->set_step(step);
+    e->set_wall_time(envtime::GetWallTime());
+    *e->mutable_summary() = sum;
+    Global<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 
   static void WriteScalarToFile(int64_t step, float value, const std::string& tag) {
-    Event e;
-    e.set_step(step);
-    e.set_wall_time(envtime::GetWallTime());
-    AddScalarToSummary(value, tag, e.mutable_summary());
-    Global<EventsWriter>::Get()->WriteEvent(e);
+    std::unique_ptr<Event> e{new Event};
+    e->set_step(step);
+    e->set_wall_time(envtime::GetWallTime());
+    AddScalarToSummary(value, tag, e->mutable_summary());
+    Global<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 
   static void WriteHistogramToFile(int64_t step, const user_op::Tensor& value,
                                    const std::string& tag) {
-    Event e;
-    e.set_step(step);
-    e.set_wall_time(envtime::GetWallTime());
-    AddHistogramToSummary<T>(value, tag, e.mutable_summary());
-    Global<EventsWriter>::Get()->WriteEvent(e);
+    std::unique_ptr<Event> e{new Event};
+    e->set_step(step);
+    e->set_wall_time(envtime::GetWallTime());
+    AddHistogramToSummary<T>(value, tag, e->mutable_summary());
+    Global<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 
   static void WriteImageToFile(int64_t step, const user_op::Tensor* tensor,
                                const std::string& tag) {
-    Event e;
-    e.set_step(step);
-    e.set_wall_time(envtime::GetWallTime());
-    AddImageToSummary(tensor, tag, e.mutable_summary());
-    return Global<EventsWriter>::Get()->WriteEvent(e);
+    std::unique_ptr<Event> e{new Event};
+    e->set_step(step);
+    e->set_wall_time(envtime::GetWallTime());
+    AddImageToSummary(tensor, tag, e->mutable_summary());
+    Global<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 };
 

@@ -144,6 +144,12 @@ Maybe<std::string> GetSerializedJobSet() {
   return PbMessage2TxtString(job_ctx_mgr->job_set());
 }
 
+Maybe<std::string> GetSerializedStructureGraph() {
+  const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
+  return job_ctx_mgr->structure_graph();
+}
+
 Maybe<std::string> GetFunctionConfigDef() {
   std::string ret;
   google::protobuf::TextFormat::PrintToString(GlobalFunctionConfigDef(), &ret);

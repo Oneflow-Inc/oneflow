@@ -35,6 +35,13 @@ def create_summary_write(logdir, name=None):
     )
 
 
+@oneflow_export("summary.flush_event_writer")
+def flush_event_writer(name=None):
+    if name is None:
+        name = id_util.UniqueStr("CreateFlush_")
+    (flow.user_op_builder(name).Op("flush_event_writer").Build().InferAndTryRun())
+
+
 @oneflow_export("summary.histogram")
 def write_histogram(value, step, tag, name=None):
     if name is None:
@@ -65,7 +72,6 @@ def write_pb(value, step=None, name=None):
 
 
 @oneflow_export("summary.image")
-# def write_image(data, step=None, bad_color=None, tag=None, max_images=None, name=None):
 def write_image(value, step=None, tag=None, name=None):
     if name is None:
         name = id_util.UniqueStr("WriteImage_")
@@ -77,8 +83,6 @@ def write_image(value, step=None, tag=None, name=None):
         .Input("in", [value])
         .Input("step", [step])
         .Input("tag", [tag])
-        #        .Input("max_images", [max_images])
-        #        .Input("bad_color", [bad_color])
         .Build()
         .InferAndTryRun()
     )

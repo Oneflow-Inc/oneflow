@@ -74,27 +74,22 @@ Maybe<void> JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
 }
 
 std::string JobBuildAndInferCtxMgr::structure_graph() const {
-  std::string structure_graph_str = "[";
-  bool is_first = true;
+  nlohmann::json json_array;
+
   for (const auto& pair : job_name2infer_ctx_) {
-    if (is_first) {
-      structure_graph_str += "\n";
-    } else {
-      structure_graph_str += ",\n";
-    }
-    structure_graph_str += "{\n";
-    structure_graph_str += "    \"class_name\": \"Model\",\n";
-    structure_graph_str += "    \"config\": {\n";
-    structure_graph_str += ("        \"name\": \"" + pair.first + "\",\n");
-    structure_graph_str += pair.second->GetJobStructureGraphStr();
-    structure_graph_str += "    },\n";
-    structure_graph_str += "    \"backend\": \"oneflow\"\n";
-    structure_graph_str += "}";
-    if (is_first) { is_first = false; }
+    nlohmann::json json_pair;
+    json_pair["class_name"] = "Model";
+
+    nlohmann::json json_conf;
+    json_conf["name"] = pair.first;
+    pair.second->GetJobStructureGraphJson(json_conf);
+    json_pair["config"] = json_conf;
+
+    json_pair["backend"] = "oneflow";
+
+    json_array.emplace_back(json_pair);
   }
-  structure_graph_str += "\n";
-  structure_graph_str += "]";
-  return structure_graph_str;
+  return json_array.dump();
 }
 
 void EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {

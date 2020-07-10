@@ -12,7 +12,7 @@ message HParamsPluginData {
 
 message SessionStartInfo {
   map<string, google.protobuf.Value> hparams = 1;
-  required string group_name = 2;
-  required double start_time_secs = 3;
-  map<string, google.protobuf.Value> metrics = 4;
+  required string group_name = 4;
+  required double start_time_secs = 5;
+  map<string, google.protobuf.Value> metrics = 6;
 }

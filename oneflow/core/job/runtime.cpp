@@ -137,6 +137,7 @@ void Runtime::DeleteAllGlobal() {
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
+  Global<EventsWriter>::Delete();
 }
 
 }  // namespace oneflow

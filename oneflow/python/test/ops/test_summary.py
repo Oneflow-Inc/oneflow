@@ -4,6 +4,7 @@ import tensorflow as tf
 import oneflow as flow
 from collections import OrderedDict
 import cv2
+import time
 
 from test_util import GenArgList
 
@@ -63,32 +64,15 @@ def test(device_type):
         with flow.device_prior_placement(device_type, "0:0"):
             flow.summary.image(value, step=step, tag=tag)
 
-    def ExceptionJob(value, step, tag, sample_name=None, sample_type=None, x=None):
-        logdir = "/home/zjhushengjian/oneflow"
-        flow.exception_projector(
-            value=value,
-            step=step,
-            tag=tag,
-            logdir=logdir,
-            sample_name=sample_name,
-            sample_type=sample_type,
-            x=x,
-        )
+    @flow.global_function(func_config)
+    def FlushJob():
+        with flow.device_prior_placement(device_type, "0:0"):
+            flow.summary.flush_event_writer()
 
-    def EmbeddingJob(
-        value, label, step, tag, sample_name=None, sample_type=None, x=None
-    ):
-        logdir = "/home/zjhushengjian/oneflow"
-        flow.embedding_projector(
-            value=value,
-            label=label,
-            step=step,
-            tag=tag,
-            logdir=logdir,
-            sample_name=sample_name,
-            sample_type=sample_type,
-            x=x,
-        )
+    logdir = "/home/zjhushengjian/oneflow"
+    projecotr = flow.Projector(logdir)
+    projecotr.create_embedding_projector()
+    projecotr.create_exception_projector()
 
     CreateWriter()
 
@@ -108,6 +92,7 @@ def test(device_type):
         flow.HParam("accuracy", flow.RealRange(1e-2, 1e-1)): 0.001,
         flow.HParam("magic", flow.ValueSet([False, True])): True,
         flow.Metric("loss", float): 0.02,
+        flow.Metric("acc", int): 1,
         "dropout": 0.6,
     }
     pb2 = flow.hparams(hparams)
@@ -116,7 +101,11 @@ def test(device_type):
     tag = np.array(list("hparams".encode("ascii")), dtype=np.int8)
     PbJob([value], [step])
 
-    # write scalar
+    time.sleep(5)
+
+    FlushJob()
+
+    # # write scalar
     for idx in range(10):
         value = np.array([idx], dtype=np.float32)
         step = np.array([idx], dtype=np.int64)
@@ -124,13 +113,13 @@ def test(device_type):
         ScalarJob([value], [step], [tag])
 
     # write histogram
-    # value = np.array(
-    #     [
-    #         [[1, 2, 3, 0], [0, 2, 3, 1], [2, 3, 4, 1]],
-    #         [[1, 0, 2, 0], [2, 1, 2, 0], [2, 1, 1, 1]],
-    #     ],
-    #     dtype=np.float64,
-    # )
+    value = np.array(
+        [
+            [[1, 2, 3, 0], [0, 2, 3, 1], [2, 3, 4, 1]],
+            [[1, 0, 2, 0], [2, 1, 2, 0], [2, 1, 1, 1]],
+        ],
+        dtype=np.float64,
+    )
 
     for idx in range(1):
         value = np.random.rand(100, 100, 100).astype(np.float32)
@@ -157,10 +146,11 @@ def test(device_type):
     # images1 = (np.random.rand(1, 512, 512, 3) * 100).astype(np.uint8)
     step = np.array([1], dtype=np.int64)
     tag = np.array(list("image".encode("ascii")), dtype=np.int8)
+    # for i in range(11):
     ImageJob([images], [step], [tag])
 
-    # write summary projectors
-    value = np.random.rand(10, 10, 10).astype(np.float32)
+    # # write summary projectors
+    value_ = np.random.rand(10, 10, 10).astype(np.float32)
     label = (np.random.rand(10) * 10).astype(np.int64)
     x = (np.random.rand(10, 10, 10) * 255).astype(np.uint8)
     sample_name = "sample"
@@ -168,23 +158,26 @@ def test(device_type):
     step = 1
     tag_exception = "exception_projector"
     tag_embedding = "embedding_projector"
-    ExceptionJob(
+    projecotr.exception_projector(
         value=value,
-        step=step,
         tag=tag_exception,
+        step=step,
         sample_name=sample_name,
         sample_type=sample_type,
         x=x,
     )
-    EmbeddingJob(
+    projecotr.embedding_projector(
         value=value,
         label=label,
-        step=step,
         tag=tag_embedding,
+        step=step,
         sample_name=sample_name,
         sample_type=sample_type,
         x=x,
     )
+
+    graph = flow.Graph(logdir)
+    graph.write_structure_graph()
 
 
 test("cpu")

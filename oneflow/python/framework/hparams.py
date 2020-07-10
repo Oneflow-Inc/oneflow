@@ -130,7 +130,7 @@ def _get_hparams_dict(hparams):
             key = key.name
         if isinstance(key, Metric):
             metrics_dict[key.name] = _get_value(value)
-            continue      
+            continue
         hparams_dict[key] = _get_value(value)
     return hparams_dict, metrics_dict
 
@@ -140,6 +140,7 @@ def _get_value(value):
         return value.item()
     else:
         return value
+
 
 @oneflow_export("Hparam")
 class HParam(object):
