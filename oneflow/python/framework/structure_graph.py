@@ -26,7 +26,7 @@ class Graph(object):
             os.path.exists(self.structure_graph_filename_)
         ):
             raise OSError("You must create only one structure graph log file!")
-        
+
         self.structure_graph_filename_ = self.logdir_ + "/structure_graph.json"
         struct_graph_str = c_api_util.GetStructureGraph()
         with open(self.structure_graph_filename_, "w", encoding="utf-8") as f:
