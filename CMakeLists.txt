@@ -121,6 +121,7 @@ endif()
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
+  # skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src, swig src
   if (NOT FOR_CI)
     include(oneflow)
   endif()
