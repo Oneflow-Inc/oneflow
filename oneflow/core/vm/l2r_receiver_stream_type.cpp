@@ -129,6 +129,8 @@ void L2RReceiverStreamType::Compute(Instruction* instruction) const {
 
 ObjectMsgPtr<StreamDesc> L2RReceiverStreamType::MakeStreamDesc(const Resource& resource,
                                                                int64_t this_machine_id) const {
+  // TODO(lixinqi) refactor for multi nodes
+  return ObjectMsgPtr<StreamDesc>();
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<L2RReceiverStreamType>());
   ret->set_num_machines(1);
