@@ -27,42 +27,47 @@ namespace oneflow {
     static std::string Call() { return OF_PP_STRINGIZE(field_type) "*"; } \
   };
 
-#define _OBJECT_MSG_DEFINE_STRUCT_FIELD(field_type, field_name)                           \
- public:                                                                                  \
-  ConstType<field_type>& field_name() const {                                             \
-    ConstType<field_type>* __attribute__((__may_alias__)) ptr =                           \
-        reinterpret_cast<ConstType<field_type>*>(&OF_PP_CAT(field_name, _).data[0]);      \
-    return *ptr;                                                                          \
-  }                                                                                       \
-  field_type* OF_PP_CAT(mutable_, field_name)() {                                         \
-    field_type* __attribute__((__may_alias__)) ptr =                                      \
-        reinterpret_cast<field_type*>(&OF_PP_CAT(field_name, _).data[0]);                 \
-    return ptr;                                                                           \
-  }                                                                                       \
-  field_type* OF_PP_CAT(mut_, field_name)() { return OF_PP_CAT(mutable_, field_name)(); } \
-  template<typename T>                                                                    \
-  void OF_PP_CAT(set_, field_name)(T val) {                                               \
-    static_assert(std::is_scalar<T>::value, "only scalar data type supported");           \
-    *OF_PP_CAT(mut_, field_name)() = val;                                                 \
-  }                                                                                       \
-                                                                                          \
- private:                                                                                 \
-  union OF_PP_CAT(field_name, _ObjectMsgFieldType) {                                      \
-    char data[sizeof(field_type)];                                                        \
-    int64_t alignment_;                                                                   \
+#define _OBJECT_MSG_DEFINE_STRUCT_FIELD(field_type, field_name)                                 \
+ public:                                                                                        \
+  ConstType<field_type>& field_name() const {                                                   \
+    ConstType<field_type>* __attribute__((__may_alias__)) ptr =                                 \
+        reinterpret_cast<ConstType<field_type>*>(&OF_PP_CAT(field_name, _).data[0]);            \
+    return *ptr;                                                                                \
+  }                                                                                             \
+  field_type* OF_PP_CAT(mutable_, field_name)() { return OF_PP_CAT(field_name, _).mut_data(); } \
+  field_type* OF_PP_CAT(mut_, field_name)() { return OF_PP_CAT(mutable_, field_name)(); }       \
+  template<typename T>                                                                          \
+  void OF_PP_CAT(set_, field_name)(T val) {                                                     \
+    static_assert(std::is_scalar<T>::value, "only scalar data type supported");                 \
+    *OF_PP_CAT(mut_, field_name)() = val;                                                       \
+  }                                                                                             \
+                                                                                                \
+ private:                                                                                       \
+  union OF_PP_CAT(field_name, _ObjectMsgFieldType) {                                            \
+   public:                                                                                      \
+    using data_type = field_type;                                                               \
+    data_type* mut_data() {                                                                     \
+      data_type* __attribute__((__may_alias__)) ptr = reinterpret_cast<data_type*>(&data[0]);   \
+      return ptr;                                                                               \
+    }                                                                                           \
+    char data[sizeof(data_type)];                                                               \
+    int64_t alignment_;                                                                         \
   } OF_PP_CAT(field_name, _);
 
 template<typename WalkCtxType, typename FieldType>
 struct ObjectMsgStructInit {
   static void Call(WalkCtxType* ctx, FieldType* field) {
-    char* mem_ptr = reinterpret_cast<char*>(field);
-    new (mem_ptr) FieldType();
+    using data_type = typename FieldType::data_type;
+    new (&field->data[0]) data_type();
   }
 };
 
 template<typename WalkCtxType, typename FieldType>
 struct ObjectMsgStructDelete {
-  static void Call(WalkCtxType* ctx, FieldType* field) { field->FieldType::~FieldType(); }
+  static void Call(WalkCtxType* ctx, FieldType* field) {
+    using data_type = typename FieldType::data_type;
+    field->mut_data()->data_type::~data_type();
+  }
 };
 }  // namespace oneflow
 

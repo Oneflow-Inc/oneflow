@@ -19,6 +19,7 @@ class DeviceTickCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
+  bool IsIndependent() const override { return true; }
 };
 
 }  // namespace oneflow

@@ -7,15 +7,16 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/record/record.pb.h"
+#include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 
-std::string DeviceTag4DeviceType(DeviceType device_type);
-Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag);
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
 
 Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
                                 std::string* device_tag, std::string* device_id_str);
+
+class ParallelContext;
 
 class ParallelDesc final {
  public:
@@ -39,6 +40,9 @@ class ParallelDesc final {
   int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
   const ParallelConf& parallel_conf() const { return parallel_conf_; }
 
+  Maybe<void> GetParallelContext(ParallelContext* parallel_ctx, int64_t machine_id,
+                                 int64_t device_id) const;
+
   // Setters
   void set_device_type(DeviceType device_type);
 
@@ -58,6 +62,7 @@ class ParallelDesc final {
   ParallelDesc() = default;
   void ClearUp();
   Maybe<void> SanityCheck();
+  Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
 
   DeviceType device_type_;
   ParallelConf parallel_conf_;
@@ -67,6 +72,7 @@ class ParallelDesc final {
   int64_t device_num_of_each_machine_;
   HashMap<int64_t, int64_t> parallel_id2machine_id_;
   HashMap<int64_t, int64_t> parallel_id2device_id_;
+  HashMap<int64_t, HashMap<int64_t, int64_t>> machine_id2device_id2parallel_id_;
 };
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {

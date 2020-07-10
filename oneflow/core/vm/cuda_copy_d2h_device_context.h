@@ -48,7 +48,7 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx {
 };
 
 #endif  // WITH_CUDA
-}
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_DEVICE_CUDA_COPY_D2H_DEVICE_CONTEXT_H_

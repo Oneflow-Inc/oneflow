@@ -43,7 +43,7 @@
 
   To install development dependencies and linter tools, run:
   ```
-  pip3 install -r dev-requirements.txt
+  pip3 install -r dev-requirements.txt --user
   ```
 
 - #### Enter Build Directory
@@ -110,7 +110,7 @@
   Inside directory `build`, run:
 
   ```shell
-  cmake -DWITH_XLA=ON -DTHIRD_PARTY=ON ..
+  cmake -DWITH_XLA=ON -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release ..
   make -j$(nproc)
   ```
 
@@ -122,7 +122,8 @@
   ```shell
   cmake .. \
   -DWITH_XLA=ON \
-  -DTHIRD_PARTY=OFF
+  -DTHIRD_PARTY=OFF \
+  -DCMAKE_BUILD_TYPE=Release
   
   make -j$(nproc)
   ```

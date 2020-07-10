@@ -1,8 +1,8 @@
 class BoolFunctor(object):
-    def debug_str(self, display_result=True):
+    def debug_str(self, ctx, display_result=True):
         raise NotImplementedError
 
-    def __call__(self):
+    def __call__(self, ctx):
         raise NotImplementedError
 
     def __and__(self, rhs):
@@ -20,14 +20,14 @@ class HighOrderBool(BoolFunctor):
         self.debug_str_ = debug_str
         self.function_ = function
 
-    def debug_str(self, display_result=True):
+    def debug_str(self, ctx, display_result=True):
         if display_result:
-            return '"%s"[%s]' % (self.debug_str_, self.function_())
+            return '"%s"[%s]' % (self.debug_str_, self.function_(ctx))
         else:
             return '"%s"' % self.debug_str_
 
-    def __call__(self):
-        return self.function_()
+    def __call__(self, ctx):
+        return self.function_(ctx)
 
 
 always_true = HighOrderBool("Always true", lambda: True)
@@ -41,14 +41,14 @@ class _AndBoolFunctor(BoolFunctor):
         self.lhs_ = lhs
         self.rhs_ = rhs
 
-    def debug_str(self, display_result=True):
-        left_display = self.lhs_.debug_str(display_result)
-        display_result = display_result and self.lhs_()
-        right_display = self.rhs_.debug_str(display_result)
+    def debug_str(self, ctx, display_result=True):
+        left_display = self.lhs_.debug_str(ctx, display_result)
+        display_result = display_result and self.lhs_(ctx)
+        right_display = self.rhs_.debug_str(ctx, display_result)
         return "(%s and %s)" % (left_display, right_display)
 
-    def __call__(self):
-        return self.lhs_() and self.rhs_()
+    def __call__(self, ctx):
+        return self.lhs_(ctx) and self.rhs_(ctx)
 
 
 class _OrBoolFunctor(BoolFunctor):
@@ -58,14 +58,14 @@ class _OrBoolFunctor(BoolFunctor):
         self.lhs_ = lhs
         self.rhs_ = rhs
 
-    def debug_str(self, display_result=True):
-        left_display = self.lhs_.debug_str(display_result)
-        display_result = display_result and (not self.lhs_())
-        right_display = self.rhs_.debug_str(display_result)
+    def debug_str(self, ctx, display_result=True):
+        left_display = self.lhs_.debug_str(ctx, display_result)
+        display_result = display_result and (not self.lhs_(ctx))
+        right_display = self.rhs_.debug_str(ctx, display_result)
         return "(%s or %s)" % (left_display, right_display)
 
-    def __call__(self):
-        return self.lhs_() or self.rhs_()
+    def __call__(self, ctx):
+        return self.lhs_(ctx) or self.rhs_(ctx)
 
 
 class _NotBoolFunctor(BoolFunctor):
@@ -73,8 +73,8 @@ class _NotBoolFunctor(BoolFunctor):
         assert isinstance(x, BoolFunctor)
         self.x_ = x
 
-    def debug_str(self, display_result=True):
-        return "(not %s)" % self.x_.debug_str(display_result)
+    def debug_str(self, ctx, display_result=True):
+        return "(not %s)" % self.x_.debug_str(ctx, display_result)
 
-    def __call__(self):
-        return not self.x_()
+    def __call__(self, ctx):
+        return not self.x_(ctx)

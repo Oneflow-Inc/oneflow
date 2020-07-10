@@ -6,6 +6,31 @@ import oneflow.python.framework.distribute_context as distribute_ctx
 from oneflow.python.oneflow_export import oneflow_export
 
 
+class Distribute(object):
+    def __init__(self):
+        pass
+
+
+class AutoDistribute(Distribute):
+    def __init__(self):
+        Distribute.__init__(self)
+
+
+class BroadcastDistribute(Distribute):
+    def __init__(self):
+        Distribute.__init__(self)
+
+
+class SplitDistribute(Distribute):
+    def __init__(self, axis):
+        Distribute.__init__(self)
+        self.axis_ = axis
+
+    @property
+    def axis(self):
+        return self.axis_
+
+
 @oneflow_export("distribute.mirrored_strategy")
 class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
     r"""Create a mirrored strategy scope. All operators within the scope will be mirrored among diffierent accelerators.
@@ -24,7 +49,7 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
 
 
 @oneflow_export("distribute.mirrored_strategy_enabled")
-def MirroredStrategyEnabled():
+def MirroredStrategyEnabled() -> bool:
     r"""
 
     Returns:
@@ -52,7 +77,7 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
 
 
 @oneflow_export("distribute.consistent_strategy_enabled")
-def ConsistentStrategyEnabled():
+def ConsistentStrategyEnabled() -> bool:
     r"""
 
     Returns:
@@ -63,53 +88,28 @@ def ConsistentStrategyEnabled():
 
 
 @oneflow_export("distribute.split")
-def split(axis):
+def split(axis: int) -> SplitDistribute:
     assert type(axis) is int
     assert str(axis) in _axis_str2split_axis_obj, "not a valid split. expected: [0, 11)"
     return _axis_str2split_axis_obj[str(axis)]
 
 
 @oneflow_export("distribute.broadcast")
-def broadcast():
+def broadcast() -> BroadcastDistribute:
     return _broadcast
 
 
 @oneflow_export("distribute.auto")
-def auto():
+def auto() -> AutoDistribute:
     return _auto
 
 
 @oneflow_export("distribute.assert_is_valid_distribute")
-def assert_is_valid_distribute(distribute):
+def assert_is_valid_distribute(distribute: Distribute) -> None:
     assert isinstance(
         distribute, Distribute
     ), """not a valid distribute policy. 
            expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"""
-
-
-class Distribute(object):
-    def __init__(self):
-        pass
-
-
-class AutoDistribute(Distribute):
-    def __init__(self):
-        Distribute.__init__(self)
-
-
-class BroadcastDistribute(Distribute):
-    def __init__(self):
-        Distribute.__init__(self)
-
-
-class SplitDistribute(Distribute):
-    def __init__(self, axis):
-        Distribute.__init__(self)
-        self.axis_ = axis
-
-    @property
-    def axis(self):
-        return self.axis_
 
 
 _auto = AutoDistribute()

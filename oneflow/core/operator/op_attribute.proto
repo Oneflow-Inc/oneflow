@@ -27,3 +27,10 @@ message OpAttribute {
   optional BlobDescSignature logical_blob_desc_signature = 106;
   optional BatchAxisSignature batch_axis_signature = 107;
 }
+
+message UpstreamSignature {
+  optional SbpSignature sbp_signature = 1;
+  optional MirroredSignature mirrored_signature = 2;
+  optional BlobDescSignature logical_blob_desc_signature = 3;
+  optional BatchAxisSignature batch_axis_signature = 4;
+}

@@ -18,4 +18,4 @@ def api_add_loss(loss):
     Args:
         loss: A `Blob`.
     """
-    return enable_if.unique(add_loss)(loss)
+    return enable_if.unique([add_loss])(loss)

@@ -4,6 +4,7 @@
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
@@ -44,7 +45,7 @@ void CheckNotReachableAmongOpNodes(const OpGraph& op_graph, const std::list<OpNo
   }
 }
 
-void GetLossOpNodes(const OpGraph& op_graph, std::list<OpNode*>* loss_op_nodes) {
+Maybe<void> GetLossOpNodes(const OpGraph& op_graph, std::list<OpNode*>* loss_op_nodes) {
   const auto& train_conf = GetTrainConf();
   HashSet<std::string> loss_op_names;
   for (const std::string& loss_lbn : train_conf.loss_lbn()) {
@@ -55,12 +56,13 @@ void GetLossOpNodes(const OpGraph& op_graph, std::list<OpNode*>* loss_op_nodes) 
       loss_op_nodes->push_back(op_node);
     }
   });
-  CHECK_GT(loss_op_nodes->size(), 0);
+  if (loss_op_nodes->empty()) { return Error::LossBlobNotFoundError("Loss blob not found."); }
+  return Maybe<void>::Ok();
 }
 
-void GetLossOpNodesAndAscendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
+Maybe<void> GetLossOpNodesAndAscendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
   std::list<OpNode*> starts;
-  GetLossOpNodes(op_graph, &starts);
+  JUST(GetLossOpNodes(op_graph, &starts));
   auto ForEachNextNode = [&](OpNode* op_node, const std::function<void(OpNode*)>& Handler) {
     for (OpEdge* edge : op_node->in_edges()) {
       if (AnyLbiWithDiffLbi(edge)) { Handler(edge->src_node()); }
@@ -68,14 +70,16 @@ void GetLossOpNodesAndAscendants(const OpGraph& op_graph, HashSet<OpNode*>* op_n
   };
   op_graph.BfsForEachNode(starts, ForEachNextNode,
                           [&](OpNode* op_node) { op_nodes->emplace(op_node); });
+  return Maybe<void>::Ok();
 }
 
-std::function<bool(OpNode*)> MakePredicatorNeedBackwardOp(const OpGraph& op_graph) {
+Maybe<void> MakePredicatorNeedBackwardOp(const OpGraph& op_graph,
+                                         std::function<bool(OpNode*)>* NeedBackwardOp) {
   auto var_op_nodes_and_descendants = std::make_shared<HashSet<OpNode*>>();
   GetVariableOpNodesAndDescendants(op_graph, var_op_nodes_and_descendants.get());
   auto loss_op_nodes_and_ascendants = std::make_shared<HashSet<OpNode*>>();
-  GetLossOpNodesAndAscendants(op_graph, loss_op_nodes_and_ascendants.get());
-  return [var_op_nodes_and_descendants, loss_op_nodes_and_ascendants](OpNode* op_node) {
+  JUST(GetLossOpNodesAndAscendants(op_graph, loss_op_nodes_and_ascendants.get()));
+  *NeedBackwardOp = [var_op_nodes_and_descendants, loss_op_nodes_and_ascendants](OpNode* op_node) {
     if (var_op_nodes_and_descendants->find(op_node) == var_op_nodes_and_descendants->end()) {
       return false;
     }
@@ -90,6 +94,7 @@ std::function<bool(OpNode*)> MakePredicatorNeedBackwardOp(const OpGraph& op_grap
     }
     return false;
   };
+  return Maybe<void>::Ok();
 }
 
 std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasDiff4LbiOpName(
@@ -140,15 +145,18 @@ void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
-    OperatorConf scalar_mul_op_conf{};
-    scalar_mul_op_conf.set_name("System-ModelDiffScale-ScalarMul_" + NewUniqueId());
-    ScalarMulOpConf* scalar_mul_conf = scalar_mul_op_conf.mutable_scalar_mul_conf();
-    scalar_mul_conf->set_float_operand(scale_factor);
-    scalar_mul_conf->set_in(GenLogicalBlobName(diff_lbi));
-    scalar_mul_conf->set_out("out");
-    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op_conf});
-    diff_lbi.set_op_name(scalar_mul_op_conf.name());
-    diff_lbi.set_blob_name(scalar_mul_conf->out());
+    auto scalar_mul_op =
+        user_op::UserOpConfWrapperBuilder("System-ModelDiffScale-ScalarMul_" + NewUniqueId())
+            .Op("scalar_mul")
+            .Input("in", GenLogicalBlobName(diff_lbi))
+            .Output("out")
+            .Attr<bool>("has_float_operand", true)
+            .Attr<double>("float_operand", scale_factor)
+            .Attr<bool>("has_int_operand", false)
+            .Attr<int64_t>("int_operand", 0)
+            .Build();
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
+    diff_lbi = GenLogicalBlobId(scalar_mul_op.output("out", 0));
   }
 }
 
@@ -199,28 +207,30 @@ void ScaleModelDiffByDynamicLossInstanceNum(
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
-    OperatorConf broadcast_div_op_conf{};
-    broadcast_div_op_conf.set_name("System-ModelDiffScale-BroadcastDiv_" + NewUniqueId());
-    BroadcastDivOpConf* broadcast_div_conf = broadcast_div_op_conf.mutable_broadcast_div_conf();
-    broadcast_div_conf->set_a(GenLogicalBlobName(diff_lbi));
-    broadcast_div_conf->set_b(GenLogicalBlobName(total_loss_instance_num_lbi));
-    broadcast_div_conf->set_out("out");
-    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {broadcast_div_op_conf});
-    diff_lbi.set_op_name(broadcast_div_op_conf.name());
-    diff_lbi.set_blob_name(broadcast_div_conf->out());
+    auto scalar_div_op =
+        user_op::UserOpConfWrapperBuilder("System-ModelDiffScale-ScalarDiv_" + NewUniqueId())
+            .Op("scalar_div_by_tensor")
+            .Input("x", GenLogicalBlobName(diff_lbi))
+            .Input("scalar", GenLogicalBlobName(total_loss_instance_num_lbi))
+            .Output("y")
+            .Build();
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_div_op.op_conf()});
+    diff_lbi = GenLogicalBlobId(scalar_div_op.output("y", 0));
   }
 }
 
-std::function<OpNode*(const std::string&)> MakeGetterLossOpNode4OpName(const OpGraph& op_graph) {
+Maybe<void> MakeGetterLossOpNode4OpName(
+    const OpGraph& op_graph, std::function<OpNode*(const std::string&)>* LossOpNode4OpName) {
   std::list<OpNode*> loss_nodes;
-  GetLossOpNodes(op_graph, &loss_nodes);
+  JUST(GetLossOpNodes(op_graph, &loss_nodes));
   auto loss_op_name2op_node = std::make_shared<HashMap<std::string, OpNode*>>();
   for (OpNode* op_node : loss_nodes) {
     CHECK(loss_op_name2op_node->emplace(op_node->op().op_name(), op_node).second);
   }
-  return [loss_op_name2op_node](const std::string& op_name) -> OpNode* {
+  *LossOpNode4OpName = [loss_op_name2op_node](const std::string& op_name) -> OpNode* {
     return loss_op_name2op_node->at(op_name);
   };
+  return Maybe<void>::Ok();
 }
 
 void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_pairs,
@@ -411,16 +421,15 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
-    OperatorConf scalar_mul_op_conf{};
-    scalar_mul_op_conf.set_name("System-ClipGradient-GlobalNorm-ScalarMul-" + NewUniqueId());
-    ScalarMulByTensorOpConf* scalar_mul_by_tensor_conf =
-        scalar_mul_op_conf.mutable_scalar_mul_by_tensor_conf();
-    scalar_mul_by_tensor_conf->set_in(GenLogicalBlobName(diff_lbi));
-    scalar_mul_by_tensor_conf->set_scalar(gradient_scale_factor_lbn);
-    scalar_mul_by_tensor_conf->set_out("out");
-    job_builder->AddOps(lbi2parallel_desc.at(lbi)->parallel_conf(), {scalar_mul_op_conf});
-    diff_lbi.set_op_name(scalar_mul_op_conf.name());
-    diff_lbi.set_blob_name(scalar_mul_by_tensor_conf->out());
+    auto scalar_mul_op = user_op::UserOpConfWrapperBuilder(
+                             "System-ClipGradient-GlobalNorm-ScalarMul-" + NewUniqueId())
+                             .Op("scalar_mul_by_tensor")
+                             .Input("x", GenLogicalBlobName(diff_lbi))
+                             .Input("scalar", gradient_scale_factor_lbn)
+                             .Output("y")
+                             .Build();
+    job_builder->AddOps(lbi2parallel_desc.at(lbi)->parallel_conf(), {scalar_mul_op.op_conf()});
+    diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
   }
 }
 
@@ -471,9 +480,10 @@ Maybe<void> GenerateBackwardOpConfIf(
 
 Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
                      HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi) {
-  auto NeedBackwardOp = MakePredicatorNeedBackwardOp(op_graph);
+  std::function<bool(OpNode*)> NeedBackwardOp;
+  JUST(MakePredicatorNeedBackwardOp(op_graph, &NeedBackwardOp));
   std::list<OpNode*> loss_nodes;
-  GetLossOpNodes(op_graph, &loss_nodes);
+  JUST(GetLossOpNodes(op_graph, &loss_nodes));
   CheckNotReachableAmongOpNodes(op_graph, loss_nodes);
   for (OpNode* loss_node : loss_nodes) {
     CHECK(NeedBackwardOp(loss_node)) << loss_node->op().op_name();
@@ -536,9 +546,10 @@ Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
   return Maybe<void>::Ok();
 }
 
-void ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
-                                     HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
-  auto LossOpNode4OpName = MakeGetterLossOpNode4OpName(op_graph);
+Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
+                                            HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
+  std::function<OpNode*(const std::string&)> LossOpNode4OpName;
+  JUST(MakeGetterLossOpNode4OpName(op_graph, &LossOpNode4OpName));
   const auto& train_conf = GetTrainConf();
   HashMap<LogicalBlobId, OpNode*> loss_lbi2op_node;
   for (const auto& loss_lbn : train_conf.loss_lbn()) {
@@ -591,25 +602,29 @@ void ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_bu
     ScaleModelDiffByConstantLossInstanceNum(op_graph, job_builder, lbi2diff_lbi,
                                             blob_desc->shape().elem_cnt());
   }
+  return Maybe<void>::Ok();
 }
 
 void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
                                HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
   const int32_t loss_scale_factor = GlobalJobDesc().loss_scale_factor();
   if (loss_scale_factor == 1) { return; }
-  const float down_scale_factor = 1.0 / loss_scale_factor;
+  const float down_scale_factor = 1.0f / loss_scale_factor;
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
-    OperatorConf down_scale_mul_op;
-    down_scale_mul_op.set_name("System-ModelDiffScale-ScalarMul-" + NewUniqueId());
-    ScalarMulOpConf* conf = down_scale_mul_op.mutable_scalar_mul_conf();
-    conf->set_in(GenLogicalBlobName(diff_lbi));
-    conf->set_out("out");
-    conf->set_float_operand(down_scale_factor);
-    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {down_scale_mul_op});
-    diff_lbi.set_op_name(down_scale_mul_op.name());
-    diff_lbi.set_blob_name(conf->out());
+    auto scalar_mul_op =
+        user_op::UserOpConfWrapperBuilder("System-ModelDiffScale-ScalarMul-" + NewUniqueId())
+            .Op("scalar_mul")
+            .Input("in", GenLogicalBlobName(diff_lbi))
+            .Output("out")
+            .Attr<bool>("has_float_operand", true)
+            .Attr<double>("float_operand", down_scale_factor)
+            .Attr<bool>("has_int_operand", false)
+            .Attr<int64_t>("int_operand", 0)
+            .Build();
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
+    diff_lbi = GenLogicalBlobId(scalar_mul_op.output("out", 0));
   }
 }
 

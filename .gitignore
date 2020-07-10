@@ -10,4 +10,5 @@ core.*
 *.pyc
 *.ipynb
 /.vscode
-manylinux-build-cache/
+manylinux*
+wheelhouse/

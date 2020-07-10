@@ -13,9 +13,6 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("constant")
 def constant(value, dtype=None, shape=None, name=None):
-    is_user_op = False
-    if os.getenv("ENABLE_USER_OP") == "True":
-        is_user_op = True
     if name is None:
         name = id_util.UniqueStr("Constant_")
     assert value is not None
@@ -24,7 +21,7 @@ def constant(value, dtype=None, shape=None, name=None):
     if not isinstance(value, (int, float)):
         raise NotImplementedError
 
-    if is_user_op:
+    if os.getenv("ENABLE_USER_OP") != "False":
         if isinstance(value, float):
             is_floating_value = True
         else:

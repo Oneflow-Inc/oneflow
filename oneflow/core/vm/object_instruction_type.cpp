@@ -68,7 +68,7 @@ class NewObjectInstructionType final : public InstructionType {
     FlatMsgView<NewObjectInstruction> view(instr_msg->operand());
     std::shared_ptr<ParallelDesc> parallel_desc = vm->GetInstructionParallelDesc(*instr_msg);
     CHECK(static_cast<bool>(parallel_desc));
-    const std::string& device_tag = DeviceTag4DeviceType(parallel_desc->device_type());
+    const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(parallel_desc->device_type()));
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
       auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
@@ -127,7 +127,7 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
     }
     std::shared_ptr<ParallelDesc> parallel_desc = vm->GetInstructionParallelDesc(*instr_msg);
     CHECK(static_cast<bool>(parallel_desc));
-    const std::string& device_tag = DeviceTag4DeviceType(parallel_desc->device_type());
+    const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(parallel_desc->device_type()));
     int64_t new_object = GetLogicalObjectId(args->new_object());
     auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
                                                                new_object, parallel_desc);
@@ -188,7 +188,7 @@ class ReplaceMirroredInstructionType final : public InstructionType {
     };
     std::shared_ptr<ParallelDesc> parallel_desc = vm->GetInstructionParallelDesc(*instr_msg);
     CHECK(static_cast<bool>(parallel_desc));
-    const std::string& device_tag = DeviceTag4DeviceType(parallel_desc->device_type());
+    const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(parallel_desc->device_type()));
     ForEachMachineIdAndDeviceIdInRange(
         *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
           FOR_RANGE(int, i, 0, args->lhs_object_id_size()) {

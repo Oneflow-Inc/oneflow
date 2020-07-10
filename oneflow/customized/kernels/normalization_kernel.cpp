@@ -46,9 +46,26 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
     CHECK_EQ(y->data_type(), data_type);
     CHECK_GE(axis, 0);
     CHECK_LT(axis, x->shape().NumAxes());
-    CudnnTensorDesc xy_desc(CUDNN_TENSOR_NCHW, data_type, x->shape().Count(0, axis),
-                            x->shape().At(axis), x->shape().Count(axis + 1), 1);
-    const int64_t param_dim_size = x->shape().At(axis);
+
+    int32_t n, c, h, w;
+    cudnnTensorFormat_t format;
+
+    if (axis != 0 && x->shape().Count(axis + 1) == 1 && !training) {
+      n = x->shape().At(0);
+      h = x->shape().Count(1, axis);
+      w = 1;
+      c = x->shape().At(axis);
+      format = CUDNN_TENSOR_NHWC;
+    } else {
+      n = x->shape().Count(0, axis);
+      c = x->shape().At(axis);
+      h = x->shape().Count(axis + 1);
+      w = 1;
+      format = CUDNN_TENSOR_NCHW;
+    }
+
+    CudnnTensorDesc xy_desc(format, data_type, n, c, h, w);
+    const int64_t param_dim_size = c;
     const DataType param_data_type = data_type == DataType::kFloat16 ? DataType::kFloat : data_type;
     const auto CheckParamTensor = [&](const user_op::Tensor* tensor) {
       CHECK_EQ(tensor->shape().NumAxes(), 1);
@@ -59,7 +76,7 @@ class NormalizationUserKernel<DeviceType::kGPU, T> final : public user_op::OpKer
     CheckParamTensor(beta);
     CheckParamTensor(moving_mean);
     CheckParamTensor(moving_variance);
-    CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, param_data_type, 1, param_dim_size, 1, 1);
+    CudnnTensorDesc param_desc(format, param_data_type, 1, c, 1, 1);
 
     if (training) {
       const auto momentum = ctx->Attr<float>("momentum");
@@ -148,20 +165,14 @@ class NormalizationGradUserKernel<DeviceType::kGPU, T> final : public user_op::O
 #define REGISTER_BN_KERNEL(op_device_type, dtype)                                   \
   REGISTER_USER_KERNEL("normalization")                                             \
       .SetCreateFn<NormalizationUserKernel<DeviceType::k##op_device_type, dtype>>() \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                  \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("y", 0); \
-        return ctx.device_type() == DeviceType::k##op_device_type                   \
-               && y_desc->data_type() == GetDataType<dtype>::value;                 \
-      });
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::k##op_device_type)  \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_BN_GRAD_KERNEL(op_device_type, dtype)                                  \
   REGISTER_USER_KERNEL("normalization_grad")                                            \
       .SetCreateFn<NormalizationGradUserKernel<DeviceType::k##op_device_type, dtype>>() \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                      \
-        const user_op::TensorDesc* dx_desc = ctx.TensorDesc4ArgNameAndIndex("dx", 0);   \
-        return ctx.device_type() == DeviceType::k##op_device_type                       \
-               && dx_desc->data_type() == GetDataType<dtype>::value;                    \
-      });
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::k##op_device_type)      \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_BN_KERNEL(CPU, float)
 REGISTER_BN_KERNEL(CPU, double)

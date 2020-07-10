@@ -8,6 +8,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -52,7 +53,7 @@ def _recursive_build_add_n(inputs, name=None):
 
 @oneflow_export("math.add_n")
 def add_n(inputs, name=None):
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         op_conf = op_conf_util.OperatorConf()
         setattr(
             op_conf, "name", name if name is not None else id_util.UniqueStr("AddN_"),
@@ -105,9 +106,13 @@ def multiply(x, y, name=None):
 @oneflow_export("math.divide")
 def divide(x, y, name=None):
     if isinstance(x, (int, float)):
-        raise NotImplementedError
+        return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
     elif isinstance(y, (int, float)):
-        raise NotImplementedError
+        if y == 0 or y == 0.0:
+            y = 0.0
+        else:
+            y = 1.0 / (float(y))
+        return scalar_mul(x, y, name)
     elif x.shape == y.shape:
         # TODO: add element-wise op
         return broadcast_div(x, y, name)
@@ -135,7 +140,7 @@ def floor_mod(x, y, name=None):
 def scalar_add(x, operand, name=None):
     if name is None:
         name = id_util.UniqueStr("ScalarAdd_")
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         builder = (
             flow.user_op_builder(name).Op("scalar_add").Input("in", [x]).Output("out")
         )
@@ -170,7 +175,7 @@ def scalar_add(x, operand, name=None):
 
 
 def scalar_add_by_tensor(x, scalar, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return (
             flow.user_op_builder(name or id_util.UniqueStr("ScalarAddByTensor_"))
             .Op("scalar_add_by_tensor")
@@ -198,7 +203,7 @@ def scalar_add_by_tensor(x, scalar, name=None):
 
 
 def element_wise_add(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return flow.math.add_n([x, y], name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -232,7 +237,7 @@ def build_broadcast_binary_op(math_op, x, y, name=None):
 
 
 def broadcast_add(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_add", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -251,7 +256,7 @@ def broadcast_add(x, y, name=None):
 
 
 def broadcast_sub(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_sub", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -270,7 +275,7 @@ def broadcast_sub(x, y, name=None):
 
 
 def scalar_sub_by_tensor(x, scalar, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return (
             flow.user_op_builder(name or id_util.UniqueStr("ScalarSubByTensor_"))
             .Op("scalar_sub_by_tensor")
@@ -298,7 +303,7 @@ def scalar_sub_by_tensor(x, scalar, name=None):
 
 
 def element_wise_mul(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return (
             flow.user_op_builder(name or id_util.UniqueStr("ElementWiseMul_"))
             .Op("multiply")
@@ -327,7 +332,7 @@ def element_wise_mul(x, y, name=None):
 
 
 def broadcast_mul(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_mul", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -348,7 +353,7 @@ def broadcast_mul(x, y, name=None):
 def scalar_mul(x, operand, name=None):
     if name is None:
         name = id_util.UniqueStr("ScalarMul_")
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         builder = (
             flow.user_op_builder(name).Op("scalar_mul").Input("in", [x]).Output("out")
         )
@@ -384,7 +389,7 @@ def scalar_mul(x, operand, name=None):
 
 
 def scalar_mul_by_tensor(x, scalar, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return (
             flow.user_op_builder(name or id_util.UniqueStr("ScalarMulByTensor_"))
             .Op("scalar_mul_by_tensor")
@@ -412,7 +417,7 @@ def scalar_mul_by_tensor(x, scalar, name=None):
 
 
 def broadcast_div(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_div", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -431,7 +436,7 @@ def broadcast_div(x, y, name=None):
 
 
 def scalar_div_by_tensor(x, scalar, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return (
             flow.user_op_builder(name or id_util.UniqueStr("ScalarDivByTensor_"))
             .Op("scalar_div_by_tensor")
@@ -459,7 +464,7 @@ def scalar_div_by_tensor(x, scalar, name=None):
 
 
 def broadcast_floor_mod(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_floor_mod", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -486,7 +491,7 @@ def tanh(x, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         op_conf = op_conf_util.OperatorConf()
         setattr(
             op_conf, "name", name if name is not None else id_util.UniqueStr("TanH_")
@@ -519,7 +524,7 @@ def gelu(x, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("Gelu_")
@@ -554,7 +559,7 @@ def relu(x, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         op_conf = op_conf_util.OperatorConf()
         setattr(
             op_conf, "name", name if name is not None else id_util.UniqueStr("Relu_")
@@ -581,13 +586,13 @@ def relu(x, name=None):
 @oneflow_export("math.sigmoid")
 def sigmoid(x, name=None):
     r"""Computes sigmoid of `x` element-wise.
-    
+
     Args:
         x: Input `Blob`.
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") != "True":
+    if os.getenv("ENABLE_USER_OP") == "False":
         op_conf = op_conf_util.OperatorConf()
         setattr(
             op_conf, "name", name if name is not None else id_util.UniqueStr("Sigmoid_")
@@ -615,7 +620,7 @@ def sigmoid(x, name=None):
 
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
 def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("UnsortedSegmentSum_")
@@ -652,7 +657,7 @@ def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
 def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
     if name is None:
         name = id_util.UniqueStr("UnsortedSegmentSumLike_")
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return (
             flow.user_op_builder(
                 name
@@ -687,7 +692,7 @@ def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
 
 @oneflow_export("math.unsorted_batch_segment_sum", "unsorted_batch_segment_sum")
 def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return (
             flow.user_op_builder(
                 name
@@ -734,7 +739,7 @@ def cast(x, dtype, name=None):
         return x
     if name is None:
         name = id_util.UniqueStr("Cast_")
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return (
             flow.user_op_builder(name)
             .Op("cast")
@@ -776,7 +781,7 @@ def naive_logical_and(lhs, rhs, name=None):
 
 @oneflow_export("math.equal")
 def equal(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_equal", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -796,7 +801,7 @@ def equal(x, y, name=None):
 
 @oneflow_export("math.not_equal")
 def not_equal(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -816,7 +821,7 @@ def not_equal(x, y, name=None):
 
 @oneflow_export("math.less")
 def less(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_less", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -836,7 +841,7 @@ def less(x, y, name=None):
 
 @oneflow_export("math.less_equal")
 def less_equal(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -856,7 +861,7 @@ def less_equal(x, y, name=None):
 
 @oneflow_export("math.greater")
 def greater(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_greater", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -876,7 +881,7 @@ def greater(x, y, name=None):
 
 @oneflow_export("math.greater_equal")
 def greater_equal(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -896,7 +901,7 @@ def greater_equal(x, y, name=None):
 
 @oneflow_export("math.logical_and")
 def logical_and(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -916,7 +921,7 @@ def logical_and(x, y, name=None):
 
 @oneflow_export("math.minimum")
 def broadcast_min(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_minimum", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -936,7 +941,7 @@ def broadcast_min(x, y, name=None):
 
 @oneflow_export("math.maximum")
 def broadcast_max(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_broadcast_binary_op("broadcast_maximum", x, y, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
