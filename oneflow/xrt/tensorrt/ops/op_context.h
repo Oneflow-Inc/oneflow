@@ -76,6 +76,8 @@ class TrtOpContext : public OpContext {
   // Output data type
   DataType OutputType(const std::string &name) const;
 
+  bool HasInput(const std::string &name) const;
+
  private:
   TrtOpContext() = delete;
   Argument ArgumentFromKey(const std::string &key) const;

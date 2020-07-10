@@ -11,14 +11,14 @@ namespace mola {
 class CastOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    DataType dest_dtype = ctx->Attr<DataType>("data_type");
-    DataType src_dtype = ctx->InputType("in");
-    xla::XlaOp in = ctx->Input("in");
+    DataType dest_dtype = ctx->Attr<DataType>("dtype");
+    DataType src_dtype = ctx->InputType("in_0");
+    xla::XlaOp in = ctx->Input("in_0");
     if (src_dtype == dest_dtype) {
-      ctx->SetOutput("out", in);
+      ctx->SetOutput("out_0", in);
     } else {
       xla::PrimitiveType data_type = DataTypeToPrimitiveType(dest_dtype);
-      ctx->SetOutput("out", xla::ConvertElementType(in, data_type));
+      ctx->SetOutput("out_0", xla::ConvertElementType(in, data_type));
     }
   }
 };

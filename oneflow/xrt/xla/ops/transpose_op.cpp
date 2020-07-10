@@ -10,16 +10,16 @@ class TransposeOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
     const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
-    Shape x_shape = ctx->InputShape("in");
+    Shape x_shape = ctx->InputShape("input_0");
     CHECK_EQ(perm.size(), x_shape.NumAxes());
 
-    xla::XlaOp x = ctx->Input("in");
+    xla::XlaOp x = ctx->Input("input_0");
     if (IsIdentity(perm)) {
-      ctx->SetOutput("out", x);
+      ctx->SetOutput("output_0", x);
     } else {
       std::vector<long long> transposed_order(x_shape.NumAxes());
       for (int i = 0; i < x_shape.NumAxes(); ++i) { transposed_order[i] = perm[i]; }
-      ctx->SetOutput("out", xla::Transpose(x, transposed_order));
+      ctx->SetOutput("output_0", xla::Transpose(x, transposed_order));
     }
   }
 

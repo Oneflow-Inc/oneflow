@@ -9,12 +9,13 @@ namespace tensorrt {
 class ConvolutionOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    nvinfer1::ITensor *in = ctx->Input("in");
-    nvinfer1::Weights weight = ctx->Weight("weight");
+    nvinfer1::ITensor *in = ctx->Input("in_0");
+    nvinfer1::Weights weight = ctx->Weight("weight_0");
 
     nvinfer1::Weights bias;
-    if (ctx->Attr<bool>("use_bias")) {
-      bias = ctx->Weight("bias");
+    if (ctx->HasInput("bias_0")) {
+      LOG(ERROR)<<"Has bias";
+      bias = ctx->Weight("bias_0");
     } else {
       bias = nvinfer1::Weights{nvinfer1::DataType::kFLOAT /* type */, nullptr /* values */,
                                0 /* count */};
@@ -24,7 +25,8 @@ class ConvolutionOp : public TrtOpKernel {
     const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
     const auto& dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-
+    const int groups = ctx->Attr<int32_t>("groups");
+    CHECK_EQ(groups, 1)<<"only support groups = 1 in TensorRT";
     int filters = ctx->Attr<int32_t>("filters");
     auto *layer = ctx->builder()->addConvolution(
         *in, filters, nvinfer1::DimsHW(kernel_size[0], kernel_size[1]), weight, bias);
@@ -36,7 +38,7 @@ class ConvolutionOp : public TrtOpKernel {
     if (ctx->Attr<std::string>("padding") == "same") {
       layer->setPaddingMode(nvinfer1::PaddingMode::kSAME_LOWER);
     }
-    ctx->SetOutput("out", layer->getOutput(0));
+    ctx->SetOutput("out_0", layer->getOutput(0));
   }
 };
 

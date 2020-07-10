@@ -30,54 +30,70 @@ namespace xrt {
 #define OP_TYPE_CASE(op) OperatorConf::k##op##Conf
 
 static std::unordered_map<int32_t, std::string> op_type2string_map = {
-    {OP_TYPE_CASE(Matmul), "MatMul"},
-    {OP_TYPE_CASE(Relu), "Relu"},
-    {OP_TYPE_CASE(Conv2D), "Conv2D"},
-    {OP_TYPE_CASE(Multiply), "Multiply"},
-    // {OP_TYPE_CASE(FullyConnected), "FullyConnected"},
-    {OP_TYPE_CASE(BiasAdd), "BiasAdd"},
-    {OP_TYPE_CASE(Reshape), "Reshape"},
     {OP_TYPE_CASE(Identity), "Identity"},
-    {OP_TYPE_CASE(ReshapeLike), "ReshapeLike"},
-    {OP_TYPE_CASE(Cast), "Cast"},
-    {OP_TYPE_CASE(Concat), "Concat"},
-    {OP_TYPE_CASE(ScalarAdd), "ScalarAdd"},
-    {OP_TYPE_CASE(ScalarMul), "ScalarMul"},
-    {OP_TYPE_CASE(Transpose), "Transpose"},
-    {OP_TYPE_CASE(BroadcastAdd), "BcastAdd"},
-    {OP_TYPE_CASE(BroadcastMul), "BcastMul"},
-    {OP_TYPE_CASE(BroadcastDiv), "BcastDiv"},
-    {OP_TYPE_CASE(Add), "Add"},
-    {OP_TYPE_CASE(Sigmoid), "Sigmoid"},
-    {OP_TYPE_CASE(Tanh), "Tanh"},
-    {OP_TYPE_CASE(TanhGrad), "TanhGrad"},
-    {OP_TYPE_CASE(Gelu), "Gelu"},
-    {OP_TYPE_CASE(GeluGrad), "GeluGrad"},
-    {OP_TYPE_CASE(Gather), "Gather"},
-    {OP_TYPE_CASE(BatchGather), "BatchGather"},
-    {OP_TYPE_CASE(Softmax), "Softmax"},
-    {OP_TYPE_CASE(SoftmaxGrad), "SoftmaxGrad"},
-    {OP_TYPE_CASE(LayerNorm), "LayerNorm"},
-    {OP_TYPE_CASE(LayerNormParamGrad), "LayerNormParamGrad"},
-    {OP_TYPE_CASE(LayerNormGrad), "LayerNormGrad"},
-    {OP_TYPE_CASE(ReduceSum), "ReduceSum"},
-    {OP_TYPE_CASE(ReduceMean), "ReduceMean"},
+    // {OP_TYPE_CASE(FullyConnected), "FullyConnected"},
     {OP_TYPE_CASE(AdamModelUpdate), "AdamOptimizer"},
-    {OP_TYPE_CASE(MaxPooling2D), "MaxPooling2D"},
-    {OP_TYPE_CASE(AveragePooling2D), "AveragePooling2D"},
-    {OP_TYPE_CASE(Normalization), "Normalization"},
     // {OP_TYPE_CASE(ReduceConcat), "ReduceConcat"},
     // {OP_TYPE_CASE(ReduceSplit), "ReduceSplit"},
     // TODO(hjchen2)
 };
 
+static std::unordered_map<std::string, std::string> user_op_type_name2string_map = {
+    {"tanh", "Tanh"},
+    {"tanh_grad", "TanhGrad"},
+    {"gelu", "Gelu"},
+    {"gelu_grad", "GeluGrad"},
+    {"sigmoid", "Sigmoid"},
+    {"relu", "Relu"},
+    {"normalization", "Normalization"},
+    {"bias_add", "BiasAdd"},
+    {"broadcast_add", "BcastAdd"},
+    {"broadcast_mul", "BcastMul"},
+    {"broadcast_div", "BcastDiv"},
+    {"cast", "Cast"},
+    {"concat", "Concat"},
+    {"conv2d", "Conv2D"},
+    {"multiply", "Multiply"},
+    {"add_n", "Add"},
+    {"matmul", "MatMul"},
+    {"max_pool_2d", "MaxPooling2D"},
+    {"avg_pool_2d", "AveragePooling2D"},
+    {"reduce_sum", "ReduceSum"},
+    {"reduce_mean", "ReduceMean"},
+    {"reshape", "Reshape"},
+    {"reshape_like", "ReshapeLike"},
+    {"softmax", "Softmax"},
+    {"softmax_grad", "SoftmaxGrad"},
+    {"top_k", "TopK"},
+    {"transpose", "Transpose"},
+    {"gather", "Gather"},
+    {"batch_gather", "BatchGather"},
+    {"unsorted_segment_sum", "UnsortedSegmentSum"},
+    {"unsorted_segment_sum_like", "UnsortedSegmentSumLike"},
+    {"layer_norm", "LayerNorm"},
+    {"layer_norm_param_grad", "LayerNormParamGrad"},
+    {"layer_norm_grad", "LayerNormGrad"},
+    {"scalar_add", "ScalarAdd"},
+    {"scalar_mul", "ScalarMul"},
+};
+
 std::string ExtractOpTypeAsString(const OperatorConf &conf) {
-  const auto it = op_type2string_map.find(conf.op_type_case());
-  if (it != op_type2string_map.end()) {
-    return it->second;
+  if (conf.has_user_conf()) {
+    const auto it = user_op_type_name2string_map.find(conf.user_conf().op_type_name());
+    if (it != user_op_type_name2string_map.end()) {
+      return it->second;
+    } else {
+      // Return empty if the operator is not in the translation map
+      return std::string("");
+    }
   } else {
-    // Return empty if the operator is not in the translation map
-    return std::string("");
+    const auto it = op_type2string_map.find(conf.op_type_case());
+    if (it != op_type2string_map.end()) {
+      return it->second;
+    } else {
+      // Return empty if the operator is not in the translation map
+      return std::string("");
+    }
   }
 }
 

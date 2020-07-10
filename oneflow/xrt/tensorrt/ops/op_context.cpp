@@ -59,6 +59,10 @@ Shape TrtOpContext::OutputShape(const std::string &name) const {
   return ArgumentFromKey(name).shape();
 }
 
+bool TrtOpContext::HasInput(const std::string &name) const {
+  return param_.arguments.count(name) > 0;
+}
+
 Argument TrtOpContext::ArgumentFromKey(const std::string &key) const {
   CHECK_GT(param_.arguments.count(key), 0);
   return param_.arguments.at(key);

@@ -10,12 +10,12 @@ namespace tensorrt {
 class ReshapeOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    Shape in_shape = ctx->InputShape("in");
-    Shape shape = ctx->OutputShape("out");
+    Shape in_shape = ctx->InputShape("in_0");
+    Shape shape = ctx->OutputShape("out_0");
     CHECK_EQ(shape.Count(0), in_shape.Count(0));
 
-    nvinfer1::ITensor *input = ctx->Input("in");
-    ctx->SetOutput("out", helpers::Reshape(ctx, input, shape));
+    nvinfer1::ITensor *input = ctx->Input("in_0");
+    ctx->SetOutput("out_0", helpers::Reshape(ctx, input, shape));
   }
 };
 
@@ -24,12 +24,12 @@ REGISTER_TRT_OP_KERNEL(Reshape, ReshapeOp).EnableTrainPhase().Finalize();
 class ReshapeLikeOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    Shape x_shape = ctx->InputShape("x");
-    Shape like_shape = ctx->InputShape("like");
+    Shape x_shape = ctx->InputShape("in_0");
+    Shape like_shape = ctx->InputShape("like_0");
     CHECK_EQ(x_shape.Count(0), like_shape.Count(0));
 
-    nvinfer1::ITensor *input = ctx->Input("x");
-    ctx->SetOutput("y", helpers::Reshape(ctx, input, like_shape));
+    nvinfer1::ITensor *input = ctx->Input("in_0");
+    ctx->SetOutput("out_0", helpers::Reshape(ctx, input, like_shape));
   }
 };
 

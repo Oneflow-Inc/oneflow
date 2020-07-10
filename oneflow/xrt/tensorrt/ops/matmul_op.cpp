@@ -13,22 +13,22 @@ nvinfer1::MatrixOperation GetMatrixOperation(nvinfer1::ITensor *x, bool transpos
 class MatMulOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    Shape a_shape = ctx->InputShape("a");
-    Shape b_shape = ctx->InputShape("b");
+    Shape a_shape = ctx->InputShape("a_0");
+    Shape b_shape = ctx->InputShape("b_0");
     CHECK_GE(a_shape.NumAxes(), 2);
     CHECK_EQ(a_shape.NumAxes(), b_shape.NumAxes());
 
     bool transpose_a = ctx->Attr<bool>("transpose_a");
     bool transpose_b = ctx->Attr<bool>("transpose_b");
-    nvinfer1::ITensor *a = ctx->Input("a");
-    nvinfer1::ITensor *b = ctx->Input("b");
+    nvinfer1::ITensor *a = ctx->Input("a_0");
+    nvinfer1::ITensor *b = ctx->Input("b_0");
 
     auto op0 = GetMatrixOperation(a, transpose_a);
     auto op1 = GetMatrixOperation(b, transpose_b);
 
     auto *layer = ctx->builder()->addMatrixMultiply(*a, op0, *b, op1);
     layer->setName(ctx->op_name().c_str());
-    ctx->SetOutput("out", layer->getOutput(0));
+    ctx->SetOutput("out_0", layer->getOutput(0));
   }
 };
 
