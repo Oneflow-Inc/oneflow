@@ -23,13 +23,6 @@ foreach(LIBRARY_NAME ${GFLAGS_LIBRARY_NAMES})
     list(APPEND GFLAGS_BUILD_STATIC_LIBRARIES ${GFLAGS_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
-set (GFLAGS_PUBLIC_H
-  ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include/gflags/config.h
-  ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include/gflags/gflags_completions.h
-  ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include/gflags/gflags_declare.h
-  ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include/gflags/gflags.h
-)
-
 if (THIRD_PARTY)
 
 # TODO: investigate if these three lines are necessary
@@ -51,17 +44,7 @@ ExternalProject_Add(gflags
         -DGFLAGS_NAMESPACE:STRING=gflags
 )
 
-add_custom_target(gflags_create_header_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${GFLAGS_INCLUDE_DIR}/gflags
-  DEPENDS gflags)
-
-add_custom_target(gflags_copy_headers_to_destination
-    DEPENDS gflags_create_header_dir)
-
-foreach(header_file ${GFLAGS_PUBLIC_H})
-  add_custom_command(TARGET gflags_copy_headers_to_destination PRE_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header_file} ${GFLAGS_INCLUDE_DIR}/gflags)
-endforeach()
+add_copy_headers_target(NAME gflags SRC ${gflags_HEADERS_DIR} DST ${GFLAGS_INCLUDE_DIR} deps gflags)
 
 add_custom_target(gflags_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GFLAGS_LIBRARY_DIR}
