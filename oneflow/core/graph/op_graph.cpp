@@ -353,6 +353,12 @@ void OpNode::InitLbi2SbpParallel() {
   Update(op().output_bns());
 }
 
+Maybe<OpGraph> OpGraph::New(const Job& job) {
+  const auto& op_graph = std::make_shared<OpGraph>();
+  JUST(op_graph->Init(job));
+  return op_graph;
+}
+
 Maybe<void> OpGraph::Init(const Job& job) {
   InitNodes(job);
   ForEachNode([&](OpNode* node) {
@@ -480,16 +486,15 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   op_node->InitLbi2SbpParallel();
 }
 
-void OpGraph::InferOpNodeMirroredSignature(OpNode* op_node,
-                                           bool is_mirrored_parallel_view_conf) const {
+Maybe<void> OpGraph::InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const {
   HashMap<std::string, MirroredSigInferHint> ibn2mirrored_sig_infer_hint;
   for (const std::string& ibn : op_node->op().input_bns()) {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
     const auto* producer = op_node->MutSrcNode4Ibn(ibn);
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
-    const auto& producer_obn = *CHECK_JUST(producer->op().obn4lbi(lbi));
+    const auto& producer_obn = *JUST(producer->op().obn4lbi(lbi));
     const auto& opt_mirrored_parallel =
-        *CHECK_JUST(producer->op().OptMirroredParallel4BnInOp(producer_obn));
+        *JUST(producer->op().OptMirroredParallel4BnInOp(producer_obn));
     MirroredSigInferHint infer_ctx(parallel_desc, opt_mirrored_parallel.has_mirrored_parallel());
     ibn2mirrored_sig_infer_hint.emplace(ibn, infer_ctx);
   }
@@ -500,8 +505,9 @@ void OpGraph::InferOpNodeMirroredSignature(OpNode* op_node,
         << "input blob not found. ibn: " << ibn;
     return &iter->second;
   };
-  CHECK_JUST(op_node->mut_op()->InferMirroredSignatureIf(
-      MirroredSigInferHint4Ibn, is_mirrored_parallel_view_conf, op_node->parallel_desc()));
+  JUST(op_node->mut_op()->InferMirroredSignatureIf(MirroredSigInferHint4Ibn, is_mirrored_conf,
+                                                   op_node->parallel_desc()));
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
@@ -561,13 +567,13 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     };
     JUST(op_node->mut_op()->InferBatchAxisIf(LogicalBlobDesc4Ibn, BatchAxis4Ibn));
     // infer mirrored_signature
-    bool is_mirrored_parallel_view_conf = false;
+    bool is_mirrored_conf = false;
     {
       const auto& op_name2is_mirrored = job_parallel_view_conf.op_name2is_mirrored_parallel_view();
       const auto& iter = op_name2is_mirrored.find(op_node->op().op_name());
-      if (iter != op_name2is_mirrored.end()) { is_mirrored_parallel_view_conf = iter->second; }
+      if (iter != op_name2is_mirrored.end()) { is_mirrored_conf = iter->second; }
     }
-    InferOpNodeMirroredSignature(op_node, is_mirrored_parallel_view_conf);
+    JUST(InferOpNodeMirroredSignature(op_node, is_mirrored_conf));
     // infer sbp_signature
     SbpSignature sbp_sig_conf;
     {

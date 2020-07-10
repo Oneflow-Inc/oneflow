@@ -37,16 +37,19 @@ void ResetOpConfName(OperatorConf* op_conf, const std::string& new_op_name) {
   }
 }
 
-void GetOpNames(const Job& job, HashSet<std::string>* op_names) {
-  for (const auto& op_conf : job.net().op()) { CHECK(op_names->insert(op_conf.name()).second); }
+Maybe<void> GetOpNames(const Job& job, HashSet<std::string>* op_names) {
+  for (const auto& op_conf : job.net().op()) {
+    CHECK_OR_RETURN(op_names->insert(op_conf.name()).second);
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
                         void (ForeignCallback::*interpret)(const std::string&, const std::string&)
                             const) {
-  OpGraph op_graph(job);
+  const auto& op_graph = JUST(OpGraph::New(job));
   const auto* foreign_callback = JUST(GlobalMaybe<ForeignCallback>());
-  op_graph.ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
+  op_graph->ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
     if (!op_names->insert(op_node.op().op_name()).second) { return Maybe<void>::Ok(); }
     const auto& op_attribute = op_node.op().GetOpAttributeWithoutOpNameAndLbn();
     const auto& parallel_conf = op_node.parallel_desc().parallel_conf();
@@ -914,7 +917,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
-  GetOpNames(job(), &executed_op_names_);
+  JUST(GetOpNames(job(), &executed_op_names_));
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
     return FunctionPass(pass_name)(mut_job());

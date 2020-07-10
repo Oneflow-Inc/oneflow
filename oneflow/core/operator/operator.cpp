@@ -253,7 +253,8 @@ Maybe<void> Operator::InferMirroredSignature(
     is_mirrored_parallel_view_values.insert(infer_hint.is_mirrored_parallel_view());
   }
   CHECK_LE_OR_RETURN(is_mirrored_parallel_view_values.size(), 1)
-      << "mixed parallel_views are disallowed";
+      << "mixed parallel_views are disallowed\n"
+      << op_conf().DebugString();
   if (is_mirrored_parallel_view_values.size() == 1) {
     is_mirrored_parallel_view_conf = *is_mirrored_parallel_view_values.begin();
   }
