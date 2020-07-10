@@ -15,6 +15,6 @@ ExternalProject_Add(cub
     INSTALL_COMMAND ""
 )
 
-add_copy_headers_target(NAME cub SRC ${CUB_BUILD_INCLUDE} DST ${CUB_INCLUDE_DIR}/cub DEPS cub)
+add_copy_headers_target(NAME cub SRC ${CUB_BUILD_INCLUDE} DST ${CUB_INCLUDE_DIR}/cub DEPS cub INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/cub_headers.txt")
 
 endif(THIRD_PARTY)
