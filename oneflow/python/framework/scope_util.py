@@ -46,11 +46,10 @@ class ScopeSymbol(Symbol):
         return builder.GetScopeSymbol(scope_proto, self)
 
     def BuildWithNewParallelConf(self, builder, parallel_conf):
-        (
-            device_tag,
-            machine_device_ids,
-        ) = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(parallel_conf)
-        return self.BuildWithNewParallelDesc(builder, device_tag, machine_device_ids)
+        tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
+            parallel_conf
+        )
+        return self.BuildWithNewParallelDesc(builder, *tag_and_dev_ids)
 
     def BuildWithNewIsMirrored(self, builder, is_mirrored):
         scope_proto = self._CloneScopeProto()
