@@ -49,8 +49,7 @@ ExternalProject_Add(protobuf
         -DZLIB_ROOT=${ZLIB_INSTALL}
         -DCMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG}
         ${PROTOBUF_ADDITIONAL_CMAKE_OPTIONS}
-    INSTALL_COMMAND
-      ${CMAKE_COMMAND} -E copy_directory ${PROTOBUF_SRC_DIR} ${PROTOBUF_INCLUDE_DIR}
+    INSTALL_COMMAND ""
     CMAKE_CACHE_ARGS
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
         -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF
@@ -58,6 +57,9 @@ ExternalProject_Add(protobuf
         -DZLIB_ROOT:STRING=${ZLIB_INSTALL}
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
 )
+
+# put protobuf includes in the 'THIRD_PARTY_DIR'
+add_copy_headers_target(NAME protobuf SRC ${PROTOBUF_SRC_DIR} DST ${PROTOBUF_INCLUDE_DIR} DEPS protobuf)
 
 # put protobuf librarys in the 'THIRD_PARTY_DIR'
 add_custom_target(protobuf_create_library_dir
