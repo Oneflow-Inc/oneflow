@@ -18,6 +18,7 @@ class Scope final {
   ~Scope() = default;
 
   Maybe<const JobDesc*> job_desc() const;
+  Maybe<int64_t> GetParallelDescSymbolId(const OperatorConf& op_conf) const;
   Maybe<const ParallelDesc*> GetParallelDesc(const OperatorConf& op_conf) const;
 
   const OptMirroredParallel& opt_mirrored_parallel_conf() const {

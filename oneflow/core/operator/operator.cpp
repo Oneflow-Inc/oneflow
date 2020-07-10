@@ -4,6 +4,7 @@
 #include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/eager/eager_symbol_storage.h"
 #include "oneflow/core/job/scope.h"
 
 namespace oneflow {
@@ -74,6 +75,21 @@ Maybe<const std::string*> Operator::obn4lbi(const LogicalBlobId& lbi) const {
   CHECK_OR_RETURN(iter != lbi2obn_.end())
       << "no logical blob id found. lbn: " << lbi.op_name() << "/" << lbi.blob_name();
   return &iter->second;
+}
+
+Maybe<void> Operator::InferParallelSignatureIf() { return InferParallelSignature(); }
+
+Maybe<void> Operator::InferParallelSignature() {
+  if (!op_conf().has_scope_symbol_id()) { return Maybe<void>::Ok(); }
+  const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf().scope_symbol_id());
+  int64_t parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
+  auto* parallel_signature = op_attribute_.mutable_parallel_signature();
+  parallel_signature->set_op_parallel_desc_symbol_id(parallel_desc_symbol_id);
+  auto* map = parallel_signature->mutable_bn_in_op2parallel_desc_symbol_id();
+  for (const auto& ibn : input_bns()) { (*map)[ibn] = parallel_desc_symbol_id; }
+  for (const auto& obn : output_bns()) { (*map)[obn] = parallel_desc_symbol_id; }
+  for (const auto& tbn : tmp_bns()) { (*map)[tbn] = parallel_desc_symbol_id; }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferBlobDescsIf(

@@ -96,6 +96,8 @@ class Operator {
 
 #undef DEFINE_BLOB_NAMES_GETTER
 
+  Maybe<void> InferParallelSignatureIf();
+
   // Read: shape of input_blobs
   // Write: shape of output_blobs
   Maybe<void> InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -185,6 +187,7 @@ class Operator {
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& BlobDesc4BnInOp);
 
  protected:
+  virtual Maybe<void> InferParallelSignature();
   virtual Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {

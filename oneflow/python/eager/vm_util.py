@@ -169,6 +169,9 @@ class InstructionsBuilder(object):
         get_delegate_blob_object=None,
     ):
         assert callable(get_delegate_blob_object)
+        if op_attribute.parallel_signature.HasField("op_parallel_desc_symbol_id"):
+            symbol_id = op_attribute.parallel_signature.op_parallel_desc_symbol_id
+            op_parallel_desc_sym = symbol_storage.GetSymbol4Id(symbol_id)
         assert op_parallel_desc_sym is not None
 
         def DelegateBlobObject4Ibn(ibn):
@@ -453,6 +456,14 @@ class InstructionsBuilder(object):
             ref_blob_object = bn_in_op2blob_object[ibn]
             mut1_operand_blob_objects.append((ibn_sym, ref_blob_object))
 
+        def GetOutBlobParallelDescSymbol(obn):
+            parallel_signature = op_attribute.parallel_signature
+            bn2symbol_id = parallel_signature.bn_in_op2parallel_desc_symbol_id
+            if obn in bn2symbol_id:
+                return symbol_storage.GetSymbol4Id(bn2symbol_id[obn])
+            else:
+                return parallel_desc_sym
+
         def OutputBns():
             obn2modifier = op_attribute.arg_modifier_signature.obn2output_blob_modifier
             for obn in op_attribute.output_bns:
@@ -465,7 +476,7 @@ class InstructionsBuilder(object):
         for obn in OutputBns():
             obn_sym = self.GetSymbol4String(obn)
             op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-                parallel_desc_sym, op_attribute, obn
+                GetOutBlobParallelDescSymbol(obn), op_attribute, obn
             )
             op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
             out_blob_object = self._NewBlobObject(
@@ -494,13 +505,22 @@ class InstructionsBuilder(object):
         self, op_attribute, parallel_desc_sym, bn_in_op2blob_object={}
     ):
         mut2_operand_blob_objects = []
+
+        def GetOutBlobParallelDescSymbol(obn):
+            parallel_signature = op_attribute.parallel_signature
+            bn2symbol_id = parallel_signature.bn_in_op2parallel_desc_symbol_id
+            if obn in bn2symbol_id:
+                return symbol_storage.GetSymbol4Id(bn2symbol_id[obn])
+            else:
+                return parallel_desc_sym
+
         for obn in op_attribute.output_bns:
             obn2modifier = op_attribute.arg_modifier_signature.obn2output_blob_modifier
             if obn2modifier[obn].header_infered_before_compute:
                 continue
             obn_sym = self.GetSymbol4String(obn)
             op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-                parallel_desc_sym, op_attribute, obn
+                GetOutBlobParallelDescSymbol(obn), op_attribute, obn
             )
             op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
             out_blob_object = self._NewBlobObject(

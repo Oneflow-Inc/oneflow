@@ -26,6 +26,14 @@ Maybe<const JobDesc*> Scope::job_desc() const {
   return job_desc_.get();
 }
 
+Maybe<int64_t> Scope::GetParallelDescSymbolId(const OperatorConf& op_conf) const {
+  if (op_conf.device_type() == DeviceType::kCPU || IsCpuOnly(op_conf)) {
+    return scope_proto_.host_parallel_desc_symbol_id();
+  } else {
+    return scope_proto_.device_parallel_desc_symbol_id();
+  }
+}
+
 Maybe<const ParallelDesc*> Scope::GetParallelDesc(const OperatorConf& op_conf) const {
   if (op_conf.device_type() == DeviceType::kCPU || IsCpuOnly(op_conf)) {
     return host_parallel_desc_.get();

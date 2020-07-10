@@ -141,6 +141,7 @@ class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
   virtual ~LazyJobBuildAndInferCtx() = default;
 
  private:
+  Maybe<void> Complete() override;
   Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op,
                                                 int32_t parallel_num) const override;
   std::string GetMirroredOpName(const std::string& op_name, int64_t parallel_id) const override;
@@ -149,7 +150,6 @@ class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
   bool GetIsMirroredParallelView() const override { return false; }
   Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
       const LogicalBlobId& lbn) override;
-  Maybe<void> Complete() override;
 };
 
 class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
@@ -159,6 +159,7 @@ class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
   virtual ~EagerJobBuildAndInferCtx() = default;
 
  private:
+  Maybe<void> Complete() override;
   Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op,
                                                 int32_t parallel_num) const override;
   std::string GetMirroredOpName(const std::string& op_name, int64_t parallel_id) const override;
@@ -167,7 +168,6 @@ class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
   bool GetIsMirroredParallelView() const override { return true; }
   Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
       const LogicalBlobId& lbn) override;
-  Maybe<void> Complete() override;
 
   HashSet<std::string> executed_op_names_;
 };

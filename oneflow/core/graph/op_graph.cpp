@@ -553,7 +553,9 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     oba2sbp_identical_obas[pair.second()].push_back(pair.first());
   }
   JUST(TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
-    // infer batch_axis
+    // Infer ParallelSignature
+    JUST(op_node->mut_op()->InferParallelSignatureIf());
+    // Infer batch_axis
     const auto& BatchAxis4Ibn = [&](const std::string& ibn) -> Maybe<const OptInt64*> {
       const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
       const auto* producer = op_node->MutSrcNode4InputLbi(lbi);
@@ -566,7 +568,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
       return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn));
     };
     JUST(op_node->mut_op()->InferBatchAxisIf(LogicalBlobDesc4Ibn, BatchAxis4Ibn));
-    // infer mirrored_signature
+    // Infer mirrored_signature
     bool is_mirrored_conf = false;
     {
       const auto& op_name2is_mirrored = job_parallel_view_conf.op_name2is_mirrored_parallel_view();
@@ -574,7 +576,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
       if (iter != op_name2is_mirrored.end()) { is_mirrored_conf = iter->second; }
     }
     JUST(InferOpNodeMirroredSignature(op_node, is_mirrored_conf));
-    // infer sbp_signature
+    // Infer sbp_signature
     SbpSignature sbp_sig_conf;
     {
       const auto& op_name2sbp_sig_conf = job_parallel_view_conf.op_name2sbp_signature_conf();
@@ -584,7 +586,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     InferOpNodeSbpSignature(op_node, sbp_sig_conf);
     op_node->InferBlobParallelDesc();
     UpdateJobParallelViewConf(*op_node, oba2sbp_identical_obas, &job_parallel_view_conf);
-    // infer logical_blob_desc
+    // Infer logical_blob_desc
     JUST(InferOpNodeLogicalBlobDesc(op_node));
     // Fill logical blob_desc signature.
     JUST(op_node->mut_op()->FillLogicalBlobDescSignature(
@@ -593,7 +595,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
         }));
     return Maybe<void>::Ok();
   }));
-  // fix sbp_signature
+  // Fix sbp_signature
   {
     TopoForEachNode([&](OpNode* op_node) {
       if (op_node->op().op_conf().op_type_case() == OperatorConf::kCastConf) {

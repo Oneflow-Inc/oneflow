@@ -549,6 +549,8 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   };
   JUST(op->InferOutParallelDescIf(ParallelDesc4Obn, GetBlobDesc4BnInOp, parallel_desc,
                                   JUST(op->sbp_signature())));
+  // TODO(lixinqi): replace lbi2parallel_desc_from_producer_view_  with ParallelSignature
+  JUST(op->InferParallelSignatureIf());
   JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));
   // Infer whether input/output blobs are backward used
   InferBlobBackwardSignature(op);
