@@ -15,3 +15,4 @@ core.*
 manylinux*
 wheelhouse/
 .DS_Store
+/tmp_wheel
