@@ -12,7 +12,13 @@ Maybe<void> BlobObject::TryInitBlob() {
 Maybe<void> BlobObject::InitBlob() {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
   rt_blob_desc_.reset(new RtBlobDesc(blob_desc_));
-  header_buffer_.reset(new char[rt_blob_desc_->AlignedByteSizeOfBlobBody()]);
+  {
+    header_buffer_.reset();
+    int64_t header_byte_size = rt_blob_desc_->ByteSizeOfBlobHeader();
+    const auto& FreeHeader = [header_byte_size](char* dptr) { std::free(dptr); };
+    char* ptr = reinterpret_cast<char*>(std::malloc(header_byte_size));
+    header_buffer_ = std::unique_ptr<char, std::function<void(char*)>>(ptr, FreeHeader);
+  }
   blob_.reset(new Blob(*mem_case_, rt_blob_desc_.get(), header_buffer_.get(), nullptr));
   return Maybe<void>::Ok();
 }
@@ -22,14 +28,18 @@ void BlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   CHECK_NOTNULL(allocator);
   Blob* blob = mut_blob();
   CHECK_NOTNULL(blob);
-  std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
+  const std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
+  if (required_body_bytes == 0) {
+    CHECK_ISNULL(blob->dptr());
+    return;
+  }
   if (blob->dptr() != nullptr) {
     CHECK_EQ(blob_body_bytes_, required_body_bytes);
     return;
   }
   {
     // reset blob_dptr_;
-    auto Free = [allocator, required_body_bytes](char* dptr) {
+    const auto& Free = [allocator, required_body_bytes](char* dptr) {
       allocator->Deallocate(dptr, required_body_bytes);
     };
     char* dptr = nullptr;

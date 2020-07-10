@@ -47,8 +47,6 @@ const char* CurandGetErrorString(curandStatus_t error) {
   return "Unknown curand status";
 }
 
-cudaDeviceProp global_device_prop;
-
 }  // namespace
 
 void InitGlobalCudaDeviceProp() {

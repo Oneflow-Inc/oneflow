@@ -32,8 +32,8 @@ class BlobObject : public vm::Object {
   std::shared_ptr<MemoryCase> mem_case_;
   BlobDesc blob_desc_;
   std::unique_ptr<RtBlobDesc> rt_blob_desc_;
-  std::unique_ptr<char[]> header_buffer_;
   std::unique_ptr<Blob> blob_;
+  std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
   std::size_t blob_body_bytes_;
 };

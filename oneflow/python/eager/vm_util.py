@@ -458,6 +458,7 @@ class InstructionsBuilder(object):
             for obn in op_attribute.output_bns:
                 if obn2modifier[obn].header_infered_before_compute:
                     yield obn
+
             for tmp_bn in op_attribute.tmp_bns:
                 yield tmp_bn
 

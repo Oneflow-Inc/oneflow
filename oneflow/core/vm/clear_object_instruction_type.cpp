@@ -27,7 +27,9 @@ class TryClearObjectInstructionType final : public InstructionType {
   // clang-format on
 
   void Infer(Instruction* instruction) const override {
-    // do nothing
+    ForEachObject(instruction, [&](const MutOperand& operand) {
+      TryClearObject(instruction->mut_type_mirrored_object(operand));
+    });
   }
   void Compute(Instruction* instruction) const override {
     ForEachObject(instruction, [&](const MutOperand& operand) {
