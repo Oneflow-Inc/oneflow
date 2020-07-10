@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import collections
 import os
 import random
-from typing import Union, Any, Optional
+from typing import Union, Optional, Sequence
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -17,10 +17,10 @@ from oneflow.python.oneflow_export import oneflow_export
 def conv2d(
     input: remote_blob_util.BlobDef,
     filters: remote_blob_util.BlobDef,
-    strides: int,
+    strides: Union[int, Sequence[int]],
     padding: str,
     data_format: str = "NHWC",
-    dilations: Optional[Union[int, list, tuple]] = None,
+    dilations: Optional[Union[int, Sequence[int]]] = None,
     groups: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -192,10 +192,10 @@ def batch_normalization(
 def tf_conv2d(
     input: remote_blob_util.BlobDef,
     filters: remote_blob_util.BlobDef,
-    strides: int,
+    strides: Union[int, Sequence[int]],
     padding: str,
     data_format: str = "NHWC",
-    dilations: Optional[Union[int, list, tuple]] = None,
+    dilations: Optional[Union[int, Sequence[int]]] = None,
     groups: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -355,8 +355,8 @@ def bias_add(
 @oneflow_export("nn.max_pool1d")
 def max_pool1d(
     input: remote_blob_util.BlobDef,
-    ksize: Union[int, list, tuple],
-    strides: Union[int, list, tuple],
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
     padding: str,
     data_format: str = "NWC",
     name: Optional[str] = None,
@@ -368,8 +368,8 @@ def max_pool1d(
 @oneflow_export("nn.avg_pool1d")
 def avg_pool1d(
     input: remote_blob_util.BlobDef,
-    ksize: Union[int, list, tuple],
-    strides: Union[int, list, tuple],
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
     padding: str,
     data_format: str = "NWC",
     name: Optional[str] = None,
@@ -381,8 +381,8 @@ def avg_pool1d(
 @oneflow_export("nn.max_pool2d")
 def max_pool2d(
     input: remote_blob_util.BlobDef,
-    ksize: Union[int, list, tuple],
-    strides: Union[int, list, tuple],
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
     padding: str,
     data_format: str = "NHWC",
     name: Optional[str] = None,
@@ -439,8 +439,8 @@ def max_pool2d(
 @oneflow_export("nn.avg_pool2d")
 def avg_pool2d(
     input: remote_blob_util.BlobDef,
-    ksize: Union[int, list, tuple],
-    strides: Union[int, list, tuple],
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
     padding: str,
     data_format: str = "NHWC",
     name: Optional[str] = None,
@@ -497,8 +497,8 @@ def avg_pool2d(
 @oneflow_export("nn.max_pool3d")
 def max_pool3d(
     input: remote_blob_util.BlobDef,
-    ksize: Union[int, list, tuple],
-    strides: Union[int, list, tuple],
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
     padding: str,
     data_format: str = "NDHWC",
     name: Optional[str] = None,
@@ -555,8 +555,8 @@ def max_pool3d(
 @oneflow_export("nn.avg_pool3d")
 def avg_pool3d(
     input: remote_blob_util.BlobDef,
-    ksize: Union[int, list, tuple],
-    strides: Union[int, list, tuple],
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
     padding: str,
     data_format: str = "NDHWC",
     name: Optional[str] = None,
@@ -893,7 +893,7 @@ def random_mask_like(
     like: remote_blob_util.BlobDef,
     rate: float,
     seed: Optional[int] = None,
-    noise_shape: Optional[Union[list, tuple]] = None,
+    noise_shape: Optional[Sequence] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     assert rate is not None and rate >= 0.0 and rate < 1.0
@@ -955,13 +955,13 @@ def deconv2d(
     value: Optional[remote_blob_util.BlobDef] = None,
     filter: Optional[remote_blob_util.BlobDef] = None,
     output_shape: Optional[remote_blob_util.BlobDef] = None,
-    strides: Optional[Union[int, list, tuple]] = None,
+    strides: Optional[Union[int, Sequence[int]]] = None,
     padding: str = "VALID",
     data_format: str = "NHWC",
     name: Optional[str] = None,
     input: Optional[remote_blob_util.BlobDef] = None,
     filters: Optional[remote_blob_util.BlobDef] = None,
-    dilations: Optional[Union[int, list, tuple]] = None,
+    dilations: Optional[Union[int, Sequence[int]]] = None,
 ) -> remote_blob_util.BlobDef:
     r"""2d transposed convolution
 

@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import os
-from typing import Any, Union, Optional
+from typing import Union, Optional, Sequence
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -57,9 +57,7 @@ def _recursive_build_add_n(inputs, name=None):
 
 
 @oneflow_export("math.add_n")
-def add_n(
-    inputs: Union[list, tuple], name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def add_n(inputs: Sequence, name: Optional[str] = None) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") == "False":
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -1014,7 +1012,7 @@ def broadcast_max(
 @oneflow_export("math.reduced_shape_elem_cnt")
 def elem_cnt(
     input_blob: remote_blob_util.BlobDef,
-    axis: Optional[Union[tuple, list]] = None,
+    axis: Optional[Sequence] = None,
     dtype: Optional[int] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -1077,9 +1075,7 @@ def argmax(
 
 @oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
 def broadcast_to_compatible_with(
-    x: remote_blob_util.BlobDef,
-    compatible: Union[list, tuple],
-    name: Optional[str] = None,
+    x: remote_blob_util.BlobDef, compatible: Sequence, name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     assert isinstance(compatible, (list, tuple))
     if name is None:
@@ -1176,7 +1172,9 @@ def l2_normalize(
 
 @oneflow_export("math.squared_difference")
 def squared_difference(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     name_subtract, name_square = None, None
     if name is not None:
