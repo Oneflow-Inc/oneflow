@@ -48,7 +48,7 @@ if [[ $SKIP_THIRD_PARTY != 1 ]]; then
         -DPython3_ROOT_DIR=$PY_ROOT \
         -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR   \
         $ONEFLOW_SRC_DIR
-    make -j glog
+    make -j1 glog
     exit 0
     make -j nccl
     make -j`nproc` prepare_oneflow_third_party
