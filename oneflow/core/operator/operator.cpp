@@ -244,6 +244,18 @@ Maybe<void> Operator::InferMirroredSignatureIf(
                                 parallel_desc);
 }
 
+std::string DebugString4MirroredHint(
+    std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
+    const Operator& op) {
+  std::string ret;
+  for (const auto& ibn : op.input_bns()) {
+    const auto& infer_hint = *CHECK_JUST(MirroredSigInferHint4Ibn(ibn));
+    bool is_mirrored = infer_hint.is_mirrored_parallel_view();
+    ret += "arg: " + ibn + ", is_mirrored: " + (is_mirrored ? "true" : "false") + "\n";
+  }
+  return ret;
+}
+
 Maybe<void> Operator::InferMirroredSignature(
     std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
     bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc) {
@@ -253,7 +265,10 @@ Maybe<void> Operator::InferMirroredSignature(
     is_mirrored_parallel_view_values.insert(infer_hint.is_mirrored_parallel_view());
   }
   CHECK_LE_OR_RETURN(is_mirrored_parallel_view_values.size(), 1)
-      << "mixed parallel_views are disallowed\n"
+      << "mixed parallel_views are disallowed."
+      << "\n=========== is_mirrrored_conf ===========\n"
+      << DebugString4MirroredHint(MirroredSigInferHint4Ibn, *this)
+      << "\n=========== op_cnf ===========\n"
       << op_conf().DebugString();
   if (is_mirrored_parallel_view_values.size() == 1) {
     is_mirrored_parallel_view_conf = *is_mirrored_parallel_view_values.begin();
