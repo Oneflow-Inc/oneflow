@@ -42,7 +42,7 @@ if [[ $SKIP_THIRD_PARTY != 1 ]]; then
     pushd $THIRD_PARTY_BUILD_DIR
 
     cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release \
-        -DFOR_CI=ON \
+        -DONEFLOW=OFF \
         -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR   \
         $ONEFLOW_SRC_DIR
     make -j nccl
@@ -63,7 +63,7 @@ do
     fi
     PY_ROOT=/opt/python/${PY_ABI}
     PY_BIN=${PY_ROOT}/bin/python
-    cmake -DTHIRD_PARTY=OFF         \
+    cmake -DTHIRD_PARTY=OFF -DONEFLOW=ON\
         -DPython3_ROOT_DIR=$PY_ROOT \
         -DCMAKE_BUILD_TYPE=Release  \
         -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR   \

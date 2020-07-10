@@ -1,7 +1,8 @@
 # Minimum CMake required
 cmake_minimum_required(VERSION 3.14.0)
 
-option(THIRD_PARTY "Build third party or oneflow" ON)
+option(THIRD_PARTY "Build third party" ON)
+option(ONEFLOW "Build oneflow" ON)
 
 option(USE_CLANG_FORMAT "" OFF)
 option(BUILD_RDMA "" OFF)
@@ -121,11 +122,11 @@ endif()
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-  # skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src, swig src
-  if (NOT FOR_CI)
-    include(oneflow)
-  endif()
 else()
   add_custom_target(prepare_oneflow_third_party ALL)
+endif()
+
+# skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src, swig src
+if (ONEFLOW)
   include(oneflow)
 endif()
