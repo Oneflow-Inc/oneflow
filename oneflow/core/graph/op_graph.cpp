@@ -842,7 +842,20 @@ void OpGraph::DumpBatchAxisLbi(Job* job) const {
 }
 
 Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&)>& DoEach) const {
-  for (const auto& op_name : op_names_) { JUST(DoEach(*op_name2op_node_.at(op_name))); }
+  HashMap<LogicalBlobId, bool> visited;
+  for (const auto& op_name : op_names_) {
+    const OpNode& op_node = *op_name2op_node_.at(op_name);
+    for (const auto& ibn : op_node.op().input_bns()) {
+      const auto& lbi = op_node.op().BnInOp2Lbi(ibn);
+      CHECK_OR_RETURN(visited[lbi]);
+    }
+    for (const auto& obn : op_node.op().output_bns()) {
+      const auto& lbi = op_node.op().BnInOp2Lbi(obn);
+      CHECK_OR_RETURN(!visited[lbi]);
+      visited[lbi] = true;
+    }
+    JUST(DoEach(op_node));
+  }
   return Maybe<void>::Ok();
 }
 
