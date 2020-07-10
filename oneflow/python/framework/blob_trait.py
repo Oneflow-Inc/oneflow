@@ -53,6 +53,9 @@ class BlobOperatorTrait(object):
     def __truediv__(self, rhs):
         return oneflow.math.divide(self, rhs)
 
+    def __rtruediv__(self, lhs):
+        return oneflow.math.divide(lhs, self)
+
     def __div__(self, rhs):
         return oneflow.math.divide(self, rhs)
 
