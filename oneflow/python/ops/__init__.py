@@ -12,7 +12,7 @@ import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.framework.hob as hob
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.blob_register as blob_register_util
 
@@ -41,8 +41,10 @@ def LazyReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
         remote_blob,
         (remote_blob_util.LazyMirroredBlob, remote_blob_util.LazyConsistentBlob),
     )
-    op_conf, lbi = _GetReturnOpConfAndOutLbi(remote_blob, allow_cpu_return_op)
-    compile_context.CurJobAddOp(op_conf)
+    op_conf, lbi, scope = _GetReturnOpConfAndOutLbiAndScope(
+        remote_blob, allow_cpu_return_op
+    )
+    compile_context.CurJobAddOp(op_conf, scope)
     return remote_blob_util.RemoteBlob(lbi)
 
 
@@ -50,12 +52,14 @@ def LazyReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
 def EagerReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
     if not hob.is_trainable(None):
         return remote_blob
-    op_conf, lbi = _GetReturnOpConfAndOutLbi(remote_blob, allow_cpu_return_op)
+    op_conf, lbi, scope = _GetReturnOpConfAndOutLbiAndScope(
+        remote_blob, allow_cpu_return_op
+    )
     if remote_blob.blob_object.op_arg_parallel_attr.is_mirrored():
         add_and_infer = compile_context.CurJobAddMirroredOp
     else:
         add_and_infer = compile_context.CurJobAddConsistentOp
-    op_attribute = add_and_infer(op_conf)
+    op_attribute = add_and_infer(op_conf, scope)
 
     def BuildInstruction(builder):
         get_blob_scope = blob_register.BnInOp2BlobObjectScope
@@ -70,14 +74,25 @@ def EagerReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-def _GetReturnOpConfAndOutLbi(remote_blob, allow_cpu_return_op=True):
+def _GetReturnOpConfAndOutLbiAndScope(remote_blob, allow_cpu_return_op=True):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr("Return_")
     setattr(op_conf.return_conf, "in", remote_blob.unique_name)
     op_conf.return_conf.out = "out"
     if allow_cpu_return_op:
         op_conf.device_type = c_api_util.DeviceType4DeviceTag("cpu")
+
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
-    return op_conf, lbi
+
+    parallel_conf = placement_proto_pb.ParallelConf()
+    parallel_conf.CopyFrom(remote_blob.parallel_conf)
+
+    def BuildScope(old_scope, builder):
+        return old_scope.BuildWithNewParallelConf(builder, parallel_conf)
+
+    sess = session_ctx.GetDefaultSession()
+    scope = sess.MakeScope(BuildScope)
+
+    return op_conf, lbi, scope
