@@ -1,4 +1,3 @@
-import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.c_api_util as c_api_util
@@ -108,23 +107,7 @@ class EagerLogicalUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        op_attribute = compile_context.CurJobAddOp(self.op_conf_)
-
-        def BuildInstruction(builder):
-            get_scope = blob_register.BnInOp2BlobObjectScope
-            with get_scope(op_attribute) as bn_in_op2blob_object:
-                parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-                builder.StatelessCall(
-                    op_attribute,
-                    parallel_conf,
-                    bn_in_op2blob_object=bn_in_op2blob_object,
-                )
-            bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
-            gradient_util.TrySetBackwardUsedBlobObject(
-                op_attribute, blob_register, bw_blob_register
-            )
-
-        vm_util.LogicalRun(BuildInstruction)
+        interpret_util.Forward(self.op_conf_)
         return self
 
     def MakeRemoteBlob(self, lbi):
@@ -177,7 +160,7 @@ class ConsistentUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        interpret_util.ConsistentInterpret(self.op_conf_)
+        interpret_util.ConsistentForward(self.op_conf_)
         return self
 
     def MakeRemoteBlob(self, lbi):

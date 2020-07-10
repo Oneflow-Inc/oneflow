@@ -7,7 +7,7 @@ from functools import reduce
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
@@ -101,7 +101,7 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
             op_conf.gather_conf.out = "out"
             op_conf.gather_conf.axis = axis
 
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -120,7 +120,7 @@ def local_gather(params, indices, axis=0, name=None):
     setattr(op_conf.local_gather_conf, "indices", indices.unique_name)
     setattr(op_conf.local_gather_conf, "axis", axis)
     setattr(op_conf.local_gather_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
@@ -188,7 +188,7 @@ def reshape(x, shape, name=None):
             setattr(op_conf.reshape_conf, "in", x.unique_name)
             op_conf.reshape_conf.shape.dim[:] = list(infer_shape(x, shape))
             op_conf.reshape_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -202,7 +202,7 @@ def reshape_like(x, like, name=None):
     setattr(op_conf.reshape_like_conf, "x", x.unique_name)
     setattr(op_conf.reshape_like_conf, "like", like.unique_name)
     op_conf.reshape_like_conf.y = "y"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "y"
@@ -222,7 +222,7 @@ def dynamic_reshape(x, shape, name=None):
     setattr(op_conf.dynamic_reshape_conf, "in", x.unique_name)
     op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
     setattr(op_conf.dynamic_reshape_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -269,7 +269,7 @@ def transpose(a, perm=None, conjugate=False, name=None):
         op_conf.transpose_conf.out = "out"
         op_conf.transpose_conf.perm.extend(list(perm))
 
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -364,7 +364,7 @@ def slice(x, begin, size, name=None):
     setattr(op_conf.slice_conf, "out", "out")
     op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list)
 
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -483,7 +483,7 @@ def concat(values, axis, name=None):
             values = [values]
         getattr(op_conf.concat_conf, "in").extend([v.unique_name for v in values])
         op_conf.concat_conf.axis = axis
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -565,7 +565,7 @@ def argwhere(condition, dtype=None, name=None):
     setattr(op_conf.arg_where_conf, "out_size", "out_size")
     if dtype is not None:
         setattr(op_conf.arg_where_conf, "data_type", dtype)
-    interpret_util.Interpret(op_conf)
+    interpret_util.Forward(op_conf)
 
     arg_where_out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(arg_where_out_lbi, "op_name", op_conf.name)
@@ -635,7 +635,7 @@ def elem_cnt(inputs, dtype=None, name=None):
     if dtype is not None:
         op_conf.shape_elem_cnt_conf.data_type = dtype
     op_conf.shape_elem_cnt_conf.y = "y"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "y")
@@ -655,7 +655,7 @@ def sync_dynamic_resize(inputs, size, name=None):
     setattr(op_conf.sync_dynamic_resize_conf, "axis", 0)
     setattr(op_conf.sync_dynamic_resize_conf, "out", "out")
     setattr(op_conf.sync_dynamic_resize_conf, "eager", flow.eager_execution_enabled())
-    interpret_util.Interpret(op_conf)
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
@@ -677,7 +677,7 @@ def stack(inputs, axis, name=None):
     getattr(op_conf.stack_conf, "in").extend([input.unique_name for input in inputs])
     setattr(op_conf.stack_conf, "axis", axis)
     setattr(op_conf.stack_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -727,7 +727,7 @@ def identity(x, name=None):
     op_conf.name = name
     setattr(op_conf.identity_conf, "in", x.unique_name)
     op_conf.identity_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -747,7 +747,7 @@ def identity_n(inputs, name=None):
         out_bn = "out_" + str(idx)
         getattr(op_conf.tuple_identity_conf, "out").append(out_bn)
         out_bns.append(out_bn)
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
 
     def bn_to_remote_blob(bn):
         lbi = logical_blob_id_util.LogicalBlobId()

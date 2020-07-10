@@ -5,7 +5,7 @@ import os
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
@@ -62,7 +62,7 @@ def add_n(inputs, name=None):
         for blob in inputs:
             getattr(op_conf.add_conf, "in").append(blob.unique_name)
         op_conf.add_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -167,7 +167,7 @@ def scalar_add(x, operand, name=None):
     elif isinstance(operand, float):
         op_conf.scalar_add_conf.float_operand = operand
     op_conf.scalar_add_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -195,7 +195,7 @@ def scalar_add_by_tensor(x, scalar, name=None):
     setattr(op_conf.scalar_add_by_tensor_conf, "in", x.unique_name)
     setattr(op_conf.scalar_add_by_tensor_conf, "scalar", scalar.unique_name)
     op_conf.scalar_add_by_tensor_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -214,7 +214,7 @@ def element_wise_add(x, y, name=None):
     getattr(op_conf.add_conf, "in").append(x.unique_name)
     getattr(op_conf.add_conf, "in").append(y.unique_name)
     op_conf.add_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -248,7 +248,7 @@ def broadcast_add(x, y, name=None):
     op_conf.broadcast_add_conf.a = x.unique_name
     op_conf.broadcast_add_conf.b = y.unique_name
     op_conf.broadcast_add_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -267,7 +267,7 @@ def broadcast_sub(x, y, name=None):
     op_conf.broadcast_sub_conf.a = x.unique_name
     op_conf.broadcast_sub_conf.b = y.unique_name
     op_conf.broadcast_sub_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -295,7 +295,7 @@ def scalar_sub_by_tensor(x, scalar, name=None):
     setattr(op_conf.scalar_sub_by_tensor_conf, "in", x.unique_name)
     setattr(op_conf.scalar_sub_by_tensor_conf, "scalar", scalar.unique_name)
     op_conf.scalar_sub_by_tensor_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -324,7 +324,7 @@ def element_wise_mul(x, y, name=None):
         setattr(op_conf.multiply_conf, "in_0", x.unique_name)
         setattr(op_conf.multiply_conf, "in_1", y.unique_name)
         op_conf.multiply_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -343,7 +343,7 @@ def broadcast_mul(x, y, name=None):
     op_conf.broadcast_mul_conf.a = x.unique_name
     op_conf.broadcast_mul_conf.b = y.unique_name
     op_conf.broadcast_mul_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -381,7 +381,7 @@ def scalar_mul(x, operand, name=None):
         elif isinstance(operand, float):
             op_conf.scalar_mul_conf.float_operand = operand
         op_conf.scalar_mul_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -409,7 +409,7 @@ def scalar_mul_by_tensor(x, scalar, name=None):
     setattr(op_conf.scalar_mul_by_tensor_conf, "in", x.unique_name)
     setattr(op_conf.scalar_mul_by_tensor_conf, "scalar", scalar.unique_name)
     op_conf.scalar_mul_by_tensor_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -428,7 +428,7 @@ def broadcast_div(x, y, name=None):
     op_conf.broadcast_div_conf.a = x.unique_name
     op_conf.broadcast_div_conf.b = y.unique_name
     op_conf.broadcast_div_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -456,7 +456,7 @@ def scalar_div_by_tensor(x, scalar, name=None):
     setattr(op_conf.scalar_div_by_tensor_conf, "in", x.unique_name)
     setattr(op_conf.scalar_div_by_tensor_conf, "scalar", scalar.unique_name)
     op_conf.scalar_div_by_tensor_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -475,7 +475,7 @@ def broadcast_floor_mod(x, y, name=None):
     op_conf.broadcast_floor_mod_conf.a = x.unique_name
     op_conf.broadcast_floor_mod_conf.b = y.unique_name
     op_conf.broadcast_floor_mod_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -498,7 +498,7 @@ def tanh(x, name=None):
         )
         setattr(op_conf.tanh_conf, "in", x.unique_name)
         setattr(op_conf.tanh_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -543,7 +543,7 @@ def gelu(x, name=None):
         )
         setattr(op_conf.gelu_conf, "in", x.unique_name)
         setattr(op_conf.gelu_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -566,7 +566,7 @@ def relu(x, name=None):
         )
         setattr(op_conf.relu_conf, "in", x.unique_name)
         setattr(op_conf.relu_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -599,7 +599,7 @@ def sigmoid(x, name=None):
         )
         setattr(op_conf.sigmoid_conf, "in", x.unique_name)
         setattr(op_conf.sigmoid_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -646,7 +646,7 @@ def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
         op_conf.unsorted_segment_sum_conf.axis = axis
         op_conf.unsorted_segment_sum_conf.out = "out"
 
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -683,7 +683,7 @@ def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
         op_conf.unsorted_segment_sum_like_conf.axis = axis
         op_conf.unsorted_segment_sum_like_conf.out = "out"
 
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -718,7 +718,7 @@ def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
         op_conf.unsorted_batch_segment_sum_conf.num_segments = num_segments
         op_conf.unsorted_batch_segment_sum_conf.out = "out"
 
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -756,7 +756,7 @@ def cast(x, dtype, name=None):
         setattr(op_conf.cast_conf, "in", x.unique_name)
         setattr(op_conf.cast_conf, "data_type", dtype)
         setattr(op_conf.cast_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -772,7 +772,7 @@ def naive_logical_and(lhs, rhs, name=None):
     setattr(op_conf.logical_and_conf, "lhs", lhs.unique_name)
     setattr(op_conf.logical_and_conf, "rhs", rhs.unique_name)
     setattr(op_conf.logical_and_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
@@ -792,7 +792,7 @@ def equal(x, y, name=None):
     op_conf.broadcast_equal_conf.a = x.unique_name
     op_conf.broadcast_equal_conf.b = y.unique_name
     op_conf.broadcast_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -812,7 +812,7 @@ def not_equal(x, y, name=None):
     op_conf.broadcast_not_equal_conf.a = x.unique_name
     op_conf.broadcast_not_equal_conf.b = y.unique_name
     op_conf.broadcast_not_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -832,7 +832,7 @@ def less(x, y, name=None):
     op_conf.broadcast_less_than_conf.a = x.unique_name
     op_conf.broadcast_less_than_conf.b = y.unique_name
     op_conf.broadcast_less_than_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -852,7 +852,7 @@ def less_equal(x, y, name=None):
     op_conf.broadcast_less_equal_conf.a = x.unique_name
     op_conf.broadcast_less_equal_conf.b = y.unique_name
     op_conf.broadcast_less_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -872,7 +872,7 @@ def greater(x, y, name=None):
     op_conf.broadcast_greater_than_conf.a = x.unique_name
     op_conf.broadcast_greater_than_conf.b = y.unique_name
     op_conf.broadcast_greater_than_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -892,7 +892,7 @@ def greater_equal(x, y, name=None):
     op_conf.broadcast_greater_equal_conf.a = x.unique_name
     op_conf.broadcast_greater_equal_conf.b = y.unique_name
     op_conf.broadcast_greater_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -912,7 +912,7 @@ def logical_and(x, y, name=None):
     op_conf.broadcast_logical_and_conf.a = x.unique_name
     op_conf.broadcast_logical_and_conf.b = y.unique_name
     op_conf.broadcast_logical_and_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -932,7 +932,7 @@ def broadcast_min(x, y, name=None):
     op_conf.broadcast_minimum_conf.a = x.unique_name
     op_conf.broadcast_minimum_conf.b = y.unique_name
     op_conf.broadcast_minimum_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -952,7 +952,7 @@ def broadcast_max(x, y, name=None):
     op_conf.broadcast_maximum_conf.a = x.unique_name
     op_conf.broadcast_maximum_conf.b = y.unique_name
     op_conf.broadcast_maximum_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -976,7 +976,7 @@ def elem_cnt(input_blob, axis=None, dtype=None, name=None):
     if dtype is not None:
         op_conf.shape_elem_cnt_conf.data_type = dtype
     op_conf.shape_elem_cnt_conf.y = "y"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     out_lbi.op_name = op_conf.name
     out_lbi.blob_name = "y"
@@ -1024,7 +1024,7 @@ def broadcast_to_compatible_with(x, compatible, name=None):
     op_conf.broadcast_to_compatible_with_conf.compatible.extend(
         [cp.unique_name for cp in compatible]
     )
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
 
     ret_lbi = logical_blob_id_util.LogicalBlobId()
     ret_lbi.op_name = op_conf.name

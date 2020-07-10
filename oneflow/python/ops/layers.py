@@ -5,7 +5,7 @@ import os
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -283,7 +283,7 @@ def layer_norm(
         setattr(op_conf.layer_norm_conf, "begin_norm_axis", begin_norm_axis)
         setattr(op_conf.layer_norm_conf, "begin_params_axis", begin_params_axis)
         setattr(op_conf.layer_norm_conf, "epsilon", epsilon)
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         out_lbi = logical_blob_id_util.LogicalBlobId()
         setattr(out_lbi, "op_name", op_conf.name)
         setattr(out_lbi, "blob_name", "out")
@@ -304,7 +304,7 @@ def layer_norm_grad(
     setattr(op_conf.layer_norm_grad_conf, "dx", "dx")
     setattr(op_conf.layer_norm_grad_conf, "begin_norm_axis", begin_norm_axis)
     setattr(op_conf.layer_norm_grad_conf, "epsilon", 1e-5)
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "dx")
@@ -325,7 +325,7 @@ def layer_norm_param_grad(
     setattr(op_conf.layer_norm_param_grad_conf, "normalized_diff", "normalized_diff")
     setattr(op_conf.layer_norm_param_grad_conf, "beta_diff", "beta_diff")
     setattr(op_conf.layer_norm_param_grad_conf, "gamma_diff", "gamma_diff")
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
 
     normalized_diff_lbi = logical_blob_id_util.LogicalBlobId()
     beta_diff_lbi = logical_blob_id_util.LogicalBlobId()
@@ -511,7 +511,7 @@ def batch_normalization(
         else:
             setattr(op_conf.normalization_conf, "is_training", False)
 
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         out_lbi = logical_blob_id_util.LogicalBlobId()
         setattr(out_lbi, "op_name", op_conf.name)
         setattr(out_lbi, "blob_name", "out")

@@ -7,7 +7,7 @@ import random
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
@@ -137,7 +137,7 @@ def conv2d(
                 raise ValueError("invalid data_format")
         op_conf.conv_2d_conf.groups = groups
 
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -333,7 +333,7 @@ def bias_add(value, bias, data_format=None, name=None):
         setattr(op_conf.bias_add_conf, "b", bias.unique_name)
         setattr(op_conf.bias_add_conf, "out", "out")
         setattr(op_conf.bias_add_conf, "axis", bias_add_axis)
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -396,7 +396,7 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
             "data_format",
             "channels_last" if data_format == "NHWC" else "channels_first",
         )
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         out_lbi = logical_blob_id_util.LogicalBlobId()
         setattr(out_lbi, "op_name", op_conf.name)
         setattr(out_lbi, "blob_name", "out")
@@ -447,7 +447,7 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
             "data_format",
             "channels_last" if data_format == "NHWC" else "channels_first",
         )
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         out_lbi = logical_blob_id_util.LogicalBlobId()
         setattr(out_lbi, "op_name", op_conf.name)
         setattr(out_lbi, "blob_name", "out")
@@ -498,7 +498,7 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
             "data_format",
             "channels_last" if data_format == "NDHWC" else "channels_first",
         )
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         out_lbi = logical_blob_id_util.LogicalBlobId()
         setattr(out_lbi, "op_name", op_conf.name)
         setattr(out_lbi, "blob_name", "out")
@@ -549,7 +549,7 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
             "data_format",
             "channels_last" if data_format == "NDHWC" else "channels_first",
         )
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         out_lbi = logical_blob_id_util.LogicalBlobId()
         setattr(out_lbi, "op_name", op_conf.name)
         setattr(out_lbi, "blob_name", "out")
@@ -594,7 +594,7 @@ def softmax(logits, axis=None, name=None):
         setattr(op_conf.softmax_conf, "in", logits.unique_name)
         op_conf.softmax_conf.axis = axis
         op_conf.softmax_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -643,7 +643,7 @@ def softmax_grad(y, dy, axis=None, name=None):
 
         op_conf.softmax_grad_conf.axis = -1
         op_conf.softmax_grad_conf.dx = "dx"
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "dx"
@@ -784,7 +784,7 @@ def sigmoid_cross_entropy_with_logits(labels=None, logits=None, name=None):
     op_conf.sigmoid_cross_entropy_conf.label = labels.unique_name
     op_conf.sigmoid_cross_entropy_conf.loss = "loss"
     op_conf.sigmoid_cross_entropy_conf.label_type = labels.dtype
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "loss"
