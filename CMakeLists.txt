@@ -4,6 +4,10 @@ cmake_minimum_required(VERSION 3.14.0)
 option(THIRD_PARTY "Build third party" ON)
 option(ONEFLOW "Build oneflow" ON)
 
+if (NOT THIRD_PARTY AND NOT ONEFLOW)
+  message(FATAL_ERROR "at least one of flags THIRD_PARTY and ONEFLOW should be ON")
+endif()
+
 option(USE_CLANG_FORMAT "" OFF)
 option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
