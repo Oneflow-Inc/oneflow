@@ -38,14 +38,11 @@ fi
 THIRD_PARTY_BUILD_DIR=$CACHE_DIR/build-third-party
 THIRD_PARTY_INSTALL_DIR=$CACHE_DIR/build-third-party-install
 if [[ $SKIP_THIRD_PARTY != 1 ]]; then
-    PY_ABI=cp35-cp35m
-    PY_ROOT=/opt/python/${PY_ABI}
-    PY_BIN=${PY_ROOT}/bin/python
     mkdir -p $THIRD_PARTY_BUILD_DIR
     pushd $THIRD_PARTY_BUILD_DIR
 
     cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release \
-        -DPython3_ROOT_DIR=$PY_ROOT \
+        -DFOR_CI=ON \
         -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR   \
         $ONEFLOW_SRC_DIR
     make -j nccl
