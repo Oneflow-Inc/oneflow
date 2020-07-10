@@ -9,7 +9,6 @@ import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
@@ -18,6 +17,7 @@ import oneflow.python.ops.user_op_builder as user_op_builder_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.gradient_util as gradient_util
+import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
@@ -100,7 +100,7 @@ def get_eager_variable(
         op_attribute = compile_context.CurJobAddConsistentOp(op_conf)
         if var_blob is None:
             var_blob = _CreateEagerVariableBlob(op_attribute)
-            InitVariableBlob(op_conf, var_blob)
+            op_executor.EagerInitVariableBlob(op_conf, var_blob)
         job_var_blob = var_blob
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
     else:
@@ -246,63 +246,3 @@ def _CreateEagerVariableBlob(op_attribute):
     return remote_blob_util.EagerLogicalBlob(
         lbi, blob_object=bn_in_op2blob_object["out"]
     )
-
-
-def InitVariableBlob(var_op_conf, var_blob):
-    with oneflow.fixed_placement("cpu", "0:0"):
-        _Assign(var_blob.blob_object, _ModelInit(var_op_conf))
-
-
-def _Assign(var_blob_object, value_blob_object):
-    def BuildAssignInstruction(builder):
-        new_parallel_desc_symbol = boxing_util.TryReplaceDeviceTag(
-            builder, var_blob_object.parallel_desc_symbol, "cpu"
-        )
-        consumer_op_arg_parallel_attr = op_arg_util.OpArgParallelAttribute(
-            new_parallel_desc_symbol,
-            var_blob_object.op_arg_parallel_attr.sbp_parallel,
-            var_blob_object.op_arg_parallel_attr.opt_mirrored_parallel,
-        )
-        tmp_blob_object = boxing_util.BoxingTo(
-            builder, value_blob_object, consumer_op_arg_parallel_attr
-        )
-        boxing_util.Assign(builder, var_blob_object, tmp_blob_object)
-
-    vm_util.LogicalRun(BuildAssignInstruction)
-
-
-def _ModelInit(var_op_conf):
-    op_conf, lbi = _GetModelInitAndLbi(var_op_conf)
-    bn_in_op2blob_object = {}
-
-    def BuildNotMirroredScope(old_scope, builder):
-        return old_scope.BuildWithNewIsMirrored(builder, False)
-
-    def BuildModeInitInstruction(builder):
-        upstream_signature = op_attribute_pb.UpstreamSignature()
-        parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-        op_conf.scope_symbol_id = oneflow.scope.current_scope().symbol_id
-        op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
-        builder.StatelessCall(
-            op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
-        )
-
-    sess = session_ctx.GetDefaultSession()
-    with sess.NewCurrentScope(sess.MakeScope(BuildNotMirroredScope)):
-        vm_util.LogicalRun(BuildModeInitInstruction)
-    return bn_in_op2blob_object["out_0"]
-
-
-def _GetModelInitAndLbi(var_op_conf):
-    variable_op_conf = op_conf_util.VariableOpConf()
-    variable_op_conf.CopyFrom(var_op_conf.variable_conf)
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = "model_init"
-    op_conf.device_type = device_util.DeviceType4DeviceTag("cpu")
-    op_conf.model_init_conf.out.append("out_0")
-    op_conf.model_init_conf.variable_op_name.append(var_op_conf.name)
-    op_conf.model_init_conf.original_variable_conf.append(variable_op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = op_conf.model_init_conf.out[0]
-    return op_conf, lbi

@@ -1,4 +1,5 @@
 import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
@@ -166,11 +167,6 @@ class EagerPhysicalUserOp(UserOp):
 
 
 @oneflow_export("consistent_user_op_builder")
-def api_consistent_user_op_builder(op_name):
-    return enable_if.unique([consistent_user_op_builder])(op_name)
-
-
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def consistent_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return UserOpConfBuilder(job_name, op_name, ConsistentUserOp)
@@ -181,7 +177,7 @@ class ConsistentUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        compile_context.CurJobAddConsistentOp(self.op_conf_)
+        interpret_util.ConsistentInterpret(self.op_conf_)
         return self
 
     def MakeRemoteBlob(self, lbi):
