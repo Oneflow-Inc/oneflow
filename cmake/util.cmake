@@ -93,7 +93,7 @@ function(add_copy_headers_target)
   cmake_parse_arguments(
       PARSED_ARGS
       ""
-      "NAME;SRC;DST"
+      "NAME;SRC;DST;INVENTORY_FILE"
       "DEPS"
       ${ARGN}
   )
@@ -116,9 +116,18 @@ function(add_copy_headers_target)
   file(GLOB_RECURSE hpp_headers "${PARSED_ARGS_SRC}/*.hpp")
   list(APPEND headers ${cuda_headers})
   list(APPEND headers ${hpp_headers})
+
   foreach(header_file ${headers})
     file(RELATIVE_PATH relative_file_path ${PARSED_ARGS_SRC} ${header_file})
     add_custom_command(TARGET "${PARSED_ARGS_NAME}_copy_headers_to_destination" PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header_file} "${PARSED_ARGS_DST}/${relative_file_path}")
+  endforeach()
+
+  if(PARSED_ARGS_INVENTORY_FILE)
+    file(STRINGS ${PARSED_ARGS_INVENTORY_FILE} inventory_headers)
+  endif(PARSED_ARGS_INVENTORY_FILE)
+  foreach(header_file ${inventory_headers})
+    add_custom_command(TARGET "${PARSED_ARGS_NAME}_copy_headers_to_destination" PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PARSED_ARGS_SRC}/${header_file}" "${PARSED_ARGS_DST}/${header_file}")
   endforeach()
 endfunction()
