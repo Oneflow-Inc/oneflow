@@ -12,6 +12,8 @@ def _coco(anno_file):
     global coco_dict
 
     if anno_file not in coco_dict:
+        from pycocotools.coco import COCO
+
         coco_dict[anno_file] = COCO(anno_file)
 
     return coco_dict[anno_file]

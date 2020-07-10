@@ -7,6 +7,8 @@ import oneflow as flow
 
 
 def _random_sample_images(anno_file, image_dir, batch_size):
+    from pycocotools.coco import COCO
+
     image_files = []
     image_ids = []
     batch_group_id = -1
