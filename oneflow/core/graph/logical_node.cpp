@@ -1,7 +1,6 @@
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/optimizer_compute_task_node.h"
-#include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
@@ -132,10 +131,6 @@ std::vector<LogicalBlobId> ReturnPackedLbi(const LogicalNode* src, const Logical
   return {GenPackedLbi()};
 }
 
-REGISTER_FUNC_FOR_FIND_LBIS("MdDiffAcc"
-                            "NormalMdUpdt",
-                            ReturnPackedLbi);
-
 }  // namespace
 
 std::shared_ptr<Operator> LogicalNode::SoleOp() const {
@@ -262,11 +257,13 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
         return &TaskGraph::BldSubTskGphByBoxing;
       } else {
         if (IsTickNode(src_node) && IsTickNode(dst_node)) {
-          if (src_pd->parallel_num() > 1) {
-            CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
+          if (src_pd->parallel_num() == dst_pd->parallel_num()) {
+            return &TaskGraph::BldSubTskGphByOneToOne;
+          } else {
+            CHECK_EQ(src_pd->parallel_num(), 1);
+            return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
           }
         }
-        return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
       }
     }
   }
@@ -323,9 +320,6 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceSplit"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("RecordLoad"
                               "Decode",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
-                              "NormalMdUpdt",
-                              BldSubTskGphToNormalMdUpdt);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
                               "ReduceAdd",
                               &TaskGraph::BldSubTskGphByReduceScatter2ReduceAdd);
@@ -360,9 +354,6 @@ BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const Logi
   return GetBldBoxingOpConfMethodByFwParallelPolicy(src, dst);
 }
 
-REGISTER_BLD_BOXING_OP_CONF_MTHD("MdDiffAcc"
-                                 "NormalMdUpdt",
-                                 &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 REGISTER_BLD_BOXING_OP_CONF_MTHD("Tick"
                                  "Tick",
                                  &BoxingTaskNode::BldBoxingOpConfWithPartialTick2SinkTick);
@@ -374,7 +365,6 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("Tick"
   OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)    \
   OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)        \
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)  \
-  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                  \
   OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)          \
   OF_PP_MAKE_TUPLE_SEQ(ReduceIdentity, kMdUpdtArea)        \

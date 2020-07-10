@@ -45,23 +45,26 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
 
     @flow.global_function(func_config)
     def test_element_wise_mul_job(
-        x=flow.FixedTensorDef(shape, dtype=flow_type),
-        y=flow.FixedTensorDef(shape, dtype=flow_type),
+        x=flow.FixedTensorDef(shape, dtype=flow.float),
+        y=flow.FixedTensorDef(shape, dtype=flow.float),
     ):
         with flow.fixed_placement(device, "0:0"):
             x += flow.get_variable(
                 name="vx",
                 shape=(1,),
-                dtype=flow_type,
+                dtype=flow.float,
                 initializer=flow.zeros_initializer(),
             )
             y += flow.get_variable(
                 name="vy",
                 shape=(1,),
-                dtype=flow_type,
+                dtype=flow.float,
                 initializer=flow.zeros_initializer(),
             )
+            x = flow.cast(x, dtype=flow_type)
+            y = flow.cast(y, dtype=flow_type)
             out = flow.math.multiply(x, y)
+            out = flow.cast(out, dtype=flow.float)
             flow.losses.add_loss(out)
 
             flow.watch(x, test_global_storage.Setter("x"))
@@ -74,9 +77,9 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
 
     check_point = flow.train.CheckPoint()
     check_point.init()
-    test_element_wise_mul_job(
-        np.random.rand(*shape).astype(np_type), np.random.rand(*shape).astype(np_type)
-    ).get()
+    x = np.random.randint(low=0, high=10, size=shape).astype(np.float32)
+    y = np.random.randint(low=0, high=10, size=shape).astype(np.float32)
+    test_element_wise_mul_job(x, y).get()
     test_case.assertTrue(
         np.allclose(
             test_global_storage.Get("x") * test_global_storage.Get("y"),
@@ -101,6 +104,6 @@ def test_element_wise_mul_fw_bw(test_case):
     arg_dict = OrderedDict()
     arg_dict["device"] = ["gpu", "cpu"]
     arg_dict["shape"] = [(96, 96)]
-    arg_dict["type_name"] = ["float32", "double"]
+    arg_dict["type_name"] = ["float32", "double", "int8", "int32", "int64"]
     for arg in GenArgDict(arg_dict):
         _test_element_wise_mul_fw_bw(test_case, **arg)

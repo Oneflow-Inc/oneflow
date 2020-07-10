@@ -96,8 +96,11 @@ set(oneflow_third_party_libs
     ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
-    ${RE2_LIBRARIES}
 )
+
+if (NOT WITH_XLA)
+  list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
+endif()
 
 if(WIN32)
   # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"
@@ -145,9 +148,12 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
-    ${RE2_INCLUDE_DIR}
     ${JSON_INCLUDE_DIR}
 )
+
+if (NOT WITH_XLA)
+  list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${RE2_INCLUDE_DIR})
+endif()
 
 if (BUILD_CUDA)
   include(cub)

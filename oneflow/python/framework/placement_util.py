@@ -7,8 +7,8 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("placement.current_scope")
-def api_placement_current_scope():
-    return enable_if.unique(placement_current_scope)()
+def api_placement_current_scope() -> placement_ctx.PlacementScope:
+    return enable_if.unique([placement_current_scope])()
 
 
 @enable_if.condition(hob.in_global_mode & hob.in_placement_scope)
@@ -17,8 +17,10 @@ def placement_current_scope():
 
 
 @oneflow_export("fixed_placement")
-def api_fixed_placement_scope(device_tag, machine_device_ids):
-    return enable_if.unique(GetFixedPlacementScope)(device_tag, machine_device_ids)
+def api_fixed_placement_scope(
+    device_tag: str, machine_device_ids: str
+) -> placement_ctx.FixedPlacementScope:
+    return enable_if.unique([GetFixedPlacementScope])(device_tag, machine_device_ids)
 
 
 @enable_if.condition(
@@ -30,8 +32,10 @@ def GetFixedPlacementScope(device_tag, machine_device_ids):
 
 
 @oneflow_export("device_prior_placement")
-def api_device_prior_placement(device_tag, machine_device_ids):
-    return enable_if.unique(GetDevicePriorPlacementScope)(
+def api_device_prior_placement(
+    device_tag: str, machine_device_ids: str
+) -> placement_ctx.DevicePriorPlacementScope:
+    return enable_if.unique([GetDevicePriorPlacementScope])(
         device_tag, machine_device_ids
     )
 

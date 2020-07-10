@@ -31,18 +31,16 @@ class MultiplyKernel final : public user_op::OpKernel {
 #define REGISTER_MULTIPLY_KERNEL(device, dtype_pair)                                            \
   REGISTER_USER_KERNEL("multiply")                                                              \
       .SetCreateFn<MultiplyKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()                      \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                              \
-        const user_op::TensorDesc* x_desc = ctx.TensorDesc4ArgNameAndIndex("x", 0);             \
-        return ctx.device_type() == device                                                      \
-               && x_desc->data_type() == OF_PP_PAIR_SECOND(dtype_pair);                         \
-      })                                                                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair)))       \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "x", 0, true));                        \
         return Maybe<void>::Ok();                                                               \
       });
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MULTIPLY_KERNEL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MULTIPLY_KERNEL, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
 #undef REGISTER_MULTIPLY_KERNEL
 
 }  // namespace oneflow

@@ -148,7 +148,7 @@ def round(x, name=None):
 
 @oneflow_export("math.rsqrt")
 def rsqrt(x, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_unary_elemwise_math_op("rsqrt", x, name)
 
     op_conf = op_conf_util.OperatorConf()
@@ -189,7 +189,7 @@ def softplus(x, name=None):
 
 @oneflow_export("math.sqrt")
 def sqrt(x, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_unary_elemwise_math_op("sqrt", x, name)
 
     op_conf = op_conf_util.OperatorConf()
@@ -205,7 +205,7 @@ def sqrt(x, name=None):
 
 @oneflow_export("math.square")
 def square(x, name=None):
-    if os.getenv("ENABLE_USER_OP") == "True":
+    if os.getenv("ENABLE_USER_OP") != "False":
         return build_unary_elemwise_math_op("square", x, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(

@@ -379,8 +379,9 @@ class UserKernel final : public Kernel {
     {
       const std::string& op_type_name =
           kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
-      const auto* kernel_reg_val = user_op::LookUpInKernelRegistry(
-          op_type_name, UserKernelRegContext(kernel_conf(), job_desc()));
+      const user_op::KernelRegistrationVal* kernel_reg_val =
+          CHECK_JUST(user_op::LookUpInKernelRegistry(
+              op_type_name, UserKernelRegContext(kernel_conf(), job_desc())));
       CHECK_NOTNULL(kernel_reg_val);
       kernel_.reset(kernel_reg_val->create_fn());
     }
@@ -449,8 +450,8 @@ EagerKernel::EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf)
 
 void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
   const std::string& op_type_name = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
-  auto kernel_reg_val =
-      user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf, job_desc()));
+  auto kernel_reg_val = CHECK_JUST(
+      user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf, job_desc())));
   CHECK_NOTNULL(kernel_reg_val);
   kernel_.reset(kernel_reg_val->create_fn());
 }
@@ -464,7 +465,7 @@ void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) co
   kernel_->InferShape(&infer_ctx);
 }
 
-std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerModelForward(
+std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
     const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, DeviceCtx* device_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   std::shared_ptr<user_op::OpKernelState> new_opkernel_state;

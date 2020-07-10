@@ -100,7 +100,8 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
   std::list<Event> event_list_;
   std::thread event_list_poll_thread_;
   std::mutex event_list_mutex_;
-  std::atomic<bool> shutdown_;
+  std::condition_variable event_list_cond_;
+  bool shutdown_;
   std::mutex mutex_;
 
   int64_t current_stream_id_ = 0;
@@ -114,10 +115,17 @@ NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
   CHECK_GE(collective_boxing_conf_.nccl_fusion_threshold_mb(), 0);
   fusion_threshold_ = collective_boxing_conf_.nccl_fusion_threshold_mb() * 1024 * 1024;
   event_list_poll_thread_ = std::thread([this]() {
+    std::list<Event> local_event_list;
     while (true) {
-      std::unique_lock<std::mutex> lock(event_list_mutex_);
-      if (event_list_.empty() && shutdown_) { break; }
-      for (auto it = event_list_.begin(); it != event_list_.end();) {
+      {
+        std::unique_lock<std::mutex> lock(event_list_mutex_);
+        if (local_event_list.empty()) {
+          event_list_cond_.wait(lock, [this]() { return (!event_list_.empty()) || shutdown_; });
+        }
+        local_event_list.splice(local_event_list.end(), event_list_);
+      }
+      if (local_event_list.empty() && shutdown_) { break; }
+      for (auto it = local_event_list.begin(); it != local_event_list.end();) {
         CudaCheck(cudaSetDevice(it->device_id));
         cudaError_t err = cudaEventQuery(it->cuda_event);
         if (err == cudaErrorNotReady) {
@@ -126,7 +134,7 @@ NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
         } else if (err == cudaSuccess) {
           CudaCheck(cudaEventDestroy(it->cuda_event));
           it->callback(Maybe<void>::Ok());
-          event_list_.erase(it++);
+          local_event_list.erase(it++);
         } else {
           CudaCheck(err);
           UNIMPLEMENTED();
@@ -137,7 +145,11 @@ NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
 }
 
 NcclCollectiveBoxingExecutorBackend::~NcclCollectiveBoxingExecutorBackend() {
-  shutdown_ = true;
+  {
+    std::unique_lock<std::mutex> lock(event_list_mutex_);
+    shutdown_ = true;
+    event_list_cond_.notify_all();
+  }
   event_list_poll_thread_.join();
   CudaCurrentDeviceGuard guard;
   for (auto& device_id2device_ctx : stream_id2device_id2device_ctx_) {
@@ -354,6 +366,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
                                          callback(status);
                                        }
                                      }});
+      event_list_cond_.notify_all();
     }
   }
 }

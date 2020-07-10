@@ -31,13 +31,15 @@ class ScalarMulUserKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_KERNEL(kernel_device_type, dtype)                                    \
-  REGISTER_USER_KERNEL("scalar_mul")                                                  \
-      .SetCreateFn<ScalarMulUserKernel<DeviceType::k##kernel_device_type, dtype>>()   \
-      .SetIsMatchedPred([](const user_op::KernelRegContext& ctx) {                    \
-        const user_op::TensorDesc* y_desc = ctx.TensorDesc4ArgNameAndIndex("out", 0); \
-        return ctx.device_type() == DeviceType::k##kernel_device_type                 \
-               && y_desc->data_type() == GetDataType<dtype>::value;                   \
+#define REGISTER_KERNEL(kernel_device_type, dtype)                                              \
+  REGISTER_USER_KERNEL("scalar_mul")                                                            \
+      .SetCreateFn<ScalarMulUserKernel<DeviceType::k##kernel_device_type, dtype>>()             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::k##kernel_device_type)          \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
+        return Maybe<void>::Ok();                                                               \
       });
 
 REGISTER_KERNEL(CPU, int32_t)

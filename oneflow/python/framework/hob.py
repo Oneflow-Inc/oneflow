@@ -7,7 +7,7 @@ from oneflow.python.lib.core.high_order_bool import HighOrderBool
 def InRuntimeModeHOB(mode):
     assert rt_mode.IsValidMode(mode)
     return HighOrderBool(
-        "Current mode is %s" % mode, lambda: rt_mode.CurrentMode() == mode
+        "Current mode is %s" % mode, lambda ctx: rt_mode.CurrentMode() == mode
     )
 
 
@@ -16,16 +16,16 @@ in_global_mode = InRuntimeModeHOB(rt_mode.GLOBAL_MODE)
 in_device_mode = InRuntimeModeHOB(rt_mode.DEVICE_MODE)
 
 
-def _IsEnvInitialized():
-    assert in_normal_mode()
+def _IsEnvInitialized(ctx):
+    assert in_normal_mode(ctx)
     return c_api_util.IsEnvInited()
 
 
 env_initialized = HighOrderBool("Environment initialized", _IsEnvInitialized)
 
 
-def _AnyGlobalFunctionDefined():
-    assert in_normal_mode()
+def _AnyGlobalFunctionDefined(ctx):
+    assert in_normal_mode(ctx)
     return session_ctx.GetDefaultSession().AnyGlobalFunctionDefined()
 
 
@@ -34,7 +34,7 @@ any_global_function_defined = HighOrderBool(
 )
 
 
-def _EagerExecutionEnabled():
+def _EagerExecutionEnabled(ctx):
     return c_api_util.EagerExecutionEnabled()
 
 
@@ -43,16 +43,16 @@ eager_execution_enabled = HighOrderBool(
 )
 
 
-def _IsSessionInitialized():
-    assert in_normal_mode()
+def _IsSessionInitialized(ctx):
+    assert in_normal_mode(ctx)
     return session_ctx.GetDefaultSession().is_running
 
 
 session_initialized = HighOrderBool("Session initialized", _IsSessionInitialized)
 
 
-def _IsCurrentFunctionTrainable():
-    assert in_global_mode()
+def _IsCurrentFunctionTrainable(ctx):
+    assert in_global_mode(ctx)
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
 
@@ -62,7 +62,7 @@ is_trainable = HighOrderBool(
 )
 
 
-def _InPlacementScope():
+def _InPlacementScope(ctx):
     return len(session_ctx.GetDefaultSession().placement_scope_stack) > 0
 
 
