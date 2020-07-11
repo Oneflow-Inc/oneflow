@@ -40,7 +40,7 @@ class TestMultiply(unittest.TestCase):
         f2 = make_trt_job(x.shape, y.shape, dtype=flow.float32)
         a = f1(x, y).get()
         b = f2(x, y).get()
-        print("without xla: ", a)
+        print("without tensorrt: ", a)
         print("with tensorrt", b)
         self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()

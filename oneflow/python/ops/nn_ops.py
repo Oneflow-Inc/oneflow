@@ -653,7 +653,7 @@ def softmax_grad(y, dy, axis=None, name=None):
             dx = flow.transpose(dx, perm=permute)
         return dx
 
-    need_transpose, permute = _softmax_need_transpose(logits, axis)
+    need_transpose, permute = _softmax_need_transpose(y, axis)
     if need_transpose:
         y = flow.transpose(y, perm=permute)
         dy = flow.transpose(dy, perm=permute)

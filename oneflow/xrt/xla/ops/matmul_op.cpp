@@ -9,8 +9,8 @@ namespace mola {
 class MatMulOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    Shape a_shape = ctx->InputShape("a");
-    Shape b_shape = ctx->InputShape("b");
+    Shape a_shape = ctx->InputShape("a_0");
+    Shape b_shape = ctx->InputShape("b_0");
     CHECK_GE(a_shape.NumAxes(), 2);
     CHECK_EQ(a_shape.NumAxes(), b_shape.NumAxes());
 
@@ -23,12 +23,12 @@ class MatMulOp : public XlaOpKernel {
     bool transpose_a = ctx->Attr<bool>("transpose_a");
     bool transpose_b = ctx->Attr<bool>("transpose_b");
 
-    xla::XlaOp a = ctx->Input("a");
-    xla::XlaOp b = ctx->Input("b");
+    xla::XlaOp a = ctx->Input("a_0");
+    xla::XlaOp b = ctx->Input("b_0");
 
     auto lhs = transpose_a ? xla::Transpose(a, {1, 0}) : a;
     auto rhs = transpose_b ? xla::Transpose(b, {1, 0}) : b;
-    ctx->SetOutput("out", xla::Dot(lhs, rhs));
+    ctx->SetOutput("out_0", xla::Dot(lhs, rhs));
   }
 };
 
