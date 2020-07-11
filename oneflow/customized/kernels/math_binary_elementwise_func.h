@@ -128,19 +128,14 @@ template<>
 struct PowFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x, const half y) {
     return MATH_FUNC_H_FW(PowFunctor<float>::Forward);
-    // return __float2half(PowFunctor<float>::Forward(__half2float(x), __half2float(y)));
   }
 
   static OF_HALF_FUNC const half BackwardXGrad(const half x, const half y, const half dz) {
     return MATH_FUNC_H_BW(PowFunctor<float>::BackwardXGrad);
-    // return __float2half(PowFunctor<float>::BackwardXGrad(__half2float(x), __half2float(y),
-    // __half2float(dz)));
   }
 
   static OF_HALF_FUNC const half BackwardYGrad(const half x, const half y, const half dz) {
     return MATH_FUNC_H_BW(PowFunctor<float>::BackwardYGrad);
-    // return __float2half(PowFunctor<float>::BackwardYGrad(__half2float(x), __half2float(y),
-    // __half2float(dz)));
   }
 };
 
