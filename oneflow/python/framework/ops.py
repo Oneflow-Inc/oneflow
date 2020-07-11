@@ -8,10 +8,13 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Union, Optional
 
 
 @oneflow_export("repeat")
-def repeat(input, repeat_num, name=None):
+def repeat(
+    input: remote_blob_util.BlobDef, repeat_num: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("Repeat_"),
@@ -27,7 +30,9 @@ def repeat(input, repeat_num, name=None):
 
 
 @oneflow_export("acc")
-def acc(one, max_acc_num, name=None):
+def acc(
+    one: remote_blob_util.BlobDef, max_acc_num: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("Acc_"),
@@ -43,7 +48,9 @@ def acc(one, max_acc_num, name=None):
 
 
 @oneflow_export("unpack")
-def unpack(input, unpack_num, name=None):
+def unpack(
+    input: remote_blob_util.BlobDef, unpack_num: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("Unpack_"),
@@ -59,7 +66,9 @@ def unpack(input, unpack_num, name=None):
 
 
 @oneflow_export("pack")
-def pack(input, pack_num, name=None):
+def pack(
+    input: remote_blob_util.BlobDef, pack_num: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("Pack_"),
@@ -75,7 +84,12 @@ def pack(input, pack_num, name=None):
 
 
 @oneflow_export("parallel_cast")
-def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
+def parallel_cast(
+    input: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+    distribute: Optional[distribute_util.Distribute] = None,
+    gradient_distribute: Optional[distribute_util.Distribute] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,

@@ -2,8 +2,10 @@ from __future__ import absolute_import
 
 import sys
 from functools import reduce
+from typing import Any, Optional, Sequence, Union
 
 import numpy as np
+
 import oneflow
 import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -129,12 +131,12 @@ class FixedTensorDef(ArgBlobDef):
 
     def __init__(
         self,
-        shape,
-        dtype=data_type_util.kFloat,
-        batch_axis=0,
-        split_axis="same_with_batch_axis",
-        name=None,
-    ):
+        shape: Union[list, tuple],
+        dtype: int = data_type_util.kFloat,
+        batch_axis: int = 0,
+        split_axis: str = "same_with_batch_axis",
+        name: Optional[str] = None,
+    ) -> None:
         if type(batch_axis) is int:
             if batch_axis < 0:
                 batch_axis += len(shape)
@@ -150,21 +152,21 @@ class FixedTensorDef(ArgBlobDef):
         )
 
     @property
-    def is_dynamic(self):
+    def is_dynamic(self) -> bool:
         return False
 
     @property
-    def is_tensor_list(self):
+    def is_tensor_list(self) -> bool:
         return False
 
-    def AddAndInferOp(self, op_conf):
+    def AddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
         return compile_context.CurJobAddConsistentOp(op_conf)
 
-    def _CheckNdarray(self, ndarray):
+    def _CheckNdarray(self, ndarray: np.ndarray) -> None:
         assert isinstance(ndarray, np.ndarray)
         assert ndarray.shape == self.shape
 
-    def _AsyncPush(self, session, arg_ndarray):
+    def _AsyncPush(self, session: object, arg_ndarray: np.ndarray) -> None:
         session.AsyncPush(self.op_name, _MakePushNdarrayCallback(arg_ndarray))
 
 
@@ -189,7 +191,13 @@ class MirroredTensorDef(ArgBlobDef):
 
     """
 
-    def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0, name=None):
+    def __init__(
+        self,
+        shape: tuple,
+        dtype: int = data_type_util.kFloat,
+        batch_axis: int = 0,
+        name: Optional[str] = None,
+    ) -> None:
         assert type(shape) is tuple
         assert type(batch_axis) is int
         if batch_axis < 0:
@@ -200,19 +208,19 @@ class MirroredTensorDef(ArgBlobDef):
         self.sub_consistent_blob_list_ = []
 
     @property
-    def is_dynamic(self):
+    def is_dynamic(self) -> bool:
         return True
 
     @property
-    def is_tensor_list(self):
+    def is_tensor_list(self) -> bool:
         return False
 
-    def AddAndInferOp(self, op_conf):
+    def AddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> None:
         _AddAndInferMirroredOp(
             self.unique_name, op_conf, self.sub_consistent_blob_list_
         )
 
-    def _CheckNdarray(self, ndarray_list):
+    def _CheckNdarray(self, ndarray_list: Sequence[np.ndarray]) -> None:
         assert isinstance(ndarray_list, (list, tuple))
         assert len(self.sub_consistent_blob_list_) == len(ndarray_list)
 
@@ -226,7 +234,7 @@ class MirroredTensorDef(ArgBlobDef):
             assert len(ndarray.shape) == len(self.shape)
             assert GetElemCnt(ndarray.shape) <= GetElemCnt(self.shape)
 
-    def _AsyncPush(self, session, ndarray_list):
+    def _AsyncPush(self, session: object, ndarray_list: Sequence[np.ndarray]) -> None:
         for i in range(len(ndarray_list)):
             sub_blob = self.sub_consistent_blob_list_[i]
             session.AsyncPush(
@@ -255,7 +263,13 @@ class MirroredTensorListDef(ArgBlobDef):
 
     """
 
-    def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0, name=None):
+    def __init__(
+        self,
+        shape: tuple,
+        dtype: int = data_type_util.kFloat,
+        batch_axis: int = 0,
+        name: Optional[str] = None,
+    ) -> None:
         assert type(shape) is tuple
         assert type(batch_axis) is int
         if batch_axis < 0:
@@ -266,19 +280,19 @@ class MirroredTensorListDef(ArgBlobDef):
         self.sub_consistent_blob_list_ = []
 
     @property
-    def is_dynamic(self):
+    def is_dynamic(self) -> bool:
         return True
 
     @property
-    def is_tensor_list(self):
+    def is_tensor_list(self) -> bool:
         return True
 
-    def AddAndInferOp(self, op_conf):
+    def AddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> None:
         _AddAndInferMirroredOp(
             self.unique_name, op_conf, self.sub_consistent_blob_list_
         )
 
-    def _CheckNdarray(self, ndarray_lists):
+    def _CheckNdarray(self, ndarray_lists: Sequence[np.ndarray]) -> None:
         assert isinstance(ndarray_lists, (list, tuple))
         assert len(self.sub_consistent_blob_list_) == len(ndarray_lists)
 
@@ -296,7 +310,7 @@ class MirroredTensorListDef(ArgBlobDef):
                 elem_cnt += GetElemCnt(ndarray.shape)
             assert elem_cnt <= GetElemCnt(self.shape)
 
-    def _AsyncPush(self, session, ndarray_lists):
+    def _AsyncPush(self, session: object, ndarray_lists: Sequence[np.ndarray]) -> None:
         for i in range(len(ndarray_lists)):
             sub_blob = self.sub_consistent_blob_list_[i]
             session.AsyncPush(
