@@ -19,6 +19,12 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("assign")
+def api_assign(ref, value, dtype=None, name=None):
+    api = enable_if.unique([assign])
+    return api(ref, value, dtype=dtype, name=name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def assign(ref, value, dtype=None, name=None):
     if name is None:
         name = id_util.UniqueStr("Assign_")
@@ -41,17 +47,17 @@ def assign(ref, value, dtype=None, name=None):
 
 
 @oneflow_export("system.assign")
-def api_assign(ref, value, validate_shape=None, use_locking=None, name=None):
+def api_system_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     # TODO(lixinqi): check ref.is_lvalue
-    api = enable_if.unique([lazy_assign, eager_assign])
+    api = enable_if.unique([lazy_system_assign, eager_system_assign])
     return api(
         ref, value, validate_shape=validate_shape, use_locking=use_locking, name=name
     )
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def lazy_assign(ref, value, validate_shape=None, use_locking=None, name=None):
-    op_conf = _AssignOpConf(ref, value, name=name)
+def lazy_system_assign(ref, value, validate_shape=None, use_locking=None, name=None):
+    op_conf = _SystemAssignOpConf(ref, value, name=name)
     device_tag, machine_device_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
         ref.parallel_conf
     )
@@ -61,8 +67,8 @@ def lazy_assign(ref, value, validate_shape=None, use_locking=None, name=None):
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
-def eager_assign(ref, value, validate_shape=None, use_locking=None, name=None):
-    op_conf = _AssignOpConf(ref, value, name=name)
+def eager_system_assign(ref, value, validate_shape=None, use_locking=None, name=None):
+    op_conf = _SystemAssignOpConf(ref, value, name=name)
     # no backward for assign
     vm_util.LogicalRun(
         lambda builder: boxing_util.BuildAssignInstruction(
@@ -72,7 +78,7 @@ def eager_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     return ref
 
 
-def _AssignOpConf(ref, value, name=None):
+def _SystemAssignOpConf(ref, value, name=None):
     if name is None:
         name = id_util.UniqueStr("Assign_")
     op_conf = op_conf_util.OperatorConf()
