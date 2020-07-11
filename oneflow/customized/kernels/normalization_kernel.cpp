@@ -11,7 +11,7 @@ namespace {
 
 void InferDimSizeAndDataFormat(const ShapeView& x_shape, const int32_t axis, int32_t* n, int32_t* c,
                                int32_t* h, int32_t* w, cudnnTensorFormat_t* format) {
-  if (axis != 0 && x_shape.Count(axis + 1) == 1) {
+  if (axis != 0 && x_shape.Count(axis + 1) == 1 && CUDNN_VERSION >= 7605) {
     *n = x_shape.At(0);
     *h = x_shape.Count(1, axis);
     *w = 1;
@@ -134,7 +134,7 @@ class NormalizationInferenceKernel final : public user_op::OpKernel {
     CudnnTensorDesc param_desc(format, param_data_type, 1, c, 1, 1);
 
     CudaCheck(cudnnBatchNormalizationForwardInference(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, CudnnSPOnePtr<T>(),
+        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL, CudnnSPOnePtr<T>(),
         CudnnSPZeroPtr<T>(), xy_desc.Get(), x->dptr(), xy_desc.Get(), y->mut_dptr(),
         param_desc.Get(), gamma->dptr(), beta->dptr(), moving_mean->dptr(), moving_variance->dptr(),
         epsilon));
