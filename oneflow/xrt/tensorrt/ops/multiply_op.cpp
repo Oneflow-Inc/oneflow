@@ -16,7 +16,7 @@ class MultiplyOp : public TrtOpKernel {
     nvinfer1::ITensor *y = ctx->Input("y_0");
     CHECK_EQ(x_shape, y_shape);
     auto *layer = ctx->builder()->addElementWise(*x, *y, nvinfer1::ElementWiseOperation::kPROD); 
-    ctx->SetOutput("out_0", layer->getOutput(0));  
+    ctx->SetSoleOutput(layer->getOutput(0));  
   }
 };
 

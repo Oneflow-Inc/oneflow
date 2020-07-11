@@ -68,8 +68,6 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"transpose", "Transpose"},
     {"gather", "Gather"},
     {"batch_gather", "BatchGather"},
-    {"unsorted_segment_sum", "UnsortedSegmentSum"},
-    {"unsorted_segment_sum_like", "UnsortedSegmentSumLike"},
     {"layer_norm", "LayerNorm"},
     {"layer_norm_param_grad", "LayerNormParamGrad"},
     {"layer_norm_grad", "LayerNormGrad"},

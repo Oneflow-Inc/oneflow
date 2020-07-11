@@ -22,7 +22,7 @@ class ElementWiseOp : public TrtOpKernel {
       auto *layer = ctx->builder()->addElementWise(*ctx->Input(name), *result, element_wise_op);
       result = layer->getOutput(0);
     }
-    ctx->SetOutput("out_0", result);
+    ctx->SetSoleOutput(result);
   }
 };
 

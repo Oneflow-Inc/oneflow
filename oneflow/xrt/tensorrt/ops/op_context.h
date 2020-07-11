@@ -28,6 +28,7 @@ class TrtOpContext : public OpContext {
     const PbMessage *message;
     // Input operands
     util::Map<Argument, TrtValue> inputs;
+    std::vector<std::string> output_names;
     int num_outputs;
 
     util::Map<std::string, Argument> arguments;
@@ -42,13 +43,17 @@ class TrtOpContext : public OpContext {
   TrtBuilder *builder() const { return param_.builder; }
 
   const std::string &op_name() const { return param_.op_name; }
+  
+  const std::string &SoleOutputName() const; 
 
   // Return input named `name` as tensor
   nvinfer1::ITensor *Input(const std::string &name);
   nvinfer1::ITensor *Input(const Argument &arg);
+  nvinfer1::ITensor *SoleInput();
   // Return output named `name` as tensor
   nvinfer1::ITensor *Output(const std::string &name);
   nvinfer1::ITensor *Output(const Argument &arg);
+  nvinfer1::ITensor *SoleOutput();
 
   // Return weight named `name` as weight
   nvinfer1::Weights &Weight(const std::string &name);
@@ -65,16 +70,21 @@ class TrtOpContext : public OpContext {
   void SetOutput(const std::string &name, nvinfer1::ITensor *tensor);
   // Setup the output `output_name` with TrtValue
   void SetOutput(const std::string &name, const TrtValue &value);
+  void SetSoleOutput(nvinfer1::ITensor *tensor);
 
   // Return input `name` shape as Shape
   Shape InputShape(const std::string &name) const;
+  Shape SoleInputShape() const;
   // Return output `name` shape as Shape
   Shape OutputShape(const std::string &name) const;
+  Shape SoleOutputShape() const;  
 
   // Input data type
   DataType InputType(const std::string &name) const;
+  DataType SoleInputType(const std::string &name) const;
   // Output data type
   DataType OutputType(const std::string &name) const;
+  DataType SoleOutputType(const std::string &name) const;
 
   bool HasInput(const std::string &name) const;
 

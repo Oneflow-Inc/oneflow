@@ -11,10 +11,10 @@ template<nvinfer1::ActivationType activation_type>
 class ActivationOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    nvinfer1::ITensor *in = ctx->Input("in_0");
+    nvinfer1::ITensor *in = ctx->SoleInput();
     auto *layer = ctx->builder()->addActivation(*in, activation_type);
     layer->setName(ctx->op_name().c_str());
-    ctx->SetOutput("out_0", layer->getOutput(0));
+    ctx->SetSoleOutput(layer->getOutput(0));
   }
 };
 

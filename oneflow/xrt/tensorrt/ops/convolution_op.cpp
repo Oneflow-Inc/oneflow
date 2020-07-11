@@ -14,7 +14,6 @@ class ConvolutionOp : public TrtOpKernel {
 
     nvinfer1::Weights bias;
     if (ctx->HasInput("bias_0")) {
-      LOG(ERROR)<<"Has bias";
       bias = ctx->Weight("bias_0");
     } else {
       bias = nvinfer1::Weights{nvinfer1::DataType::kFLOAT /* type */, nullptr /* values */,

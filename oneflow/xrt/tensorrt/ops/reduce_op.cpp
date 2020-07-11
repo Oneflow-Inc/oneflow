@@ -15,16 +15,16 @@ class ReduceOp : public TrtOpKernel {
     for (int i = 0; i < axis.size(); ++i) { reduce_axis = reduce_axis | (1U << axis[i]); }
     bool keepDimensions = ctx->Attr<bool>("keepdims");
     // TensorRT does not support full reduce without keepDimensions.
-    Shape in_shape = ctx->InputShape("input_tensor_0");
+    Shape in_shape = ctx->SoleInputShape();
     if (!keepDimensions) {
       CHECK_NE(reduce_axis, (1U << in_shape.NumAxes()) - 1)
           << "TensorRT does not support full reduce without keepDimensions.";
     }
 
-    nvinfer1::ITensor *in = ctx->Input("input_tensor_0");
+    nvinfer1::ITensor *in = ctx->SoleInput();
     auto *layer = ctx->builder()->addReduce(*in, reduce_op, reduce_axis, keepDimensions);
     layer->setName(ctx->op_name().c_str());
-    ctx->SetOutput("output_tensor_0", layer->getOutput(0));
+    ctx->SetSoleOutput(layer->getOutput(0));
   }
 };
 

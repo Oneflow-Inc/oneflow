@@ -10,12 +10,12 @@ namespace tensorrt {
 class ReshapeOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    Shape in_shape = ctx->InputShape("in_0");
-    Shape shape = ctx->OutputShape("out_0");
+    Shape in_shape = ctx->SoleInputShape();
+    Shape shape = ctx->SoleOutputShape();
     CHECK_EQ(shape.Count(0), in_shape.Count(0));
 
-    nvinfer1::ITensor *input = ctx->Input("in_0");
-    ctx->SetOutput("out_0", helpers::Reshape(ctx, input, shape));
+    nvinfer1::ITensor *input = ctx->SoleInput();
+    ctx->SetSoleOutput(helpers::Reshape(ctx, input, shape));
   }
 };
 
@@ -29,7 +29,7 @@ class ReshapeLikeOp : public TrtOpKernel {
     CHECK_EQ(x_shape.Count(0), like_shape.Count(0));
 
     nvinfer1::ITensor *input = ctx->Input("in_0");
-    ctx->SetOutput("out_0", helpers::Reshape(ctx, input, like_shape));
+    ctx->SetSoleOutput(helpers::Reshape(ctx, input, like_shape));
   }
 };
 

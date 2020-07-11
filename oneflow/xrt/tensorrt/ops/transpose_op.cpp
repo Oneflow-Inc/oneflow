@@ -11,14 +11,14 @@ class TransposeOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
     const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
-    Shape in_shape = ctx->InputShape("input_0");
+    Shape in_shape = ctx->SoleInputShape();
     CHECK_EQ(perm.size(), in_shape.NumAxes());
 
-    nvinfer1::ITensor *input = ctx->Input("input_0");
+    nvinfer1::ITensor *input = ctx->SoleInput();
     if (IsIdentity(perm)) {
-      ctx->SetOutput("output_0", input);
+      ctx->SetSoleOutput(input);
     } else {
-      ctx->SetOutput("output_0", helpers::Transpose(ctx, input, perm));
+      ctx->SetSoleOutput(helpers::Transpose(ctx, input, perm));
     }
   }
 
