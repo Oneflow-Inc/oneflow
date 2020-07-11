@@ -144,7 +144,19 @@ class FixedTensorDef(ArgBlobDef):
         return compile_context.CurJobAddConsistentOp(op_conf)
 
     def EagerAddAndInferOp(self, op_conf):
-        return compile_context.CurJobAddConsistentOp(op_conf)
+        parallel_symbol = oneflow.scope.current_scope().device_parallel_desc_symbol
+        if (
+            parallel_symbol.device_tag == "gpu"
+            and list(parallel_symbol.machine_id2device_id_list.keys()) == [0]
+            and parallel_symbol.parallel_num == 1
+        ):
+            device_tag = "gpu"
+            device_ids = "0:%s" % (parallel_symbol.machine_id2device_id_list[0][0])
+        else:
+            device_tag = "cpu"
+            device_ids = "0:0"
+        with oneflow.fixed_placement(device_tag, device_ids):
+            return compile_context.CurJobAddConsistentOp(op_conf)
 
     def SetBatchAxisAndSplitAxis(self, interface_blob_conf):
         if self.batch_axis is None:
