@@ -1617,18 +1617,6 @@ message OperatorConf {
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-<<<<<<< HEAD
-    Conv1DOpConf conv_1d_conf = 205;
-    Conv2DOpConf conv_2d_conf = 206;
-    Conv3DOpConf conv_3d_conf = 207;
-=======
-    AveragePooling1DOpConf average_pooling_1d_conf = 208;
-    MaxPooling1DOpConf max_pooling_1d_conf = 209;
-    AveragePooling2DOpConf average_pooling_2d_conf = 210;
-    MaxPooling2DOpConf max_pooling_2d_conf = 211;
-    AveragePooling3DOpConf average_pooling_3d_conf = 212;
-    MaxPooling3DOpConf max_pooling_3d_conf = 213;
->>>>>>> develop
     LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
     ReduceSumOpConf reduce_sum_conf = 219;
     AddOpConf add_conf = 220;
