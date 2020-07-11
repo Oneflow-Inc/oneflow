@@ -196,16 +196,30 @@ def reshape(x, shape, name=None):
 
 @oneflow_export("reshape_like")
 def reshape_like(x, like, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr("ReshapeLike_")
-    setattr(op_conf.reshape_like_conf, "x", x.unique_name)
-    setattr(op_conf.reshape_like_conf, "like", like.unique_name)
-    op_conf.reshape_like_conf.y = "y"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "y"
-    return remote_blob_util.RemoteBlob(lbi)
+    if os.getenv("ENABLE_USER_OP") != "False":
+        if name is None:
+            name = id_util.UniqueStr("ReshapeLike_")
+        return (
+            flow.user_op_builder(name)
+            .Op("reshape_like")
+            .Input("in", [x])
+            .Input("like", [like])
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+    else:
+        op_conf = op_conf_util.OperatorConf()
+        op_conf.name = id_util.UniqueStr("ReshapeLike_")
+        setattr(op_conf.reshape_like_conf, "x", x.unique_name)
+        setattr(op_conf.reshape_like_conf, "like", like.unique_name)
+        op_conf.reshape_like_conf.y = "y"
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "y"
+        return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("dynamic_reshape")
