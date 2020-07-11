@@ -45,6 +45,11 @@ xla::XlaOp XlaValue::AsXlaOp(xla::XlaBuilder *builder) const {
 
 xla::XlaBuilder *XlaOpContext::builder() const { return param_.builder; }
 
+const std::string &XlaOpContext::SoleOutputName() const {
+  CHECK_EQ(num_outputs(), 1);
+  return param_.output_names.front();
+}
+
 bool XlaOpContext::HasInput(const std::string &name) const {
   return param_.arguments.count(name) > 0 && param_.inputs.count(ArgumentFromKey(name)) > 0;
 }
@@ -67,6 +72,18 @@ xla::XlaOp XlaOpContext::Output(const Argument &arg) {
   return outputs_.at(arg).AsXlaOp(builder());
 }
 
+xla::XlaOp XlaOpContext::SoleInput() {
+  CHECK_EQ(num_inputs(), 1);
+  auto it = param_.inputs.begin();
+  return (it->second).AsXlaOp(builder());
+}
+
+xla::XlaOp XlaOpContext::SoleOutput() {
+  CHECK_EQ(outputs_.size(), 1);
+  auto it = outputs_.begin();
+  return (it->second).AsXlaOp(builder());
+}
+
 void XlaOpContext::SetOutput(const std::string &name, const xla::XlaOp &handle) {
   SetOutput(name, XlaValue::XlaOp(handle));
 }
@@ -79,20 +96,45 @@ void XlaOpContext::SetOutput(const std::string &name, const XlaValue &handle) {
   outputs_[arg] = handle;
 }
 
+void XlaOpContext::SetSoleOutput(const xla::XlaOp &handle) {
+  CHECK_EQ(outputs_.size(), 0);
+  SetOutput(SoleOutputName(), handle);
+}
+
 DataType XlaOpContext::InputType(const std::string &name) const {
   return ArgumentFromKey(name).data_type();
+}
+
+DataType XlaOpContext::SoleInputType() const {
+  CHECK_EQ(num_inputs(), 1);
+  auto it = param_.inputs.begin();
+  return (it->first).data_type();
 }
 
 DataType XlaOpContext::OutputType(const std::string &name) const {
   return ArgumentFromKey(name).data_type();
 }
 
+DataType XlaOpContext::SoleOutputType() const {
+  return ArgumentFromKey(SoleOutputName()).data_type();
+}
+
 Shape XlaOpContext::InputShape(const std::string &name) const {
   return ArgumentFromKey(name).shape();
 }
 
+Shape XlaOpContext::SoleInputShape() const {
+  CHECK_EQ(num_inputs(), 1);
+  auto it = param_.inputs.begin();
+  return (it->first).shape();
+}
+
 Shape XlaOpContext::OutputShape(const std::string &name) const {
   return ArgumentFromKey(name).shape();
+}
+
+Shape XlaOpContext::SoleOutputShape() const {
+  return ArgumentFromKey(SoleOutputName()).shape();
 }
 
 Argument XlaOpContext::ArgumentFromKey(const std::string &key) const {
