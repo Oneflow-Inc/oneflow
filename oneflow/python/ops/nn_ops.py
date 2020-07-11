@@ -82,9 +82,7 @@ def conv2d(
         else:
             raise ValueError("invalid data_format")
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Conv2d_")
-        )
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
         .Op("conv2d")
         .Input("in", [input])
         .Input("weight", [filters])
