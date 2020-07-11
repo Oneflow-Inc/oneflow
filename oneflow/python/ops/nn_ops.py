@@ -153,8 +153,6 @@ def batch_normalization(
     are always 1D. Users need to specify "axis" to 1 for NCHW data format.
 
     """
-    if os.getenv("ENABLE_USER_OP") == "False":
-        raise ValueError("nn.batch_normalization is not supported in non-user-op mode")
 
     assert axis >= -len(x.shape) and axis < len(x.shape)
     if axis < 0:
