@@ -15,12 +15,12 @@ class ReduceOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
     std::vector<int32_t> axis = ctx->Attr<std::vector<int>>("axis");
-    Shape in_shape = ctx->InputShape("input_tensor_0");
+    Shape in_shape = ctx->SoleInputShape();
     for (int i = 0; i < axis.size(); ++i) {
       if (axis[i] < 0) { axis[i] += in_shape.NumAxes(); }
     }
 
-    xla::XlaOp input = ctx->Input("input_tensor_0");
+    xla::XlaOp input = ctx->SoleInput();
     if (axis.size() == 0) {
       std::vector<int64_t> dim_vec{1};
       dim_vec.insert(dim_vec.end(), in_shape.dim_vec().begin(), in_shape.dim_vec().end());
@@ -30,7 +30,7 @@ class ReduceOp : public XlaOpKernel {
     }
 
     xla::XlaBuilder *builder = ctx->builder();
-    DataType data_type = ctx->InputType("input_tensor_0");
+    DataType data_type = ctx->SoleInputType();
     xla::XlaOp output = xla::Reduce(input, InitValue(builder, data_type), Reduction(data_type),
                                     std::vector<long long>{axis.begin(), axis.end()});
 
@@ -43,7 +43,7 @@ class ReduceOp : public XlaOpKernel {
       // keep consistent with oneflow.
       if (axis.size() == in_shape.NumAxes()) { output = Reshape(output, Shape({1})); }
     }
-    ctx->SetOutput("output_tensor_0", output);
+    ctx->SetSoleOutput(output);
   }
 
   virtual xla::XlaOp InitValue(xla::XlaBuilder *builder, const DataType &data_type) = 0;

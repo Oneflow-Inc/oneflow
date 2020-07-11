@@ -11,11 +11,11 @@ namespace mola {
 class ReshapeOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    Shape in_shape = ctx->InputShape("in_0");
-    Shape shape = ctx->OutputShape("out_0");
+    Shape in_shape = ctx->SoleInputShape();
+    Shape shape = ctx->SoleOutputShape();
     CHECK_EQ(shape.Count(0), in_shape.Count(0));
 
-    ctx->SetOutput("out_0", Reshape(ctx->Input("in_0"), shape));
+    ctx->SetSoleOutput(Reshape(ctx->SoleInput(), shape));
   }
 };
 

@@ -25,7 +25,7 @@ struct Gelu {
 template<typename UnaryOp>
 class ApplyUnaryOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext *ctx) override { ctx->SetOutput("out_0", UnaryOp()(ctx->Input("in_0"))); }
+  void Compile(XlaOpContext *ctx) override { ctx->SetSoleOutput(UnaryOp()(ctx->SoleInput())); }
 };
 
 REGISTER_XLA_OP_KERNEL(Sigmoid, ApplyUnaryOp<op::Logistic>).Finalize();
@@ -34,12 +34,6 @@ REGISTER_XLA_OP_KERNEL(Gelu, ApplyUnaryOp<Gelu>).Finalize();
 
 struct Identity {
   xla::XlaOp operator()(const xla::XlaOp &x) { return x; }
-};
-
-template<>
-class ApplyUnaryOp<Identity> : public XlaOpKernel {
- public:
-  void Compile(XlaOpContext *ctx) override { ctx->SetOutput("out", Identity()(ctx->Input("in"))); }
 };
 
 REGISTER_XLA_OP_KERNEL(Identity, ApplyUnaryOp<Identity>).Finalize();

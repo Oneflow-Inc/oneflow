@@ -12,13 +12,13 @@ class CastOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
     DataType dest_dtype = ctx->Attr<DataType>("dtype");
-    DataType src_dtype = ctx->InputType("in_0");
-    xla::XlaOp in = ctx->Input("in_0");
+    DataType src_dtype = ctx->SoleInputType();
+    xla::XlaOp in = ctx->SoleInput();
     if (src_dtype == dest_dtype) {
-      ctx->SetOutput("out_0", in);
+      ctx->SetSoleOutput(in);
     } else {
       xla::PrimitiveType data_type = DataTypeToPrimitiveType(dest_dtype);
-      ctx->SetOutput("out_0", xla::ConvertElementType(in, data_type));
+      ctx->SetSoleOutput(xla::ConvertElementType(in, data_type));
     }
   }
 };

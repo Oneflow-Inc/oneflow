@@ -15,7 +15,7 @@ class SoftmaxOp : public XlaOpKernel {
 
 void SoftmaxOp::Compile(XlaOpContext *ctx) {
   xla::XlaBuilder *builder = ctx->builder();
-  Shape input_shape = ctx->InputShape("in_0");
+  Shape input_shape = ctx->SoleInputShape();
 
   int axis = input_shape.NumAxes() - 1;
   std::vector<long long> batch_dims(input_shape.NumAxes() - 1);
@@ -23,8 +23,8 @@ void SoftmaxOp::Compile(XlaOpContext *ctx) {
   for (int i = 0; i < axis; ++i) { batch_dims[i] = i; }
   for (int i = axis; i < input_shape.NumAxes() - 1; ++i) { batch_dims[i] = i + 1; }
 
-  DataType data_type = ctx->InputType("in_0");
-  xla::XlaOp input = ctx->Input("in_0");
+  DataType data_type = ctx->SoleInputType();
+  xla::XlaOp input = ctx->SoleInput();
   xla::XlaComputation max_func = CreateMaxFunc(data_type);
   xla::XlaOp logits_max = xla::Reduce(input, MinValue(builder, data_type), max_func, {axis});
   // y = exp(x - max)
@@ -34,7 +34,7 @@ void SoftmaxOp::Compile(XlaOpContext *ctx) {
   // TODO(hjchen2) Accumulate by float if use bfloat16
   xla::XlaOp sum = xla::Reduce(y, Zero(builder, data_type), add_func, {axis});
   // exp(x - max) / sum(exp(x - max))
-  ctx->SetOutput("out_0", xla::Div(y, sum, batch_dims));
+  ctx->SetSoleOutput(xla::Div(y, sum, batch_dims));
 }
 
 REGISTER_XLA_OP_KERNEL(Softmax, SoftmaxOp).Finalize();
