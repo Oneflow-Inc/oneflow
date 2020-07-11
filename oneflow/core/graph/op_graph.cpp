@@ -849,11 +849,15 @@ Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&
     const OpNode& op_node = *op_name2op_node_.at(op_name);
     for (const auto& ibn : op_node.op().input_bns()) {
       const auto& lbi = op_node.op().BnInOp2Lbi(ibn);
-      CHECK_OR_RETURN(visited[lbi]);
+      CHECK_OR_RETURN(visited[lbi]) << "input blob '" << ibn << "' is not defined\n"
+                                    << lbi.DebugString() << "\n==== op_conf ====\n"
+                                    << op_node.op().op_conf().DebugString();
     }
     for (const auto& obn : op_node.op().output_bns()) {
       const auto& lbi = op_node.op().BnInOp2Lbi(obn);
-      CHECK_OR_RETURN(!visited[lbi]);
+      CHECK_OR_RETURN(!visited[lbi]) << "output blob '" << obn << "' is defined\n"
+                                     << lbi.DebugString() << "\n==== op_conf ====\n"
+                                     << op_node.op().op_conf().DebugString();
       visited[lbi] = true;
     }
     JUST(DoEach(op_node));

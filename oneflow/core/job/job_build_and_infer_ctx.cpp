@@ -49,7 +49,7 @@ Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
                             const) {
   const auto& op_graph = JUST(OpGraph::New(job));
   const auto* foreign_callback = JUST(GlobalMaybe<ForeignCallback>());
-  op_graph->ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
+  JUST(op_graph->ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
     if (!op_names->insert(op_node.op().op_name()).second) { return Maybe<void>::Ok(); }
     const auto& op_attribute = op_node.op().GetOpAttributeWithoutOpNameAndLbn();
     const auto& parallel_conf = op_node.parallel_desc().parallel_conf();
@@ -57,7 +57,7 @@ Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
     const std::string& parallel_conf_str = PbMessage2TxtString(parallel_conf);
     (foreign_callback->*interpret)(op_attribute_str, parallel_conf_str);
     return Maybe<void>::Ok();
-  });
+  }));
   return Maybe<void>::Ok();
 }
 

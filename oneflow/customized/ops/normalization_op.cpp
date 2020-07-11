@@ -277,10 +277,13 @@ REGISTER_USER_OP_GRAD("normalization")
         }
 
         const user_op::UserOpConfWrapper grad_op = grad_op_builder.Build();
-        bool need_norm_grad_op = false;
+        if ((training && op.NeedGenGradTensor4OpInput("x", 0))
+            || op.NeedGenGradTensor4OpInput("gamma", 0)
+            || op.NeedGenGradTensor4OpInput("beta", 0)) {
+          AddOp(grad_op);
+        }
         if (training && op.NeedGenGradTensor4OpInput("x", 0)) {
           op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-          need_norm_grad_op = true;
         }
         if (op.NeedGenGradTensor4OpInput("gamma", 0)) {
           // TODO(liujuncheng): delete identity op when boxing support separated regsts
@@ -292,7 +295,6 @@ REGISTER_USER_OP_GRAD("normalization")
                   .Build();
           AddOp(identity);
           op.BindGradTensorWithOpInput(identity.output("out", 0), "gamma", 0);
-          need_norm_grad_op = true;
         }
         if (op.NeedGenGradTensor4OpInput("beta", 0)) {
           // TODO(liujuncheng): delete identity op when boxing support separated regsts
@@ -304,9 +306,7 @@ REGISTER_USER_OP_GRAD("normalization")
                   .Build();
           AddOp(identity);
           op.BindGradTensorWithOpInput(identity.output("out", 0), "beta", 0);
-          need_norm_grad_op = true;
         }
-        if (need_norm_grad_op) { AddOp(grad_op); }
       }
     });
 
