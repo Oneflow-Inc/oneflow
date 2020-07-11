@@ -57,14 +57,6 @@ message ReduceSumKernelConf {
   required ShapeProto kept_dims_shape = 1;
 }
 
-message SoftmaxKernelConf {
-  required int32 axis = 1;
-  required int64 transpose_rows = 2;
-  required int64 transpose_cols = 3;
-  required bool need_transpose = 4;
-  repeated int32 perm = 5;
-}
-
 message TransposeKernelConf {
   repeated int32 perm = 1;
   repeated int32 invert_perm = 2;
@@ -199,7 +191,6 @@ message KernelConf {
     UserKernelConf user_conf = 100;
     DecodeRandomKernelConf decode_random_conf = 103;
     DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
-    SoftmaxKernelConf softmax_conf = 116;
     TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
     ConvKernelConf conv_conf = 127;
