@@ -1012,7 +1012,7 @@ def broadcast_max(
 @oneflow_export("math.reduced_shape_elem_cnt")
 def elem_cnt(
     input_blob: remote_blob_util.BlobDef,
-    axis: Optional[Sequence] = None,
+    axis: Optional[Sequence[int]] = None,
     dtype: Optional[int] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
