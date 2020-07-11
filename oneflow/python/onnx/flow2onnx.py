@@ -213,6 +213,7 @@ def TopologicalSort(g, continue_on_error):
             pass
 
 
+@session_ctx.try_init_default_session
 @oneflow_export("onnx.export")
 def Export(
     job_func: Callable,
