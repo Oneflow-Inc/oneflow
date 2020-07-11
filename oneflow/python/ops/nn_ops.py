@@ -583,23 +583,6 @@ def softmax(logits, axis=None, name=None):
     if axis is None:
         axis = -1
 
-    if os.getenv("ENABLE_USER_OP") == "False":
-        assert type(axis) is int
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("Softmax_"),
-        )
-        setattr(op_conf.softmax_conf, "in", logits.unique_name)
-        op_conf.softmax_conf.axis = axis
-        op_conf.softmax_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
-
     need_transpose, permute = _softmax_need_transpose(logits, axis)
     if need_transpose:
         logits = flow.transpose(logits, perm=permute)
@@ -626,34 +609,7 @@ def softmax_grad(y, dy, axis=None, name=None):
     if axis is None:
         axis = -1
 
-    if os.getenv("ENABLE_USER_OP") == "False":
-        assert type(axis) is int
-        op_conf = op_conf_util.OperatorConf()
-
-        name_prefix = name if name is not None else id_util.UniqueStr("SoftmaxGrad_")
-        setattr(op_conf, "name", name_prefix)
-
-        need_transpose, permute = _softmax_need_transpose(y, axis)
-
-        if need_transpose:
-            y = flow.transpose(y, perm=permute)
-            dy = flow.transpose(dy, perm=permute)
-        setattr(op_conf.softmax_grad_conf, "y", y.unique_name)
-        setattr(op_conf.softmax_grad_conf, "dy", dy.unique_name)
-
-        op_conf.softmax_grad_conf.axis = -1
-        op_conf.softmax_grad_conf.dx = "dx"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "dx"
-        dx = remote_blob_util.RemoteBlob(lbi)
-
-        if need_transpose:
-            dx = flow.transpose(dx, perm=permute)
-        return dx
-
-    need_transpose, permute = _softmax_need_transpose(logits, axis)
+    need_transpose, permute = _softmax_need_transpose(y, axis)
     if need_transpose:
         y = flow.transpose(y, perm=permute)
         dy = flow.transpose(dy, perm=permute)
