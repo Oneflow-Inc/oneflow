@@ -1,6 +1,7 @@
 pycocotools
 opencv-python
 sphinx
+sphinx-material
 recommonmark
 scipy
 pillow
