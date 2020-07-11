@@ -893,19 +893,13 @@ class Graph(object):
 
     def get_saved_tensor(self, node):
         tensor_name = node.output[0]
-        if self._model_save_dir is not None:
-            # TODO(daquexian): node.output[0] is "node_name/output_name", so this pathjoin doesn't work
-            # on windows (where path separator is "\")
-            path = pathjoin(self._model_save_dir, node.output[0])
-            tensor_value = np.fromfile(
-                path, dtype=util.Onnx2NumpyDtype(self.get_dtype(tensor_name))
-            ).reshape(self.get_shape(tensor_name))
-            return tensor_value
-        else:
-            shape = self.get_shape(tensor_name)
-            return np.ones(
-                shape, dtype=util.Onnx2NumpyDtype(self.get_dtype(tensor_name))
-            )
+        # TODO(daquexian): node.output[0] is "node_name/output_name", so this pathjoin doesn't work
+        # on windows (where path separator is "\")
+        path = pathjoin(self._model_save_dir, node.output[0])
+        tensor_value = np.fromfile(
+            path, dtype=util.Onnx2NumpyDtype(self.get_dtype(tensor_name))
+        ).reshape(self.get_shape(tensor_name))
+        return tensor_value
 
     def get_shape(self, name):
         """Get shape for node."""
