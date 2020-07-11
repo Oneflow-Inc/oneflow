@@ -14,13 +14,14 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_hob as boxing_hob
+from oneflow.python.eager.boxing_hob import BoxingHobContext
 import oneflow.python.eager.boxing_middle as boxing_middle
 import random
 import oneflow
 
 
 def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):
-    hob_context = (produced_blob_object, consumer_op_arg_parallel_attr)
+    hob_context = BoxingHobContext(produced_blob_object, consumer_op_arg_parallel_attr)
     if enable_if.get_condition_hob(NoBoxing)(hob_context):
         return produced_blob_object
 
@@ -170,22 +171,22 @@ def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     ]
     function = enable_if.unique(
         conditional_functions,
-        context=(produced_blob_object, consumer_op_arg_parallel_attr),
+        context=BoxingHobContext(produced_blob_object, consumer_op_arg_parallel_attr),
         default=default,
     )
     return function(builder, produced_blob_object, consumer_op_arg_parallel_attr)
 
 
-def ComposeBoxing(lhs_boxing, rhs_boxing, get_medium_op_arg_parallel_attr):
+def ComposeBoxing(lhs_boxing, rhs_boxing, get_middle_op_arg_parallel_attr):
     composed_hob = boxing_hob.ComposeHob(
         enable_if.get_condition_hob(lhs_boxing),
         enable_if.get_condition_hob(rhs_boxing),
-        get_medium_op_arg_parallel_attr=get_medium_op_arg_parallel_attr,
+        get_middle_op_arg_parallel_attr=get_middle_op_arg_parallel_attr,
     )
 
     @enable_if.condition(composed_hob)
     def Composed(builder, produced_blob_object, consumer_op_arg_parallel_attr):
-        tmp_op_arg_parallel_attr = get_medium_op_arg_parallel_attr(
+        tmp_op_arg_parallel_attr = get_middle_op_arg_parallel_attr(
             builder, produced_blob_object, consumer_op_arg_parallel_attr
         )
         tmp = lhs_boxing(builder, produced_blob_object, tmp_op_arg_parallel_attr)
