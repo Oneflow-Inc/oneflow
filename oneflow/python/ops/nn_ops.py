@@ -61,87 +61,43 @@ def conv2d(
         else:
             raise ValueError("dilations must be an int or a list.")
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        if channel_pos == "channels_first":
-            kernel_size_list = filters.shape[2:4]
-        elif channel_pos == "channels_last":
-            kernel_size_list = filters.shape[-3:-1]
-        else:
-            raise ValueError("invalid data_format")
-        assert isinstance(kernel_size_list, tuple)
-        assert isinstance(groups, int)
-        assert groups > 0
-        if groups > 1:
-            if data_format.upper() == "NCHW":
-                assert groups <= filters.shape[0]
-                assert filters.shape[0] % groups == 0
-                assert groups <= input.shape[1]
-                assert input.shape[1] % groups == 0
-                assert filters.shape[1] == input.shape[1] // groups
-            elif data_format.upper() == "NHWC":
-                raise ValueError("data_format NHWC not support groups > 1")
-            else:
-                raise ValueError("invalid data_format")
-        return (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("Conv2d_")
-            )
-            .Op("conv2d")
-            .Input("in", [input])
-            .Input("weight", [filters])
-            .Output("out")
-            .Attr("filters", filters.shape[0], "AttrTypeInt32")
-            .Attr("padding", padding.lower(), "AttrTypeString")
-            .Attr("data_format", channel_pos, "AttrTypeString")
-            .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
-            .Attr("strides", strides, "AttrTypeListInt32")
-            .Attr("dilation_rate", dilations, "AttrTypeListInt32")
-            .Attr("groups", groups, "AttrTypeInt32")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
+    if channel_pos == "channels_first":
+        kernel_size_list = filters.shape[2:4]
+    elif channel_pos == "channels_last":
+        kernel_size_list = filters.shape[-3:-1]
     else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("Conv2d_")
-        )
-        setattr(op_conf.conv_2d_conf, "in", input.unique_name)
-        op_conf.conv_2d_conf.out = "out"
-        op_conf.conv_2d_conf.weight = filters.unique_name
-        op_conf.conv_2d_conf.filters = filters.shape[0]
-        op_conf.conv_2d_conf.padding = padding.lower()
-        op_conf.conv_2d_conf.data_format = channel_pos
-        if channel_pos == "channels_first":
-            op_conf.conv_2d_conf.kernel_size.extend(filters.shape[2:4])
-        elif channel_pos == "channels_last":
-            op_conf.conv_2d_conf.kernel_size.extend(filters.shape[-3:-1])
+        raise ValueError("invalid data_format")
+    assert isinstance(kernel_size_list, tuple)
+    assert isinstance(groups, int)
+    assert groups > 0
+    if groups > 1:
+        if data_format.upper() == "NCHW":
+            assert groups <= filters.shape[0]
+            assert filters.shape[0] % groups == 0
+            assert groups <= input.shape[1]
+            assert input.shape[1] % groups == 0
+            assert filters.shape[1] == input.shape[1] // groups
+        elif data_format.upper() == "NHWC":
+            raise ValueError("data_format NHWC not support groups > 1")
         else:
             raise ValueError("invalid data_format")
-        op_conf.conv_2d_conf.strides.extend(strides)
-        op_conf.conv_2d_conf.dilation_rate.extend(dilations)
-        op_conf.conv_2d_conf.use_bias = False
-
-        assert isinstance(groups, int)
-        assert groups > 0
-        if groups > 1:
-            if data_format.upper() == "NCHW":
-                assert groups <= filters.shape[0]
-                assert filters.shape[0] % groups == 0
-                assert groups <= input.shape[1]
-                assert input.shape[1] % groups == 0
-                assert filters.shape[1] == input.shape[1] // groups
-            elif data_format.upper() == "NHWC":
-                raise ValueError("data_format NHWC not support groups > 1")
-            else:
-                raise ValueError("invalid data_format")
-        op_conf.conv_2d_conf.groups = groups
-
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
+        .Op("conv2d")
+        .Input("in", [input])
+        .Input("weight", [filters])
+        .Output("out")
+        .Attr("filters", filters.shape[0], "AttrTypeInt32")
+        .Attr("padding", padding.lower(), "AttrTypeString")
+        .Attr("data_format", channel_pos, "AttrTypeString")
+        .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
+        .Attr("strides", strides, "AttrTypeListInt32")
+        .Attr("dilation_rate", dilations, "AttrTypeListInt32")
+        .Attr("groups", groups, "AttrTypeInt32")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("nn.batch_normalization")
