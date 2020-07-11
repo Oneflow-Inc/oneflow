@@ -13,7 +13,7 @@ template<nvinfer1::PoolingType pooling_type>
 class PoolingOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    Shape in_shape = ctx->InputShape("in");
+    Shape in_shape = ctx->SoleInputShape();
     CHECK_GE(in_shape.NumAxes(), 3);
     CHECK_LE(in_shape.NumAxes(), 5);
 
@@ -21,14 +21,14 @@ class PoolingOp : public TrtOpKernel {
     const auto& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
     const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
 
-    nvinfer1::ITensor *in = ctx->Input("in");
+    nvinfer1::ITensor *in = ctx->SoleInput();
     auto *layer =
         ctx->builder()->addPooling(*in, pooling_type, nvinfer1::DimsHW(pool_size[0], pool_size[1]));
     layer->setName(ctx->op_name().c_str());
 
     layer->setStride(nvinfer1::DimsHW(strides[0], strides[1]));
     if (padding == "same") { layer->setPaddingMode(nvinfer1::PaddingMode::kSAME_LOWER); }
-    ctx->SetOutput("out", layer->getOutput(0));
+    ctx->SetSoleOutput(layer->getOutput(0));
   }
 };
 
