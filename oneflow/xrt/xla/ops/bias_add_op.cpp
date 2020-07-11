@@ -9,19 +9,19 @@ namespace mola {
 class BiasAddOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    Shape in_shape = ctx->InputShape("a");
-    Shape bias_shape = ctx->InputShape("b");
+    Shape in_shape = ctx->InputShape("a_0");
+    Shape bias_shape = ctx->InputShape("b_0");
     CHECK_GE(in_shape.NumAxes(), 2);
     CHECK_EQ(bias_shape.NumAxes(), 1);
 
-    CHECK_EQ(ctx->InputType("a"), ctx->InputType("b"));
+    CHECK_EQ(ctx->InputType("a_0"), ctx->InputType("b_0"));
 
-    xla::XlaOp in = ctx->Input("a");
-    xla::XlaOp bias = ctx->Input("b");
+    xla::XlaOp in = ctx->Input("a_0");
+    xla::XlaOp bias = ctx->Input("b_0");
 
     // Channel dim for NCHW data formart
     int channel_dim = 1;
-    ctx->SetOutput("out", xla::Add(in, bias, {channel_dim}));
+    ctx->SetOutput("out_0", xla::Add(in, bias, {channel_dim}));
   }
 };
 

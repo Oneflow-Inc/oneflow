@@ -5,6 +5,11 @@ namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
+const std::string &TrtOpContext::SoleOutputName() const {
+  CHECK_EQ(num_outputs(), 1);
+  return param_.output_names.front();
+}
+
 nvinfer1::ITensor *TrtOpContext::Input(const std::string &name) {
   return Input(ArgumentFromKey(name));
 }
@@ -21,6 +26,18 @@ nvinfer1::ITensor *TrtOpContext::Input(const Argument &arg) {
 nvinfer1::ITensor *TrtOpContext::Output(const Argument &arg) {
   CHECK_GT(outputs_.count(arg), 0);
   return outputs_.at(arg).AsTensor(builder());
+}
+
+nvinfer1::ITensor *TrtOpContext::SoleInput() {
+  CHECK_EQ(num_inputs(), 1);
+  auto it = param_.inputs.begin();
+  return (it->second).AsTensor(builder());
+}
+
+nvinfer1::ITensor *TrtOpContext::SoleOutput() {
+  CHECK_EQ(outputs_.size(), 1);
+  auto it = outputs_.begin();
+  return (it->second).AsTensor(builder());
 }
 
 nvinfer1::Weights &TrtOpContext::Weight(const std::string &name) {
@@ -43,20 +60,49 @@ void TrtOpContext::SetOutput(const std::string &name, const TrtValue &value) {
   tensor->setName(arg.name().c_str());
 }
 
+void TrtOpContext::SetSoleOutput(nvinfer1::ITensor *tensor) {
+  CHECK_EQ(outputs_.size(), 0);
+  SetOutput(SoleOutputName(), tensor);
+}
+
 DataType TrtOpContext::InputType(const std::string &name) const {
   return ArgumentFromKey(name).data_type();
+}
+
+DataType TrtOpContext::SoleInputType() const {
+  CHECK_EQ(num_inputs(), 1);
+  auto it = param_.inputs.begin();
+  return (it->first).data_type();
 }
 
 DataType TrtOpContext::OutputType(const std::string &name) const {
   return ArgumentFromKey(name).data_type();
 }
 
+DataType TrtOpContext::SoleOutputType() const {
+  return ArgumentFromKey(SoleOutputName()).data_type();
+}
+
 Shape TrtOpContext::InputShape(const std::string &name) const {
   return ArgumentFromKey(name).shape();
 }
 
+Shape TrtOpContext::SoleInputShape() const {
+  CHECK_EQ(num_inputs(), 1);
+  auto it = param_.inputs.begin();
+  return (it->first).shape();
+}
+
 Shape TrtOpContext::OutputShape(const std::string &name) const {
   return ArgumentFromKey(name).shape();
+}
+
+Shape TrtOpContext::SoleOutputShape() const {
+  return ArgumentFromKey(SoleOutputName()).shape();
+}
+
+bool TrtOpContext::HasInput(const std::string &name) const {
+  return param_.arguments.count(name) > 0;
 }
 
 Argument TrtOpContext::ArgumentFromKey(const std::string &key) const {
