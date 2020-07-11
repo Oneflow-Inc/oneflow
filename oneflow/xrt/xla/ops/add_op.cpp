@@ -20,7 +20,7 @@ class AddOp : public XlaOpKernel {
       sum = xla::Add(sum, ctx->Input(name));
     }
 
-    ctx->SetOutput("out", sum);
+    ctx->SetSoleOutput(sum);
   }
 };
 
