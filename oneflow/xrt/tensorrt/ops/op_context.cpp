@@ -79,7 +79,7 @@ DataType TrtOpContext::OutputType(const std::string &name) const {
   return ArgumentFromKey(name).data_type();
 }
 
-DataType XlaOpContext::SoleOutputType() const {
+DataType TrtOpContext::SoleOutputType() const {
   return ArgumentFromKey(SoleOutputName()).data_type();
 }
 

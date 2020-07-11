@@ -81,10 +81,10 @@ class TrtOpContext : public OpContext {
 
   // Input data type
   DataType InputType(const std::string &name) const;
-  DataType SoleInputType(const std::string &name) const;
+  DataType SoleInputType() const;
   // Output data type
   DataType OutputType(const std::string &name) const;
-  DataType SoleOutputType(const std::string &name) const;
+  DataType SoleOutputType() const;
 
   bool HasInput(const std::string &name) const;
 
