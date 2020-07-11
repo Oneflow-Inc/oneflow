@@ -162,7 +162,7 @@ def reserved_device_mem_mbyte(val):
 
 @oneflow_export("config.use_rdma")
 def api_use_rdma(val: bool = True) -> None:
-    return enable_if.unique([use_rdma, do_nothing])(val=True)
+    return enable_if.unique([use_rdma, do_nothing])(val=val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
@@ -198,7 +198,7 @@ def enable_debug_mode(val):
 
 @oneflow_export("config.save_downloaded_file_to_local_fs")
 def api_save_downloaded_file_to_local_fs(val: bool = True) -> None:
-    return enable_if.unique([save_downloaded_file_to_local_fs, do_nothing])(val=True)
+    return enable_if.unique([save_downloaded_file_to_local_fs, do_nothing])(val=val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
@@ -234,7 +234,7 @@ def enable_model_io_v2(val):
 
 @oneflow_export("config.collect_act_event")
 def api_collect_act_event(val: bool = True) -> None:
-    return enable_if.unique([collect_act_event, do_nothing])(val=True)
+    return enable_if.unique([collect_act_event, do_nothing])(val=val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
@@ -246,7 +246,7 @@ def collect_act_event(val=True):
 
 @oneflow_export("config.collective_boxing.enable_fusion")
 def api_enable_fusion(val: bool = True) -> None:
-    return enable_if.unique([enable_fusion, do_nothing])(val=True)
+    return enable_if.unique([enable_fusion, do_nothing])(val=val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
