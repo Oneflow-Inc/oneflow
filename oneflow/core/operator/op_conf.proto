@@ -116,17 +116,6 @@ message RegularizerConf {
   }
 }
 
-message ReluOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message ReluGradOpConf {
-  required string y = 1;
-  required string dy = 2;
-  required string dx = 3;
-}
-
 message PReluOpConf {
   required string in = 1;
   required string out = 2;
@@ -151,17 +140,6 @@ message PReluAlphaGradOpConf {
   required string alpha_grad = 3;
   required string data_format = 4;
   required bool channel_shared = 5;
-}
-
-message SigmoidOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message SigmoidGradOpConf {
-  required string y = 1;
-  required string dy = 2;
-  required string dx = 3;
 }
 
 message TanHOpConf {
@@ -219,19 +197,6 @@ message DistributeCloneOpConf {
 message DistributeAddOpConf {
   repeated string in = 1;
   required string out = 2;
-}
-
-message ConcatOpConf {
-  repeated string in = 1;
-  required string out = 2;
-  required int32 axis = 3;
-}
-
-message SplitLikeOpConf {
-  required string in = 1;
-  repeated string like = 2;
-  repeated string out = 3;
-  required int32 axis = 4;
 }
 
 message CopyCommNetOpConf {
@@ -586,12 +551,6 @@ message MaximumOpConf {
   required string out = 2;
 }
 
-message CastOpConf {
-  required string in = 1;
-  required string out = 2;
-  required DataType data_type = 3;
-}
-
 message InterfaceBlobConf {
   required ShapeProto shape = 1;
   required DataType data_type = 2;
@@ -753,12 +712,6 @@ message DecodeRandomOpConf {
   required int64 batch_size = 8;
 }
 
-message TransposeOpConf {
-  required string in = 1;
-  required string out = 2;
-  repeated int32 perm = 3;
-}
-
 message ReduceConcatOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -795,16 +748,6 @@ message ReduceAddOpConf {
 
 message ReduceGatherOpConf {
   optional int32 in_num = 1 [default = 0];
-}
-
-message MatmulOpConf {
-  // input lbn
-  required string a = 1;
-  required string b = 2;
-  // output bn
-  required string out = 5;
-  optional bool transpose_a = 6 [default = false];
-  optional bool transpose_b = 7 [default = false];
 }
 
 message DotOpConf {
@@ -1518,7 +1461,6 @@ message OperatorConf {
     RecordLoadOpConf record_load_conf = 103;
     CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
-    ConcatOpConf concat_conf = 107;
     BoxingOpConf boxing_conf = 108;
     ReduceScatterOpConf reduce_scatter_conf = 109;
     ReduceAddOpConf reduce_add_conf = 110;
@@ -1530,7 +1472,6 @@ message OperatorConf {
     NcclAllGatherOpConf nccl_all_gather_conf = 116;
     AccumulateOpConf accumulate_conf = 117;
     NormalModelUpdateOpConf normal_mdupdt_conf = 118;
-    CastOpConf cast_conf = 121;
     VariableOpConf variable_conf = 122;
     ReduceIdentityOpConf reduce_identity_conf = 123;
     TickOpConf tick_conf = 124;
@@ -1580,19 +1521,15 @@ message OperatorConf {
     
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
-    TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
     ReduceSumOpConf reduce_sum_conf = 219;
     AddOpConf add_conf = 220;
-    MatmulOpConf matmul_conf = 221;
     DotOpConf dot_conf = 222;
     MultiplyOpConf multiply_conf = 223;
     MaximumOpConf maximum_conf = 224;
-    SigmoidOpConf sigmoid_conf = 225;
     TanHOpConf tanh_conf = 226;
-    ReluOpConf relu_conf = 227;
     PrintOpConf print_conf = 233;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
@@ -1606,7 +1543,6 @@ message OperatorConf {
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     ReduceMeanOpConf reduce_mean_conf = 261;
     PReluOpConf prelu_conf = 265;
-    ReluGradOpConf relu_grad_conf = 266;
     GeluGradOpConf gelu_grad_conf = 267;
     SliceGradOpConf slice_grad_conf = 269;
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
@@ -1624,8 +1560,6 @@ message OperatorConf {
     CaseOpConf case_conf = 291;
     EsacOpConf esac_conf = 292;
     ModelInitOpConf model_init_conf = 293;
-    SplitLikeOpConf split_like_conf = 294;
-    SigmoidGradOpConf sigmoid_grad_conf = 295;
     AssignOpConf assign_conf = 296;
     ModelSaveOpConf model_save_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;

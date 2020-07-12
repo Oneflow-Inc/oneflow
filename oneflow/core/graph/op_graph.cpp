@@ -587,21 +587,6 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
         }));
     return Maybe<void>::Ok();
   }));
-  // fix sbp_signature
-  {
-    TopoForEachNode([&](OpNode* op_node) {
-      if (op_node->op().op_conf().op_type_case() == OperatorConf::kCastConf) {
-        if (op_node->out_edges().size() > 1) { return; }
-        if (dynamic_cast<const NormalModelUpdtOp*>(&(op_node->SoleOutEdge()->dst_node()->op()))) {
-          auto* bn2sbp = op_node->mut_sbp_signature()->mutable_bn_in_op2sbp_parallel();
-          if (bn2sbp->at("out").has_partial_sum_parallel() && GlobalJobDesc().all_reduce_fp16()) {
-            bn2sbp->at("in").mutable_broadcast_parallel();
-            bn2sbp->at("out").mutable_broadcast_parallel();
-          }
-        }
-      }
-    });
-  }
   return Maybe<void>::Ok();
 }
 
