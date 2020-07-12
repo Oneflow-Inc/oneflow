@@ -50,6 +50,7 @@ class XlaOpContext : public OpContext {
     const PbMessage *message;
     // Input operands
     util::Map<Argument, XlaValue> inputs;
+    std::vector<std::string> output_names;
     int num_outputs;
 
     util::Map<std::string, Argument> arguments;
@@ -62,13 +63,18 @@ class XlaOpContext : public OpContext {
   const XrtDevice &device() const { return param_.device; }
   // Return XlaBuilder
   xla::XlaBuilder *builder() const;
+  
+  const std::string &SoleOutputName() const; 
 
   // Return input named `name` as XlaOp
   xla::XlaOp Input(const std::string &name);
   xla::XlaOp Input(const Argument &arg);
+  xla::XlaOp SoleInput();
+
   // Return output named `name` as XlaOp
   xla::XlaOp Output(const std::string &name);
   xla::XlaOp Output(const Argument &arg);
+  xla::XlaOp SoleOutput();
 
   int num_inputs() const { return param_.inputs.size(); }
   int num_outputs() const { return param_.num_outputs; }
@@ -83,16 +89,21 @@ class XlaOpContext : public OpContext {
   void SetOutput(const std::string &name, const xla::XlaOp &handle);
   // Setup the output `output_name` with XlaValue
   void SetOutput(const std::string &name, const XlaValue &handle);
+  void SetSoleOutput(const xla::XlaOp &handle);
 
   // Return input `name` shape as Shape
   Shape InputShape(const std::string &name) const;
+  Shape SoleInputShape() const;
   // Return output `name` shape as Shape
   Shape OutputShape(const std::string &name) const;
+  Shape SoleOutputShape() const;
 
   // Input data type
   DataType InputType(const std::string &name) const;
+  DataType SoleInputType() const;
   // Output data type
   DataType OutputType(const std::string &name) const;
+  DataType SoleOutputType() const;
 
   const Param &param() const { return param_; }
 
