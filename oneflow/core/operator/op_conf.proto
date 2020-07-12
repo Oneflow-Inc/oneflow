@@ -116,17 +116,6 @@ message RegularizerConf {
   }
 }
 
-message ReluOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message ReluGradOpConf {
-  required string y = 1;
-  required string dy = 2;
-  required string dx = 3;
-}
-
 message PReluOpConf {
   required string in = 1;
   required string out = 2;
@@ -1609,7 +1598,11 @@ message OperatorConf {
     MaximumOpConf maximum_conf = 224;
     SigmoidOpConf sigmoid_conf = 225;
     TanHOpConf tanh_conf = 226;
+<<<<<<< HEAD
+    SoftmaxOpConf softmax_conf = 228;
+=======
     ReluOpConf relu_conf = 227;
+>>>>>>> develop
     PrintOpConf print_conf = 233;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
@@ -1623,7 +1616,6 @@ message OperatorConf {
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     ReduceMeanOpConf reduce_mean_conf = 261;
     PReluOpConf prelu_conf = 265;
-    ReluGradOpConf relu_grad_conf = 266;
     GeluGradOpConf gelu_grad_conf = 267;
     SliceGradOpConf slice_grad_conf = 269;
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
