@@ -85,6 +85,30 @@ void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t nu
   TransposeImpl<double>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
 }
 
+void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const int8_t* x,
+                                                int8_t* y) {
+  TransposeImpl<int8_t>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const int32_t* x,
+                                                int32_t* y) {
+  TransposeImpl<int32_t>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const int64_t* x,
+                                                int64_t* y) {
+  TransposeImpl<int64_t>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
+}
+
 void ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(
     DeviceCtx* ctx, const ConstantInitializerConf& initializer_conf, Blob* blob) {
   DataType dtype = blob->data_type();
@@ -181,5 +205,25 @@ FILL(int32_t);
 FILL(int64_t);
 
 #undef FILL
+
+#define COPY_COLS_REGION(T)                                                              \
+  void ArithemeticIf<DeviceType::kCPU>::CopyColsRegion(                                  \
+      DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,          \
+      const int64_t x_col_offset, const int64_t x_lda, T* y, const int64_t y_col_offset, \
+      const int64_t y_lda) {                                                             \
+    for (int64_t i = 0; i < row_num; ++i) {                                              \
+      for (int64_t j = 0; j < col_num; ++j) {                                            \
+        y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];               \
+      }                                                                                  \
+    }                                                                                    \
+  }
+
+COPY_COLS_REGION(float)
+COPY_COLS_REGION(double)
+COPY_COLS_REGION(int8_t)
+COPY_COLS_REGION(int32_t)
+COPY_COLS_REGION(int64_t)
+
+#undef COPY_COLS_REGION
 
 }  // namespace oneflow

@@ -15,7 +15,7 @@ struct DumpFieldName {
 template<typename T>
 std::vector<std::string> GetFieldNames(T* flat_msg) {
   std::vector<std::string> field_names;
-  flat_msg->template __WalkField__<DumpFieldName>(&field_names);
+  flat_msg->template __WalkVerboseField__<DumpFieldName>(&field_names);
   return field_names;
 }
 
@@ -26,13 +26,14 @@ void CheckSoleFieldName(T* flat_msg, const std::string& expected) {
   ASSERT_EQ(field_names.at(0), expected);
 }
 // clang-format off
-BEGIN_FLAT_MSG(TestOptional)
+FLAT_MSG_BEGIN(TestOptional)
   FLAT_MSG_DEFINE_OPTIONAL(int32_t, bar);
-END_FLAT_MSG(TestOptional)
+FLAT_MSG_END(TestOptional)
 // clang-format on
 
 TEST(FlatMsg, optional) {
-  FLAT_MSG(TestOptional) foo_box;
+  static_assert(std::is_trivial<TestOptional>::value, "TestOptional is not trivial");
+  FlatMsg<TestOptional> foo_box;
   auto& foo = *foo_box.Mutable();
   ASSERT_TRUE(!foo.has_bar());
   ASSERT_EQ(foo.bar(), 0);
@@ -46,16 +47,16 @@ TEST(FlatMsg, optional) {
 }
 
 // clang-format off
-BEGIN_FLAT_MSG(FooOneof)
+FLAT_MSG_BEGIN(FooOneof)
   FLAT_MSG_DEFINE_ONEOF(type,
       FLAT_MSG_ONEOF_FIELD(int32_t, case_0)
       FLAT_MSG_ONEOF_FIELD(int64_t, case_1)
       FLAT_MSG_ONEOF_FIELD(TestOptional, bar));
-END_FLAT_MSG(FooOneof)
+FLAT_MSG_END(FooOneof)
 // clang-format on
 
 TEST(FlatMsg, oneof) {
-  FLAT_MSG(FooOneof) foo_box;
+  FlatMsg<FooOneof> foo_box;
   auto& foo = *foo_box.Mutable();
   ASSERT_TRUE(GetFieldNames(&foo).empty());
   ASSERT_TRUE(!foo.has_bar());
@@ -63,8 +64,8 @@ TEST(FlatMsg, oneof) {
   foo.mutable_case_0();
   CheckSoleFieldName(&foo, "case_0_");
   ASSERT_TRUE(foo.has_case_0());
-  FLAT_MSG_ONEOF_ENUM_TYPE(FooOneof, type) x = foo.type_case();
-  ASSERT_TRUE(x == FLAT_MSG_ONEOF_ENUM_VALUE(FooOneof, case_0));
+  FooOneof::FLAT_MSG_ONEOF_CASE(type) x = foo.type_case();
+  ASSERT_TRUE(x == FooOneof::FLAT_MSG_ONEOF_CASE_VALUE(case_0));
   *foo.mutable_case_1() = 9527;
   CheckSoleFieldName(&foo, "case_1_");
   ASSERT_TRUE(foo.has_case_1());
@@ -72,14 +73,14 @@ TEST(FlatMsg, oneof) {
 }
 
 // clang-format off
-BEGIN_FLAT_MSG(FooRepeated)
+FLAT_MSG_BEGIN(FooRepeated)
   FLAT_MSG_DEFINE_REPEATED(char, char_field, 1);
   FLAT_MSG_DEFINE_REPEATED(TestOptional, bar, 10);
-END_FLAT_MSG(FooRepeated)
+FLAT_MSG_END(FooRepeated)
 // clang-format on
 
 TEST(FlatMsg, repeated) {
-  FLAT_MSG(FooRepeated) foo_box;
+  FlatMsg<FooRepeated> foo_box;
   auto& foo = *foo_box.Mutable();
   ASSERT_EQ(foo.bar_size(), 0);
   ASSERT_EQ(foo.bar().size(), 0);
@@ -102,13 +103,13 @@ TEST(FlatMsg, repeated) {
 
 // clang-format off
 template<int N>
-BEGIN_FLAT_MSG(TestTemplateFlatMsg);
+FLAT_MSG_BEGIN(TestTemplateFlatMsg);
   FLAT_MSG_DEFINE_REPEATED(char, char_field, N);
-END_FLAT_MSG(TestTemplateFlatMsg);
+FLAT_MSG_END(TestTemplateFlatMsg);
 // clang-format on
 
 TEST(FlatMsg, flat_msg_template) {
-  FLAT_MSG(TestTemplateFlatMsg<1024>) foo;
+  FlatMsg<TestTemplateFlatMsg<1024>> foo;
   ASSERT_TRUE(foo.Get().char_field().empty());
 }
 

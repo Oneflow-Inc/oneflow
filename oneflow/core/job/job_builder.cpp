@@ -10,7 +10,8 @@ std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4Op
   for (const auto& placement_group : placement.placement_group()) {
     for (const std::string& op_name : placement_group.op_set().op_name()) {
       const ParallelConf* parallel_conf = &placement_group.parallel_conf();
-      CHECK(op_name2parallel_conf->emplace(op_name, parallel_conf).second);
+      CHECK(op_name2parallel_conf->emplace(op_name, parallel_conf).second)
+          << "op_name: " << op_name;
     }
   }
   return [op_name2parallel_conf](const std::string& op_name) {
@@ -30,8 +31,8 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
           op_name2parallel_conf_.emplace(op_name, placemnt_group->mutable_parallel_conf()).second);
     }
   }
-  auto* sbp_conf = job->mutable_sbp_conf();
-  for (auto& pair : *(sbp_conf->mutable_op_name2sbp_signature_conf())) {
+  auto* job_parallel_view_conf = job->mutable_job_parallel_view_conf();
+  for (auto& pair : *(job_parallel_view_conf->mutable_op_name2sbp_signature_conf())) {
     op_name2sbp_signature_conf_.emplace(pair.first, &pair.second);
   }
   for (auto& pair : *(job->mutable_helper()->mutable_lbn2batch_axis())) {
@@ -128,11 +129,12 @@ void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_
     if (op_set->op_name().size() > 0) { *(job_->mutable_placement()->add_placement_group()) = p; }
   }
 
-  auto* sbp_conf = job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf();
+  auto* job_parallel_view_conf =
+      job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
   auto* time_shape_conf = job_->mutable_helper()->mutable_op_name2op_time_shape();
   for (const std::string& op_name : removing_names) {
     // Update Sbp
-    if (sbp_conf->count(op_name) > 0) { sbp_conf->erase(op_name); }
+    if (job_parallel_view_conf->count(op_name) > 0) { job_parallel_view_conf->erase(op_name); }
     // Update time shape
     if (time_shape_conf->count(op_name) > 0) { time_shape_conf->erase(op_name); }
   }
@@ -192,7 +194,9 @@ void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
 
 void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Handler) const {
   for (const auto& pair : op_name2op_conf_) {
-    DeviceType device_type = ParallelDesc(*op_name2parallel_conf_.at(pair.first)).device_type();
+    auto it = op_name2parallel_conf_.find(pair.first);
+    CHECK(it != op_name2parallel_conf_.end()) << "op_name: " << pair.first;
+    DeviceType device_type = ParallelDesc(*it->second).device_type();
     std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type, &GlobalJobDesc());
     Handler(*op);
   }
@@ -215,7 +219,8 @@ void JobBuilder::AddParallelConf4OpName(const std::string& op_name,
 }
 
 SbpParallel* JobBuilder::MutSbpParallel4Oba(const OpBlobArg& oba) const {
-  auto* sbp_sig = &(*job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[oba.op_name()];
+  auto* sbp_sig = &(
+      *job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf())[oba.op_name()];
   return &(*sbp_sig->mutable_bn_in_op2sbp_parallel())[oba.bn_in_op()];
 }
 
@@ -239,7 +244,8 @@ void JobBuilder::AddSbpSignature4OpName(const std::string& op_name,
     return;
   }
 
-  auto* op_name2sbp_signature_conf = job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf();
+  auto* op_name2sbp_signature_conf =
+      job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
   (*op_name2sbp_signature_conf)[op_name] = sbp_signature;
   op_name2sbp_signature_conf_.emplace(op_name, &(*op_name2sbp_signature_conf)[op_name]);
 }

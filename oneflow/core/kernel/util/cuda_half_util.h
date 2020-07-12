@@ -23,6 +23,6 @@ __inline__ float16 half2float16(half x) {
   float16* ret = reinterpret_cast<float16*>(&x);
   return *ret;
 }
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_UTIL_CUDA_HALF_UTIL_H_

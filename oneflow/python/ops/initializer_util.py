@@ -1,16 +1,25 @@
 from __future__ import absolute_import
 
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.common.data_type_pb2 as data_type_conf_util
-from oneflow.python.oneflow_export import oneflow_export
+import functools
+import math
 
 import oneflow as flow
-import math
-import functools
+import oneflow.core.common.data_type_pb2 as data_type_conf_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("constant_initializer")
 def constant_initializer(value=0, dtype=data_type_conf_util.kFloat):
+    r"""Initializer that generates blob with constant values.
+    
+    Args:
+        value: A Python scalar. All elements of the initialized variable 
+        will be set to the corresponding value.
+        dtype: Default data type.
+    Returns:
+        An InitializerConf object.
+    """
     initializer = op_conf_util.InitializerConf()
     if dtype in [data_type_conf_util.kFloat, data_type_conf_util.kDouble]:
         setattr(initializer.constant_conf, "value", float(value))
@@ -37,9 +46,18 @@ def ones_initializer(dtype=data_type_conf_util.kFloat):
 
 
 @oneflow_export("random_uniform_initializer")
-def random_uniform_initializer(
-    minval=0, maxval=1, dtype=data_type_conf_util.kFloat
-):
+def random_uniform_initializer(minval=0, maxval=1, dtype=data_type_conf_util.kFloat):
+    r"""Initializer that generates blob with a uniform distribution.
+
+    Args:
+        minval: A python scalar. Lower bound of the range of random values to generate.
+        maxval: A python scalar. Upper bound of the range of random values to generate. 
+        Defaults to 1 for float types.
+        seed: None. Not support yet.
+        dtype: Default data type
+    Returns:
+        An InitializerConf object.
+    """
     initializer = op_conf_util.InitializerConf()
     if dtype in [data_type_conf_util.kFloat, data_type_conf_util.kDouble]:
         setattr(initializer.random_uniform_conf, "min", float(minval))
@@ -58,7 +76,19 @@ def random_uniform_initializer(
 
 
 @oneflow_export("random_normal_initializer")
-def random_normal_initializer(mean=0.0, stddev=1.0):
+def random_normal_initializer(mean=0.0, stddev=1.0, seed=None, dtype=None):
+    r"""Initializer that generates blob with a normal distribution.
+
+    Args:
+        mean: a python scalar. Mean of the random values to generate.
+        stddev: a python scalar. Standard deviation of the random values to generate.
+        seed: None. Not support yet.
+        dtype: None. Not applicable in OneFlow
+    Returns:
+        An InitializerConf object.
+    """
+    assert seed is None
+    assert dtype is None
     initializer = op_conf_util.InitializerConf()
     setattr(initializer.random_normal_conf, "mean", float(mean))
     setattr(initializer.random_normal_conf, "std", float(stddev))
@@ -82,9 +112,12 @@ def truncated_normal_initializer(mean=0.0, stddev=1.0):
 
 @oneflow_export("glorot_uniform_initializer", "xavier_uniform_initializer")
 def glorot_uniform_initializer(data_format=""):
-    return variance_scaling_initializer(
-        1.0, "fan_avg", "random_uniform", data_format
-    )
+    return variance_scaling_initializer(1.0, "fan_avg", "random_uniform", data_format)
+
+
+@oneflow_export("glorot_normal_initializer", "xavier_normal_initializer")
+def glorot_normal_initializer(data_format=""):
+    return variance_scaling_initializer(1.0, "fan_avg", "random_normal", data_format)
 
 
 @oneflow_export("variance_scaling_initializer")
@@ -105,9 +138,7 @@ def variance_scaling_initializer(
     initializer = op_conf_util.InitializerConf()
     setattr(initializer.variance_scaling_conf, "scale", float(scale))
     setattr(
-        initializer.variance_scaling_conf,
-        "variance_norm",
-        _get_variance_norm(mode),
+        initializer.variance_scaling_conf, "variance_norm", _get_variance_norm(mode),
     )
     setattr(
         initializer.variance_scaling_conf,
@@ -115,9 +146,7 @@ def variance_scaling_initializer(
         _get_random_distribution(distribution),
     )
     setattr(
-        initializer.variance_scaling_conf,
-        "data_format",
-        _get_data_format(data_format),
+        initializer.variance_scaling_conf, "data_format", _get_data_format(data_format),
     )
     return initializer
 
@@ -129,7 +158,7 @@ def kaiming_initializer(
     mode="fan_in",
     nonlinearity="leaky_relu",
     negative_slope=0.0,
-    data_format="channels_first",
+    data_format="NCHW",
 ):
     r"""Initialize weight according to the method described in `Delving deep into
     rectifiers: Surpassing human-level performance on ImageNet classification`
@@ -140,7 +169,7 @@ def kaiming_initializer(
         mode: 'fan_in', 'fan_out' or 'fan_avg'
         nonlinearity: None, 'tanh', 'sigmoid', 'relu' or 'leaky_relu'
         negative_slope: the negative slope of leaky_relu
-        data_format: 'channels_first', 'channels_last'
+        data_format: 'NCHW', 'NHWC'
     """
     assert isinstance(shape, tuple)
     # Kaiming Initialization only deals with FC, Conv and Deconv's weight
@@ -150,9 +179,9 @@ def kaiming_initializer(
     assert distribution in ["random_normal", "random_uniform"]
     assert mode in ["fan_in", "fan_out", "fan_avg"]
     assert nonlinearity in [None, "tanh", "sigmoid", "relu", "leaky_relu"]
-    assert data_format in ["channels_first", "channels_last"]
+    assert data_format in ["NCHW", "NHWC"]
 
-    fan = _CalcFan(shape, mode, data_format)
+    fan = _CalcFan(shape, mode, _get_data_format(data_format))
     gain = _CalcGain(nonlinearity, negative_slope)
     std = gain / math.sqrt(fan)
     if distribution == "random_normal":
@@ -161,9 +190,7 @@ def kaiming_initializer(
         bound = math.sqrt(3.0) * std
         return flow.random_uniform_initializer(-bound, bound)
     else:
-        raise NotImplementedError(
-            "Only support normal and uniform distribution"
-        )
+        raise NotImplementedError("Only support normal and uniform distribution")
 
 
 def _get_variance_norm(mode):
@@ -196,6 +223,9 @@ def _get_data_format(data_format):
     elif data_format.startswith("N") and data_format.endswith("C"):
         return "channels_last"
     else:
+        assert data_format == "", ValueError(
+            'data_format must be "N...C" or "NC..." or ""'
+        )
         return ""
 
 
@@ -226,9 +256,7 @@ def _CalcFan(shape, mode, data_format):
     elif mode == "fan_out":
         return float(fan_out)
     else:
-        raise NotImplementedError(
-            "Only support 'fan_in', 'fan_out' and 'fan_avg' mode"
-        )
+        raise NotImplementedError("Only support 'fan_in', 'fan_out' and 'fan_avg' mode")
 
 
 def _CalcGain(nonlinearity, negative_slope):

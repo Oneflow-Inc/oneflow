@@ -9,17 +9,17 @@ namespace mola {
 class TransposeOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    auto perm = ctx->GetAttr<std::vector<int32_t>>("perm");
-    Shape x_shape = ctx->InputShape("in");
+    const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
+    Shape x_shape = ctx->SoleInputShape();
     CHECK_EQ(perm.size(), x_shape.NumAxes());
 
-    xla::XlaOp x = ctx->Input("in");
+    xla::XlaOp x = ctx->SoleInput();
     if (IsIdentity(perm)) {
-      ctx->SetOutput("out", x);
+      ctx->SetSoleOutput(x);
     } else {
       std::vector<long long> transposed_order(x_shape.NumAxes());
       for (int i = 0; i < x_shape.NumAxes(); ++i) { transposed_order[i] = perm[i]; }
-      ctx->SetOutput("out", xla::Transpose(x, transposed_order));
+      ctx->SetSoleOutput(xla::Transpose(x, transposed_order));
     }
   }
 

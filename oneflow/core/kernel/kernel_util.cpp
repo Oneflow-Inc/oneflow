@@ -270,11 +270,6 @@ void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
   }
 }
 
-template<>
-void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
-  memset(dst, value, sz);
-}
-
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
   void CpuKernelUtilIf<T, Derived>::
@@ -560,6 +555,10 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
   } else {
     UNIMPLEMENTED();
   }
+}
+
+KU_INTEGRAL_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
 }
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                                \

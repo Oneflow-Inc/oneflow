@@ -6,22 +6,22 @@ namespace oneflow {
 namespace {
 
 struct Foo {
-  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), Foo, 0);
+  DSS_BEGIN(DSS_GET_FIELD_COUNTER(), Foo);
   int x;
   int y;
   int* z;
 
-  DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", x);
-  DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", y);
-  DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", z);
+  DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", int, x);
+  DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", int, y);
+  DSS_DEFINE_FIELD(DSS_GET_FIELD_COUNTER(), "demo dss", int*, z);
 
-  END_DSS(DSS_GET_FIELD_COUNTER(), "demo dss", Foo);
+  DSS_END(DSS_GET_FIELD_COUNTER(), "demo dss", Foo);
 };
 
 struct Bar {
-  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), Foo, 0);
+  DSS_BEGIN(DSS_GET_FIELD_COUNTER(), Foo);
 
-  END_DSS(DSS_GET_FIELD_COUNTER(), "demo dss", Bar);
+  DSS_END(DSS_GET_FIELD_COUNTER(), "demo dss", Bar);
 };
 
 template<typename T>
@@ -40,19 +40,6 @@ struct IsScalar {
       std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, std::string>::value;
 };
 
-struct FooBar {
-  DSS_DEFINE_GETTER(int, x);
-  DSS_DEFINE_MUTABLE(int, x);
-  DSS_DEFINE_SETTER(IsScalar, int, x);
-
-  DSS_DEFINE_GETTER(Foo*, foo);
-  DSS_DEFINE_MUTABLE(Foo*, foo);
-  DSS_DEFINE_SETTER(IsScalar, Foo*, foo);
-
-  int x_;
-  Foo* foo_;
-};
-
 template<int field_counter, typename WalkCtxType, typename FieldType>
 struct DumpFieldName {
   static void Call(WalkCtxType* ctx, FieldType* field, const char* field_name) {
@@ -63,21 +50,11 @@ struct DumpFieldName {
 TEST(DSS, walk_field) {
   Foo foo;
   std::vector<std::string> field_names;
-  foo.__WalkField__<DumpFieldName>(&field_names);
+  foo.__WalkVerboseField__<DumpFieldName>(&field_names);
   ASSERT_EQ(field_names.size(), 3);
   ASSERT_TRUE(field_names[0] == "x");
   ASSERT_TRUE(field_names[1] == "y");
   ASSERT_TRUE(field_names[2] == "z");
-}
-
-TEST(DSS, reverse_walk_field) {
-  Foo foo;
-  std::vector<std::string> field_names;
-  foo.__ReverseWalkField__<DumpFieldName>(&field_names);
-  ASSERT_EQ(field_names.size(), 3);
-  ASSERT_TRUE(field_names[0] == "z");
-  ASSERT_TRUE(field_names[1] == "y");
-  ASSERT_TRUE(field_names[2] == "x");
 }
 
 template<bool is_pointer>
@@ -101,25 +78,40 @@ struct FilterPointerFieldName {
   }
 };
 
+template<int field_counter, typename WalkCtxType, typename FieldType>
+struct FilterPointerFieldNameUntil {
+  static bool Call(WalkCtxType* ctx, FieldType* field) {
+    return true;
+    PushBackPtrFieldName<std::is_pointer<FieldType>::value>::Call(ctx, "");
+  }
+};
+
 TEST(DSS, filter_field) {
   Foo foo;
   std::vector<std::string> field_names;
-  foo.__WalkField__<FilterPointerFieldName>(&field_names);
+  foo.__WalkVerboseField__<FilterPointerFieldName>(&field_names);
   ASSERT_EQ(field_names.size(), 1);
   ASSERT_TRUE(field_names[0] == "z");
 }
 
-#define DSS_DEFINE_TEST_UNION_FIELD(field_counter)                   \
-  DSS_DEFINE_FIELD(field_counter, "demo dss", union_field);          \
-  DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, union_case,          \
-                                 OF_PP_MAKE_TUPLE_SEQ(int32_t, x, 1) \
+TEST(DSS, filter_field_until) {
+  Foo foo;
+  std::vector<std::string> field_names;
+  ASSERT_TRUE(foo.__WalkFieldUntil__<FilterPointerFieldNameUntil>(&field_names));
+  ASSERT_TRUE(field_names.empty());
+}
+
+#define DSS_DEFINE_TEST_UNION_FIELD(field_counter)                      \
+  DSS_DEFINE_FIELD(field_counter, "demo dss", UnionField, union_field); \
+  DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, union_case,             \
+                                 OF_PP_MAKE_TUPLE_SEQ(int32_t, x, 1)    \
                                      OF_PP_MAKE_TUPLE_SEQ(int64_t, y, 2));
 
 struct TestDssUnion {
-  BEGIN_DSS(DSS_GET_FIELD_COUNTER(), TestDssUnion, 0);
+  DSS_BEGIN(DSS_GET_FIELD_COUNTER(), TestDssUnion);
 
  public:
-  struct {
+  struct UnionField {
     int32_t union_case;
     union {
       int32_t x;
@@ -128,7 +120,16 @@ struct TestDssUnion {
   } union_field;
 
   DSS_DEFINE_TEST_UNION_FIELD(DSS_GET_FIELD_COUNTER());
-  END_DSS(DSS_GET_FIELD_COUNTER(), "demo dss", TestDssUnion);
+  DSS_END(DSS_GET_FIELD_COUNTER(), "demo dss", TestDssUnion);
+};
+
+template<typename StructT, int field_counter, typename WalkCtxType, typename FieldType,
+         bool is_oneof_field>
+struct StaticDumpFieldName {
+  static void Call(WalkCtxType* ctx, const char* field_name, const char* oneof_name) {
+    ctx->push_back(field_name);
+    ctx->push_back(oneof_name);
+  }
 };
 
 TEST(DSS, union_field) {
@@ -136,23 +137,33 @@ TEST(DSS, union_field) {
   foo.union_field.union_case = 0;
   {
     std::vector<std::string> field_names;
-    foo.__WalkField__<DumpFieldName>(&field_names);
+    foo.__WalkVerboseField__<DumpFieldName>(&field_names);
     ASSERT_EQ(field_names.size(), 0);
   }
   foo.union_field.union_case = 1;
   {
     std::vector<std::string> field_names;
-    foo.__WalkField__<DumpFieldName>(&field_names);
+    foo.__WalkVerboseField__<DumpFieldName>(&field_names);
     ASSERT_EQ(field_names.size(), 1);
     ASSERT_EQ(field_names.at(0), "x");
   }
   foo.union_field.union_case = 2;
   {
     std::vector<std::string> field_names;
-    foo.__WalkField__<DumpFieldName>(&field_names);
+    foo.__WalkVerboseField__<DumpFieldName>(&field_names);
     ASSERT_EQ(field_names.size(), 1);
     ASSERT_EQ(field_names.at(0), "y");
   }
+}
+
+TEST(DSS, static_verbose_field) {
+  std::vector<std::string> field_names;
+  TestDssUnion::__WalkStaticVerboseField__<StaticDumpFieldName>(&field_names);
+  ASSERT_EQ(field_names.size(), 4);
+  ASSERT_EQ(field_names.at(0), "x");
+  ASSERT_EQ(field_names.at(1), "union_field");
+  ASSERT_EQ(field_names.at(2), "y");
+  ASSERT_EQ(field_names.at(3), "union_field");
 }
 
 }  // namespace

@@ -10,27 +10,60 @@
 
 namespace oneflow {
 
+class EagerExecutionOption {};
+
 class JobBuildAndInferCtxMgr {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtxMgr);
-  ~JobBuildAndInferCtxMgr() = default;
+  virtual ~JobBuildAndInferCtxMgr() = default;
 
   Maybe<void> OpenJobBuildAndInferCtx(const std::string& job_name);
   Maybe<JobBuildAndInferCtx*> FindJobBuildAndInferCtx(const std::string& job_name);
   Maybe<std::string> GetCurrentJobName() const;
-  void CloseCurrentJobBuildAndInferCtx();
+  Maybe<void> CloseCurrentJobBuildAndInferCtx();
   Maybe<void> AddLbiAndDiffWatcherUuidPair(const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) const;
 
   const JobSet& job_set() const { return job_set_; }
 
- private:
+ protected:
+  virtual JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const = 0;
   JobBuildAndInferCtxMgr() : has_cur_job_(false) {}
-  friend class Global<JobBuildAndInferCtxMgr>;
+  virtual void VirtualCloseJob() = 0;
+  JobSet* mut_job_set() { return &job_set_; }
 
+  void clear_job_name2infer_ctx() { job_name2infer_ctx_.clear(); }
+
+ private:
   JobSet job_set_;
   bool has_cur_job_;
   std::string cur_job_name_;
   HashMap<std::string, std::unique_ptr<JobBuildAndInferCtx>> job_name2infer_ctx_;
+};
+
+class LazyJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LazyJobBuildAndInferCtxMgr);
+  LazyJobBuildAndInferCtxMgr() : JobBuildAndInferCtxMgr() {}
+  ~LazyJobBuildAndInferCtxMgr() override = default;
+
+ private:
+  friend class Global<LazyJobBuildAndInferCtxMgr>;
+
+  void VirtualCloseJob() override {}
+  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
+};
+
+class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EagerJobBuildAndInferCtxMgr);
+  EagerJobBuildAndInferCtxMgr() : JobBuildAndInferCtxMgr() {}
+  ~EagerJobBuildAndInferCtxMgr() override = default;
+
+ private:
+  friend class Global<EagerJobBuildAndInferCtxMgr>;
+
+  void VirtualCloseJob() override;
+  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
 };
 
 }  // namespace oneflow

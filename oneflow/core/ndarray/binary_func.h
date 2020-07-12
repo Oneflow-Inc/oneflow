@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <climits>
 #include <cfloat>
+#include <cmath>
 
 #if defined(__CUDACC__)
 #include <cuda_fp16.h>
@@ -24,7 +25,7 @@ namespace oneflow {
 #define BINARY_FUNC_NAME_SEQ ARITHMETIC_BINARY_FUNC_NAME_SEQ LOGICAL_BINARY_FUNC_NAME_SEQ
 #define BINARY_FUNC_SEQ ARITHMETIC_BINARY_FUNC_SEQ LOGICAL_BINARY_FUNC_SEQ
 
-#define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)
+#define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)(All)
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
 
@@ -65,6 +66,12 @@ template<typename T>
 struct BinaryFuncMul final {
   static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x * y; }
 };
+template<typename T>
+struct BinaryFuncProd final {
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
+    return BinaryFuncMul<T>::Invoke(x, y);
+  }
+};
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMul);
 
 template<typename T>
@@ -75,7 +82,15 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncDiv);
 
 template<typename T>
 struct BinaryFuncFloorMod final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x % y; }
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
+#if defined(__CUDACC__)
+    T trunc_mod = x % y;
+    return (trunc_mod != T(0)) && ((y < T(0)) != (trunc_mod < T(0))) ? trunc_mod + y : trunc_mod;
+#else
+    T trunc_mod = x % y;
+    return (trunc_mod != T(0)) && ((y < T(0)) != (trunc_mod < T(0))) ? trunc_mod + y : trunc_mod;
+#endif
+  }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncFloorMod);
 
@@ -131,7 +146,19 @@ template<typename T>
 struct BinaryFuncAND final {
   static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x && y; }
 };
+template<typename T>
+struct BinaryFuncAll final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) {
+    return BinaryFuncAND<T>::Invoke(x, y);
+  }
+};
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAND);
+
+template<typename T>
+struct BinaryFuncAny final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x || y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAny);
 
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
@@ -209,14 +236,16 @@ struct BinaryFuncMin<half> final {
 template<>
 struct BinaryFuncFloorMod<float> final {
   static __device__ __forceinline__ const float Invoke(const float x, const float y) {
-    return fmodf(x, y);
+    const float trunc_mod = fmodf(x, y);
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
   }
 };
 
 template<>
 struct BinaryFuncFloorMod<double> final {
   static __device__ __forceinline__ const double Invoke(const double x, const double y) {
-    return fmod(x, y);
+    const double trunc_mod = fmod(x, y);
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
   }
 };
 
@@ -224,7 +253,11 @@ template<>
 struct BinaryFuncFloorMod<half> final {
   static __device__ __forceinline__ const half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
-    return __float2half(fmodf(__half2float(x), __half2float(y)));
+    const half trunc_mod = __float2half(fmodf(__half2float(x), __half2float(y)));
+    return __hne(trunc_mod, GetZeroVal<half>())
+                   && __hne(__hlt(y, GetZeroVal<half>()), __hlt(trunc_mod, half(0)))
+               ? trunc_mod + y
+               : trunc_mod;
 #else
     NO_HALF_UTIL_FOUND;
 #endif
@@ -235,22 +268,27 @@ struct BinaryFuncFloorMod<half> final {
 
 template<>
 struct BinaryFuncFloorMod<float> final {
-  static __device__ __forceinline__ const float Invoke(const float x, const float y) {
-    return std::fmod(x, y);
+  static inline const float Invoke(const float x, const float y) {
+    const float trunc_mod = std::fmod(x, y);
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
   }
 };
 
 template<>
 struct BinaryFuncFloorMod<double> final {
-  static __device__ __forceinline__ const double Invoke(const double x, const double y) {
-    return std::fmod(x, y);
+  static inline const double Invoke(const double x, const double y) {
+    const double trunc_mod = std::fmod(x, y);
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
   }
 };
 
 template<>
 struct BinaryFuncFloorMod<float16> final {
-  static __device__ __forceinline__ const float16 Invoke(const float16 x, const float16 y) {
-    return static_cast<float16>(std::fmod(static_cast<float>(x), static_cast<float>(y)));
+  static inline const float16 Invoke(const float16 x, const float16 y) {
+    const float trunc_mod = std::fmod(static_cast<float>(x), static_cast<float>(y));
+    return (trunc_mod != float(0)) && ((y < float(0)) != (trunc_mod < float(0)))
+               ? static_cast<float16>(trunc_mod + y)
+               : static_cast<float16>(trunc_mod);
   }
 };
 
@@ -267,8 +305,11 @@ struct UnitOfBinaryFunc;
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAdd, GetZeroVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncSum, GetZeroVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMul, GetOneVal);
+SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncProd, GetOneVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMax, GetMinVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMin, GetMaxVal);
+SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAny, GetZeroVal);
+SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAll, GetOneVal);
 #undef SPECIALIZE_UNIT_OF_BINARY_FUNC
 
 }  // namespace oneflow

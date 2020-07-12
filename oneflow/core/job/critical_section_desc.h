@@ -2,8 +2,9 @@
 #define ONEFLOW_CORE_JOB_CRITICAL_SECTION_DESC_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job/critical_section.pb.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/job/critical_section.pb.h"
 
 namespace oneflow {
 

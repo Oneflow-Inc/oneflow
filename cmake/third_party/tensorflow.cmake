@@ -3,12 +3,12 @@ include (ExternalProject)
 if (WITH_XLA)
 
 list(APPEND TENSORFLOW_BUILD_CMD --define with_xla_support=true)
-if (RELEASE_VERSION)
-  list(APPEND TENSORFLOW_BUILD_CMD -c opt)
-  set(TENSORFLOW_GENFILE_DIR k8-opt)
-else()
+if (CMAKE_BUILD_TYPE MATCHES Debug)
   list(APPEND TENSORFLOW_BUILD_CMD --copt=-g -c dbg)
   set(TENSORFLOW_GENFILE_DIR k8-dbg)
+else()
+  list(APPEND TENSORFLOW_BUILD_CMD -c opt)
+  set(TENSORFLOW_GENFILE_DIR k8-opt)
 endif()
 
 set(TF_WITH_CUDA ON)
@@ -28,7 +28,7 @@ set(TENSORFLOW_PROJECT  tensorflow)
 set(TENSORFLOW_GIT_URL  https://github.com/tensorflow/tensorflow.git)
 #set(TENSORFLOW_GIT_TAG  master)
 set(TENSORFLOW_GIT_TAG  80c04b80ad66bf95aa3f41d72a6bba5e84a99622)
-set(TENSORFLOW_SOURCES_DIR ${CMAKE_CURRENT_BINARY_DIR}/third_party/tensorflow)
+set(TENSORFLOW_SOURCES_DIR ${THIRD_PARTY_SUBMODULE_DIR}/tensorflow)
 set(TENSORFLOW_SRCS_DIR ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 set(TENSORFLOW_INC_DIR  ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 
@@ -43,6 +43,7 @@ set(THIRD_ABSL_DIR ${TENSORFLOW_EXTERNAL_DIR}/com_google_absl)
 set(THIRD_PROTOBUF_DIR ${TENSORFLOW_EXTERNAL_DIR}/com_google_protobuf/src)
 set(THIRD_BORINGSSL_DIR ${TENSORFLOW_EXTERNAL_DIR}/boringssl/src)
 set(THIRD_SNAPPY_DIR ${TENSORFLOW_EXTERNAL_DIR}/snappy)
+set(THIRD_RE2_DIR ${TENSORFLOW_EXTERNAL_DIR}/com_googlesource_code_re2)
 
 list(APPEND TENSORFLOW_XLA_INCLUDE_DIR
   ${TENSORFLOW_INC_DIR}
@@ -51,6 +52,7 @@ list(APPEND TENSORFLOW_XLA_INCLUDE_DIR
   ${THIRD_PROTOBUF_DIR}
   ${THIRD_BORINGSSL_DIR}
   ${THIRD_SNAPPY_DIR}
+  ${THIRD_RE2_DIR}
 )
 include_directories(${TENSORFLOW_XLA_INCLUDE_DIR})
 list(APPEND TENSORFLOW_XLA_LIBRARIES libtensorflow_framework.so.1)

@@ -10,10 +10,11 @@ class PruneParallelCastOpsPass final : public OpGraphPass {
   PruneParallelCastOpsPass() = default;
   ~PruneParallelCastOpsPass() override = default;
   bool IsEnabled() const override { return GlobalJobDesc().prune_parallel_cast_ops(); }
-  void Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
-void PruneParallelCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
+                                            JobBuilder* job_builder) const {
   HashMap<std::string, OperatorConf> op_name2op_conf;
   HashMap<std::string, SbpSignature> op_name2sbp_signature;
   HashSet<std::string> ctrl_in_op_names;
@@ -34,7 +35,9 @@ void PruneParallelCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     const SbpParallel& parallel_cast_sbp_parallel = op_node->SbpParallel4Lbi(parallel_cast_in_lbi);
     const SbpParallel& producer_sbp_parallel = producer->SbpParallel4Lbi(parallel_cast_in_lbi);
     if (op_node->parallel_desc() != producer->parallel_desc()) { return; }
-    if (parallel_cast_sbp_parallel != producer_sbp_parallel) { return; }
+    if (parallel_cast_sbp_parallel != producer_sbp_parallel && op_node->out_edges().size() > 1) {
+      return;
+    }
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       if (consumer->op().op_conf().has_parallel_cast_conf()) { return; }
@@ -56,8 +59,8 @@ void PruneParallelCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
           MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
       for (const std::string& ibn : consumer->op().input_bns()) {
         if (consumer->op().BnInOp2Lbi(ibn) == parallel_cast_out_lbi) {
-          ReplaceStrValInPbFdOrPbRpf(conf, ibn, GenLogicalBlobName(parallel_cast_out_lbi),
-                                     GenLogicalBlobName(parallel_cast_in_lbi));
+          ReplaceInputLbnInOpCustomizedConf(conf, ibn, GenLogicalBlobName(parallel_cast_out_lbi),
+                                            GenLogicalBlobName(parallel_cast_in_lbi));
         }
       }
     }
@@ -67,6 +70,7 @@ void PruneParallelCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
   for (const auto& pair : op_name2sbp_signature) {
     job_builder->AddSbpSignature4OpName(pair.first, pair.second);
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace

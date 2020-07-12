@@ -4,6 +4,8 @@
 
 #ifdef PLATFORM_POSIX
 
+#include <netinet/tcp.h>
+
 namespace oneflow {
 
 SocketReadHelper::~SocketReadHelper() {
@@ -37,6 +39,8 @@ bool SocketReadHelper::MsgBodyReadHandle() {
 
 bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) {
   ssize_t n = read(sockfd_, read_ptr_, read_size_);
+  const int val = 1;
+  PCHECK(setsockopt(sockfd_, IPPROTO_TCP, TCP_QUICKACK, (char*)&val, sizeof(int)) == 0);
   if (n == read_size_) {
     (this->*set_cur_read_done)();
     return true;

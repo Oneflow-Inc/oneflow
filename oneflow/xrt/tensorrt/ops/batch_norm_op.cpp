@@ -13,15 +13,15 @@ static T *GetWeightPtr(const nvinfer1::Weights &weight) {
 class NormalizationOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    Shape in_shape = ctx->InputShape("in");
+    Shape in_shape = ctx->InputShape("x_0");
     CHECK_GE(in_shape.NumAxes(), 2);
 
-    float epsilon = ctx->GetAttr<float>("epsilon");
+    float epsilon = ctx->Attr<float>("epsilon");
 
-    nvinfer1::Weights gamma = ctx->Weight("gamma");
-    nvinfer1::Weights beta = ctx->Weight("beta");
-    nvinfer1::Weights moving_mean = ctx->Weight("moving_mean");
-    nvinfer1::Weights moving_variance = ctx->Weight("moving_variance");
+    nvinfer1::Weights gamma = ctx->Weight("gamma_0");
+    nvinfer1::Weights beta = ctx->Weight("beta_0");
+    nvinfer1::Weights moving_mean = ctx->Weight("moving_mean_0");
+    nvinfer1::Weights moving_variance = ctx->Weight("moving_variance_0");
 
     float *gamma_ptr = GetWeightPtr<float>(gamma);
     float *beta_ptr = GetWeightPtr<float>(beta);
@@ -39,14 +39,14 @@ class NormalizationOp : public TrtOpKernel {
 
     nvinfer1::Weights power{nvinfer1::DataType::kFLOAT, nullptr, 0};
 
-    nvinfer1::ITensor *input = ctx->Input("in");
+    nvinfer1::ITensor *input = ctx->Input("x_0");
 
     nvinfer1::ScaleMode mode = nvinfer1::ScaleMode::kCHANNEL;
     nvinfer1::IScaleLayer *layer =  // NOLINT
         ctx->builder()->addScale(*input, mode, beta, gamma, power);
     layer->setName(ctx->op_name().c_str());
 
-    ctx->SetOutput("out", layer->getOutput(0));
+    ctx->SetOutput("y_0", layer->getOutput(0));
   }
 };
 

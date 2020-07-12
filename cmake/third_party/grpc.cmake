@@ -4,19 +4,19 @@ set(GRPC_INCLUDE_DIR ${THIRD_PARTY_DIR}/grpc/include)
 set(GRPC_LIBRARY_DIR ${THIRD_PARTY_DIR}/grpc/lib)
 
 set(GRPC_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
-set(GRPC_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/grpc/src/grpc)
+set(GRPC_URL ${THIRD_PARTY_SUBMODULE_DIR}/grpc/src/grpc)
 
 if(WIN32)
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
-    set(GRPC_LIBRARY_NAMES grpc++_unsecure.lib 
+    set(GRPC_LIBRARY_NAMES grpc++_unsecure.lib
       grpc_unsecure.lib gpr.lib)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
-    set(GRPC_LIBRARY_NAMES libgrpc++_unsecure.a 
+    set(GRPC_LIBRARY_NAMES libgrpc++_unsecure.a
       libgrpc_unsecure.a libgpr.a)
 else()
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc)
-    set(GRPC_LIBRARY_NAMES libgrpc++_unsecure.a 
+    set(GRPC_LIBRARY_NAMES libgrpc++_unsecure.a
       libgrpc_unsecure.a libgpr.a)
 endif()
 
@@ -46,13 +46,7 @@ ExternalProject_Add(grpc
         -DZLIB_INCLUDE_DIRS:STRING=${ZLIB_INCLUDE_DIR}
 )
 
-add_custom_target(grpc_create_header_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${GRPC_INCLUDE_DIR}
-  DEPENDS grpc)
-
-add_custom_target(grpc_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${GRPC_INCLUDE_DIRS} ${GRPC_INCLUDE_DIR}
-  DEPENDS grpc_create_header_dir)
+add_copy_headers_target(NAME grpc SRC ${GRPC_INCLUDE_DIRS} DST ${GRPC_INCLUDE_DIR} DEPS grpc INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/grpc_headers.txt")
 
 add_custom_target(grpc_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GRPC_LIBRARY_DIR}

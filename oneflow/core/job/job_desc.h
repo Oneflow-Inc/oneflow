@@ -18,6 +18,7 @@ class JobDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobDesc);
   JobDesc(const JobConfigProto& job_conf, int64_t job_id);
+  explicit JobDesc(const JobConfigProto& job_conf) : JobDesc(job_conf, -1) {}
   ~JobDesc() = default;
   // Common
   int64_t job_id() const { return job_id_; }
@@ -25,7 +26,6 @@ class JobDesc final {
   int64_t concurrency_width() const { return job_conf_.concurrency_width(); }
   const JobConfigProto& job_conf() const { return job_conf_; }
   DataType DefaultDataType() const { return job_conf_.default_data_type(); }
-  size_t SizeOfOneDataId() const { return job_conf_.max_data_id_length() * sizeof(char); }
   bool EnableCudnn() const { return job_conf_.enable_cudnn(); }
   bool IsTrain() const { return job_conf_.has_train_conf(); }
   bool IsPredict() const { return job_conf_.has_predict_conf(); }
@@ -39,7 +39,6 @@ class JobDesc final {
   bool enable_inplace_in_reduce_struct() const {
     return job_conf_.enable_inplace_in_reduce_struct();
   }
-  bool cudnn_conv_enable_true_half() const { return job_conf_.cudnn_conv_enable_true_half(); }
   bool enable_float_compute_for_half_gemm() const {
     return job_conf_.enable_float_compute_for_half_gemm();
   }
@@ -49,6 +48,9 @@ class JobDesc final {
     return job_conf_.use_nccl_inter_node_communication();
   }
   bool use_boxing_v2() const { return job_conf_.use_boxing_v2(); }
+  bool do_parallel_cast_before_widening_type_cast() const {
+    return job_conf_.do_parallel_cast_before_widening_type_cast();
+  };
   bool enable_all_reduce_group() const { return job_conf_.enable_all_reduce_group(); }
   bool enable_non_distributed_optimizer() const {
     return job_conf_.enable_non_distributed_optimizer();
@@ -64,6 +66,8 @@ class JobDesc final {
   float all_reduce_lazy_ratio() const;
   bool all_reduce_fp16() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
+
+  bool enable_keep_header_only() const { return job_conf_.enable_keep_header_only(); }
 
   bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
   const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }
@@ -82,10 +86,6 @@ class JobDesc final {
   // Train conf
   int64_t TotalBatchNum() const;
   int64_t NumOfPiecesInBatch() const;
-  float weight_l1() const;
-  float bias_l1() const;
-  float weight_l2() const;
-  float bias_l2() const;
   int32_t loss_scale_factor() const;
 
  private:

@@ -1,4 +1,4 @@
-/.git
+**/.git
 /build
 /third_party/
 /examples/**/oneflow
@@ -9,10 +9,19 @@
 .clangd
 dist
 
-*/__pycache__
-*/plan
-*/core.*
-*/*.pyc
-*/log
-*/.ipynb_checkpoints
-core.*
+**/__pycache__
+**/*.pyc
+**/log
+**/.ipynb_checkpoints
+**/core.0*
+**/core.1*
+**/core.2*
+**/core.3*
+**/core.4*
+**/core.5*
+**/core.6*
+**/core.7*
+**/core.8*
+**/core.9*
+
+build/third_party/re2/src/re2-*

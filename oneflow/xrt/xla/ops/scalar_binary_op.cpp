@@ -14,20 +14,19 @@ class ScalarBinaryOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
     xla::XlaOp scalar = Scalar(ctx);
-    xla::XlaOp in = ctx->Input("in");
+    xla::XlaOp in = ctx->SoleInput();
 
-    ctx->SetOutput("out", BinaryOp()(in, scalar));
+    ctx->SetSoleOutput(BinaryOp()(in, scalar));
   }
 
   xla::XlaOp Scalar(XlaOpContext *ctx) const {
     xla::XlaBuilder *builder = ctx->builder();
-    DataType data_type = ctx->InputType("in");
-    std::string type = ctx->GetOneofType("scalar_operand");
-    if (type == "int_operand") {
-      int64_t value = ctx->GetAttr<int64_t>(type);
+    DataType data_type = ctx->SoleInputType();
+    if (ctx->Attr<bool>("has_int_operand")) {
+      int64_t value = ctx->Attr<int64_t>("int_operand");
       return IntegerLiteral(builder, data_type, value);
-    } else {
-      double value = ctx->GetAttr<double>(type);
+    } else if(ctx->Attr<bool>("has_float_operand")) {
+      double value = ctx->Attr<double>("float_operand");
       return FloatLiteral(builder, data_type, value);
     }
   }

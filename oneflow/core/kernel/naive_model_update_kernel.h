@@ -14,16 +14,17 @@ class NaiveMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> {
 
  private:
   const PbMessage& GetCustomizedOpConf() const override;
-  void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2,
-                   const int64_t* train_step, const float* learning_rate,
+  void UpdateModel(DeviceCtx* ctx, T weight_decay, const int64_t* train_step,
+                   const float* learning_rate,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  bool IsWeightDecaySupported() override { return true; }
 };
 
 template<DeviceType device_type, typename T>
 class NaiveMdUpdateKernelUtil final {
  public:
-  static void UpdateModel(DeviceCtx*, int64_t n, const T* batch_instance_num_ptr,
-                          const float* learning_rate, T l1, T l2, const T* model_diff, T* model);
+  static void UpdateModel(DeviceCtx*, int64_t n, const float* learning_rate, T weight_decay,
+                          const T* model_diff, T* model);
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(Naive);

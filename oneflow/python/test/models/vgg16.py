@@ -1,9 +1,10 @@
-import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-from datetime import datetime
 import argparse
 import os
+from datetime import datetime
+
 import numpy
+import oneflow as flow
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
 _DATA_DIR = "/dataset/PNGS/PNG224/of_record_repeated"
 _SINGLE_DATA_DIR = "/dataset/PNGS/PNG224/of_record"
@@ -13,22 +14,23 @@ _MODEL_SAVE_DIR = "./model_save-{}".format(
 )
 NODE_LIST = "192.168.1.12,192.168.1.14"
 
-class DLNetSpec(object):
-  def __init__(self):
-    self.batch_size = 8
-    self.data_part_num = 32
-    self.eval_dir = _DATA_DIR
-    self.train_dir = _DATA_DIR
-    self.model_save_dir = _MODEL_SAVE_DIR
-    self.model_load_dir = _MODEL_LOAD_DIR
-    self.num_nodes = 1
-    self.gpu_num_per_node = 1
-    self.iter_num = 10
 
-parser = argparse.ArgumentParser(
-    description="flags for multi-node and resource")
-parser.add_argument("-g", "--gpu_num_per_node",
-                    type=int, default=1, required=False)
+class DLNetSpec(object):
+    def __init__(self, enable_auto_mixed_precision):
+        self.batch_size = 8
+        self.data_part_num = 32
+        self.eval_dir = _DATA_DIR
+        self.train_dir = _DATA_DIR
+        self.model_save_dir = _MODEL_SAVE_DIR
+        self.model_load_dir = _MODEL_LOAD_DIR
+        self.num_nodes = 1
+        self.gpu_num_per_node = 1
+        self.iter_num = 10
+        self.enable_auto_mixed_precision = enable_auto_mixed_precision
+
+
+parser = argparse.ArgumentParser(description="flags for multi-node and resource")
+parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
 parser.add_argument(
     "-m", "--multinode", default=False, action="store_true", required=False
@@ -47,12 +49,11 @@ parser.add_argument(
 parser.add_argument(
     "-r", "--remote_by_hand", default=False, action="store_true", required=False
 )
-parser.add_argument("-e", "--eval_dir", type=str,
-                    default=_DATA_DIR, required=False)
-parser.add_argument("-t", "--train_dir", type=str,
-                    default=_DATA_DIR, required=False)
-parser.add_argument("-load", "--model_load_dir", type=str,
-                    default=_MODEL_LOAD_DIR, required=False)
+parser.add_argument("-e", "--eval_dir", type=str, default=_DATA_DIR, required=False)
+parser.add_argument("-t", "--train_dir", type=str, default=_DATA_DIR, required=False)
+parser.add_argument(
+    "-load", "--model_load_dir", type=str, default=_MODEL_LOAD_DIR, required=False
+)
 parser.add_argument(
     "-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False
 )
@@ -74,7 +75,7 @@ def _conv2d_layer(
     weight_initializer=flow.random_uniform_initializer(),
     bias_initializer=flow.constant_initializer(),
 ):
-    weight_shape = (filters, input.static_shape[1], kernel_size, kernel_size)
+    weight_shape = (filters, input.shape[1], kernel_size, kernel_size)
     weight = flow.get_variable(
         name + "-weight",
         shape=weight_shape,
@@ -108,8 +109,7 @@ def _data_load_layer(args, data_dir):
         shape=(224, 224, 3),
         dtype=flow.float,
         codec=flow.data.ImageCodec([flow.data.ImagePreprocessor("bgr2rgb")]),
-        preprocessors=[flow.data.NormByChannelPreprocessor(
-            (123.68, 116.78, 103.94))],
+        preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
     )
 
     label_blob_conf = flow.data.BlobConf(
@@ -119,8 +119,11 @@ def _data_load_layer(args, data_dir):
     node_num = args.num_nodes
     total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
     return flow.data.decode_ofrecord(
-        data_dir, (label_blob_conf, image_blob_conf),
-        batch_size=total_batch_size, data_part_num=args.data_part_num, name="decode",
+        data_dir,
+        (label_blob_conf, image_blob_conf),
+        batch_size=total_batch_size,
+        data_part_num=args.data_part_num,
+        name="decode",
     )
 
 
@@ -179,7 +182,7 @@ def vgg(images, labels, trainable=True):
         kernel_initializer=_get_kernel_initializer(),
         bias_initializer=_get_bias_initializer(),
         trainable=trainable,
-        name="fc1"
+        name="fc1",
     )
 
     fc7 = flow.layers.dense(
@@ -190,7 +193,7 @@ def vgg(images, labels, trainable=True):
         kernel_initializer=_get_kernel_initializer(),
         bias_initializer=_get_bias_initializer(),
         trainable=trainable,
-        name="fc2"
+        name="fc2",
     )
 
     fc8 = flow.layers.dense(
@@ -200,7 +203,7 @@ def vgg(images, labels, trainable=True):
         kernel_initializer=_get_kernel_initializer(),
         bias_initializer=_get_bias_initializer(),
         trainable=trainable,
-        name="fc_final"
+        name="fc_final",
     )
 
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
@@ -219,7 +222,9 @@ def main(args):
     train_config.default_data_type(flow.float)
     train_config.train.primary_lr(0.00001)
     train_config.train.model_update_conf(dict(naive_conf={}))
-    @flow.function(train_config)
+    train_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
+
+    @flow.global_function(train_config)
     def vgg_train_job():
         (labels, images) = _data_load_layer(args, args.train_dir)
         to_return = vgg(images, labels)
@@ -230,10 +235,13 @@ def main(args):
     eval_config = flow.FunctionConfig()
     eval_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     eval_config.default_data_type(flow.float)
-    @flow.function(eval_config)
+    eval_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
+
+    @flow.global_function(eval_config)
     def vgg_eval_job():
         (labels, images) = _data_load_layer(args, args.eval_dir)
         return vgg(images, labels, False)
+
     check_point = flow.train.CheckPoint()
     if not args.model_load_dir:
         check_point.init()
@@ -241,32 +249,40 @@ def main(args):
         check_point.load(args.model_load_dir)
 
     num_nodes = args.num_nodes
-    print("Traning vgg16: num_gpu_per_node = {}, num_nodes = {}.".format(args.gpu_num_per_node, num_nodes))
+    print(
+        "Traning vgg16: num_gpu_per_node = {}, num_nodes = {}.".format(
+            args.gpu_num_per_node, num_nodes
+        )
+    )
 
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
     loss = []
     for i in range(args.iter_num):
-      train_loss = vgg_train_job().get().mean()
-      loss.append(train_loss)
+        train_loss = vgg_train_job().get().mean()
+        loss.append(train_loss)
 
-      fmt_str = "{:>12}  {:>12}  {:>12.6f}"
-      print(fmt_str.format(i, "train loss:", train_loss))
+        fmt_str = "{:>12}  {:>12}  {:>12.6f}"
+        print(fmt_str.format(i, "train loss:", train_loss))
 
-      # if (i + 1) % 10 == 0:
-      #   eval_loss = alexnet_eval_job().get().mean()
+        # if (i + 1) % 10 == 0:
+        #   eval_loss = alexnet_eval_job().get().mean()
         # print(
         #     fmt_str.format(
         #         i, "eval loss:", eval_loss
         #     )
         # )
-      if (i + 1) % 100 == 0:
-        check_point.save(_MODEL_SAVE_DIR + str(i))
+        if (i + 1) % 100 == 0:
+            check_point.save(_MODEL_SAVE_DIR + str(i))
 
     # save loss to file
-    loss_file = "{}n{}c.npy".format(str(num_nodes), str(args.gpu_num_per_node * num_nodes))
+    loss_file = "{}n{}c.npy".format(
+        str(num_nodes), str(args.gpu_num_per_node * num_nodes)
+    )
     loss_path = "./of_loss/vgg16"
-    if not os.path.exists(loss_path): os.makedirs(loss_path)
+    if not os.path.exists(loss_path):
+        os.makedirs(loss_path)
     numpy.save(os.path.join(loss_path, loss_file), loss)
+
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -277,24 +293,24 @@ if __name__ == "__main__":
 
         nodes = []
         for n in args.node_list.strip().split(","):
-          addr_dict = {}
-          addr_dict["addr"] = n
-          nodes.append(addr_dict)
+            addr_dict = {}
+            addr_dict["addr"] = n
+            nodes.append(addr_dict)
 
         flow.env.machine(nodes)
 
         if args.remote_by_hand is False:
             if args.scp_binary_without_uuid:
-                flow.deprecated.init_worker(
-                    scp_binary=True, use_uuid=False)
+                flow.deprecated.init_worker(scp_binary=True, use_uuid=False)
             elif args.skip_scp_binary:
-                flow.deprecated.init_worker(
-                    scp_binary=False, use_uuid=False)
+                flow.deprecated.init_worker(scp_binary=False, use_uuid=False)
             else:
-                flow.deprecated.init_worker(
-                    scp_binary=True, use_uuid=True)
+                flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
 
     main(args)
-    if (args.multinode and args.skip_scp_binary is False and
-          args.scp_binary_without_uuid is False):
+    if (
+        args.multinode
+        and args.skip_scp_binary is False
+        and args.scp_binary_without_uuid is False
+    ):
         flow.deprecated.delete_worker()

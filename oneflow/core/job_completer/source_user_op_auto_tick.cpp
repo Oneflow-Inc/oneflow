@@ -1,4 +1,5 @@
 #include "oneflow/core/job_completer/autotick.h"
+#include "oneflow/core/framework/op_registration.h"
 
 namespace oneflow {
 
@@ -12,7 +13,7 @@ class MutUserOpConTickInputHelper final : public MutOpConTickInputHelper {
 
   OperatorConf NewTickInputBoundOpConf(const std::string& lbn) const override {
     OperatorConf ret(op_conf());
-    (*ret.mutable_user_conf()->mutable_input())["in"].add_s(lbn);
+    (*ret.mutable_user_conf()->mutable_input())[user_op::kUserSourceOpTickInputArgName].add_s(lbn);
     return ret;
   }
 };

@@ -16,6 +16,11 @@ void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src, size_t
   memcpy(dst, src, sz);
 }
 
+template<>
+void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
+  memset(dst, value, sz);
+}
+
 void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
                                          std::function<void(Blob*)> Callback) {
   char* host_raw_dptr = nullptr;

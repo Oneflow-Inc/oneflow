@@ -7,6 +7,11 @@
 
 namespace oneflow {
 
+namespace user_op {
+
+class UserOpConfWrapper;
+}
+
 const size_t DhwOffset(const std::string& data_format);
 
 std::vector<int32_t> Get3DVecInOpConf(const PbRf<int32_t>& field_vals, int32_t NDims);
@@ -38,6 +43,13 @@ void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
                      const std::vector<int32_t>& strides, const std::string& padding_type,
                      DimVector* out, std::vector<int32_t>* padding_before,
                      std::vector<int32_t>* padding_after, std::vector<int32_t>* dilation_rate);
+
+void GetConvOutAndPad(const ShapeView& in_blob_shape, const PbMessage& conv_conf, DimVector* out,
+                      std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side);
+
+void GetConvOutAndPad(const ShapeView& in_blob_shape, const user_op::UserOpConfWrapper& conv_conf,
+                      DimVector* out, std::vector<int32_t>* pad_small_side,
+                      std::vector<int32_t>* pad_large_side);
 
 }  // namespace oneflow
 

@@ -9,7 +9,7 @@ set(GOOGLEMOCK_LIBRARY_DIR ${THIRD_PARTY_DIR}/googlemock/lib)
 set(googletest_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/include)
 set(googlemock_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/include)
 
-set(googletest_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/googletest/src/googletest)
+set(googletest_URL ${THIRD_PARTY_SUBMODULE_DIR}/googletest/src/googletest)
 
 if(WIN32)
     set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/gtest/${CMAKE_BUILD_TYPE})
@@ -54,13 +54,7 @@ ExternalProject_Add(googletest
         #-Dgtest_force_shared_crt:BOOL=ON  #default value is OFF
 )
 
-add_custom_target(googletest_create_header_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLETEST_INCLUDE_DIR}
-  DEPENDS googletest)
-
-add_custom_target(googletest_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${googletest_SRC_INCLUDE_DIR} ${GOOGLETEST_INCLUDE_DIR}
-  DEPENDS googletest_create_header_dir)
+add_copy_headers_target(NAME googletest SRC ${googletest_SRC_INCLUDE_DIR} DST ${GOOGLETEST_INCLUDE_DIR} DEPS googletest INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/gtest_headers.txt")
 
 add_custom_target(googletest_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLETEST_LIBRARY_DIR}
@@ -70,13 +64,7 @@ add_custom_target(googletest_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GOOGLETEST_BUILD_STATIC_LIBRARIES} ${GOOGLETEST_LIBRARY_DIR}
   DEPENDS googletest_create_library_dir)
 
-add_custom_target(googlemock_create_header_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLEMOCK_INCLUDE_DIR}
-  DEPENDS googletest)
-
-add_custom_target(googlemock_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${googlemock_SRC_INCLUDE_DIR} ${GOOGLEMOCK_INCLUDE_DIR}
-  DEPENDS googlemock_create_header_dir)
+add_copy_headers_target(NAME googlemock SRC ${googlemock_SRC_INCLUDE_DIR} DST ${GOOGLEMOCK_INCLUDE_DIR} DEPS googletest INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/gmock_headers.txt")
 
 add_custom_target(googlemock_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLEMOCK_LIBRARY_DIR}

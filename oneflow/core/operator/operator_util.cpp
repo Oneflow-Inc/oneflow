@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/operator_util.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
@@ -124,6 +125,47 @@ void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
       GetWindowedOutputSize(in.at(i), pool_size.at(i), strides.at(i), padding_type, out_ptr,
                             padding_before_ptr, padding_after_ptr);
     }
+  }
+}
+
+void GetConvOutAndPad(const ShapeView& in_blob_shape, const PbMessage& conv_conf, DimVector* out,
+                      std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
+  int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
+  if (out) { out->assign(opkernel_dim, 0); }
+  if (pad_small_side) { pad_small_side->assign(opkernel_dim, 0); }
+  if (pad_large_side) { pad_large_side->assign(opkernel_dim, 0); }
+  const auto& data_format = GetValFromPbMessage<std::string>(conv_conf, "data_format");
+  const std::string& padding = GetValFromPbMessage<std::string>(conv_conf, "padding");
+  const PbRf<int32_t>& dilation_rate = GetPbRfFromPbMessage<int32_t>(conv_conf, "dilation_rate");
+  const auto& strides = GetPbRfFromPbMessage<int32_t>(conv_conf, "strides");
+  const PbRf<int32_t>& kernel_size = GetPbRfFromPbMessage<int32_t>(conv_conf, "kernel_size");
+  FOR_RANGE(int32_t, i, 0, opkernel_dim) {
+    GetWindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i),
+                          dilation_rate.Get(i), strides.Get(i), padding,
+                          out ? &(out->at(i)) : nullptr,
+                          pad_small_side ? &(pad_small_side->at(i)) : nullptr,
+                          pad_large_side ? &(pad_large_side->at(i)) : nullptr);
+  }
+}
+
+void GetConvOutAndPad(const ShapeView& in_blob_shape, const user_op::UserOpConfWrapper& conv_conf,
+                      DimVector* out, std::vector<int32_t>* pad_small_side,
+                      std::vector<int32_t>* pad_large_side) {
+  int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
+  if (out) { out->assign(opkernel_dim, 0); }
+  if (pad_small_side) { pad_small_side->assign(opkernel_dim, 0); }
+  if (pad_large_side) { pad_large_side->assign(opkernel_dim, 0); }
+  const auto& data_format = conv_conf.attr<std::string>("data_format");
+  const auto& padding = conv_conf.attr<std::string>("padding");
+  const auto& strides = conv_conf.attr<std::vector<int32_t>>("strides");
+  const auto& dilation_rate = conv_conf.attr<std::vector<int32_t>>("dilation_rate");
+  const auto& kernel_size = conv_conf.attr<std::vector<int32_t>>("kernel_size");
+  FOR_RANGE(int32_t, i, 0, opkernel_dim) {
+    GetWindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.at(i),
+                          dilation_rate.at(i), strides.at(i), padding,
+                          out ? &(out->at(i)) : nullptr,
+                          pad_small_side ? &(pad_small_side->at(i)) : nullptr,
+                          pad_large_side ? &(pad_large_side->at(i)) : nullptr);
   }
 }
 

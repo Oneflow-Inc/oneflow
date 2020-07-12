@@ -1,3 +1,8 @@
+// include sstream first to avoid some compiling error
+// caused by the following trick
+// reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
+#include <sstream>
+#define private public
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/object_msg.h"
 
@@ -5,16 +10,18 @@ namespace oneflow {
 
 namespace test {
 
+namespace {
+
 // clang-format off
-BEGIN_OBJECT_MSG(TestListItem)
+OBJECT_MSG_BEGIN(TestListItem)
   OBJECT_MSG_DEFINE_LIST_LINK(foo_list);
-  OBJECT_MSG_DEFINE_RAW_PTR(int*, cnt);
+  OBJECT_MSG_DEFINE_PTR(int, cnt);
 
  public:
   void __Delete__() {
     if (has_cnt()) { --*mutable_cnt(); }
   }
-END_OBJECT_MSG(TestListItem)
+OBJECT_MSG_END(TestListItem)
 // clang-format on
 
 TEST(ObjectMsgList, empty) {
@@ -25,10 +32,10 @@ TEST(ObjectMsgList, empty) {
 
 TEST(ObjectMsgList, empty_Begin) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
+  ObjectMsgPtr<TestListItem> obj_ptr;
   obj_ptr = foo_list.Begin();
   ASSERT_TRUE(!obj_ptr);
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(!obj_ptr);
@@ -36,8 +43,8 @@ TEST(ObjectMsgList, empty_Begin) {
 
 TEST(ObjectMsgList, empty_Next) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> obj_ptr;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(!obj_ptr);
@@ -52,12 +59,12 @@ TEST(ObjectMsgList, empty_Next) {
 
 TEST(ObjectMsgList, PushFront) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushFront(item0.Mutable());
   foo_list.PushFront(item1.Mutable());
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> obj_ptr;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item1);
@@ -68,20 +75,20 @@ TEST(ObjectMsgList, destructor) {
   int elem_cnt = 2;
   {
     OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-    auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+    auto item0 = ObjectMsgPtr<TestListItem>::New();
     item0->set_cnt(&elem_cnt);
-    auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+    auto item1 = ObjectMsgPtr<TestListItem>::New();
     item1->set_cnt(&elem_cnt);
     foo_list.PushFront(item0.Mutable());
     foo_list.PushFront(item1.Mutable());
   }
   ASSERT_EQ(elem_cnt, 0);
   elem_cnt = 2;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
   {
     OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
     item0->set_cnt(&elem_cnt);
-    auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+    auto item1 = ObjectMsgPtr<TestListItem>::New();
     item1->set_cnt(&elem_cnt);
     foo_list.PushFront(item0.Mutable());
     foo_list.PushFront(item1.Mutable());
@@ -91,12 +98,12 @@ TEST(ObjectMsgList, destructor) {
 
 TEST(ObjectMsgList, PushBack) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> obj_ptr;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item0);
@@ -105,15 +112,15 @@ TEST(ObjectMsgList, PushBack) {
 
 TEST(ObjectMsgList, Erase) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item1->ref_cnt(), 2);
   foo_list.Erase(item1.Mutable());
   ASSERT_EQ(item1->ref_cnt(), 1);
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> obj_ptr;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item0);
@@ -122,15 +129,15 @@ TEST(ObjectMsgList, Erase) {
 
 TEST(ObjectMsgList, PopBack) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item1->ref_cnt(), 2);
   foo_list.PopBack();
   ASSERT_EQ(item1->ref_cnt(), 1);
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> obj_ptr;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(obj_ptr == item0);
@@ -139,15 +146,15 @@ TEST(ObjectMsgList, PopBack) {
 
 TEST(ObjectMsgList, PopFront) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item0->ref_cnt(), 2);
   foo_list.PopFront();
   ASSERT_EQ(item0->ref_cnt(), 1);
-  OBJECT_MSG_PTR(TestListItem) obj_ptr;
-  OBJECT_MSG_PTR(TestListItem) next;
+  ObjectMsgPtr<TestListItem> obj_ptr;
+  ObjectMsgPtr<TestListItem> next;
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(!next);
@@ -155,8 +162,8 @@ TEST(ObjectMsgList, PopFront) {
 
 TEST(ObjectMsgList, Clear) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item0->ref_cnt(), 2);
@@ -167,14 +174,14 @@ TEST(ObjectMsgList, Clear) {
   ASSERT_EQ(item1->ref_cnt(), 1);
 }
 
-TEST(ObjectMsgList, FOR_EACH_UNSAFE) {
+TEST(ObjectMsgList, UNSAFE_FOR_EACH_PTR) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   int i = 0;
-  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(&foo_list, item) {
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(&foo_list, item) {
     if (i == 0) {
       ASSERT_TRUE(item == item0.Mutable());
     } else if (i == 1) {
@@ -187,8 +194,8 @@ TEST(ObjectMsgList, FOR_EACH_UNSAFE) {
 
 TEST(ObjectMsgList, FOR_EACH) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   int i = 0;
@@ -209,16 +216,16 @@ TEST(ObjectMsgList, FOR_EACH) {
 }
 
 // clang-format off
-BEGIN_OBJECT_MSG(TestObjectMsgListHead);
+OBJECT_MSG_BEGIN(TestObjectMsgListHead);
   OBJECT_MSG_DEFINE_LIST_HEAD(TestListItem, foo_list, foo_list);
-END_OBJECT_MSG(TestObjectMsgListHead);
+OBJECT_MSG_END(TestObjectMsgListHead);
 // clang-format on
 
 TEST(ObjectMsg, OBJECT_MSG_DEFINE_LIST_HEAD) {
-  auto foo_list_head = OBJECT_MSG_PTR(TestObjectMsgListHead)::New();
+  auto foo_list_head = ObjectMsgPtr<TestObjectMsgListHead>::New();
   auto& foo_list = *foo_list_head->mutable_foo_list();
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item0->ref_cnt(), 2);
@@ -241,22 +248,22 @@ TEST(ObjectMsg, OBJECT_MSG_DEFINE_LIST_HEAD) {
 }
 
 // clang-format off
-BEGIN_OBJECT_MSG(TestObjectMsgListHeadWrapper);
+OBJECT_MSG_BEGIN(TestObjectMsgListHeadWrapper);
   OBJECT_MSG_DEFINE_OPTIONAL(TestObjectMsgListHead, head);
-END_OBJECT_MSG(TestObjectMsgListHeadWrapper);
+OBJECT_MSG_END(TestObjectMsgListHeadWrapper);
 // clang-format on
 
 TEST(ObjectMsg, nested_list_delete) {
-  auto foo_list_head = OBJECT_MSG_PTR(TestObjectMsgListHeadWrapper)::New();
+  auto foo_list_head = ObjectMsgPtr<TestObjectMsgListHeadWrapper>::New();
   auto& foo_list = *foo_list_head->mutable_head()->mutable_foo_list();
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
   ASSERT_EQ(item0->ref_cnt(), 2);
   ASSERT_EQ(item1->ref_cnt(), 2);
   int i = 0;
-  OBJECT_MSG_LIST_FOR_EACH_UNSAFE(&foo_list, item) {
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(&foo_list, item) {
     if (i == 0) {
       ASSERT_TRUE(item == item0.Mutable());
     } else if (i == 1) {
@@ -273,10 +280,14 @@ TEST(ObjectMsg, nested_list_delete) {
 TEST(ObjectMsg, MoveTo) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list0;
-  auto item0 = OBJECT_MSG_PTR(TestListItem)::New();
-  auto item1 = OBJECT_MSG_PTR(TestListItem)::New();
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
+  ASSERT_EQ(item0->is_foo_list_empty(), true);
+  ASSERT_EQ(item1->is_foo_list_empty(), true);
   foo_list.PushBack(item0.Mutable());
   foo_list.PushBack(item1.Mutable());
+  ASSERT_EQ(item0->is_foo_list_empty(), false);
+  ASSERT_EQ(item1->is_foo_list_empty(), false);
   ASSERT_EQ(foo_list.size(), 2);
   ASSERT_EQ(foo_list0.empty(), true);
   ASSERT_EQ(item0->ref_cnt(), 2);
@@ -289,6 +300,186 @@ TEST(ObjectMsg, MoveTo) {
   ASSERT_EQ(item0->ref_cnt(), 2);
   ASSERT_EQ(item1->ref_cnt(), 2);
 }
+
+// clang-format off
+OBJECT_MSG_BEGIN(SelfLoopContainer);
+  // methods
+  PUBLIC void __Init__(bool* deleted) { set_deleted(deleted); }
+  PUBLIC void __Delete__() { *mut_deleted() = true; }
+  // fields
+  OBJECT_MSG_DEFINE_PTR(bool, deleted);
+  // links
+  OBJECT_MSG_DEFINE_LIST_LINK(link);
+  OBJECT_MSG_DEFINE_LIST_HEAD(SelfLoopContainer, link, head);
+OBJECT_MSG_END(SelfLoopContainer);
+// clang-format on
+
+TEST(ObjectMsgSelfLoopList, __Init__) {
+  bool deleted = false;
+  auto self_loop_head = ObjectMsgPtr<SelfLoopContainer>::New(&deleted);
+  ASSERT_EQ(self_loop_head->mut_head()->container_, self_loop_head.Mutable());
+}
+
+TEST(ObjectMsgSelfLoopList, PushBack) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
+    ASSERT_EQ(self_loop_head0->head().size(), 1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 2);
+    ASSERT_EQ(self_loop_head0->head().size(), 2);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, PushFront) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+    self_loop_head0->mut_head()->PushFront(self_loop_head0.Mutable());
+    ASSERT_EQ(self_loop_head0->head().size(), 1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    self_loop_head0->mut_head()->PushFront(self_loop_head1.Mutable());
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 2);
+    ASSERT_EQ(self_loop_head0->head().size(), 2);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, EmplaceBack) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+    self_loop_head0->mut_head()->EmplaceBack(ObjectMsgPtr<SelfLoopContainer>(self_loop_head0));
+    ASSERT_EQ(self_loop_head0->head().size(), 1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    self_loop_head0->mut_head()->EmplaceBack(ObjectMsgPtr<SelfLoopContainer>(self_loop_head1));
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 2);
+    ASSERT_EQ(self_loop_head0->head().size(), 2);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, EmplaceFront) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+    self_loop_head0->mut_head()->EmplaceFront(ObjectMsgPtr<SelfLoopContainer>(self_loop_head0));
+    ASSERT_EQ(self_loop_head0->head().size(), 1);
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    self_loop_head0->mut_head()->EmplaceFront(ObjectMsgPtr<SelfLoopContainer>(self_loop_head1));
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 2);
+    ASSERT_EQ(self_loop_head0->head().size(), 2);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, Erase) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
+    self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
+    self_loop_head0->mut_head()->Erase(self_loop_head0.Mutable());
+    self_loop_head0->mut_head()->Erase(self_loop_head1.Mutable());
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, PopBack) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
+    self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
+    self_loop_head0->mut_head()->PopBack();
+    self_loop_head0->mut_head()->PopBack();
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, PopFront) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
+    self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
+    self_loop_head0->mut_head()->PopFront();
+    self_loop_head0->mut_head()->PopFront();
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, MoveTo) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
+    self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
+    self_loop_head0->mut_head()->MoveTo(self_loop_head1->mut_head());
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 2);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+TEST(ObjectMsgSelfLoopList, Clear) {
+  bool deleted0 = false;
+  bool deleted1 = false;
+  {
+    auto self_loop_head0 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted0);
+    auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
+    self_loop_head0->mut_head()->PushBack(self_loop_head0.Mutable());
+    self_loop_head0->mut_head()->PushBack(self_loop_head1.Mutable());
+    self_loop_head0->mut_head()->Clear();
+    ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
+    ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
+  }
+  ASSERT_TRUE(deleted0);
+  ASSERT_TRUE(deleted1);
+}
+
+}  // namespace
 
 }  // namespace test
 

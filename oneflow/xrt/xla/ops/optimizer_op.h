@@ -19,25 +19,15 @@ class OptimizerOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
     xla::XlaOp gradient = ctx->Input("model_diff");
-    xla::XlaOp instance_num = ctx->Input("total_instance_num_diff");
     xla::XlaOp learning_rate = ctx->Input("learning_rate");
-
-    NormalModelUpdateOpUserConf *user_conf =
-        dynamic_cast<NormalModelUpdateOpUserConf *>(ctx->GetAttr<PbMessage *>("user_conf"));
-    CHECK(user_conf) << "Can not get message `user_conf`.";
-    if (user_conf->has_clip_conf()) {
-      gradient = ClipGradient(ctx, gradient, instance_num, user_conf->clip_conf());
-    }
-
-    ApplyUpdate(ctx, gradient, instance_num, learning_rate);
+    ApplyUpdate(ctx, gradient, learning_rate);
   }
 
  private:
-  virtual void ApplyUpdate(XlaOpContext *ctx, xla::XlaOp gradient, xla::XlaOp instance_num,
-                           xla::XlaOp learning_rate) = 0;
+  virtual void ApplyUpdate(XlaOpContext *ctx, xla::XlaOp gradient, xla::XlaOp learning_rate) = 0;
 
   xla::XlaOp ClipGradient(XlaOpContext *ctx, const xla::XlaOp &gradient,
-                          const xla::XlaOp &instance_num, const ClipConf &clip_conf) {
+                          const ClipConf &clip_conf) {
     DataType data_type = ctx->InputType("model_diff");
     Shape gradient_shape = ctx->InputShape("model_diff");
     xla::XlaOp norm;
@@ -47,14 +37,14 @@ class OptimizerOp : public XlaOpKernel {
     } else {
       // int64_t count = gradient_shape.elem_cnt();
       // xla::XlaOp flat = Reshape(gradient, Shape({count}));
-      // norm = xla::Sqrt(xla::Dot(flat, flat)) / instance_num;
+      // norm = xla::Sqrt(xla::Dot(flat, flat));
       xla::XlaBuilder *builder = ctx->builder();
       std::vector<long long> reduce_dims(gradient_shape.NumAxes());
       std::iota(reduce_dims.begin(), reduce_dims.end(), 0);
       xla::XlaComputation add_func = CreateAddFunc(data_type);
       xla::XlaOp sum =
           xla::Reduce(gradient * gradient, Zero(builder, data_type), add_func, reduce_dims);
-      norm = xla::Sqrt(sum) / instance_num;
+      norm = xla::Sqrt(sum);
     }
 
     float clip_norm_val = clip_conf.clip_by_global_norm().clip_norm();

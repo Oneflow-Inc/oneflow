@@ -26,9 +26,6 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
 void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                     const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
 
-template<DeviceType device_type>
-void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
-
 template<typename T>
 OF_DEVICE_FUNC T ReduceCoreAdd(const T x, const T y) {
   return x + y;
@@ -206,6 +203,7 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::va
                    const int incy);
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
 };
 
 // GPU, Integral, Floating
@@ -308,6 +306,7 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::va
       public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
                    const int incy);
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
 };
 
 using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
