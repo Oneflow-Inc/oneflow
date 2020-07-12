@@ -857,21 +857,6 @@ message BatchGatherOpConf {
   required string out = 3;
 }
 
-message SqrtOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message RsqrtOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message SquareOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
 message BroadcastAddOpConf {
   required string a = 1;
   required string b = 2;
@@ -1654,9 +1639,6 @@ message OperatorConf {
     BroadcastGreaterEqualOpConf broadcast_greater_equal_conf = 509;
     BroadcastLogicalAndOpConf broadcast_logical_and_conf = 510;
     BroadcastFloorModOpConf broadcast_floor_mod_conf = 511;
-    SquareOpConf square_conf = 513;
-    SqrtOpConf sqrt_conf = 514;
-    RsqrtOpConf rsqrt_conf = 515;
     ScalarAddOpConf scalar_add_conf = 516;
     ScalarMulOpConf scalar_mul_conf = 517;
     ScalarAddByTensorOpConf scalar_add_by_tensor_conf = 518;
