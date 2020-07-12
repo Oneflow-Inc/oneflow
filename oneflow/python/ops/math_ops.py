@@ -57,7 +57,9 @@ def _recursive_build_add_n(inputs, name=None):
 
 
 @oneflow_export("math.add_n")
-def add_n(inputs: Sequence, name: Optional[str] = None) -> remote_blob_util.BlobDef:
+def add_n(
+    inputs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") == "False":
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -1075,7 +1077,9 @@ def argmax(
 
 @oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
 def broadcast_to_compatible_with(
-    x: remote_blob_util.BlobDef, compatible: Sequence, name: Optional[str] = None,
+    x: remote_blob_util.BlobDef,
+    compatible: Sequence[remote_blob_util.BlobDef],
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     assert isinstance(compatible, (list, tuple))
     if name is None:
