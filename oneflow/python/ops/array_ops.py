@@ -264,29 +264,16 @@ def transpose(a, perm=None, conjugate=False, name=None):
     if conjugate:
         raise NotImplementedError
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name)
-            .Op("transpose")
-            .Input("input", [a])
-            .Output("output")
-            .Attr("perm", perm, "AttrTypeListInt32")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = name
-        setattr(op_conf.transpose_conf, "in", a.unique_name)
-        op_conf.transpose_conf.out = "out"
-        op_conf.transpose_conf.perm.extend(list(perm))
-
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    return (
+        flow.user_op_builder(name)
+        .Op("transpose")
+        .Input("input", [a])
+        .Output("output")
+        .Attr("perm", perm, "AttrTypeListInt32")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("slice")
