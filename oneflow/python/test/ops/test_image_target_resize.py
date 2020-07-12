@@ -115,9 +115,7 @@ def _compare_image_target_resize_with_cv(
         print("cv_resized_image shape:", cv_resized_image.shape)
         print("resized h & w:", image_size)
         print("resize h_scale & w_scale:", image_scale)
-        print(
-            "max_abs_diff:", np.amax(np.absolute(resized_image - cv_resized_image))
-        )
+        print("max_abs_diff:", np.amax(np.absolute(resized_image - cv_resized_image)))
 
         test_case.assertTrue(np.allclose(resized_image, cv_resized_image))
 
