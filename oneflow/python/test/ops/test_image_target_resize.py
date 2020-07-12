@@ -96,7 +96,7 @@ def _get_target_resize_size(w, h, target_size, max_size):
 
 
 def _compare_image_target_resize_with_cv(
-    test_case, image_files, target_size, max_size, print_debug_info=True
+    test_case, image_files, target_size, max_size, print_debug_info=False
 ):
     images = _read_images_by_cv(image_files)
     image_static_shape = _get_images_static_shape(images)
@@ -110,12 +110,11 @@ def _compare_image_target_resize_with_cv(
     for resized_image, cv_resized_image, image_size, image_scale in zip(
         resized_images, cv_resized_images, size, scale
     ):
-        # if print_debug_info:
-        print("resized_image shape:", resized_image.shape)
-        print("cv_resized_image shape:", cv_resized_image.shape)
-        print("resized h & w:", image_size)
-        print("resize h_scale & w_scale:", image_scale)
-        print("max_abs_diff:", np.amax(np.absolute(resized_image - cv_resized_image)))
+        if print_debug_info:
+            print("resized_image shape:", resized_image.shape)
+            print("cv_resized_image shape:", cv_resized_image.shape)
+            print("resized h & w:", image_size)
+            print("resize h_scale & w_scale:", image_scale)
 
         test_case.assertTrue(np.allclose(resized_image, cv_resized_image))
 
@@ -129,5 +128,5 @@ def test_image_target_resize(test_case):
         ],
         800,
         1333,
-        True,
+        # True,
     )
