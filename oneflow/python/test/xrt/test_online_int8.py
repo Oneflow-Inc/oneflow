@@ -20,7 +20,7 @@ def make_trt_job(
     config.use_tensorrt(True)
     config.tensorrt.use_int8()
 
-    @flow.function(config)
+    @flow.global_function(config)
     def trt_conv2d_job(
         x=flow.FixedTensorDef(x_shape, dtype=dtype),
         weight=flow.FixedTensorDef(w_shape, dtype=dtype),
