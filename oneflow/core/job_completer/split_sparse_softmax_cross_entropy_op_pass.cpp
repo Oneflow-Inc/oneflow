@@ -9,11 +9,13 @@ void UpdateProbConsumerOpConf(const std::string& new_prob_lbn, const OpNode* op_
                               JobBuilder* job_builder) {
   for (const OpEdge* edge : op_node->out_edges()) {
     OpNode* out_node = edge->dst_node();
-    auto* op_conf = job_builder->MutableOpConf4OpName(out_node->op().op_name());
-    if (op_conf->user_conf().op_type_name() == "sparse_softmax_cross_entropy_ms_grad") {
-      auto it = op_conf->user_conf().input().find("prob");
-      CHECK(it != op_conf->user_conf().input().end());
-      (*(op_conf->mutable_user_conf()->mutable_input()))["prob"].set_s(0, new_prob_lbn);
+    OperatorConf new_conf = out_node->op().op_conf();
+    if (new_conf.has_user_conf()
+        && new_conf.user_conf().op_type_name() == "sparse_softmax_cross_entropy_ms_grad") {
+      ReplaceInputLbnInOpCustomizedConf(new_conf.mutable_user_conf(), "prob_0",
+                                        GenLogicalBlobName(out_node->op().BnInOp2Lbi("prob_0")),
+                                        new_prob_lbn);
+      job_builder->MutOpsOnlyOnce({new_conf});
     }
   }
 }
@@ -22,10 +24,7 @@ class SplitSparseSoftmaxCrossEntropyOpPass final : public OpGraphPass {
  public:
   SplitSparseSoftmaxCrossEntropyOpPass() = default;
   ~SplitSparseSoftmaxCrossEntropyOpPass() override = default;
-  bool IsEnabled() const override {
-    // if has sparse softmax cross entropy ms op
-    return true;
-  }
+  bool IsEnabled() const override { return true; }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
@@ -44,10 +43,9 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
 
     std::string op_name = node->op().op_name();
 
-    user_op::UserOpConfWrapperBuilder reduce_max_device_stage_builder(
-        op_name + "-split_softmax_reduce_max_device_stage");
-    user_op::UserOpConfWrapper reduce_max_device_stage_op =
-        reduce_max_device_stage_builder.Op("reduce_max_device_stage")
+    auto reduce_max_device_stage_op =
+        user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_max_device_stage")
+            .Op("reduce_max_device_stage")
             .Input("in", op_prediction_blob_name)
             .Output("out")
             .Output("mask")
@@ -70,10 +68,9 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
           ->mutable_op_name2sbp_signature_conf())[reduce_max_device_stage_op.op_name()] =
         reduce_max_device_stage_sbp_signature;
 
-    user_op::UserOpConfWrapperBuilder reduce_max_global_stage_builder(
-        op_name + "-split_softmax_reduce_max_global_stage");
-    user_op::UserOpConfWrapper reduce_max_global_stage_op =
-        reduce_max_global_stage_builder.Op("reduce_min_global_stage")
+    auto reduce_max_global_stage_op =
+        user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_max_global_stage")
+            .Op("reduce_max_global_stage")
             .Input("in", reduce_max_device_stage_op.output("out", 0))
             .Input("device_count", reduce_max_device_stage_op.output("count", 0))
             .Output("out")
@@ -93,47 +90,47 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
           ->mutable_op_name2sbp_signature_conf())[reduce_max_global_stage_op.op_name()] =
         reduce_max_global_stage_sbp_signature;
 
-    user_op::UserOpConfWrapperBuilder sub_max_builder(op_name + "-split_softmax_sub_max");
-    user_op::UserOpConfWrapper broadcast_sub_max_op =
-        sub_max_builder.Op("broadcast_sub")
+    auto broadcast_sub_max_op =
+        user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_sub_max")
+            .Op("broadcast_sub")
             .Input("x", op_prediction_blob_name)
             .Input("y", reduce_max_global_stage_op.output("out", 0))
             .Output("z")
             .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(), {broadcast_sub_max_op.op_conf()});
 
-    user_op::UserOpConfWrapperBuilder exp_builder(op_name + "-split_softmax_exp");
-    user_op::UserOpConfWrapper exp_op =
-        exp_builder.Op("exp").Input("x", broadcast_sub_max_op.output("z", 0)).Output("y").Build();
+    auto exp_op = user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_exp")
+                      .Op("exp")
+                      .Input("x", broadcast_sub_max_op.output("z", 0))
+                      .Output("y")
+                      .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(), {exp_op.op_conf()});
 
-    user_op::UserOpConfWrapperBuilder reduce_sum_builder(op_name + "-split_softmax_reduce_sum");
-    user_op::UserOpConfWrapper reduce_sum_op = reduce_sum_builder.Op("reduce_sum")
-                                                   .Input("input_tensor", exp_op.output("y", 0))
-                                                   .Output("output_tensor")
-                                                   .Attr("axis", axis_vec)
-                                                   .Attr("keepdims", true)
-                                                   .Build();
+    auto reduce_sum_op = user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_sum")
+                             .Op("reduce_sum")
+                             .Input("input_tensor", exp_op.output("y", 0))
+                             .Output("output_tensor")
+                             .Attr("axis", axis_vec)
+                             .Attr("keepdims", true)
+                             .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(), {reduce_sum_op.op_conf()});
 
-    user_op::UserOpConfWrapperBuilder div_builder(op_name + "-split_softmax_div");
-    user_op::UserOpConfWrapper broadcast_div_op =
-        div_builder.Op("broadcast_div")
-            .Input("x", exp_op.output("y", 0))
-            .Input("y", reduce_sum_op.output("output_tensor", 0))
-            .Output("z")
-            .Build();
+    auto broadcast_div_op = user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_div")
+                                .Op("broadcast_div")
+                                .Input("x", exp_op.output("y", 0))
+                                .Input("y", reduce_sum_op.output("output_tensor", 0))
+                                .Output("z")
+                                .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(), {broadcast_div_op.op_conf()});
     UpdateProbConsumerOpConf(broadcast_div_op.output("z", 0), node, job_builder);
 
-    user_op::UserOpConfWrapperBuilder sparse_cross_entropy_builder(op_name);
-    user_op::UserOpConfWrapper sparse_cross_entropy_ms_op =
-        sparse_cross_entropy_builder.Op("sparse_cross_entropy_ms")
-            .Input("prediction", broadcast_div_op.output("z", 0))
-            .Input("label", op_label_blob_name)
-            .Output("out")
-            .Attr("depth", depth)
-            .Build();
+    auto sparse_cross_entropy_ms_op = user_op::UserOpConfWrapperBuilder(op_name)
+                                          .Op("sparse_cross_entropy_ms")
+                                          .Input("prediction", broadcast_div_op.output("z", 0))
+                                          .Input("label", op_label_blob_name)
+                                          .Output("out")
+                                          .Attr("depth", depth)
+                                          .Build();
 
     job_builder->MutOpsOnlyOnce({sparse_cross_entropy_ms_op.op_conf()});
   });

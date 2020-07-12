@@ -691,9 +691,7 @@ def sparse_cross_entropy(labels=None, prediction=None, name=None):
     if prediction.distribute is distribute_util.split(len(prediction.shape) - 1):
         return (
             flow.user_op_builder(
-                name
-                if name is not None
-                else id_util.UniqueStr("SparseCrossEntropyMs_")
+                name if name is not None else id_util.UniqueStr("SparseCrossEntropyMs_")
             )
             .Op("sparse_cross_entropy_ms")
             .Input("prediction", [prediction])
@@ -707,9 +705,7 @@ def sparse_cross_entropy(labels=None, prediction=None, name=None):
     else:
         return (
             flow.user_op_builder(
-                name
-                if name is not None
-                else id_util.UniqueStr("SparseCrossEntropy_")
+                name if name is not None else id_util.UniqueStr("SparseCrossEntropy_")
             )
             .Op("sparse_cross_entropy")
             .Input("prediction", [prediction])
