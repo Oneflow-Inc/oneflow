@@ -219,11 +219,11 @@ def Export(
     job_func: Callable,
     model_save_dir: Text,
     onnx_filename: Text,
-    continue_on_error: bool=False,
-    opset: Optional[int]=None,
-    extra_opset: Optional[int]=None,
-    shape_override: Optional[Dict[Text, List[int]]]=None,
-    external_data: bool=False,
+    continue_on_error: bool = False,
+    opset: Optional[int] = None,
+    extra_opset: Optional[int] = None,
+    shape_override: Optional[Dict[Text, List[int]]] = None,
+    external_data: bool = False,
 ):
     r"""Export a oneflow model into ONNX format.
 
@@ -251,12 +251,18 @@ def Export(
                 shape_override=shape_override,
             )
             onnx_graph = optimizer.OptimizeGraph(onnx_graph)
-            model_proto = onnx_graph.MakeModel(job_name, onnx_filename, external_data=external_data)
-            with open(onnx_filename, 'wb') as f:
+            model_proto = onnx_graph.MakeModel(
+                job_name, onnx_filename, external_data=external_data
+            )
+            with open(onnx_filename, "wb") as f:
                 try:
                     f.write(model_proto.SerializeToString())
                 except ValueError as e:
-                    raise ValueError('Error occured when running model_proto.SerializeToString(). If the model is larger than 2GB, please specify external_data=True when calling flow.onnx.export. Original error message:\n{}'.format(e))
+                    raise ValueError(
+                        "Error occured when running model_proto.SerializeToString(). If the model is larger than 2GB, please specify external_data=True when calling flow.onnx.export. Original error message:\n{}".format(
+                            e
+                        )
+                    )
             return
     raise ValueError('Cannot find job "{}" in jobset'.format(job_name))
 

@@ -25,6 +25,6 @@ def test_large_array(test_case):
         return flow.math.add_n([x, y])
 
     # ONNX Runtime optimizers doesn't support external data
-    convert_to_onnx_and_check(add_with_large_array, external_data=True, ort_optimize=False)
-
-
+    convert_to_onnx_and_check(
+        add_with_large_array, external_data=True, ort_optimize=False
+    )

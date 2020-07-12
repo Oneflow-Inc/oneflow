@@ -27,7 +27,9 @@ def generate_binary_op_test(flow_op, *args, opset=constants.PREFERRED_OPSET, **k
     convert_to_onnx_and_check(job1, opset=opset)
 
 
-def generate_unary_op_test(flow_op, *args, opset=constants.PREFERRED_OPSET, min_val=-10, max_val=10, **kwargs):
+def generate_unary_op_test(
+    flow_op, *args, opset=constants.PREFERRED_OPSET, min_val=-10, max_val=10, **kwargs
+):
     @flow.global_function(func_config)
     def job1():
         x = flow.get_variable(

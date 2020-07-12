@@ -181,26 +181,27 @@ def is_onnx_domain(domain):
 
 
 def GenerateValidFilename(s):
-    return "".join([c if c.isalpha() or c.isdigit() else '_' for c in s])
+    return "".join([c if c.isalpha() or c.isdigit() else "_" for c in s])
 
 
-def TensorProtoFromNumpy(arr:np.ndarray, name=None, external_data=False, export_path=None):
+def TensorProtoFromNumpy(
+    arr: np.ndarray, name=None, external_data=False, export_path=None
+):
     if name is None:
-        name = id_util.UniqueStr('tensor_')
+        name = id_util.UniqueStr("tensor_")
     tp = numpy_helper.from_array(arr, name)
-    # value with size < 1024 bytes will remain in .onnx file 
+    # value with size < 1024 bytes will remain in .onnx file
     # (like what pytorch does)
     if (not external_data) or arr.nbytes < 1024:
         return tp
-    assert tp.HasField('raw_data')
-    tp.ClearField('raw_data')
+    assert tp.HasField("raw_data")
+    tp.ClearField("raw_data")
     export_dir = os.path.dirname(export_path)
     filename = GenerateValidFilename(name)
-    with open(os.path.join(export_dir, filename), 'wb') as f:
+    with open(os.path.join(export_dir, filename), "wb") as f:
         arr.tofile(f)
     tp.data_location = onnx_pb.TensorProto.EXTERNAL
     external_data = tp.external_data.add()
-    external_data.key = 'location'
+    external_data.key = "location"
     external_data.value = filename
     return tp
-

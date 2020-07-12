@@ -991,7 +991,9 @@ class Graph(object):
         ret = [x for _, x in sorted(zip(label, ops))]
         self.ResetNodes(ret)
 
-    def MakeGraph(self, doc, onnx_filename, external_data=False, graph_name="oneflow.python.onnx"):
+    def MakeGraph(
+        self, doc, onnx_filename, external_data=False, graph_name="oneflow.python.onnx"
+    ):
         """
         Create GraphProto for onnx from internal graph.
         Args:
@@ -1025,8 +1027,10 @@ class Graph(object):
         for op in const_ops:
             tensor_name = op.output[0]
             tensor = util.TensorProtoFromNumpy(
-                op.get_tensor_value(as_list=False), tensor_name,
-                external_data=external_data, export_path=onnx_filename
+                op.get_tensor_value(as_list=False),
+                tensor_name,
+                external_data=external_data,
+                export_path=onnx_filename,
             )
             initializers.append(tensor)
 
@@ -1057,7 +1061,13 @@ class Graph(object):
         return graph
 
     def MakeModel(
-        self, graph_doc, onnx_filename, external_data=False, optimize=False, graph_name="oneflow.python.onnx", **kwargs
+        self,
+        graph_doc,
+        onnx_filename,
+        external_data=False,
+        optimize=False,
+        graph_name="oneflow.python.onnx",
+        **kwargs
     ):
         """
         Create final ModelProto for onnx from internal graph.
@@ -1065,7 +1075,9 @@ class Graph(object):
             optimize: optimize graph via onnx
             doc: text for doc string of the model
         """
-        graph = self.MakeGraph(graph_doc, onnx_filename, graph_name=graph_name, external_data=external_data)
+        graph = self.MakeGraph(
+            graph_doc, onnx_filename, graph_name=graph_name, external_data=external_data
+        )
 
         if "producer_name" not in kwargs:
             kwargs = {"producer_name": "oneflow.python.onnx"}
@@ -1371,4 +1383,3 @@ class Graph(object):
                 out_consumers |= set(self.FindOutputConsumers(out))
             if out_consumers.issubset(delete_set):
                 self.RemoveNode(n.name)
-

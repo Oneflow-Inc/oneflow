@@ -683,7 +683,9 @@ class Equal:
         need_not = node.type == "NotEqual"
         supported_dtypes = [TensorProto.BOOL, TensorProto.INT32, TensorProto.INT64]
         if any([ctx.get_dtype(inp) not in supported_dtypes for inp in node.input]):
-            raise ValueError("Version 7 Equal op only supports bool, int32 and int64 inputs. Please set opset > 11 and try again.")
+            raise ValueError(
+                "Version 7 Equal op only supports bool, int32 and int64 inputs. Please set opset > 11 and try again."
+            )
         if need_not:
             node.type = "Equal"
             output_name = node.output[0]

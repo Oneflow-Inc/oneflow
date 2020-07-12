@@ -9,7 +9,14 @@ import shutil
 import oneflow.python.onnx.constants as constants
 
 
-def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True, external_data=False, ort_optimize=True, opset=constants.PREFERRED_OPSET):
+def convert_to_onnx_and_check(
+    job_func,
+    print_rel_diff=False,
+    explicit_init=True,
+    external_data=False,
+    ort_optimize=True,
+    opset=constants.PREFERRED_OPSET,
+):
     check_point = flow.train.CheckPoint()
     if explicit_init:
         # it is a trick to keep check_point.save() from hanging when there is no variable
@@ -29,13 +36,21 @@ def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True
     while not os.path.exists(os.path.join(flow_weight_dir.name, "snapshot_done")):
         pass
     onnx_model_dir = tempfile.TemporaryDirectory()
-    onnx_model_path = os.path.join(onnx_model_dir.name, 'model.onnx')
-    flow.onnx.export(job_func, flow_weight_dir.name, onnx_model_path, opset=opset, external_data=external_data)
+    onnx_model_path = os.path.join(onnx_model_dir.name, "model.onnx")
+    flow.onnx.export(
+        job_func,
+        flow_weight_dir.name,
+        onnx_model_path,
+        opset=opset,
+        external_data=external_data,
+    )
     flow_weight_dir.cleanup()
     ort_sess_opt = ort.SessionOptions()
-    ort_sess_opt.graph_optimization_level = \
-        ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED if ort_optimize else \
-        ort.GraphOptimizationLevel.ORT_DISABLE_ALL
+    ort_sess_opt.graph_optimization_level = (
+        ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
+        if ort_optimize
+        else ort.GraphOptimizationLevel.ORT_DISABLE_ALL
+    )
     sess = ort.InferenceSession(onnx_model_path, sess_options=ort_sess_opt)
     onnx_model_dir.cleanup()
     assert len(sess.get_outputs()) == 1
