@@ -86,6 +86,7 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"layer_norm_grad", "LayerNormGrad"},
     {"scalar_add", "ScalarAdd"},
     {"scalar_mul", "ScalarMul"},
+    {"leaky_relu", "LeakyRelu"},
 };
 
 std::string ExtractOpTypeAsString(const OperatorConf &conf) {
