@@ -4,6 +4,7 @@ import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
+import random
 
 
 class BoxingToMiddle(object):
@@ -51,6 +52,14 @@ def ReplaceProducerDeviceTag(new_device_tag):
     return Getter
 
 
+def ProducerRandomParallelIdPerMachine(
+    builder, produced_blob_object, consumer_op_arg_parallel_attr
+):
+    return RandomParallelIdPerMachine(
+        produced_blob_object.parallel_desc_symbol, builder=builder
+    )
+
+
 def ProducerParallelDesc(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return produced_blob_object.parallel_desc_symbol
 
@@ -96,6 +105,22 @@ def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
         parallel_conf.device_name.append(
             "%s:%s:%s" % (triple[0], device_tag, triple[2])
         )
+    if builder is None:
+        return symbol_util.ParallelDescSymbol(
+            parallel_desc_symbol.symbol_id, parallel_conf, device_tag
+        )
+    else:
+        return builder.GetParallelDescSymbol(parallel_conf)
+
+
+def RandomParallelIdPerMachine(parallel_desc_symbol, builder=None):
+    for device_name in parallel_desc_symbol.parallel_conf.device_name:
+        _, device_tag, _ = device_name.split(":")
+        break
+    parallel_conf = placement_pb.ParallelConf()
+    for machine_id, dev_ids in parallel_desc_symbol.machine_id2device_id_list.items():
+        dev_id = dev_ids[random.randint(0, len(dev_ids) - 1)]
+        parallel_conf.device_name.append("%s:%s:%s" % (machine_id, device_tag, dev_id))
     if builder is None:
         return symbol_util.ParallelDescSymbol(
             parallel_desc_symbol.symbol_id, parallel_conf, device_tag
