@@ -49,132 +49,38 @@ def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):
             )
         )
 
-    conditional_functions = [
-        CopyH2D,
-        CopyD2H,
-        NoBoxing,
-        CpuManyOneToOne,
-        Sequential(
-            boxing_middle.BoxingToMiddle(
-                CopyD2H,
-                boxing_middle.ReplaceProducerDeviceTag("cpu"),
-                boxing_middle.ProducerSbpParallel,
-            ),
-            CpuManyOneToOne,
-        ),
-        Sequential(
-            boxing_middle.BoxingToMiddle(
-                CpuManyOneToOne,
-                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
-                boxing_middle.ConsumerSbpParallel,
-            ),
-            CopyH2D,
-        ),
-        Sequential(
-            boxing_middle.BoxingToMiddle(
-                CopyD2H,
-                boxing_middle.ReplaceProducerDeviceTag("cpu"),
-                boxing_middle.ProducerSbpParallel,
-            ),
-            boxing_middle.BoxingToMiddle(
-                CpuManyOneToOne,
-                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
-                boxing_middle.ConsumerSbpParallel,
-            ),
-            CopyH2D,
-        ),
-        # e.g. 0:cpu:0 -> 0:cpu:0-3
-        BroadcastOneToMany,
-        # e.g. 0:cpu:0 -> 0:gpu:0-3
-        # ==>   0:cpu:0 -> 0:cpu:0-3 -> 0:gpu:0-3
-        Sequential(
-            boxing_middle.BoxingToMiddle(
-                BroadcastOneToMany,
-                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
-                boxing_middle.BroadcastParallel,
-            ),
-            CopyH2D,
-        ),
-        Sequential(
-            boxing_middle.BoxingToMiddle(
-                CopyD2H,
-                boxing_middle.ReplaceProducerDeviceTag("cpu"),
-                boxing_middle.ProducerSbpParallel,
-            ),
-            BroadcastOneToMany,
-        ),
-        BroadcastManyToOne,
-        Sequential(
-            boxing_middle.BoxingToMiddle(
-                BroadcastManyToOne,
-                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
-                boxing_middle.ProducerSbpParallel,
-            ),
-            CopyH2D,
-        ),
-        Sequential(
-            boxing_middle.BoxingToMiddle(
-                BroadcastManyToOne,
-                boxing_middle.ReplaceConsumerDeviceTag("gpu"),
-                boxing_middle.ProducerSbpParallel,
-            ),
-            CopyD2H,
-        ),
-        # e.g. 0:gpu:0-3 -> 0:gpu:0-3 (P->B)
-        NcclAllReduce,
-        Sequential(
-            boxing_middle.BoxingToMiddle(
-                CopyH2D,
-                boxing_middle.ReplaceConsumerDeviceTag("gpu"),
-                boxing_middle.ProducerSbpParallel,
-            ),
-            NcclAllReduce,
-        ),
-        Sequential(
-            boxing_middle.BoxingToMiddle(
-                NcclAllReduce,
-                boxing_middle.ProducerParallelDesc,
-                boxing_middle.BroadcastParallel,
-            ),
-            CopyD2H,
-        ),
-        NaiveCpuConcatSplit,
-        Sequential(
-            boxing_middle.BoxingToMiddle(
-                CopyD2H,
-                boxing_middle.ReplaceProducerDeviceTag("cpu"),
-                boxing_middle.ProducerSbpParallel,
-            ),
-            NaiveCpuConcatSplit,
-        ),
-        Sequential(
-            boxing_middle.BoxingToMiddle(
-                NaiveCpuConcatSplit,
-                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
-                boxing_middle.ConsumerSbpParallel,
-            ),
-            CopyH2D,
-        ),
-        Sequential(
-            boxing_middle.BoxingToMiddle(
-                CopyD2H,
-                boxing_middle.ReplaceProducerDeviceTag("cpu"),
-                boxing_middle.ProducerSbpParallel,
-            ),
-            boxing_middle.BoxingToMiddle(
-                NaiveCpuConcatSplit,
-                boxing_middle.ReplaceConsumerDeviceTag("cpu"),
-                boxing_middle.ConsumerSbpParallel,
-            ),
-            CopyH2D,
-        ),
-    ]
+    global conditional_function_table
     function = enable_if.unique(
-        conditional_functions,
+        conditional_function_table,
         context=BoxingHobContext(produced_blob_object, consumer_op_arg_parallel_attr),
         default=default,
     )
     return function(builder, produced_blob_object, consumer_op_arg_parallel_attr)
+
+
+def FirstMatchedBoxing(*boxing_methods):
+    hob_expr = enable_if.get_condition_hob(boxing_methods[0])
+    for boxing_method in boxing_methods[1:]:
+        hob_expr = hob_expr | enable_if.get_condition_hob(boxing_method)
+
+    @enable_if.condition(hob_expr)
+    def FirstMatched(builder, produced_blob_object, consumer_op_arg_parallel_attr):
+        ctx = BoxingHobContext(produced_blob_object, consumer_op_arg_parallel_attr)
+        for boxing_method in boxing_methods:
+            hob_expr = enable_if.get_condition_hob(boxing_method)
+            if not hob_expr(ctx):
+                continue
+            return boxing_method(
+                builder, produced_blob_object, consumer_op_arg_parallel_attr
+            )
+
+    boxing_methods_names = [GetBoxingDebugString(m) for m in boxing_methods]
+    FirstMatched.__debug_str__ = "(%s)" % (" | ".join(boxing_methods_names))
+    return FirstMatched
+
+
+def OptionalBoxing(boxing_method):
+    return FirstMatchedBoxing(NoBoxing, boxing_method)
 
 
 def ComposeBoxing(lhs_boxing, rhs_boxing, get_middle_op_arg_parallel_attr):
@@ -193,14 +99,17 @@ def ComposeBoxing(lhs_boxing, rhs_boxing, get_middle_op_arg_parallel_attr):
         return rhs_boxing(builder, tmp, consumer_op_arg_parallel_attr)
 
     Composed.__debug_str__ = "%s->%s" % (
-        lhs_boxing.__debug_str__
-        if hasattr(lhs_boxing, "__debug_str__")
-        else lhs_boxing.__name__,
-        rhs_boxing.__debug_str__
-        if hasattr(rhs_boxing, "__debug_str__")
-        else rhs_boxing.__name__,
+        GetBoxingDebugString(lhs_boxing),
+        GetBoxingDebugString(rhs_boxing),
     )
     return Composed
+
+
+def GetBoxingDebugString(boxing_method):
+    if hasattr(boxing_method, "__debug_str__"):
+        return boxing_method.__debug_str__
+    else:
+        return boxing_method.__name__
 
 
 def Sequential(*boxing_methods):
@@ -547,8 +456,10 @@ def UnpackLogicalBoxingBlobObjectToPhysical(builder, produced_blob_object):
     return builder.UnpackLogicalBlobToPhysicalBlobs(produced_blob_object)
 
 
-MatchBroadcastOneToMany = (
+MatchCpuBroadcastOneToMany = (
     boxing_hob.MasterMachineOnly
+    & (boxing_hob.producer_parallel_desc.device_tag == "cpu")
+    & (boxing_hob.consumer_parallel_desc.device_tag == "cpu")
     & boxing_hob.ProducerDevicesContainedInConsumerDevices
     & (boxing_hob.producer_parallel_desc.parallel_num == 1)
     & (boxing_hob.consumer_parallel_desc.parallel_num > 1)
@@ -556,27 +467,19 @@ MatchBroadcastOneToMany = (
 )
 
 
-@enable_if.condition(MatchBroadcastOneToMany)
-def BroadcastOneToMany(builder, produced_blob_object, consumer_op_arg_parallel_attr):
-    tmp_blob_object = OneToManyBroadcastBlobReference(
+@enable_if.condition(MatchCpuBroadcastOneToMany)
+def CpuBroadcastOneToMany(builder, produced_blob_object, consumer_op_arg_parallel_attr):
+    return CpuOneToManyBroadcastBlobReference(
         builder,
         produced_blob_object,
         consumer_op_arg_parallel_attr.parallel_desc_symbol,
     )
-    tmp_parallel_desc_sym = tmp_blob_object.parallel_desc_symbol
-    op_arg_parallel_desc_sym = consumer_op_arg_parallel_attr.parallel_desc_symbol
-    if tmp_parallel_desc_sym == op_arg_parallel_desc_sym:
-        return tmp_blob_object
-    ret = BuildCopyHdInstruction(
-        builder,
-        tmp_blob_object,
-        consumer_op_arg_parallel_attr.parallel_desc_symbol.device_tag,
-    )
-    return ret
 
 
-MatchBroadcastManyToOne = (
+MatchCpuBroadcastManyToOne = (
     boxing_hob.MasterMachineOnly
+    & (boxing_hob.producer_parallel_desc.device_tag == "cpu")
+    & (boxing_hob.consumer_parallel_desc.device_tag == "cpu")
     & boxing_hob.ConsumerDevicesContainedInProducerDevices
     & (boxing_hob.producer_parallel_desc.parallel_num > 1)
     & (boxing_hob.consumer_parallel_desc.parallel_num == 1)
@@ -584,8 +487,8 @@ MatchBroadcastManyToOne = (
 )
 
 
-@enable_if.condition(MatchBroadcastManyToOne)
-def BroadcastManyToOne(builder, produced_blob_object, consumer_op_arg_parallel_attr):
+@enable_if.condition(MatchCpuBroadcastManyToOne)
+def CpuBroadcastManyToOne(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     y_blob_objects = builder.UnpackLogicalBlobToPhysicalBlobs(produced_blob_object)
     for y in y_blob_objects:
         if y.parallel_desc_symbol == consumer_op_arg_parallel_attr.parallel_desc_symbol:
@@ -599,7 +502,7 @@ def Assign(builder, ref_blob_object, value_blob_object):
     )
 
 
-def OneToManyBroadcastBlobReference(
+def CpuOneToManyBroadcastBlobReference(
     builder, produced_blob_object, to_parallel_desc_symbol
 ):
     x_parallel_desc_symbol = produced_blob_object.parallel_desc_symbol
@@ -612,11 +515,7 @@ def OneToManyBroadcastBlobReference(
     assert len(x_first_device_ids) == 1, x_first_device_ids
     if x_parallel_desc_symbol == to_parallel_desc_symbol:
         return produced_blob_object
-    tmp_parallel_desc_symbol = TryReplaceDeviceTag(
-        builder, to_parallel_desc_symbol, x_parallel_desc_symbol.device_tag
-    )
-    ret = builder.BroadcastBlobReference(produced_blob_object, tmp_parallel_desc_symbol)
-    return ret
+    return builder.BroadcastBlobReference(produced_blob_object, to_parallel_desc_symbol)
 
 
 def BuildCopyHdInstruction(builder, produced_blob_object, to_device_tag):
@@ -733,3 +632,125 @@ def _GetEagerNcclAllReduce(parallel_conf):
     op_conf.user_conf.output["out"].s.append("eager_nccl_all_reduce/out_0")
     op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
     return c_api_util.GetOpAttribute4OpConf(op_conf)
+
+
+conditional_function_table = [
+    CopyH2D,
+    CopyD2H,
+    NoBoxing,
+    CpuManyOneToOne,
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            CopyD2H,
+            boxing_middle.ReplaceProducerDeviceTag("cpu"),
+            boxing_middle.ProducerSbpParallel,
+        ),
+        CpuManyOneToOne,
+    ),
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            CpuManyOneToOne,
+            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+            boxing_middle.ConsumerSbpParallel,
+        ),
+        CopyH2D,
+    ),
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            CopyD2H,
+            boxing_middle.ReplaceProducerDeviceTag("cpu"),
+            boxing_middle.ProducerSbpParallel,
+        ),
+        boxing_middle.BoxingToMiddle(
+            CpuManyOneToOne,
+            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+            boxing_middle.ConsumerSbpParallel,
+        ),
+        CopyH2D,
+    ),
+    # e.g. 0:cpu:0 -> 0:cpu:0-3
+    CpuBroadcastOneToMany,
+    # e.g. 0:cpu:0 -> 0:gpu:0-3
+    # ==>   0:cpu:0 -> 0:cpu:0-3 -> 0:gpu:0-3
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            CpuBroadcastOneToMany,
+            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+            boxing_middle.BroadcastParallel,
+        ),
+        CopyH2D,
+    ),
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            CopyD2H,
+            boxing_middle.ReplaceProducerDeviceTag("cpu"),
+            boxing_middle.ProducerSbpParallel,
+        ),
+        CpuBroadcastOneToMany,
+    ),
+    CpuBroadcastManyToOne,
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            CpuBroadcastManyToOne,
+            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+            boxing_middle.ProducerSbpParallel,
+        ),
+        CopyH2D,
+    ),
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            CpuBroadcastManyToOne,
+            boxing_middle.ReplaceConsumerDeviceTag("gpu"),
+            boxing_middle.ProducerSbpParallel,
+        ),
+        CopyD2H,
+    ),
+    # e.g. 0:gpu:0-3 -> 0:gpu:0-3 (P->B)
+    NcclAllReduce,
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            CopyH2D,
+            boxing_middle.ReplaceConsumerDeviceTag("gpu"),
+            boxing_middle.ProducerSbpParallel,
+        ),
+        NcclAllReduce,
+    ),
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            NcclAllReduce,
+            boxing_middle.ProducerParallelDesc,
+            boxing_middle.BroadcastParallel,
+        ),
+        CopyD2H,
+    ),
+    NaiveCpuConcatSplit,
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            CopyD2H,
+            boxing_middle.ReplaceProducerDeviceTag("cpu"),
+            boxing_middle.ProducerSbpParallel,
+        ),
+        NaiveCpuConcatSplit,
+    ),
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            NaiveCpuConcatSplit,
+            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+            boxing_middle.ConsumerSbpParallel,
+        ),
+        CopyH2D,
+    ),
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            CopyD2H,
+            boxing_middle.ReplaceProducerDeviceTag("cpu"),
+            boxing_middle.ProducerSbpParallel,
+        ),
+        boxing_middle.BoxingToMiddle(
+            NaiveCpuConcatSplit,
+            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+            boxing_middle.ConsumerSbpParallel,
+        ),
+        CopyH2D,
+    ),
+]
