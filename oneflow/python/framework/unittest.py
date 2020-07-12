@@ -46,7 +46,7 @@ def register_test_cases(
 
 
 @oneflow_export("unittest.num_nodes_required")
-def num_nodes_required(num_nodes: int) -> Callable[..., None]:
+def num_nodes_required(num_nodes: int) -> Callable[[Callable], Callable]:
     def Decorator(f):
         f.__oneflow_test_case_num_nodes_required__ = num_nodes
         return f

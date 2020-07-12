@@ -33,7 +33,7 @@ class FunctionConfig(object):
 
         def FunctionConfigSetter(
             attr_value: Optional[Union[bool, int, float, str]] = None
-        ):
+        ) -> None:
             if default_val.HasField("at_bool"):
                 if attr_value is None:
                     attr_value = True
@@ -60,7 +60,7 @@ class FunctionConfig(object):
 @oneflow_export("global_function")
 def oneflow_function(
     function_config: FunctionConfig = FunctionConfig(),
-) -> Callable[..., Any]:
+) -> Callable[[Callable], Callable]:
     r"""Creates a callable OneFlow global function from a Python function.
     For instance::
 
