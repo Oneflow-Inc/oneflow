@@ -268,30 +268,17 @@ def bias_add(value, bias, data_format=None, name=None):
         else:
             raise ValueError("data_format must be of the form `N...C` or `NC...`")
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name)
-            .Op("bias_add")
-            .Input("a", [value])
-            .Input("b", [bias])
-            .Output("out")
-            .Attr("axis", bias_add_axis, "AttrTypeInt32")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(op_conf, "name", name)
-        setattr(op_conf.bias_add_conf, "a", value.unique_name)
-        setattr(op_conf.bias_add_conf, "b", bias.unique_name)
-        setattr(op_conf.bias_add_conf, "out", "out")
-        setattr(op_conf.bias_add_conf, "axis", bias_add_axis)
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    return (
+        flow.user_op_builder(name)
+        .Op("bias_add")
+        .Input("a", [value])
+        .Input("b", [bias])
+        .Output("out")
+        .Attr("axis", bias_add_axis, "AttrTypeInt32")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("nn.max_pool1d")
