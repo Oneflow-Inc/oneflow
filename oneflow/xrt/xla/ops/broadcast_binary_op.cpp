@@ -13,16 +13,16 @@ template<typename BinaryOp>
 class BcastBinaryOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    Shape shape_a = ctx->InputShape("a");
-    Shape shape_b = ctx->InputShape("b");
+    Shape shape_a = ctx->InputShape("x_0");
+    Shape shape_b = ctx->InputShape("y_0");
 
     int axes = std::max(shape_a.NumAxes(), shape_b.NumAxes());
     shape_a = CreateLeftExtendedShape(ShapeView(shape_a), axes);
     shape_b = CreateLeftExtendedShape(ShapeView(shape_b), axes);
 
-    xla::XlaOp a = Reshape(ctx->Input("a"), shape_a);
-    xla::XlaOp b = Reshape(ctx->Input("b"), shape_b);
-    ctx->SetOutput("out", BinaryOp()(a, b));
+    xla::XlaOp a = Reshape(ctx->Input("x_0"), shape_a);
+    xla::XlaOp b = Reshape(ctx->Input("y_0"), shape_b);
+    ctx->SetOutput("z_0", BinaryOp()(a, b));
   }
 };
 

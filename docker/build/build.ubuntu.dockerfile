@@ -8,8 +8,6 @@ RUN apt-get update && \
     apt-get install -y apt-transport-https && \
     apt-get install -y --no-install-recommends \
     curl \
-    default-jdk \
-    pciutils \
     nasm \
     make \
     git \
@@ -18,7 +16,6 @@ RUN apt-get update && \
     g++ \
     libopenblas-dev \
     python3-dev \
-    protobuf-compiler \
     cmake
 
 
