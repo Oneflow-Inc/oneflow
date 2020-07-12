@@ -116,163 +116,6 @@ message RegularizerConf {
   }
 }
 
-message Conv1DOpConf {
-  required string in = 1;
-  required string out = 2;
-  required int32 filters = 3;
-  optional string padding = 4 [default = "valid"];
-  required string data_format = 5;
-  repeated int32 kernel_size = 6;
-  repeated int32 strides = 7;
-  repeated int32 dilation_rate = 8;
-  optional bool use_bias = 10 [default = true];
-  required string weight = 13;
-  optional string bias = 14;
-  optional int32 groups = 15 [default = 1];
-}
-
-message Conv2DOpConf {
-  required string in = 1;
-  required string out = 2;
-  required int32 filters = 3;
-  optional string padding = 4 [default = "valid"];
-  required string data_format = 5;
-  repeated int32 kernel_size = 6;
-  repeated int32 strides = 7;
-  repeated int32 dilation_rate = 8;
-  optional bool use_bias = 10 [default = true];
-  required string weight = 13;
-  optional string bias = 14;
-  optional int32 groups = 15 [default = 1];
-}
-
-message Conv3DOpConf {
-  required string in = 1;
-  required string out = 2;
-  required int32 filters = 3;
-  optional string padding = 4 [default = "valid"];
-  required string data_format = 5;
-  repeated int32 kernel_size = 6;
-  repeated int32 strides = 7;
-  repeated int32 dilation_rate = 8;
-  optional bool use_bias = 10 [default = true];
-  required string weight = 13;
-  optional string bias = 14;
-  optional int32 groups = 15 [default = 1];
-}
-
-message ConvConf {
-  required int32 num_spatial_dims = 1;
-  required string padding = 2;
-  required string data_format = 3;
-  repeated int32 kernel_size = 4;
-  repeated int32 strides = 5;
-  repeated int32 dilation_rate = 6;
-  required int32 groups = 7;
-}
-
-message ConvDataGradOpConf {
-  required string dy = 1;
-  required string filter = 2;
-  required string x_like = 3;
-  required string dx = 4;
-  required ConvConf conv_conf = 5;
-}
-
-message ConvFilterGradOpConf {
-  required string dy = 1;
-  required string x = 2;
-  required string filter_diff = 3;
-  required ConvConf conv_conf = 4;
-}
-
-message ConvBiasGradOpConf {
-  required string dy = 1;
-  required string bias_diff = 2;
-  required string data_format = 3;
-  required int64 num_spatial_dims = 4;
-}
-
-message AveragePooling1DOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional string padding = 3 [default = "valid"];
-  required string data_format = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-}
-
-message MaxPooling1DOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional string padding = 3 [default = "valid"];
-  required string data_format = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-}
-
-message AveragePooling2DOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional string padding = 3 [default = "valid"];
-  required string data_format = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-}
-
-message MaxPooling2DOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional string padding = 3 [default = "valid"];
-  required string data_format = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-}
-
-message AveragePooling3DOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional string padding = 3 [default = "valid"];
-  required string data_format = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-}
-
-message MaxPooling3DOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional string padding = 3 [default = "valid"];
-  required string data_format = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-}
-
-message PoolingConf {
-  required int32 num_spatial_dims = 1;
-  // "avg" or "max"
-  required string pool_mode = 2;
-  required string data_format = 3;
-  repeated int32 pool_size = 4;
-  repeated int32 strides = 5;
-  optional string padding = 6 [default = "valid"];
-}
-
-message PoolingGradOpConf {
-  // input
-  required string x = 1;
-  required string y = 2;
-  required string dy = 3;
-  // output
-  required string dx = 4;
-  required PoolingConf pooling_conf = 5;
-}
-
 message ReluOpConf {
   required string in = 1;
   required string out = 2;
@@ -330,23 +173,6 @@ message TanHGradOpConf {
   required string y = 1;
   required string dy = 2;
   required string dx = 3;
-}
-
-message SoftmaxOpConf {
-  required string in = 1;
-  required string out = 2;
-  optional int32 axis = 3 [default = -1];
-  optional string transpose_in = 4 [default = "transpose_in"];
-  optional string transpose_out = 5 [default = "transpose_out"];
-}
-
-message SoftmaxGradOpConf {
-  required string y = 1;
-  required string dy = 2;
-  required string dx = 3;
-  optional string transpose_x = 4;
-  optional string transpose_y = 5;
-  optional int32 axis = 6 [default = -1];
 }
 
 enum ScalarReductionType {
@@ -927,43 +753,6 @@ message DecodeRandomOpConf {
   required int64 batch_size = 8;
 }
 
-message NormalizationOpConf {
-  required string in = 1;
-  required string out = 2;
-  optional int32 axis = 3 [default = -1]; // NCHW = 1, NHWC = 3, TODO: axis list
-  optional float momentum = 4 [default = 0.99];
-  optional float epsilon = 5 [default = 0.001];
-  optional bool center = 6 [default = true];
-  optional bool scale = 7 [default = true];
-  optional float beta_init = 8 [default = 0.0];
-  optional float gamma_init = 9 [default = 1.0];
-  optional float mean_init = 10 [default = 0.0];
-  optional float variance_init = 11 [default = 1.0];
-  required string moving_mean = 14;
-  required string moving_variance = 15;
-  optional string beta = 16;
-  optional string gamma = 17;
-  optional string mean = 18 [default = "mean"];
-  optional string inv_variance = 19 [default = "inv_variance"];
-  optional bool is_training = 20 [default = true];
-}
-
-message NormalizationGradOpConf {
-  //in
-  required string dy = 1;
-  required string x = 2;
-  optional string mean = 3;
-  optional string inv_variance = 4;
-  optional string gamma = 5;
-  //out
-  optional string dx = 6 [default = "dx"];
-  optional string beta_diff = 7 [default = "beta_diff"];
-  optional string gamma_diff = 8 [default = "gamma_diff"];
-
-  required int32 axis = 9;
-  required float epsilon = 10;
-}
-
 message TransposeOpConf {
   required string in = 1;
   required string out = 2;
@@ -1174,16 +963,6 @@ message BroadcastDivGradOpConf {
   //  output
   required string db = 4;
   optional string temp_storage = 5 [default = "temp_storage"];
-}
-
-message BiasAddOpConf {
-  // inputs
-  required string a = 1;
-  required string b = 2;
-  // output
-  required string out = 3;
-  // conf
-  required int32 axis = 4;
 }
 
 message DimSliceConf {
@@ -1792,17 +1571,7 @@ message OperatorConf {
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    Conv1DOpConf conv_1d_conf = 205;
-    Conv2DOpConf conv_2d_conf = 206;
-    Conv3DOpConf conv_3d_conf = 207;
-    AveragePooling1DOpConf average_pooling_1d_conf = 208;
-    MaxPooling1DOpConf max_pooling_1d_conf = 209;
-    AveragePooling2DOpConf average_pooling_2d_conf = 210;
-    MaxPooling2DOpConf max_pooling_2d_conf = 211;
-    AveragePooling3DOpConf average_pooling_3d_conf = 212;
-    MaxPooling3DOpConf max_pooling_3d_conf = 213;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
-    NormalizationOpConf normalization_conf = 217;
     ReduceSumOpConf reduce_sum_conf = 219;
     AddOpConf add_conf = 220;
     MatmulOpConf matmul_conf = 221;
@@ -1812,7 +1581,6 @@ message OperatorConf {
     SigmoidOpConf sigmoid_conf = 225;
     TanHOpConf tanh_conf = 226;
     ReluOpConf relu_conf = 227;
-    SoftmaxOpConf softmax_conf = 228;
     PrintOpConf print_conf = 233;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
@@ -1820,7 +1588,6 @@ message OperatorConf {
     GeluOpConf gelu_conf = 241;
     BatchGatherOpConf batch_gather_conf = 243;
     SliceOpConf slice_conf = 252;
-    BiasAddOpConf bias_add_conf = 253;
     LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
@@ -1834,17 +1601,11 @@ message OperatorConf {
     LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;
-    SoftmaxGradOpConf softmax_grad_conf = 278;
     UnsortedBatchSegmentSumOpConf unsorted_batch_segment_sum_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
-    NormalizationGradOpConf normalization_grad_conf = 282;
-    ConvBiasGradOpConf conv_bias_grad_conf = 283;
-    ConvFilterGradOpConf conv_filter_grad_conf = 284;
-    ConvDataGradOpConf conv_data_grad_conf = 285;
     ReshapeLikeOpConf reshape_like_conf = 286;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     TanHGradOpConf tanh_grad_conf = 288;
-    PoolingGradOpConf pooling_grad_conf = 289;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
     EsacOpConf esac_conf = 292;

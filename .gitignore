@@ -1,5 +1,6 @@
 /build
 /build-*
+/cmake-build-*
 /dist
 /third_party/
 /examples/**/oneflow
@@ -10,5 +11,8 @@ core.*
 *.pyc
 *.ipynb
 /.vscode
+/.idea
 manylinux*
 wheelhouse/
+.DS_Store
+/tmp_wheel
