@@ -22,6 +22,10 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t stri
                            const std::string& padding_type, int64_t* output_size,
                            int32_t* padding_before, int32_t* padding_after);
 
+void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
+                           int32_t stride, int32_t padding_needed, int64_t* output_size,
+                           int32_t* padding_before, int32_t* padding_after);
+
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t stride,
                            const std::string& padding_type, int64_t* output_size,
                            int32_t* padding_size);
