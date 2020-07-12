@@ -640,7 +640,7 @@ def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
 def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
     return (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("UnsortedSegmentSumLike__")
+            name if name is not None else id_util.UniqueStr("UnsortedSegmentSumLike_")
         )
         .Op("unsorted_segment_sum_like")
         .Input("data", [data])
