@@ -36,11 +36,13 @@ class TestLayerNorm(unittest.TestCase):
     def _test_body(self, x, norm_axis, params_axis, dtype=np.float32):
         f1 = make_job(x.shape, norm_axis, params_axis, dtype=flow.float32)
         f2 = make_xla_job(x.shape, norm_axis, params_axis, dtype=flow.float32)
+        check_point = flow.train.CheckPoint()
+        check_point.init()
         a = f1(x).get()
         b = f2(x).get()
         print("without xla: ", a)
         print("with xla", b)
-        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-5, atol=2e-3))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, norm_axis=-1, params_axis=-1, dtype=np.float32):
