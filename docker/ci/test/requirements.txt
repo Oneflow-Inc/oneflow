@@ -1,5 +1,5 @@
 pycocotools
-opencv-python
+opencv-python==4.2.0.34
 sphinx
 sphinx-material
 recommonmark
