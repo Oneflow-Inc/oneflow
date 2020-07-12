@@ -185,7 +185,7 @@ Maybe<void> CacheInt8Calibration() {
 #ifdef WITH_TENSORRT
   xrt::tensorrt::CacheInt8Calibration();
 #else
-  OF_CHECK(0) << "Please recompile with TensorRT.";
+  CHECK_OR_RETURN(0) << "Please recompile with TensorRT.";
 #endif  // WITH_TENSORRT
   return Maybe<void>::Ok();
 }
@@ -195,7 +195,7 @@ Maybe<void> WriteInt8Calibration(const std::string& path) {
   xrt::tensorrt::CacheInt8Calibration();
   xrt::tensorrt::WriteInt8Calibration(path);
 #else
-  OF_CHECK(0) << "Please recompile with TensorRT.";
+  CHECK_OR_RETURN(0) << "Please recompile with TensorRT.";
 #endif  // WITH_TENSORRT
   return Maybe<void>::Ok();
 }
