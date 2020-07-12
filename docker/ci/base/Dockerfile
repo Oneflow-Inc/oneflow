@@ -3,6 +3,7 @@ ARG CUDA=10.0
 
 FROM nvidia/cuda:${CUDA}-cudnn7-devel-centos7
 
+COPY dev-requirements.txt /workspace/dev-requirements.txt
 RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
     rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
     yum update -y && yum install -y epel-release && \
@@ -18,7 +19,7 @@ RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproduct
     which \
     rh-python36 python36-devel.x86_64 python36-devel && \
     python3 -m ensurepip && \
-    pip3 install numpy protobuf wheel && \
+    pip3 install -r /workspace/dev-requirements.txt && \
     yum clean all
 
 RUN mkdir -p /tmp/download && \

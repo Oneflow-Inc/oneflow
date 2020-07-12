@@ -125,6 +125,7 @@ ObjectMsgPtr<StreamDesc> DeviceHelperStreamType::MakeStreamDesc(const Resource& 
   if (resource.has_gpu_device_num()) {
     device_num = std::max<std::size_t>(device_num, resource.gpu_device_num());
   }
+  if (device_num == 0) { return ObjectMsgPtr<StreamDesc>(); }
   CHECK_GT(device_num, 0);
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DeviceHelperStreamType>());
