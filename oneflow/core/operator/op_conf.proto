@@ -1586,11 +1586,6 @@ message OperatorConf {
     MultiplyOpConf multiply_conf = 223;
     MaximumOpConf maximum_conf = 224;
     TanHOpConf tanh_conf = 226;
-<<<<<<< HEAD
-    SoftmaxOpConf softmax_conf = 228;
-=======
-    ReluOpConf relu_conf = 227;
->>>>>>> develop
     PrintOpConf print_conf = 233;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
