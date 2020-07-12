@@ -22,11 +22,6 @@ message ReduceSumKernelConf {
   required ShapeProto kept_dims_shape = 1;
 }
 
-message TransposeKernelConf {
-  repeated int32 perm = 1;
-  repeated int32 invert_perm = 2;
-}
-
 message LocalResponseNormalizationKernelConf {
   required ShapeProto batch = 1;
 }
@@ -138,7 +133,6 @@ message KernelConf {
     UserKernelConf user_conf = 100;
     DecodeRandomKernelConf decode_random_conf = 103;
     DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
-    TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;

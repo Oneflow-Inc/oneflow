@@ -219,29 +219,16 @@ def transpose(a, perm=None, conjugate=False, name=None):
     if conjugate:
         raise NotImplementedError
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name)
-            .Op("transpose")
-            .Input("input", [a])
-            .Output("output")
-            .Attr("perm", perm, "AttrTypeListInt32")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = name
-        setattr(op_conf.transpose_conf, "in", a.unique_name)
-        op_conf.transpose_conf.out = "out"
-        op_conf.transpose_conf.perm.extend(list(perm))
-
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    return (
+        flow.user_op_builder(name)
+        .Op("transpose")
+        .Input("input", [a])
+        .Output("output")
+        .Attr("perm", perm, "AttrTypeListInt32")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("slice")
@@ -422,40 +409,22 @@ def concat(values, axis, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") != "False":
-        assert isinstance(values, (list, tuple))
-        assert len(values) >= 2
-        if axis < 0:
-            axis += len(values[0].shape)
-        assert axis >= 0 and axis < len(values[0].shape)
-        out = (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("Concat_")
-            )
-            .Op("concat")
-            .Input("in", values)
-            .Output("out")
-            .Attr("axis", int(axis), "AttrTypeInt32")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-        return out
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("Concat_")
-        )
-        op_conf.concat_conf.out = "out"
-        if not isinstance(values, (list, tuple)):
-            values = [values]
-        getattr(op_conf.concat_conf, "in").extend([v.unique_name for v in values])
-        op_conf.concat_conf.axis = axis
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    assert isinstance(values, (list, tuple))
+    assert len(values) >= 2
+    if axis < 0:
+        axis += len(values[0].shape)
+    assert axis >= 0 and axis < len(values[0].shape)
+    out = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Concat_"))
+        .Op("concat")
+        .Input("in", values)
+        .Output("out")
+        .Attr("axis", int(axis), "AttrTypeInt32")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+    return out
 
 
 @oneflow_export("gather_nd")
