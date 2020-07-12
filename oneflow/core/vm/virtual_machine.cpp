@@ -91,7 +91,7 @@ const std::shared_ptr<ParallelDesc>& VirtualMachine::GetInstructionParallelDesc(
   CHECK_NOTNULL(logical_object);
   auto* map = logical_object->mut_global_device_id2mirrored_object();
   CHECK_EQ(map->size(), 1);
-  return map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>().GetPtr();
+  return CHECK_JUST(map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>())->GetPtr();
 }
 
 MirroredObject* VirtualMachine::MutMirroredObject(int64_t logical_object_id,
@@ -342,6 +342,7 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocat
   *mutable_machine_id_range() = vm_desc.machine_id_range();
   set_vm_thread_only_allocator(allocator);
   OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
+    if (stream_desc->num_threads() == 0) { continue; }
     auto stream_rt_desc = ObjectMsgPtr<StreamRtDesc>::NewFrom(allocator, stream_desc);
     mut_stream_type_id2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
     BalancedSplitter bs(stream_desc->parallel_num(), stream_desc->num_threads());

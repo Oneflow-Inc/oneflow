@@ -113,7 +113,8 @@ Maybe<void> StartGlobalSession() {
   CHECK_ISNULL_OR_RETURN(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
   Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
-  Global<Oneflow>::New(job_set);
+  Global<Oneflow>::New();
+  JUST(Global<Oneflow>::Get()->Init(job_set));
   return Maybe<void>::Ok();
 }
 

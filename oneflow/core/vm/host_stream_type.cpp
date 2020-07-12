@@ -46,7 +46,7 @@ class CudaMallocHostInstructionType final : public InstructionType {
       FlatMsgView<MallocInstruction> view;
       CHECK(view.Match(instruction->instr_msg().operand()));
       const auto& operand = view->mem_buffer();
-      buffer_type = &instruction->mut_operand_type(operand)->Get<MemBufferObjectType>();
+      buffer_type = CHECK_JUST(instruction->mut_operand_type(operand)->Get<MemBufferObjectType>());
       buffer_value = instruction->mut_operand_value(operand)->Init<MemBufferObjectValue>();
     }
     CudaCheck(cudaMallocHost(&dptr, buffer_type->size()));
@@ -84,7 +84,7 @@ class MallocInstructionType final : public InstructionType {
       FlatMsgView<MallocInstruction> view;
       CHECK(view.Match(instruction->instr_msg().operand()));
       const auto& operand = view->mem_buffer();
-      buffer_type = &instruction->mut_operand_type(operand)->Get<MemBufferObjectType>();
+      buffer_type = CHECK_JUST(instruction->mut_operand_type(operand)->Get<MemBufferObjectType>());
       buffer_value = instruction->mut_operand_value(operand)->Init<MemBufferObjectValue>();
     }
     dptr = reinterpret_cast<char*>(std::malloc(buffer_type->size()));
@@ -107,7 +107,7 @@ class CudaFreeHostInstructionType final : public InstructionType {
       CHECK(view.Match(instruction->instr_msg().operand()));
       const auto& operand = view->mem_buffer();
       type_rw_mutexed_object = instruction->mut_operand_type(operand);
-      const auto& buffer_type = type_rw_mutexed_object->Get<MemBufferObjectType>();
+      const auto& buffer_type = *CHECK_JUST(type_rw_mutexed_object->Get<MemBufferObjectType>());
       CHECK(buffer_type.mem_case().has_host_mem());
       CHECK(buffer_type.mem_case().host_mem().has_cuda_pinned_mem());
     }
@@ -141,7 +141,7 @@ class FreeInstructionType final : public InstructionType {
       CHECK(view.Match(instruction->instr_msg().operand()));
       const auto& operand = view->mem_buffer();
       type_rw_mutexed_object = instruction->mut_operand_type(operand);
-      const auto& buffer_type = type_rw_mutexed_object->Get<MemBufferObjectType>();
+      const auto& buffer_type = *CHECK_JUST(type_rw_mutexed_object->Get<MemBufferObjectType>());
       CHECK(buffer_type.mem_case().has_host_mem());
       CHECK(!buffer_type.mem_case().host_mem().has_cuda_pinned_mem());
     }

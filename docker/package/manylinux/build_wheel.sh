@@ -3,6 +3,8 @@
 set -x
 set -e
 
+export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
+
 ONEFLOW_SRC_DIR=`cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd`
 ONEFLOW_SRC_DIR=$ONEFLOW_SRC_DIR/../../..
 cd $ONEFLOW_SRC_DIR
@@ -10,7 +12,7 @@ cd $ONEFLOW_SRC_DIR
 EXTRA_ONEFLOW_CMAKE_ARGS=""
 PY_VERS=()
 
-while [[ "$#" > 0 ]]; do 
+while [[ "$#" > 0 ]]; do
     case $1 in
         --skip-third-party) SKIP_THIRD_PARTY=1; ;;
         --cache-dir) CACHE_DIR=$2; shift ;;
@@ -34,19 +36,21 @@ then
 fi
 
 THIRD_PARTY_BUILD_DIR=$CACHE_DIR/build-third-party
+THIRD_PARTY_INSTALL_DIR=$CACHE_DIR/build-third-party-install
 if [[ $SKIP_THIRD_PARTY != 1 ]]; then
     mkdir -p $THIRD_PARTY_BUILD_DIR
     pushd $THIRD_PARTY_BUILD_DIR
 
     cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release \
-        -DTHIRD_PARTY_DIR=`pwd`   \
+        -DONEFLOW=OFF \
+        -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR   \
         $ONEFLOW_SRC_DIR
-    make -j`nproc`
+    make -j nccl
+    make -j`nproc` prepare_oneflow_third_party
 
     popd
 fi
 
-export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 ONEFLOW_BUILD_DIR=$CACHE_DIR/build-oneflow
 for PY_VER in ${PY_VERS[@]}
 do
@@ -59,10 +63,10 @@ do
     fi
     PY_ROOT=/opt/python/${PY_ABI}
     PY_BIN=${PY_ROOT}/bin/python
-    cmake -DTHIRD_PARTY=OFF         \
+    cmake -DTHIRD_PARTY=OFF -DONEFLOW=ON\
         -DPython3_ROOT_DIR=$PY_ROOT \
         -DCMAKE_BUILD_TYPE=Release  \
-        -DTHIRD_PARTY_DIR=$THIRD_PARTY_BUILD_DIR   \
+        -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR   \
         $EXTRA_ONEFLOW_CMAKE_ARGS   \
         $ONEFLOW_SRC_DIR
     cmake --build . -j `nproc`

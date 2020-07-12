@@ -7,23 +7,9 @@ import "oneflow/core/common/dtype_signature.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/placement.proto";
+import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/register/blob_desc.proto";
-
-message ConvKernelConf {
-  required ShapeProto in = 1;
-  required ShapeProto out = 2;
-  required ShapeProto weight = 3;
-  optional ShapeProto bias = 4;
-  required int32 dim = 5;
-  repeated int32 pad_small_side = 6;
-  repeated int32 pad_large_side = 7;
-  repeated int32 dilation_rate = 8;
-  repeated int32 strides = 9;
-  optional int32 cudnn_fwd_algo = 10 [default = -1];
-  optional int32 cudnn_bwd_filter_algo = 11 [default = -1];
-  optional int32 cudnn_bwd_data_algo = 12 [default = -1];
-}
 
 message LossKernelConf {
   required DataType prediction_type = 1;
@@ -32,36 +18,8 @@ message LossKernelConf {
   required ScalarReductionType reduction = 4;
 }
 
-message PoolingKernelConf {
-  required ShapeProto in = 1;
-  required ShapeProto out = 2;
-  required int32 dim = 3;
-  repeated int32 padding_before = 4;
-  repeated int32 padding_after = 5;
-  repeated int32 pool_size = 6;
-  repeated int32 strides = 7;
-  required string data_format = 8;
-  optional bool need_infer_cudnn_desc_each_forward = 9 [default = false];
-}
-
-message AveragePoolingKernelConf {
-  required PoolingKernelConf pooling_conf = 1;
-}
-
-message MaxPoolingKernelConf {
-  required PoolingKernelConf pooling_conf = 1;
-}
-
 message ReduceSumKernelConf {
   required ShapeProto kept_dims_shape = 1;
-}
-
-message SoftmaxKernelConf {
-  required int32 axis = 1;
-  required int64 transpose_rows = 2;
-  required int64 transpose_cols = 3;
-  required bool need_transpose = 4;
-  repeated int32 perm = 5;
 }
 
 message TransposeKernelConf {
@@ -124,6 +82,11 @@ message GatherMs0KernelConf {
 message GatherMs0GradKernelConf {
   required int64 offset = 1;
   required DataType indices_data_type = 2;
+}
+
+message ModelIoV2KernelConf {
+  repeated TensorSliceViewProto slice_view = 1;
+  required ParallelContext parallel_ctx = 2;
 }
 
 message UserKernelConf {
@@ -193,12 +156,8 @@ message KernelConf {
     UserKernelConf user_conf = 100;
     DecodeRandomKernelConf decode_random_conf = 103;
     DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
-    SoftmaxKernelConf softmax_conf = 116;
     TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
-    ConvKernelConf conv_conf = 127;
-    AveragePoolingKernelConf average_pooling_conf = 204;
-    MaxPoolingKernelConf max_pooling_conf = 205;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
     XrtLaunchKernelConf xrt_launch_conf = 353;
@@ -220,6 +179,7 @@ message KernelConf {
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
     GatherMs0KernelConf gather_ms0_conf = 414;
     GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
+    ModelIoV2KernelConf model_io_v2_conf = 418;
     BroadcastToCompatibleWithKernelConf broadcast_to_compatible_with_conf = 428;
   }
 }
