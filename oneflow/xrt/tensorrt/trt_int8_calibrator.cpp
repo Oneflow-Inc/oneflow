@@ -154,13 +154,11 @@ static std::unordered_map<std::string,  // NOLINT
 /*static*/ TRTInt8CalibratorResource*  // NOLINT
 TRTInt8CalibratorResource::LookupOrCreate(const std::string& name) {
   static std::mutex mutex;
+  std::lock_guard<std::mutex> lock(mutex);
   auto it = resources.find(name);
   if (it == resources.end()) {
-    std::lock_guard<std::mutex> lock(mutex);
-    while (resources.find(name) == resources.end()) {
       it = resources.emplace(name, new TRTInt8CalibratorResource).first;
     }
-  }
   return it->second;
 }
 
