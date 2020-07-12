@@ -815,12 +815,6 @@ message RepeatOpConf {
   required int32 repeat_num = 3;
 }
 
-message BatchGatherOpConf {
-  required string in = 1;
-  required string indices = 2;
-  required string out = 3;
-}
-
 message SqrtOpConf {
   required string in = 1;
   required string out = 2;
@@ -1097,13 +1091,6 @@ message AxpyOpConf {
 message TotalLossInstanceNumOpConf {
   repeated string in = 1;
   required string out = 2;
-}
-
-message UnsortedBatchSegmentSumOpConf {
-  required string data = 1;
-  required string segment_ids = 2;
-  required string out = 3;
-  required int64 num_segments = 4;
 }
 
 message ShapeElemCntAxisConf {
@@ -1555,7 +1542,6 @@ message OperatorConf {
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
     GeluOpConf gelu_conf = 241;
-    BatchGatherOpConf batch_gather_conf = 243;
     SliceOpConf slice_conf = 252;
     LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
@@ -1569,7 +1555,6 @@ message OperatorConf {
     LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;
-    UnsortedBatchSegmentSumOpConf unsorted_batch_segment_sum_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
     ReshapeLikeOpConf reshape_like_conf = 286;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;

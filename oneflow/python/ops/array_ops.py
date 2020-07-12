@@ -48,23 +48,18 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
 
     if batch_dims > 0:
         if axis == batch_dims:
-            if os.getenv("ENABLE_USER_OP") != "False":
-                return (
-                    flow.user_op_builder(
-                        name if name is not None else id_util.UniqueStr("BatchGather_")
-                    )
-                    .Op("batch_gather")
-                    .Input("in", [params])
-                    .Input("indices", [indices])
-                    .Output("out")
-                    .Build()
-                    .InferAndTryRun()
-                    .RemoteBlobList()[0]
+            return (
+                flow.user_op_builder(
+                    name if name is not None else id_util.UniqueStr("BatchGather_")
                 )
-            else:
-                setattr(op_conf.batch_gather_conf, "in", params.unique_name)
-                op_conf.batch_gather_conf.indices = indices.unique_name
-                op_conf.batch_gather_conf.out = "out"
+                .Op("batch_gather")
+                .Input("in", [params])
+                .Input("indices", [indices])
+                .Output("out")
+                .Build()
+                .InferAndTryRun()
+                .RemoteBlobList()[0]
+            )
         elif axis > batch_dims:
             raise NotImplementedError
         else:
