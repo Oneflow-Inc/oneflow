@@ -486,17 +486,6 @@ class Graph(object):
             self.CopyShape(new_output_name, o)
             self.CopyDtype(new_output_name, o)
 
-    def CreateNewGraphWithSameConfig(self):
-        """Create a clean graph inheriting current graph's configuration."""
-        return Graph(
-            [],
-            output_shapes={},
-            dtypes={},
-            opset=self._opset,
-            extra_opset=self.extra_opset,
-            output_names=[],
-        )
-
     @property
     def opset(self):
         return self._opset
