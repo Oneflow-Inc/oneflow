@@ -22,8 +22,7 @@ class OneRecParser final : public Parser<TensorBuffer> {
     FOR_RANGE(int32_t, i, 0, batch_data->size()) {
       TensorBuffer* out = out_tensor->mut_dptr<TensorBuffer>() + i;
       TensorBuffer* tensor = batch_data->at(i).get();
-      out->Resize(tensor->shape(), tensor->data_type());
-      std::memcpy(out->mut_data(), tensor->data(), out->nbytes());
+      out->Swap(tensor);
     }
   }
 };
