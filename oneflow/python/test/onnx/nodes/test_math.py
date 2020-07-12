@@ -1,4 +1,5 @@
 import oneflow as flow
+import oneflow.python.onnx.constants as constants
 from util import convert_to_onnx_and_check
 
 
@@ -6,7 +7,7 @@ func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 
-def generate_binary_op_test(flow_op, *args, **kwargs):
+def generate_binary_op_test(flow_op, *args, opset=constants.PREFERRED_OPSET, **kwargs):
     @flow.global_function(func_config)
     def job1():
         x = flow.get_variable(
@@ -23,10 +24,10 @@ def generate_binary_op_test(flow_op, *args, **kwargs):
         )
         return flow_op(x, y, *args, **kwargs)
 
-    convert_to_onnx_and_check(job1)
+    convert_to_onnx_and_check(job1, opset=opset)
 
 
-def generate_unary_op_test(flow_op, *args, min_val=-10, max_val=10, **kwargs):
+def generate_unary_op_test(flow_op, *args, opset=constants.PREFERRED_OPSET, min_val=-10, max_val=10, **kwargs):
     @flow.global_function(func_config)
     def job1():
         x = flow.get_variable(
@@ -37,7 +38,7 @@ def generate_unary_op_test(flow_op, *args, min_val=-10, max_val=10, **kwargs):
         )
         return flow_op(x, *args, **kwargs)
 
-    convert_to_onnx_and_check(job1)
+    convert_to_onnx_and_check(job1, opset=opset)
 
 
 def test_mul(test_case):
@@ -133,7 +134,7 @@ def test_reciprocal(test_case):
 
 
 def test_round(test_case):
-    generate_unary_op_test(flow.math.round)
+    generate_unary_op_test(flow.math.round, opset=11)
 
 
 def test_rsqrt(test_case):
@@ -177,11 +178,11 @@ def test_minimum(test_case):
 
 
 def test_equal(test_case):
-    generate_binary_op_test(flow.math.equal)
+    generate_binary_op_test(flow.math.equal, opset=11)
 
 
 def test_not_equal(test_case):
-    generate_binary_op_test(flow.math.not_equal)
+    generate_binary_op_test(flow.math.not_equal, opset=11)
 
 
 def test_less(test_case):

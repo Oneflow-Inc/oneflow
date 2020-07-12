@@ -25,4 +25,4 @@ def test_gather_nd(test_case):
         )
         return flow.gather_nd(x, y)
 
-    convert_to_onnx_and_check(gather_nd)
+    convert_to_onnx_and_check(gather_nd, opset=11)

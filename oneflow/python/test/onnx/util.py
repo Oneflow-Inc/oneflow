@@ -6,9 +6,10 @@ from collections import OrderedDict
 import tempfile
 import os
 import shutil
+import oneflow.python.onnx.constants as constants
 
 
-def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True, external_data=False, ort_optimize=True):
+def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True, external_data=False, ort_optimize=True, opset=constants.PREFERRED_OPSET):
     check_point = flow.train.CheckPoint()
     if explicit_init:
         # it is a trick to keep check_point.save() from hanging when there is no variable
@@ -29,7 +30,7 @@ def convert_to_onnx_and_check(job_func, print_rel_diff=False, explicit_init=True
         pass
     onnx_model_dir = tempfile.TemporaryDirectory()
     onnx_model_path = os.path.join(onnx_model_dir.name, 'model.onnx')
-    flow.onnx.export(job_func, flow_weight_dir.name, onnx_model_path, opset=11, external_data=external_data)
+    flow.onnx.export(job_func, flow_weight_dir.name, onnx_model_path, opset=opset, external_data=external_data)
     flow_weight_dir.cleanup()
     ort_sess_opt = ort.SessionOptions()
     ort_sess_opt.graph_optimization_level = \

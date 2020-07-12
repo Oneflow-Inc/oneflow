@@ -10,7 +10,7 @@ ONNX_DOMAIN = ""
 AI_ONNX_ML_DOMAIN = "ai.onnx.ml"
 
 # Default opset version for onnx domain
-PREFERRED_OPSET = 8
+PREFERRED_OPSET = 10
 
 NCHW_TO_NHWC = [0, 2, 3, 1]
 NHWC_TO_NCHW = [0, 3, 1, 2]
