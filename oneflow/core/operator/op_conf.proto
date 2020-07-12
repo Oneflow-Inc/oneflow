@@ -116,86 +116,6 @@ message RegularizerConf {
   }
 }
 
-message AveragePooling1DOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional string padding = 3 [default = "valid"];
-  required string data_format = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-}
-
-message MaxPooling1DOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional string padding = 3 [default = "valid"];
-  required string data_format = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-}
-
-message AveragePooling2DOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional string padding = 3 [default = "valid"];
-  required string data_format = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-}
-
-message MaxPooling2DOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional string padding = 3 [default = "valid"];
-  required string data_format = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-}
-
-message AveragePooling3DOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional string padding = 3 [default = "valid"];
-  required string data_format = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-}
-
-message MaxPooling3DOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional string padding = 3 [default = "valid"];
-  required string data_format = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-}
-
-message PoolingConf {
-  required int32 num_spatial_dims = 1;
-  // "avg" or "max"
-  required string pool_mode = 2;
-  required string data_format = 3;
-  repeated int32 pool_size = 4;
-  repeated int32 strides = 5;
-  optional string padding = 6 [default = "valid"];
-}
-
-message PoolingGradOpConf {
-  // input
-  required string x = 1;
-  required string y = 2;
-  required string dy = 3;
-  // output
-  required string dx = 4;
-  required PoolingConf pooling_conf = 5;
-}
-
 message ReluOpConf {
   required string in = 1;
   required string out = 2;
@@ -1687,12 +1607,6 @@ message OperatorConf {
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    AveragePooling1DOpConf average_pooling_1d_conf = 208;
-    MaxPooling1DOpConf max_pooling_1d_conf = 209;
-    AveragePooling2DOpConf average_pooling_2d_conf = 210;
-    MaxPooling2DOpConf max_pooling_2d_conf = 211;
-    AveragePooling3DOpConf average_pooling_3d_conf = 212;
-    MaxPooling3DOpConf max_pooling_3d_conf = 213;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
     ReduceSumOpConf reduce_sum_conf = 219;
     AddOpConf add_conf = 220;
@@ -1730,7 +1644,6 @@ message OperatorConf {
     ReshapeLikeOpConf reshape_like_conf = 286;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     TanHGradOpConf tanh_grad_conf = 288;
-    PoolingGradOpConf pooling_grad_conf = 289;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
     EsacOpConf esac_conf = 292;
