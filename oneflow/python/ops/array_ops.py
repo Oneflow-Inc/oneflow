@@ -30,11 +30,6 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
     Returns:
         A blob. Has the same type as params.
     """
-    op_conf = op_conf_util.OperatorConf()
-    if name is None:
-        op_conf.name = id_util.UniqueStr("Gather_")
-    else:
-        op_conf.name = name
     params_ndims = len(params.shape)
     if axis is None:
         axis = batch_dims
@@ -78,12 +73,6 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
             .InferAndTryRun()
             .RemoteBlobList()[0]
         )
-
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 
 def infer_shape(x, shape):
