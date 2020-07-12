@@ -3,7 +3,6 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 
 import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.input_blob_def as input_blob_util
