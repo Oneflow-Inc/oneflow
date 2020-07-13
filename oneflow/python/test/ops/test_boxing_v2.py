@@ -43,6 +43,7 @@ def test_split_to_split(test_case):
     arg_dict["src_axis"] = [0, 1]
     arg_dict["dst_axis"] = [0, 1]
     for arg in GenArgList(arg_dict):
+        print(arg)
         _test_split_to_split(test_case, *arg)
 
 
@@ -82,6 +83,7 @@ def test_split_to_broadcast(test_case):
     arg_dict["dst_device_num"] = [1, 2, 3]
     arg_dict["src_axis"] = [0, 1]
     for arg in GenArgList(arg_dict):
+        print(arg)
         _test_split_to_broadcast(test_case, *arg)
 
 
@@ -162,6 +164,7 @@ def test_partial_sum_to_split(test_case):
     arg_dict["dst_device_num"] = [1, 2, 3]
     arg_dict["dst_axis"] = [0, 1]
     for arg in GenArgList(arg_dict):
+        print(arg)
         _test_partial_sum_to_split(test_case, *arg)
 
 
@@ -196,6 +199,7 @@ def test_partial_sum_to_broadcast(test_case):
     arg_dict["src_device_num"] = [2, 3]
     arg_dict["dst_device_num"] = [1, 2, 3]
     for arg in GenArgList(arg_dict):
+        print(arg)
         _test_partial_sum_to_broadcast(test_case, *arg)
 
 

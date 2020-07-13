@@ -283,7 +283,7 @@ MatchNcclAllReduce = (
 
 
 @boxing_condition(MatchNcclAllReduce)
-def NcclAllReduce(builder, produced_blob_object, consumer_op_arg_parallel_attr):
+def GpuNcclAllReduce(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     parallel_conf = consumer_op_arg_parallel_attr.parallel_desc_symbol.parallel_conf
     op_attribute = _GetEagerNcclAllReduce(parallel_conf)
     bn_in_op2blob_object = dict(in_0=produced_blob_object)
@@ -324,7 +324,7 @@ MatchConcatManyToSplitMany = (
 )
 
 
-MatchNaiveCpuConcatSplit = (
+MatchNaiveCpuSplitToSplit = (
     boxing_hob.MasterMachineOnly
     & (boxing_hob.producer_parallel_desc.device_tag == "cpu")
     & (boxing_hob.consumer_parallel_desc.device_tag == "cpu")
@@ -332,8 +332,33 @@ MatchNaiveCpuConcatSplit = (
 )
 
 
-@boxing_condition(MatchNaiveCpuConcatSplit)
-def NaiveCpuConcatSplit(builder, produced_blob_object, consumer_op_arg_parallel_attr):
+@boxing_condition(MatchNaiveCpuSplitToSplit)
+def NaiveCpuSplitToSplit(builder, produced_blob_object, consumer_op_arg_parallel_attr):
+    return NaiveCpuRefPhysicalBlobObjectsScope(
+        builder,
+        produced_blob_object,
+        consumer_op_arg_parallel_attr,
+        get_physical_out_blob_objects=NaiveBoxingToPhysicalBlobObjects,
+    )
+
+
+MatchNaiveCpuPartialSumToSplit = (
+    boxing_hob.MasterMachineOnly
+    & (boxing_hob.producer_parallel_desc.device_tag == "cpu")
+    & (boxing_hob.consumer_parallel_desc.device_tag == "cpu")
+    & (boxing_hob.producer_parallel_desc.parallel_num > 1)
+    & boxing_hob.producer_sbp_parallel.HasField("partial_sum_parallel")
+    & (
+        (boxing_hob.consumer_parallel_desc.parallel_num == 1)
+        | boxing_hob.consumer_sbp_parallel.HasField("split_parallel")
+    )
+)
+
+
+@boxing_condition(MatchNaiveCpuPartialSumToSplit)
+def NaiveCpuPartialSumToSplit(
+    builder, produced_blob_object, consumer_op_arg_parallel_attr
+):
     return NaiveCpuRefPhysicalBlobObjectsScope(
         builder,
         produced_blob_object,
@@ -392,13 +417,13 @@ def NaiveBoxingToPhysicalBlobObjects(
     boxing_parallel_desc_symbol,
     out_parallel_num,
 ):
-    op_attribute = ConstructConcatSplitBoxingOpConf(
+    op_attribute = ConstructNaiveBoxingOpConf(
         produced_blob_object,
         consumer_op_arg_parallel_attr,
         len(physical_in_blob_objects),
         out_parallel_num,
     )
-    return BuildConcatSplitBoxing(
+    return BuildNaiveCpuBoxing(
         builder,
         op_attribute,
         physical_in_blob_objects,
@@ -437,7 +462,7 @@ def PackPhysicalBoxingBlobObjectsToLogical(
     )
 
 
-def BuildConcatSplitBoxing(
+def BuildNaiveCpuBoxing(
     builder,
     op_attribute,
     physical_in_blob_objects,
@@ -455,7 +480,8 @@ def BuildConcatSplitBoxing(
     return [bn_in_op2blob_object["out_%s" % i] for i in range(out_parallel_num)]
 
 
-def ConstructConcatSplitBoxingOpConf(
+# S -> S or P -> S
+def ConstructNaiveBoxingOpConf(
     produced_blob_object,
     consumer_op_arg_parallel_attr,
     in_parallel_num,
@@ -469,11 +495,12 @@ def ConstructConcatSplitBoxingOpConf(
     op_conf.boxing_conf.out_num = out_parallel_num
     in_sbp_parallel = produced_blob_object.op_arg_parallel_attr.sbp_parallel
     if in_sbp_parallel.HasField("split_parallel"):
-        in_axis = in_sbp_parallel.split_parallel.axis
+        op_conf.boxing_conf.concat_box.axis = in_sbp_parallel.split_parallel.axis
+    elif in_parallel_num == 1:
+        op_conf.boxing_conf.concat_box.axis = 0
     else:
-        assert in_parallel_num == 1
-        in_axis = 0
-    op_conf.boxing_conf.concat_box.axis = in_axis
+        assert in_sbp_parallel.HasField("partial_sum_parallel")
+        op_conf.boxing_conf.add_box.SetInParent()
     out_sbp_parallel = consumer_op_arg_parallel_attr.sbp_parallel
     if out_sbp_parallel.HasField("split_parallel"):
         out_axis = out_sbp_parallel.split_parallel.axis
@@ -684,6 +711,15 @@ def _GetEagerNcclAllReduce(parallel_conf):
     return c_api_util.GetOpAttribute4OpConf(op_conf)
 
 
+NcclAllReduce = Sequential(
+    boxing_middle.BoxingToMiddle(
+        GpuNcclAllReduce,
+        boxing_middle.ProducerParallelDesc,
+        boxing_middle.BroadcastParallel,
+    ),
+    OptionalBoxing(CopyD2H),
+)
+
 conditional_function_table = [
     CopyH2D,
     CopyD2H,
@@ -741,26 +777,66 @@ conditional_function_table = [
             boxing_middle.ProducerSbpParallel,
         ),
         boxing_middle.BoxingToMiddle(
-            NaiveCpuConcatSplit,
+            NaiveCpuSplitToSplit,
             boxing_middle.ReplaceConsumerDeviceTag("cpu"),
             boxing_middle.ConsumerSbpParallel,
         ),
         OptionalBoxing(CopyH2D),
     ),
     # P -> B
-    # e.g. 0:gpu:0-3 -> 0:gpu:0-3
+    NcclAllReduce, # e.g. 0:gpu:0-3 -> 0:gpu:0-3
     Sequential(
         boxing_middle.BoxingToMiddle(
-            OptionalBoxing(CopyH2D),
-            boxing_middle.ReplaceProducerDeviceTag("gpu"),
+            OptionalBoxing(CopyD2H),
+            boxing_middle.ReplaceProducerDeviceTag("cpu"),
             boxing_middle.ProducerSbpParallel,
         ),
         boxing_middle.BoxingToMiddle(
-            NcclAllReduce,
-            boxing_middle.ProducerParallelDesc,
+            NaiveCpuPartialSumToSplit,
+            boxing_middle.ConsumerRandomParallelIdPerMachine("cpu"),
             boxing_middle.BroadcastParallel,
         ),
-        OptionalBoxing(CopyD2H),
+        boxing_middle.BoxingToMiddle(
+            CpuBroadcastOneToMany,
+            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+            boxing_middle.BroadcastParallel,
+        ),
+        OptionalBoxing(CopyH2D),
+        exclude=(NcclAllReduce,),
+    ),
+    # P -> S
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            OptionalBoxing(CopyD2H),
+            boxing_middle.ReplaceProducerDeviceTag("cpu"),
+            boxing_middle.ProducerSbpParallel,
+        ),
+        boxing_middle.BoxingToMiddle(
+            NaiveCpuPartialSumToSplit,
+            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+            boxing_middle.ConsumerSbpParallel,
+        ),
+        OptionalBoxing(CopyH2D),
+    ),
+    # S -> B
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            OptionalBoxing(CopyD2H),
+            boxing_middle.ReplaceProducerDeviceTag("cpu"),
+            boxing_middle.ProducerSbpParallel,
+        ),
+        boxing_middle.BoxingToMiddle(
+            NaiveCpuSplitToSplit,
+            boxing_middle.ConsumerRandomParallelIdPerMachine("cpu"),
+            boxing_middle.BroadcastParallel,
+        ),
+        boxing_middle.BoxingToMiddle(
+            CpuBroadcastOneToMany,
+            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+            boxing_middle.BroadcastParallel,
+        ),
+        OptionalBoxing(CopyH2D),
+        exclude=(NcclAllReduce,),
     ),
     # S -> S
     Sequential(
@@ -770,7 +846,7 @@ conditional_function_table = [
             boxing_middle.ProducerSbpParallel,
         ),
         boxing_middle.BoxingToMiddle(
-            NaiveCpuConcatSplit,
+            NaiveCpuSplitToSplit,
             boxing_middle.ReplaceConsumerDeviceTag("cpu"),
             boxing_middle.ConsumerSbpParallel,
         ),
