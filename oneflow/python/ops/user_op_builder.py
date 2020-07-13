@@ -144,7 +144,7 @@ class UserOpConfBuilder(object):
                 assert attr_type_name == "AttrTypeInt32"
             assert isinstance(attr_value, int)
             attribute.at_int32 = attr_value
-        elif attr_type == user_op_attr_util.KAt64:
+        elif attr_type == user_op_attr_util.kAtInt64:
             if attr_type_name != "":
                 assert attr_type_name == "AttrTypeInt64"
             assert isinstance(attr_value, int)
