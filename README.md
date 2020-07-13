@@ -19,7 +19,7 @@
 
 1. #### System Requirements
 
-    Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable. 
+    Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable.
 
     ```
     export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
@@ -57,7 +57,7 @@
     pip3 install -r dev-requirements.txt --user
     ```
 
-4. #### Build OneFlow
+4. #### Build and Install OneFlow
 
     Enter Build Directory, run:
 
@@ -68,20 +68,8 @@
     Inside directory `build`, run:
     ```
     cmake ..
-
     make -j$(nproc)
-    ```
-
-5. #### Install OneFlow
-
-    In the root path of OneFlow repo, run:
-    ```
-    pip3 install -e . --user
-    ```
-
-    Alternatively, you can also install OneFlow by adding `build/python_scripts` to your `PYTHONPATH`:
-    ```
-    export PYTHONPATH=$HOME/oneflow/build/python_scripts:$PYTHONPATH
+    make pip_install
     ```
 
 ### Troubleshooting
