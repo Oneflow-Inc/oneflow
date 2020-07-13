@@ -8,18 +8,14 @@ namespace tensorrt {
 class SoftmaxOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    Shape in_shape = ctx->InputShape("in");
+    Shape in_shape = ctx->SoleInputShape();
     CHECK_GE(in_shape.NumAxes(), 2);
-
-    int32_t axis = ctx->Attr<int32_t>("axis");
-    if (axis < 0) { axis += in_shape.NumAxes(); }
-    CHECK_LT(axis, in_shape.NumAxes());
-
-    nvinfer1::ITensor *in = ctx->Input("in");
+    int32_t axis = in_shape.NumAxes() - 1;
+    nvinfer1::ITensor *in = ctx->SoleInput();
     auto *layer = ctx->builder()->addSoftMax(*in);
     layer->setAxes((1U << axis));
     layer->setName(ctx->op_name().c_str());
-    ctx->SetOutput("out", layer->getOutput(0));
+    ctx->SetSoleOutput(layer->getOutput(0));
   }
 };
 

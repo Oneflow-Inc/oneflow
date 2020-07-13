@@ -10,16 +10,16 @@ namespace mola {
 class BatchMatMulOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    Shape shape_a = ctx->InputShape("a");
-    Shape shape_b = ctx->InputShape("b");
+    Shape shape_a = ctx->InputShape("a_0");
+    Shape shape_b = ctx->InputShape("b_0");
     CHECK_EQ(shape_a.NumAxes(), shape_b.NumAxes());
     CHECK_GT(shape_a.NumAxes(), 2);
 
     bool transpose_a = ctx->Attr<bool>("transpose_a");
     bool transpose_b = ctx->Attr<bool>("transpose_b");
 
-    xla::XlaOp a = ctx->Input("a");
-    xla::XlaOp b = ctx->Input("b");
+    xla::XlaOp a = ctx->Input("a_0");
+    xla::XlaOp b = ctx->Input("b_0");
 
     // int axis = shape_a.NumAxes();
     // std::vector<long long int> permute_a(axis), permute_b(axis);
@@ -39,7 +39,7 @@ class BatchMatMulOp : public XlaOpKernel {
 
     // ctx->SetOutput("out", xla::BatchDot(lhs, rhs));
 
-    ctx->SetOutput("out", xla::BatchDot(a, transpose_a, b, transpose_b));
+    ctx->SetOutput("out_0", xla::BatchDot(a, transpose_a, b, transpose_b));
   }
 };
 
