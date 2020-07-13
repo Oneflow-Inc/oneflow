@@ -784,7 +784,7 @@ conditional_function_table = [
         OptionalBoxing(CopyH2D),
     ),
     # P -> B
-    NcclAllReduce, # e.g. 0:gpu:0-3 -> 0:gpu:0-3
+    NcclAllReduce,  # e.g. 0:gpu:0-3 -> 0:gpu:0-3
     Sequential(
         boxing_middle.BoxingToMiddle(
             OptionalBoxing(CopyD2H),

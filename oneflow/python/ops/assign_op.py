@@ -19,12 +19,6 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("assign")
-def api_assign(ref, value, dtype=None, name=None):
-    api = enable_if.unique([assign])
-    return api(ref, value, dtype=dtype, name=name)
-
-
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def assign(ref, value, dtype=None, name=None):
     if name is None:
         name = id_util.UniqueStr("Assign_")
