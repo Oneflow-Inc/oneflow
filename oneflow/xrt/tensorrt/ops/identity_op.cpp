@@ -8,10 +8,10 @@ namespace tensorrt {
 class IdentityOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    nvinfer1::ITensor *in = ctx->Input("in");
+    nvinfer1::ITensor *in = ctx->SoleInput();
     auto *layer = ctx->builder()->addIdentity(*in);
     layer->setName(ctx->op_name().c_str());
-    ctx->SetOutput("out", layer->getOutput(0));
+    ctx->SetSoleOutput(layer->getOutput(0));
   }
 };
 
