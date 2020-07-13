@@ -22,11 +22,6 @@ message ReduceSumKernelConf {
   required ShapeProto kept_dims_shape = 1;
 }
 
-message TransposeKernelConf {
-  repeated int32 perm = 1;
-  repeated int32 invert_perm = 2;
-}
-
 message LocalResponseNormalizationKernelConf {
   required ShapeProto batch = 1;
 }
@@ -52,10 +47,6 @@ message ConstantKernelConf {
   required uint32 random_seed = 2;
 }
 
-message GatherKernelConf {
-  required int64 axis = 1;
-}
-
 message VariableKernelConf {
   required bool is_fw_inplace = 1;
   required bool is_bw_inplace = 2;
@@ -73,15 +64,6 @@ message PReluAlphaGradKernelConf {
 
 message ShapeElemCntKernelConf {
   repeated int32 axis = 1;
-}
-
-message GatherMs0KernelConf {
-  required int64 offset = 1;
-}
-
-message GatherMs0GradKernelConf {
-  required int64 offset = 1;
-  required DataType indices_data_type = 2;
 }
 
 message ModelIoV2KernelConf {
@@ -106,11 +88,6 @@ message UniqueWithCountsKernelConf {
 
 message IndexedSlicesReduceSumKernelConf {
   required DataType indices_data_type = 1;
-}
-
-message UnsortedSegmentSumKernelConf {
-  required DataType indices_data_type = 1;
-  required int64 axis = 2;
 }
 
 message IndexedSlicesNaiveModelUpdateKernelConf {
@@ -156,14 +133,12 @@ message KernelConf {
     UserKernelConf user_conf = 100;
     DecodeRandomKernelConf decode_random_conf = 103;
     DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
-    TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
     XrtLaunchKernelConf xrt_launch_conf = 353;
     UniqueWithCountsKernelConf unique_with_counts_conf = 354;
     IndexedSlicesReduceSumKernelConf indexed_slices_reduce_sum_conf = 355;
-    UnsortedSegmentSumKernelConf unsorted_segment_sum_conf = 356;
     IndexedSlicesNaiveModelUpdateKernelConf indexed_slices_naive_model_update_conf = 357;
     IndexedSlicesMomentumModelUpdateKernelConf indexed_slices_momentum_model_update_conf = 358;
     IndexedSlicesLazyAdamModelUpdateKernelConf indexed_slices_lazy_adam_model_update_conf = 359;
@@ -172,13 +147,10 @@ message KernelConf {
 
     SliceKernelConf slice_conf = 402;
     ConstantKernelConf constant_conf = 403;
-    GatherKernelConf gather_conf = 406;
     VariableKernelConf variable_conf = 407;
     RecordLoadKernelConf record_load_conf = 408;
     PReluAlphaGradKernelConf prelu_alpha_grad_conf = 409;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
-    GatherMs0KernelConf gather_ms0_conf = 414;
-    GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
     ModelIoV2KernelConf model_io_v2_conf = 418;
     BroadcastToCompatibleWithKernelConf broadcast_to_compatible_with_conf = 428;
   }
