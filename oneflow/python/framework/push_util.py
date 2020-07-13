@@ -68,7 +68,15 @@ def _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_value):
             assert len(v.shape) == len(arg_blob_def.shape)
             assert numpy.prod(v.shape) <= numpy.prod(arg_blob_def.shape)
     elif isinstance(arg_blob_def, input_blob_def.MirroredTensorListDef):
-        raise NotImplementedError
+        assert isinstance(arg_value, (list, tuple))
+        for ndarray_list in arg_value:
+            for ndarray in ndarray_list:
+                assert isinstance(ndarray, numpy.ndarray)
+                assert len(ndarray.shape) == len(arg_blob_def.shape)
+                assert (
+                    numpy.prod(ndarray.shape)
+                    <= numpy.prod(arg_blob_def.shape) / arg_blob_def.shape[0]
+                )
     else:
         raise NotImplementedError
 
@@ -200,11 +208,35 @@ class FeedContext(object):
         assert elem_cnt <= capacity, "%s v.s. %s" % (ndarray.shape, static_shape)
         return ndarray
 
+    def GetMirroredTensorList(self, static_shape):
+        assert isinstance(self.arg_ndarray_, (list, tuple))
+        parallel_num = self.op_arg_parallel_attr_.parallel_desc_symbol.parallel_num
+        assert self.rank_ >= 0
+        assert self.rank_ < parallel_num
+        assert len(self.arg_ndarray_) == parallel_num
+        assert all(isinstance(a, (list, tuple)) for a in self.arg_ndarray_)
+        ndarray_list = self.arg_ndarray_[self.rank_]
+        assert all(isinstance(arr, numpy.ndarray) for arr in ndarray_list)
+        capacity = numpy.prod(static_shape) / static_shape[0]
+        assert all(numpy.prod(arr.shape) <= capacity for arr in ndarray_list)
+        return ndarray_list
+
 
 def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
     assert isinstance(blob_def, input_blob_def.ArgBlobDef)
     assert isinstance(blob_object, object_util.BlobObject)
 
+    FeedBlob = _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object)
+    assert callable(FeedBlob)
+
+    def BuildFeedInstruction(builder):
+        builder.FeedBlob(blob_object, FeedBlob)
+
+    vm_util.PhysicalRun(BuildFeedInstruction)
+    python_callback.DeleteRegisteredCallback(FeedBlob)
+
+
+def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):
     if isinstance(blob_def, input_blob_def.FixedTensorDef):
 
         def FeedBlob(ofblob):
@@ -218,12 +250,6 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
             if ofblob.CopyFromNdarray(ndarray) is False:
                 raise ValueError
 
-        def BuildFeedInstruction(builder):
-            builder.FeedBlob(blob_object, FeedBlob)
-
-        vm_util.PhysicalRun(BuildFeedInstruction)
-        python_callback.DeleteRegisteredCallback(FeedBlob)
-
     elif isinstance(blob_def, input_blob_def.MirroredTensorDef):
 
         def FeedBlob(ofblob):
@@ -234,13 +260,19 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
             if ofblob.CopyFromNdarray(ndarray) is False:
                 raise ValueError
 
-        def BuildFeedInstruction(builder):
-            builder.FeedBlob(blob_object, FeedBlob)
-
-        vm_util.PhysicalRun(BuildFeedInstruction)
-        python_callback.DeleteRegisteredCallback(FeedBlob)
-
     elif isinstance(blob_def, input_blob_def.MirroredTensorListDef):
-        raise NotImplementedError
+
+        def FeedBlob(ofblob):
+            assert ofblob.is_tensor_list
+            ndarray_list = feed_ctx.GetMirroredTensorList(ofblob.static_shape)
+            assert isinstance(ndarray_list, (list, tuple))
+            assert all(isinstance(ndarray, numpy.ndarray) for ndarray in ndarray_list)
+            dtype = dtype_util.convert_of_dtype_to_numpy_dtype(ofblob.dtype)
+            assert all(ndarray.dtype == dtype for ndarray in ndarray_list)
+            if ofblob.CopyFromNdarrayList(ndarray_list) is False:
+                raise ValueError
+
     else:
         raise NotImplementedError
+
+    return FeedBlob

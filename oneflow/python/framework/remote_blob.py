@@ -231,7 +231,17 @@ class EagerBlobTrait(object):
             return self._NumpyAt(rank)
 
     def numpy_list(self, rank=None):
-        raise NotImplementedError
+        assert self.is_tensor_list
+        assert self.is_dynamic
+        mirrored_list = self._NumpyMirroredList()
+        if rank is None:
+            return mirrored_list
+        else:
+            parallel_num = self.blob_object_.parallel_desc_symbol.parallel_num
+            assert rank >= 0
+            assert rank < parallel_num
+            assert len(mirrored_list) == parallel_num
+            return mirrored_list[rank]
 
     @property
     def sub_consistent_blob_list(self):
@@ -334,7 +344,6 @@ class EagerBlobTrait(object):
         return blob_cache.GetCachedNumpy(FetchBlobNumpy)
 
     def _NumpyMirroredList(self):
-        assert self.is_tensor_list is not True
         physical_blob_objects = []
 
         def UnpackLogicalBlobToPhysicalBlobs(builder):
@@ -346,7 +355,11 @@ class EagerBlobTrait(object):
         def GetPhyBlobNumpy(i, phy_blob_object):
             name = "{}/{}".format(self.logical_blob_name, i)
             blob_register.SetObject4BlobName(name, phy_blob_object)
-            return eager_blob_util.EagerPhysicalBlob(name).numpy()
+            return (
+                eager_blob_util.EagerPhysicalBlob(name).numpy_list()
+                if self.is_tensor_list
+                else eager_blob_util.EagerPhysicalBlob(name).numpy()
+            )
 
         def FetchBlobNumpyMirroredList(blob_object):
             vm_util.LogicalRun(UnpackLogicalBlobToPhysicalBlobs)

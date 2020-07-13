@@ -47,6 +47,10 @@ class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
         assert not self.is_tensor_list
         return _GetPhysicalBlobBodyCache(self.blob_object_)
 
+    def numpy_list(self):
+        assert self.is_tensor_list
+        return _GetPhysicalBlobBodyCache(self.blob_object_)
+
     def __str__(self):
         return "EagerPhysicalBlob(shape=%s, dtype=%s, is_tensor_list=%s)" % (
             self.shape,
@@ -94,18 +98,26 @@ def _FetchPhysicalBlobBody(blob_object):
 
 def _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield):
     def Callback(ofblob):
-        # TODO(lixinqi) refactor ofblob.static_shape ofblob.shape_list
-        static_shape = ofblob.static_shape
-        shape = ofblob.shape
         Yield(
-            EagerPhysicalBlobHeader(shape, [shape], ofblob.dtype, ofblob.is_tensor_list)
+            EagerPhysicalBlobHeader(
+                ofblob.static_shape,
+                ofblob.shape_list,
+                ofblob.dtype,
+                ofblob.is_tensor_list,
+            )
         )
 
     return Callback
 
 
 def _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield):
-    return lambda ofblob: Yield(ofblob.CopyToNdarray())
+    def FetchFromOfBlob(ofblob):
+        if ofblob.is_tensor_list:
+            Yield(ofblob.CopyToFlatNdarrayList())
+        else:
+            Yield(ofblob.CopyToNdarray())
+
+    return FetchFromOfBlob
 
 
 class EagerPhysicalBlobHeader(object):
@@ -124,6 +136,11 @@ class EagerPhysicalBlobHeader(object):
         assert len(self.shape_list_) == 1
         assert not self.is_tensor_list_
         return self.shape_list_[0]
+
+    @property
+    def shape_list(self):
+        assert self.is_tensor_list_
+        return self.shape_list_
 
     @property
     def dtype(self):
