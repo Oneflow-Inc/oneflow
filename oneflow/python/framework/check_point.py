@@ -7,6 +7,7 @@ import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
+from typing import List, Union
 
 
 @oneflow_export("train.CheckPoint")
@@ -138,7 +139,7 @@ class SimpleCheckPointManager(object):
         self._prefix = prefix
         self._checkpoint = CheckPoint()
 
-    def list_checkpoints(self) -> list:
+    def list_checkpoints(self) -> List[str]:
         def is_snapshot(name):
             if not name.startswith(self._prefix):
                 return False
@@ -147,7 +148,7 @@ class SimpleCheckPointManager(object):
 
         return sorted([f for f in os.listdir(self._root_path) if is_snapshot(f)])
 
-    def latest_checkpoint(self) -> str:
+    def latest_checkpoint(self) -> Union[str, None]:
         names = self.list_checkpoints()
         if not names:
             return None
