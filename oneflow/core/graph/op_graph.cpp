@@ -472,11 +472,11 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
     ibn2sbp_infer_hint.emplace(ibn,
                                SbpInferHint(parallel_desc, logical_blob_desc, sbp, batch_axis));
   }
-  const auto& BatchAxis4Lbi = [&](const LogicalBlobId& lbi) -> Maybe<const OptInt64*> {
-    return op_node->BatchAxis4Lbi(lbi);
+  const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const OptInt64*> {
+    return op_node->op().BatchAxis4BnInOp(bn_in_op);
   };
   CHECK_JUST(InferOpSbpSignature(op_node->mut_op(), sbp_sig_conf, op_node->parallel_desc(),
-                                 ibn2sbp_infer_hint, BatchAxis4Lbi));
+                                 ibn2sbp_infer_hint, BatchAxis4BnInOp));
   op_node->InitLbi2SbpParallel();
 }
 
@@ -587,21 +587,6 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
         }));
     return Maybe<void>::Ok();
   }));
-  // fix sbp_signature
-  {
-    TopoForEachNode([&](OpNode* op_node) {
-      if (op_node->op().op_conf().op_type_case() == OperatorConf::kCastConf) {
-        if (op_node->out_edges().size() > 1) { return; }
-        if (dynamic_cast<const NormalModelUpdtOp*>(&(op_node->SoleOutEdge()->dst_node()->op()))) {
-          auto* bn2sbp = op_node->mut_sbp_signature()->mutable_bn_in_op2sbp_parallel();
-          if (bn2sbp->at("out").has_partial_sum_parallel() && GlobalJobDesc().all_reduce_fp16()) {
-            bn2sbp->at("in").mutable_broadcast_parallel();
-            bn2sbp->at("out").mutable_broadcast_parallel();
-          }
-        }
-      }
-    });
-  }
   return Maybe<void>::Ok();
 }
 

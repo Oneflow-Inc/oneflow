@@ -74,11 +74,11 @@ void MakeSendRequests(Instruction* instruction,
     data_token->mutable_mirrored_token()->set_global_device_id(stream.global_device_id());
     data_size = view->size();
     const auto& src_buffer_type =
-        instruction->operand_type(view->src())->Get<MemBufferObjectType>();
+        *CHECK_JUST(instruction->operand_type(view->src())->Get<MemBufferObjectType>());
     CHECK_LE(data_size, src_buffer_type.size());
     CHECK(src_buffer_type.mem_case().has_host_mem());
     const auto& src_buffer_value =
-        instruction->operand_value(view->src())->Get<MemBufferObjectValue>();
+        *CHECK_JUST(instruction->operand_value(view->src())->Get<MemBufferObjectValue>());
     data_ptr = src_buffer_value.data();
   }
   std::atomic<int64_t>* incomplete_cnt = nullptr;
@@ -129,6 +129,8 @@ void L2RSenderStreamType::Compute(Instruction* instruction) const {
 
 ObjectMsgPtr<StreamDesc> L2RSenderStreamType::MakeStreamDesc(const Resource& resource,
                                                              int64_t this_machine_id) const {
+  // TODO(lixinqi) refactor for multi nodes
+  if (this_machine_id != 0) { return ObjectMsgPtr<StreamDesc>(); }
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<L2RSenderStreamType>());
   ret->set_num_machines(1);

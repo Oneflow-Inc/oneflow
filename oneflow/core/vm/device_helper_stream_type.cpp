@@ -44,7 +44,7 @@ class CudaMallocInstructionType final : public InstructionType {
       FlatMsgView<MallocInstruction> view;
       CHECK(view.Match(instruction->instr_msg().operand()));
       const auto& operand = view->mem_buffer();
-      buffer_type = &instruction->mut_operand_type(operand)->Get<MemBufferObjectType>();
+      buffer_type = CHECK_JUST(instruction->mut_operand_type(operand)->Get<MemBufferObjectType>());
       buffer_value = instruction->mut_operand_value(operand)->Init<MemBufferObjectValue>();
     }
     const auto& stream = instruction->stream();
@@ -68,7 +68,7 @@ class CudaFreeInstructionType final : public InstructionType {
       FlatMsgView<FreeInstruction> view;
       CHECK(view.Match(instruction->instr_msg().operand()));
       type_rw_mutexed_object = instruction->mut_operand_type(view->mem_buffer());
-      const auto& buffer_type = type_rw_mutexed_object->Get<MemBufferObjectType>();
+      const auto& buffer_type = *CHECK_JUST(type_rw_mutexed_object->Get<MemBufferObjectType>());
       CHECK(buffer_type.mem_case().has_device_cuda_mem());
     }
     type_rw_mutexed_object->reset_object();
@@ -125,6 +125,7 @@ ObjectMsgPtr<StreamDesc> DeviceHelperStreamType::MakeStreamDesc(const Resource& 
   if (resource.has_gpu_device_num()) {
     device_num = std::max<std::size_t>(device_num, resource.gpu_device_num());
   }
+  if (device_num == 0) { return ObjectMsgPtr<StreamDesc>(); }
   CHECK_GT(device_num, 0);
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DeviceHelperStreamType>());
