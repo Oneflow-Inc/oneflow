@@ -24,22 +24,22 @@ class BoxingHobContext(object):
 
 
 class ComposeHob(BoolFunctor):
-    def __init__(self, lhs_hob, rhs_hob, get_middle_op_arg_parallel_attr):
+    def __init__(
+        self, lhs_hob, rhs_hob, get_middle_op_arg_parallel_attr, middle_verbose_str=None
+    ):
         self.get_middle_op_arg_parallel_attr_ = get_middle_op_arg_parallel_attr
         self.lhs_hob_ = lhs_hob
         self.rhs_hob_ = rhs_hob
         self.ctx_id2middle_op_arg_parallel_attr_ = {}
+        self.middle_verbose_str_ = middle_verbose_str
 
-    def debug_str(self, ctx, display_result=True):
+    def verbose_debug_str(self, ctx, display_result=True):
         left_display = self.lhs_hob_.debug_str(self._GetLhsContext(ctx), display_result)
         display_result = display_result and self.lhs_hob_(self._GetLhsContext(ctx))
         right_display = self.rhs_hob_.debug_str(
             self._GetRhsContext(ctx), display_result
         )
-        middle_name = self.get_middle_op_arg_parallel_attr_.__name__
-        if hasattr(self.get_middle_op_arg_parallel_attr_, "__debug_str__"):
-            middle_name = self.get_middle_op_arg_parallel_attr_.__debug_str__
-        return "{%s} (->%s->) {%s}" % (left_display, middle_name, right_display)
+        return "%s -> %s" % (left_display, right_display)
 
     def __call__(self, ctx):
         return self.lhs_hob_(self._GetLhsContext(ctx)) and self.rhs_hob_(
@@ -79,6 +79,9 @@ class ComposeHob(BoolFunctor):
             value = self.get_middle_op_arg_parallel_attr_(
                 None, ctx.produced_blob_object, ctx.consumer_op_arg_parallel_attr
             )
+            if self.middle_verbose_str_ is not None:
+                print("=== %s ===" % self.middle_verbose_str_)
+                print(value)
             ctx.composer2middle_op_arg_parallel_attr[self] = value
         return ctx.composer2middle_op_arg_parallel_attr[self]
 

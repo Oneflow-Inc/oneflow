@@ -58,6 +58,16 @@ def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return function(builder, produced_blob_object, consumer_op_arg_parallel_attr)
 
 
+def boxing_condition(hob_expr, verbose=False):
+    def Decorator(func):
+        func.__oneflow_condition_hob__ = hob_expr
+        if not verbose:
+            hob_expr.__debug_str__ = GetBoxingDebugString(func)
+        return func
+
+    return Decorator
+
+
 def FirstMatchedBoxing(*boxing_methods):
     hob_expr = enable_if.get_condition_hob(boxing_methods[0])
     for boxing_method in boxing_methods[1:]:
@@ -80,17 +90,20 @@ def FirstMatchedBoxing(*boxing_methods):
 
 
 def OptionalBoxing(boxing_method):
-    opt_boxing_method = FirstMatchedBoxing(NoBoxing, boxing_method)
+    opt_boxing_method = FirstMatchedBoxing(boxing_method, NoBoxing)
     debug_str = "Optional(%s)" % GetBoxingDebugString(boxing_method)
     opt_boxing_method.__debug_str__ = debug_str
     return opt_boxing_method
 
 
-def ComposeBoxing(lhs_boxing, rhs_boxing, get_middle_op_arg_parallel_attr):
+def ComposeBoxing(
+    lhs_boxing, rhs_boxing, get_middle_op_arg_parallel_attr, middle_verbose_str=None
+):
     composed_hob = boxing_hob.ComposeHob(
         enable_if.get_condition_hob(lhs_boxing),
         enable_if.get_condition_hob(rhs_boxing),
         get_middle_op_arg_parallel_attr=get_middle_op_arg_parallel_attr,
+        middle_verbose_str=middle_verbose_str,
     )
 
     @enable_if.condition(composed_hob)
@@ -105,6 +118,8 @@ def ComposeBoxing(lhs_boxing, rhs_boxing, get_middle_op_arg_parallel_attr):
         GetBoxingDebugString(lhs_boxing),
         GetBoxingDebugString(rhs_boxing),
     )
+    Composed.__left_debug_str__ = GetBoxingLeftDebugString(lhs_boxing)
+    Composed.__right_debug_str__ = GetBoxingRightDebugString(rhs_boxing)
     return Composed
 
 
@@ -115,15 +130,37 @@ def GetBoxingDebugString(boxing_method):
         return boxing_method.__name__
 
 
-def Sequential(*boxing_methods, override=tuple()):
+def GetBoxingLeftDebugString(boxing_method):
+    if hasattr(boxing_method, "__left_debug_str__"):
+        return boxing_method.__left_debug_str__
+    else:
+        return GetBoxingDebugString(boxing_method)
+
+
+def GetBoxingRightDebugString(boxing_method):
+    if hasattr(boxing_method, "__right_debug_str__"):
+        return boxing_method.__right_debug_str__
+    else:
+        return GetBoxingDebugString(boxing_method)
+
+
+def Sequential(*boxing_methods, override=tuple(), middle_verbose=False):
     assert not isinstance(boxing_methods[-1], boxing_middle.BoxingToMiddle)
     composed = boxing_methods[-1]
     for boxing_to_middle in boxing_methods[-2::-1]:
         assert isinstance(boxing_to_middle, boxing_middle.BoxingToMiddle)
+        if middle_verbose:
+            middle_verbose_str = "middle op_arg_parallel_attr of %s->%s:" % (
+                GetBoxingDebugString(boxing_to_middle.boxing_method),
+                GetBoxingLeftDebugString(composed),
+            )
+        else:
+            middle_verbose_str = None
         composed = ComposeBoxing(
             boxing_to_middle.boxing_method,
             composed,
             boxing_to_middle.get_middle_op_arg_parallel_attr,
+            middle_verbose_str=middle_verbose_str,
         )
     if len(override) > 0:
         override_hob = enable_if.get_condition_hob(override[0])
@@ -149,7 +186,7 @@ MatchCopyH2D = (
 )
 
 
-@enable_if.condition(MatchCopyH2D)
+@boxing_condition(MatchCopyH2D)
 def CopyH2D(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return CopyHD(builder, produced_blob_object, consumer_op_arg_parallel_attr)
 
@@ -169,7 +206,7 @@ MatchCopyD2H = (
 )
 
 
-@enable_if.condition(MatchCopyD2H)
+@boxing_condition(MatchCopyD2H)
 def CopyD2H(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return CopyHD(builder, produced_blob_object, consumer_op_arg_parallel_attr)
 
@@ -180,7 +217,7 @@ def CopyHD(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return BuildCopyHdInstruction(builder, produced_blob_object, op_device_tag)
 
 
-MatchCpuNonBroadcastManyOneToOne = (
+MatchCpuOneToOne = (
     boxing_hob.MasterMachineOnly
     & (boxing_hob.producer_parallel_desc.device_tag == "cpu")
     & (boxing_hob.consumer_parallel_desc.device_tag == "cpu")
@@ -189,16 +226,15 @@ MatchCpuNonBroadcastManyOneToOne = (
         boxing_hob.producer_parallel_desc.parallel_num
         == boxing_hob.consumer_parallel_desc.parallel_num
     )
-    & (boxing_hob.producer_parallel_desc.parallel_num > 1)
-    & (boxing_hob.producer_sbp_parallel == boxing_hob.consumer_sbp_parallel)
-    & ~boxing_hob.producer_sbp_parallel.HasField("broadcast_parallel")
+    & (
+        (boxing_hob.producer_sbp_parallel == boxing_hob.consumer_sbp_parallel)
+        | (boxing_hob.producer_parallel_desc.parallel_num == 1)
+    )
 )
 
 
-@enable_if.condition(MatchCpuNonBroadcastManyOneToOne)
-def CpuNonBroadcastManyOneToOne(
-    builder, produced_blob_object, consumer_op_arg_parallel_attr
-):
+@boxing_condition(MatchCpuOneToOne)
+def CpuOneToOne(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     def get_identity_physical_in_blob_objects(
         builder,
         produced_blob_object,
@@ -227,7 +263,7 @@ MatchNoBoxing = (
 )
 
 
-@enable_if.condition(MatchNoBoxing)
+@boxing_condition(MatchNoBoxing)
 def NoBoxing(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return produced_blob_object
 
@@ -246,7 +282,7 @@ MatchNcclAllReduce = (
 )
 
 
-@enable_if.condition(MatchNcclAllReduce)
+@boxing_condition(MatchNcclAllReduce)
 def NcclAllReduce(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     parallel_conf = consumer_op_arg_parallel_attr.parallel_desc_symbol.parallel_conf
     op_attribute = _GetEagerNcclAllReduce(parallel_conf)
@@ -296,7 +332,7 @@ MatchNaiveCpuConcatSplit = (
 )
 
 
-@enable_if.condition(MatchNaiveCpuConcatSplit)
+@boxing_condition(MatchNaiveCpuConcatSplit)
 def NaiveCpuConcatSplit(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return NaiveCpuRefPhysicalBlobObjectsScope(
         builder,
@@ -479,7 +515,7 @@ MatchCpuBroadcastOneToMany = (
 )
 
 
-@enable_if.condition(MatchCpuBroadcastOneToMany)
+@boxing_condition(MatchCpuBroadcastOneToMany)
 def CpuBroadcastOneToMany(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return CpuOneToManyBroadcastBlobReference(
         builder,
@@ -501,7 +537,7 @@ MatchBroadcastManyToOne = (
 )
 
 
-@enable_if.condition(MatchBroadcastManyToOne)
+@boxing_condition(MatchBroadcastManyToOne)
 def BroadcastManyToOne(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     y_blob_objects = builder.UnpackLogicalBlobToPhysicalBlobs(produced_blob_object)
     for y in y_blob_objects:
@@ -659,7 +695,7 @@ conditional_function_table = [
             boxing_middle.ProducerSbpParallel,
         ),
         boxing_middle.BoxingToMiddle(
-            CpuNonBroadcastManyOneToOne,
+            CpuOneToOne,
             boxing_middle.ReplaceConsumerDeviceTag("cpu"),
             boxing_middle.ConsumerSbpParallel,
         ),
@@ -667,8 +703,8 @@ conditional_function_table = [
     ),
     Sequential(
         boxing_middle.BoxingToMiddle(
-            BroadcastManyToOne,
-            boxing_middle.ProducerRandomParallelIdPerMachine,
+            OptionalBoxing(BroadcastManyToOne),
+            boxing_middle.ProducerRandomParallelIdPerMachine(),
             boxing_middle.ProducerSbpParallel,
         ),
         boxing_middle.BoxingToMiddle(
@@ -676,39 +712,18 @@ conditional_function_table = [
             boxing_middle.ReplaceProducerDeviceTag("cpu"),
             boxing_middle.ProducerSbpParallel,
         ),
-        OptionalBoxing(CopyH2D),
-    ),
-    Sequential(
         boxing_middle.BoxingToMiddle(
-            OptionalBoxing(CopyD2H),
-            boxing_middle.ReplaceProducerDeviceTag("cpu"),
-            boxing_middle.ProducerSbpParallel,
+            OptionalBoxing(CpuOneToOne),
+            boxing_middle.ConsumerRandomParallelIdPerMachine("cpu"),
+            boxing_middle.BroadcastParallel,
         ),
         boxing_middle.BoxingToMiddle(
-            CpuBroadcastOneToMany,
+            OptionalBoxing(CpuBroadcastOneToMany),
             boxing_middle.ReplaceConsumerDeviceTag("cpu"),
             boxing_middle.BroadcastParallel,
         ),
         OptionalBoxing(CopyH2D),
-    ),
-    Sequential(
-        boxing_middle.BoxingToMiddle(
-            BroadcastManyToOne,
-            boxing_middle.ProducerRandomParallelIdPerMachine,
-            boxing_middle.ProducerSbpParallel,
-        ),
-        boxing_middle.BoxingToMiddle(
-            OptionalBoxing(CopyD2H),
-            boxing_middle.ReplaceProducerDeviceTag("cpu"),
-            boxing_middle.ProducerSbpParallel,
-        ),
-        boxing_middle.BoxingToMiddle(
-            CpuBroadcastOneToMany,
-            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
-            boxing_middle.BroadcastParallel,
-        ),
-        OptionalBoxing(CopyH2D),
-        override=(CopyH2D, CopyD2H),
+        override=(CopyH2D, CopyD2H, NoBoxing, CpuOneToOne),
     ),
     # e.g. 0:gpu:0-3 -> 0:gpu:0-3 (P->B)
     Sequential(

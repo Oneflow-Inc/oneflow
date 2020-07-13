@@ -9,12 +9,17 @@ import random
 
 class BoxingToMiddle(object):
     def __init__(
-        self, boxing_method, get_middle_parallel_desc_symbol, get_middle_sbp_parallel
+        self,
+        boxing_method,
+        get_middle_parallel_desc_symbol,
+        get_middle_sbp_parallel,
+        verbose=False,
     ):
         self.boxing_method_ = boxing_method
         self.get_middle_op_arg_parallel_attr_ = MiddleOpArgParallelAttr(
             get_middle_parallel_desc_symbol, get_middle_sbp_parallel,
         )
+        self.verbose_ = verbose
 
     @property
     def boxing_method(self):
@@ -23,6 +28,10 @@ class BoxingToMiddle(object):
     @property
     def get_middle_op_arg_parallel_attr(self):
         return self.get_middle_op_arg_parallel_attr_
+
+    @property
+    def verbose(self):
+        return self.verbose_
 
 
 def MiddleOpArgParallelAttr(get_parallel_desc_symbol, get_sbp_parallel):
@@ -52,12 +61,26 @@ def ReplaceProducerDeviceTag(new_device_tag):
     return Getter
 
 
-def ProducerRandomParallelIdPerMachine(
-    builder, produced_blob_object, consumer_op_arg_parallel_attr
-):
-    return RandomParallelIdPerMachine(
-        produced_blob_object.parallel_desc_symbol, builder=builder
-    )
+def ProducerRandomParallelIdPerMachine(device_tag=None):
+    def Getter(builder, produced_blob_object, consumer_op_arg_parallel_attr):
+        return RandomParallelIdPerMachine(
+            produced_blob_object.parallel_desc_symbol,
+            device_tag=device_tag,
+            builder=builder,
+        )
+
+    return Getter
+
+
+def ConsumerRandomParallelIdPerMachine(device_tag=None):
+    def Getter(builder, produced_blob_object, consumer_op_arg_parallel_attr):
+        return RandomParallelIdPerMachine(
+            consumer_op_arg_parallel_attr.parallel_desc_symbol,
+            device_tag=device_tag,
+            builder=builder,
+        )
+
+    return Getter
 
 
 def ProducerParallelDesc(builder, produced_blob_object, consumer_op_arg_parallel_attr):
@@ -113,10 +136,12 @@ def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
         return builder.GetParallelDescSymbol(parallel_conf)
 
 
-def RandomParallelIdPerMachine(parallel_desc_symbol, builder=None):
-    for device_name in parallel_desc_symbol.parallel_conf.device_name:
-        _, device_tag, _ = device_name.split(":")
-        break
+def RandomParallelIdPerMachine(parallel_desc_symbol, device_tag=None, builder=None):
+    if device_tag is None:
+        for device_name in parallel_desc_symbol.parallel_conf.device_name:
+            _, device_tag, _ = device_name.split(":")
+            break
+    assert device_tag is not None
     parallel_conf = placement_pb.ParallelConf()
     for machine_id, dev_ids in parallel_desc_symbol.machine_id2device_id_list.items():
         dev_id = dev_ids[random.randint(0, len(dev_ids) - 1)]

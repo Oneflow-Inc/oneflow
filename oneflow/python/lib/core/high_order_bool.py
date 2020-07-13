@@ -1,6 +1,6 @@
-def bool_functor(debug_str):
+def bool_functor(verbose_debug_str):
     def Decorator(match_function):
-        return HighOrderBool(debug_str, match_function)
+        return HighOrderBool(verbose_debug_str, match_function)
 
     return Decorator
 
@@ -14,6 +14,14 @@ def hob_context_attr(attr_name):
 
 class BoolFunctor(object):
     def debug_str(self, ctx, display_result=True):
+        if hasattr(self, "__debug_str__"):
+            if display_result:
+                return '"%s"[%s]' % (self.__debug_str__, self(ctx))
+            else:
+                return '"%s"' % self.__debug_str__
+        return self.verbose_debug_str(ctx, display_result=display_result)
+
+    def verbose_debug_str(self, ctx, display_result=True):
         raise NotImplementedError
 
     def __call__(self, ctx):
@@ -30,15 +38,15 @@ class BoolFunctor(object):
 
 
 class HighOrderBool(BoolFunctor):
-    def __init__(self, debug_str, function):
-        self.debug_str_ = debug_str
+    def __init__(self, verbose_debug_str, function):
+        self.verbose_debug_str_ = verbose_debug_str
         self.function_ = function
 
-    def debug_str(self, ctx, display_result=True):
+    def verbose_debug_str(self, ctx, display_result=True):
         if display_result:
-            return '"%s"[%s]' % (self.debug_str_, self.function_(ctx))
+            return '"%s"[%s]' % (self.verbose_debug_str_, self.function_(ctx))
         else:
-            return '"%s"' % self.debug_str_
+            return '"%s"' % self.verbose_debug_str_
 
     def __call__(self, ctx):
         return self.function_(ctx)
@@ -55,7 +63,7 @@ class _AndBoolFunctor(BoolFunctor):
         self.lhs_ = lhs
         self.rhs_ = rhs
 
-    def debug_str(self, ctx, display_result=True):
+    def verbose_debug_str(self, ctx, display_result=True):
         left_display = self.lhs_.debug_str(ctx, display_result)
         display_result = display_result and self.lhs_(ctx)
         right_display = self.rhs_.debug_str(ctx, display_result)
@@ -72,7 +80,7 @@ class _OrBoolFunctor(BoolFunctor):
         self.lhs_ = lhs
         self.rhs_ = rhs
 
-    def debug_str(self, ctx, display_result=True):
+    def verbose_debug_str(self, ctx, display_result=True):
         left_display = self.lhs_.debug_str(ctx, display_result)
         display_result = display_result and (not self.lhs_(ctx))
         right_display = self.rhs_.debug_str(ctx, display_result)
@@ -87,7 +95,7 @@ class _NotBoolFunctor(BoolFunctor):
         assert isinstance(x, BoolFunctor)
         self.x_ = x
 
-    def debug_str(self, ctx, display_result=True):
+    def verbose_debug_str(self, ctx, display_result=True):
         return "(not %s)" % self.x_.debug_str(ctx, display_result)
 
     def __call__(self, ctx):
