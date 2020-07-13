@@ -688,6 +688,7 @@ conditional_function_table = [
     CopyH2D,
     CopyD2H,
     NoBoxing,
+    # one to one
     Sequential(
         boxing_middle.BoxingToMiddle(
             OptionalBoxing(CopyD2H),
@@ -701,6 +702,7 @@ conditional_function_table = [
         ),
         OptionalBoxing(CopyH2D),
     ),
+    # B -> B
     BroadcastManyToOne,
     Sequential(
         boxing_middle.BoxingToMiddle(
@@ -726,7 +728,27 @@ conditional_function_table = [
         OptionalBoxing(CopyH2D),
         exclude=(BroadcastManyToOne, CopyH2D, CopyD2H, NoBoxing, CpuOneToOne),
     ),
-    # e.g. 0:gpu:0-3 -> 0:gpu:0-3 (P->B)
+    # B -> S
+    Sequential(
+        boxing_middle.BoxingToMiddle(
+            BroadcastManyToOne,
+            boxing_middle.ProducerRandomParallelIdPerMachine(),
+            boxing_middle.ProducerSbpParallel,
+        ),
+        boxing_middle.BoxingToMiddle(
+            OptionalBoxing(CopyD2H),
+            boxing_middle.ReplaceProducerDeviceTag("cpu"),
+            boxing_middle.ProducerSbpParallel,
+        ),
+        boxing_middle.BoxingToMiddle(
+            NaiveCpuConcatSplit,
+            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+            boxing_middle.ConsumerSbpParallel,
+        ),
+        OptionalBoxing(CopyH2D),
+    ),
+    # P -> B
+    # e.g. 0:gpu:0-3 -> 0:gpu:0-3
     Sequential(
         boxing_middle.BoxingToMiddle(
             OptionalBoxing(CopyH2D),
@@ -740,6 +762,7 @@ conditional_function_table = [
         ),
         OptionalBoxing(CopyD2H),
     ),
+    # S -> S
     Sequential(
         boxing_middle.BoxingToMiddle(
             OptionalBoxing(CopyD2H),
