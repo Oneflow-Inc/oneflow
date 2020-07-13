@@ -68,7 +68,15 @@ def _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_value):
             assert len(v.shape) == len(arg_blob_def.shape)
             assert numpy.prod(v.shape) <= numpy.prod(arg_blob_def.shape)
     elif isinstance(arg_blob_def, input_blob_def.MirroredTensorListDef):
-        raise NotImplementedError
+        assert isinstance(arg_value, (list, tuple))
+        for ndarray_list in arg_value:
+            for ndarray in ndarray_list:
+                assert isinstance(ndarray, numpy.ndarray)
+                assert len(ndarray.shape) == len(arg_blob_def.shape)
+                assert (
+                    numpy.prod(ndarray.shape)
+                    <= numpy.prod(arg_blob_def.shape) / arg_blob_def.shape[0]
+                )
     else:
         raise NotImplementedError
 
