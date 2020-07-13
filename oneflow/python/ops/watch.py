@@ -34,14 +34,8 @@ def Watch(blob_watched, handler_or_prompt=None):
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def EagerWatch(blob_watched, handler_or_prompt=None):
     handler = _MakeHandler(handler_or_prompt)
-    if isinstance(blob_watched, ConsistentBlob):
-        local_blob = local_blob_util.MakeLocalBlob4EagerConsistentBlob(blob_watched)
-        handler(local_blob)
-    elif isinstance(blob_watched, MirroredBlob):
-        local_blob = local_blob_util.MakeLocalBlob4EagerMirroredBlob(blob_watched)
-        handler(local_blob)
-    else:
-        raise NotImplementedError
+    local_blob = local_blob_util.MakeLocalBlob4EagerBlob(blob_watched)
+    handler(local_blob)
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
