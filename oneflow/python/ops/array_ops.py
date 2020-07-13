@@ -30,11 +30,6 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
     Returns:
         A blob. Has the same type as params.
     """
-    op_conf = op_conf_util.OperatorConf()
-    if name is None:
-        op_conf.name = id_util.UniqueStr("Gather_")
-    else:
-        op_conf.name = name
     params_ndims = len(params.shape)
     if axis is None:
         axis = batch_dims
@@ -48,87 +43,36 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
 
     if batch_dims > 0:
         if axis == batch_dims:
-            if os.getenv("ENABLE_USER_OP") != "False":
-                return (
-                    flow.user_op_builder(
-                        name if name is not None else id_util.UniqueStr("BatchGather_")
-                    )
-                    .Op("batch_gather")
-                    .Input("in", [params])
-                    .Input("indices", [indices])
-                    .Output("out")
-                    .Build()
-                    .InferAndTryRun()
-                    .RemoteBlobList()[0]
-                )
-            else:
-                setattr(op_conf.batch_gather_conf, "in", params.unique_name)
-                op_conf.batch_gather_conf.indices = indices.unique_name
-                op_conf.batch_gather_conf.out = "out"
-        elif axis > batch_dims:
-            raise NotImplementedError
-        else:
-            raise AttributeError
-    elif (
-        params.has_batch_axis() == False
-        and params.distribute is distribute_util.split(0)
-        and os.getenv("ENABLE_USER_OP") == "False"
-    ):
-        assert axis == 0
-        assert batch_dims == 0
-        setattr(op_conf.gather_ms0_conf, "in", params.unique_name)
-        op_conf.gather_ms0_conf.indices = indices.unique_name
-        op_conf.gather_ms0_conf.out = "out"
-    else:
-        if os.getenv("ENABLE_USER_OP") != "False":
             return (
                 flow.user_op_builder(
-                    name if name is not None else id_util.UniqueStr("Gather_")
+                    name if name is not None else id_util.UniqueStr("BatchGather_")
                 )
-                .Op("gather")
+                .Op("batch_gather")
                 .Input("in", [params])
                 .Input("indices", [indices])
                 .Output("out")
-                .Attr("axis", int(axis), "AttrTypeInt64")
                 .Build()
                 .InferAndTryRun()
                 .RemoteBlobList()[0]
             )
+        elif axis > batch_dims:
+            raise NotImplementedError
         else:
-            setattr(op_conf.gather_conf, "in", params.unique_name)
-            op_conf.gather_conf.indices = indices.unique_name
-            op_conf.gather_conf.out = "out"
-            op_conf.gather_conf.axis = axis
-
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
-
-@oneflow_export("local_gather")
-def local_gather(params, indices, axis=0, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("LocalGather_")
-    )
-    if axis < 0:
-        axis += len(params.shape)
-    setattr(op_conf.local_gather_conf, "in", params.unique_name)
-    setattr(op_conf.local_gather_conf, "indices", indices.unique_name)
-    setattr(op_conf.local_gather_conf, "axis", axis)
-    setattr(op_conf.local_gather_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-    def gather_lambda(params, indices):
-        return gather(params, indices, axis=axis, name=name)
-
-    return flow.advanced.distribute_map((params, indices), gather_lambda)
+            raise AttributeError
+    else:
+        return (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("Gather_")
+            )
+            .Op("gather")
+            .Input("in", [params])
+            .Input("indices", [indices])
+            .Output("out")
+            .Attr("axis", int(axis), "AttrTypeInt64")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
 
 
 def infer_shape(x, shape):

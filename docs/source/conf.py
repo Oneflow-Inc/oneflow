@@ -76,7 +76,25 @@ pygments_style = None
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'sphinx_material'
+
+# Material theme options (see theme.conf for more information)
+html_theme_options = {
+
+    # Set the name of the project to appear in the navigation.
+    'nav_title': 'OneFlow APIs',
+
+    # Set the color and the accent color
+    'color_primary': 'blue',
+    'color_accent': 'light-blue',
+
+    # Set the repo location to get a badge with stats
+    'repo_url': 'https://github.com/Oneflow-Inc/oneflow',
+    'repo_name': 'oneflow',
+
+    # Visible levels of the global TOC; -1 means unlimited
+    'globaltoc_depth': 2,
+}
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -130,7 +148,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'OneFlow.tex', u'OneFlow Documentation',
+    (master_doc, 'OneFlow.tex', u'OneFlow API Reference',
      u'Oneflow Contributors', 'manual'),
 ]
 
@@ -140,7 +158,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'oneflow', u'OneFlow Documentation',
+    (master_doc, 'oneflow', u'OneFlow API Reference',
      [author], 1)
 ]
 
@@ -151,8 +169,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'OneFlow', u'OneFlow Documentation',
-     author, 'OneFlow', 'One line description of project.',
+    (master_doc, 'OneFlow', u'OneFlow API Reference',
+     author, 'OneFlow', 'OneFlow API Reference',
      'Miscellaneous'),
 ]
 
