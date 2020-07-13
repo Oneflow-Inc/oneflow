@@ -417,140 +417,64 @@ def batch_normalization(
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        if center:
-            beta = flow.get_variable(
-                name=name + "-beta",
-                shape=params_shape,
-                dtype=params_dtype,
-                initializer=beta_initializer or flow.zeros_initializer(),
-                regularizer=beta_regularizer,
-                trainable=trainable,
-                distribute=distribute_util.broadcast(),
-            )
-        else:
-            beta = flow.constant(0, dtype=params_dtype, shape=params_shape)
-
-        if scale:
-            gamma = flow.get_variable(
-                name=name + "-gamma",
-                shape=params_shape,
-                dtype=params_dtype,
-                initializer=gamma_initializer or flow.ones_initializer(),
-                regularizer=gamma_regularizer,
-                trainable=trainable,
-                distribute=distribute_util.broadcast(),
-            )
-        else:
-            gamma = flow.constant(1, dtype=params_dtype, shape=params_shape)
-
-        moving_mean = flow.get_variable(
-            name=name + "-moving_mean",
+    if center:
+        beta = flow.get_variable(
+            name=name + "-beta",
             shape=params_shape,
             dtype=params_dtype,
-            initializer=moving_mean_initializer or flow.zeros_initializer(),
-            trainable=False,
+            initializer=beta_initializer or flow.zeros_initializer(),
+            regularizer=beta_regularizer,
+            trainable=trainable,
             distribute=distribute_util.broadcast(),
         )
-
-        moving_variance = flow.get_variable(
-            name=name + "-moving_variance",
-            shape=params_shape,
-            dtype=params_dtype,
-            initializer=moving_variance_initializer or flow.ones_initializer(),
-            trainable=False,
-            distribute=distribute_util.broadcast(),
-        )
-
-        builder = (
-            flow.user_op_builder(name)
-            .Op("normalization")
-            .Input("x", [inputs])
-            .Input("moving_mean", [moving_mean])
-            .Input("moving_variance", [moving_variance])
-            .Input("gamma", [gamma])
-            .Input("beta", [beta])
-            .Output("y")
-            .Attr("axis", axis, "AttrTypeInt32")
-            .Attr("epsilon", epsilon, "AttrTypeFloat")
-            .Attr("training", training, "AttrTypeBool")
-            .Attr("momentum", momentum, "AttrTypeFloat")
-        )
-        if trainable and training:
-            builder = builder.Output("mean").Output("inv_variance")
-        return builder.Build().InferAndTryRun().RemoteBlobList()[0]
-
     else:
-        if center:
-            beta = flow.get_variable(
-                name=name + "-beta",
-                shape=params_shape,
-                dtype=params_dtype,
-                initializer=beta_initializer or flow.zeros_initializer(),
-                regularizer=beta_regularizer,
-                trainable=trainable,
-                distribute=distribute_util.broadcast(),
-            )
+        beta = flow.constant(0, dtype=params_dtype, shape=params_shape)
 
-        if scale:
-            gamma = flow.get_variable(
-                name=name + "-gamma",
-                shape=params_shape,
-                dtype=params_dtype,
-                initializer=gamma_initializer or flow.ones_initializer(),
-                regularizer=gamma_regularizer,
-                trainable=trainable,
-                distribute=distribute_util.broadcast(),
-            )
-
-        moving_mean = flow.get_variable(
-            name=name + "-moving_mean",
+    if scale:
+        gamma = flow.get_variable(
+            name=name + "-gamma",
             shape=params_shape,
             dtype=params_dtype,
-            initializer=moving_mean_initializer or flow.zeros_initializer(),
+            initializer=gamma_initializer or flow.ones_initializer(),
+            regularizer=gamma_regularizer,
             trainable=trainable,
             distribute=distribute_util.broadcast(),
         )
+    else:
+        gamma = flow.constant(1, dtype=params_dtype, shape=params_shape)
 
-        moving_variance = flow.get_variable(
-            name=name + "-moving_variance",
-            shape=params_shape,
-            dtype=params_dtype,
-            initializer=moving_variance_initializer or flow.ones_initializer(),
-            trainable=trainable,
-            distribute=distribute_util.broadcast(),
-        )
+    moving_mean = flow.get_variable(
+        name=name + "-moving_mean",
+        shape=params_shape,
+        dtype=params_dtype,
+        initializer=moving_mean_initializer or flow.zeros_initializer(),
+        trainable=False,
+        distribute=distribute_util.broadcast(),
+    )
 
-        op_conf = op_conf_util.OperatorConf()
-        setattr(op_conf, "name", name)
-        setattr(op_conf.normalization_conf, "in", inputs.unique_name)
-        setattr(op_conf.normalization_conf, "out", "out")
-        setattr(op_conf.normalization_conf, "axis", axis)
-        setattr(op_conf.normalization_conf, "momentum", momentum)
-        setattr(op_conf.normalization_conf, "epsilon", epsilon)
-        setattr(op_conf.normalization_conf, "center", center)
-        setattr(op_conf.normalization_conf, "scale", scale)
-        setattr(op_conf.normalization_conf, "moving_mean", moving_mean.unique_name)
-        setattr(
-            op_conf.normalization_conf, "moving_variance", moving_variance.unique_name,
-        )
-        if center:
-            setattr(op_conf.normalization_conf, "beta", beta.unique_name)
-        if scale:
-            setattr(op_conf.normalization_conf, "gamma", gamma.unique_name)
-        if trainable and flow.current_global_function_desc().IsTrainable():
-            if not training:
-                raise ValueError(
-                    "training == False && trainable == True doesn't work in non-user-op mode"
-                )
-            setattr(op_conf.normalization_conf, "mean", "mean")
-            setattr(op_conf.normalization_conf, "inv_variance", "inv_variance")
-            setattr(op_conf.normalization_conf, "is_training", training)
-        else:
-            setattr(op_conf.normalization_conf, "is_training", False)
+    moving_variance = flow.get_variable(
+        name=name + "-moving_variance",
+        shape=params_shape,
+        dtype=params_dtype,
+        initializer=moving_variance_initializer or flow.ones_initializer(),
+        trainable=False,
+        distribute=distribute_util.broadcast(),
+    )
 
-        interpret_util.Forward(op_conf)
-        out_lbi = logical_blob_id_util.LogicalBlobId()
-        setattr(out_lbi, "op_name", op_conf.name)
-        setattr(out_lbi, "blob_name", "out")
-        return remote_blob_util.RemoteBlob(out_lbi)
+    builder = (
+        flow.user_op_builder(name)
+        .Op("normalization")
+        .Input("x", [inputs])
+        .Input("moving_mean", [moving_mean])
+        .Input("moving_variance", [moving_variance])
+        .Input("gamma", [gamma])
+        .Input("beta", [beta])
+        .Output("y")
+        .Attr("axis", axis, "AttrTypeInt32")
+        .Attr("epsilon", epsilon, "AttrTypeFloat")
+        .Attr("training", training, "AttrTypeBool")
+        .Attr("momentum", momentum, "AttrTypeFloat")
+    )
+    if trainable and training:
+        builder = builder.Output("mean").Output("inv_variance")
+    return builder.Build().InferAndTryRun().RemoteBlobList()[0]

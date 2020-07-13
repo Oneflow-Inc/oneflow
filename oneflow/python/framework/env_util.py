@@ -114,7 +114,7 @@ def data_port(val):
 
 @oneflow_export("env.grpc_use_no_signal")
 def api_grpc_use_no_signal(val: bool = True) -> None:
-    return enable_if.unique([grpc_use_no_signal, do_nothing])(val=True)
+    return enable_if.unique([grpc_use_no_signal, do_nothing])(val=val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
