@@ -33,10 +33,7 @@
 
   - It is recommended to install MKL. Please refer to Intel's official guide on how to install MKL [here](https://software.intel.com/content/www/us/en/develop/tools/math-kernel-library/choose-download.html)
 
-  - If installed CMake doesn't support https scheme, please install a release with support for it. For instance:
-  ```
-  https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz
-  ```
+  - If installed CMake doesn't support https scheme, please install a release with support for it. You could download cmake release from here: https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz
 
 2. #### Clone Source Code
 
