@@ -73,19 +73,18 @@ def MakeLocalBlob4EagerBlob(eager_blob):
     assert isinstance(eager_blob, remote_blob_util.EagerBlobTrait)
     if eager_blob.is_tensor_list:
         return LocalMirroredTensorList(eager_blob.numpy_list())
+    elif isinstance(eager_blob, remote_blob_util.EagerMirroredBlob):
+        return LocalMirroredTensor(
+            [eager_blob.numpy(i) for i in range(eager_blob.numpy_size())],
+            is_dynamic=eager_blob.is_dynamic,
+            concat_axis=eager_blob.batch_axis,
+        )
+    elif isinstance(eager_blob, remote_blob_util.EagerConsistentBlob):
+        return LocalMirroredTensor(
+            [eager_blob.numpy()], is_dynamic=False, concat_axis=0
+        )
     else:
-        if isinstance(eager_blob, remote_blob_util.EagerMirroredBlob):
-            return LocalMirroredTensor(
-                [eager_blob.numpy(i) for i in range(eager_blob.numpy_size())],
-                is_dynamic=eager_blob.is_dynamic,
-                concat_axis=eager_blob.batch_axis,
-            )
-        elif isinstance(eager_blob, remote_blob_util.EagerConsistentBlob):
-            return LocalMirroredTensor(
-                [eager_blob.numpy()], is_dynamic=False, concat_axis=0
-            )
-        else:
-            raise NotImplementedError
+        raise NotImplementedError
 
 
 non_override_field = set(
