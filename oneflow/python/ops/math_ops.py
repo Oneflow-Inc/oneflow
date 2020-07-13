@@ -222,41 +222,11 @@ def build_broadcast_binary_op(math_op, x, y, name=None):
 
 
 def broadcast_add(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_add", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastAdd_"),
-    )
-    op_conf.broadcast_add_conf.a = x.unique_name
-    op_conf.broadcast_add_conf.b = y.unique_name
-    op_conf.broadcast_add_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_add", x, y, name)
 
 
 def broadcast_sub(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_sub", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastSub_"),
-    )
-    op_conf.broadcast_sub_conf.a = x.unique_name
-    op_conf.broadcast_sub_conf.b = y.unique_name
-    op_conf.broadcast_sub_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_sub", x, y, name)
 
 
 def scalar_sub_by_tensor(x, scalar, name=None):
@@ -302,22 +272,7 @@ def element_wise_mul(x, y, name=None):
 
 
 def broadcast_mul(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_mul", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastMul_"),
-    )
-    op_conf.broadcast_mul_conf.a = x.unique_name
-    op_conf.broadcast_mul_conf.b = y.unique_name
-    op_conf.broadcast_mul_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_mul", x, y, name)
 
 
 def scalar_mul(x, operand, name=None):
@@ -372,22 +327,7 @@ def scalar_mul_by_tensor(x, scalar, name=None):
 
 
 def broadcast_div(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_div", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastDiv_"),
-    )
-    op_conf.broadcast_div_conf.a = x.unique_name
-    op_conf.broadcast_div_conf.b = y.unique_name
-    op_conf.broadcast_div_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_div", x, y, name)
 
 
 def scalar_div_by_tensor(x, scalar, name=None):
@@ -404,22 +344,7 @@ def scalar_div_by_tensor(x, scalar, name=None):
 
 
 def broadcast_floor_mod(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_floor_mod", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastMod_"),
-    )
-    op_conf.broadcast_floor_mod_conf.a = x.unique_name
-    op_conf.broadcast_floor_mod_conf.b = y.unique_name
-    op_conf.broadcast_floor_mod_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_floor_mod", x, y, name)
 
 
 @oneflow_export("math.tanh", "keras.activations.tanh")
@@ -613,200 +538,49 @@ def cast(x, dtype, name=None):
     )
 
 
-@oneflow_export("math.naive_logical_and")
-def naive_logical_and(lhs, rhs, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("LogicalAnd_")
-    )
-    setattr(op_conf.logical_and_conf, "lhs", lhs.unique_name)
-    setattr(op_conf.logical_and_conf, "rhs", rhs.unique_name)
-    setattr(op_conf.logical_and_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-
 @oneflow_export("math.equal")
 def equal(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_equal", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastEqual_"),
-    )
-    op_conf.broadcast_equal_conf.a = x.unique_name
-    op_conf.broadcast_equal_conf.b = y.unique_name
-    op_conf.broadcast_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_equal", x, y, name)
 
 
 @oneflow_export("math.not_equal")
 def not_equal(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastNotEqual_"),
-    )
-    op_conf.broadcast_not_equal_conf.a = x.unique_name
-    op_conf.broadcast_not_equal_conf.b = y.unique_name
-    op_conf.broadcast_not_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
 
 
 @oneflow_export("math.less")
 def less(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_less", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastLessThan_"),
-    )
-    op_conf.broadcast_less_than_conf.a = x.unique_name
-    op_conf.broadcast_less_than_conf.b = y.unique_name
-    op_conf.broadcast_less_than_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_less", x, y, name)
 
 
 @oneflow_export("math.less_equal")
 def less_equal(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastLessEqual_"),
-    )
-    op_conf.broadcast_less_equal_conf.a = x.unique_name
-    op_conf.broadcast_less_equal_conf.b = y.unique_name
-    op_conf.broadcast_less_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
 
 
 @oneflow_export("math.greater")
 def greater(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_greater", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastGreaterThan_"),
-    )
-    op_conf.broadcast_greater_than_conf.a = x.unique_name
-    op_conf.broadcast_greater_than_conf.b = y.unique_name
-    op_conf.broadcast_greater_than_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_greater", x, y, name)
 
 
 @oneflow_export("math.greater_equal")
 def greater_equal(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastGreaterEqual_"),
-    )
-    op_conf.broadcast_greater_equal_conf.a = x.unique_name
-    op_conf.broadcast_greater_equal_conf.b = y.unique_name
-    op_conf.broadcast_greater_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
 
 
 @oneflow_export("math.logical_and")
 def logical_and(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastLogicalAnd_"),
-    )
-    op_conf.broadcast_logical_and_conf.a = x.unique_name
-    op_conf.broadcast_logical_and_conf.b = y.unique_name
-    op_conf.broadcast_logical_and_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
 
 
 @oneflow_export("math.minimum")
 def broadcast_min(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_minimum", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastMin_"),
-    )
-    op_conf.broadcast_minimum_conf.a = x.unique_name
-    op_conf.broadcast_minimum_conf.b = y.unique_name
-    op_conf.broadcast_minimum_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_minimum", x, y, name)
 
 
 @oneflow_export("math.maximum")
 def broadcast_max(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_maximum", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastMax_"),
-    )
-    op_conf.broadcast_maximum_conf.a = x.unique_name
-    op_conf.broadcast_maximum_conf.b = y.unique_name
-    op_conf.broadcast_maximum_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_maximum", x, y, name)
 
 
 @oneflow_export("math.reduced_shape_elem_cnt")
