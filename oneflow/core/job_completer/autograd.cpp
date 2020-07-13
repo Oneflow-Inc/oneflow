@@ -391,33 +391,32 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   }
   global_norm_add_conf->set_out("out");
   job_builder->AddOps(global_norm_parallel_conf, {global_norm_add_op_conf});
-  OperatorConf inv_global_norm_op_conf{};
-  inv_global_norm_op_conf.set_name("System-ClipGradient-GlobalNorm-InvGlobalNorm-" + NewUniqueId());
-  RsqrtOpConf* inv_global_norm_rsqrt_conf = inv_global_norm_op_conf.mutable_rsqrt_conf();
-  inv_global_norm_rsqrt_conf->set_in(
-      GenLogicalBlobName(global_norm_add_op_conf.name(), global_norm_add_conf->out()));
-  inv_global_norm_rsqrt_conf->set_out("out");
-  job_builder->AddOps(global_norm_parallel_conf, {inv_global_norm_op_conf});
+  auto inv_global_norm_op = user_op::UserOpConfWrapperBuilder(
+                                "System-ClipGradient-GlobalNorm-InvGlobalNorm-" + NewUniqueId())
+                                .Op("rsqrt")
+                                .Input("x", GenLogicalBlobName(global_norm_add_op_conf.name(),
+                                                               global_norm_add_conf->out()))
+                                .Output("y")
+                                .Build();
+  job_builder->AddOps(global_norm_parallel_conf, {inv_global_norm_op.op_conf()});
   OperatorConf inv_clip_norm_op_conf{};
   inv_clip_norm_op_conf.set_name("System-ClipGradient-GlobalNorm-InvClipNorm-" + NewUniqueId());
   ConstantLikeOpConf* inv_clip_norm_constant_like_conf =
       inv_clip_norm_op_conf.mutable_constant_like_conf();
-  inv_clip_norm_constant_like_conf->set_like(
-      GenLogicalBlobName(inv_global_norm_op_conf.name(), inv_global_norm_rsqrt_conf->out()));
+  inv_clip_norm_constant_like_conf->set_like(inv_global_norm_op.output("y", 0));
   inv_clip_norm_constant_like_conf->set_float_operand(1.0 / conf.clip_norm());
   inv_clip_norm_constant_like_conf->set_out("out");
   job_builder->AddOps(global_norm_parallel_conf, {inv_clip_norm_op_conf});
-  OperatorConf minimum_op_conf{};
-  minimum_op_conf.set_name("System-ClipGradient-GlobalNorm-Minimum-" + NewUniqueId());
-  BroadcastMinimumOpConf* minimum_conf = minimum_op_conf.mutable_broadcast_minimum_conf();
-  minimum_conf->set_a(
-      GenLogicalBlobName(inv_global_norm_op_conf.name(), inv_global_norm_rsqrt_conf->out()));
-  minimum_conf->set_b(
-      GenLogicalBlobName(inv_clip_norm_op_conf.name(), inv_clip_norm_constant_like_conf->out()));
-  minimum_conf->set_out("out");
-  job_builder->AddOps(global_norm_parallel_conf, {minimum_op_conf});
-  const std::string gradient_scale_factor_lbn =
-      GenLogicalBlobName(minimum_op_conf.name(), minimum_conf->out());
+  auto minimum_op =
+      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Minimum-" + NewUniqueId())
+          .Op("broadcast_minimum")
+          .Input("x", inv_global_norm_op.output("y", 0))
+          .Input("y", GenLogicalBlobName(inv_clip_norm_op_conf.name(),
+                                         inv_clip_norm_constant_like_conf->out()))
+          .Output("z")
+          .Build();
+  job_builder->AddOps(global_norm_parallel_conf, {minimum_op.op_conf()});
+  const std::string gradient_scale_factor_lbn = minimum_op.output("z", 0);
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;

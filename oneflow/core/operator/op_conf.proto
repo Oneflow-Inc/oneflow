@@ -116,17 +116,6 @@ message RegularizerConf {
   }
 }
 
-message ReluOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message ReluGradOpConf {
-  required string y = 1;
-  required string dy = 2;
-  required string dx = 3;
-}
-
 message PReluOpConf {
   required string in = 1;
   required string out = 2;
@@ -151,17 +140,6 @@ message PReluAlphaGradOpConf {
   required string alpha_grad = 3;
   required string data_format = 4;
   required bool channel_shared = 5;
-}
-
-message SigmoidOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message SigmoidGradOpConf {
-  required string y = 1;
-  required string dy = 2;
-  required string dx = 3;
 }
 
 message TanHOpConf {
@@ -219,19 +197,6 @@ message DistributeCloneOpConf {
 message DistributeAddOpConf {
   repeated string in = 1;
   required string out = 2;
-}
-
-message ConcatOpConf {
-  repeated string in = 1;
-  required string out = 2;
-  required int32 axis = 3;
-}
-
-message SplitLikeOpConf {
-  required string in = 1;
-  repeated string like = 2;
-  repeated string out = 3;
-  required int32 axis = 4;
 }
 
 message CopyCommNetOpConf {
@@ -586,12 +551,6 @@ message MaximumOpConf {
   required string out = 2;
 }
 
-message CastOpConf {
-  required string in = 1;
-  required string out = 2;
-  required DataType data_type = 3;
-}
-
 message InterfaceBlobConf {
   required ShapeProto shape = 1;
   required DataType data_type = 2;
@@ -753,12 +712,6 @@ message DecodeRandomOpConf {
   required int64 batch_size = 8;
 }
 
-message TransposeOpConf {
-  required string in = 1;
-  required string out = 2;
-  repeated int32 perm = 3;
-}
-
 message ReduceConcatOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -797,16 +750,6 @@ message ReduceGatherOpConf {
   optional int32 in_num = 1 [default = 0];
 }
 
-message MatmulOpConf {
-  // input lbn
-  required string a = 1;
-  required string b = 2;
-  // output bn
-  required string out = 5;
-  optional bool transpose_a = 6 [default = false];
-  optional bool transpose_b = 7 [default = false];
-}
-
 message DotOpConf {
   required string in = 1;
   required string weight = 2;
@@ -843,162 +786,11 @@ message RepeatOpConf {
   required int32 repeat_num = 3;
 }
 
-message GatherOpConf {
-  required string in = 1;
-  required string indices = 2;
-  required string out = 3;
-  optional int64 axis = 4 [default = 0];
-}
-
-message GatherMs0OpConf {
-  required string in = 1;
-  required string indices = 2;
-  required string out = 3;
-}
-
-message UnsortedSegmentSumOpConf {
-  required string data = 1;
-  required string segment_ids = 2;
-  required string out = 3;
-  required int64 axis = 4;
-  required int64 num_segments = 5;
-}
-
-message UnsortedSegmentSumLikeOpConf {
-  required string data = 1;
-  required string segment_ids = 2;
-  required string like = 3;
-  required string out = 4;
-  required int64 axis = 5;
-}
-
-message GatherMs0GradOpConf {
-  required string out_diff = 1;
-  required string indices = 2;
-  required string in_diff = 3;
-  required int64 gather_dim_size = 4;
-}
-
-message BatchGatherOpConf {
-  required string in = 1;
-  required string indices = 2;
-  required string out = 3;
-}
-
-message SqrtOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message RsqrtOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message SquareOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message BroadcastAddOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastSubOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastMulOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastDivOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastEqualOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastNotEqualOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastLessThanOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastLessEqualOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastGreaterThanOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastGreaterEqualOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastLogicalAndOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastFloorModOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
 message BroadcastLikeOpConf {
   required string x = 1;
   required string like = 2;
   required string y = 3;
   repeated int32 reduced_axis = 4;
-}
-
-message BroadcastDivGradOpConf {
-  //  input
-  required string b = 1; // denominator in fw
-  required string y = 2;
-  required string dy = 3;
-  //  output
-  required string db = 4;
-  optional string temp_storage = 5 [default = "temp_storage"];
 }
 
 message DimSliceConf {
@@ -1161,13 +953,6 @@ message AxpyOpConf {
 message TotalLossInstanceNumOpConf {
   repeated string in = 1;
   required string out = 2;
-}
-
-message UnsortedBatchSegmentSumOpConf {
-  required string data = 1;
-  required string segment_ids = 2;
-  required string out = 3;
-  required int64 num_segments = 4;
 }
 
 message ShapeElemCntAxisConf {
@@ -1403,20 +1188,6 @@ message SquareSumOpConf {
   required string y = 2;
 }
 
-message BroadcastMaximumOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
-message BroadcastMinimumOpConf {
-  required string a = 1;
-  required string b = 2;
-  required string out = 3;
-  optional bool is_const = 4 [default = false];
-}
-
 message ConstantLikeOpConf {
   required string like = 1;
   required string out = 2;
@@ -1425,30 +1196,6 @@ message ConstantLikeOpConf {
     int64 int_operand = 4;
     double float_operand = 5;
   }
-}
-
-message ScalarAddByTensorOpConf {
-  required string in = 1;
-  required string scalar = 2;
-  required string out = 3;
-}
-
-message ScalarMulByTensorOpConf {
-  required string in = 1;
-  required string scalar = 2;
-  required string out = 3;
-}
-
-message ScalarSubByTensorOpConf {
-  required string in = 1;
-  required string scalar = 2;
-  required string out = 3;
-}
-
-message ScalarDivByTensorOpConf {
-  required string in = 1;
-  required string scalar = 2;
-  required string out = 3;
 }
 
 message IndexedSlicesNaiveModelUpdateOpConf {
@@ -1542,7 +1289,6 @@ message OperatorConf {
     RecordLoadOpConf record_load_conf = 103;
     CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
-    ConcatOpConf concat_conf = 107;
     BoxingOpConf boxing_conf = 108;
     ReduceScatterOpConf reduce_scatter_conf = 109;
     ReduceAddOpConf reduce_add_conf = 110;
@@ -1554,7 +1300,6 @@ message OperatorConf {
     NcclAllGatherOpConf nccl_all_gather_conf = 116;
     AccumulateOpConf accumulate_conf = 117;
     NormalModelUpdateOpConf normal_mdupdt_conf = 118;
-    CastOpConf cast_conf = 121;
     VariableOpConf variable_conf = 122;
     ReduceIdentityOpConf reduce_identity_conf = 123;
     TickOpConf tick_conf = 124;
@@ -1604,42 +1349,32 @@ message OperatorConf {
     
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
-    TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
     ReduceSumOpConf reduce_sum_conf = 219;
     AddOpConf add_conf = 220;
-    MatmulOpConf matmul_conf = 221;
     DotOpConf dot_conf = 222;
     MultiplyOpConf multiply_conf = 223;
     MaximumOpConf maximum_conf = 224;
-    SigmoidOpConf sigmoid_conf = 225;
     TanHOpConf tanh_conf = 226;
-    ReluOpConf relu_conf = 227;
     PrintOpConf print_conf = 233;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
     GeluOpConf gelu_conf = 241;
-    GatherOpConf gather_conf = 242;
-    BatchGatherOpConf batch_gather_conf = 243;
     SliceOpConf slice_conf = 252;
     LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     ReduceMeanOpConf reduce_mean_conf = 261;
     PReluOpConf prelu_conf = 265;
-    ReluGradOpConf relu_grad_conf = 266;
     GeluGradOpConf gelu_grad_conf = 267;
     SliceGradOpConf slice_grad_conf = 269;
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
     LayerNormGradOpConf layer_norm_grad_conf = 272;
     LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
-    UnsortedSegmentSumOpConf unsorted_segment_sum_conf = 275;
-    BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;
-    UnsortedBatchSegmentSumOpConf unsorted_batch_segment_sum_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
     ReshapeLikeOpConf reshape_like_conf = 286;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
@@ -1648,23 +1383,18 @@ message OperatorConf {
     CaseOpConf case_conf = 291;
     EsacOpConf esac_conf = 292;
     ModelInitOpConf model_init_conf = 293;
-    SplitLikeOpConf split_like_conf = 294;
-    SigmoidGradOpConf sigmoid_grad_conf = 295;
     AssignOpConf assign_conf = 296;
     ModelSaveOpConf model_save_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
     PReluDataGradOpConf prelu_data_grad_conf = 299;
     PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
     ModelLoadOpConf model_load_conf = 301;
-    GatherMs0OpConf gather_ms0_conf = 302;
-    GatherMs0GradOpConf gather_ms0_grad_conf = 303;
     SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
     ParallelCastOpConf parallel_cast_conf = 336;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
-    UnsortedSegmentSumLikeOpConf unsorted_segment_sum_like_conf = 341;
     ArgWhereOpConf arg_where_conf = 342;
     CopyOpConf copy_conf = 343;
     CastToMirroredOpConf cast_to_mirrored_conf = 344;
@@ -1675,30 +1405,9 @@ message OperatorConf {
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op
-    BroadcastAddOpConf broadcast_add_conf = 500;
-    BroadcastSubOpConf broadcast_sub_conf = 501;
-    BroadcastMulOpConf broadcast_mul_conf = 502;
-    BroadcastDivOpConf broadcast_div_conf = 503;
-    BroadcastEqualOpConf broadcast_equal_conf = 504;
-    BroadcastNotEqualOpConf broadcast_not_equal_conf = 505;
-    BroadcastLessThanOpConf broadcast_less_than_conf = 506;
-    BroadcastLessEqualOpConf broadcast_less_equal_conf = 507;
-    BroadcastGreaterThanOpConf broadcast_greater_than_conf = 508;
-    BroadcastGreaterEqualOpConf broadcast_greater_equal_conf = 509;
-    BroadcastLogicalAndOpConf broadcast_logical_and_conf = 510;
-    BroadcastFloorModOpConf broadcast_floor_mod_conf = 511;
-    SquareOpConf square_conf = 513;
-    SqrtOpConf sqrt_conf = 514;
-    RsqrtOpConf rsqrt_conf = 515;
     ScalarAddOpConf scalar_add_conf = 516;
     ScalarMulOpConf scalar_mul_conf = 517;
-    ScalarAddByTensorOpConf scalar_add_by_tensor_conf = 518;
-    ScalarMulByTensorOpConf scalar_mul_by_tensor_conf = 519;
-    ScalarSubByTensorOpConf scalar_sub_by_tensor_conf = 520;
-    ScalarDivByTensorOpConf scalar_div_by_tensor_conf = 521;
     SquareSumOpConf square_sum_conf = 522;
-    BroadcastMaximumOpConf broadcast_maximum_conf = 523;
-    BroadcastMinimumOpConf broadcast_minimum_conf = 524;
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
 
     // mutable input op
