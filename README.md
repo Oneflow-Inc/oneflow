@@ -5,18 +5,18 @@
 
   - To install latest release of OneFlow:
 
-  ```
-  pip install oneflow
-  ```
+    ```
+    pip install oneflow
+    ```
 
   - To install nightly release of OneFlow:
 
-  ```
-  pip install --find-links https://oneflow-inc.github.io/nightly oneflow
-  ```
+    ```
+    pip install --find-links https://oneflow-inc.github.io/nightly oneflow
+    ```
 
 ### Build OneFlow from Source
-- #### System Requirements
+1. #### System Requirements
   Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable. 
 
   ```
@@ -36,11 +36,7 @@
   https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz
   ```
 
-- #### Troubleshooting
-
-  Please refer to [troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling oneflow from source.
-
-- #### Clone Source Code
+2. #### Clone Source Code
 
   Clone source code and submodules (faster, recommended)
 
@@ -55,20 +51,20 @@
   git clone https://github.com/Oneflow-Inc/oneflow --recursive
   ```
 
-- #### Install Python Dev Requirements
+3. #### Install Python Dev Requirements
 
   To install development dependencies and linter tools, run:
   ```
   pip3 install -r dev-requirements.txt --user
   ```
 
-- #### Enter Build Directory
+4. #### Build OneFlow
+
+  Enter Build Directory, run:
 
   ```
   cd build
   ```
-
-- #### Build OneFlow
 
   Inside directory `build`, run:
   ```
@@ -77,7 +73,7 @@
   make -j$(nproc)
   ```
 
-- #### Install OneFlow
+5. #### Install OneFlow
 
   In the root path of OneFlow repo, run:
   ```
@@ -91,17 +87,9 @@
   export PYTHONPATH=$HOME/oneflow/build/python_scripts:$PYTHONPATH
   ```
 
-- #### Generate Pip Package
-  Please make sure pip package `wheel` is installed:
-  ```
-  pip3 install wheel --user
-  ```
+### Troubleshooting
 
-  In the root path of OneFlow repo, run:
-  ```
-  python3 setup.py bdist_wheel
-  ```
-  Your should find a `.whl` package in `dist`.
+  Please refer to [troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling oneflow from source.
 
 ### Advanced Features
 
