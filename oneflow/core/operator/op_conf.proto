@@ -786,48 +786,6 @@ message RepeatOpConf {
   required int32 repeat_num = 3;
 }
 
-message GatherOpConf {
-  required string in = 1;
-  required string indices = 2;
-  required string out = 3;
-  optional int64 axis = 4 [default = 0];
-}
-
-message GatherMs0OpConf {
-  required string in = 1;
-  required string indices = 2;
-  required string out = 3;
-}
-
-message UnsortedSegmentSumOpConf {
-  required string data = 1;
-  required string segment_ids = 2;
-  required string out = 3;
-  required int64 axis = 4;
-  required int64 num_segments = 5;
-}
-
-message UnsortedSegmentSumLikeOpConf {
-  required string data = 1;
-  required string segment_ids = 2;
-  required string like = 3;
-  required string out = 4;
-  required int64 axis = 5;
-}
-
-message GatherMs0GradOpConf {
-  required string out_diff = 1;
-  required string indices = 2;
-  required string in_diff = 3;
-  required int64 gather_dim_size = 4;
-}
-
-message BatchGatherOpConf {
-  required string in = 1;
-  required string indices = 2;
-  required string out = 3;
-}
-
 message SqrtOpConf {
   required string in = 1;
   required string out = 2;
@@ -1106,13 +1064,6 @@ message TotalLossInstanceNumOpConf {
   required string out = 2;
 }
 
-message UnsortedBatchSegmentSumOpConf {
-  required string data = 1;
-  required string segment_ids = 2;
-  required string out = 3;
-  required int64 num_segments = 4;
-}
-
 message ShapeElemCntAxisConf {
   repeated int32 axis = 1;
 }
@@ -1370,30 +1321,6 @@ message ConstantLikeOpConf {
   }
 }
 
-message ScalarAddByTensorOpConf {
-  required string in = 1;
-  required string scalar = 2;
-  required string out = 3;
-}
-
-message ScalarMulByTensorOpConf {
-  required string in = 1;
-  required string scalar = 2;
-  required string out = 3;
-}
-
-message ScalarSubByTensorOpConf {
-  required string in = 1;
-  required string scalar = 2;
-  required string out = 3;
-}
-
-message ScalarDivByTensorOpConf {
-  required string in = 1;
-  required string scalar = 2;
-  required string out = 3;
-}
-
 message IndexedSlicesNaiveModelUpdateOpConf {
   required string model_diff_indices = 1;
   required string model_diff_values = 2;
@@ -1559,8 +1486,6 @@ message OperatorConf {
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
     GeluOpConf gelu_conf = 241;
-    GatherOpConf gather_conf = 242;
-    BatchGatherOpConf batch_gather_conf = 243;
     SliceOpConf slice_conf = 252;
     LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
@@ -1572,10 +1497,8 @@ message OperatorConf {
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
     LayerNormGradOpConf layer_norm_grad_conf = 272;
     LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
-    UnsortedSegmentSumOpConf unsorted_segment_sum_conf = 275;
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;
-    UnsortedBatchSegmentSumOpConf unsorted_batch_segment_sum_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
     ReshapeLikeOpConf reshape_like_conf = 286;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
@@ -1590,15 +1513,12 @@ message OperatorConf {
     PReluDataGradOpConf prelu_data_grad_conf = 299;
     PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
     ModelLoadOpConf model_load_conf = 301;
-    GatherMs0OpConf gather_ms0_conf = 302;
-    GatherMs0GradOpConf gather_ms0_grad_conf = 303;
     SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
     ParallelCastOpConf parallel_cast_conf = 336;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
-    UnsortedSegmentSumLikeOpConf unsorted_segment_sum_like_conf = 341;
     ArgWhereOpConf arg_where_conf = 342;
     CopyOpConf copy_conf = 343;
     CastToMirroredOpConf cast_to_mirrored_conf = 344;
@@ -1626,10 +1546,6 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 515;
     ScalarAddOpConf scalar_add_conf = 516;
     ScalarMulOpConf scalar_mul_conf = 517;
-    ScalarAddByTensorOpConf scalar_add_by_tensor_conf = 518;
-    ScalarMulByTensorOpConf scalar_mul_by_tensor_conf = 519;
-    ScalarSubByTensorOpConf scalar_sub_by_tensor_conf = 520;
-    ScalarDivByTensorOpConf scalar_div_by_tensor_conf = 521;
     SquareSumOpConf square_sum_conf = 522;
     BroadcastMaximumOpConf broadcast_maximum_conf = 523;
     BroadcastMinimumOpConf broadcast_minimum_conf = 524;

@@ -52,6 +52,4 @@ def test_gather_model_parallel_fw(test_case):
     arg_dict["axis"] = [0, 1, 2]
     arg_dict["split_axis"] = [0, 1, 2]
     for arg in GenArgList(arg_dict):
-        if arg[3] == arg[4] and os.getenv("ENABLE_USER_OP") == "False":
-            continue
         _test_gather_model_parallel_fw(test_case, *arg)
