@@ -55,7 +55,9 @@ def _FindOrCreateVarBlobObject(op_attribute, parallel_conf, blob_register):
     sess = session_ctx.GetDefaultSession()
     var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
     if var_blob is not None:
-        blob_register.SetObject4BlobName(var_blob.unique_name, var_blob.blob_object)
+        blob_register.SetObject4BlobName(
+            var_blob.logical_blob_name, var_blob.blob_object
+        )
         return
     _NaiveInterpret(op_attribute, parallel_conf, blob_register)
     var_blob = _MakeEagerLogicalBlob(op_attribute, "out", blob_register=blob_register)

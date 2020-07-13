@@ -249,7 +249,7 @@ class EagerFutureRemoteBlobs(FutureRemoteBlobs):
 
 class _EagerBlobGetter(object):
     def __init__(self, eager_blob):
-        assert isinstance(eager_blob, remote_blob_util.EagerBlobMixin)
+        assert isinstance(eager_blob, remote_blob_util.EagerBlobTrait)
         self.eager_blob_ = eager_blob
         self.local_tensor_ = None
 

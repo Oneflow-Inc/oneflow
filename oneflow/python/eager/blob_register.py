@@ -8,9 +8,54 @@ def GetDefaultBlobRegister():
     return default_blob_register_
 
 
+class RegisteredBlobAccess(object):
+    def __init__(self, blob_name, blob_register, blob_object=None):
+        self.blob_name_ = blob_name
+        self.blob_register_ = blob_register
+        if blob_object is None:
+            blob_object = blob_register.GetObject4BlobName(blob_name)
+        else:
+            blob_register.SetObject4BlobName(blob_name, blob_object)
+        self.blob_object_ = blob_object
+        self.reference_counter_ = 0
+
+    @property
+    def reference_counter(self):
+        return self.reference_counter_
+
+    def increase_reference_counter(self):
+        self.reference_counter_ = self.reference_counter_ + 1
+
+    def decrease_reference_counter(self):
+        self.reference_counter_ = self.reference_counter_ - 1
+        return self.reference_counter_
+
+    @property
+    def blob_object(self):
+        return self.blob_object_
+
+    def __del__(self):
+        self.blob_register_.ClearObject4BlobName(self.blob_name_)
+
+
 class BlobRegister(object):
     def __init__(self):
         self.blob_name2object_ = {}
+        self.blob_name2access_ = {}
+
+    def OpenRegisteredBlobAccess(self, blob_name, blob_object=None):
+        if blob_name not in self.blob_name2access_:
+            self.blob_name2access_[blob_name] = RegisteredBlobAccess(
+                blob_name, self, blob_object
+            )
+        access = self.blob_name2access_[blob_name]
+        access.increase_reference_counter()
+        return access
+
+    def CloseRegisteredBlobAccess(self, blob_name):
+        if blob_name in self.blob_name2access_:
+            if self.blob_name2access_[blob_name].decrease_reference_counter() == 0:
+                del self.blob_name2access_[blob_name]
 
     @property
     def blob_name2object(self):

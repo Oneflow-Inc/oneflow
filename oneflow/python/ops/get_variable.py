@@ -106,7 +106,9 @@ def get_eager_variable(
     else:
         assert var_blob is not None
     bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
-    bw_blob_register.TrySetObject4BlobName(var_blob.unique_name, var_blob.blob_object)
+    bw_blob_register.TrySetObject4BlobName(
+        var_blob.logical_blob_name, var_blob.blob_object
+    )
     assert var_blob.shape == job_var_blob.shape, "%s v.s. %s" % (
         var_blob.shape,
         job_var_blob.shape,

@@ -30,5 +30,5 @@ def lazy_add_loss(loss):
 def eager_add_loss(loss):
     c_api_util.CurJobBuildAndInferCtx_AddLossLogicalBlobName(loss.unique_name)
     gradient_util.GetDefaultBackwardBlobRegister().TrySetObject4BlobName(
-        loss.unique_name, loss.blob_object
+        loss.logical_blob_name, loss.blob_object
     )
