@@ -27,7 +27,7 @@ void SetPluginData(SummaryMetadata* metadata, const char* name) {
   }
 }
 
-Maybe<void> AddScalarToSummary(const float& value, const std::string& tag, Summary* s) {
+Maybe<void> FillScalarInSummary(const float& value, const std::string& tag, Summary* s) {
   SummaryMetadata metadata;
   SetPluginData(&metadata, kScalarPluginName);
   Summary::Value* v = s->add_value();
@@ -38,8 +38,8 @@ Maybe<void> AddScalarToSummary(const float& value, const std::string& tag, Summa
 }
 
 template<typename T>
-Maybe<void> AddHistogramToSummary(const user_op::Tensor& value, const std::string& tag,
-                                  Summary* s) {
+Maybe<void> FillHistogramInSummary(const user_op::Tensor& value, const std::string& tag,
+                                   Summary* s) {
   SummaryMetadata metadata;
   SetPluginData(&metadata, kHistogramPluginName);
   Summary::Value* v = s->add_value();
@@ -100,7 +100,7 @@ bool WriteImageToBuffer(const uint8_t* image, int width, int height, int depth,
   return true;
 }
 
-Maybe<void> AddImageToSummary(const user_op::Tensor* tensor, const std::string& tag, Summary* s) {
+Maybe<void> FillImageInSummary(const user_op::Tensor* tensor, const std::string& tag, Summary* s) {
   SummaryMetadata metadata;
   SetPluginData(&metadata, kImagePluginName);
   if (!(tensor->shape().NumAxes() == 4
@@ -163,7 +163,7 @@ struct EventWriteHelper<DeviceType::kCPU, T> {
     std::unique_ptr<Event> e{new Event};
     e->set_step(step);
     e->set_wall_time(envtime::GetWallTime());
-    AddScalarToSummary(value, tag, e->mutable_summary());
+    FillScalarInSummary(value, tag, e->mutable_summary());
     Global<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 
@@ -172,7 +172,7 @@ struct EventWriteHelper<DeviceType::kCPU, T> {
     std::unique_ptr<Event> e{new Event};
     e->set_step(step);
     e->set_wall_time(envtime::GetWallTime());
-    AddHistogramToSummary<T>(value, tag, e->mutable_summary());
+    FillHistogramInSummary<T>(value, tag, e->mutable_summary());
     Global<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 
@@ -181,7 +181,7 @@ struct EventWriteHelper<DeviceType::kCPU, T> {
     std::unique_ptr<Event> e{new Event};
     e->set_step(step);
     e->set_wall_time(envtime::GetWallTime());
-    AddImageToSummary(tensor, tag, e->mutable_summary());
+    FillImageInSummary(tensor, tag, e->mutable_summary());
     Global<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 };

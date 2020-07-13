@@ -9,19 +9,13 @@ class HistogramProto;
 
 namespace histogram {
 
-#define MIN_VALUE 1.0e-12
-#define MAX_VLAUE 1.0e20
-#define INCREASE_RATE 1.1
-
 class Histogram {
  public:
   Histogram();
-  explicit Histogram(const std::vector<double>& container);
   ~Histogram() {}
 
   void AppendValue(double value);
   void AppendToProto(HistogramProto* proto);
-  void Clear();
 
  private:
   double value_count_;

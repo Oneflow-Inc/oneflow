@@ -23,7 +23,7 @@ def write_scalar(value, step, tag, name=None):
 
 
 @oneflow_export("summary.create_summary_writer")
-def create_summary_write(logdir, name=None):
+def create_summary_writer(logdir, name=None):
     if name is None:
         name = id_util.UniqueStr("CreateWriter_")
     (
