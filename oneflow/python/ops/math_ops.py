@@ -175,31 +175,16 @@ def scalar_add(x, operand, name=None):
 
 
 def scalar_add_by_tensor(x, scalar, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name or id_util.UniqueStr("ScalarAddByTensor_"))
-            .Op("scalar_add_by_tensor")
-            .Input("x", [x])
-            .Input("scalar", [scalar])
-            .Output("y")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ScalarAddByTensor_"),
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ScalarAddByTensor_"))
+        .Op("scalar_add_by_tensor")
+        .Input("x", [x])
+        .Input("scalar", [scalar])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.scalar_add_by_tensor_conf, "in", x.unique_name)
-    setattr(op_conf.scalar_add_by_tensor_conf, "scalar", scalar.unique_name)
-    op_conf.scalar_add_by_tensor_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 
 def element_wise_add(x, y, name=None):
@@ -275,31 +260,16 @@ def broadcast_sub(x, y, name=None):
 
 
 def scalar_sub_by_tensor(x, scalar, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name or id_util.UniqueStr("ScalarSubByTensor_"))
-            .Op("scalar_sub_by_tensor")
-            .Input("x", [x])
-            .Input("scalar", [scalar])
-            .Output("y")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ScalarSubByTensor_"),
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ScalarSubByTensor_"))
+        .Op("scalar_sub_by_tensor")
+        .Input("x", [x])
+        .Input("scalar", [scalar])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.scalar_sub_by_tensor_conf, "in", x.unique_name)
-    setattr(op_conf.scalar_sub_by_tensor_conf, "scalar", scalar.unique_name)
-    op_conf.scalar_sub_by_tensor_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 
 def element_wise_mul(x, y, name=None):
@@ -389,31 +359,16 @@ def scalar_mul(x, operand, name=None):
 
 
 def scalar_mul_by_tensor(x, scalar, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name or id_util.UniqueStr("ScalarMulByTensor_"))
-            .Op("scalar_mul_by_tensor")
-            .Input("x", [x])
-            .Input("scalar", [scalar])
-            .Output("y")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ScalarMulByTensor_"),
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ScalarMulByTensor_"))
+        .Op("scalar_mul_by_tensor")
+        .Input("x", [x])
+        .Input("scalar", [scalar])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.scalar_mul_by_tensor_conf, "in", x.unique_name)
-    setattr(op_conf.scalar_mul_by_tensor_conf, "scalar", scalar.unique_name)
-    op_conf.scalar_mul_by_tensor_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 
 def broadcast_div(x, y, name=None):
@@ -436,31 +391,16 @@ def broadcast_div(x, y, name=None):
 
 
 def scalar_div_by_tensor(x, scalar, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name or id_util.UniqueStr("ScalarDivByTensor_"))
-            .Op("scalar_div_by_tensor")
-            .Input("x", [x])
-            .Input("scalar", [scalar])
-            .Output("y")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ScalarDivByTensor_"),
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ScalarDivByTensor_"))
+        .Op("scalar_div_by_tensor")
+        .Input("x", [x])
+        .Input("scalar", [scalar])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.scalar_div_by_tensor_conf, "in", x.unique_name)
-    setattr(op_conf.scalar_div_by_tensor_conf, "scalar", scalar.unique_name)
-    op_conf.scalar_div_by_tensor_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 
 def broadcast_floor_mod(x, y, name=None):
@@ -559,18 +499,6 @@ def relu(x, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") == "False":
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("Relu_")
-        )
-        setattr(op_conf.relu_conf, "in", x.unique_name)
-        setattr(op_conf.relu_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
 
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
@@ -592,19 +520,6 @@ def sigmoid(x, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") == "False":
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("Sigmoid_")
-        )
-        setattr(op_conf.sigmoid_conf, "in", x.unique_name)
-        setattr(op_conf.sigmoid_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
-
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Sigmoid_")
@@ -739,28 +654,17 @@ def cast(x, dtype, name=None):
         return x
     if name is None:
         name = id_util.UniqueStr("Cast_")
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name)
-            .Op("cast")
-            .Input("in", [x])
-            .Output("out")
-            .Attr("dtype", dtype, "AttrTypeDataType")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(op_conf, "name", name)
-        setattr(op_conf.cast_conf, "in", x.unique_name)
-        setattr(op_conf.cast_conf, "data_type", dtype)
-        setattr(op_conf.cast_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+
+    return (
+        flow.user_op_builder(name)
+        .Op("cast")
+        .Input("in", [x])
+        .Output("out")
+        .Attr("dtype", dtype, "AttrTypeDataType")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("math.naive_logical_and")
