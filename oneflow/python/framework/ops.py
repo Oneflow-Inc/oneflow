@@ -15,7 +15,7 @@ import oneflow
 
 @oneflow_export("repeat")
 def api_repeat(input, repeat_num, name=None):
-    func = enable_if.condition([repeat])
+    func = enable_if.unique([repeat])
     return func(input, repeat_num, name=name)
 
 
@@ -38,7 +38,7 @@ def repeat(input, repeat_num, name=None):
 
 @oneflow_export("acc")
 def api_acc(one, max_acc_num, name=None):
-    func = enable_if.condition([acc])
+    func = enable_if.unique([acc])
     return func(one, max_acc_num, name=name)
 
 
@@ -61,7 +61,7 @@ def acc(one, max_acc_num, name=None):
 
 @oneflow_export("unpack")
 def api_unpack(input, unpack_num, name=None):
-    func = enable_if.condition([unpack])
+    func = enable_if.unique([unpack])
     return func(input, unpack_num, name=name)
 
 
