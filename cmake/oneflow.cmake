@@ -232,6 +232,7 @@ add_custom_target(make_pyproto_dir ALL
   COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow
   COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow/core
 	)
+add_dependencies(make_pyproto_dir prepare_oneflow_third_party)
 foreach(proto_name ${of_all_proto})
   file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})

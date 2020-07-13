@@ -209,7 +209,7 @@ def enable_eager_execution(val=True):
 
 @oneflow_export("enable_eager_execution")
 def api_enable_eager_execution(val: bool = True) -> None:
-    return enable_if.unique([enable_eager_execution])(val)
+    return enable_if.unique([enable_eager_execution])(val=val)
 
 
 @oneflow_export("eager_execution_enabled")
