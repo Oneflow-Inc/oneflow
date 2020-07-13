@@ -44,7 +44,7 @@
     git submodule update --init --recursive
     ```
 
-    or you can also clone the repo with `--recursive` flag to clone third_party submodules together
+    Or you could also clone the repo with `--recursive` flag to clone third_party submodules together
 
     ```
     git clone https://github.com/Oneflow-Inc/oneflow --recursive
