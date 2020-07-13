@@ -148,27 +148,6 @@ def test_eager_input_output(test_case):
     test_case.assertTrue(np.allclose(output, ret.ndarray_list()[0]))
 
 
-def test_eager_tensor_list_input(test_case):
-    if os.getenv("ENABLE_USER_OP") != "True":
-        return
-
-    flow.clear_default_session()
-    flow.enable_eager_execution()
-
-    input_0 = np.random.rand(1, 5, 4).astype(np.single)
-    input_1 = np.random.rand(1, 4, 4).astype(np.single)
-
-    @flow.global_function()
-    def foo_job(
-        input_def=flow.MirroredTensorListDef(shape=(2, 5, 4), dtype=flow.float)
-    ):
-        output_0, output_1 = flow.tensor_list_split(input_def)
-        test_case.assertTrue(np.array_equal(output_0.numpy(), input_0.squeeze()))
-        test_case.assertTrue(np.array_equal(output_1.numpy(), input_1.squeeze()))
-
-    foo_job([[input_0, input_1]])
-
-
 # TODO: system op need manaully register blob_object in default_blob_register or bw_blob_register
 # def test_eager_system_op(test_case):
 #     if os.getenv("ENABLE_USER_OP") != "True":

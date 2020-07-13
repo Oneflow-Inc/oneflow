@@ -32,6 +32,10 @@ class LocalMirroredTensor(object):
 
 class LocalMirroredTensorList(object):
     def __init__(self, ndarray_lists=None):
+        assert isinstance(ndarray_lists, (list, tuple))
+        for ndarray_list in ndarray_lists:
+            assert isinstance(ndarray_list, (list, tuple))
+            assert all(isinstance(ndarray, np.ndarray) for ndarray in ndarray_list)
         self.ndarray_lists_ = ndarray_lists
 
     def ndarray_lists(self):
@@ -65,26 +69,23 @@ def MergeLocalBlobs(local_blob_list, mirrored_blob):
     )
 
 
-def MakeLocalBlob4EagerMirroredBlob(eager_mirrored_blob):
-    assert isinstance(eager_mirrored_blob, remote_blob_util.EagerMirroredBlob)
-    if eager_mirrored_blob.is_tensor_list:
-        raise NotImplementedError
-    blob = eager_mirrored_blob
-    return LocalMirroredTensor(
-        [blob.numpy(i) for i in range(blob.numpy_size())],
-        is_dynamic=eager_mirrored_blob.is_dynamic,
-        concat_axis=eager_mirrored_blob.batch_axis,
-    )
-
-
-def MakeLocalBlob4EagerConsistentBlob(eager_consistent_blob):
-    assert isinstance(eager_consistent_blob, remote_blob_util.EagerConsistentBlob)
-    if eager_consistent_blob.is_tensor_list:
-        raise NotImplementedError
-
-    return LocalMirroredTensor(
-        [eager_consistent_blob.numpy()], is_dynamic=False, concat_axis=0
-    )
+def MakeLocalBlob4EagerBlob(eager_blob):
+    assert isinstance(eager_blob, remote_blob_util.EagerBlobTrait)
+    if eager_blob.is_tensor_list:
+        return LocalMirroredTensorList(eager_blob.numpy_list())
+    else:
+        if isinstance(eager_blob, remote_blob_util.EagerMirroredBlob):
+            return LocalMirroredTensor(
+                [eager_blob.numpy(i) for i in range(eager_blob.numpy_size())],
+                is_dynamic=eager_blob.is_dynamic,
+                concat_axis=eager_blob.batch_axis,
+            )
+        elif isinstance(eager_blob, remote_blob_util.EagerConsistentBlob):
+            return LocalMirroredTensor(
+                [eager_blob.numpy()], is_dynamic=False, concat_axis=0
+            )
+        else:
+            raise NotImplementedError
 
 
 non_override_field = set(

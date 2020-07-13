@@ -227,10 +227,8 @@ class EagerFutureRemoteBlobs(FutureRemoteBlobs):
             )
         elif isinstance(remote_blobs, dict):
             return {k: self._MakeRemoteBlobGetters(v) for k, v in remote_blobs.items()}
-        elif isinstance(remote_blobs, remote_blob_util.EagerMirroredBlob):
-            return _EagerMirroredBlobGetter(remote_blobs)
-        elif isinstance(remote_blobs, remote_blob_util.EagerConsistentBlob):
-            return _EagerConsistentBlobGetter(remote_blobs)
+        elif isinstance(remote_blobs, remote_blob_util.EagerBlobTrait):
+            return _EagerBlobGetter(remote_blobs)
         else:
             raise NotImplementedError
 
@@ -258,26 +256,5 @@ class _EagerBlobGetter(object):
         if self.local_tensor_ is not None:
             return self.local_tensor_
 
-        self.local_tensor_ = self.MakeLocalBlob()
+        self.local_tensor_ = local_blob_util.MakeLocalBlob4EagerBlob(self.eager_blob_)
         return self.local_tensor_
-
-    def MakeLocalBlob(self):
-        raise NotImplementedError
-
-
-class _EagerMirroredBlobGetter(_EagerBlobGetter):
-    def __init__(self, eager_mirror_blob):
-        assert isinstance(eager_mirror_blob, remote_blob_util.EagerMirroredBlob)
-        super().__init__(eager_mirror_blob)
-
-    def MakeLocalBlob(self):
-        return local_blob_util.MakeLocalBlob4EagerMirroredBlob(self.eager_blob_)
-
-
-class _EagerConsistentBlobGetter(_EagerBlobGetter):
-    def __init__(self, eager_consistent_blob):
-        assert isinstance(eager_consistent_blob, remote_blob_util.EagerConsistentBlob)
-        super().__init__(eager_consistent_blob)
-
-    def MakeLocalBlob(self):
-        return local_blob_util.MakeLocalBlob4EagerConsistentBlob(self.eager_blob_)
