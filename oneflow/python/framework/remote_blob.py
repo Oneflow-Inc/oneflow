@@ -147,7 +147,7 @@ class LazyMirroredBlob(MirroredBlob):
         MirroredBlob.__init__(self, lbi, **kw)
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         self.sub_consistent_blob_list_ = []
-        lbn = self.unique_name
+        lbn = self.logical_blob_name
         num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(
             self.job_name_, lbn
         )
@@ -284,14 +284,13 @@ class EagerBlobMixin(object):
         return self.blob_object_.parallel_desc_symbol.parallel_conf
 
     def __del__(self):
-        # TODO(lixinqi): fix the bug ocurred when using ClearObject4BlobName
-        blob_register.TryClearObject4BlobName(self.unique_name)
+        blob_register.TryClearObject4BlobName(self.logical_blob_name)
 
     def _Init(self, blob_object):
         if blob_object is None:
-            self.blob_object_ = blob_register.GetObject4BlobName(self.unique_name)
+            self.blob_object_ = blob_register.GetObject4BlobName(self.logical_blob_name)
         else:
-            blob_register.SetObject4BlobName(self.unique_name, blob_object)
+            blob_register.SetObject4BlobName(self.logical_blob_name, blob_object)
             self.blob_object_ = blob_object
         self.sub_consistent_blob_list_ = []
 
@@ -323,7 +322,7 @@ class EagerBlobMixin(object):
                     builder, blob_object, tmp_op_arg_parallel_attr
                 )
                 nonlocal consistent_blob_name
-                consistent_blob_name = "{}-consistent".format(self.unique_name)
+                consistent_blob_name = "{}-consistent".format(self.logical_blob_name)
                 if not blob_register.HasObject4BlobName(consistent_blob_name):
                     blob_register.SetObject4BlobName(
                         consistent_blob_name, tmp_blob_object
@@ -346,7 +345,7 @@ class EagerBlobMixin(object):
             )
 
         def GetPhyBlobNumpy(i, phy_blob_object):
-            name = "{}/{}".format(self.unique_name, i)
+            name = "{}/{}".format(self.logical_blob_name, i)
             blob_register.SetObject4BlobName(name, phy_blob_object)
             return eager_blob_util.EagerPhysicalBlob(name).numpy()
 

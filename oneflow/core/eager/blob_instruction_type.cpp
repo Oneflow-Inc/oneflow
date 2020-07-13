@@ -34,7 +34,7 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
     FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
     auto* blob = instruction->mut_operand_type(args->blob())->Mut<BlobObject>()->mut_blob();
     CHECK(blob->mem_case().has_host_mem());
-    CHECK(!blob->mem_case().host_mem().has_cuda_pinned_mem());
+    if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
     void* dptr = blob->mut_dptr();
     CHECK_NOTNULL(dptr);
     size_t size = blob->AlignedByteSizeOfBlobBody();
@@ -59,7 +59,7 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
     FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
     auto* blob = instruction->mut_operand_type(args->blob())->Mut<BlobObject>()->mut_blob();
     CHECK(blob->mem_case().has_host_mem());
-    CHECK(!blob->mem_case().host_mem().has_cuda_pinned_mem());
+    if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
     void* dptr = blob->mut_dptr();
     CHECK_NOTNULL(dptr);
     cudaError_t cuda_error = cudaHostUnregister(dptr);

@@ -144,7 +144,7 @@ def GetBoxingRightDebugString(boxing_method):
         return GetBoxingDebugString(boxing_method)
 
 
-def Sequential(*boxing_methods, override=tuple(), middle_verbose=False):
+def Sequential(*boxing_methods, exclude=tuple(), middle_verbose=False):
     assert not isinstance(boxing_methods[-1], boxing_middle.BoxingToMiddle)
     composed = boxing_methods[-1]
     for boxing_to_middle in boxing_methods[-2::-1]:
@@ -162,12 +162,12 @@ def Sequential(*boxing_methods, override=tuple(), middle_verbose=False):
             boxing_to_middle.get_middle_op_arg_parallel_attr,
             middle_verbose_str=middle_verbose_str,
         )
-    if len(override) > 0:
-        override_hob = enable_if.get_condition_hob(override[0])
-        for method in override[1:]:
-            override_hob = override_hob | enable_if.get_condition_hob(method)
+    if len(exclude) > 0:
+        exclude_hob = enable_if.get_condition_hob(exclude[0])
+        for method in exclude[1:]:
+            exclude_hob = exclude_hob | enable_if.get_condition_hob(method)
         old_hob = enable_if.get_condition_hob(composed)
-        enable_if.set_condition_hob(composed, old_hob & ~override_hob)
+        enable_if.set_condition_hob(composed, old_hob & ~exclude_hob)
     return composed
 
 
@@ -701,6 +701,7 @@ conditional_function_table = [
         ),
         OptionalBoxing(CopyH2D),
     ),
+    BroadcastManyToOne,
     Sequential(
         boxing_middle.BoxingToMiddle(
             OptionalBoxing(BroadcastManyToOne),
@@ -723,7 +724,7 @@ conditional_function_table = [
             boxing_middle.BroadcastParallel,
         ),
         OptionalBoxing(CopyH2D),
-        override=(CopyH2D, CopyD2H, NoBoxing, CpuOneToOne),
+        exclude=(BroadcastManyToOne, CopyH2D, CopyD2H, NoBoxing, CpuOneToOne),
     ),
     # e.g. 0:gpu:0-3 -> 0:gpu:0-3 (P->B)
     Sequential(
