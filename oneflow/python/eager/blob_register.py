@@ -36,6 +36,10 @@ class BlobRegister(object):
         blob_cache_util.TryDisableBlobCache(self.blob_name2object[blob_name])
         del self.blob_name2object[blob_name]
 
+    def TryClearObject4BlobName(self, blob_name):
+        if self.HasObject4BlobName(blob_name):
+            self.ClearObject4BlobName(blob_name)
+
     @contextmanager
     def BnInOp2BlobObjectScope(self, op_attribute):
         bn_in_op2blob_object = {}

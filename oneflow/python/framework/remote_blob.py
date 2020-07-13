@@ -284,7 +284,8 @@ class EagerBlobMixin(object):
         return self.blob_object_.parallel_desc_symbol.parallel_conf
 
     def __del__(self):
-        blob_register.ClearObject4BlobName(self.unique_name)
+        # TODO(lixinqi): fix the bug ocurred when using ClearObject4BlobName
+        blob_register.TryClearObject4BlobName(self.unique_name)
 
     def _Init(self, blob_object):
         if blob_object is None:
