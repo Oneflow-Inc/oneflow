@@ -29,9 +29,9 @@ OF_PP_FOR_EACH_TUPLE(DECLARE_UNARY_FUNCTOR, MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
 
 template<typename T>
 struct AbsFunctor {
-  static OF_DEVICE_FUNC const T Forward(const T x) { return x < 0 ? -x : x; }
+  static OF_DEVICE_FUNC const T Forward(const T x) { return x < T(0) ? -x : x; }
 
-  static OF_DEVICE_FUNC const T Backward(const T x, const T dy) { return x < 0 ? -dy : dy; }
+  static OF_DEVICE_FUNC const T Backward(const T x, const T dy) { return x < T(0) ? -dy : dy; }
 };
 
 template<typename T>
@@ -845,12 +845,12 @@ struct ReciprocalFunctor<half> {
 template<>
 struct ReciprocalNoNanFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) {
-    if (__hequ(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
+    if (__heq(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
     return hrcp(x);
   }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
-    if (__hequ(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
+    if (__heq(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
     return __hmul(dy, __hneg(hrcp(__hmul(x, x))));
   }
 };
