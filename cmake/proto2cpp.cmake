@@ -3,7 +3,7 @@ function(RELATIVE_PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
     message(SEND_ERROR "Error: RELATIVE_PROTOBUF_GENERATE_CPP() called without any proto files")
     return()
   endif()
-  
+
   set(${SRCS})
   set(${HDRS})
   set(of_proto_dir "${PROJECT_BINARY_DIR}/python_scripts")
@@ -30,13 +30,13 @@ function(RELATIVE_PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
 
       COMMAND ${CMAKE_COMMAND}
       ARGS -E touch ${of_proto_dir}/${REL_DIR}/__init__.py
-      
+
       COMMAND  ${PROTOBUF_PROTOC_EXECUTABLE}
       ARGS --python_out  ${of_pure_proto_dir} -I ${ROOT_DIR} ${ABS_FIL} -I ${PROTOBUF_INCLUDE_DIR}
-      
+
       COMMAND ${CMAKE_COMMAND}
       ARGS -E touch ${of_pure_proto_dir}/${REL_DIR}/__init__.py
-      
+
       DEPENDS ${ABS_FIL}
       COMMENT "Running Protocol Buffer Compiler on ${FIL}"
       VERBATIM )
