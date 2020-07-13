@@ -1,6 +1,20 @@
 # Oneflow
 ![Build and Test CI](https://github.com/Oneflow-Inc/oneflow/workflows/Build%20and%20Test%20CI/badge.svg?branch=develop)
 
+### Install OneFlow
+
+  - To install latest release of OneFlow:
+
+  ```
+  pip install oneflow
+  ```
+
+  - To install nightly release of OneFlow:
+
+  ```
+  pip install --find-links https://oneflow-inc.github.io/nightly oneflow
+  ```
+
 ### Build OneFlow from Source
 - #### System Requirements
   Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable. 
@@ -15,14 +29,16 @@
   sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
   ```
 
+  It is recommended to install MKL. Please refer to Intel's official guide on how to install MKL [here](https://software.intel.com/content/www/us/en/develop/tools/math-kernel-library/choose-download.html)
+
   If installed CMake doesn't support https scheme, please install a release with support for it. For instance:
   ```
   https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz
   ```
 
-- #### Common Questions
+- #### Troubleshooting
 
-  [Troubleshooting](docs/source/troubleshooting.md)
+  Please refer to [Troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling oneflow from source.
 
 - #### Clone Source Code
 
@@ -52,19 +68,11 @@
   cd build
   ```
 
-- #### Build Third Party from Source
-
-  Inside directory `build`, run:
-  ```
-  cmake -DTHIRD_PARTY=ON .. 
-  make -j$(nproc)
-  ```
-
 - #### Build OneFlow
 
   Inside directory `build`, run:
   ```
-  cmake .. -DTHIRD_PARTY=OFF
+  cmake ..
 
   make -j$(nproc)
   ```
@@ -95,65 +103,8 @@
   ```
   Your should find a `.whl` package in `dist`.
 
-### Build with XLA
+### Advanced Features
 
-- #### Install Bazel
-
-  Download and install bazel from [here](https://docs.bazel.build/versions/1.0.0/bazel-overview.html) , and version 0.24.1 is recommended. You can confirm bazel is installed successfully by running the following command:
-
-  ```shell
-  bazel version
-  ```
-
-- #### Build Third Parties
-
-  Inside directory `build`, run:
-
-  ```shell
-  cmake -DWITH_XLA=ON -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release ..
-  make -j$(nproc)
-  ```
-
-  If the downloading error occurred, you should go back to the previous step to reinstall the cmake, then clean the file CMakeCache.txt and build the third-parties once again.
-
-- #### Build OneFlow
-
-  Inside directory `build`, run:
-  ```shell
-  cmake .. \
-  -DWITH_XLA=ON \
-  -DTHIRD_PARTY=OFF \
-  -DCMAKE_BUILD_TYPE=Release
-  
-  make -j$(nproc)
-  ```
-
-### Build with TensorRT
-
-- #### Build Third Parties
-
-  1. Download TensorRT(>=6.0) .tgz and unzip the package.
-  
-  2. Inside directory `build`, run:
-  
-  ```shell
-  cmake -DWITH_TENSORRT=ON -DTENSORRT_ROOT=your_tensorrt_path -DTHIRD_PARTY=ON ..
-  make -j$(nproc)
-  ```
-- #### Build OneFlow
-
-  Inside directory `build`, run:
-  ```shell
-  cmake .. \
-  -DWITH_TENSORRT=ON \
-  -DTENSORRT_ROOT=your_tensorrt_path \
-  -DTHIRD_PARTY=OFF
-
-  make -j$(nproc)
-  ```
-
-### Documents
-
- - #### XRT Documents
+ - #### XRT
 
    You can check this [doc](./oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
