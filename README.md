@@ -82,9 +82,7 @@
     pip3 install -e . --user
     ```
 
-  - Alternatively, you can also install OneFlow by adding `build/python_scripts` to your `PYTHONPATH`
-
-    For example:
+  - Alternatively, you can also install OneFlow by adding `build/python_scripts` to your `PYTHONPATH`:
     ```
     export PYTHONPATH=$HOME/oneflow/build/python_scripts:$PYTHONPATH
     ```
