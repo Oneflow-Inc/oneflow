@@ -326,4 +326,17 @@ REGISTER_USER_KERNEL("TestListDataTypeAndListShapeAndListStringAttr")
     .SetCreateFn<TestListDataTypeAndShapeAttrAndStringAttrKernel>()
     .SetIsMatchedHob(user_op::HobTrue());
 
+class TestUserOpAttrAutoTypeKernel final : public user_op::OpKernel {
+ public:
+  TestUserOpAttrAutoTypeKernel() = default;
+  ~TestUserOpAttrAutoTypeKernel() override = default;
+
+ private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("test_user_op_attr_auto_type")
+    .SetCreateFn<TestUserOpAttrAutoTypeKernel>()
+    .SetIsMatchedHob(user_op::HobTrue());
+
 }  // namespace oneflow
