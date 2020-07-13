@@ -1,11 +1,10 @@
-OneFlow Documentation
+OneFlow API Reference
 ===================================
 .. toctree::
     :maxdepth: 1
 
-    models
     troubleshooting
-    mandarin
+
 
 
 .. toctree::
