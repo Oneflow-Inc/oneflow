@@ -142,13 +142,6 @@ message PReluAlphaGradOpConf {
   required bool channel_shared = 5;
 }
 
-enum ScalarReductionType {
-  kSumOverOne = 0;
-  kSumOverWeight = 1;
-  kSumOverN = 2;
-  kSumOverNonZeroWeight = 3;
-}
-
 message SigmoidCrossEntropyOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -452,19 +445,6 @@ message LazyAdamModelUpdateOpConf {
 message AccumulateOpConf {
 }
 
-message PrintRecordConf {
-  required string lbn = 1;
-  optional string name = 2;
-  required EncodeConf encode_case = 3;
-}
-
-message PrintOpConf {
-  repeated PrintRecordConf in = 1;
-  required string print_dir = 2;
-  optional string part_name_prefix = 3 [default = "part-"];
-  optional int32 part_name_suffix_length = 4 [default = -1];
-}
-
 message ReduceSumOpConf {
   required string in = 1;
   required string out = 3;
@@ -477,21 +457,6 @@ message ReduceSumLikeOpConf {
   required string like = 2;
   required string y = 3;
   repeated int32 axis = 4;
-  optional string temp_storage = 5 [default = "temp_storage"];
-}
-
-message ReduceMeanOpConf {
-  required string in = 1;
-  required string out = 2;
-  repeated int32 axis = 3;
-  optional bool keep_dims = 4 [default = false];
-}
-
-message ReduceMeanGradOpConf {
-  required string dy = 1;
-  required string x = 2; // like
-  required string dx = 3;
-  repeated int32 reduced_axis = 4;
   optional string temp_storage = 5 [default = "temp_storage"];
 }
 
@@ -520,11 +485,6 @@ message DynamicReshapeLikeOpConf {
 }
 
 message AddOpConf {
-  repeated string in = 1;
-  required string out = 2;
-}
-
-message MaximumOpConf {
   repeated string in = 1;
   required string out = 2;
 }
@@ -590,16 +550,6 @@ message VariableOpConf {
   required OptInt64 split_axis = 8;
   optional int64 random_seed = 9;
   optional RegularizerConf regularizer = 10;
-}
-
-message LocalResponseNormalizationOpConf {
-  required string in = 1;
-  required string out = 2;
-  required string data_format = 3;
-  optional int32 depth_radius = 4 [default = 5];
-  optional double bias = 5 [default = 1];
-  optional double alpha = 6 [default = 1];
-  optional double beta = 7 [default = 0.5];
 }
 
 message EncodeConf {
@@ -728,18 +678,6 @@ message ReduceGatherOpConf {
   optional int32 in_num = 1 [default = 0];
 }
 
-message DotOpConf {
-  required string in = 1;
-  required string weight = 2;
-  optional string bias = 3;
-  required string out = 4;
-}
-
-enum Norm {
-  L1 = 1;
-  L2 = 2;
-}
-
 message PackOpConf {
   required string in = 1;
   required string out = 2;
@@ -771,24 +709,6 @@ message ConstantOpConf {
   optional ShapeProto shape = 3;
   optional DataType data_type = 4;
   optional InitializerConf initializer = 5;
-}
-
-message ScalarAddOpConf {
-  required string in = 1;
-  required string out = 2;
-  oneof scalar_operand {
-    int64 int_operand = 3;
-    double float_operand = 4;
-  }
-}
-
-message ScalarMulOpConf {
-  required string in = 1;
-  required string out = 2;
-  oneof scalar_operand {
-    int64 int_operand = 3;
-    double float_operand = 4;
-  }
 }
 
 message ReduceIdentityOpConf {
@@ -840,22 +760,9 @@ message TupleIdentityOpConf {
   repeated string out = 2;
 }
 
-message TopKOpConf {
-  required string in = 1;
-  required string out = 2;
-  optional int32 k = 3 [default = 1];
-  optional bool sorted = 4 [default = true];
-}
-
 message KeepHeaderOnlyOpConf {
   repeated string in = 1;
   repeated string out = 2;
-}
-
-message AxpyOpConf {
-  required string x = 1;
-  required string y = 2;
-  required double alpha = 3;
 }
 
 message TotalLossInstanceNumOpConf {
@@ -1259,22 +1166,16 @@ message OperatorConf {
     TupleIdentityOpConf tuple_identity_conf = 200;
     ReshapeOpConf reshape_conf = 202;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
     ReduceSumOpConf reduce_sum_conf = 219;
     AddOpConf add_conf = 220;
-    DotOpConf dot_conf = 222;
-    MaximumOpConf maximum_conf = 224;
-    PrintOpConf print_conf = 233;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
-    ReduceMeanOpConf reduce_mean_conf = 261;
     PReluOpConf prelu_conf = 265;
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
     BroadcastLikeOpConf broadcast_like_conf = 277;
-    ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
     ReshapeLikeOpConf reshape_like_conf = 286;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     IdentityOpConf identity_conf = 290;
@@ -1303,13 +1204,9 @@ message OperatorConf {
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op
-    ScalarAddOpConf scalar_add_conf = 516;
-    ScalarMulOpConf scalar_mul_conf = 517;
     SquareSumOpConf square_sum_conf = 522;
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
 
-    // mutable input op
-    AxpyOpConf axpy_conf = 752;
   }
 }
 

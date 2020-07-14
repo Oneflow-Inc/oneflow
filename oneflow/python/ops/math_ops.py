@@ -140,38 +140,22 @@ def floor_mod(x, y, name=None):
 def scalar_add(x, operand, name=None):
     if name is None:
         name = id_util.UniqueStr("ScalarAdd_")
-    if os.getenv("ENABLE_USER_OP") != "False":
-        builder = (
-            flow.user_op_builder(name).Op("scalar_add").Input("in", [x]).Output("out")
-        )
-        if isinstance(operand, int):
-            builder = (
-                builder.Attr("has_int_operand", True, "AttrTypeBool")
-                .Attr("has_float_operand", False, "AttrTypeBool")
-                .Attr("int_operand", operand, "AttrTypeInt64")
-                .Attr("float_operand", 0.0, "AttrTypeDouble")
-            )
-        elif isinstance(operand, float):
-            builder = (
-                builder.Attr("has_int_operand", False, "AttrTypeBool")
-                .Attr("has_float_operand", True, "AttrTypeBool")
-                .Attr("int_operand", 0, "AttrTypeInt64")
-                .Attr("float_operand", operand, "AttrTypeDouble")
-            )
-        return builder.Build().InferAndTryRun().RemoteBlobList()[0]
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name)
-    setattr(op_conf.scalar_add_conf, "in", x.unique_name)
+    builder = flow.user_op_builder(name).Op("scalar_add").Input("in", [x]).Output("out")
     if isinstance(operand, int):
-        op_conf.scalar_add_conf.int_operand = operand
+        builder = (
+            builder.Attr("has_int_operand", True, "AttrTypeBool")
+            .Attr("has_float_operand", False, "AttrTypeBool")
+            .Attr("int_operand", operand, "AttrTypeInt64")
+            .Attr("float_operand", 0.0, "AttrTypeDouble")
+        )
     elif isinstance(operand, float):
-        op_conf.scalar_add_conf.float_operand = operand
-    op_conf.scalar_add_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+        builder = (
+            builder.Attr("has_int_operand", False, "AttrTypeBool")
+            .Attr("has_float_operand", True, "AttrTypeBool")
+            .Attr("int_operand", 0, "AttrTypeInt64")
+            .Attr("float_operand", operand, "AttrTypeDouble")
+        )
+    return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 def scalar_add_by_tensor(x, scalar, name=None):
@@ -262,39 +246,22 @@ def broadcast_mul(x, y, name=None):
 def scalar_mul(x, operand, name=None):
     if name is None:
         name = id_util.UniqueStr("ScalarMul_")
-    if os.getenv("ENABLE_USER_OP") != "False":
+    builder = flow.user_op_builder(name).Op("scalar_mul").Input("in", [x]).Output("out")
+    if isinstance(operand, int):
         builder = (
-            flow.user_op_builder(name).Op("scalar_mul").Input("in", [x]).Output("out")
+            builder.Attr("has_int_operand", True, "AttrTypeBool")
+            .Attr("has_float_operand", False, "AttrTypeBool")
+            .Attr("int_operand", operand, "AttrTypeInt64")
+            .Attr("float_operand", 0.0, "AttrTypeDouble")
         )
-        if isinstance(operand, int):
-            builder = (
-                builder.Attr("has_int_operand", True, "AttrTypeBool")
-                .Attr("has_float_operand", False, "AttrTypeBool")
-                .Attr("int_operand", operand, "AttrTypeInt64")
-                .Attr("float_operand", 0.0, "AttrTypeDouble")
-            )
-        elif isinstance(operand, float):
-            builder = (
-                builder.Attr("has_int_operand", False, "AttrTypeBool")
-                .Attr("has_float_operand", True, "AttrTypeBool")
-                .Attr("int_operand", 0, "AttrTypeInt64")
-                .Attr("float_operand", operand, "AttrTypeDouble")
-            )
-        return builder.Build().InferAndTryRun().RemoteBlobList()[0]
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(op_conf, "name", name)
-        setattr(op_conf.scalar_mul_conf, "in", x.unique_name)
-        if isinstance(operand, int):
-            op_conf.scalar_mul_conf.int_operand = operand
-        elif isinstance(operand, float):
-            op_conf.scalar_mul_conf.float_operand = operand
-        op_conf.scalar_mul_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    elif isinstance(operand, float):
+        builder = (
+            builder.Attr("has_int_operand", False, "AttrTypeBool")
+            .Attr("has_float_operand", True, "AttrTypeBool")
+            .Attr("int_operand", 0, "AttrTypeInt64")
+            .Attr("float_operand", operand, "AttrTypeDouble")
+        )
+    return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 def scalar_mul_by_tensor(x, scalar, name=None):
