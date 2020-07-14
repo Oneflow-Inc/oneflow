@@ -214,10 +214,10 @@ def test_pool(_):
             x = [x]
         y = pooling_job(x).get()
         y_ndarray = None
-        if is_dynamic:
-            y_ndarray = y.ndarray_list()[0]
-        else:
+        if hasattr(y, "ndarray"):
             y_ndarray = y.ndarray()
+        else:
+            y_ndarray = y.ndarray_list()[0]
         assert y_ndarray.shape == y_tf.numpy().shape, (
             y_ndarray.shape,
             y_tf.numpy().shape,
