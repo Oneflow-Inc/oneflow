@@ -181,7 +181,6 @@ Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
 }
 
-
 Maybe<void> CacheInt8Calibration() {
 #ifdef WITH_TENSORRT
   xrt::tensorrt::CacheInt8Calibration();
@@ -201,8 +200,7 @@ Maybe<void> WriteInt8Calibration(const std::string& path) {
   return Maybe<void>::Ok();
 }
 
-Maybe<long long> GetUserOpAttrType(const std::string& op_type_name,
-                                   const std::string& attr_name) {
+Maybe<long long> GetUserOpAttrType(const std::string& op_type_name, const std::string& attr_name) {
   return JUST(GetUserOpAttrTypeImpl(op_type_name, attr_name));
 }
 
