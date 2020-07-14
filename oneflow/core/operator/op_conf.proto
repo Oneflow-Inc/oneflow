@@ -489,11 +489,6 @@ message AddOpConf {
   required string out = 2;
 }
 
-message MaximumOpConf {
-  repeated string in = 1;
-  required string out = 2;
-}
-
 message InterfaceBlobConf {
   required ShapeProto shape = 1;
   required DataType data_type = 2;
@@ -1267,7 +1262,6 @@ message OperatorConf {
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
     ReduceSumOpConf reduce_sum_conf = 219;
     AddOpConf add_conf = 220;
-    MaximumOpConf maximum_conf = 224;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
