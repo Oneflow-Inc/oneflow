@@ -71,6 +71,23 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dila
   if (output_size) { CHECK_GE((*output_size), 0); }
 }
 
+void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
+                           int32_t stride, int32_t padding_needed, int64_t* output_size,
+                           int32_t* padding_before, int32_t* padding_after) {
+  CHECK_GT(stride, 0);
+  CHECK_GE(dilation_rate, 1);
+
+  int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
+  if (output_size) {
+    *output_size = (input_size + padding_needed - effective_filter_size + stride) / stride;
+    CHECK_GE((*output_size), 0);
+  }
+  // For odd values of total padding, add more padding at the 'right'
+  // side of the given dimension.
+  if (padding_before) { *padding_before = padding_needed / 2; }
+  if (padding_after) { *padding_after = padding_needed - padding_needed / 2; }
+}
+
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t stride,
                            const std::string& padding_type, int64_t* output_size,
                            int32_t* padding_before, int32_t* padding_after) {
@@ -156,13 +173,13 @@ void GetConvOutAndPad(const ShapeView& in_blob_shape, const user_op::UserOpConfW
   if (pad_small_side) { pad_small_side->assign(opkernel_dim, 0); }
   if (pad_large_side) { pad_large_side->assign(opkernel_dim, 0); }
   const auto& data_format = conv_conf.attr<std::string>("data_format");
-  const auto& padding = conv_conf.attr<std::string>("padding");
+  const auto& padding_needed = conv_conf.attr<std::vector<int32_t>>("padding_needed");
   const auto& strides = conv_conf.attr<std::vector<int32_t>>("strides");
   const auto& dilation_rate = conv_conf.attr<std::vector<int32_t>>("dilation_rate");
   const auto& kernel_size = conv_conf.attr<std::vector<int32_t>>("kernel_size");
   FOR_RANGE(int32_t, i, 0, opkernel_dim) {
     GetWindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.at(i),
-                          dilation_rate.at(i), strides.at(i), padding,
+                          dilation_rate.at(i), strides.at(i), padding_needed.at(i),
                           out ? &(out->at(i)) : nullptr,
                           pad_small_side ? &(pad_small_side->at(i)) : nullptr,
                           pad_large_side ? &(pad_large_side->at(i)) : nullptr);
