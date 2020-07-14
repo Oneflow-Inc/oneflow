@@ -13,7 +13,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
-#include "oneflow/customized/utils/events_writer.h"
+#include "oneflow/customized/summary/events_writer.h"
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 
@@ -116,6 +116,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
   Global<ThreadMgr>::New(plan);
+  Global<summary::EventsWriter>::New();
 #ifdef WITH_CUDA
   Global<NcclCommMgr>::New(plan);
 #endif  // WITH_CUDA
@@ -137,7 +138,7 @@ void Runtime::DeleteAllGlobal() {
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
-  Global<EventsWriter>::Delete();
+  Global<summary::EventsWriter>::Delete();
 }
 
 }  // namespace oneflow

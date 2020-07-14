@@ -1,10 +1,10 @@
-#include "oneflow/customized/utils/events_writer.h"
-#include <cstdio>
-#include <queue>
+#include "oneflow/customized/summary/events_writer.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/customized/utils/env_time.h"
+#include "oneflow/customized/summary/env_time.h"
 
 namespace oneflow {
+
+namespace summary {
 
 EventsWriter::EventsWriter() {}
 
@@ -15,7 +15,7 @@ Maybe<void> EventsWriter::Init(const std::string& logdir) {
   file_system_->RecursivelyCreateDirIfNotExist(logdir);
   log_dir_ = logdir;
   TryToInit();
-  last_flush_time_ = envtime::CurrentMircoTime();
+  last_flush_time_ = CurrentMircoTime();
   return Maybe<void>::Ok();
 }
 
@@ -28,7 +28,7 @@ Maybe<void> EventsWriter::TryToInit() {
     }
   }
 
-  int32_t current_time = envtime::CurrentSecondTime();
+  int32_t current_time = CurrentSecondTime();
   char hostname[255];
   CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
 
@@ -52,8 +52,7 @@ void EventsWriter::AppendQueue(std::unique_ptr<Event> event) {
   queue_mutex.lock();
   event_queue_.emplace_back(std::move(event));
   queue_mutex.unlock();
-  if (event_queue_.size() > MAX_QUEUE_NUM
-      || envtime::CurrentMircoTime() - last_flush_time_ > FLUSH_TIME) {
+  if (event_queue_.size() > MAX_QUEUE_NUM || CurrentMircoTime() - last_flush_time_ > FLUSH_TIME) {
     Flush();
   }
 }
@@ -64,7 +63,7 @@ void EventsWriter::Flush() {
   event_queue_.clear();
   queue_mutex.unlock();
   FileFlush();
-  last_flush_time_ = envtime::CurrentMircoTime();
+  last_flush_time_ = CurrentMircoTime();
 }
 
 void EventsWriter::WriteEvent(const Event& event) {
@@ -104,5 +103,7 @@ Maybe<void> EventsWriter::Close() {
   }
   return Maybe<void>::Ok();
 }
+
+}  // namespace summary
 
 }  // namespace oneflow

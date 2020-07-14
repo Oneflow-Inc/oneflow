@@ -1,23 +1,15 @@
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/customized/utils/event.pb.h"
-#include "oneflow/customized/utils/events_writer.h"
-#include "oneflow/customized/utils/summary.pb.h"
-#include "oneflow/customized/utils/env_time.h"
-#include "oneflow/customized/utils/histogram.h"
-#include "oneflow/customized/utils/tensor.pb.h"
+#include "oneflow/customized/summary/events_writer.h"
+#include "oneflow/customized/summary/env_time.h"
+#include "oneflow/customized/summary/histogram.h"
+#include "oneflow/customized/summary/event_writer_helper.h"
 
-#include "oneflow/customized/utils/event_write_helper.h"
-
-#include <sys/time.h>
 #include <time.h>
 #include <cstdint>
-#include <memory>
 
 namespace oneflow {
 
-namespace {
+namespace summary {
 
 template<typename T>
 class WriteScalar final : public user_op::OpKernel {
@@ -37,7 +29,7 @@ class WriteScalar final : public user_op::OpKernel {
     CHECK_NOTNULL(istep);
     int8_t* ctag = const_cast<int8_t*>(tag->dptr<int8_t>());
     CHECK_NOTNULL(ctag);
-    EventWriteHelper<DeviceType::kCPU, T>::WriteScalarToFile(
+    EventWriterHelper<DeviceType::kCPU, T>::WriteScalarToFile(
         istep[0], static_cast<double>(tvalue[0]), reinterpret_cast<char*>(ctag));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -62,7 +54,7 @@ class CreateSummaryWriter final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const std::string& logdir = ctx->Attr<std::string>("logdir");
-    Global<EventsWriter>::New();
+    // Global<EventsWriter>::New();
     Global<EventsWriter>::Get()->Init(logdir);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -72,10 +64,26 @@ REGISTER_USER_KERNEL("create_summary_writer")
     .SetCreateFn<CreateSummaryWriter>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
 
-class FlushEventWriter final : public user_op::OpKernel {
+class DestroySummaryWriter final : public user_op::OpKernel {
  public:
-  FlushEventWriter() = default;
-  ~FlushEventWriter() = default;
+  DestroySummaryWriter() = default;
+  ~DestroySummaryWriter() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    Global<EventsWriter>::Delete();
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+REGISTER_USER_KERNEL("destroy_summary_writer")
+    .SetCreateFn<DestroySummaryWriter>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
+
+class FlushSummaryWriter final : public user_op::OpKernel {
+ public:
+  FlushSummaryWriter() = default;
+  ~FlushSummaryWriter() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -84,8 +92,8 @@ class FlushEventWriter final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-REGISTER_USER_KERNEL("flush_event_writer")
-    .SetCreateFn<FlushEventWriter>()
+REGISTER_USER_KERNEL("flush_summary_writer")
+    .SetCreateFn<FlushSummaryWriter>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
 
 template<typename T>
@@ -103,7 +111,7 @@ class WriteHistogram final : public user_op::OpKernel {
     CHECK_NOTNULL(istep);
     int8_t* ctag = const_cast<int8_t*>(tag->dptr<int8_t>());
     CHECK_NOTNULL(ctag);
-    EventWriteHelper<DeviceType::kCPU, T>::WriteHistogramToFile(
+    EventWriterHelper<DeviceType::kCPU, T>::WriteHistogramToFile(
         static_cast<float>(istep[0]), *value, reinterpret_cast<char*>(ctag));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -136,7 +144,8 @@ class WritePb final : public user_op::OpKernel {
     CHECK_NOTNULL(istep);
     int8_t* cvalue = const_cast<int8_t*>(value->dptr<int8_t>());
     CHECK_NOTNULL(value);
-    EventWriteHelper<DeviceType::kCPU, T>::WritePbToFile(istep[0], reinterpret_cast<char*>(cvalue));
+    EventWriterHelper<DeviceType::kCPU, T>::WritePbToFile(istep[0],
+                                                          reinterpret_cast<char*>(cvalue));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -161,8 +170,8 @@ class WriteImage final : public user_op::OpKernel {
     CHECK_NOTNULL(istep);
     char* ctag = const_cast<char*>(tag->dptr<char>());
     CHECK_NOTNULL(ctag);
-    EventWriteHelper<DeviceType::kCPU, T>::WriteImageToFile(static_cast<int64_t>(istep[0]), value,
-                                                            ctag);
+    EventWriterHelper<DeviceType::kCPU, T>::WriteImageToFile(static_cast<int64_t>(istep[0]), *value,
+                                                             ctag);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -172,5 +181,5 @@ REGISTER_USER_KERNEL("write_image")
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      & (user_op::HobDataType("in", 0) == GetDataType<uint8_t>::value));
 
-}  // namespace
+}  // namespace summary
 }  // namespace oneflow

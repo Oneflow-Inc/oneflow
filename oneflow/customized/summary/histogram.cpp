@@ -1,9 +1,12 @@
-#include "oneflow/customized/utils/histogram.h"
-#include "oneflow/customized/utils/summary.pb.h"
+#include "oneflow/customized/summary/histogram.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/customized/summary/summary.pb.h"
+#include <cfloat>
+#include <algorithm>
 
 namespace oneflow {
 
-namespace histogram {
+namespace summary {
 
 static std::vector<double> defalut_container = {-DBL_MAX,
                                                 -451872326.521804,
@@ -727,5 +730,5 @@ void Histogram::AppendToProto(HistogramProto* hist_proto) {
   }
 }
 
-}  // namespace histogram
+}  // namespace summary
 }  // namespace oneflow

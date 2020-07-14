@@ -16,4 +16,3 @@ message NodeDef {
   optional string device = 4;
   map<string, UserOpAttrVal> attr = 5;
 }
-

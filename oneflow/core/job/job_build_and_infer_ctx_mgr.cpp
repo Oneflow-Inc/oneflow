@@ -1,5 +1,6 @@
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/common/util.h"
+#include <json.hpp>
 
 namespace oneflow {
 
@@ -75,18 +76,12 @@ Maybe<void> JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
 
 std::string JobBuildAndInferCtxMgr::structure_graph() const {
   nlohmann::json json_array;
-
   for (const auto& pair : job_name2infer_ctx_) {
     nlohmann::json json_pair;
     json_pair["class_name"] = "Model";
-
-    nlohmann::json json_conf;
-    json_conf["name"] = pair.first;
-    pair.second->GetJobStructureGraphJson(json_conf);
-    json_pair["config"] = json_conf;
-
+    std::string tmp_json = pair.second->GetJobStructureGraphJson(pair.first);
+    json_pair["config"] = nlohmann::json::parse(tmp_json);
     json_pair["backend"] = "oneflow";
-
     json_array.emplace_back(json_pair);
   }
   return json_array.dump();

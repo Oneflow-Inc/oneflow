@@ -24,7 +24,6 @@
 #include "oneflow/core/vm/oneflow_vm.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
-#include "oneflow/customized/utils/plan_to_physical_graph.h"
 
 namespace std {
 
@@ -933,7 +932,6 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
       PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
-      PlanToPhysicalGraphFile(*plan);
     }
     PushPlan("merged_plan", *plan);
   } else {

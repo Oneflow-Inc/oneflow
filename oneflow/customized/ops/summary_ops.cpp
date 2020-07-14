@@ -3,27 +3,33 @@
 
 namespace oneflow {
 
-namespace {
+namespace summary {
 
 Maybe<void> CheckStepShape(const Shape* step) {
   CHECK_OR_RETURN(step->elem_cnt() == 1);
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP("create_summary_writer")
+REGISTER_CPU_ONLY_USER_OP("create_summary_writer")
     .Attr("logdir", UserOpAttrType::kAtString)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
-REGISTER_USER_OP("flush_event_writer")
+REGISTER_CPU_ONLY_USER_OP("destroy_summary_writer")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
-REGISTER_USER_OP("write_scalar")
+REGISTER_CPU_ONLY_USER_OP("flush_summary_writer")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+
+REGISTER_CPU_ONLY_USER_OP("write_scalar")
     .Input("in")
     .Input("step")
     .Input("tag")
@@ -35,7 +41,7 @@ REGISTER_USER_OP("write_scalar")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
-REGISTER_USER_OP("write_histogram")
+REGISTER_CPU_ONLY_USER_OP("write_histogram")
     .Input("in")
     .Input("step")
     .Input("tag")
@@ -45,7 +51,7 @@ REGISTER_USER_OP("write_histogram")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
-REGISTER_USER_OP("write_pb")
+REGISTER_CPU_ONLY_USER_OP("write_pb")
     .Input("in")
     .Input("step")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -54,7 +60,7 @@ REGISTER_USER_OP("write_pb")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
-REGISTER_USER_OP("write_image")
+REGISTER_CPU_ONLY_USER_OP("write_image")
     .Input("in")
     .Input("step")
     .Input("tag")
@@ -64,5 +70,5 @@ REGISTER_USER_OP("write_image")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
-}  // namespace
+}  // namespace summary
 }  // namespace oneflow

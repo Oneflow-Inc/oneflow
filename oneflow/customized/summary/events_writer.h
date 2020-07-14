@@ -1,22 +1,23 @@
-#ifndef ONEFLOW_UTIL_EVENTS_WRITER_H_
-#define ONEFLOW_UTIL_EVENTS_WRITER_H_
+#ifndef ONEFLOW_CUSTOMIZED_SUMMARY_EVENTS_WRITER_H_
+#define ONEFLOW_CUSTOMIZED_SUMMARY_EVENTS_WRITER_H_
 
 #include "oneflow/core/persistence/posix/posix_file_system.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/framework.h"
-#include "oneflow/customized/utils/event.pb.h"
-#include "oneflow/customized/utils/crc32c.h"
+#include "oneflow/customized/summary/crc32c.h"
+#include "oneflow/customized/summary/event.pb.h"
 
 #include <time.h>
 #include <mutex>
+
+namespace oneflow {
+
+namespace summary {
 
 #define MAX_QUEUE_NUM 10
 #define FLUSH_TIME 3 * 60 * 1000 * 1000
 #define FILE_VERSION "brain.Event:3"
 const size_t kHeadSize = sizeof(uint64_t) + sizeof(uint32_t);
 const size_t kTailSize = sizeof(uint32_t);
-
-namespace oneflow {
 
 class EventsWriter {
  public:
@@ -59,6 +60,8 @@ void EventsWriter::EncodeHead(char* head, const char* data, size_t size) {
 void EventsWriter::EncodeTail(char* tail, const char* data, size_t size) {
   crc32c::EncodeFixed32(tail, MaskedCrc(data, size));
 }
+
+}  // namespace summary
 
 }  // namespace oneflow
 

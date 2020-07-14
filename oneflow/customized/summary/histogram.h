@@ -1,13 +1,13 @@
-#ifndef OF_UTIL_HISTOGRAM_H_
-#define OF_UTIL_HISTOGRAM_H_
+#ifndef ONEFLOW_CUSTOMIZED_SUMMARY_HISTOGRAM_H_
+#define ONEFLOW_CUSTOMIZED_SUMMARY_HISTOGRAM_H_
 
-#include "oneflow/core/framework/framework.h"
+#include <vector>
 
 namespace oneflow {
 
 class HistogramProto;
 
-namespace histogram {
+namespace summary {
 
 class Histogram {
  public:
@@ -26,10 +26,9 @@ class Histogram {
 
   std::vector<double> max_constainers_;
   std::vector<double> containers_;
-  OF_DISALLOW_COPY(Histogram);
 };
 
-}  // namespace histogram
+}  // namespace summary
 }  // namespace oneflow
 
 #endif

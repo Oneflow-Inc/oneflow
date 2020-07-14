@@ -9,7 +9,6 @@
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob_desc.h"
-#include <json.hpp>
 
 namespace oneflow {
 
@@ -52,7 +51,7 @@ class JobBuildAndInferCtx {
   const Job& job() const;
   Maybe<void> CheckJob() const;
 
-  void GetJobStructureGraphJson(nlohmann::json& jsonPair) const;
+  std::string GetJobStructureGraphJson(const std::string& job_name) const;
 
   virtual Maybe<void> Complete() = 0;
 

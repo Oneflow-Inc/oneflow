@@ -1,10 +1,11 @@
 #ifndef OF_TIME_UTIL_H_
 #define OF_TIME_UTIL_H_
 
-#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/util.h"
+
 namespace oneflow {
 
-namespace envtime {
+namespace summary {
 
 static constexpr uint64_t kMicroTimeToNanoTime = 1000ULL;
 static constexpr uint64_t kSecondToNanoTime = 1000ULL * 1000ULL * 1000ULL;
@@ -24,7 +25,7 @@ inline double GetWallTime() {
   return static_cast<double>(CurrentNanoTime() / kMicroTimeToNanoTime) / 1.0e6;
 }
 
-}  // namespace envtime
+}  // namespace summary
 }  // namespace oneflow
 
 #endif
