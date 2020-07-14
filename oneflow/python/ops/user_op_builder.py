@@ -128,8 +128,7 @@ class UserOpConfBuilder(object):
         assert isinstance(num, int) and num >= 1
         out_lbns = []
         for i in range(num):
-            lbn = "{}/{}_{}".format(self.user_op_.op_conf_.name,
-                                    output_name, i)
+            lbn = "{}/{}_{}".format(self.user_op_.op_conf_.name, output_name, i)
             out_lbns.append(lbn)
         self.user_op_.op_conf_.user_conf.output[output_name].s[:] = out_lbns
         self.user_op_.output_arg_key_list_.append(output_name)
@@ -139,7 +138,8 @@ class UserOpConfBuilder(object):
         attribute = user_op_attr_util.UserOpAttrVal()
         assert isinstance(attr_name, str)
         attr_type = c_api_util.GetUserOpAttrType(
-            self.user_op_.op_conf_.user_conf.op_type_name, attr_name)
+            self.user_op_.op_conf_.user_conf.op_type_name, attr_name
+        )
         if attr_type == user_op_attr_util.kAtInt32:
             if attr_type_name != "":
                 assert attr_type_name == "AttrTypeInt32"
@@ -203,15 +203,13 @@ class UserOpConfBuilder(object):
             if attr_type_name != "":
                 assert attr_type_name == "AttrTypeListDataType"
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, int)
-                       and x in flow.dtypes for x in attr_value)
+            assert all(isinstance(x, int) and x in flow.dtypes for x in attr_value)
             attribute.at_list_data_type.val[:] = list(attr_value)
         elif attr_type == user_op_attr_util.kAtListShape:
             if attr_type_name != "":
                 assert attr_type_name == "AttrTypeListShape"
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, tuple) or isinstance(x, list)
-                       for x in attr_value)
+            assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)
             for i in range(len(attr_value)):
                 shape = shape_util.ShapeProto()
                 shape.dim[:] = list(attr_value[i])
