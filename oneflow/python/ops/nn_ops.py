@@ -29,6 +29,7 @@ def conv2d(
     Analogous to `tf.nn.conv2d <https://www.tensorflow.org/api_docs/python/tf/nn/conv2d>`_
 
     """
+    name = name if name is not None else id_util.UniqueStr("Conv2d_")
     assert len(input.shape) == 4
     assert len(filters.shape) == 4
 
@@ -82,21 +83,21 @@ def conv2d(
             )
             padding_left[i] = padding_needed // 2
             padding_right[i] = padding_needed - padding_needed // 2
-            if padding_left != padding_right:
-                assert data_format.upper() == "NCHW"
-                input = flow.pad(
-                    input,
-                    [
-                        (0, 0),
-                        (0, 0),
-                        (padding_left[0], padding_right[0]),
-                        (padding_left[1], padding_right[1]),
-                    ],
-                    name=name + "_pad" if name is not None else None,
-                )
-                padding_needed = [0] * NDims
-            else:
-                padding_needed = [p * 2 for p in padding_left]
+        if padding_left != padding_right:
+            assert data_format.upper() == "NCHW"
+            input = flow.pad(
+                input,
+                [
+                    (0, 0),
+                    (0, 0),
+                    (padding_left[0], padding_right[0]),
+                    (padding_left[1], padding_right[1]),
+                ],
+                name=name + "_pad" if name is not None else None,
+            )
+            padding_needed = [0] * NDims
+        else:
+            padding_needed = [p * 2 for p in padding_left]
     elif padding.upper() == "VALID":
         padding_needed = [0] * NDims
     else:
@@ -117,7 +118,7 @@ def conv2d(
         else:
             raise ValueError("invalid data_format")
     return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
+        flow.user_op_builder(name)
         .Op("conv2d")
         .Input("in", [input])
         .Input("weight", [filters])
