@@ -478,3 +478,48 @@ def batch_normalization(
     if trainable and training:
         builder = builder.Output("mean").Output("inv_variance")
     return builder.Build().InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("layers.upsample_2d")
+def upsample(
+    x, size=(2, 2), data_format="channels_first", interpolation="nearest", name=None
+):
+    if name is None:
+        name = id_util.UniqueStr("Upsample2D_")
+
+    if isinstance(size, int):
+        height_scale = size
+        width_scale = size
+    else:
+        assert isinstance(size, (list, tuple))
+        assert len(size) == 2
+        height_scale = size[0]
+        width_scale = size[1]
+
+    if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
+        raise ValueError('data_format must be "NHWC" or "NCHW".')
+
+    need_transpose = 0
+    if data_format.upper() == "NHWC":
+        need_transpose = 1
+
+    if need_transpose:
+        x = flow.transpose(x, perm=[0, 3, 1, 2])
+
+    y = (
+        flow.user_op_builder(name)
+        .Op("upsample")
+        .Input("x", [x])
+        .Output("y")
+        .Attr("height_scale", float(height_scale), "AttrTypeFloat")
+        .Attr("width_scale", float(width_scale), "AttrTypeFloat")
+        .Attr("data_format", "channels_first", "AttrTypeString")
+        .Attr("interpolation", interpolation, "AttrTypeString")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+    if need_transpose:
+        y = flow.transpose(y, perm=[0, 2, 3, 1])
+    return y
