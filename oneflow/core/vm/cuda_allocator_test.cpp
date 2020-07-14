@@ -1,5 +1,6 @@
 #ifdef WITH_CUDA
 #include "oneflow/core/vm/cuda_allocator.h"
+#include "oneflow/core/vm/thread_safe_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
@@ -21,8 +22,9 @@ TEST(CudaAllocator, cuda_allocator) {
     LOG(INFO) << "CudaAllocator Test: Skip because of allocator mem bytes less than 50MiB in GPU 0";
     return;
   }
-  std::unique_ptr<CudaAllocator> allo(new CudaAllocator(0));
-  CudaAllocator* a = allo.get();
+  std::unique_ptr<Allocator> allo(new CudaAllocator(0));
+  allo.reset(new SingleThreadOnlyAllocator(std::move(allo)));
+  Allocator* a = allo.get();
   std::vector<char*> ptrs;
   for (int i = 0; i < 512; ++i) {
     char* ptr = nullptr;
