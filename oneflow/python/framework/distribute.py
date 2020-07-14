@@ -33,10 +33,10 @@ class SplitDistribute(Distribute):
 
 @oneflow_export("scope.mirrored_view", "distribute.mirrored_strategy")
 class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
-    r"""Create a mirrored strategy scope. All operators within the scope will be mirrored among diffierent accelerators.
+    r"""Create a scope in mirrored strategy view. All operators within the scope will be mirrored among diffierent accelerators.
     Usage::
 
-        with oneflow.distribute.mirrored_strategy():
+        with oneflow.scope.mirrored_view():
             ...
 
     """
@@ -61,10 +61,10 @@ def MirroredStrategyEnabled() -> bool:
 
 @oneflow_export("scope.consistent_view", "distribute.consistent_strategy")
 class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
-    r"""Create a consistent strategy scope. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
+    r"""Create a scope in consistent strategy view. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
     Usage::
 
-        with oneflow.distribute.consistent_strategy():
+        with oneflow.scope.consistent_view():
             ...
 
     """

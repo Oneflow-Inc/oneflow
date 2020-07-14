@@ -10,12 +10,12 @@ from oneflow.python.oneflow_export import oneflow_export
 @oneflow_export("scope.namespace", "name_scope", "experimental.name_scope", "deprecated.variable_scope")
 @contextmanager
 def name_scope(name):
-    r"""Create a name scope. All variables within the name scope will have a prefix `[SCOPE NAME]-`. This is for convenience only and has no other effect on the system. 
+    r"""Create a namespace. All variables within the namespace will have a prefix `[SCOPE NAME]-`. This is for convenience only and has no other effect on the system. 
     Usage::
 
-        with oneflow.name_scope("scope1"):
+        with oneflow.namespace("scope1"):
             ...
-            with oneflow.name_scope("scope12"):
+            with oneflow.namespace("scope12"):
                 ...
 
     Args:
