@@ -164,6 +164,9 @@ def GetUserOpAttrType(op_type_name, attr_name) :
     attr_type, error_str = oneflow_internal.GetUserOpAttrType(
         op_type_name, attr_name
     )
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
     return attr_type
 
 def CheckAndCompleteUserOpConf(op_conf_proto):
