@@ -20,18 +20,6 @@ def relu(x, alpha=0.0, max_value=None, threshold=0.0, name=None):
 
 @oneflow_export("keras.activations.gelu_grad")
 def gelu_grad(x, dy, name=None):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = id_util.UniqueStr("GeluGrad_")
-        setattr(op_conf.gelu_grad_conf, "x", x.unique_name)
-        setattr(op_conf.gelu_grad_conf, "dy", dy.unique_name)
-        op_conf.gelu_grad_conf.dx = "dx"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "dx"
-        return remote_blob_util.RemoteBlob(lbi)
-
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("GeluGrad_")
@@ -48,18 +36,6 @@ def gelu_grad(x, dy, name=None):
 
 @oneflow_export("keras.activations.tanh_grad")
 def tanh_grad(y, dy, name=None):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = id_util.UniqueStr("TanhGrad_")
-        setattr(op_conf.tanh_grad_conf, "y", y.unique_name)
-        setattr(op_conf.tanh_grad_conf, "dy", dy.unique_name)
-        op_conf.tanh_grad_conf.dx = "dx"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "dx"
-        return remote_blob_util.RemoteBlob(lbi)
-
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("TanhGrad_")

@@ -142,17 +142,6 @@ message PReluAlphaGradOpConf {
   required bool channel_shared = 5;
 }
 
-message TanHOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message TanHGradOpConf {
-  required string y = 1;
-  required string dy = 2;
-  required string dx = 3;
-}
-
 enum ScalarReductionType {
   kSumOverOne = 0;
   kSumOverWeight = 1;
@@ -476,17 +465,6 @@ message PrintOpConf {
   optional int32 part_name_suffix_length = 4 [default = -1];
 }
 
-message GeluOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message GeluGradOpConf {
-  required string x = 1;
-  required string dy = 2;
-  required string dx = 3;
-}
-
 message ReduceSumOpConf {
   required string in = 1;
   required string out = 3;
@@ -754,12 +732,6 @@ message DotOpConf {
   required string in = 1;
   required string weight = 2;
   optional string bias = 3;
-  required string out = 4;
-}
-
-message MultiplyOpConf {
-  required string in_0 = 1;
-  required string in_1 = 2;
   required string out = 4;
 }
 
@@ -1291,25 +1263,20 @@ message OperatorConf {
     ReduceSumOpConf reduce_sum_conf = 219;
     AddOpConf add_conf = 220;
     DotOpConf dot_conf = 222;
-    MultiplyOpConf multiply_conf = 223;
     MaximumOpConf maximum_conf = 224;
-    TanHOpConf tanh_conf = 226;
     PrintOpConf print_conf = 233;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
-    GeluOpConf gelu_conf = 241;
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     ReduceMeanOpConf reduce_mean_conf = 261;
     PReluOpConf prelu_conf = 265;
-    GeluGradOpConf gelu_grad_conf = 267;
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
     BroadcastLikeOpConf broadcast_like_conf = 277;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
     ReshapeLikeOpConf reshape_like_conf = 286;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
-    TanHGradOpConf tanh_grad_conf = 288;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
     EsacOpConf esac_conf = 292;
