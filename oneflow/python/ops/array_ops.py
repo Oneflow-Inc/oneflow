@@ -246,37 +246,9 @@ def slice(x, begin, size, name=None):
     # assert (
     #     size[0] is None
     # ), "size not support dim0 slice at present, the first element of size must be set to None"
-    if os.getenv("ENABLE_USER_OP") != "False":
-        slice_tup_list = []
-        for b, s, d in list(zip(begin, size, x.shape)):
-            begin, end, stride = None, None, 1
-            if b is not None:
-                if b < -d or b > d - 1:
-                    raise ValueError(
-                        "'i'th element of begin must be greater than or equal to negative x's 'i'th dimension "
-                        "and less than x's 'i'th dimension."
-                    )
-                b = b + d if b < 0 else b
-                begin = b
-            if s is not None:
-                if s > 0:
-                    if b + s > d:
-                        raise ValueError(
-                            "the sum of 'i'th element of begin and 'i'th element of size must be "
-                            "less than or equal to x's 'i'th dimension."
-                        )
-                    end = b + s
-                elif s == -1:
-                    end = d
-                else:
-                    raise ValueError(
-                        "elements of size must be an int that greater then 0 or equal to -1"
-                    )
-            slice_tup_list.append((begin, end, stride))
-        return slice_v2(x, slice_tup_list, name=name)
-    slice_conf_list = []
+    slice_tup_list = []
     for b, s, d in list(zip(begin, size, x.shape)):
-        slice_conf = op_conf_util.DimSliceConf()
+        begin, end, stride = None, None, 1
         if b is not None:
             if b < -d or b > d - 1:
                 raise ValueError(
@@ -284,7 +256,7 @@ def slice(x, begin, size, name=None):
                     "and less than x's 'i'th dimension."
                 )
             b = b + d if b < 0 else b
-            slice_conf.start = b
+            begin = b
         if s is not None:
             if s > 0:
                 if b + s > d:
@@ -292,27 +264,15 @@ def slice(x, begin, size, name=None):
                         "the sum of 'i'th element of begin and 'i'th element of size must be "
                         "less than or equal to x's 'i'th dimension."
                     )
-                slice_conf.end = b + s
+                end = b + s
             elif s == -1:
-                slice_conf.end = d
+                end = d
             else:
                 raise ValueError(
                     "elements of size must be an int that greater then 0 or equal to -1"
                 )
-            slice_conf.stride = 1
-        slice_conf_list.append(slice_conf)
-
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Slice_"))
-    setattr(op_conf.slice_conf, "in", x.unique_name)
-    setattr(op_conf.slice_conf, "out", "out")
-    op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list)
-
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+        slice_tup_list.append((begin, end, stride))
+    return slice_v2(x, slice_tup_list, name=name)
 
 
 @oneflow_export("slice_v2")
