@@ -7,7 +7,7 @@ import oneflow.python.framework.session_context as session_context
 from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export("name_scope", "experimental.name_scope", "deprecated.variable_scope")
+@oneflow_export("scope.namespace", "name_scope", "experimental.name_scope", "deprecated.variable_scope")
 @contextmanager
 def name_scope(name):
     r"""Create a name scope. All variables within the name scope will have a prefix `[SCOPE NAME]-`. This is for convenience only and has no other effect on the system. 
