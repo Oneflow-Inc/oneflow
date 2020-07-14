@@ -16,13 +16,6 @@ def placement_current_scope():
     return placement_ctx.PlacementScopeStackTop()
 
 
-@oneflow_export("fixed_placement")
-def api_fixed_placement_scope(
-    device_tag: str, machine_device_ids: str
-) -> placement_ctx.FixedPlacementScope:
-    return enable_if.unique([GetFixedPlacementScope])(device_tag, machine_device_ids)
-
-
 @enable_if.condition(
     hob.in_global_mode
     | (hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized)
@@ -31,8 +24,20 @@ def GetFixedPlacementScope(device_tag, machine_device_ids):
     return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
 
 
-@oneflow_export("scope.placement", "device_prior_placement")
-def api_device_prior_placement(
+@oneflow_export("device_prior_placement", "fixed_placement")
+def deprecated_placement(
+    device_tag: str, machine_device_ids: str
+) -> placement_ctx.PlacementScope:
+    print(
+        "WARNING:",
+        "/".join(deprecated_placement._ONEFLOW_API),
+        "will be removed in the future, use oneflow.scope.placement instead.",
+    )
+    return api_placement(device_tag, machine_device_ids)
+
+
+@oneflow_export("scope.placement")
+def api_placement(
     device_tag: str, machine_device_ids: str
 ) -> placement_ctx.DevicePriorPlacementScope:
     return enable_if.unique([GetDevicePriorPlacementScope])(
