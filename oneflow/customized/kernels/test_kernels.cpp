@@ -332,6 +332,7 @@ class TestUserOpAttrAutoTypeKernel final : public user_op::OpKernel {
   ~TestUserOpAttrAutoTypeKernel() override = default;
 
  private:
+  void Compute(user_op::KernelComputeContext* ctx) const override { return; }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
