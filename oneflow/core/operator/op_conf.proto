@@ -678,11 +678,6 @@ message ReduceGatherOpConf {
   optional int32 in_num = 1 [default = 0];
 }
 
-enum Norm {
-  L1 = 1;
-  L2 = 2;
-}
-
 message PackOpConf {
   required string in = 1;
   required string out = 2;
