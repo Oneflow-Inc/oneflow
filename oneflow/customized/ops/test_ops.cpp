@@ -332,7 +332,9 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
 REGISTER_USER_OP("test_user_op_attr_auto_type")
     .Input("in")
     .Output("out")
-    .Attr("int32", UserOpAttrType::kAtInt32);
+    .Attr("int1", UserOpAttrType::kAtInt32)
+    .Attr("int2", UserOpAttrType::kAtInt32)
+    .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged);                        \
 
 REGISTER_CPU_ONLY_USER_OP("cpu_only_relu_test")
     .Input("in")
