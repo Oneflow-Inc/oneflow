@@ -103,20 +103,6 @@ std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph&
   return [allowed_set](OpNode* node) -> bool { return IsKeyFound(*allowed_set, node); };
 }
 
-bool TryUpdtBnVal4SepcialOpConf(const OperatorConf::OpTypeCase& op_type, PbMessage* op_conf,
-                                const std::string& old_val, const std::string& new_val,
-                                const std::string& dst_ibn) {
-  if (OperatorConf::kPrintConf == op_type) {
-    const std::pair<std::string, int32_t> prefix_idx = GenUnRepeatedBn(dst_ibn);
-    CHECK_EQ("in", prefix_idx.first);
-    PbMessage* print_record_conf =
-        MutableRepeatedMessageInPbMessage(op_conf, "in", prefix_idx.second);
-    ReplaceStrValInPbFdOrPbRpf(print_record_conf, "lbn", old_val, new_val);
-    return true;
-  }
-  return false;
-}
-
 std::string ReplaceSlashToDash4Lbn(std::string lbn) {
   std::replace(lbn.begin(), lbn.end(), '/', '-');
   return lbn;
@@ -195,10 +181,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       PbMessage* dst_op_type_conf =
           MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
       std::string new_lbn = cast_op.op_name() + "/out_0";
-      if (!TryUpdtBnVal4SepcialOpConf(dst_op_conf.op_type_case(), dst_op_type_conf, lbn, new_lbn,
-                                      dst_ibn)) {
-        ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
-      }
+      ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
     }
 
     if (cast_is_consumed) {
