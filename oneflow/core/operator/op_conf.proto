@@ -683,13 +683,6 @@ message ReduceGatherOpConf {
   optional int32 in_num = 1 [default = 0];
 }
 
-message DotOpConf {
-  required string in = 1;
-  required string weight = 2;
-  optional string bias = 3;
-  required string out = 4;
-}
-
 enum Norm {
   L1 = 1;
   L2 = 2;
@@ -1274,7 +1267,6 @@ message OperatorConf {
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
     ReduceSumOpConf reduce_sum_conf = 219;
     AddOpConf add_conf = 220;
-    DotOpConf dot_conf = 222;
     MaximumOpConf maximum_conf = 224;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
