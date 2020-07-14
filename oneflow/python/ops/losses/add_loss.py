@@ -4,6 +4,7 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.remote_blob as remote_blob_util
 
 
 @enable_if.condition(hob.in_global_mode & hob.is_trainable)
@@ -12,7 +13,7 @@ def add_loss(loss):
 
 
 @oneflow_export("losses.add_loss")
-def api_add_loss(loss):
+def api_add_loss(loss: remote_blob_util.BlobDef) -> None:
     r"""Mark a `Blob` as a loss. Auto grad starts at every loss blob. It doesn't has to be a product of typical "loss" operator like softmax loss but can also be a `Blob` produced by any operator.
 
     Args:

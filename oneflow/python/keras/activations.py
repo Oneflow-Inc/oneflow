@@ -1,5 +1,8 @@
 from __future__ import absolute_import
 
+import os
+from typing import Any, Optional, Union
+
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -7,11 +10,16 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
-import os
 
 
 @oneflow_export("keras.activations.relu")
-def relu(x, alpha=0.0, max_value=None, threshold=0.0, name=None):
+def relu(
+    x: remote_blob_util.BlobDef,
+    alpha: float = 0.0,
+    max_value: Optional[Any] = None,
+    threshold: float = 0.0,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     assert alpha == 0.0
     assert max_value == None
     assert threshold == 0.0
@@ -19,7 +27,11 @@ def relu(x, alpha=0.0, max_value=None, threshold=0.0, name=None):
 
 
 @oneflow_export("keras.activations.gelu_grad")
-def gelu_grad(x, dy, name=None):
+def gelu_grad(
+    x: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("GeluGrad_")
@@ -35,7 +47,11 @@ def gelu_grad(x, dy, name=None):
 
 
 @oneflow_export("keras.activations.tanh_grad")
-def tanh_grad(y, dy, name=None):
+def tanh_grad(
+    y: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("TanhGrad_")
@@ -51,5 +67,7 @@ def tanh_grad(y, dy, name=None):
 
 
 @oneflow_export("keras.activations.sigmoid")
-def sigmoid(x, name=None):
+def sigmoid(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return flow.math.sigmoid(x, name)

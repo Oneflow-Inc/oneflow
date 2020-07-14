@@ -6,10 +6,13 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Optional
 
 
 @oneflow_export("keras.maths.add")
-def add(x, y, name=None):
+def add(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     r"""Returns x + y element-wise.
     Args:
         x: A `Blob`.

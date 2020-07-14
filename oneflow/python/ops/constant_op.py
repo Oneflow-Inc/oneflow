@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import os
+from typing import Optional, Sequence, Union
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -12,7 +13,12 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("constant")
-def constant(value, dtype=None, shape=None, name=None):
+def constant(
+    value: Union[int, float],
+    dtype: int,
+    shape: Optional[Sequence[int]] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     if name is None:
         name = id_util.UniqueStr("Constant_")
     assert value is not None
@@ -63,12 +69,19 @@ def constant(value, dtype=None, shape=None, name=None):
 
 
 @oneflow_export("constant_scalar")
-def constant_scalar(value, dtype=None, name=None):
+def constant_scalar(
+    value: Union[int, float], dtype: Optional[int] = None, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return flow.constant(value, dtype=dtype, shape=[1])
 
 
 @oneflow_export("constant_like")
-def constant_like(like, value, dtype=None, name=None):
+def constant_like(
+    like: remote_blob_util.BlobDef,
+    value: Union[int, float],
+    dtype: Optional[int] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -93,10 +106,18 @@ def constant_like(like, value, dtype=None, name=None):
 
 
 @oneflow_export("ones_like")
-def ones_like(like, dtype=None, name=None):
+def ones_like(
+    like: remote_blob_util.BlobDef,
+    dtype: Optional[int] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     return constant_like(like, 1, dtype=dtype, name=name)
 
 
 @oneflow_export("zeros_like")
-def zeros_like(like, dtype=None, name=None):
+def zeros_like(
+    like: remote_blob_util.BlobDef,
+    dtype: Optional[int] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     return constant_like(like, 0, dtype=dtype, name=name)

@@ -6,10 +6,13 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Optional
 
 
 @oneflow_export("copy")
-def copy(x, name=None):
+def copy(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     if name is None:
         name = id_util.UniqueStr("Copy_")
     op_conf = op_conf_util.OperatorConf()

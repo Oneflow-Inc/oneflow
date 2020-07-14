@@ -8,12 +8,19 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Union, Optional, List, Dict, Sequence, Tuple, Callable
 
 
 @oneflow_export("detection.roi_align")
 def roi_align(
-    x, rois, pooled_h, pooled_w, name=None, spatial_scale=0.0625, sampling_ratio=2,
-):
+    x: remote_blob_util.BlobDef,
+    rois: remote_blob_util.BlobDef,
+    pooled_h: int,
+    pooled_w: int,
+    name: Optional[str] = None,
+    spatial_scale: float = 0.0625,
+    sampling_ratio: int = 2,
+) -> remote_blob_util.BlobDef:
     assert isinstance(pooled_h, int)
     assert isinstance(pooled_w, int)
     op_conf = op_conf_util.OperatorConf()
@@ -38,7 +45,13 @@ def roi_align(
 @oneflow_export(
     "detection.maskrcnn_positive_negative_sample", "detection.pos_neg_sampler"
 )
-def pos_neg_sampler(pos_inds, neg_inds, total_subsample_num, pos_fraction, name=None):
+def pos_neg_sampler(
+    pos_inds: remote_blob_util.BlobDef,
+    neg_inds: remote_blob_util.BlobDef,
+    total_subsample_num: int,
+    pos_fraction: float,
+    name: Optional[str] = None,
+) -> List[remote_blob_util.BlobDef]:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -66,7 +79,11 @@ def pos_neg_sampler(pos_inds, neg_inds, total_subsample_num, pos_fraction, name=
 
 
 @oneflow_export("detection.calc_iou_matrix")
-def calc_iou_matrix(boxes1, boxes2, name=None):
+def calc_iou_matrix(
+    boxes1: remote_blob_util.BlobDef,
+    boxes2: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -84,7 +101,12 @@ def calc_iou_matrix(boxes1, boxes2, name=None):
 
 
 @oneflow_export("detection.box_encode")
-def box_encode(ref_boxes, boxes, regression_weights, name=None):
+def box_encode(
+    ref_boxes: remote_blob_util.BlobDef,
+    boxes: remote_blob_util.BlobDef,
+    regression_weights: Dict[str, float],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("BoxEncode_"),
@@ -106,7 +128,12 @@ def box_encode(ref_boxes, boxes, regression_weights, name=None):
 
 
 @oneflow_export("detection.box_decode")
-def box_decode(ref_boxes, boxes_delta, regression_weights, name=None):
+def box_decode(
+    ref_boxes: remote_blob_util.BlobDef,
+    boxes_delta: remote_blob_util.BlobDef,
+    regression_weights: Dict[str, float],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("BoxDecode_"),
@@ -129,14 +156,14 @@ def box_decode(ref_boxes, boxes_delta, regression_weights, name=None):
 
 @oneflow_export("detection.level_map")
 def level_map(
-    inputs,
-    min_level=2,
-    max_level=5,
-    canonical_level=4,
-    canonical_scale=224,
-    epsilon=1e-6,
-    name=None,
-):
+    inputs: remote_blob_util.BlobDef,
+    min_level: int = 2,
+    max_level: int = 5,
+    canonical_level: int = 4,
+    canonical_scale: int = 224,
+    epsilon: float = 1e-6,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("LevelMap_"),
@@ -157,8 +184,12 @@ def level_map(
 
 @oneflow_export("detection.anchor_generate")
 def anchor_generate(
-    images, feature_map_stride, aspect_ratios, anchor_scales, name=None
-):
+    images: remote_blob_util.BlobDef,
+    feature_map_stride: int,
+    aspect_ratios: Sequence[float],
+    anchor_scales: Union[Sequence[int], int],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -182,7 +213,9 @@ def anchor_generate(
 
 
 @oneflow_export("detection.identify_non_small_boxes")
-def identify_non_small_boxes(inputs, min_size=0.0, name=None):
+def identify_non_small_boxes(
+    inputs: remote_blob_util.BlobDef, min_size: float = 0.0, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -200,7 +233,12 @@ def identify_non_small_boxes(inputs, min_size=0.0, name=None):
 
 
 @oneflow_export("detection.identify_outside_anchors")
-def identify_outside_anchors(anchors, image_size, tolerance=0.0, name=None):
+def identify_outside_anchors(
+    anchors: remote_blob_util.BlobDef,
+    image_size: remote_blob_util.BlobDef,
+    tolerance: float = 0.0,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -219,7 +257,11 @@ def identify_outside_anchors(anchors, image_size, tolerance=0.0, name=None):
 
 
 @oneflow_export("detection.clip_to_image")
-def clip_boxes_to_image(boxes, image_size, name=None):
+def clip_boxes_to_image(
+    boxes: remote_blob_util.BlobDef,
+    image_size: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -237,7 +279,9 @@ def clip_boxes_to_image(boxes, image_size, name=None):
 
 
 @oneflow_export("detection.extract_piece_slice_id")
-def extract_piece_slice_id(inputs, name=None):
+def extract_piece_slice_id(
+    inputs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
+) -> Tuple[remote_blob_util.BlobDef]:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -262,8 +306,11 @@ def extract_piece_slice_id(inputs, name=None):
 
 @oneflow_export("detection.nms")
 def non_maximum_suppression(
-    inputs, nms_iou_threshold=0.7, post_nms_top_n=1000, name=None
-):
+    inputs: remote_blob_util.BlobDef,
+    nms_iou_threshold: float = 0.7,
+    post_nms_top_n: int = 1000,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -282,7 +329,12 @@ def non_maximum_suppression(
 
 
 @oneflow_export("detection.upsample_nearest")
-def upsample_nearest(inputs, scale, data_format, name=None):
+def upsample_nearest(
+    inputs: remote_blob_util.BlobDef,
+    scale: float,
+    data_format: str,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -303,16 +355,18 @@ def upsample_nearest(inputs, scale, data_format, name=None):
 
 @oneflow_export("detection.affine_channel", "layers.affine_channel")
 def affine_channel(
-    inputs,
-    axis,
-    use_bias=True,
-    scale_initializer=None,
-    bias_initializer=None,
-    activation=None,
-    trainable=True,
-    name=None,
-    model_distribute=distribute_util.broadcast(),
-):
+    inputs: remote_blob_util.BlobDef,
+    axis: int,
+    use_bias: bool = True,
+    scale_initializer: Optional[op_conf_util.InitializerConf] = None,
+    bias_initializer: Optional[op_conf_util.InitializerConf] = None,
+    activation: Optional[
+        Callable[[remote_blob_util.BlobDef], remote_blob_util.BlobDef]
+    ] = None,
+    trainable: bool = True,
+    name: Optional[str] = None,
+    model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
+) -> remote_blob_util.BlobDef:
     name_prefix = name if name is not None else id_util.UniqueStr("AffineChannel_")
     if axis < 0:
         axis = axis + len(inputs.shape)
@@ -355,7 +409,9 @@ def affine_channel(
 
 
 @oneflow_export("dim0_dynamic_to_fixed")
-def dim0_dynamic_to_fixed(inputs, name=None):
+def dim0_dynamic_to_fixed(
+    inputs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
+) -> Tuple[remote_blob_util.BlobDef]:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -384,7 +440,11 @@ def dim0_dynamic_to_fixed(inputs, name=None):
 
 
 @oneflow_export("detection.maskrcnn_split")
-def maskrcnn_split(input, segms, name=None):
+def maskrcnn_split(
+    input: remote_blob_util.BlobDef,
+    segms: Sequence[remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> Tuple[remote_blob_util.BlobDef]:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -405,7 +465,13 @@ def maskrcnn_split(input, segms, name=None):
 
 
 @oneflow_export("detection.masks_crop_and_resize")
-def masks_crop_and_resize(masks, rois, mask_h, mask_w, name=None):
+def masks_crop_and_resize(
+    masks: remote_blob_util.BlobDef,
+    rois: remote_blob_util.BlobDef,
+    mask_h: int,
+    mask_w: int,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     assert len(masks.shape) == 4
     assert len(rois.shape) == 2
     assert masks.shape[0] == rois.shape[0]

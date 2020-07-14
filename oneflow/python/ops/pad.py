@@ -1,12 +1,20 @@
 from __future__ import absolute_import
 
+from typing import Optional, Sequence, Union
+
 import oneflow
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("pad")
-def pad(x, paddings, constant_value=0, name=None):
+def pad(
+    x: remote_blob_util.BlobDef,
+    paddings: Sequence[int],
+    constant_value: Union[int, float] = 0,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):
@@ -37,7 +45,12 @@ def pad(x, paddings, constant_value=0, name=None):
 
 
 @oneflow_export("pad_grad")
-def pad_grad(x, paddings, constant_value=0, name=None):
+def pad_grad(
+    x: remote_blob_util.BlobDef,
+    paddings: Sequence[int],
+    constant_value: Union[int, float] = 0,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):

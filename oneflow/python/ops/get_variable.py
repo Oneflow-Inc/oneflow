@@ -14,20 +14,21 @@ import oneflow.python.framework.session_context as session_context
 import oneflow.python.framework.id_util as id_util
 
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Union, Optional, Sequence
 
 
 @oneflow_export("get_variable")
 def get_variable(
-    name,
-    shape=None,
-    dtype=None,
-    initializer=None,
-    regularizer=None,
-    trainable=None,
-    model_name=None,
-    random_seed=None,
-    distribute=distribute_util.broadcast(),
-):
+    name: str,
+    shape: Optional[Sequence[int]] = None,
+    dtype: Optional[int] = None,
+    initializer: Optional[op_conf_util.InitializerConf] = None,
+    regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    trainable: Optional[bool] = None,
+    model_name: Optional[str] = None,
+    random_seed: Optional[int] = None,
+    distribute: distribute_util.Distribute = distribute_util.broadcast(),
+) -> remote_blob_util.BlobDef:
     r"""Create a variable or retrieve an existing one.
 
     Args:
@@ -134,7 +135,12 @@ def _CreateVariableBlob(op_conf, parallel_conf):
 
 
 @oneflow_export("assign")
-def assign(ref, value, dtype=None, name=None):
+def assign(
+    ref: remote_blob_util.BlobDef,
+    value: remote_blob_util.BlobDef,
+    dtype: Optional[int] = None,
+    name: Optional[str] = None,
+) -> None:
     if name is None:
         name = id_util.UniqueStr("Assign_")
 
