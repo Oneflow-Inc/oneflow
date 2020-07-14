@@ -243,32 +243,16 @@ def scalar_sub_by_tensor(x, scalar, name=None):
 
 
 def element_wise_mul(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name or id_util.UniqueStr("ElementWiseMul_"))
-            .Op("multiply")
-            .Input("x", [x])
-            .Input("y", [y])
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("ElementWiseMul_"),
-        )
-        setattr(op_conf.multiply_conf, "in_0", x.unique_name)
-        setattr(op_conf.multiply_conf, "in_1", y.unique_name)
-        op_conf.multiply_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ElementWiseMul_"))
+        .Op("multiply")
+        .Input("x", [x])
+        .Input("y", [y])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 def broadcast_mul(x, y, name=None):
@@ -356,18 +340,6 @@ def tanh(x, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") == "False":
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("TanH_")
-        )
-        setattr(op_conf.tanh_conf, "in", x.unique_name)
-        setattr(op_conf.tanh_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
 
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("TanH_"))
@@ -389,30 +361,15 @@ def gelu(x, name=None):
     Returns:
         A `Blob`
     """
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("Gelu_")
-            )
-            .Op("gelu")
-            .Input("in", [x])
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("Gelu_")
-        )
-        setattr(op_conf.gelu_conf, "in", x.unique_name)
-        setattr(op_conf.gelu_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Gelu_"))
+        .Op("gelu")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("math.relu", "nn.relu")
