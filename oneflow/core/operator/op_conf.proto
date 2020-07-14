@@ -773,24 +773,6 @@ message ConstantOpConf {
   optional InitializerConf initializer = 5;
 }
 
-message ScalarAddOpConf {
-  required string in = 1;
-  required string out = 2;
-  oneof scalar_operand {
-    int64 int_operand = 3;
-    double float_operand = 4;
-  }
-}
-
-message ScalarMulOpConf {
-  required string in = 1;
-  required string out = 2;
-  oneof scalar_operand {
-    int64 int_operand = 3;
-    double float_operand = 4;
-  }
-}
-
 message ReduceIdentityOpConf {
   optional string in = 1;
   optional string out = 2;
@@ -1303,8 +1285,6 @@ message OperatorConf {
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op
-    ScalarAddOpConf scalar_add_conf = 516;
-    ScalarMulOpConf scalar_mul_conf = 517;
     SquareSumOpConf square_sum_conf = 522;
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
 
