@@ -66,29 +66,16 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
     if len(axis) == 0:
         return input_tensor
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        op = (
-            flow.user_op_builder(name)
-            .Op("reduce_sum")
-            .Input("input_tensor", [input_tensor])
-            .Output("output_tensor")
-            .Attr("axis", axis, "AttrTypeListInt32")
-            .Attr("keepdims", keepdims, "AttrTypeBool")
-            .Build()
-        )
-        return op.InferAndTryRun().SoleOutputBlob()
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(op_conf, "name", name)
-        setattr(op_conf.reduce_sum_conf, "in", input_tensor.unique_name)
-        setattr(op_conf.reduce_sum_conf, "out", "out")
-        op_conf.reduce_sum_conf.axis[:] = list(axis)
-        setattr(op_conf.reduce_sum_conf, "keep_dims", keepdims)
-        interpret_util.Forward(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    op = (
+        flow.user_op_builder(name)
+        .Op("reduce_sum")
+        .Input("input_tensor", [input_tensor])
+        .Output("output_tensor")
+        .Attr("axis", axis, "AttrTypeListInt32")
+        .Attr("keepdims", keepdims, "AttrTypeBool")
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("math.reduce_any")
