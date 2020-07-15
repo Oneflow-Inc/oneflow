@@ -1,5 +1,6 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/platform.h"
+#include "oneflow/core/common/global.h"
 
 namespace oneflow {
 
@@ -46,12 +47,12 @@ const char* CurandGetErrorString(curandStatus_t error) {
   return "Unknown curand status";
 }
 
-cudaDeviceProp global_device_prop;
-
 }  // namespace
 
 void InitGlobalCudaDeviceProp() {
-  cudaGetDeviceProperties(&global_device_prop, 0);
+  CHECK(Global<cudaDeviceProp>::Get() == nullptr) << "initialized Global<cudaDeviceProp> twice";
+  Global<cudaDeviceProp>::New();
+  cudaGetDeviceProperties(Global<cudaDeviceProp>::Get(), 0);
   if (IsCuda9OnTuringDevice()) {
     LOG(WARNING)
         << "CUDA 9 running on Turing device has known issues, consider upgrading to CUDA 10";
@@ -59,12 +60,14 @@ void InitGlobalCudaDeviceProp() {
 }
 
 int32_t GetSMCudaMaxBlocksNum() {
+  const auto& global_device_prop = *Global<cudaDeviceProp>::Get();
   int32_t n =
       global_device_prop.multiProcessorCount * global_device_prop.maxThreadsPerMultiProcessor;
   return (n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock;
 }
 
 bool IsCuda9OnTuringDevice() {
+  const auto& global_device_prop = *Global<cudaDeviceProp>::Get();
   return CUDA_VERSION >= 9000 && CUDA_VERSION < 9020 && global_device_prop.major == 7
          && global_device_prop.minor == 5;
 }
