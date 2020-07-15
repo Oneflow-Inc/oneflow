@@ -57,11 +57,11 @@ __global__ void UpsampleBilinearForward(const int64_t elem_cnt, const T* in_dptr
     const float in_h = (static_cast<float>(h) + 0.5f) * scale_h - 0.5f;
     const int64_t top_h_index = in_h > 0.0 ? floorf(in_h) : 0;
     const int64_t bottom_h_index = (in_h < in_height - 1) ? ceilf(in_h) : in_height - 1;
-    const float h_lerp = in_h - top_h_index;
+    const float h_lerp = in_h - floorf(in_h);
     const float in_w = (static_cast<float>(w) + 0.5f) * scale_w - 0.5f;
     const int64_t left_w_index = in_w > 0.0 ? floorf(in_w) : 0;
     const int64_t right_w_index = (in_w < in_width - 1) ? ceilf(in_w) : in_width - 1;
-    const float w_lerp = in_w - left_w_index;
+    const float w_lerp = in_w - floorf(in_w);
     const int64_t top_offset = in_helper.NdIndexToOffset(n, c, top_h_index, 0);
     const float top_left = in_dptr[top_offset + left_w_index];
     const float top_right = in_dptr[top_offset + right_w_index];
