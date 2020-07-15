@@ -5,10 +5,16 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 import test_global_storage
-from test_util import GenArgList
+from test_util import GenArgList, type_name_to_flow_type
+
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(device_type, input_shape, size, data_format, interpolation):
+def compare_with_tensorflow(
+    device_type, input_shape, dtype, size, data_format, interpolation
+):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
 
@@ -23,7 +29,7 @@ def compare_with_tensorflow(device_type, input_shape, size, data_format, interpo
             x = flow.get_variable(
                 "input",
                 shape=input_shape,
-                dtype=flow.float,
+                dtype=type_name_to_flow_type[dtype],
                 initializer=flow.random_uniform_initializer(minval=2, maxval=5),
                 trainable=True,
             )
@@ -47,11 +53,11 @@ def compare_with_tensorflow(device_type, input_shape, size, data_format, interpo
     channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(test_global_storage.Get("x"))
+        x = tf.Variable(test_global_storage.Get("x").astype(np.float32))
         tf_out = tf.keras.layers.UpSampling2D(
             size=size, data_format=channel_pos, interpolation=interpolation
         )(x)
-    loss_diff = test_global_storage.Get("loss_diff")
+    loss_diff = test_global_storage.Get("loss_diff").astype(np.float32)
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
@@ -63,7 +69,8 @@ def test_upsample(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict["input_shape"] = [(10, 11, 12, 13)]
-    arg_dict["size"] = [(2, 2), 3]
+    arg_dict["dtype"] = ["float32", "double"]
+    arg_dict["size"] = [(2, 2), 3, (1, 2)]
     arg_dict["data_format"] = ["NCHW", "NHWC"]
     arg_dict["interpolation"] = ["nearest", "bilinear"]
     for arg in GenArgList(arg_dict):

@@ -84,12 +84,12 @@ __global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const T* dy_dpt
     int64_t n, c, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
     const float original_h = (static_cast<float>(h) + 0.5f) * scale_h - 0.5f;
-    const int top_h_index = original_h > 0.0 ? floorf(original_h) : 0;
-    const int bottom_h_index = (original_h < dx_height - 1) ? ceilf(original_h) : dx_height - 1;
+    const int64_t top_h_index = original_h > 0.0 ? floorf(original_h) : 0;
+    const int64_t bottom_h_index = (original_h < dx_height - 1) ? ceilf(original_h) : dx_height - 1;
     const float h_lerp = original_h - floorf(original_h);
     const float original_w = (static_cast<float>(w) + 0.5f) * scale_w - 0.5f;
-    const int left_w_index = original_w > 0.0 ? floorf(original_w) : 0;
-    const int right_w_index = (original_w < dx_width - 1) ? ceilf(original_w) : dx_width - 1;
+    const int64_t left_w_index = original_w > 0.0 ? floorf(original_w) : 0;
+    const int64_t right_w_index = (original_w < dx_width - 1) ? ceilf(original_w) : dx_width - 1;
     const float w_lerp = original_w - floorf(original_w);
     const int64_t top_offset = dx_helper.NdIndexToOffset(n, c, top_h_index, 0);
     const float dtop = (1 - h_lerp) * dy_dptr[index];
