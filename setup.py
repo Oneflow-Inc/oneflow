@@ -37,6 +37,7 @@ sys.argv = ['setup.py'] + remain_args
 REQUIRED_PACKAGES = [
     'numpy',
     'protobuf',
+    'tqdm',
 ]
 
 
