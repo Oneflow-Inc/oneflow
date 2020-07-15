@@ -80,7 +80,7 @@ void EventsWriter::WriteEvent(const Event& event) {
 
   char head[kHeadSize];
   char tail[kTailSize];
-  EncodeHead(head, event_str.data(), event_str.size());
+  EncodeHead(head, event_str.size());
   EncodeTail(tail, event_str.data(), event_str.size());
   writable_file_->Append(head, sizeof(head));
   writable_file_->Append(event_str.data(), event_str.size());

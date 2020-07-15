@@ -25,8 +25,7 @@ def test(device_type):
 
     @flow.global_function(func_config)
     def CreateWriter():
-        with flow.device_prior_placement(device_type, "0:0"):
-            flow.summary.create_summary_writer("/home/zjhushengjian/oneflow")
+        flow.summary.create_summary_writer("/home/zjhushengjian/oneflow")
 
     @flow.global_function(func_config)
     def ScalarJob(
@@ -34,8 +33,7 @@ def test(device_type):
         step=flow.MirroredTensorDef((1,), dtype=flow.int64),
         tag=flow.MirroredTensorDef((1000,), dtype=flow.int8),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
-            flow.summary.scalar(value, step, tag)
+        flow.summary.scalar(value, step, tag)
 
     @flow.global_function(func_config)
     def HistogramJob(
@@ -43,17 +41,15 @@ def test(device_type):
         step=flow.MirroredTensorDef((1,), dtype=flow.int64),
         tag=flow.MirroredTensorDef((9,), dtype=flow.int8),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
-            flow.summary.histogram(value, step, tag)
+        flow.summary.histogram(value, step, tag)
 
     # OneFlow
     @flow.global_function(func_config)
     def PbJob(
-        value=flow.MirroredTensorDef((1000,), dtype=flow.int8),
+        value=flow.MirroredTensorDef((1500,), dtype=flow.int8),
         step=flow.MirroredTensorDef((1,), dtype=flow.int64),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
-            flow.summary.pb(value, step=step)
+        flow.summary.pb(value, step=step)
 
     @flow.global_function(func_config)
     def ImageJob(
@@ -61,13 +57,11 @@ def test(device_type):
         step=flow.MirroredTensorDef((1,), dtype=flow.int64),
         tag=flow.MirroredTensorDef((10,), dtype=flow.int8),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
-            flow.summary.image(value, step=step, tag=tag)
+        flow.summary.image(value, step=step, tag=tag)
 
     @flow.global_function(func_config)
     def FlushJob():
-        with flow.device_prior_placement(device_type, "0:0"):
-            flow.summary.flush_event_writer()
+        flow.summary.flush_summary_writer()
 
     logdir = "/home/zjhushengjian/oneflow"
     projecotr = flow.Projector(logdir)
@@ -75,14 +69,6 @@ def test(device_type):
     projecotr.create_exception_projector()
 
     CreateWriter()
-
-    # write text
-    for i in range(10):
-        t = ["vgg16", "resnet50", "mask-rcnn", "yolov3"]
-        pb = flow.text(t)
-        value = np.array(list(str(pb).encode("ascii")), dtype=np.int8)
-        step = np.array([i], dtype=np.int64)
-        PbJob([value], [step])
 
     # write hparams
     hparams = {
@@ -92,18 +78,30 @@ def test(device_type):
         flow.HParam("accuracy", flow.RealRange(1e-2, 1e-1)): 0.001,
         flow.HParam("magic", flow.ValueSet([False, True])): True,
         flow.Metric("loss", float): 0.02,
-        flow.Metric("acc", int): 1,
         "dropout": 0.6,
     }
-    pb2 = flow.hparams(hparams)
-    value = np.array(list(str(pb2).encode("ascii")), dtype=np.int8)
-    step = np.array([0], dtype=np.int64)
-    tag = np.array(list("hparams".encode("ascii")), dtype=np.int8)
-    PbJob([value], [step])
 
-    time.sleep(5)
+    # print(str(pb2))
 
-    FlushJob()
+    # # write text
+    for i in range(200):
+        # t = ["vgg16", "resnet50", "mask-rcnn", "yolov3"]
+        # pb = flow.text(t)
+        # value = np.array(list(str(pb).encode("ascii")), dtype=np.int8)
+        # step = np.array([i], dtype=np.int64)
+        # PbJob([value], [step])
+
+        pb2 = flow.hparams(hparams)
+
+        value = np.fromstring(str(pb2), dtype=np.int8)
+        # value = np.array(list(str(pb2).encode("ascii")), dtype=np.int8)
+        step = np.array([i], dtype=np.int64)
+        tag = np.array(list("hparams".encode("ascii")), dtype=np.int8)
+        PbJob([value], [step])
+
+    # time.sleep(5)
+
+    # FlushJob()
 
     # # write scalar
     for idx in range(10):
@@ -178,6 +176,7 @@ def test(device_type):
 
     graph = flow.Graph(logdir)
     graph.write_structure_graph()
+
 
 
 test("cpu")

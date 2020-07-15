@@ -34,12 +34,7 @@ class EventsWriter {
 
  private:
   Maybe<void> TryToInit();
-
-  inline static uint32_t MaskedCrc(const char* data, size_t size) {
-    return crc32c::Mask(crc32c::Value(data, size));
-  }
-
-  inline static void EncodeHead(char* head, const char* data, size_t size);
+  inline static void EncodeHead(char* head, size_t size);
   inline static void EncodeTail(char* tail, const char* data, size_t size);
 
   std::string log_dir_;
@@ -52,13 +47,15 @@ class EventsWriter {
   OF_DISALLOW_COPY(EventsWriter);
 };
 
-void EventsWriter::EncodeHead(char* head, const char* data, size_t size) {
-  crc32c::EncodeFixed64(head + 0, size);
-  crc32c::EncodeFixed32(head + sizeof(uint64_t), MaskedCrc(head, sizeof(uint64_t)));
+void EventsWriter::EncodeHead(char* head, size_t size) {
+  memcpy(head, &size, sizeof(size));
+  uint32_t value = MaskCrc32(GetCrc32(head, sizeof(uint64_t)));
+  memcpy(head + sizeof(uint64_t), &value, sizeof(value));
 }
 
 void EventsWriter::EncodeTail(char* tail, const char* data, size_t size) {
-  crc32c::EncodeFixed32(tail, MaskedCrc(data, size));
+  uint32_t value = MaskCrc32(GetCrc32(data, size));
+  memcpy(tail, &value, sizeof(value));
 }
 
 }  // namespace summary

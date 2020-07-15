@@ -1,5 +1,5 @@
-#ifndef OF_TIME_UTIL_H_
-#define OF_TIME_UTIL_H_
+#ifndef ONEFLOW_CUSTOMIZED_SUMMARY_ENV_TIME_H_
+#define ONEFLOW_CUSTOMIZED_SUMMARY_ENV_TIME_H_
 
 #include "oneflow/core/common/util.h"
 
