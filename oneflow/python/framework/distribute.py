@@ -43,7 +43,7 @@ def deprecated_mirrored_strategy():
 
 @oneflow_export("scope.mirrored_view")
 class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
-    r"""Create a scope in mirrored strategy view. All operators within the scope will be mirrored among diffierent accelerators.
+    r"""Create a scope in mirrored view. All operators within the scope will be mirrored among diffierent accelerators.
     Usage::
 
         with oneflow.scope.mirrored_view():
@@ -81,7 +81,7 @@ def deprecated_consistent_strategy():
 
 @oneflow_export("scope.consistent_view")
 class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
-    r"""Create a scope in consistent strategy view. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
+    r"""Create a scope in consistent view. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
     Usage::
 
         with oneflow.scope.consistent_view():

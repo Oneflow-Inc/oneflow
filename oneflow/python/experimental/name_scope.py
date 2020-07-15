@@ -10,13 +10,13 @@ from oneflow.python.oneflow_export import oneflow_export
 @oneflow_export(
     "name_scope", "experimental.name_scope", "deprecated.variable_scope",
 )
-def deprecated_name_scope(name):
+def deprecated_name_scope(*args, **kwargs):
     print(
         "WARNING:",
         "/".join(deprecated_name_scope._ONEFLOW_API),
         "will be removed in the future, use oneflow.scope.namespace instead.",
     )
-    return name_scope(name)
+    return name_scope(*args, **kwargs)
 
 
 @oneflow_export("scope.namespace")

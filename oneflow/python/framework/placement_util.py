@@ -25,15 +25,13 @@ def GetFixedPlacementScope(device_tag, machine_device_ids):
 
 
 @oneflow_export("device_prior_placement", "fixed_placement")
-def deprecated_placement(
-    device_tag: str, machine_device_ids: str
-) -> placement_ctx.PlacementScope:
+def deprecated_placement(*args, **kwargs):
     print(
         "WARNING:",
         "/".join(deprecated_placement._ONEFLOW_API),
         "will be removed in the future, use oneflow.scope.placement instead.",
     )
-    return api_placement(device_tag, machine_device_ids)
+    return api_placement(*args, **kwargs)
 
 
 @oneflow_export("scope.placement")
