@@ -6,9 +6,6 @@ import hashlib
 
 from oneflow.python.oneflow_export import oneflow_export
 
-# sha256:63d4344077849053dc3036b247fa012b2b381de53fd055a66b539dffd76cf08e
-mnist_file_url = "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist.npz"
-
 
 def _get_sha256hash(file_path, Bytes=1024):
     sha256hash = hashlib.sha256()
