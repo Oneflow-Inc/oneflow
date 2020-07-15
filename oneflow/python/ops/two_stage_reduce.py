@@ -4,17 +4,31 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.ops.user_op_builder as user_op_builder
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.framework.hob as hob
+import oneflow.python.lib.core.enable_if as enable_if
 
 import oneflow as flow
 
 
 @oneflow_export("math.two_stage_reduce_max")
+def api_two_stage_reduce_max(x, axis=None, keepdims=False, name=None):
+    func = enable_if.unique([two_stage_reduce_max])
+    return func(x, axis=axis, keepdims=keepdims, name=name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def two_stage_reduce_max(x, axis=None, keepdims=False, name=None):
     name = name if name is not None else id_util.UniqueStr("ReduceMax_")
     return two_stage_reduce(x, axis, keepdims, "reduce_max", name)
 
 
 @oneflow_export("math.two_stage_reduce_min")
+def api_two_stage_reduce_min(x, axis=None, keepdims=False, name=None):
+    func = enable_if.unique([two_stage_reduce_min])
+    return func(x, axis=axis, keepdims=keepdims, name=name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def two_stage_reduce_min(x, axis=None, keepdims=False, name=None):
     name = name if name is not None else id_util.UniqueStr("ReduceMin_")
     return two_stage_reduce(x, axis, keepdims, "reduce_min", name)

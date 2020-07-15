@@ -6,7 +6,7 @@ from functools import reduce
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -28,7 +28,7 @@ def unique_with_counts(x, out_idx=flow.int32, name=None):
     op_conf.unique_with_counts_conf.num_unique = "num_unique"
     op_conf.unique_with_counts_conf.out_idx = out_idx
 
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     y_lbi = logical_blob_id_util.LogicalBlobId()
     y_lbi.op_name = op_conf.name
     y_lbi.blob_name = "y"

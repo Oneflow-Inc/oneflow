@@ -6,7 +6,13 @@ from test_util import GenArgList
 
 
 def _test_split_to_split(
-    src_device_type, dst_device_type, src_device_num, dst_device_num, src_axis, dst_axis
+    test_case,
+    src_device_type,
+    dst_device_type,
+    src_device_num,
+    dst_device_num,
+    src_axis,
+    dst_axis,
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -25,7 +31,7 @@ def _test_split_to_split(
 
     x = np.random.rand(96, 96).astype(np.float32)
     y = split_to_split_job(x).get().ndarray()
-    assert np.array_equal(x, y)
+    test_case.assertTrue(np.array_equal(x, y))
 
 
 def test_split_to_split(test_case):
@@ -37,11 +43,17 @@ def test_split_to_split(test_case):
     arg_dict["src_axis"] = [0, 1]
     arg_dict["dst_axis"] = [0, 1]
     for arg in GenArgList(arg_dict):
-        _test_split_to_split(*arg)
+        print(arg)
+        _test_split_to_split(test_case, *arg)
 
 
 def _test_split_to_broadcast(
-    src_device_type, dst_device_type, src_device_num, dst_device_num, src_axis
+    test_case,
+    src_device_type,
+    dst_device_type,
+    src_device_num,
+    dst_device_num,
+    src_axis,
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -60,7 +72,7 @@ def _test_split_to_broadcast(
 
     x = np.random.rand(96, 96).astype(np.float32)
     y = split_to_broadcast_job(x).get().ndarray()
-    assert np.array_equal(x, y)
+    test_case.assertTrue(np.array_equal(x, y))
 
 
 def test_split_to_broadcast(test_case):
@@ -71,11 +83,17 @@ def test_split_to_broadcast(test_case):
     arg_dict["dst_device_num"] = [1, 2, 3]
     arg_dict["src_axis"] = [0, 1]
     for arg in GenArgList(arg_dict):
-        _test_split_to_broadcast(*arg)
+        print(arg)
+        _test_split_to_broadcast(test_case, *arg)
 
 
 def _test_broadcast_to_split(
-    src_device_type, dst_device_type, src_device_num, dst_device_num, dst_axis
+    test_case,
+    src_device_type,
+    dst_device_type,
+    src_device_num,
+    dst_device_num,
+    dst_axis,
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -94,7 +112,7 @@ def _test_broadcast_to_split(
 
     x = np.random.rand(96, 96).astype(np.float32)
     y = broadcast_to_split_job(x).get().ndarray()
-    assert np.array_equal(x, y)
+    test_case.assertTrue(np.array_equal(x, y))
 
 
 def test_broadcast_to_split(test_case):
@@ -105,11 +123,17 @@ def test_broadcast_to_split(test_case):
     arg_dict["dst_device_num"] = [1, 2, 3]
     arg_dict["dst_axis"] = [0, 1]
     for arg in GenArgList(arg_dict):
-        _test_broadcast_to_split(*arg)
+        print(arg)
+        _test_broadcast_to_split(test_case, *arg)
 
 
 def _test_partial_sum_to_split(
-    src_device_type, dst_device_type, src_device_num, dst_device_num, dst_axis
+    test_case,
+    src_device_type,
+    dst_device_type,
+    src_device_num,
+    dst_device_num,
+    dst_axis,
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -129,7 +153,7 @@ def _test_partial_sum_to_split(
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
     y = partial_sum_to_split_job(x).get().ndarray()
-    assert np.allclose(np.sum(x, axis=0), y)
+    test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
 
 
 def test_partial_sum_to_split(test_case):
@@ -140,11 +164,12 @@ def test_partial_sum_to_split(test_case):
     arg_dict["dst_device_num"] = [1, 2, 3]
     arg_dict["dst_axis"] = [0, 1]
     for arg in GenArgList(arg_dict):
-        _test_partial_sum_to_split(*arg)
+        print(arg)
+        _test_partial_sum_to_split(test_case, *arg)
 
 
 def _test_partial_sum_to_broadcast(
-    src_device_type, dst_device_type, src_device_num, dst_device_num
+    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -164,7 +189,7 @@ def _test_partial_sum_to_broadcast(
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
     y = partial_sum_to_broadcast_job(x).get().ndarray()
-    assert np.allclose(np.sum(x, axis=0), y)
+    test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
 
 
 def test_partial_sum_to_broadcast(test_case):
@@ -174,11 +199,12 @@ def test_partial_sum_to_broadcast(test_case):
     arg_dict["src_device_num"] = [2, 3]
     arg_dict["dst_device_num"] = [1, 2, 3]
     for arg in GenArgList(arg_dict):
-        _test_partial_sum_to_broadcast(*arg)
+        print(arg)
+        _test_partial_sum_to_broadcast(test_case, *arg)
 
 
 def _test_broadcast_to_broadcast(
-    src_device_type, dst_device_type, src_device_num, dst_device_num
+    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -197,7 +223,7 @@ def _test_broadcast_to_broadcast(
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
     y = broadcast_to_broadcast_job(x).get().ndarray()
-    assert np.array_equal(x, y)
+    test_case.assertTrue(np.array_equal(x, y))
 
 
 def test_broadcast_to_broadcast(test_case):
@@ -206,11 +232,15 @@ def test_broadcast_to_broadcast(test_case):
     arg_dict["dst_device_type"] = ["cpu", "gpu"]
     arg_dict["src_device_num"] = [1, 2, 3]
     arg_dict["dst_device_num"] = [1, 2, 3]
+
     for arg in GenArgList(arg_dict):
-        _test_broadcast_to_broadcast(*arg)
+        print(arg)
+        _test_broadcast_to_broadcast(test_case, *arg)
 
 
-def _test_multi_lbi(src_device_type, dst_device_type, src_device_num, dst_device_num):
+def _test_multi_lbi(
+    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num
+):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
@@ -236,9 +266,9 @@ def _test_multi_lbi(src_device_type, dst_device_type, src_device_num, dst_device
     r0 = multi_lbi_job(x).get()[0].ndarray()
     r1 = multi_lbi_job(x).get()[1].ndarray()
     r2 = multi_lbi_job(x).get()[2].ndarray()
-    assert np.array_equal(x, r0)
-    assert np.array_equal(x, r1)
-    assert np.array_equal(x, r2)
+    test_case.assertTrue(np.array_equal(x, r0))
+    test_case.assertTrue(np.array_equal(x, r1))
+    test_case.assertTrue(np.array_equal(x, r2))
 
 
 def test_multi_lbi(test_case):
@@ -248,4 +278,5 @@ def test_multi_lbi(test_case):
     arg_dict["src_device_num"] = [1, 2, 3]
     arg_dict["dst_device_num"] = [1, 2, 3]
     for arg in GenArgList(arg_dict):
-        _test_multi_lbi(*arg)
+        print(arg)
+        _test_multi_lbi(test_case, *arg)
