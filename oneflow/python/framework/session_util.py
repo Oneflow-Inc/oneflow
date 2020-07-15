@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 
 import threading
-
-import oneflow
-import oneflow.core.job.job_pb2 as job_util
+from oneflow.core.job.job_set_pb2 import ConfigProto
+import oneflow.core.vm.instruction_pb2 as instr_util
+import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
@@ -14,11 +14,20 @@ import oneflow.python.framework.job_instance as job_instance_util
 import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.python.eager.vm_util as vm_util
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.framework.function_desc import FunctionDesc
-from oneflow.python.framework.pull_util import FutureRemoteBlobs
+from oneflow.python.framework.pull_util import (
+    LazyFutureRemoteBlobs,
+    EagerFutureRemoteBlobs,
+)
 from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.framework.function_desc import FunctionDesc
+from oneflow.python.eager.blob_register import BlobRegister
+from contextlib import contextmanager
+
+import oneflow
 
 
 class Session(object):
@@ -29,13 +38,19 @@ class Session(object):
         self.running_job_cnt_ = 0
         self.inter_user_job_info_ = None
         self.uuid2watch_handler_ = {}
-        self.config_proto_ = _GetDefaultConfigProto()
+        self.config_proto_ = None
         self.placement_scope_stack_ = []
         self.is_mirrored_strategy_enabled_stack_ = []
         self.function_flag_name2default_val_ = {}
         self.job_name2var_name2var_blob_ = {}
+        self.var_name2var_blob_ = {}
         self.job_name2name_scope_stack_ = {}
-        self.UpdateFunctionFlagName2DefaultVal()
+        self.job_name2current_scope_ = {}
+        self.eager_global_function_desc_stack_ = []
+        self._UpdateFunctionFlagName2DefaultVal()
+        self.instruction_list_ = instr_util.InstructionListProto()
+        self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
+        self.backward_blob_register_ = BlobRegister()
 
     @property
     def status(self):
@@ -47,6 +62,8 @@ class Session(object):
 
     @property
     def config_proto(self):
+        if self.config_proto_ is None:
+            self.config_proto_ = _GetDefaultConfigProto()
         return self.config_proto_
 
     @property
@@ -70,12 +87,59 @@ class Session(object):
         return self.inter_user_job_info_
 
     @property
-    def job_name2var_name2var_blob(self):
-        return self.job_name2var_name2var_blob_
-
-    @property
     def job_name2name_scope_stack(self):
         return self.job_name2name_scope_stack_
+
+    @property
+    def instruction_list(self):
+        return self.instruction_list_
+
+    @property
+    def eager_symbol_list(self):
+        return self.eager_symbol_list_
+
+    @property
+    def backward_blob_register(self):
+        return self.backward_blob_register_
+
+    def MakeScope(self, build_func):
+        scope = None
+        old_scope = oneflow.scope.current_scope()
+        assert old_scope is not None
+
+        def BuildScope(builder):
+            nonlocal scope
+            scope = build_func(old_scope, builder)
+            assert scope is not None
+
+        vm_util.LogicalRun(BuildScope)
+        return scope
+
+    @contextmanager
+    def NewCurrentScope(self, scope):
+        job_name = scope.job_desc_symbol.data.job_name
+        old_scope = self.GetCurrentScope(job_name)
+        self.job_name2current_scope_[job_name] = scope
+        try:
+            yield
+        finally:
+            assert self.GetCurrentScope(job_name) is scope
+            self.job_name2current_scope_[job_name] = old_scope
+
+    def InitNoneScope(self, job_name):
+        if job_name not in self.job_name2current_scope_:
+            assert isinstance(job_name, str)
+            self.job_name2current_scope_[job_name] = None
+        assert self.job_name2current_scope_[job_name] is None, "job_name: %s" % job_name
+
+    def GetCurrentScope(self, job_name):
+        assert job_name in self.job_name2current_scope_, "job_name: %s" % job_name
+        return self.job_name2current_scope_[job_name]
+
+    def GetLazyFunctionDesc(self, job_name):
+        if job_name in self.job_name2function_desc_:
+            return self.job_name2function_desc_[job_name]
+        return None
 
     def AnyGlobalFunctionDefined(self):
         return len(self.job_name2function_desc_) > 0
@@ -86,7 +150,7 @@ class Session(object):
     def GetFunctionDesc(self, job_name):
         return self.job_name2function_desc_[job_name]
 
-    def UpdateFunctionFlagName2DefaultVal(self):
+    def _UpdateFunctionFlagName2DefaultVal(self):
         items = c_api_util.GetFunctionConfigDef().flag_name2flag_def.items()
         self.function_flag_name2default_val_ = {k: v.default_val for k, v in items}
 
@@ -97,15 +161,18 @@ class Session(object):
 
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
+        self.status_ = SessionStatus.RUNNING
         if not c_api_util.IsEnvInited():
             oneflow.env.init()
-        _TryCompleteConfigProto(self.config_proto_)
-        c_api_util.InitGlobalSession(self.config_proto_)
-        for job_name, func_desc in self.job_name2function_desc_.items():
-            compiler.Compile(func_desc, self.config_proto_)
-        c_api_util.StartGlobalSession()
-        self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
-        self.status_ = SessionStatus.RUNNING
+        _TryCompleteConfigProto(self.config_proto)
+        c_api_util.InitGlobalSession(self.config_proto)
+        if not c_api_util.EagerExecutionEnabled():
+            for job_name, func_desc in self.job_name2function_desc_.items():
+                compiler.Compile(self, func_desc, self.config_proto)
+            self.job_name2var_name2var_blob_ = dict()
+            assert len(self.job_name2function_desc_.items()) > 0
+            c_api_util.StartGlobalSession()
+            self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
         return self
 
     def TryClose(self):
@@ -115,6 +182,8 @@ class Session(object):
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
         self.Sync()
+        assert len(self.job_name2var_name2var_blob_) == 0
+        del self.var_name2var_blob_
         c_api_util.StopGlobalSession()
         c_api_util.DestroyGlobalSession()
         self.status_ = SessionStatus.CLOSED
@@ -132,12 +201,21 @@ class Session(object):
         assert self.running_job_cnt_ == 0
         self.cond_var_.release()
 
-    def Run(self, job_func, *arg):
+    def LazyRun(self, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING
         remote_blobs = self.LaunchUserJob(job_func, *arg)
         if remote_blobs is None:
             return
-        return FutureRemoteBlobs(self).SetResult(remote_blobs).Inited()
+        return LazyFutureRemoteBlobs(self).SetResult(remote_blobs).Inited()
+
+    def EagerRun(self, function_desc, *arg):
+        with self._EagerGlobalFunctionDescScope(function_desc):
+            remote_blobs = compiler.EagerRun(
+                self, function_desc, self.config_proto, arg
+            )
+            if remote_blobs is None:
+                return
+            return EagerFutureRemoteBlobs().SetResult(remote_blobs).Inited()
 
     def LaunchUserJob(self, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING
@@ -174,20 +252,45 @@ class Session(object):
         return len(self.uuid2watch_handler) > 0
 
     def StashVariableBlob4Job(self, job_name, var_name, var_blob):
-        if job_name not in self.job_name2var_name2var_blob:
-            self.job_name2var_name2var_blob[job_name] = dict()
-        assert var_name not in self.job_name2var_name2var_blob[job_name]
-        self.job_name2var_name2var_blob[job_name][var_name] = var_blob
+        if var_name not in self.var_name2var_blob_:
+            self.var_name2var_blob_[var_name] = var_blob
+        if job_name not in self.job_name2var_name2var_blob_:
+            self.job_name2var_name2var_blob_[job_name] = dict()
+        assert var_name not in self.job_name2var_name2var_blob_[job_name]
+        self.job_name2var_name2var_blob_[job_name][var_name] = var_blob
 
+    # return global_variable_blob, job_variable_blob
     def TryGetVariableBlobOfJobFromStash(self, job_name, var_name):
-        if job_name not in self.job_name2var_name2var_blob:
-            return None
+        if var_name not in self.var_name2var_blob_:
+            return None, None
+        global_variable_blob = self.var_name2var_blob_[var_name]
+        if job_name not in self.job_name2var_name2var_blob_:
+            return global_variable_blob, None
 
-        var_name2var_blob = self.job_name2var_name2var_blob[job_name]
+        var_name2var_blob = self.job_name2var_name2var_blob_[job_name]
         if var_name not in var_name2var_blob:
-            return None
+            return global_variable_blob, None
+        assert global_variable_blob is var_name2var_blob[var_name]
+        return global_variable_blob, var_name2var_blob[var_name]
 
-        return var_name2var_blob[var_name]
+    def CurrentEagerGlobalFunctionDesc(self):
+        if len(self.eager_global_function_desc_stack_) == 0:
+            return None
+        return self.eager_global_function_desc_stack_[0]
+
+    @contextmanager
+    def _EagerGlobalFunctionDescScope(self, function_desc):
+        assert len(self.backward_blob_register.blob_name2object) == 0
+        assert len(self.job_name2var_name2var_blob_) == 0
+        self.eager_global_function_desc_stack_.insert(0, function_desc)
+        try:
+            yield
+        finally:
+            self.job_name2var_name2var_blob_ = dict()
+            self.eager_global_function_desc_stack_.pop(0)
+            keys = list(self.backward_blob_register.blob_name2object.keys())
+            for key in keys:
+                del self.backward_blob_register.blob_name2object[key]
 
     def _IncRunningJobCnt(self):
         assert self.status_ is SessionStatus.RUNNING
@@ -202,14 +305,14 @@ class Session(object):
         self.cond_var_.release()
 
 
-@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
-def enable_eager_execution(val=True):
-    return c_api_util.EnableEagerExecution(val)
-
-
 @oneflow_export("enable_eager_execution")
 def api_enable_eager_execution(val: bool = True) -> None:
-    return enable_if.unique([enable_eager_execution])(val)
+    return enable_if.unique([enable_eager_execution])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
+def enable_eager_execution(val=True):
+    return c_api_util.EnableEagerSession(val)
 
 
 @oneflow_export("eager_execution_enabled")
@@ -224,7 +327,15 @@ def clear_default_session() -> None:
     """
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
-    c_api_util.EnableEagerExecution(False)
+    c_api_util.EnableEagerSession(False)
+
+
+@oneflow_export("scope.current_scope")
+def current_scope():
+    r""" Return current scope
+    """
+    job_name = oneflow.current_global_function_desc().job_config_proto.job_name
+    return session_ctx.GetDefaultSession().GetCurrentScope(job_name)
 
 
 @oneflow_export("sync_default_session")

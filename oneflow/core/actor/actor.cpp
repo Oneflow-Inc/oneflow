@@ -360,7 +360,7 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
       act_event->set_stop_time(GetCurTime());
       // The stream poller thread is not allowed to perform blocking RPC call. Hence, the
       // RPC call is forwarded to the thread pool and will be executed there.
-      Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork(
+      Global<ThreadPool>::Get()->AddWork(
           [act_event]() { Global<CtrlClient>::Get()->PushActEvent(*act_event); });
     });
   } else {

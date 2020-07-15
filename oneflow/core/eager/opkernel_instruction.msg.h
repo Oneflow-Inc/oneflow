@@ -21,6 +21,7 @@ FLAT_MSG_VIEW_END(DeleteOpKernelObjectInstrOperand);
 
 FLAT_MSG_VIEW_BEGIN(CallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, opkernel);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, sbp_signature);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_ibn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, ibn);
@@ -38,6 +39,7 @@ FLAT_MSG_VIEW_END(CallOpKernelInstrOperand);
 FLAT_MSG_VIEW_BEGIN(StatelessCallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, job_desc);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, op_conf);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, sbp_signature);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, shared_opkernel);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_ibn);
@@ -52,12 +54,17 @@ FLAT_MSG_VIEW_BEGIN(StatelessCallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, mut2_obn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::Mut2Operand, mut2_output_blob);
 FLAT_MSG_VIEW_END(StatelessCallOpKernelInstrOperand);
-// clang-format on
 
-FLAT_MSG_VIEW_BEGIN(WatchBlobInstrOperand);
-FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstOperand, blob);
-FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
-FLAT_MSG_VIEW_END(WatchBlobInstrOperand);
+FLAT_MSG_VIEW_BEGIN(FetchBlobInstrOperand);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstOperand, blob);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
+FLAT_MSG_VIEW_END(FetchBlobInstrOperand);
+
+FLAT_MSG_VIEW_BEGIN(FeedBlobInstrOperand);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::Mut2Operand, blob);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
+FLAT_MSG_VIEW_END(FeedBlobInstrOperand);
+// clang-format on
 
 }  // namespace eager
 }  // namespace oneflow

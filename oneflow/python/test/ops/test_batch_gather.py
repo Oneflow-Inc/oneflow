@@ -26,6 +26,7 @@ def _make_gather_fn(
     params, indices, axis, batch_dims, device_type, mirrored, compare_fn
 ):
     flow.clear_default_session()
+    flow.config.enable_debug_mode(True)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     if mirrored:

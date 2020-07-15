@@ -10,9 +10,10 @@ namespace mola {
 
 class XlaExecutable : public Executable {
  public:
-  XlaExecutable(const XrtDevice &device, const std::vector<xla::Shape> &input_shapes,
+  XlaExecutable(const std::string &name, const XrtDevice &device,
+                const std::vector<xla::Shape> &input_shapes,
                 const xla::Shape &output_shape, std::unique_ptr<xla::LocalExecutable> &&executable)
-      : Executable(XrtEngine::XLA),
+      : Executable(name, XrtEngine::XLA),
         device_(device),
         input_shapes_(input_shapes),
         output_shape_(output_shape),

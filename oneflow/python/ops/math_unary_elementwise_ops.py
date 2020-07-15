@@ -5,7 +5,7 @@ import os
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.ops.user_op_builder as user_op_builder
@@ -148,18 +148,7 @@ def round(x, name=None):
 
 @oneflow_export("math.rsqrt")
 def rsqrt(x, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_unary_elemwise_math_op("rsqrt", x, name)
-
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Rsqrt_"))
-    setattr(op_conf.rsqrt_conf, "in", x.unique_name)
-    setattr(op_conf.rsqrt_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_unary_elemwise_math_op("rsqrt", x, name)
 
 
 @oneflow_export("math.sigmoid_v2")
@@ -189,35 +178,12 @@ def softplus(x, name=None):
 
 @oneflow_export("math.sqrt")
 def sqrt(x, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_unary_elemwise_math_op("sqrt", x, name)
-
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Sqrt_"))
-    setattr(op_conf.sqrt_conf, "in", x.unique_name)
-    setattr(op_conf.sqrt_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_unary_elemwise_math_op("sqrt", x, name)
 
 
 @oneflow_export("math.square")
 def square(x, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_unary_elemwise_math_op("square", x, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("square_"),
-    )
-    setattr(op_conf.square_conf, "in", x.unique_name)
-    setattr(op_conf.square_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_unary_elemwise_math_op("square", x, name)
 
 
 @oneflow_export("math.tan")

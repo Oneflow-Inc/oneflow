@@ -10,15 +10,6 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-template<typename UnaryOp>
-class ApplyUnaryOp : public XlaOpKernel {
- public:
-  void Compile(XlaOpContext *ctx) override { ctx->SetOutput("out", UnaryOp()(ctx->Input("in"))); }
-};
-
-REGISTER_XLA_OP_KERNEL(Sigmoid, ApplyUnaryOp<op::Logistic>).Finalize();
-REGISTER_XLA_OP_KERNEL(Tanh, ApplyUnaryOp<op::Tanh>).Finalize();
-
 struct Gelu {
   xla::XlaOp operator()(const xla::XlaOp &x) {
     xla::XlaOp dot_5 = xla::ScalarLike(x, 0.5f);
@@ -31,6 +22,14 @@ struct Gelu {
   }
 };
 
+template<typename UnaryOp>
+class ApplyUnaryOp : public XlaOpKernel {
+ public:
+  void Compile(XlaOpContext *ctx) override { ctx->SetSoleOutput(UnaryOp()(ctx->SoleInput())); }
+};
+
+REGISTER_XLA_OP_KERNEL(Sigmoid, ApplyUnaryOp<op::Logistic>).Finalize();
+REGISTER_XLA_OP_KERNEL(Tanh, ApplyUnaryOp<op::Tanh>).Finalize();
 REGISTER_XLA_OP_KERNEL(Gelu, ApplyUnaryOp<Gelu>).Finalize();
 
 struct Identity {
@@ -38,6 +37,7 @@ struct Identity {
 };
 
 REGISTER_XLA_OP_KERNEL(Identity, ApplyUnaryOp<Identity>).Finalize();
+
 
 }  // namespace mola
 }  // namespace xrt
