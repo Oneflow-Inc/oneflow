@@ -15,14 +15,15 @@ import re
 import shutil
 import tempfile
 
-import six
+from google.protobuf import text_format
 import numpy as np
+import onnx
+from onnx import helper, onnx_pb, defs, numpy_helper
+import six
+
 import oneflow.core.common.data_type_pb2 as data_type_pb2
 from oneflow.python.framework import id_util
 from oneflow.python.onnx import constants
-from google.protobuf import text_format
-import onnx
-from onnx import helper, onnx_pb, defs, numpy_helper
 
 
 #

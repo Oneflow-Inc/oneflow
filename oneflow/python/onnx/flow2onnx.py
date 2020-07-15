@@ -10,28 +10,26 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
-from typing import Text, Optional, Dict, Callable, List
-
 import collections
-import sys
-import traceback
 import itertools
 import logging
+import os
+import os.path
+import sys
+import traceback
+from typing import Text, Optional, Dict, Callable, List
 
 import numpy as np
 from onnx import helper, onnx_pb
 
 import oneflow
-import oneflow.python.onnx
-import oneflow.python.onnx.onnx_opset  # pylint: disable=unused-import
-from oneflow.python.onnx.graph import Graph
-from oneflow.python.onnx import constants, schemas, util, handler, optimizer
-
-from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_ctx
-import os
-import os.path
+from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.onnx
+from oneflow.python.onnx import constants, schemas, util, handler, optimizer
+from oneflow.python.onnx.graph import Graph
+import oneflow.python.onnx.onnx_opset  # pylint: disable=unused-import
 
 logger = logging.getLogger(__name__)
 
