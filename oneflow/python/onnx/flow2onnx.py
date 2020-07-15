@@ -236,6 +236,7 @@ def Export(
         external_data: Save weights as ONNX external data, usually to bypass the 2GB file size limit of protobuf.
     """
     assert os.getenv("ENABLE_USER_OP") != "False"
+    assert os.path.isdir(model_save_dir)
     job_set = c_api_util.GetJobSet()
     job_name = job_func.__name__
     for job in job_set.job:
