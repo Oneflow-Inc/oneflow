@@ -45,6 +45,28 @@ __global__ void UpsampleNearestBackward(const int64_t elem_cnt, const T* dy_dptr
   }
 }
 
+struct BilinearParam {
+  int64_t top_h_index;
+  int64_t bottom_h_index;
+  int64_t left_w_index;
+  int64_t right_w_index;
+  float w_lerp;
+  float h_lerp;
+};
+
+__device__ void GetBilinearParam(const int64_t index, const int64_t h, const int64_t w,
+                                 const int64_t in_height, const int64_t in_width,
+                                 const float scale_h, const float scale_w, BilinearParam* params) {
+  const float in_h = (static_cast<float>(h) + 0.5f) * scale_h - 0.5f;
+  const float in_w = (static_cast<float>(w) + 0.5f) * scale_w - 0.5f;
+  params->top_h_index = in_h > 0.0 ? floorf(in_h) : 0;
+  params->bottom_h_index = (in_h < in_height - 1) ? ceilf(in_h) : in_height - 1;
+  params->h_lerp = in_h - floorf(in_h);
+  params->left_w_index = in_w > 0.0 ? floorf(in_w) : 0;
+  params->right_w_index = (in_w < in_width - 1) ? ceilf(in_w) : in_width - 1;
+  params->w_lerp = in_w - floorf(in_w);
+}
+
 template<typename T>
 __global__ void UpsampleBilinearForward(const int64_t elem_cnt, const T* in_dptr,
                                         NdIndexOffsetHelper<int64_t, 4> in_helper,
@@ -54,23 +76,17 @@ __global__ void UpsampleBilinearForward(const int64_t elem_cnt, const T* in_dptr
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     out_helper.OffsetToNdIndex(index, n, c, h, w);
-    const float in_h = (static_cast<float>(h) + 0.5f) * scale_h - 0.5f;
-    const int64_t top_h_index = in_h > 0.0 ? floorf(in_h) : 0;
-    const int64_t bottom_h_index = (in_h < in_height - 1) ? ceilf(in_h) : in_height - 1;
-    const float h_lerp = in_h - floorf(in_h);
-    const float in_w = (static_cast<float>(w) + 0.5f) * scale_w - 0.5f;
-    const int64_t left_w_index = in_w > 0.0 ? floorf(in_w) : 0;
-    const int64_t right_w_index = (in_w < in_width - 1) ? ceilf(in_w) : in_width - 1;
-    const float w_lerp = in_w - floorf(in_w);
-    const int64_t top_offset = in_helper.NdIndexToOffset(n, c, top_h_index, 0);
-    const float top_left = in_dptr[top_offset + left_w_index];
-    const float top_right = in_dptr[top_offset + right_w_index];
-    const int64_t bottom_offset = in_helper.NdIndexToOffset(n, c, bottom_h_index, 0);
-    const float bottom_left = in_dptr[bottom_offset + left_w_index];
-    const float bottom_right = in_dptr[bottom_offset + right_w_index];
-    const float top = top_left + (top_right - top_left) * w_lerp;
-    const float bottom = bottom_left + (bottom_right - bottom_left) * w_lerp;
-    out_dptr[index] = top + (bottom - top) * h_lerp;
+    BilinearParam params;
+    GetBilinearParam(index, h, w, in_height, in_width, scale_h, scale_w, &params);
+    const int64_t top_offset = in_helper.NdIndexToOffset(n, c, params.top_h_index, 0);
+    const int64_t bottom_offset = in_helper.NdIndexToOffset(n, c, params.bottom_h_index, 0);
+    const float top_left = in_dptr[top_offset + params.left_w_index];
+    const float top_right = in_dptr[top_offset + params.right_w_index];
+    const float bottom_left = in_dptr[bottom_offset + params.left_w_index];
+    const float bottom_right = in_dptr[bottom_offset + params.right_w_index];
+    const float top = top_left + (top_right - top_left) * params.w_lerp;
+    const float bottom = bottom_left + (bottom_right - bottom_left) * params.w_lerp;
+    out_dptr[index] = top + (bottom - top) * params.h_lerp;
   }
 }
 
@@ -83,25 +99,21 @@ __global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const T* dy_dpt
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
-    const float dx_h = (static_cast<float>(h) + 0.5f) * scale_h - 0.5f;
-    const int64_t top_h_index = dx_h > 0.0 ? floorf(dx_h) : 0;
-    const int64_t bottom_h_index = (dx_h < dx_height - 1) ? ceilf(dx_h) : dx_height - 1;
-    const float h_lerp = dx_h - floorf(dx_h);
-    const float dx_w = (static_cast<float>(w) + 0.5f) * scale_w - 0.5f;
-    const int64_t left_w_index = dx_w > 0.0 ? floorf(dx_w) : 0;
-    const int64_t right_w_index = (dx_w < dx_width - 1) ? ceilf(dx_w) : dx_width - 1;
-    const float w_lerp = dx_w - floorf(dx_w);
+    BilinearParam params;
+    GetBilinearParam(index, h, w, dx_height, dx_width, scale_h, scale_w, &params);
+    const int64_t top_offset = dx_helper.NdIndexToOffset(n, c, params.top_h_index, 0);
+    const int64_t bottom_offset = dx_helper.NdIndexToOffset(n, c, params.bottom_h_index, 0);
     const T dy = dy_dptr[index];
-    const float dbottom = h_lerp * dy;
-    const int64_t bottom_offset = dx_helper.NdIndexToOffset(n, c, bottom_h_index, 0);
+    const float dbottom = params.h_lerp * dy;
     T* dx_dptr_bottom_offset = dx_dptr + bottom_offset;
-    atomicAdd(dx_dptr_bottom_offset + left_w_index, static_cast<T>((1 - w_lerp) * dbottom));
-    atomicAdd(dx_dptr_bottom_offset + right_w_index, static_cast<T>(w_lerp * dbottom));
+    atomicAdd(dx_dptr_bottom_offset + params.left_w_index,
+              static_cast<T>((1 - params.w_lerp) * dbottom));
+    atomicAdd(dx_dptr_bottom_offset + params.right_w_index,
+              static_cast<T>(params.w_lerp * dbottom));
     const float dtop = dy - dbottom;
-    const int64_t top_offset = dx_helper.NdIndexToOffset(n, c, top_h_index, 0);
     T* dx_dptr_top_offset = dx_dptr + top_offset;
-    atomicAdd(dx_dptr_top_offset + left_w_index, static_cast<T>((1 - w_lerp) * dtop));
-    atomicAdd(dx_dptr_top_offset + right_w_index, static_cast<T>(w_lerp * dtop));
+    atomicAdd(dx_dptr_top_offset + params.left_w_index, static_cast<T>((1 - params.w_lerp) * dtop));
+    atomicAdd(dx_dptr_top_offset + params.right_w_index, static_cast<T>(params.w_lerp * dtop));
   }
 }
 
