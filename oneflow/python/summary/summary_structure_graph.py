@@ -8,7 +8,7 @@ import logging
 import oneflow as flow
 
 
-@oneflow_export("Graph")
+@oneflow_export("summary.Graph")
 class Graph(object):
     def __init__(self, logdir=None):
         if logdir is None:

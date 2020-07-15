@@ -64,7 +64,7 @@ def test(device_type):
         flow.summary.flush_summary_writer()
 
     logdir = "/home/zjhushengjian/oneflow"
-    projecotr = flow.Projector(logdir)
+    projecotr = flow.summary.Projector(logdir)
     projecotr.create_embedding_projector()
     projecotr.create_exception_projector()
 
@@ -72,12 +72,12 @@ def test(device_type):
 
     # write hparams
     hparams = {
-        flow.HParam("learning_rate", flow.RealRange(1e-2, 1e-1)): 0.02,
-        flow.HParam("dense_layers", flow.IntegerRange(2, 7)): 5,
-        flow.HParam("optimizer", flow.ValueSet(["adam", "sgd"])): "adam",
-        flow.HParam("accuracy", flow.RealRange(1e-2, 1e-1)): 0.001,
-        flow.HParam("magic", flow.ValueSet([False, True])): True,
-        flow.Metric("loss", float): 0.02,
+        flow.summary.HParam("learning_rate", flow.summary.RealRange(1e-2, 1e-1)): 0.02,
+        flow.summary.HParam("dense_layers", flow.summary.IntegerRange(2, 7)): 5,
+        flow.summary.HParam("optimizer", flow.summary.ValueSet(["adam", "sgd"])): "adam",
+        flow.summary.HParam("accuracy", flow.summary.RealRange(1e-2, 1e-1)): 0.001,
+        flow.summary.HParam("magic", flow.summary.ValueSet([False, True])): True,
+        flow.summary.Metric("loss", float): 0.02,
         "dropout": 0.6,
     }
 
@@ -85,13 +85,13 @@ def test(device_type):
 
     # # write text
     for i in range(200):
-        # t = ["vgg16", "resnet50", "mask-rcnn", "yolov3"]
-        # pb = flow.text(t)
-        # value = np.array(list(str(pb).encode("ascii")), dtype=np.int8)
-        # step = np.array([i], dtype=np.int64)
-        # PbJob([value], [step])
+        t = ["vgg16", "resnet50", "mask-rcnn", "yolov3"]
+        pb = flow.summary.text(t)
+        value = np.array(list(str(pb).encode("ascii")), dtype=np.int8)
+        step = np.array([i], dtype=np.int64)
+        PbJob([value], [step])
 
-        pb2 = flow.hparams(hparams)
+        pb2 = flow.summary.hparams(hparams)
 
         value = np.fromstring(str(pb2), dtype=np.int8)
         # value = np.array(list(str(pb2).encode("ascii")), dtype=np.int8)
@@ -174,9 +174,8 @@ def test(device_type):
         x=x,
     )
 
-    graph = flow.Graph(logdir)
+    graph = flow.summary.Graph(logdir)
     graph.write_structure_graph()
-
 
 
 test("cpu")

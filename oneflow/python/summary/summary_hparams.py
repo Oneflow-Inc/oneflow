@@ -19,7 +19,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow as flow
 
 
-@oneflow_export("text")
+@oneflow_export("summary.text")
 def text(text, tag=None):
     if isinstance(text, (tuple, list)) and len(text) > 0:
         if not isinstance(tag, str) or tag is None:
@@ -59,7 +59,7 @@ def _get_tensor(values, dtype=None, shape=None):
     return tensor_proto
 
 
-@oneflow_export("hparams")
+@oneflow_export("summary.hparams")
 def hparams(hparams):
     hparams, metrics = _get_hparams_dict(hparams)
     jparams = json.dumps(hparams, sort_keys=True, separators=(",", ":"))
@@ -130,7 +130,7 @@ def _get_value(value):
         return value
 
 
-@oneflow_export("Hparam")
+@oneflow_export("summary.Hparam")
 class HParam(object):
     def __init__(self, name, dtype=None):
         self.name_ = name
@@ -150,7 +150,7 @@ class HParam(object):
         return self.dtype_
 
 
-@oneflow_export("IntegerRange")
+@oneflow_export("summary.IntegerRange")
 class IntegerRange(object):
     def __init__(self, min_value, max_value):
         if not isinstance(max_value, int):
@@ -173,7 +173,7 @@ class IntegerRange(object):
         return self.max_value_
 
 
-@oneflow_export("RealRange")
+@oneflow_export("summary.RealRange")
 class RealRange(object):
     def __init__(self, min_value, max_value):
         if not isinstance(max_value, float):
@@ -196,7 +196,7 @@ class RealRange(object):
         return self.max_value_
 
 
-@oneflow_export("ValueSet")
+@oneflow_export("summary.ValueSet")
 class ValueSet(object):
     def __init__(self, values, dtype=None):
         self.values_ = list(values)
@@ -226,7 +226,7 @@ class ValueSet(object):
         return list(self.values_)
 
 
-@oneflow_export("Metric")
+@oneflow_export("summary.Metric")
 class Metric(object):
     def __init__(self, name, dtype=None):
         self.name_ = name

@@ -6,7 +6,7 @@ import time
 import oneflow as flow
 
 
-@oneflow_export("Projector")
+@oneflow_export("summary.Projector")
 class Projector(object):
     def __init__(self, logdir=None):
         if logdir is None:
