@@ -153,6 +153,7 @@ def reduce_euclidean_norm(input_tensor, axis=None, keepdims=False, name=None):
 @oneflow_export("math.reduce_logsumexp")
 def reduce_logsumexp(input_tensor, axis=None, keepdims=False, name=None):
     name = _gen_unique_name_if_need(name, "ReduceLogSumExp_")
+    axis = _check_axis(axis, input_tensor.shape)
     return flow.math.log(
         flow.math.reduce_sum(
             flow.math.exp(input_tensor, name + "_exp"),
@@ -167,6 +168,7 @@ def reduce_logsumexp(input_tensor, axis=None, keepdims=False, name=None):
 @oneflow_export("math.reduce_std")
 def reduce_std(input_tensor, axis=None, keepdims=False, name=None):
     name = _gen_unique_name_if_need(name, "ReduceStd_")
+    axis = _check_axis(axis, input_tensor.shape)
     if isinstance(axis, list) and len(axis) == 0:
         return flow.zeros_like(
             input_tensor, dtype=input_tensor.dtype, name=name + "_zeros_like"
@@ -182,22 +184,23 @@ def reduce_std(input_tensor, axis=None, keepdims=False, name=None):
 @oneflow_export("math.reduce_variance")
 def reduce_variance(input_tensor, axis=None, keepdims=False, name=None):
     name = _gen_unique_name_if_need(name, "ReduceVariance_")
+    axis = _check_axis(axis, input_tensor.shape)
     if isinstance(axis, list) and len(axis) == 0:
         return flow.zeros_like(
             input_tensor, dtype=input_tensor.dtype, name=name + "_zeros_like"
         )
     return flow.math.subtract(
         flow.math.reduce_mean(
-            flow.math.square(input_tensor, name + "_square_0"),
+            flow.math.square(input_tensor, name + "_square_minuend"),
             axis,
             keepdims,
-            name + "_reduce_mean_0",
+            name + "_reduce_mean_minuend",
         ),
         flow.math.square(
             flow.math.reduce_mean(
-                input_tensor, axis, keepdims, name + "_reduce_mean_1"
+                input_tensor, axis, keepdims, name + "_reduce_mean_subtrahend"
             ),
-            name + "_square_1",
+            name + "_square_subtrahend",
         ),
         name + "_subtract",
     )

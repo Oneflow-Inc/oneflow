@@ -40,28 +40,28 @@ class ReduceKernel final : public user_op::OpKernel {
         return in_shape->elem_cnt() * sizeof(dtype);                                              \
       });
 
-#define REGISTER_REDUCE_BY_TYPE(device, dtype)                             \
+#define REGISTER_REDUCE_ARITHMETIC_KERNELS(device, dtype)                  \
   REGISTER_REDUCE_XPU_KERNEL("reduce_prod", BinaryFuncProd, device, dtype) \
   REGISTER_REDUCE_XPU_KERNEL("reduce_min", BinaryFuncMin, device, dtype)   \
   REGISTER_REDUCE_XPU_KERNEL("reduce_sum", BinaryFuncSum, device, dtype)   \
   REGISTER_REDUCE_XPU_KERNEL("reduce_max", BinaryFuncMax, device, dtype)
 
-#define REGISTER_REDUCE_KERNEL(device)     \
-  REGISTER_REDUCE_BY_TYPE(device, float)   \
-  REGISTER_REDUCE_BY_TYPE(device, double)  \
-  REGISTER_REDUCE_BY_TYPE(device, int8_t)  \
-  REGISTER_REDUCE_BY_TYPE(device, int32_t) \
-  REGISTER_REDUCE_BY_TYPE(device, int64_t)
+#define REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(device) \
+  REGISTER_REDUCE_ARITHMETIC_KERNELS(device, float)          \
+  REGISTER_REDUCE_ARITHMETIC_KERNELS(device, double)         \
+  REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int8_t)         \
+  REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int32_t)        \
+  REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int64_t)
 
-REGISTER_REDUCE_KERNEL(DeviceType::kCPU)
-REGISTER_REDUCE_KERNEL(DeviceType::kGPU)
+REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCPU)
+REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kGPU)
 
-#define REGISTER_REDUCE_LOGICAL_KERNEL(device)                            \
+#define REGISTER_REDUCE_LOGICAL_KERNELS(device)                           \
   REGISTER_REDUCE_XPU_KERNEL("reduce_any", BinaryFuncAny, device, int8_t) \
   REGISTER_REDUCE_XPU_KERNEL("reduce_all", BinaryFuncAll, device, int8_t)
 
-REGISTER_REDUCE_LOGICAL_KERNEL(DeviceType::kCPU)
-REGISTER_REDUCE_LOGICAL_KERNEL(DeviceType::kGPU)
+REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kCPU)
+REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kGPU)
 
 REGISTER_REDUCE_XPU_KERNEL("reduce_sum", BinaryFuncSum, DeviceType::kGPU, float16)
 
