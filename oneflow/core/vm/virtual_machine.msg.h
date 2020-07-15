@@ -35,7 +35,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);
-  OBJECT_MSG_DEFINE_STRUCT(Range, machine_id_range);
+  OBJECT_MSG_DEFINE_STRUCT(Range, current_machine_id_range);
   OBJECT_MSG_DEFINE_PTR(ObjectMsgAllocator, vm_thread_only_allocator);
 
   //links

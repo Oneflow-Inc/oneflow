@@ -338,8 +338,8 @@ void VirtualMachine::TryMoveWaitingToReady(Instruction* instruction, ReadyList* 
 
 void VirtualMachine::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator) {
   mutable_vm_resource_desc()->CopyFrom(vm_desc.vm_resource_desc());
-  CHECK_GT(vm_desc.machine_id_range().size(), 0);
-  *mutable_machine_id_range() = vm_desc.machine_id_range();
+  CHECK_GT(vm_desc.current_machine_id_range().size(), 0);
+  *mutable_current_machine_id_range() = vm_desc.current_machine_id_range();
   set_vm_thread_only_allocator(allocator);
   OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
     if (stream_desc->num_threads() == 0) { continue; }
