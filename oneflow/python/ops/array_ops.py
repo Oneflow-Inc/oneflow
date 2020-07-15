@@ -102,7 +102,7 @@ def reshape(x, shape, name=None):
     shape = list(shape)
     assert all(dim == -1 or dim > 0 for dim in shape)
     assert shape.count(-1) <= 1
-    if (not x.is_dynamic) and (os.getenv("ENABLE_USER_OP") != "False"):
+    if not x.is_dynamic:
         if name is None:
             name = id_util.UniqueStr("Reshape_")
         return (
@@ -117,20 +117,14 @@ def reshape(x, shape, name=None):
         )
     else:
         op_conf = op_conf_util.OperatorConf()
-        if x.is_dynamic:
-            setattr(
-                op_conf,
-                "name",
-                name if name is not None else id_util.UniqueStr("DynamicReshape_"),
-            )
-            setattr(op_conf.dynamic_reshape_conf, "in", x.unique_name)
-            op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
-            setattr(op_conf.dynamic_reshape_conf, "out", "out")
-        else:
-            op_conf.name = id_util.UniqueStr("Reshape_" + x.op_name)
-            setattr(op_conf.reshape_conf, "in", x.unique_name)
-            op_conf.reshape_conf.shape.dim[:] = list(infer_shape(x, shape))
-            op_conf.reshape_conf.out = "out"
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("DynamicReshape_"),
+        )
+        setattr(op_conf.dynamic_reshape_conf, "in", x.unique_name)
+        op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
+        setattr(op_conf.dynamic_reshape_conf, "out", "out")
         interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
@@ -140,30 +134,18 @@ def reshape(x, shape, name=None):
 
 @oneflow_export("reshape_like")
 def reshape_like(x, like, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        if name is None:
-            name = id_util.UniqueStr("ReshapeLike_")
-        return (
-            flow.user_op_builder(name)
-            .Op("reshape_like")
-            .Input("in", [x])
-            .Input("like", [like])
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = id_util.UniqueStr("ReshapeLike_")
-        setattr(op_conf.reshape_like_conf, "x", x.unique_name)
-        setattr(op_conf.reshape_like_conf, "like", like.unique_name)
-        op_conf.reshape_like_conf.y = "y"
-        interpret_util.Forward(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "y"
-        return remote_blob_util.RemoteBlob(lbi)
+    if name is None:
+        name = id_util.UniqueStr("ReshapeLike_")
+    return (
+        flow.user_op_builder(name)
+        .Op("reshape_like")
+        .Input("in", [x])
+        .Input("like", [like])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("dynamic_reshape")

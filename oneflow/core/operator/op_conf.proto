@@ -445,18 +445,6 @@ message LazyAdamModelUpdateOpConf {
 message AccumulateOpConf {
 }
 
-message ReshapeOpConf {
-  required string in = 1;
-  required string out = 2;
-  required ShapeProto shape = 3;
-}
-
-message ReshapeLikeOpConf {
-  required string x = 1;
-  required string y = 2;
-  required string like = 3;
-}
-
 message DynamicReshapeOpConf {
   required string in = 1;
   required string out = 2;
@@ -1143,7 +1131,6 @@ message OperatorConf {
     
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
-    ReshapeOpConf reshape_conf = 202;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
     AddOpConf add_conf = 220;
     PackOpConf pack_conf = 237;
@@ -1152,7 +1139,6 @@ message OperatorConf {
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     PReluOpConf prelu_conf = 265;
-    ReshapeLikeOpConf reshape_like_conf = 286;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
