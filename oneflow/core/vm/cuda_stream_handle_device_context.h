@@ -6,6 +6,7 @@
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/common/callback.msg.h"
 #include "oneflow/core/vm/cuda_allocator.h"
+#include "oneflow/core/vm/thread_safe_allocator.h"
 
 namespace oneflow {
 namespace vm {
@@ -21,7 +22,8 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx {
   CudaStreamHandleDeviceCtx(CallbackMsgListPtr callback_msg_list, int64_t device_id)
       : cuda_handler_(new CudaStreamHandle(nullptr)),
         callback_msg_list_(callback_msg_list),
-        cuda_allocator_(device_id) {}
+        cuda_allocator_(new SingleThreadOnlyAllocator(
+            std::unique_ptr<Allocator>(new CudaAllocator(device_id)))) {}
 
   const cudaStream_t& cuda_stream() const override { return *(cuda_handler_->cuda_stream()); }
   const cublasHandle_t& cublas_pmh_handle() const override {
@@ -41,12 +43,12 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx {
     callback_msg_list_->EmplaceBack(ObjectMsgPtr<CallbackMsg>::New(callback));
   }
 
-  vm::Allocator* mut_allocator() override { return &cuda_allocator_; }
+  vm::Allocator* mut_allocator() override { return cuda_allocator_.get(); }
 
  protected:
   std::unique_ptr<CudaStreamHandle> cuda_handler_;
   CallbackMsgListPtr callback_msg_list_;
-  CudaAllocator cuda_allocator_;
+  std::unique_ptr<Allocator> cuda_allocator_;
 };
 
 #endif  // WITH_CUDA
