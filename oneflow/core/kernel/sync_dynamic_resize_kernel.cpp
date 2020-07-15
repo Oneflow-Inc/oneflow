@@ -61,8 +61,7 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
       CHECK_GE(new_size, 0);
       CHECK_LE(new_size, out->shape_view().At(conf.axis()));
       // NOTE(Liang Depeng): `mut_shape_view` should be used here to get the blob's `MutShapeView`
-      // pointer.
-      //                     But this callback is called after `Kernel::Forward` function's
+      //                     pointer. But this callback is called after `Kernel::Forward` function's
       //                     execution and the header check is already been set to false at that
       //                     moment. So we have to choose the `ForceMutShapeView` function with
       //                     header checker disabled.
