@@ -88,10 +88,9 @@ void EventsWriter::WriteEvent(const Event& event) {
   FileFlush();
 }
 
-Maybe<void> EventsWriter::FileFlush() {
-  CHECK_OR_RETURN(writable_file_ != nullptr);
+void EventsWriter::FileFlush() {
+  if (writable_file_ == nullptr) { return; }
   writable_file_->Flush();
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> EventsWriter::Close() {

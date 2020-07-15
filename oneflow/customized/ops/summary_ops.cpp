@@ -17,12 +17,6 @@ REGISTER_CPU_ONLY_USER_OP("create_summary_writer")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
-REGISTER_CPU_ONLY_USER_OP("destroy_summary_writer")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
-
 REGISTER_CPU_ONLY_USER_OP("flush_summary_writer")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();

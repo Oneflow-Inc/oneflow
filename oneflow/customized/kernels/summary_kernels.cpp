@@ -29,8 +29,9 @@ class WriteScalar final : public user_op::OpKernel {
     CHECK_NOTNULL(istep);
     int8_t* ctag = const_cast<int8_t*>(tag->dptr<int8_t>());
     CHECK_NOTNULL(ctag);
+    std::string tag_str(reinterpret_cast<char*>(ctag), tag->shape().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WriteScalarToFile(
-        istep[0], static_cast<double>(tvalue[0]), reinterpret_cast<char*>(ctag));
+        istep[0], static_cast<double>(tvalue[0]), tag_str);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -54,7 +55,6 @@ class CreateSummaryWriter final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const std::string& logdir = ctx->Attr<std::string>("logdir");
-    // Global<EventsWriter>::New();
     Global<EventsWriter>::Get()->Init(logdir);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -62,22 +62,6 @@ class CreateSummaryWriter final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("create_summary_writer")
     .SetCreateFn<CreateSummaryWriter>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
-
-class DestroySummaryWriter final : public user_op::OpKernel {
- public:
-  DestroySummaryWriter() = default;
-  ~DestroySummaryWriter() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    Global<EventsWriter>::Delete();
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
-};
-
-REGISTER_USER_KERNEL("destroy_summary_writer")
-    .SetCreateFn<DestroySummaryWriter>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
 
 class FlushSummaryWriter final : public user_op::OpKernel {
@@ -111,8 +95,9 @@ class WriteHistogram final : public user_op::OpKernel {
     CHECK_NOTNULL(istep);
     int8_t* ctag = const_cast<int8_t*>(tag->dptr<int8_t>());
     CHECK_NOTNULL(ctag);
-    EventWriterHelper<DeviceType::kCPU, T>::WriteHistogramToFile(
-        static_cast<float>(istep[0]), *value, reinterpret_cast<char*>(ctag));
+    std::string tag_str(reinterpret_cast<char*>(ctag), tag->shape().elem_cnt());
+    EventWriterHelper<DeviceType::kCPU, T>::WriteHistogramToFile(static_cast<float>(istep[0]),
+                                                                 *value, tag_str);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -143,9 +128,9 @@ class WritePb final : public user_op::OpKernel {
     int64_t* istep = const_cast<int64_t*>(step->dptr<int64_t>());
     CHECK_NOTNULL(istep);
     int8_t* cvalue = const_cast<int8_t*>(value->dptr<int8_t>());
-    CHECK_NOTNULL(value);
-    EventWriterHelper<DeviceType::kCPU, T>::WritePbToFile(istep[0],
-                                                          reinterpret_cast<char*>(cvalue));
+    CHECK_NOTNULL(cvalue);
+    std::string value_str(reinterpret_cast<char*>(cvalue), value->shape().elem_cnt());
+    EventWriterHelper<DeviceType::kCPU, T>::WritePbToFile(istep[0], value_str);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -170,8 +155,9 @@ class WriteImage final : public user_op::OpKernel {
     CHECK_NOTNULL(istep);
     char* ctag = const_cast<char*>(tag->dptr<char>());
     CHECK_NOTNULL(ctag);
+    std::string tag_str(ctag, tag->shape().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WriteImageToFile(static_cast<int64_t>(istep[0]), *value,
-                                                             ctag);
+                                                             tag_str);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

@@ -116,12 +116,12 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
   Global<ThreadMgr>::New(plan);
-  Global<summary::EventsWriter>::New();
 #ifdef WITH_CUDA
   Global<NcclCommMgr>::New(plan);
 #endif  // WITH_CUDA
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
+  Global<summary::EventsWriter>::New();
 }
 
 void Runtime::DeleteAllGlobal() {

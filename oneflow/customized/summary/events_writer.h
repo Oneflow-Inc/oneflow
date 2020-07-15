@@ -30,7 +30,7 @@ class EventsWriter {
   Maybe<void> Close();
 
   void AppendQueue(std::unique_ptr<Event> event);
-  Maybe<void> FileFlush();
+  void FileFlush();
 
  private:
   Maybe<void> TryToInit();

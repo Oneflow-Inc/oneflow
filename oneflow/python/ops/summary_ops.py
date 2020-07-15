@@ -35,13 +35,6 @@ def create_summary_writer(logdir, name=None):
     )
 
 
-@oneflow_export("summary.destroy_summary_writer")
-def destroy_summary_writer(name=None):
-    if name is None:
-        name = id_util.UniqueStr("DestroyWriter_")
-    (flow.user_op_builder(name).Op("destroy_summary_writer").Build().InferAndTryRun())
-
-
 @oneflow_export("summary.flush_summary_writer")
 def flush_summary_writer(name=None):
     if name is None:
