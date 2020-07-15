@@ -5,6 +5,7 @@
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/eager/blob_object.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 
 namespace oneflow {
 
@@ -42,7 +43,7 @@ class OpKernelObject : public vm::Object {
     opkernel_state_ = opkernel_state;
   }
 
-  void ResetOpAndKernel(const ParallelContext* parallel_ctx,
+  void ResetOpAndKernel(const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
                         const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
 
   const BlobObject& tmp_buffer_blob_object() const { return *tmp_buffer_blob_object_; }
@@ -55,7 +56,8 @@ class OpKernelObject : public vm::Object {
  private:
   void InferBlobDescs(const Operator& op,
                       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx, std::unique_ptr<OpContext>* op_ctx);
+                      const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
+                      std::unique_ptr<OpContext>* op_ctx);
   void NewPartialInitializedKernel(
       const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, OpContext* op_ctx);
@@ -84,13 +86,14 @@ class SystemOpKernelObject : public vm::Object {
 
   const Kernel& kernel() const { return *kernel_; }
 
-  void ResetKernel(const ParallelContext* parallel_ctx,
+  void ResetKernel(const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
                    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
 
  private:
   void InferBlobDescs(const Operator& op,
                       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx, std::unique_ptr<OpContext>* op_ctx);
+                      const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
+                      std::unique_ptr<OpContext>* op_ctx);
   void ResetKernel(const Operator& op,
                    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
                    const ParallelContext* parallel_ctx, OpContext* op_ctx);

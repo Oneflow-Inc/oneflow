@@ -1,5 +1,6 @@
 #include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
@@ -36,22 +37,25 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
   const std::string& train_step_lbn =
       GenLogicalBlobName(identity_op_conf.name(), identity_conf->out());
 
-  OperatorConf scalar_add_op_conf{};
-  scalar_add_op_conf.set_name(train_step_name + "-ScalarAdd");
-  ScalarAddOpConf* scalar_add_conf = scalar_add_op_conf.mutable_scalar_add_conf();
-  scalar_add_conf->set_in(train_step_lbn);
-  scalar_add_conf->set_out("out");
-  scalar_add_conf->set_int_operand(1);
+  auto scalar_add_op = user_op::UserOpConfWrapperBuilder(train_step_name + "-ScalarAdd")
+                           .Op("scalar_add")
+                           .Input("in", train_step_lbn)
+                           .Output("out")
+                           .Attr<bool>("has_float_operand", false)
+                           .Attr<double>("float_operand", 0)
+                           .Attr<bool>("has_int_operand", true)
+                           .Attr<int64_t>("int_operand", 1)
+                           .Build();
 
   OperatorConf assign_op_conf{};
   assign_op_conf.set_name(train_step_name + "-Assign");
   AssignOpConf* assign_conf = assign_op_conf.mutable_assign_conf();
   assign_conf->set_ref(GenLogicalBlobName(variable_op_conf.name(), variable_conf->out()));
-  assign_conf->set_value(GenLogicalBlobName(scalar_add_op_conf.name(), scalar_add_conf->out()));
+  assign_conf->set_value(scalar_add_op.output("out", 0));
 
   JobBuilder job_builder(job);
   job_builder.AddOps(GenParallelConfOfCpuZeroOnMaster(),
-                     {variable_op_conf, identity_op_conf, scalar_add_op_conf, assign_op_conf});
+                     {variable_op_conf, identity_op_conf, scalar_add_op.op_conf(), assign_op_conf});
   job->mutable_job_conf()->mutable_train_conf()->set_train_step_lbn(train_step_lbn);
   return Maybe<void>::Ok();
 }

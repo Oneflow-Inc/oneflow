@@ -10,10 +10,10 @@
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/storage.h"
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/object_wrapper.h"
+#include "oneflow/core/eager/eager_symbol_storage.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -28,17 +28,30 @@ using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 int64_t NewJobDescSymbol(InstructionMsgList* list,
                          const std::shared_ptr<JobConfigProto>& job_conf) {
   int64_t job_desc_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::Storage<JobConfigProto>>::Get()->Add(job_desc_id, job_conf);
+  Global<vm::SymbolStorage<JobDesc>>::Get()->Add(job_desc_id, *job_conf);
   list->EmplaceBack(vm::NewInstruction("InitJobDescSymbol")->add_init_symbol_operand(job_desc_id));
   return job_desc_id;
 }
 
 int64_t NewOpConfSymbol(InstructionMsgList* list, const std::shared_ptr<OperatorConf>& op_conf) {
   int64_t op_conf_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::Storage<OperatorConf>>::Get()->Add(op_conf_id, op_conf);
+  Global<vm::SymbolStorage<OperatorConf>>::Get()->Add(op_conf_id, *op_conf);
   list->EmplaceBack(
       vm::NewInstruction("InitOperatorConfSymbol")->add_init_symbol_operand(op_conf_id));
   return op_conf_id;
+}
+
+int64_t NewSbpSignatureSymbol(InstructionMsgList* list, const std::vector<std::string>& ibns,
+                              const std::vector<std::string>& obns) {
+  SbpSignature sbp_signature;
+  auto* map = sbp_signature.mutable_bn_in_op2sbp_parallel();
+  for (const auto& ibn : ibns) { (*map)[ibn].mutable_broadcast_parallel(); }
+  for (const auto& obn : obns) { (*map)[obn].mutable_broadcast_parallel(); }
+  int64_t sbp_signature_id = vm::TestUtil::NewSymbol(list);
+  Global<vm::SymbolStorage<SbpSignature>>::Get()->Add(sbp_signature_id, sbp_signature);
+  list->EmplaceBack(
+      vm::NewInstruction("InitSbpSignatureSymbol")->add_init_symbol_operand(sbp_signature_id));
+  return sbp_signature_id;
 }
 
 // return opkernel logical object id
@@ -111,12 +124,14 @@ TEST(OpkernelInstructionType, call_opkernel) {
     (*user_conf->mutable_output())["out"].add_s("test_source_op_name/out_0");
     opkernel_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
   }
+  int64_t sbp_signature_id = NewSbpSignatureSymbol(&list, {}, {"out_0"});
   int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
   int64_t parallel_desc_id = 0;
   int64_t output_blob_id = vm::TestUtil::NewObject(&list, "0:gpu:0", &parallel_desc_id);
   list.EmplaceBack(vm::NewInstruction("gpu.CallOpKernel")
                        ->add_parallel_desc(parallel_desc_id)
                        ->add_mut_operand(opkernel_id)
+                       ->add_symbol_operand(sbp_signature_id)
                        ->add_separator()
                        ->add_separator()
                        ->add_symbol_operand(obn_id)
@@ -150,11 +165,13 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   }
   int64_t x = 0;
   {
+    int64_t sbp_signature_id = NewSbpSignatureSymbol(&list, {}, {"out_0"});
     int64_t parallel_desc_id = 0;
     x = vm::TestUtil::NewObject(&list, "0:gpu:0", &parallel_desc_id);
     list.EmplaceBack(vm::NewInstruction("gpu.CallOpKernel")
                          ->add_parallel_desc(parallel_desc_id)
                          ->add_mut_operand(test_source_id)
+                         ->add_symbol_operand(sbp_signature_id)
                          ->add_separator()
                          ->add_separator()
                          ->add_symbol_operand(out_id)
@@ -173,11 +190,13 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   }
   int64_t y = 0;
   {
+    int64_t sbp_signature_id = NewSbpSignatureSymbol(&list, {"in_0"}, {"out_0"});
     int64_t parallel_desc_id = 0;
     y = vm::TestUtil::NewObject(&list, "0:gpu:0", &parallel_desc_id);
     list.EmplaceBack(vm::NewInstruction("gpu.CallOpKernel")
                          ->add_parallel_desc(parallel_desc_id)
                          ->add_mut_operand(ccrelu_id)
+                         ->add_symbol_operand(sbp_signature_id)
                          ->add_separator()
                          ->add_symbol_operand(in_id)
                          ->add_const_operand(x)
@@ -213,12 +232,14 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
     (*user_conf->mutable_output())["out"].add_s("test_source_op_name/out_0");
     op_conf_id = NewOpConfSymbol(&list, op_conf);
   }
+  int64_t sbp_signature_id = NewSbpSignatureSymbol(&list, {}, {"out_0"});
   int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
   int64_t output_blob_id = vm::TestUtil::NewObject(&list, "0:gpu:0");
   list.EmplaceBack(vm::NewInstruction("gpu.compute.UserStatelessCallOpKernel")
                        ->add_parallel_desc(parallel_desc_id)
                        ->add_symbol_operand(job_desc_id)
                        ->add_symbol_operand(op_conf_id)
+                       ->add_symbol_operand(sbp_signature_id)
                        ->add_mut_operand(opkernel_id)
                        ->add_separator()
                        ->add_separator()
@@ -253,11 +274,13 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
     (*user_conf->mutable_output())["out"].add_s("test_source_op_name/out_0");
     test_source_id = NewOpConfSymbol(&list, op_conf);
   }
+  int64_t sbp_signature_id = NewSbpSignatureSymbol(&list, {}, {"out_0"});
   int64_t x = vm::TestUtil::NewObject(&list, "0:gpu:0");
   list.EmplaceBack(vm::NewInstruction("gpu.compute.UserStatelessCallOpKernel")
                        ->add_parallel_desc(parallel_desc_id)
                        ->add_symbol_operand(job_desc_id)
                        ->add_symbol_operand(test_source_id)
+                       ->add_symbol_operand(sbp_signature_id)
                        ->add_mut_operand(opkernel_id)
                        ->add_separator()
                        ->add_separator()
@@ -275,11 +298,13 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
     (*user_conf->mutable_output())["out"].add_s("ccrelu_op_name/out_0");
     ccrelu_id = NewOpConfSymbol(&list, op_conf);
   }
+  sbp_signature_id = NewSbpSignatureSymbol(&list, {"in_0"}, {"out_0"});
   int64_t y = vm::TestUtil::NewObject(&list, "0:gpu:0");
   list.EmplaceBack(vm::NewInstruction("gpu.compute.UserStatelessCallOpKernel")
                        ->add_parallel_desc(parallel_desc_id)
                        ->add_symbol_operand(job_desc_id)
                        ->add_symbol_operand(ccrelu_id)
+                       ->add_symbol_operand(sbp_signature_id)
                        ->add_mut_operand(opkernel_id)
                        ->add_separator()
                        ->add_symbol_operand(in_id)

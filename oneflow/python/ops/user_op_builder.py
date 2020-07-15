@@ -1,18 +1,31 @@
-import random
-
-import oneflow as flow
-import oneflow.core.common.shape_pb2 as shape_util
-import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.experimental.name_scope as name_scope
+import oneflow.python.framework.interpret_util as interpret_util
+import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.distribute as distribute
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.core.common.shape_pb2 as shape_util
+import oneflow
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.hob as hob
+import oneflow.python.experimental.name_scope as name_scope
+import oneflow.core.vm.instruction_pb2 as instr_util
+import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
+import oneflow.python.vm.id_util as id_util
+import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.job_conf_ctx as job_conf_ctx
+import oneflow.python.eager.eager_blob_util as eager_blob_util
+import oneflow.python.lib.core.enable_if as enable_if
+import random
+import oneflow.python.eager.gradient_util as gradient_util
+import oneflow.python.eager.blob_register as blob_register_util
+
+blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
 class UserOp(object):
@@ -53,6 +66,24 @@ class UserOp(object):
         return blobs[0]
 
 
+@oneflow_export("user_op_builder")
+def api_user_op_builder(op_name):
+    api = enable_if.unique(
+        [
+            lazy_user_op_builder,
+            eager_logical_user_op_builder,
+            eager_physical_user_op_builder,
+        ]
+    )
+    return api(op_name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def lazy_user_op_builder(op_name):
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    return UserOpConfBuilder(job_name, op_name, LazyUserOp)
+
+
 class LazyUserOp(UserOp):
     def __init__(self, op_name):
         UserOp.__init__(self, op_name)
@@ -65,15 +96,63 @@ class LazyUserOp(UserOp):
         return remote_blob_util.RemoteBlob(lbi)
 
 
-@enable_if.condition(hob.in_global_mode)
-def lazy_user_op_builder(op_name):
+@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+def eager_logical_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpConfBuilder(job_name, op_name, LazyUserOp)
+    return UserOpConfBuilder(job_name, op_name, EagerLogicalUserOp)
 
 
-@oneflow_export("user_op_builder")
-def api_user_op_builder(op_name):
-    return enable_if.unique([lazy_user_op_builder])(op_name)
+class EagerLogicalUserOp(UserOp):
+    def __init__(self, op_name):
+        UserOp.__init__(self, op_name)
+
+    def InferAndTryRun(self):
+        interpret_util.Forward(self.op_conf_)
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        return remote_blob_util.EagerLogicalBlob(lbi)
+
+
+in_physical_placement = hob.env_initialized & hob.is_current_placement_physical
+
+
+@enable_if.condition(hob.in_normal_mode & in_physical_placement)
+def eager_physical_user_op_builder(op_name):
+    job_name = job_conf_ctx.CurrentJobConf().job_name
+    return UserOpConfBuilder(job_name, op_name, EagerPhysicalUserOp)
+
+
+class EagerPhysicalUserOp(UserOp):
+    def __init__(self, op_name):
+        UserOp.__init__(self, op_name)
+
+    def InferAndTryRun(self):
+        self.op_conf_.scope_symbol_id = oneflow.scope.current_scope().symbol_id
+        op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
+
+        def BuildInstruction(builder):
+            with blob_register.BnInOp2BlobObjectScope(
+                op_attribute
+            ) as bn_in_op2blob_object:
+                parallel_conf = oneflow.placement.current_scope().default_parallel_conf
+                builder.StatelessCall(
+                    op_attribute,
+                    parallel_conf,
+                    bn_in_op2blob_object=bn_in_op2blob_object,
+                )
+
+        vm_util.PhysicalRun(BuildInstruction)
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        return eager_blob_util.EagerPhysicalBlob("%s/%s" % (lbi.op_name, lbi.blob_name))
+
+
+@oneflow_export("consistent_user_op_builder")
+def consistent_user_op_builder(op_name):
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    return UserOpConfBuilder(job_name, op_name, ConsistentUserOp)
 
 
 class ConsistentUserOp(UserOp):
@@ -81,22 +160,41 @@ class ConsistentUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        compile_context.CurJobAddConsistentOp(self.op_conf_)
+        interpret_util.ConsistentForward(self.op_conf_)
         return self
 
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.RemoteBlob(lbi)
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def consistent_user_op_builder(op_name):
+def NonTraceableEagerLogicalUserOpBuilder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpConfBuilder(job_name, op_name, ConsistentUserOp)
+    return UserOpConfBuilder(job_name, op_name, NonTraceableEagerLogicalUserOp)
 
 
-@oneflow_export("consistent_user_op_builder")
-def api_consistent_user_op_builder(op_name):
-    return enable_if.unique([consistent_user_op_builder])(op_name)
+class NonTraceableEagerLogicalUserOp(UserOp):
+    def __init__(self, op_name):
+        UserOp.__init__(self, op_name)
+
+    def InferAndTryRun(self):
+        self.op_conf_.scope_symbol_id = oneflow.scope.current_scope().symbol_id
+        op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
+
+        def BuildInstruction(builder):
+            get_scope = blob_register.BnInOp2BlobObjectScope
+            with get_scope(op_attribute) as bn_in_op2blob_object:
+                parallel_conf = oneflow.placement.current_scope().default_parallel_conf
+                builder.StatelessCall(
+                    op_attribute,
+                    parallel_conf,
+                    bn_in_op2blob_object=bn_in_op2blob_object,
+                )
+
+        vm_util.LogicalRun(BuildInstruction)
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        return remote_blob_util.EagerLogicalBlob(lbi)
 
 
 class UserOpConfBuilder(object):
@@ -128,7 +226,8 @@ class UserOpConfBuilder(object):
         assert isinstance(num, int) and num >= 1
         out_lbns = []
         for i in range(num):
-            lbn = "{}/{}_{}".format(self.user_op_.op_conf_.name, output_name, i)
+            lbn = "{}/{}_{}".format(self.user_op_.op_conf_.name,
+                                    output_name, i)
             out_lbns.append(lbn)
         self.user_op_.op_conf_.user_conf.output[output_name].s[:] = out_lbns
         self.user_op_.output_arg_key_list_.append(output_name)
@@ -179,7 +278,7 @@ class UserOpConfBuilder(object):
         elif attr_type == user_op_attr_util.kAtDataType:
             if attr_type_name != "":
                 assert attr_type_name == "AttrTypeDataType"
-            assert isinstance(attr_value, int) and attr_value in flow.dtypes
+            assert isinstance(attr_value, int) and attr_value in oneflow.dtypes
             attribute.at_data_type = attr_value
         elif attr_type == user_op_attr_util.kAtListInt32:
             if attr_type_name != "":
@@ -203,13 +302,15 @@ class UserOpConfBuilder(object):
             if attr_type_name != "":
                 assert attr_type_name == "AttrTypeListDataType"
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, int) and x in flow.dtypes for x in attr_value)
+            assert all(isinstance(x, int)
+                       and x in oneflow.dtypes for x in attr_value)
             attribute.at_list_data_type.val[:] = list(attr_value)
         elif attr_type == user_op_attr_util.kAtListShape:
             if attr_type_name != "":
                 assert attr_type_name == "AttrTypeListShape"
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)
+            assert all(isinstance(x, tuple) or isinstance(x, list)
+                       for x in attr_value)
             for i in range(len(attr_value)):
                 shape = shape_util.ShapeProto()
                 shape.dim[:] = list(attr_value[i])

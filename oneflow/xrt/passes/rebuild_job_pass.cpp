@@ -35,11 +35,6 @@ void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
                         const std::string &blob_name, const std::string &fixed_blob_name) {
   auto *spec_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
   switch (op_conf->op_type_case()) {
-    case OperatorConf::kPrintConf: {
-      int index = GetRepeatedIndex(input);
-      *(op_conf->mutable_print_conf()->mutable_in(index)->mutable_lbn()) = fixed_blob_name;
-      break;
-    }
     case OperatorConf::kUserConf: {
       std::pair<std::string, int32_t> pair = GetFieldNameAndIndex4StrVal(input);
       auto it = op_conf->user_conf().input().find(pair.first);

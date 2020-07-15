@@ -160,6 +160,35 @@ void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder
   }
 }
 
+Maybe<void> TryMirroredCastTotalLossInstanceNum(
+    JobBuilder* job_builder, const HashMap<LogicalBlobId, OpNode*>& loss_lbi2loss_node,
+    LogicalBlobId* total_loss_instance_num_lbi) {
+  auto IsMirrored4Lbi = [](const LogicalBlobId& lbi, OpNode* op_node) -> Maybe<bool> {
+    const auto& obn = *JUST(op_node->op().obn4lbi(lbi));
+    const auto& opt_mirrored_parallel = *JUST(op_node->op().OptMirroredParallel4BnInOp(obn));
+    return opt_mirrored_parallel.has_mirrored_parallel();
+  };
+  const auto& begin = *loss_lbi2loss_node.begin();
+  bool is_mirrored = JUST(IsMirrored4Lbi(begin.first, begin.second));
+  for (const auto& pair : loss_lbi2loss_node) {
+    bool is_other_mirrored = JUST(IsMirrored4Lbi(pair.first, pair.second));
+    CHECK_EQ_OR_RETURN(is_mirrored, is_other_mirrored);
+  }
+  if (is_mirrored) {
+    OperatorConf op_conf;
+    op_conf.set_name("System-Cast-Mirrored-TotalLossInstanceNum" + NewUniqueId());
+    CastFromMirroredOpConf* cast_from_mirrored = op_conf.mutable_cast_from_mirrored_conf();
+    cast_from_mirrored->set_in(GenLogicalBlobName(*total_loss_instance_num_lbi));
+    cast_from_mirrored->set_out("out");
+    cast_from_mirrored->mutable_sbp_parallel()->mutable_partial_sum_parallel();
+    const auto& parallel_conf = job_builder->ParallelConf4Lbi(*total_loss_instance_num_lbi);
+    job_builder->AddOps(parallel_conf, {op_conf});
+    total_loss_instance_num_lbi->set_op_name(op_conf.name());
+    total_loss_instance_num_lbi->set_blob_name("out");
+  }
+  return Maybe<void>::Ok();
+}
+
 void ScaleModelDiffByDynamicLossInstanceNum(
     const OpGraph& op_graph, JobBuilder* job_builder,
     HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
@@ -204,6 +233,8 @@ void ScaleModelDiffByDynamicLossInstanceNum(
   } else {
     UNIMPLEMENTED();
   }
+  CHECK_JUST(TryMirroredCastTotalLossInstanceNum(job_builder, loss_lbi2loss_node,
+                                                 &total_loss_instance_num_lbi));
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
@@ -407,16 +438,16 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   inv_clip_norm_constant_like_conf->set_float_operand(1.0 / conf.clip_norm());
   inv_clip_norm_constant_like_conf->set_out("out");
   job_builder->AddOps(global_norm_parallel_conf, {inv_clip_norm_op_conf});
-  OperatorConf minimum_op_conf{};
-  minimum_op_conf.set_name("System-ClipGradient-GlobalNorm-Minimum-" + NewUniqueId());
-  BroadcastMinimumOpConf* minimum_conf = minimum_op_conf.mutable_broadcast_minimum_conf();
-  minimum_conf->set_a(inv_global_norm_op.output("y", 0));
-  minimum_conf->set_b(
-      GenLogicalBlobName(inv_clip_norm_op_conf.name(), inv_clip_norm_constant_like_conf->out()));
-  minimum_conf->set_out("out");
-  job_builder->AddOps(global_norm_parallel_conf, {minimum_op_conf});
-  const std::string gradient_scale_factor_lbn =
-      GenLogicalBlobName(minimum_op_conf.name(), minimum_conf->out());
+  auto minimum_op =
+      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Minimum-" + NewUniqueId())
+          .Op("broadcast_minimum")
+          .Input("x", inv_global_norm_op.output("y", 0))
+          .Input("y", GenLogicalBlobName(inv_clip_norm_op_conf.name(),
+                                         inv_clip_norm_constant_like_conf->out()))
+          .Output("z")
+          .Build();
+  job_builder->AddOps(global_norm_parallel_conf, {minimum_op.op_conf()});
+  const std::string gradient_scale_factor_lbn = minimum_op.output("z", 0);
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
@@ -535,6 +566,11 @@ Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
                               &out_oba2clone_bw_add_out_lbi);
     std::vector<OperatorConf> ops;
     JUST(GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
+    if (op_node->op().op_conf().has_scope_symbol_id()) {
+      for (auto& op_conf : ops) {
+        op_conf.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
+      }
+    }
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), ops);
   }
   OpBlobArgPairs fw_bw_oba_pairs;
