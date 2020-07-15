@@ -26,7 +26,6 @@ def normal_mode_cur_placement_scope():
     return device_scope_stack.CurrentPlacement()
 
 
-@oneflow_export("fixed_placement")
 def api_fixed_placement(
     device_tag: str, machine_device_ids: str
 ) -> placement_ctx.FixedPlacementScope:
