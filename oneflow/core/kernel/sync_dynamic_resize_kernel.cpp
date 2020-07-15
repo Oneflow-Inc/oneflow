@@ -55,14 +55,20 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
                out->mem_case(), in->mem_case());
     AutoMemcpy(ctx.device_ctx, cuda_host_mem_ptr->Ptr(), size->dptr(), sizeof(SizeType),
                MakeHostMemCase(), size->mem_case());
-    ctx.device_ctx->AddCallBack([out, cuda_host_mem_ptr, conf, this]() {
+    const auto& UpdateShape = [out, cuda_host_mem_ptr, conf, this]() {
       const int64_t new_size = *reinterpret_cast<SizeType*>(cuda_host_mem_ptr->Ptr());
       CHECK_GE(new_size, 0);
       CHECK_LE(new_size, out->shape_view().At(conf.axis()));
       out->mut_shape_view()->Set(conf.axis(), new_size);
       std::lock_guard<std::mutex> lock(mutex_);
       queue_.push(cuda_host_mem_ptr);
-    });
+    };
+    if (conf.eager()) {
+      CudaCheck(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()));
+      UpdateShape();
+    } else {
+      ctx.device_ctx->AddCallBack(UpdateShape);
+    }
   }
 
   mutable std::queue<std::shared_ptr<CudaHostMem>> queue_;

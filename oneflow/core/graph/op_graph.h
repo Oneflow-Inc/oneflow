@@ -123,6 +123,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   explicit OpGraph() = default;
   ~OpGraph() override = default;
 
+  static Maybe<OpGraph> New(const Job& job);
+
   Maybe<void> ForEachOpNode(const std::function<Maybe<void>(const OpNode&)>& DoEach) const;
 
   const OpNode* OpNode4OpName(const std::string& name) const;
@@ -164,7 +166,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferBlobLastUsed() const;
   void InferTimeShape() const;
   void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
-  void InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_parallel_view_conf) const;
+  Maybe<void> InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const;
   Maybe<void> InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
   Maybe<void> InferLogicalBlobDesc(const Job& job) const;
   bool IsBatchAxisBlob(const std::string& op_name, const LogicalBlobId& lbi) const;

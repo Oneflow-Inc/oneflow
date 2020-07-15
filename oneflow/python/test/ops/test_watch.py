@@ -25,6 +25,7 @@ def test_two_device(test_case):
 
     @flow.global_function()
     def ReluJob(x=flow.FixedTensorDef((10,))):
-        flow.watch(flow.math.relu(x), EqOnes)
+        y = flow.math.relu(x)
+        flow.watch(y, EqOnes)
 
     ReluJob(data)
