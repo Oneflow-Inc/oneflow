@@ -11,7 +11,7 @@ class SyncDynamicResizeOp : public Operator {
   void InitFromOpConf() override {
     EnrollInputBn("in");
     EnrollInputBn("size", false);
-    EnrollOutputBn("out");
+    EnrollOutputBn("out")->set_header_infered_before_compute(false);
   }
 
   const PbMessage& GetCustomizedConf() const override {

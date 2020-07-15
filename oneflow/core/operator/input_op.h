@@ -27,6 +27,7 @@ class InputOp final : public Operator {
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+  Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 };
 
 }  // namespace oneflow

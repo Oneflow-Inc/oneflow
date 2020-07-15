@@ -16,14 +16,11 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+from functools import reduce
 
 
 class ArgBlobDef(blob_desc.BlobDesc):
-    def __init__(
-        self, shape, dtype, batch_axis, split_axis="same_with_batch_axis", name=None
-    ):
-        if split_axis == "same_with_batch_axis":
-            split_axis = batch_axis
+    def __init__(self, shape, dtype, batch_axis, name=None):
         lbi = lbi_util.LogicalBlobId()
         if name is None:
             name = id_util.UniqueStr("Input_")
@@ -37,7 +34,6 @@ class ArgBlobDef(blob_desc.BlobDesc):
         self.shape_ = shape
         self.dtype_ = dtype
         self.batch_axis_ = batch_axis
-        self.split_axis_ = split_axis
 
     @property
     def shape(self):
@@ -78,6 +74,9 @@ class ArgBlobDef(blob_desc.BlobDesc):
     def AddAndInferOp(self, op_conf):
         raise NotImplementedError
 
+    def EagerAddAndInferOp(self, op_conf):
+        raise NotImplementedError
+
     def CheckAndAsyncPush(self, session, arg_ndarray):
         self._CheckNdarray(arg_ndarray)
         self._AsyncPush(session, arg_ndarray)
@@ -88,24 +87,16 @@ class ArgBlobDef(blob_desc.BlobDesc):
     def _AsyncPush(self, session, arg_ndarray):
         raise NotImplementedError
 
+    def SetBatchAxisAndSplitAxis(self, interface_blob_conf):
+        raise NotImplementedError
+
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
         interface_blob_conf.data_type = self.dtype_
         interface_blob_conf.is_dynamic = self.is_dynamic
         interface_blob_conf.is_tensor_list = self.is_tensor_list
-        if type(self.batch_axis_) is int:
-            assert self.batch_axis_ >= 0
-            interface_blob_conf.batch_axis.value = self.batch_axis_
-        else:
-            assert self.batch_axis_ is None or self.batch_axis_ is False
-            interface_blob_conf.batch_axis.ClearField("value")
-        if type(self.split_axis_) is int:
-            assert self.split_axis_ >= 0
-            interface_blob_conf.split_axis.value = self.split_axis_
-        else:
-            assert self.split_axis_ is None or self.split_axis_ is False
-            interface_blob_conf.split_axis.ClearField("value")
+        self.SetBatchAxisAndSplitAxis(interface_blob_conf)
         return interface_blob_conf
 
 
@@ -128,25 +119,17 @@ class FixedTensorDef(ArgBlobDef):
     """
 
     def __init__(
-        self,
-        shape,
-        dtype=data_type_util.kFloat,
-        batch_axis=0,
-        split_axis="same_with_batch_axis",
-        name=None,
+        self, shape, dtype=data_type_util.kFloat, batch_axis=0, name=None,
     ):
         if type(batch_axis) is int:
             if batch_axis < 0:
                 batch_axis += len(shape)
             assert batch_axis >= 0
             assert batch_axis < len(shape)
+        else:
+            assert batch_axis is None
         ArgBlobDef.__init__(
-            self,
-            shape,
-            dtype=dtype,
-            batch_axis=batch_axis,
-            split_axis=split_axis,
-            name=name,
+            self, shape, dtype=dtype, batch_axis=batch_axis, name=name,
         )
 
     @property
@@ -159,6 +142,30 @@ class FixedTensorDef(ArgBlobDef):
 
     def AddAndInferOp(self, op_conf):
         return compile_context.CurJobAddConsistentOp(op_conf)
+
+    def EagerAddAndInferOp(self, op_conf):
+        parallel_symbol = oneflow.scope.current_scope().device_parallel_desc_symbol
+        if (
+            parallel_symbol.device_tag == "gpu"
+            and list(parallel_symbol.machine_id2device_id_list.keys()) == [0]
+            and parallel_symbol.parallel_num == 1
+        ):
+            device_tag = "gpu"
+            device_ids = "0:%s" % (parallel_symbol.machine_id2device_id_list[0][0])
+        else:
+            device_tag = "cpu"
+            device_ids = "0:0"
+        with oneflow.fixed_placement(device_tag, device_ids):
+            return compile_context.CurJobAddConsistentOp(op_conf)
+
+    def SetBatchAxisAndSplitAxis(self, interface_blob_conf):
+        if self.batch_axis is None:
+            interface_blob_conf.batch_axis.ClearField("value")
+            interface_blob_conf.split_axis.ClearField("value")
+        else:
+            assert type(self.batch_axis) is int
+            interface_blob_conf.batch_axis.value = self.batch_axis
+            interface_blob_conf.split_axis.value = self.batch_axis
 
     def _CheckNdarray(self, ndarray):
         assert isinstance(ndarray, np.ndarray)
@@ -211,6 +218,14 @@ class MirroredTensorDef(ArgBlobDef):
         _AddAndInferMirroredOp(
             self.unique_name, op_conf, self.sub_consistent_blob_list_
         )
+
+    def EagerAddAndInferOp(self, op_conf):
+        return compile_context.CurJobAddMirroredOp(op_conf)
+
+    def SetBatchAxisAndSplitAxis(self, interface_blob_conf):
+        assert type(self.batch_axis) is int
+        interface_blob_conf.batch_axis.value = self.batch_axis
+        interface_blob_conf.split_axis.ClearField("value")
 
     def _CheckNdarray(self, ndarray_list):
         assert isinstance(ndarray_list, (list, tuple))
@@ -278,6 +293,14 @@ class MirroredTensorListDef(ArgBlobDef):
             self.unique_name, op_conf, self.sub_consistent_blob_list_
         )
 
+    def EagerAddAndInferOp(self, op_conf):
+        return compile_context.CurJobAddMirroredOp(op_conf)
+
+    def SetBatchAxisAndSplitAxis(self, interface_blob_conf):
+        assert type(self.batch_axis) is int
+        interface_blob_conf.batch_axis.value = self.batch_axis
+        interface_blob_conf.split_axis.ClearField("value")
+
     def _CheckNdarray(self, ndarray_lists):
         assert isinstance(ndarray_lists, (list, tuple))
         assert len(self.sub_consistent_blob_list_) == len(ndarray_lists)
@@ -319,7 +342,14 @@ def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
 
 def _MakePushNdarrayCallback(ndarray):
     copied = np.copy(ndarray)
-    return lambda ofblob: ofblob.CopyFromNdarray(copied)
+
+    def Copy(ofblob):
+        capacity = reduce(lambda x, y: x * y, ofblob.static_shape, 1)
+        elem_cnt = reduce(lambda x, y: x * y, copied.shape, 1)
+        assert elem_cnt <= capacity, "%s v.s. %s" % (copied.shape, ofblob.static_shape)
+        ofblob.CopyFromNdarray(copied)
+
+    return Copy
 
 
 def _MakePushNdarrayListCallback(ndarray_list):

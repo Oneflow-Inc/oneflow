@@ -5,16 +5,30 @@
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+
+class ParallelDesc;
+class ParallelConf;
+
 namespace vm {
 
 template<typename T>
-class Storage final {
- public:
-  Storage(const Storage&) = delete;
-  Storage(Storage&&) = delete;
+struct ConstructArgType4Symbol final {
+  using type = T;
+};
 
-  Storage() = default;
-  ~Storage() = default;
+template<>
+struct ConstructArgType4Symbol<ParallelDesc> final {
+  using type = ParallelConf;
+};
+
+template<typename T>
+class SymbolStorage final {
+ public:
+  SymbolStorage(const SymbolStorage&) = delete;
+  SymbolStorage(SymbolStorage&&) = delete;
+
+  SymbolStorage() = default;
+  ~SymbolStorage() = default;
 
   bool Has(int64_t logical_object_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
@@ -30,10 +44,11 @@ class Storage final {
     return iter->second;
   }
 
-  void Add(int64_t logical_object_id, const std::shared_ptr<T>& data) {
+  void Add(int64_t logical_object_id, const typename ConstructArgType4Symbol<T>::type& data) {
     CHECK_GT(logical_object_id, 0);
+    const auto& ptr = std::make_shared<T>(data);
     std::unique_lock<std::mutex> lock(mutex_);
-    CHECK(logical_object_id2data_.emplace(logical_object_id, data).second);
+    CHECK(logical_object_id2data_.emplace(logical_object_id, ptr).second);
   }
   void Clear(int64_t logical_object_id) {
     std::unique_lock<std::mutex> lock(mutex_);

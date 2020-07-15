@@ -4,6 +4,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/foreign_job_instance.h"
@@ -17,12 +18,19 @@
 #include "oneflow/core/control/cluster_control.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/foreign_watcher.h"
+#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/scope.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/vm/instruction.pb.h"
+#include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/id_util.h"
+#include "oneflow/core/eager/eager_util.h"
+#include "oneflow/core/eager/eager_symbol_storage.h"
 
 #ifdef WITH_TENSORRT
 #include "oneflow/xrt/api.h"
@@ -30,9 +38,14 @@
 
 namespace oneflow {
 
+Maybe<void> RegisterForeignCallbackOnlyOnce(ForeignCallback* callback) {
+  CHECK_ISNULL_OR_RETURN(Global<ForeignCallback>::Get()) << "foreign callback registered";
+  Global<ForeignCallback>::SetAllocated(callback);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
-  // no delete
   Global<ForeignWatcher>::SetAllocated(watcher);
   return Maybe<void>::Ok();
 }
@@ -53,6 +66,11 @@ Maybe<bool> IsOpTypeNameCpuSupportOnly(const std::string& op_type_name) {
 Maybe<std::string> CurrentResource() {
   CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
   return PbMessage2TxtString(Global<ResourceDesc, ForSession>::Get()->resource());
+}
+
+Maybe<std::string> EnvResource() {
+  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForEnv>::Get()));
+  return PbMessage2TxtString(Global<ResourceDesc, ForEnv>::Get()->resource());
 }
 
 Maybe<void> InitEnv(const std::string& env_proto_str) {
@@ -206,9 +224,77 @@ Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
   return PbMessage2TxtString(*JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
 }
 
+Maybe<std::string> InferOpConf(const std::string& op_conf_str,
+                               const std::string& upstream_signature_str) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
+  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
+  UpstreamSignature upstream_signature;
+  CHECK_OR_RETURN(TxtString2PbMessage(upstream_signature_str, &upstream_signature))
+      << "UpstreamSignature parse failed";
+  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
+  const auto& op = JUST(ConstructAndInferOp(op_conf, upstream_signature, scope));
+  const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
+  return PbMessage2TxtString(*op_attribute);
+}
+
+Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
+  const JobDesc* job_desc = nullptr;
+  if (op_conf.has_scope_symbol_id()) {
+    const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+    const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
+    job_desc = JUST(scope.job_desc());
+  }
+  std::shared_ptr<Operator> op = ConstructOp(op_conf, job_desc);
+  std::shared_ptr<OpAttribute> op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
+  auto* mirrored_map =
+      op_attribute->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel();
+  auto* sbp_map = op_attribute->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
+  const auto SetSignature = [&](const std::string& bn_in_op) {
+    (*mirrored_map)[bn_in_op].mutable_mirrored_parallel();
+    (*sbp_map)[bn_in_op] = SbpParallel();  // nothing set
+  };
+  for (const auto& ibn : op_attribute->input_bns()) { SetSignature(ibn); }
+  for (const auto& obn : op_attribute->output_bns()) { SetSignature(obn); }
+  return PbMessage2TxtString(*op_attribute);
+}
+
+Maybe<void> RunLogicalInstruction(const std::string& instruction_list_str,
+                                  const std::string& eager_symbol_list_str) {
+  return eager::RunLogicalInstruction(instruction_list_str, eager_symbol_list_str);
+}
+
+Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_str,
+                                   const std::string& eager_symbol_list_str) {
+  return eager::RunPhysicalInstruction(instruction_list_str, eager_symbol_list_str);
+}
+
 Maybe<long long> CurrentMachineId() {
   CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
   return Global<MachineCtx>::Get()->this_machine_id();
+}
+
+Maybe<long long> NewLogicalObjectId() {
+  CHECK_OR_RETURN(JUST(GlobalMaybe<MachineCtx>())->IsThisMachineMaster());
+  return vm::IdUtil::NewLogicalObjectId();
+}
+
+Maybe<long long> NewLogicalSymbolId() {
+  CHECK_OR_RETURN(JUST(GlobalMaybe<MachineCtx>())->IsThisMachineMaster());
+  return vm::IdUtil::NewLogicalSymbolId();
+}
+
+Maybe<long long> NewPhysicalObjectId() {
+  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
+  return vm::IdUtil::NewPhysicalObjectId(Global<MachineCtx>::Get()->this_machine_id());
+}
+
+Maybe<long long> NewPhysicalSymbolId() {
+  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
+  return vm::IdUtil::NewPhysicalSymbolId(Global<MachineCtx>::Get()->this_machine_id());
 }
 
 }  // namespace oneflow
