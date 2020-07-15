@@ -421,6 +421,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
     const size_t add_n_op_max_input_num = 8;
     user_op::UserOpConfWrapperBuilder add_op_builder("System-ClipGradient-GlobalNorm-Add-"
                                                      + NewUniqueId());
+    add_op_builder.Op("add_n");
     const size_t start = lbns_to_add.size() >= add_n_op_max_input_num
                              ? lbns_to_add.size() - add_n_op_max_input_num
                              : 0;
