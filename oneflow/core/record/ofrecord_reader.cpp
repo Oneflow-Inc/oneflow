@@ -37,7 +37,7 @@ size_t NaiveOFRecordReader::Read(size_t n, OFRecord* allocated_records) {
     }
   }
   if (cur_read == 0) { return 0; }
-  ThreadPool* thread_pool = Global<ThreadMgr>::Get()->compute_thread_pool();
+  ThreadPool* thread_pool = Global<ThreadPool>::Get();
   const int64_t thread_num = std::min<int64_t>(thread_pool->thread_num(), cur_read);
   BlockingCounter bc(thread_num);
   const BalancedSplitter bs(cur_read, thread_num);

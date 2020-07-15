@@ -5,7 +5,7 @@ import os
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
@@ -62,7 +62,7 @@ def add_n(inputs, name=None):
         for blob in inputs:
             getattr(op_conf.add_conf, "in").append(blob.unique_name)
         op_conf.add_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -183,7 +183,7 @@ def element_wise_add(x, y, name=None):
     getattr(op_conf.add_conf, "in").append(x.unique_name)
     getattr(op_conf.add_conf, "in").append(y.unique_name)
     op_conf.add_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -524,7 +524,7 @@ def elem_cnt(input_blob, axis=None, dtype=None, name=None):
     if dtype is not None:
         op_conf.shape_elem_cnt_conf.data_type = dtype
     op_conf.shape_elem_cnt_conf.y = "y"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     out_lbi.op_name = op_conf.name
     out_lbi.blob_name = "y"
@@ -572,7 +572,7 @@ def broadcast_to_compatible_with(x, compatible, name=None):
     op_conf.broadcast_to_compatible_with_conf.compatible.extend(
         [cp.unique_name for cp in compatible]
     )
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
 
     ret_lbi = logical_blob_id_util.LogicalBlobId()
     ret_lbi.op_name = op_conf.name

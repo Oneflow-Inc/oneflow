@@ -1,6 +1,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"

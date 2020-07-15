@@ -18,8 +18,6 @@ class ThreadMgr final {
 
   Thread* GetThrd(int64_t thrd_id);
 
-  ThreadPool* compute_thread_pool() { return compute_thread_pool_.get(); }
-
  private:
   friend class Global<ThreadMgr>;
   explicit ThreadMgr(const Plan& plan);
@@ -27,7 +25,6 @@ class ThreadMgr final {
   void CreatePersistenceThrd(const Plan& plan, int64_t thrd_id);
 
   std::vector<Thread*> threads_;
-  std::unique_ptr<ThreadPool> compute_thread_pool_;
 };
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);

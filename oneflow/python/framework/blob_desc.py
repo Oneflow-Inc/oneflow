@@ -26,6 +26,10 @@ class BlobDesc(object):
         return self.lbi_
 
     @property
+    def logical_blob_name(self):
+        return self.lbn_
+
+    @property
     def op_name(self):
         return self.lbi_.op_name
 
