@@ -230,7 +230,7 @@ def Export(
         model_save_dir: The directory containing oneflow model weights. Users are expected to call check_point.save(dir), wait for the model saving finishing, and pass the argument 'dir' as model_save_dir.
         onnx_filename: a string for the output filename
         continue_on_error: if an op can't be processed (aka there is no mapping), continue
-        opset: the opset to be used (int, default is 8)
+        opset: the opset to be used (int, default is oneflow.python.onnx.constants.PREFERRED_OPSET)
         extra_opset: list of extra opset's, for example the opset's used by custom ops
         shape_override: dict with inputs that override the shapes given by oneflow
         external_data: Save weights as ONNX external data, usually to bypass the 2GB file size limit of protobuf.
