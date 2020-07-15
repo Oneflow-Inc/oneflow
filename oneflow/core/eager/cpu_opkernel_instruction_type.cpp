@@ -53,29 +53,41 @@ class CpuSystemStatelessCallOpKernelInstructionType final
 COMMAND(vm::RegisterInstructionType<CpuSystemStatelessCallOpKernelInstructionType>(
     "cpu.compute.SystemStatelessCallOpKernel"));
 
-class CpuWatchBlobHeaderInstructionType final : public WatchBlobHeaderInstructionType {
+class CpuFetchBlobHeaderInstructionType final : public FetchBlobHeaderInstructionType {
  public:
-  CpuWatchBlobHeaderInstructionType() = default;
-  ~CpuWatchBlobHeaderInstructionType() override = default;
+  CpuFetchBlobHeaderInstructionType() = default;
+  ~CpuFetchBlobHeaderInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<CpuWatchBlobHeaderInstructionType>("cpu.WatchBlobHeader"));
+COMMAND(vm::RegisterInstructionType<CpuFetchBlobHeaderInstructionType>("cpu.FetchBlobHeader"));
 
-class CpuWatchBlobBodyInstructionType final : public WatchBlobBodyInstructionType {
+class CpuFetchBlobBodyInstructionType final : public FetchBlobBodyInstructionType {
  public:
-  CpuWatchBlobBodyInstructionType() = default;
-  ~CpuWatchBlobBodyInstructionType() override = default;
+  CpuFetchBlobBodyInstructionType() = default;
+  ~CpuFetchBlobBodyInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<CpuWatchBlobBodyInstructionType>("cpu.WatchBlobBody"));
+COMMAND(vm::RegisterInstructionType<CpuFetchBlobBodyInstructionType>("cpu.FetchBlobBody"));
+
+class CpuFeedBlobInstructionType final : public FeedBlobInstructionType {
+ public:
+  CpuFeedBlobInstructionType() = default;
+  ~CpuFeedBlobInstructionType() override = default;
+
+  using stream_type = vm::CpuStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<CpuFeedBlobInstructionType>("cpu.FeedBlob"));
 
 }  // namespace eager
 }  // namespace oneflow
