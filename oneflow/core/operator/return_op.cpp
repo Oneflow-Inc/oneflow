@@ -43,6 +43,10 @@ Maybe<void> ReturnOp::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
+Symbol<OperatorConf> ReturnOp::GetOpConfWithoutOpNameAndLbn() const {
+  return SymbolOf(this->op_conf());
+}
+
 REGISTER_OP(OperatorConf::kReturnConf, ReturnOp);
 REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kReturnConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kReturnConf);
