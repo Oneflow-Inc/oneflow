@@ -21,7 +21,8 @@ ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_i
     stream_type_ids.insert(instr_type_id.stream_type_id());
   });
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(ObjectMsgPtr<VmResourceDesc>::New(resource).Get());
-  SetMachineIdRange(vm_desc->mutable_machine_id_range(), resource.machine_num(), this_machine_id);
+  SetMachineIdRange(vm_desc->mutable_current_machine_id_range(), resource.machine_num(),
+                    this_machine_id);
   int cnt = 0;
   for (const auto& stream_type_id : stream_type_ids) {
     const StreamType& stream_type = stream_type_id.stream_type();

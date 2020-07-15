@@ -18,9 +18,11 @@ namespace {
 
 template<typename DoEachT>
 void ForEachMachineIdAndDeviceIdInRange(const ParallelDesc& parallel_desc,
-                                        const Range& machine_id_range, const DoEachT& DoEach) {
-  if (machine_id_range.size() < parallel_desc.sorted_machine_ids().size()) {
-    FOR_RANGE(int64_t, machine_id, machine_id_range.begin(), machine_id_range.end()) {
+                                        const Range& current_machine_id_range,
+                                        const DoEachT& DoEach) {
+  if (current_machine_id_range.size() < parallel_desc.sorted_machine_ids().size()) {
+    FOR_RANGE(int64_t, machine_id, current_machine_id_range.begin(),
+              current_machine_id_range.end()) {
       if (parallel_desc.HasMachineId(machine_id)) {
         for (int64_t device_id : parallel_desc.sorted_dev_phy_ids(machine_id)) {
           DoEach(machine_id, device_id);
@@ -29,7 +31,8 @@ void ForEachMachineIdAndDeviceIdInRange(const ParallelDesc& parallel_desc,
     }
   } else {
     for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
-      if (machine_id >= machine_id_range.begin() && machine_id < machine_id_range.end()) {
+      if (machine_id >= current_machine_id_range.begin()
+          && machine_id < current_machine_id_range.end()) {
         for (int64_t device_id : parallel_desc.sorted_dev_phy_ids(machine_id)) {
           DoEach(machine_id, device_id);
         }
@@ -77,7 +80,8 @@ class NewObjectInstructionType final : public InstructionType {
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
       ForEachMachineIdAndDeviceIdInRange(
-          *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
+          *parallel_desc, vm->current_machine_id_range(),
+          [&](int64_t machine_id, int64_t device_id) {
             int64_t global_device_id =
                 vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
             auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
@@ -134,7 +138,7 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
     CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
     auto* global_device_id2mirrored_object = logical_object->mut_global_device_id2mirrored_object();
     ForEachMachineIdAndDeviceIdInRange(
-        *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
+        *parallel_desc, vm->current_machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
           int64_t global_device_id =
               vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
           auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
@@ -190,7 +194,7 @@ class ReplaceMirroredInstructionType final : public InstructionType {
     CHECK(static_cast<bool>(parallel_desc));
     const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(parallel_desc->device_type()));
     ForEachMachineIdAndDeviceIdInRange(
-        *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
+        *parallel_desc, vm->current_machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
           FOR_RANGE(int, i, 0, args->lhs_object_id_size()) {
             int64_t global_device_id =
                 vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
