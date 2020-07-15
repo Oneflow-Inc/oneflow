@@ -13,7 +13,7 @@ from google.protobuf import text_format
 
 
 def BindUuidAndHandler(uuid, blob_watched, handler):
-    assert type(blob_watched) is remote_blob_util.ConsistentBlob
+    assert isinstance(blob_watched, remote_blob_util.ConsistentBlob)
     session_ctx.GetDefaultSession().uuid2watch_handler[uuid] = (blob_watched, handler)
 
 
@@ -38,5 +38,6 @@ def _WatcherHandler(handler_uuid, of_blob_ptr):
     handler(local_blob_util.MakeLocalBlob(ndarray_lists, blob_watched))
 
 
+# static lifetime
 _global_watcher = _Watcher()
 c_api_util.RegisterWatcherOnlyOnce(_global_watcher)

@@ -111,7 +111,7 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
   RecordBlob<OFRecord> record_blob(in_blob);
   int64_t one_col_elem_num = out_blob->shape().Count(1);
   int32_t random_seed = NextRandomInt();
-  ThreadPool* thread_pool = Global<ThreadMgr>::Get()->compute_thread_pool();
+  ThreadPool* thread_pool = Global<ThreadPool>::Get();
   int32_t thread_num = thread_pool->thread_num();
   int32_t part_num = std::min(record_blob.record_num(), thread_num);
   if (part_num >= 2) {
