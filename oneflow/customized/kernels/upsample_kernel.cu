@@ -83,22 +83,25 @@ __global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const T* dy_dpt
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
-    const float original_h = (static_cast<float>(h) + 0.5f) * scale_h - 0.5f;
-    const int64_t top_h_index = original_h > 0.0 ? floorf(original_h) : 0;
-    const int64_t bottom_h_index = (original_h < dx_height - 1) ? ceilf(original_h) : dx_height - 1;
-    const float h_lerp = original_h - floorf(original_h);
-    const float original_w = (static_cast<float>(w) + 0.5f) * scale_w - 0.5f;
-    const int64_t left_w_index = original_w > 0.0 ? floorf(original_w) : 0;
-    const int64_t right_w_index = (original_w < dx_width - 1) ? ceilf(original_w) : dx_width - 1;
-    const float w_lerp = original_w - floorf(original_w);
-    const int64_t top_offset = dx_helper.NdIndexToOffset(n, c, top_h_index, 0);
-    const float dtop = (1 - h_lerp) * dy_dptr[index];
-    atomicAdd(dx_dptr + top_offset + left_w_index, static_cast<T>((1 - w_lerp) * dtop));
-    atomicAdd(dx_dptr + top_offset + right_w_index, static_cast<T>(w_lerp * dtop));
+    const float dx_h = (static_cast<float>(h) + 0.5f) * scale_h - 0.5f;
+    const int64_t top_h_index = dx_h > 0.0 ? floorf(dx_h) : 0;
+    const int64_t bottom_h_index = (dx_h < dx_height - 1) ? ceilf(dx_h) : dx_height - 1;
+    const float h_lerp = dx_h - floorf(dx_h);
+    const float dx_w = (static_cast<float>(w) + 0.5f) * scale_w - 0.5f;
+    const int64_t left_w_index = dx_w > 0.0 ? floorf(dx_w) : 0;
+    const int64_t right_w_index = (dx_w < dx_width - 1) ? ceilf(dx_w) : dx_width - 1;
+    const float w_lerp = dx_w - floorf(dx_w);
+    const T dy = dy_dptr[index];
+    const float dbottom = h_lerp * dy;
     const int64_t bottom_offset = dx_helper.NdIndexToOffset(n, c, bottom_h_index, 0);
-    const float dbottom = h_lerp * dy_dptr[index];
-    atomicAdd(dx_dptr + bottom_offset + left_w_index, static_cast<T>((1 - w_lerp) * dbottom));
-    atomicAdd(dx_dptr + bottom_offset + right_w_index, static_cast<T>(w_lerp * dbottom));
+    T* dx_dptr_bottom_offset = dx_dptr + bottom_offset;
+    atomicAdd(dx_dptr_bottom_offset + left_w_index, static_cast<T>((1 - w_lerp) * dbottom));
+    atomicAdd(dx_dptr_bottom_offset + right_w_index, static_cast<T>(w_lerp * dbottom));
+    const float dtop = dy - dbottom;
+    const int64_t top_offset = dx_helper.NdIndexToOffset(n, c, top_h_index, 0);
+    T* dx_dptr_top_offset = dx_dptr + top_offset;
+    atomicAdd(dx_dptr_top_offset + left_w_index, static_cast<T>((1 - w_lerp) * dtop));
+    atomicAdd(dx_dptr_top_offset + right_w_index, static_cast<T>(w_lerp * dtop));
   }
 }
 
