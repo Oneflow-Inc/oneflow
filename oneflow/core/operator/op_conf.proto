@@ -445,33 +445,6 @@ message LazyAdamModelUpdateOpConf {
 message AccumulateOpConf {
 }
 
-message ReduceSumOpConf {
-  required string in = 1;
-  required string out = 3;
-  repeated int32 axis = 4;
-  optional bool keep_dims = 5 [default = false];
-}
-
-message ReduceSumLikeOpConf {
-  required string x = 1;
-  required string like = 2;
-  required string y = 3;
-  repeated int32 axis = 4;
-  optional string temp_storage = 5 [default = "temp_storage"];
-}
-
-message ReshapeOpConf {
-  required string in = 1;
-  required string out = 2;
-  required ShapeProto shape = 3;
-}
-
-message ReshapeLikeOpConf {
-  required string x = 1;
-  required string y = 2;
-  required string like = 3;
-}
-
 message DynamicReshapeOpConf {
   required string in = 1;
   required string out = 2;
@@ -694,13 +667,6 @@ message RepeatOpConf {
   required string in = 1;
   required string out = 2;
   required int32 repeat_num = 3;
-}
-
-message BroadcastLikeOpConf {
-  required string x = 1;
-  required string like = 2;
-  required string y = 3;
-  repeated int32 reduced_axis = 4;
 }
 
 message ConstantOpConf {
@@ -1165,9 +1131,7 @@ message OperatorConf {
     
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
-    ReshapeOpConf reshape_conf = 202;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    ReduceSumOpConf reduce_sum_conf = 219;
     AddOpConf add_conf = 220;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
@@ -1175,9 +1139,6 @@ message OperatorConf {
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     PReluOpConf prelu_conf = 265;
-    ReduceSumLikeOpConf reduce_sum_like_conf = 270;
-    BroadcastLikeOpConf broadcast_like_conf = 277;
-    ReshapeLikeOpConf reshape_like_conf = 286;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;

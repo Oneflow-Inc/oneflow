@@ -203,6 +203,14 @@ def GetOpAttribute4OpConf(op_conf_proto):
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 
+def GetUserOpAttrType(op_type_name, attr_name):
+    attr_type, error_str = oneflow_internal.GetUserOpAttrType(op_type_name, attr_name)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return attr_type
+
+
 def CheckAndCompleteUserOpConf(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
     new_op_conf, error_str = oneflow_internal.CheckAndCompleteUserOpConf(
