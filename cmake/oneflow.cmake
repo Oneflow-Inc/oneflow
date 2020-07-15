@@ -315,7 +315,7 @@ add_dependencies(generate_api of_pyscript_copy)
 add_dependencies(generate_api oneflow_internal)
 
 file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
-add_custom_target(pip_install ALL)
+add_custom_target(pip_install)
 add_dependencies(pip_install generate_api)
 add_custom_command(
   TARGET pip_install
