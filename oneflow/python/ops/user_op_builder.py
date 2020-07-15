@@ -232,59 +232,89 @@ class UserOpConfBuilder(object):
         self.user_op_.output_arg_key_list_.append(output_name)
         return self
 
-    def Attr(self, attr_name, attr_value, attr_type):
+    def Attr(self, attr_name, attr_value, attr_type_name=""):
         attribute = user_op_attr_util.UserOpAttrVal()
         assert isinstance(attr_name, str)
-        assert isinstance(attr_type, str)
-        if attr_type == "AttrTypeInt32":
+        attr_type = c_api_util.GetUserOpAttrType(
+            self.user_op_.op_conf_.user_conf.op_type_name, attr_name
+        )
+        if attr_type == user_op_attr_util.kAtInt32:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeInt32"
             assert isinstance(attr_value, int)
             attribute.at_int32 = attr_value
-        elif attr_type == "AttrTypeInt64":
+        elif attr_type == user_op_attr_util.kAtInt64:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeInt64"
             assert isinstance(attr_value, int)
             attribute.at_int64 = attr_value
-        elif attr_type == "AttrTypeBool":
+        elif attr_type == user_op_attr_util.kAtBool:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeBool"
             assert isinstance(attr_value, bool)
             attribute.at_bool = attr_value
-        elif attr_type == "AttrTypeFloat":
+        elif attr_type == user_op_attr_util.kAtFloat:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeFloat"
             assert isinstance(attr_value, float)
             attribute.at_float = attr_value
-        elif attr_type == "AttrTypeDouble":
+        elif attr_type == user_op_attr_util.kAtDouble:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeDouble"
             assert isinstance(attr_value, float)
             attribute.at_double = attr_value
-        elif attr_type == "AttrTypeString":
+        elif attr_type == user_op_attr_util.kAtString:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeString"
             assert isinstance(attr_value, str)
             attribute.at_string = attr_value
-        elif attr_type == "AttrTypeShape":
+        elif attr_type == user_op_attr_util.kAtShape:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeShape"
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_shape.dim[:] = list(attr_value)
-        elif attr_type == "AttrTypeDataType":
+        elif attr_type == user_op_attr_util.kAtDataType:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeDataType"
             assert isinstance(attr_value, int) and attr_value in oneflow.dtypes
             attribute.at_data_type = attr_value
-        elif attr_type == "AttrTypeListInt32":
+        elif attr_type == user_op_attr_util.kAtListInt32:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeListInt32"
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_list_int32.val[:] = list(attr_value)
-        elif attr_type == "AttrTypeListInt64":
+        elif attr_type == user_op_attr_util.kAtListInt64:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeListInt64"
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_list_int64.val[:] = list(attr_value)
-        elif attr_type == "AttrTypeListFloat":
+        elif attr_type == user_op_attr_util.kAtListFloat:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeListFloat"
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, float) for x in attr_value)
             attribute.at_list_float.val[:] = list(attr_value)
-        elif attr_type == "AttrTypeListDataType":
+        elif attr_type == user_op_attr_util.kAtListDataType:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeListDataType"
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) and x in oneflow.dtypes for x in attr_value)
             attribute.at_list_data_type.val[:] = list(attr_value)
-        elif attr_type == "AttrTypeListShape":
+        elif attr_type == user_op_attr_util.kAtListShape:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeListShape"
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)
             for i in range(len(attr_value)):
                 shape = shape_util.ShapeProto()
                 shape.dim[:] = list(attr_value[i])
                 attribute.at_list_shape.val.append(shape)
-        elif attr_type == "AttrTypeListString":
+        elif attr_type == user_op_attr_util.kAtListString:
+            if attr_type_name != "":
+                assert attr_type_name == "AttrTypeListString"
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, str) for x in attr_value)
             attribute.at_list_string.val[:] = list(attr_value)
