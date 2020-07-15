@@ -42,7 +42,7 @@ def _cb_progress_bar(blocknum, blocksize, totalsize):
     try:
         column_size = int(os.get_terminal_size().columns * 0.8)
     except OSError:
-        # Ubuntu系统调用os.get_terminal_size()有bug
+        # Ubuntu os.get_terminal_size() system bug
         column_size = 80
     _process_bar(percent, end_str="100%", total_length=column_size)
 
