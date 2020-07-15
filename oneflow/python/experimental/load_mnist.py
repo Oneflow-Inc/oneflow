@@ -45,7 +45,6 @@ def _cb_progress_bar(blocknum, blocksize, totalsize):
 
 
 def _download_mnist_file(outputfile, url):
-    # global mnist_file_url
     urllib.request.urlretrieve(url, outputfile, _cb_progress_bar)
     print("")
 
