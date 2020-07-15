@@ -94,8 +94,3 @@ def load_mnist(
     test_images, test_labels = _normalize(x_test, y_test, test_batch_size)
 
     return (train_images, train_labels), (test_images, test_labels)
-
-
-# for test
-# (x_train, y_train), (x_test, y_test) = load_mnist()
-# print(x_train.shape, y_train.shape, x_test.shape, y_test.shape)
