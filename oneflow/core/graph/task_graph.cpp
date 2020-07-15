@@ -10,7 +10,6 @@
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/operator/variable_op.h"
-#include "oneflow/core/operator/constant_op.h"
 #include "oneflow/core/operator/user_op_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_context.h"
@@ -42,7 +41,6 @@ bool IsConnectToTickOp(const TaskNode* node) {
   if (comp_task_node->logical_node()->op_vec().size() != 1) { return false; }
   const Operator* op = comp_task_node->logical_node()->SoleOp().get();
   if (dynamic_cast<const VariableOp*>(op) != nullptr) { return true; }
-  if (dynamic_cast<const ConstantOp*>(op) != nullptr) { return true; }
   return false;
 }
 
