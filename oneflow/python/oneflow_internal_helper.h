@@ -218,6 +218,10 @@ Maybe<void> WriteInt8Calibration(const std::string& path) {
   return Maybe<void>::Ok();
 }
 
+Maybe<long long> GetUserOpAttrType(const std::string& op_type_name, const std::string& attr_name) {
+  return JUST(GetUserOpAttrTypeImpl(op_type_name, attr_name));
+}
+
 Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
