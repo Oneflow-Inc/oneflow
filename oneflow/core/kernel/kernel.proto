@@ -11,10 +11,6 @@ import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/register/blob_desc.proto";
 
-message ReduceSumKernelConf {
-  required ShapeProto kept_dims_shape = 1;
-}
-
 message DecodeRandomKernelConf {
   required uint32 random_seed = 1;
 }
@@ -122,7 +118,6 @@ message KernelConf {
     UserKernelConf user_conf = 100;
     DecodeRandomKernelConf decode_random_conf = 103;
     DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
-    ReduceSumKernelConf reduce_sum_conf = 120;
     ReduceGatherKernelConf reduce_gather_conf = 350;
     XrtLaunchKernelConf xrt_launch_conf = 353;
     UniqueWithCountsKernelConf unique_with_counts_conf = 354;
