@@ -4,30 +4,38 @@ import numpy as np
 import oneflow.python.framework.remote_blob as remote_blob_util
 
 
-class LocalFixedTensor(object):
-    def __init__(self, ndarray=None):
-        self.ndarray_ = ndarray
-
-    def ndarray(self):
-        return self.ndarray_
-
-    def __str__(self):
-        return str(self.ndarray_)
-
-    def __getattr__(self, attr):
-        return getattr(self.ndarray_, attr)
-
-
 class LocalMirroredTensor(object):
-    def __init__(self, ndarray_list=None):
+    def __init__(self, ndarray_list, is_dynamic, concat_axis=None):
         self.ndarray_list_ = ndarray_list
+        self.is_dynamic_ = is_dynamic
+        self.concat_axis_ = concat_axis
+        self.ndarray_ = None
+        if not is_dynamic:
+            if len(self.ndarray_list_) == 1:
+                self.ndarray_ = self.ndarray_list_[0]
+            elif concat_axis is not None:
+                self.ndarray_ = np.concatenate(self.ndarray_list_, axis=concat_axis)
+            else:
+                # do nothing
+                pass
 
     def ndarray_list(self):
         return self.ndarray_list_
 
+    def ndarray(self):
+        assert self.ndarray_ is not None
+        return self.ndarray_
+
+    def __getattr__(self, attr):
+        return getattr(self.ndarray(), attr)
+
 
 class LocalMirroredTensorList(object):
     def __init__(self, ndarray_lists=None):
+        assert isinstance(ndarray_lists, (list, tuple))
+        for ndarray_list in ndarray_lists:
+            assert isinstance(ndarray_list, (list, tuple))
+            assert all(isinstance(ndarray, np.ndarray) for ndarray in ndarray_list)
         self.ndarray_lists_ = ndarray_lists
 
     def ndarray_lists(self):
@@ -35,14 +43,17 @@ class LocalMirroredTensorList(object):
 
 
 def MakeLocalBlob(ndarray_lists, consistent_blob):
-    assert type(consistent_blob) is remote_blob_util.ConsistentBlob
+    assert isinstance(consistent_blob, remote_blob_util.ConsistentBlob), type(
+        consistent_blob
+    )
     if consistent_blob.is_tensor_list:
         return LocalMirroredTensorList(ndarray_lists)
     assert len(ndarray_lists) == 1
-    if consistent_blob.is_dynamic:
-        return LocalMirroredTensor(ndarray_lists[0])
-    assert len(ndarray_lists[0]) == 1
-    return LocalFixedTensor(ndarray_lists[0][0])
+    return LocalMirroredTensor(
+        ndarray_lists[0],
+        is_dynamic=consistent_blob.is_dynamic,
+        concat_axis=consistent_blob.split_axis,
+    )
 
 
 def MergeLocalBlobs(local_blob_list, mirrored_blob):
@@ -51,18 +62,29 @@ def MergeLocalBlobs(local_blob_list, mirrored_blob):
         for local_blob in local_blob_list:
             assert type(local_blob) is LocalMirroredTensorList
         return LocalMirroredTensorList([x.ndarray_lists()[0] for x in local_blob_list])
-    if mirrored_blob.is_dynamic:
-        for local_blob in local_blob_list:
-            assert type(local_blob) is LocalMirroredTensor
-        return LocalMirroredTensor([x.ndarray_list()[0] for x in local_blob_list])
-    for local_blob in local_blob_list:
-        assert type(local_blob) is LocalFixedTensor
-        batch_axis = mirrored_blob.batch_axis
-        assert type(batch_axis) is int
-        ndarray = np.concatenate(
-            [x.ndarray() for x in local_blob_list], axis=batch_axis
+    return LocalMirroredTensor(
+        [x.ndarray_list()[0] for x in local_blob_list],
+        is_dynamic=mirrored_blob.is_dynamic,
+        concat_axis=mirrored_blob.batch_axis,
+    )
+
+
+def MakeLocalBlob4EagerBlob(eager_blob):
+    assert isinstance(eager_blob, remote_blob_util.EagerBlobTrait)
+    if eager_blob.is_tensor_list:
+        return LocalMirroredTensorList(eager_blob.numpy_list())
+    elif isinstance(eager_blob, remote_blob_util.EagerMirroredBlob):
+        return LocalMirroredTensor(
+            [eager_blob.numpy(i) for i in range(eager_blob.numpy_size())],
+            is_dynamic=eager_blob.is_dynamic,
+            concat_axis=eager_blob.batch_axis,
         )
-        return LocalFixedTensor(ndarray)
+    elif isinstance(eager_blob, remote_blob_util.EagerConsistentBlob):
+        return LocalMirroredTensor(
+            [eager_blob.numpy()], is_dynamic=False, concat_axis=0
+        )
+    else:
+        raise NotImplementedError
 
 
 non_override_field = set(
@@ -87,7 +109,7 @@ non_override_field = set(
 
 def MakeBlobMethod(field_name):
     def ConvertOtherArgs(args):
-        return [x.ndarray() if isinstance(x, LocalFixedTensor) else x for x in args]
+        return [x.ndarray() if isinstance(x, LocalMirroredTensor) else x for x in args]
 
     return lambda self, *args: getattr(self.ndarray(), field_name)(
         *ConvertOtherArgs(args)
@@ -99,5 +121,5 @@ for field_name in dir(np.ndarray):
         continue
     if field_name in non_override_field:
         continue
-    if hasattr(LocalFixedTensor, field_name) == False:
-        setattr(LocalFixedTensor, field_name, MakeBlobMethod(field_name))
+    if hasattr(LocalMirroredTensor, field_name) == False:
+        setattr(LocalMirroredTensor, field_name, MakeBlobMethod(field_name))
