@@ -11,6 +11,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
     .Attr("data_type", UserOpAttrType::kAtInt64)
     .Attr<bool>("dim1_varying_length", UserOpAttrType::kAtBool, false)
     .Attr<bool>("auto_zero_padding", UserOpAttrType::kAtBool, false)
+    .SetOutputBufferNum(2)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -49,6 +50,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder")
     .Output("out")
     .Attr("name", UserOpAttrType::kAtString)
     .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
+    .SetOutputBufferNum(2)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -87,6 +89,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder_random_crop")
     .Attr<bool>("has_seed", UserOpAttrType::kAtBool, false)
     .Attr<std::vector<float>>("random_area", UserOpAttrType::kAtListFloat, {0.08, 1.0})
     .Attr<std::vector<float>>("random_aspect_ratio", UserOpAttrType::kAtListFloat, {0.75, 1.333333})
+    .SetOutputBufferNum(2)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);

@@ -16,6 +16,7 @@ REGISTER_CPU_ONLY_USER_OP("image_resize")
     .Attr<int64_t>("resize_shorter", UserOpAttrType::kAtInt64, 0)
     .Attr<int64_t>("resize_x", UserOpAttrType::kAtInt64, 0)
     .Attr<int64_t>("resize_y", UserOpAttrType::kAtInt64, 0)
+    .SetOutputBufferNum(2)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -66,6 +67,7 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize")
     .Attr<float>("crop_pos_y", UserOpAttrType::kAtFloat, 0.5)
     .Attr<bool>("pad_output", UserOpAttrType::kAtBool, false)
     .Attr<int32_t>("output_dtype", UserOpAttrType::kAtInt32, static_cast<int32_t>(DataType::kFloat))
+    .SetOutputBufferNum(2)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* mirror_tensor = ctx->TensorDesc4ArgNameAndIndex("mirror", 0);
@@ -129,6 +131,7 @@ REGISTER_CPU_ONLY_USER_OP("coin_flip")
     .Attr("batch_size", UserOpAttrType::kAtInt64)
     .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
     .Attr<bool>("has_seed", UserOpAttrType::kAtBool, false)
+    .SetOutputBufferNum(2)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
@@ -149,6 +152,58 @@ REGISTER_CPU_ONLY_USER_OP("coin_flip")
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("transpose_mirror_normalize_gpu")
+    .Input("in")
+    .OptionalInput("mirror")
+    .Output("out")
+    .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
+    .Attr<std::string>("output_layout", UserOpAttrType::kAtString, "NCHW")
+    .Attr<std::vector<float>>("mean", UserOpAttrType::kAtListFloat, {0.0})
+    .Attr<std::vector<float>>("std", UserOpAttrType::kAtListFloat, {1.0})
+    .Attr<DataType>("output_dtype", UserOpAttrType::kAtDataType, DataType::kFloat)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* mirror_tensor = ctx->TensorDesc4ArgNameAndIndex("mirror", 0);
+      if (mirror_tensor) {
+        CHECK_OR_RETURN(mirror_tensor->shape().NumAxes() == 1
+                        && in_tensor->shape().At(0) == mirror_tensor->shape().At(0));
+        CHECK_EQ_OR_RETURN(mirror_tensor->data_type(), DataType::kInt8);
+      }
+      CHECK_EQ_OR_RETURN(in_tensor->data_type(), DataType::kUInt8);
+      CHECK_EQ_OR_RETURN(in_tensor->shape().NumAxes(), 4);  // {N, H, W, C}
+      std::string color_space = ctx->Attr<std::string>("color_space");
+      int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
+      CHECK_EQ_OR_RETURN(in_tensor->shape().At(3), C);
+
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      int64_t N = in_tensor->shape().At(0);
+      int64_t H = in_tensor->shape().At(1);
+      int64_t W = in_tensor->shape().At(2);
+
+      std::string output_layout = ctx->Attr<std::string>("output_layout");
+      if (output_layout == "NCHW") {
+        *out_tensor->mut_shape() = Shape({N, C, H, W});
+      } else if (output_layout == "NHWC") {
+        *out_tensor->mut_shape() = Shape({N, H, W, C});
+      } else {
+        return Error::CheckFailed() << "output_layout: " << output_layout << " is not supported";
+      }
+      DataType output_dtype = ctx->Attr<DataType>("output_dtype");
+      // TODO(chengcheng) only support float now; for float16 in future
+      CHECK_EQ_OR_RETURN(output_dtype, DataType::kFloat);
+      *out_tensor->mut_data_type() = output_dtype;
+
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 

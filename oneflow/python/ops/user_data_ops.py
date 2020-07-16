@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
+import oneflow.core.common.data_type_pb2 as data_type_pb2
 
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.remote_blob import BlobDef
@@ -112,6 +113,39 @@ def Resize(
     )
 
 
+@oneflow_export("image.transpose_mirror_normalize_gpu")
+def TransposeMirrorNormalizeGPU(
+    input_blob,
+    mirror_blob=None,
+    color_space="BGR",
+    output_layout="NCHW",
+    mean=[0.0],
+    std=[1.0],
+    output_dtype=flow.float,
+    name=None,
+):
+    if name is None:
+        name = id_util.UniqueStr("TransposeMirrorNormalizeGpu_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("transpose_mirror_normalize_gpu")
+        .Input("in", [input_blob])
+    )
+    if mirror_blob is not None:
+        op = op.Input("mirror", [mirror_blob])
+    return (
+        op.Output("out")
+        .Attr("color_space", color_space, "AttrTypeString")
+        .Attr("output_layout", output_layout, "AttrTypeString")
+        .Attr("mean", mean, "AttrTypeListFloat")
+        .Attr("std", std, "AttrTypeListFloat")
+        .Attr("output_dtype", output_dtype, "AttrTypeDataType")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("image.CropMirrorNormalize", "image.crop_mirror_normalize")
 def CropMirrorNormalize(
     input_blob,
@@ -125,8 +159,30 @@ def CropMirrorNormalize(
     mean=[0.0],
     std=[1.0],
     output_dtype=flow.float,
+    run_gpu=False,
     name=None,
 ):
+    if (
+        run_gpu
+        and input_blob.dtype is flow.uint8
+        and len(input_blob.shape) == 4
+        and output_layout == "NCHW"
+    ):
+        if (
+            crop_h == 0
+            or crop_w == 0
+            or (crop_h == input_blob.shape[1] and crop_w == input_blob.shape[2])
+        ):
+            return TransposeMirrorNormalizeGPU(
+                input_blob,
+                mirror_blob,
+                color_space,
+                output_layout,
+                mean,
+                std,
+                output_dtype,
+                name,
+            )
     if name is None:
         name = id_util.UniqueStr("CropMirrorNormalize_")
     op = (
