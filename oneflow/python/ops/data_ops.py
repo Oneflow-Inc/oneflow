@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union, List
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -57,7 +57,12 @@ class ImageResizePreprocessor(object):
 
 @oneflow_export("data.ImageCodec")
 class ImageCodec(object):
-    def __init__(self, image_preprocessors: Union[list, tuple] = None) -> None:
+    def __init__(
+        self,
+        image_preprocessors: Optional[
+            Union[List[ImageResizePreprocessor], Tuple[ImageResizePreprocessor]]
+        ] = None,
+    ) -> None:
         if isinstance(image_preprocessors, (list, tuple)):
             self.image_preprocessors = list(image_preprocessors)
         else:
@@ -108,8 +113,8 @@ class BytesListCodec(object):
 class NormByChannelPreprocessor(object):
     def __init__(
         self,
-        mean_values: Union[list, tuple],
-        std_values: Union[list, tuple] = (1.0, 1.0, 1.0),
+        mean_values: Union[List[float], Tuple[float]],
+        std_values: Union[List[float], Tuple[float]] = (1.0, 1.0, 1.0),
         data_format: str = "channels_last",
     ) -> None:
         assert isinstance(mean_values, (list, tuple))
@@ -137,7 +142,7 @@ class BlobConf(object):
     def __init__(
         self,
         name: str,
-        shape: Union[list, tuple],
+        shape: Union[List[int], Tuple[int]],
         dtype: int,
         codec: Union[ImageCodec, RawCodec],
         preprocessors: Optional[

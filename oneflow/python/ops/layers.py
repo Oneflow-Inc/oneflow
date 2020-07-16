@@ -1,14 +1,13 @@
 from __future__ import absolute_import
 
 import os
-from typing import Callable, Optional, Union, Tuple
+from typing import Callable, Optional, Union, Tuple, List
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -97,8 +96,8 @@ def dense(
 def conv2d(
     inputs: remote_blob_util.BlobDef,
     filters: int,
-    kernel_size: Union[int, list, tuple] = 1,
-    strides: Union[int, list, tuple] = 1,
+    kernel_size: Union[int, List[int], Tuple[int]] = 1,
+    strides: Union[int, List[int], Tuple[int]] = 1,
     padding: str = "VALID",
     data_format: str = "NCHW",
     dilation_rate: int = 1,
@@ -247,10 +246,10 @@ def layer_norm(
 
 @oneflow_export("layers.layer_norm_grad")
 def layer_norm_grad(
-    dy: input_blob_util.ArgBlobDef,
-    x: input_blob_util.ArgBlobDef,
-    mean: input_blob_util.ArgBlobDef,
-    inv_variance: input_blob_util.ArgBlobDef,
+    dy: remote_blob_util.BlobDef,
+    x: remote_blob_util.BlobDef,
+    mean: remote_blob_util.BlobDef,
+    inv_variance: remote_blob_util.BlobDef,
     begin_norm_axis: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -271,9 +270,9 @@ def layer_norm_grad(
 
 @oneflow_export("layers.layer_norm_param_grad")
 def layer_norm_param_grad(
-    dy: input_blob_util.ArgBlobDef,
-    norm: input_blob_util.ArgBlobDef,
-    gamma: input_blob_util.ArgBlobDef,
+    dy: remote_blob_util.BlobDef,
+    norm: remote_blob_util.BlobDef,
+    gamma: remote_blob_util.BlobDef,
     begin_params_axis: int = -1,
     name: Optional[str] = None,
 ) -> Tuple[remote_blob_util.BlobDef]:

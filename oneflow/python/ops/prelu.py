@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from typing import Optional, Union
+from typing import Optional, Union, Sequence
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -16,7 +16,7 @@ def prelu(
     inputs: remote_blob_util.BlobDef,
     alpha_initializer: Optional[op_conf_util.InitializerConf] = None,
     alpha_regularizer: Optional[op_conf_util.RegularizerConf] = None,
-    shared_axes: Union[list, tuple] = None,
+    shared_axes: Optional[Sequence[int]] = None,
     trainable: bool = True,
     name: Optional[str] = None,
     model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
