@@ -10,7 +10,7 @@
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/test_util.h"
 
@@ -26,7 +26,7 @@ TEST(StringStreamType, init_string_object) {
   auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = IdUtil::NewLogicalSymbolId();
-  Global<Storage<std::string>>::Get()->Add(symbol_id, std::make_shared<std::string>("foobar"));
+  Global<SymbolStorage<std::string>>::Get()->Add(symbol_id, "foobar");
   list.EmplaceBack(NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
   list.EmplaceBack(NewInstruction("InitStringSymbol")->add_init_symbol_operand(symbol_id));
   vm->Receive(&list);

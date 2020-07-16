@@ -136,6 +136,8 @@ class OpArg final {
 
 }  // namespace user_op
 
+Maybe<long long> GetUserOpAttrTypeImpl(const std::string& op_type_name,
+                                       const std::string& attr_name);
 Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf);
 
 }  // namespace oneflow

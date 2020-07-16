@@ -24,7 +24,8 @@ Maybe<OptInt64> GetSplitAxis(const VariableOpConf& variable_conf) {
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   if (op_conf().variable_conf().has_tick()) { EnrollInputBn("tick", false); }
-  EnrollOutputBn("out", job_desc().IsTrain() && op_conf().trainable())->set_is_mutable(true);
+  bool is_trainable = job_desc().IsTrain() && op_conf().trainable();
+  EnrollOutputBn("out", is_trainable)->set_is_mutable(is_trainable);
 }
 
 const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variable_conf(); }

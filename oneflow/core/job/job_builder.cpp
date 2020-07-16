@@ -61,7 +61,9 @@ const OperatorConf& JobBuilder::OpConf4OpName(const std::string& op_name) const 
 }
 
 const ParallelConf& JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const {
-  return *lbi2blob_parallel_conf_.at(lbi);
+  const auto& iter = lbi2blob_parallel_conf_.find(lbi);
+  if (iter != lbi2blob_parallel_conf_.end()) { return *iter->second; }
+  return ParallelConf4OpName(lbi.op_name());
 }
 
 void JobBuilder::AddOps(const ParallelConf& parallel_conf,
@@ -203,7 +205,9 @@ void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Han
 }
 
 const ParallelConf& JobBuilder::ParallelConf4OpName(const std::string& op_name) const {
-  return *op_name2parallel_conf_.at(op_name);
+  const auto& iter = op_name2parallel_conf_.find(op_name);
+  CHECK(iter != op_name2parallel_conf_.end());
+  return *iter->second;
 }
 
 void JobBuilder::AddParallelConf4OpName(const std::string& op_name,

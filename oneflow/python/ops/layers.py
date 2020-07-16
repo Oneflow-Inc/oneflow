@@ -5,7 +5,7 @@ import os
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -199,187 +199,89 @@ def layer_norm(
     Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
 
     """
-    if os.getenv("ENABLE_USER_OP") != "False":
-        name = name if name is not None else id_util.UniqueStr("LayerNorm_")
-        op = (
-            flow.user_op_builder(name)
-            .Op("layer_norm")
-            .Input("x", [inputs])
-            .Output("y")
-            .Output("mean")
-            .Output("inv_variance")
+    name = name if name is not None else id_util.UniqueStr("LayerNorm_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("layer_norm")
+        .Input("x", [inputs])
+        .Output("y")
+        .Output("mean")
+        .Output("inv_variance")
+    )
+    if center == False and scale == False:
+        trainable = False
+    param_shape = inputs.shape[begin_params_axis:]
+    if center:
+        beta = flow.get_variable(
+            name="{}-beta".format(name),
+            shape=param_shape,
+            dtype=inputs.dtype,
+            initializer=flow.constant_initializer(0.0),
+            trainable=trainable,
+            model_name="beta",
+            distribute=distribute_util.broadcast(),
         )
-        if center == False and scale == False:
-            trainable = False
-        param_shape = inputs.shape[begin_params_axis:]
-        if center:
-            beta = flow.get_variable(
-                name="{}-beta".format(name),
-                shape=param_shape,
-                dtype=inputs.dtype,
-                initializer=flow.constant_initializer(0.0),
-                trainable=trainable,
-                model_name="beta",
-                distribute=distribute_util.broadcast(),
-            )
-            op.Input("beta", [beta])
-        if scale:
-            gamma = flow.get_variable(
-                name="{}-gamma".format(name),
-                shape=param_shape,
-                dtype=inputs.dtype,
-                initializer=flow.constant_initializer(1.0),
-                trainable=trainable,
-                model_name="gamma",
-                distribute=distribute_util.broadcast(),
-            )
-            op.Input("gamma", [gamma])
-            op.Output("normalized")
-        op.Attr("center", center, "AttrTypeBool")
-        op.Attr("scale", scale, "AttrTypeBool")
-        op.Attr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
-        op.Attr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
-        op.Attr("epsilon", epsilon, "AttrTypeDouble")
-        return op.Build().InferAndTryRun().RemoteBlobList()[0]
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        name = name if name is not None else id_util.UniqueStr("LayerNorm_")
-        begin_params_axis = (
-            begin_params_axis
-            if begin_params_axis >= 0
-            else len(inputs.shape) + begin_params_axis
+        op.Input("beta", [beta])
+    if scale:
+        gamma = flow.get_variable(
+            name="{}-gamma".format(name),
+            shape=param_shape,
+            dtype=inputs.dtype,
+            initializer=flow.constant_initializer(1.0),
+            trainable=trainable,
+            model_name="gamma",
+            distribute=distribute_util.broadcast(),
         )
-        param_shape = inputs.shape[begin_params_axis:]
-        if len(param_shape) == 0:
-            param_shape = (1,)
-        if center:
-            beta = flow.get_variable(
-                name="{}-beta".format(name),
-                shape=param_shape,
-                dtype=inputs.dtype,
-                initializer=flow.constant_initializer(0.0),
-                trainable=trainable,
-                model_name="beta",
-                distribute=distribute_util.broadcast(),
-            )
-            setattr(op_conf.layer_norm_conf, "beta", beta.unique_name)
-        if scale:
-            gamma = flow.get_variable(
-                name="{}-gamma".format(name),
-                shape=param_shape,
-                dtype=inputs.dtype,
-                initializer=flow.constant_initializer(1.0),
-                trainable=trainable,
-                model_name="gamma",
-                distribute=distribute_util.broadcast(),
-            )
-            setattr(op_conf.layer_norm_conf, "gamma", gamma.unique_name)
-        setattr(op_conf, "name", name)
-        setattr(op_conf, "trainable", trainable)
-        setattr(op_conf.layer_norm_conf, "in", inputs.unique_name)
-        setattr(op_conf.layer_norm_conf, "out", "out")
-        setattr(op_conf.layer_norm_conf, "center", center)
-        setattr(op_conf.layer_norm_conf, "scale", scale)
-        setattr(op_conf.layer_norm_conf, "begin_norm_axis", begin_norm_axis)
-        setattr(op_conf.layer_norm_conf, "begin_params_axis", begin_params_axis)
-        setattr(op_conf.layer_norm_conf, "epsilon", epsilon)
-        compile_context.CurJobAddOp(op_conf)
-        out_lbi = logical_blob_id_util.LogicalBlobId()
-        setattr(out_lbi, "op_name", op_conf.name)
-        setattr(out_lbi, "blob_name", "out")
-        return remote_blob_util.RemoteBlob(out_lbi)
+        op.Input("gamma", [gamma])
+        op.Output("normalized")
+    op.Attr("center", center, "AttrTypeBool")
+    op.Attr("scale", scale, "AttrTypeBool")
+    op.Attr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
+    op.Attr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
+    op.Attr("epsilon", epsilon, "AttrTypeDouble")
+    return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("layers.layer_norm_grad")
 def layer_norm_grad(
     dy, x, mean, inv_variance, begin_norm_axis=1, name=None,
 ):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
-        op = (
-            flow.user_op_builder(name)
-            .Op("layer_norm_grad")
-            .Input("dy", [dy])
-            .Input("x", [x])
-            .Input("mean", [mean])
-            .Input("inv_variance", [inv_variance])
-            .Output("dx")
-            .Attr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
-            .Attr("epsilon", 1e-5, "AttrTypeDouble")
-        )
-        return op.Build().InferAndTryRun().RemoteBlobList()[0]
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
-        setattr(op_conf, "name", name)
-        setattr(op_conf.layer_norm_grad_conf, "dy", dy.unique_name)
-        setattr(op_conf.layer_norm_grad_conf, "x", x.unique_name)
-        setattr(op_conf.layer_norm_grad_conf, "mean", mean.unique_name)
-        setattr(op_conf.layer_norm_grad_conf, "inv_variance", inv_variance.unique_name)
-        setattr(op_conf.layer_norm_grad_conf, "dx", "dx")
-        setattr(op_conf.layer_norm_grad_conf, "begin_norm_axis", begin_norm_axis)
-        setattr(op_conf.layer_norm_grad_conf, "epsilon", 1e-5)
-        compile_context.CurJobAddOp(op_conf)
-        out_lbi = logical_blob_id_util.LogicalBlobId()
-        setattr(out_lbi, "op_name", op_conf.name)
-        setattr(out_lbi, "blob_name", "dx")
-        return remote_blob_util.RemoteBlob(out_lbi)
+    name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("layer_norm_grad")
+        .Input("dy", [dy])
+        .Input("x", [x])
+        .Input("mean", [mean])
+        .Input("inv_variance", [inv_variance])
+        .Output("dx")
+        .Attr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
+        .Attr("epsilon", 1e-5, "AttrTypeDouble")
+    )
+    return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("layers.layer_norm_param_grad")
 def layer_norm_param_grad(
     dy, norm, gamma, begin_params_axis=-1, name=None,
 ):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
-        normalized_diff, beta_diff, gamma_diff, reduce_buf = (
-            flow.user_op_builder(name)
-            .Op("layer_norm_param_grad")
-            .Input("dy", [dy])
-            .Input("normalized", [norm])
-            .Input("gamma", [gamma])
-            .Output("normalized_diff")
-            .Output("beta_diff")
-            .Output("gamma_diff")
-            .Output("reduce_buf")
-            .Attr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()
-        )
-        return normalized_diff, beta_diff, gamma_diff
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        name = name if name is not None else id_util.UniqueStr("LayerNormParamGrad_")
-        setattr(op_conf, "name", name)
-        setattr(op_conf.layer_norm_param_grad_conf, "dy", dy.unique_name)
-        setattr(op_conf.layer_norm_param_grad_conf, "normalized", norm.unique_name)
-        setattr(op_conf.layer_norm_param_grad_conf, "gamma", gamma.unique_name)
-        setattr(
-            op_conf.layer_norm_param_grad_conf, "begin_params_axis", begin_params_axis
-        )
-        setattr(
-            op_conf.layer_norm_param_grad_conf, "normalized_diff", "normalized_diff"
-        )
-        setattr(op_conf.layer_norm_param_grad_conf, "beta_diff", "beta_diff")
-        setattr(op_conf.layer_norm_param_grad_conf, "gamma_diff", "gamma_diff")
-        compile_context.CurJobAddOp(op_conf)
-
-        normalized_diff_lbi = logical_blob_id_util.LogicalBlobId()
-        beta_diff_lbi = logical_blob_id_util.LogicalBlobId()
-        gamma_diff_lbi = logical_blob_id_util.LogicalBlobId()
-        setattr(normalized_diff_lbi, "op_name", op_conf.name)
-        setattr(beta_diff_lbi, "op_name", op_conf.name)
-        setattr(gamma_diff_lbi, "op_name", op_conf.name)
-        setattr(normalized_diff_lbi, "blob_name", "normalized_diff")
-        setattr(beta_diff_lbi, "blob_name", "beta_diff")
-        setattr(gamma_diff_lbi, "blob_name", "gamma_diff")
-
-        return (
-            remote_blob_util.RemoteBlob(normalized_diff_lbi),
-            remote_blob_util.RemoteBlob(beta_diff_lbi),
-            remote_blob_util.RemoteBlob(gamma_diff_lbi),
-        )
+    name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
+    normalized_diff, beta_diff, gamma_diff, reduce_buf = (
+        flow.user_op_builder(name)
+        .Op("layer_norm_param_grad")
+        .Input("dy", [dy])
+        .Input("normalized", [norm])
+        .Input("gamma", [gamma])
+        .Output("normalized_diff")
+        .Output("beta_diff")
+        .Output("gamma_diff")
+        .Output("reduce_buf")
+        .Attr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    return normalized_diff, beta_diff, gamma_diff
 
 
 @oneflow_export("layers.batch_normalization")
