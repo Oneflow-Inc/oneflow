@@ -34,7 +34,8 @@
       Or you can install OpenBLAS and other tools through:
 
       ```
-      sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
+      sudo yum -y install epel-release
+      sudo yum -y install gcc-c++ openblas-devel kernel-devel-$(uname -r) nasm swig
       ```
 
 2. #### Clone Source Code
