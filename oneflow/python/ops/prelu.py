@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-import os
+from typing import Optional, Union, Sequence
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -13,14 +13,14 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("layers.prelu")
 def prelu(
-    inputs,
-    alpha_initializer=None,
-    alpha_regularizer=None,
-    shared_axes=None,
-    trainable=True,
-    name=None,
-    model_distribute=distribute_util.broadcast(),
-):
+    inputs: remote_blob_util.BlobDef,
+    alpha_initializer: Optional[op_conf_util.InitializerConf] = None,
+    alpha_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    shared_axes: Optional[Sequence[int]] = None,
+    trainable: bool = True,
+    name: Optional[str] = None,
+    model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
+) -> remote_blob_util.BlobDef:
     alpha_shape = list(inputs.shape[1:])
     if shared_axes is not None:
         for i in shared_axes:
