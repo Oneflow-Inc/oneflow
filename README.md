@@ -57,7 +57,7 @@
 
     To install development dependencies and linter tools, run:
     ```
-    pip3 install -r dev-requirements.txt --user
+    python3 -m pip install -r dev-requirements.txt --user
     ```
 
 4. #### Build and Install OneFlow
