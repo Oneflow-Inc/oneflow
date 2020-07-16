@@ -58,12 +58,12 @@ def load_mnist(
             if  dataset doesn't exist, then download it to directory that out_dir specified
 
     Args:
-        train_batch_size (int, optional): [batch size for train]. Defaults to 100.
-        test_batch_size (int, optional): [batch size for test or evaluate]. Defaults to 100.
-        data_format (str, optional): [data format]. Defaults to "NCHW".
-        url (str, optional): [url to get mnist.npz]. Defaults to "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist.npz".
-        hash_check (str, optional): [file hash value]. Defaults to "63d4344077849053dc3036b247fa012b2b381de53fd055a66b539dffd76cf08e".
-        out_dir (str, optional): [dir to save downloaded file]. Defaults to "./".
+        train_batch_size (int, optional): batch size for train. Defaults to 100.
+        test_batch_size (int, optional): batch size for test or evaluate. Defaults to 100.
+        data_format (str, optional): data format. Defaults to "NCHW".
+        url (str, optional): url to get mnist.npz. Defaults to "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist.npz".
+        hash_check (str, optional): file hash value. Defaults to "63d4344077849053dc3036b247fa012b2b381de53fd055a66b539dffd76cf08e".
+        out_dir (str, optional): dir to save downloaded file. Defaults to "./".
 
     Returns:
         [type]: (train_images, train_labels), (test_images, test_labels)
