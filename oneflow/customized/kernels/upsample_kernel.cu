@@ -6,7 +6,7 @@ namespace oneflow {
 
 namespace {
 
-template<typename T, bool align_corners>
+template<typename T>
 __global__ void UpsampleNearestForward(const int64_t elem_cnt, const T* in_dptr,
                                        NdIndexOffsetHelper<int64_t, 4> in_helper,
                                        NdIndexOffsetHelper<int64_t, 4> out_helper,
@@ -15,18 +15,17 @@ __global__ void UpsampleNearestForward(const int64_t elem_cnt, const T* in_dptr,
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     out_helper.OffsetToNdIndex(index, n, c, h, w);
-
-    const int64_t in_h = min((align_corners) ? static_cast<int64_t>(roundf(h * scale_h))
-                                             : static_cast<int64_t>(floorf(h * scale_h)),
-                             in_height - 1);
-    const int64_t in_w = min((align_corners) ? static_cast<int64_t>(roundf(w * scale_w))
-                                             : static_cast<int64_t>(floorf(w * scale_w)),
-                             in_width - 1);
+    const int64_t in_h = max(
+        min(static_cast<int64_t>(floorf((static_cast<float>(h) + 0.5f) * scale_h)), in_height - 1),
+        static_cast<int64_t>(0));
+    const int64_t in_w = max(
+        min(static_cast<int64_t>(floorf((static_cast<float>(w) + 0.5f) * scale_w)), in_width - 1),
+        static_cast<int64_t>(0));
     out_dptr[index] = in_dptr[in_helper.NdIndexToOffset(n, c, in_h, in_w)];
   }
 }
 
-template<typename T, bool align_corners>
+template<typename T>
 __global__ void UpsampleNearestBackward(const int64_t elem_cnt, const T* dy_dptr,
                                         NdIndexOffsetHelper<int64_t, 4> dy_helper,
                                         NdIndexOffsetHelper<int64_t, 4> dx_helper,
@@ -35,12 +34,12 @@ __global__ void UpsampleNearestBackward(const int64_t elem_cnt, const T* dy_dptr
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
-    const int64_t in_h = min((align_corners) ? static_cast<int64_t>(roundf(h * scale_h))
-                                             : static_cast<int64_t>(floorf(h * scale_h)),
-                             dx_height - 1);
-    const int64_t in_w = min((align_corners) ? static_cast<int64_t>(roundf(w * scale_w))
-                                             : static_cast<int64_t>(floorf(w * scale_w)),
-                             dx_width - 1);
+    const int64_t in_h = max(
+        min(static_cast<int64_t>(floorf((static_cast<float>(h) + 0.5f) * scale_h)), dx_height - 1),
+        static_cast<int64_t>(0));
+    const int64_t in_w = max(
+        min(static_cast<int64_t>(floorf((static_cast<float>(w) + 0.5f) * scale_w)), dx_width - 1),
+        static_cast<int64_t>(0));
     atomicAdd(dx_dptr + dx_helper.NdIndexToOffset(n, c, in_h, in_w), dy_dptr[index]);
   }
 }
@@ -137,7 +136,7 @@ class UpsampleNearestGPUKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 4> out_helper(y_blob->shape().At(0), y_blob->shape().At(1),
                                                y_blob->shape().At(2), y_blob->shape().At(3));
 
-    RUN_CUDA_KERNEL((UpsampleNearestForward<T, false>), ctx->device_ctx(), elem_cnt, elem_cnt,
+    RUN_CUDA_KERNEL((UpsampleNearestForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
                     x_blob->dptr<T>(), in_helper, out_helper, x_blob->shape().At(2),
                     x_blob->shape().At(3), 1.f / height_scale, 1.f / width_scale,
                     y_blob->mut_dptr<T>());
@@ -165,7 +164,7 @@ class UpsampleNearestGradGPUKernel final : public user_op::OpKernel {
                                               dy_blob->shape().At(2), dy_blob->shape().At(3));
     NdIndexOffsetHelper<int64_t, 4> dx_helper(dx_blob->shape().At(0), dx_blob->shape().At(1),
                                               dx_blob->shape().At(2), dx_blob->shape().At(3));
-    RUN_CUDA_KERNEL((UpsampleNearestBackward<T, false>), ctx->device_ctx(), elem_cnt, elem_cnt,
+    RUN_CUDA_KERNEL((UpsampleNearestBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
                     dy_blob->dptr<T>(), dy_helper, dx_helper, dx_blob->shape().At(2),
                     dx_blob->shape().At(3), 1.f / height_scale, 1.f / width_scale,
                     dx_blob->mut_dptr<T>());
