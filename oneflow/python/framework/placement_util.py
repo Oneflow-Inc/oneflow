@@ -46,8 +46,10 @@ def deprecated_placement(*args, **kwargs):
     print(
         "WARNING:",
         "/".join(deprecated_placement._ONEFLOW_API),
-        "will be removed in the future, use {} instead."
-        .format("oneflow.scope.placement"))
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.placement"
+        ),
+    )
     print(" ".join(traceback.format_stack()[-2:-1]))
     return api_placement(*args, **kwargs)
 

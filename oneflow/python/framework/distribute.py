@@ -6,6 +6,7 @@ import oneflow.python.framework.distribute_context as distribute_ctx
 from oneflow.python.oneflow_export import oneflow_export
 import traceback
 
+
 class Distribute(object):
     def __init__(self):
         pass
@@ -36,8 +37,10 @@ def deprecated_mirrored_strategy():
     print(
         "WARNING:",
         "/".join(deprecated_mirrored_strategy._ONEFLOW_API),
-        "will be removed in the future, use {} instead."
-        .format("oneflow.scope.mirrored_view"))
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.mirrored_view"
+        ),
+    )
     print(" ".join(traceback.format_stack()[-2:-1]))
     return DistributeMirroredStrategy()
 
@@ -72,8 +75,10 @@ def deprecated_consistent_strategy():
     print(
         "WARNING:",
         "/".join(deprecated_consistent_strategy._ONEFLOW_API),
-        "will be removed in the future, use {} instead."
-        .format("oneflow.scope.consistent_view"))
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.consistent_view"
+        ),
+    )
     print(" ".join(traceback.format_stack()[-2:-1]))
     return DistributeConsistentStrategy()
 
