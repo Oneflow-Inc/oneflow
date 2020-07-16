@@ -1,159 +1,83 @@
 # Oneflow
 ![Build and Test CI](https://github.com/Oneflow-Inc/oneflow/workflows/Build%20and%20Test%20CI/badge.svg?branch=develop)
 
+### Install OneFlow
+
+  - To install latest release of OneFlow:
+
+    ```
+    pip install oneflow
+    ```
+
+  - To install nightly release of OneFlow:
+
+    ```
+    pip install --find-links https://oneflow-inc.github.io/nightly oneflow
+    ```
+
 ### Build OneFlow from Source
-- #### System Requirements
-  Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable. 
 
-  ```
-  export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
-  ```
+1. #### System Requirements
 
-  Or you can install OpenBLAS and other tools through:
+    Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable.
 
-  ```
-  sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
-  ```
+    ```
+    export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
+    ```
 
-  If installed CMake doesn't support https scheme, please install a release with support for it. For instance:
-  ```
-  https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz
-  ```
+    Or you can install OpenBLAS and other tools through:
 
-- #### Common Questions
+    ```
+    sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
+    ```
 
-  [Troubleshooting](docs/source/troubleshooting.md)
+    It is recommended to install MKL. Please refer to Intel's official guide on how to install MKL [here](https://software.intel.com/content/www/us/en/develop/tools/math-kernel-library/choose-download.html)
 
-- #### Clone Source Code
+    If installed CMake doesn't support https scheme, please install a release with support for it. You could download cmake release from here: https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz
 
-  Clone source code and submodules (faster, recommended)
+2. #### Clone Source Code
 
-  ```
-  git clone https://github.com/Oneflow-Inc/oneflow
-  git submodule update --init --recursive
-  ```
+    Clone source code and submodules (faster, recommended)
 
-  or you can also clone the repo with `--recursive` flag to clone third_party submodules together
+    ```
+    git clone https://github.com/Oneflow-Inc/oneflow
+    git submodule update --init --recursive
+    ```
 
-  ```
-  git clone https://github.com/Oneflow-Inc/oneflow --recursive
-  ```
+    Or you could also clone the repo with `--recursive` flag to clone third_party submodules together
 
-- #### Install Python Dev Requirements
+    ```
+    git clone https://github.com/Oneflow-Inc/oneflow --recursive
+    ```
 
-  To install development dependencies and linter tools, run:
-  ```
-  pip3 install -r dev-requirements.txt --user
-  ```
+3. #### Install Python Dev Requirements
 
-- #### Enter Build Directory
+    To install development dependencies and linter tools, run:
+    ```
+    pip3 install -r dev-requirements.txt --user
+    ```
 
-  ```
-  cd build
-  ```
+4. #### Build and Install OneFlow
 
-- #### Build Third Party from Source
+    Enter Build Directory, run:
 
-  Inside directory `build`, run:
-  ```
-  cmake -DTHIRD_PARTY=ON .. 
-  make -j$(nproc)
-  ```
+    ```
+    cd build
+    ```
 
-- #### Build OneFlow
+    Inside directory `build`, run:
+    ```
+    cmake ..
+    make -j$(nproc)
+    make pip_install
+    ```
 
-  Inside directory `build`, run:
-  ```
-  cmake .. -DTHIRD_PARTY=OFF
+### Troubleshooting
 
-  make -j$(nproc)
-  ```
+Please refer to [troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling oneflow from source.
 
-- #### Install OneFlow
+### Advanced Features
 
-  In the root path of OneFlow repo, run:
-  ```
-  pip3 install -e . --user
-  ```
+- #### XRT
 
-  Alternatively, you can also install OneFlow by adding `build/python_scripts` to your `PYTHONPATH`
-
-  For example:
-  ```
-  export PYTHONPATH=$HOME/oneflow/build/python_scripts:$PYTHONPATH
-  ```
-
-- #### Generate Pip Package
-  Please make sure pip package `wheel` is installed:
-  ```
-  pip3 install wheel --user
-  ```
-
-  In the root path of OneFlow repo, run:
-  ```
-  python3 setup.py bdist_wheel
-  ```
-  Your should find a `.whl` package in `dist`.
-
-### Build with XLA
-
-- #### Install Bazel
-
-  Download and install bazel from [here](https://docs.bazel.build/versions/1.0.0/bazel-overview.html) , and version 0.24.1 is recommended. You can confirm bazel is installed successfully by running the following command:
-
-  ```shell
-  bazel version
-  ```
-
-- #### Build Third Parties
-
-  Inside directory `build`, run:
-
-  ```shell
-  cmake -DWITH_XLA=ON -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release ..
-  make -j$(nproc)
-  ```
-
-  If the downloading error occurred, you should go back to the previous step to reinstall the cmake, then clean the file CMakeCache.txt and build the third-parties once again.
-
-- #### Build OneFlow
-
-  Inside directory `build`, run:
-  ```shell
-  cmake .. \
-  -DWITH_XLA=ON \
-  -DTHIRD_PARTY=OFF \
-  -DCMAKE_BUILD_TYPE=Release
-  
-  make -j$(nproc)
-  ```
-
-### Build with TensorRT
-
-- #### Build Third Parties
-
-  1. Download TensorRT(>=6.0) .tgz and unzip the package.
-  
-  2. Inside directory `build`, run:
-  
-  ```shell
-  cmake -DWITH_TENSORRT=ON -DTENSORRT_ROOT=your_tensorrt_path -DTHIRD_PARTY=ON ..
-  make -j$(nproc)
-  ```
-- #### Build OneFlow
-
-  Inside directory `build`, run:
-  ```shell
-  cmake .. \
-  -DWITH_TENSORRT=ON \
-  -DTENSORRT_ROOT=your_tensorrt_path \
-  -DTHIRD_PARTY=OFF
-
-  make -j$(nproc)
-  ```
-
-### Documents
-
- - #### XRT Documents
-
-   You can check this [doc](./oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
+  You can check this [doc](./oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
