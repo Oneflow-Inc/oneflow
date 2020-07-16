@@ -19,7 +19,7 @@ def _run_test(test_case, a, b, dtype, device):
             return flow.math.maximum(a, b)
 
     out = BroadcastMaximum(a, b).get()
-    _check(test_case, a, b, out.ndarray())
+    _check(test_case, a, b, out.numpy())
 
 
 def test_broadcast_maximum_random_gpu(test_case):

@@ -376,13 +376,13 @@ def test_coco_reader(test_case, verbose=VERBOSE):
 
     of_coco_load_fn = _make_coco_data_load_fn(anno_file, image_dir, 1, 2, True, True)
     image_id, image_size, image, bbox, label, poly, poly_index = of_coco_load_fn().get()
-    image_id = image_id.ndarray()
-    image_size = image_size.ndarray()
-    image = image.ndarray_lists()
-    bbox = bbox.ndarray_lists()
-    label = label.ndarray_lists()
-    poly = poly.ndarray_lists()
-    poly_index = poly_index.ndarray_lists()
+    image_id = image_id.numpy()
+    image_size = image_size.numpy()
+    image = image.numpy_lists()
+    bbox = bbox.numpy_lists()
+    label = label.numpy_lists()
+    poly = poly.numpy_lists()
+    poly_index = poly_index.numpy_lists()
 
     samples = _get_coco_image_samples(anno_file, image_dir, image_id)
     for i, sample in enumerate(samples):
@@ -435,7 +435,7 @@ def test_coco_reader_distributed_stride(test_case, verbose=VERBOSE):
         anno_file, image_dir, 4, 8, True, False, True
     )
     for i, sample_ids in enumerate(sampler):
-        image_id = of_coco_load_fn().get().ndarray()
+        image_id = of_coco_load_fn().get().numpy()
         if verbose:
             print("#{} image_id:".format(i), image_id)
             print("#{} sample_ids:".format(i), sample_ids)
@@ -452,7 +452,7 @@ def test_coco_reader_distributed_contiguous(test_case, verbose=VERBOSE):
         anno_file, image_dir, 4, 8, False, False, True
     )
     for i, sample_ids in enumerate(sampler):
-        image_id = of_coco_load_fn().get().ndarray()
+        image_id = of_coco_load_fn().get().numpy()
         if verbose:
             print("#{} image_id:".format(i), image_id)
             print("#{} sample_ids:".format(i), sample_ids)

@@ -170,6 +170,12 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetInputArgModifyFn(
   return *this;
 }
 
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetOutputArgModifyFn(
+    OutputArgModifyFn output_arg_modify_fn) {
+  wrapper_.reg_val.output_arg_modify_fn = std::move(output_arg_modify_fn);
+  return *this;
+}
+
 OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
   CHECK(wrapper_.reg_val.tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << wrapper_.op_type_name;
@@ -184,6 +190,9 @@ OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
   }
   if (wrapper_.reg_val.input_arg_modify_fn == nullptr) {
     wrapper_.reg_val.input_arg_modify_fn = [](GetInputArgModifier, const UserOpConfWrapper&) {};
+  }
+  if (wrapper_.reg_val.output_arg_modify_fn == nullptr) {
+    wrapper_.reg_val.output_arg_modify_fn = [](GetOutputArgModifier, const UserOpConfWrapper&) {};
   }
   return wrapper_;
 }

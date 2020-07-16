@@ -48,8 +48,9 @@ void AdamMdUpdateKernel<device_type, T>::UpdateModel(
       static_cast<T>(adam_conf.beta1()), static_cast<T>(adam_conf.beta2()),
       static_cast<T>(adam_conf.epsilon()), adam_conf.do_bias_correction(), train_step,
       (beta1_t_blob ? beta1_t_blob->dptr<T>() : nullptr),
-      (beta2_t_blob ? beta2_t_blob->dptr<T>() : nullptr), BnInOp2Blob("model_diff")->mut_dptr<T>(),
-      model_blob->mut_dptr<T>(), m_blob->mut_dptr<T>(), v_blob->mut_dptr<T>());
+      (beta2_t_blob ? beta2_t_blob->dptr<T>() : nullptr),
+      const_cast<T*>(BnInOp2Blob("model_diff")->dptr<T>()), model_blob->mut_dptr<T>(),
+      m_blob->mut_dptr<T>(), v_blob->mut_dptr<T>());
 }
 
 template<typename T>
