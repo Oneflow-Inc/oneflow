@@ -57,9 +57,10 @@ def compare_with_tensorflow(
         tf_out = tf.keras.layers.UpSampling2D(
             size=size, data_format=channel_pos, interpolation=interpolation
         )(x)
+    
     loss_diff = test_global_storage.Get("loss_diff").astype(np.float32)
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
@@ -68,7 +69,7 @@ def compare_with_tensorflow(
 def test_upsample(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(10, 11, 12, 13)]
+    arg_dict["input_shape"] = [(2, 11, 12, 13)]
     arg_dict["dtype"] = ["float32", "double"]
     arg_dict["size"] = [(2, 2), 3, (1, 2)]
     arg_dict["data_format"] = ["NCHW", "NHWC"]
