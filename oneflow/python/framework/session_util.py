@@ -311,6 +311,7 @@ def api_enable_eager_execution(val: bool = True) -> None:
 
     Args:
         val (bool, optional): True or False. Defaults to True.
+
     """
     return enable_if.unique([enable_eager_execution])(val=val)
 
@@ -326,6 +327,7 @@ def api_eager_execution_enabled() -> bool:
 
     Returns:
         bool: True or False,
+
     """
     return c_api_util.EagerExecutionEnabled()
 
@@ -343,6 +345,7 @@ def clear_default_session() -> None:
 @oneflow_export("scope.current_scope")
 def current_scope():
     r""" Return current scope
+    
     """
     job_name = oneflow.current_global_function_desc().job_config_proto.job_name
     return session_ctx.GetDefaultSession().GetCurrentScope(job_name)

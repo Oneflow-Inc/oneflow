@@ -18,6 +18,7 @@ def api_enable_eager_execution(val: bool = True) -> None:
 
     Args:
         val (bool, optional): whether  eager execution or not. Defaults to True.
+
     """
     return enable_if.unique([enable_eager_environment])(val)
 
@@ -33,6 +34,7 @@ def api_env_init() -> bool:
 
     Returns:
         bool: true or false
+
     """
     return enable_if.unique([env_init, do_nothing])()
 
@@ -51,7 +53,8 @@ def env_init():
 @oneflow_export("env.current_resource", "current_resource")
 def api_get_current_resource() -> resource_util.Resource:
     r"""Get current resources, such as:machine nums, cpu/gpu device nums,
-    epoch network threed num, rdma params...
+            epoch network threed num, rdma params...
+
     """
     return enable_if.unique([get_current_resource])()
 
@@ -64,6 +67,7 @@ def get_current_resource():
 @oneflow_export("current_machine_id")
 def api_get_current_machine_id():
     r"""get machine id of current machine/node
+
     """
     return enable_if.unique([get_current_machine_id])()
 
@@ -75,12 +79,14 @@ def get_current_machine_id() -> int:
 
 @oneflow_export("env.machine")
 def api_machine(*val: list) -> None:
-    r"""Set machines' hostnames.  For instance::
+    r"""Set machines' hostnames.
 
+    For instance::
         oneflow.env.machine([{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}])
 
     Args:
         val:  `list`, `tuple` or multiple arguments of `dict`. First in the list is the master machine.
+
     """
     return enable_if.unique([machine, do_nothing])(*val)
 
@@ -101,6 +107,7 @@ def api_ctrl_port(val: int) -> None:
 
     Args:
         val: a port number accessible to peer machines
+
     """
     return enable_if.unique([ctrl_port, do_nothing])(val)
 
@@ -117,6 +124,7 @@ def api_data_port(val: int) -> None:
 
     Args:
         val: a port number accessible to peer machines
+
     """
     return enable_if.unique([data_port, do_nothing])(val)
 
@@ -133,6 +141,7 @@ def api_grpc_use_no_signal(val: bool = True) -> None:
 
     Args:
         val (bool, optional): True or False. Defaults to True.
+
     """
     return enable_if.unique([grpc_use_no_signal, do_nothing])(val=val)
 
@@ -149,6 +158,7 @@ def api_log_dir(val: str) -> None:
 
     Args:
         val (str): string , log file path
+
     """
     return enable_if.unique([log_dir, do_nothing])(val)
 
@@ -165,6 +175,7 @@ def api_logtostderr(val: int) -> None:
 
     Args:
         val (int): [description]
+
     """
     return enable_if.unique([logtostderr, do_nothing])(val)
 
@@ -182,6 +193,7 @@ def api_logbuflevel(val: int) -> None:
 
     Args:
         val (int): int, number of level
+        
     """
     return enable_if.unique([logbuflevel, do_nothing])(val)
 

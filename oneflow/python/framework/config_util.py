@@ -13,8 +13,6 @@ def api_load_library(val: str) -> None:
     Args:
         val (str): library path
 
-    Returns:
-        [type]: None
     """
     return enable_if.unique([load_library, do_nothing])(val)
 
@@ -32,6 +30,7 @@ def api_machine_num(val: int) -> None:
 
     Args:
         val (int): available number of machines
+
     """
     return enable_if.unique([machine_num, do_nothing])(val)
 
@@ -50,6 +49,7 @@ def api_gpu_device_num(val: int) -> None:
     Args:
         val (int): number of GPUs. It is identical on every machine. In other words, 
         you can't specify different number of GPUs you would like to use on each machine.
+
     """
     return enable_if.unique([gpu_device_num, do_nothing])(val)
 
@@ -67,6 +67,7 @@ def api_cpu_device_num(val: int) -> None:
 
     Args:
         val (int): number of CPUs. It is identical on every machine.
+
     """
     return enable_if.unique([cpu_device_num, do_nothing])(val)
 
@@ -80,8 +81,8 @@ def cpu_device_num(val):
 
 @oneflow_export("config.comm_net_worker_num")
 def api_comm_net_worker_num(val: int) -> None:
-    """Set up the workers number in epoch  mode network,
-          If use RDMA mode network, then doesn't need.
+    r"""Set up the workers number in epoll  mode network,
+            If use RDMA mode network, then doesn't need.
 
     Args:
         val (int): number of workers
@@ -102,6 +103,7 @@ def api_max_mdsave_worker_num(val: int) -> None:
 
     Args:
         val (int):  max number of workers
+
     """
     return enable_if.unique([max_mdsave_worker_num, do_nothing])(val)
 
@@ -115,10 +117,11 @@ def max_mdsave_worker_num(val):
 
 @oneflow_export("config.enable_numa_aware_cuda_malloc_host")
 def api_numa_aware_cuda_malloc_host(val: bool = True) -> None:
-    """Whether or not let numa know  that  cuda allocated host's memory.
+    r"""Whether or not let numa know  that  cuda allocated host's memory.
 
     Args:
         val (bool, optional): True or False. Defaults to True.
+        
     """
     return enable_if.unique([enable_numa_aware_cuda_malloc_host, do_nothing])(val)
 
@@ -136,6 +139,7 @@ def api_compute_thread_pool_size(val: int) -> None:
 
     Args:
         val (int): size of  thread pool
+
     """
     return enable_if.unique([compute_thread_pool_size, do_nothing])(val)
 
@@ -153,6 +157,7 @@ def api_rdma_mem_block_mbyte(val: int) -> None:
 
     Args:
         val (int): size of block, e.g. 1024(mb)
+
     """
     return enable_if.unique([rdma_mem_block_mbyte, do_nothing])(val)
 
@@ -170,6 +175,7 @@ def api_rdma_recv_msg_buf_mbyte(val: int) -> None:
 
     Args:
         val (int): buffer size, e.g. 1024(mb)
+
     """
     return enable_if.unique([rdma_recv_msg_buf_mbyte, do_nothing])(val)
 
@@ -187,6 +193,7 @@ def api_reserved_host_mem_mbyte(val: int) -> None:
 
     Args:
         val (int):  memory size, e.g. 1024(mb)
+
     """
     return enable_if.unique([reserved_host_mem_mbyte, do_nothing])(val)
 
@@ -204,6 +211,7 @@ def api_reserved_device_mem_mbyte(val: int) -> None:
 
     Args:
         val (int):  memory size, e.g. 1024(mb)
+
     """
     return enable_if.unique([reserved_device_mem_mbyte, do_nothing])(val)
 
@@ -217,11 +225,12 @@ def reserved_device_mem_mbyte(val):
 
 @oneflow_export("config.use_rdma")
 def api_use_rdma(val: bool = True) -> None:
-    """Whether use rdma mode or not, 
-          if false,then use normal epoch mode
+    r"""Whether use RDMA to speed up data transmission in cluster nodes or not.
+          if not, then use normal epoll mode.
 
     Args:
         val (bool, optional):  Defaults to True.
+
     """
     return enable_if.unique([use_rdma, do_nothing])(val=val)
 
@@ -239,6 +248,7 @@ def api_thread_enable_local_message_queue(val: bool) -> None:
 
     Args:
         val (bool):  True or False
+
     """
     return enable_if.unique([thread_enable_local_message_queue, do_nothing])(val)
 
@@ -256,6 +266,7 @@ def api_enable_debug_mode(val: bool) -> None:
 
     Args:
         val (bool):  True or False
+
     """
     return enable_if.unique([enable_debug_mode, do_nothing])(val)
 
@@ -273,6 +284,7 @@ def api_save_downloaded_file_to_local_fs(val: bool = True) -> None:
 
     Args:
         val (bool, optional): True or False. Defaults to True.
+
     """
     return enable_if.unique([save_downloaded_file_to_local_fs, do_nothing])(val=val)
 
@@ -290,6 +302,7 @@ def api_persistence_buf_byte(val: int) -> None:
 
     Args:
         val (int): e.g. 1024(bytes)
+
     """
     return enable_if.unique([persistence_buf_byte, do_nothing])(val)
 
@@ -307,6 +320,7 @@ def api_enable_model_io_v2(val):
 
     Args:
         val ([type]): True or False
+
     """
     return enable_if.unique([enable_model_io_v2, do_nothing])(val)
 
@@ -324,6 +338,7 @@ def api_collect_act_event(val: bool = True) -> None:
 
     Args:
         val (bool, optional): True or False. Defaults to True.
+
     """
     return enable_if.unique([collect_act_event, do_nothing])(val=val)
 
@@ -341,6 +356,7 @@ def api_enable_fusion(val: bool = True) -> None:
 
     Args:
         val (bool, optional): True or False. Defaults to True.
+
     """
     return enable_if.unique([enable_fusion, do_nothing])(val=val)
 
@@ -356,8 +372,10 @@ def enable_fusion(val=True):
 def api_num_callback_threads(val: int) -> None:
     r"""Set up number of callback threads for boxing process.
             Boxing is used to convert between different parallel properties of logical tensor
+
     Args:
         val (int): number of  callback threads
+
     """
     return enable_if.unique([num_callback_threads, do_nothing])(val)
 
@@ -375,6 +393,7 @@ def api_nccl_num_streams(val: int) -> None:
 
     Args:
         val (int): number of streams
+
     """
     return enable_if.unique([nccl_num_streams, do_nothing])(val)
 
@@ -392,6 +411,7 @@ def api_nccl_fusion_threshold_mb(val: int) -> None:
 
     Args:
         val (int): int number, e.g. 10(mb)
+
     """
     return enable_if.unique([nccl_fusion_threshold_mb, do_nothing])(val)
 
@@ -409,6 +429,7 @@ def api_nccl_fusion_all_reduce_use_buffer(val: bool) -> None:
 
     Args:
         val (bool): True or False
+
     """
     return enable_if.unique([nccl_fusion_all_reduce_use_buffer, do_nothing])(val)
 
@@ -428,6 +449,7 @@ def api_nccl_fusion_all_reduce(val: bool) -> None:
 
     Args:
         val (bool):  True or False
+
     """
     return enable_if.unique([nccl_fusion_all_reduce, do_nothing])(val)
 
@@ -445,6 +467,7 @@ def api_nccl_fusion_reduce_scatter(val: bool) -> None:
 
     Args:
         val (bool): True or False
+
     """
     return enable_if.unique([nccl_fusion_reduce_scatter, do_nothing])(val)
 
@@ -462,6 +485,7 @@ def api_nccl_fusion_all_gather(val: bool) -> None:
 
     Args:
         val (bool): True or False
+
     """
     return enable_if.unique([nccl_fusion_all_gather, do_nothing])(val)
 
@@ -479,6 +503,7 @@ def api_nccl_fusion_reduce(val: bool) -> None:
 
     Args:
         val (bool): True or False
+
     """
     return enable_if.unique([nccl_fusion_reduce, do_nothing])(val)
 
@@ -496,6 +521,7 @@ def api_nccl_fusion_broadcast(val: bool) -> None:
 
     Args:
         val (bool): True or False
+        
     """
     return enable_if.unique([nccl_fusion_broadcast, do_nothing])(val)
 
