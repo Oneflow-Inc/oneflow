@@ -25,7 +25,7 @@ class Projector(object):
         ):
             raise OSError("You must create only one embedding projector!")
         self.embedding_filename_ = (
-            self.logdir_ + "/projector." + str(time.time()) + ".v2"
+            self.logdir_ + "/projector." + str(int(time.time())) + ".log"
         )
 
     def create_exception_projector(self):
@@ -34,7 +34,7 @@ class Projector(object):
         ):
             raise OSError("You must create only one embedding projector!")
         self.exception_filename_ = (
-            self.logdir_ + "/projector.gradit" + str(time.time()) + ".v2"
+            self.logdir_ + "/projector.gradit." + str(int(time.time())) + ".log"
         )
 
     @property

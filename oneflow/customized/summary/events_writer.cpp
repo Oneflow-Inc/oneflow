@@ -29,11 +29,8 @@ Maybe<void> EventsWriter::TryToInit() {
   }
 
   int32_t current_time = CurrentSecondTime();
-  char hostname[255];
-  CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
-
   char fname[100] = {'\0'};
-  snprintf(fname, 100, "events.out.tfevents.%d.%s.v2", current_time, hostname);
+  snprintf(fname, 100, "event.%d.log", current_time);
 
   filename_ = JoinPath(log_dir_, fname);
   file_system_->NewWritableFile(filename_, &writable_file_);
