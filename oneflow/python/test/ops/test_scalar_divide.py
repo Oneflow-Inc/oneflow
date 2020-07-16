@@ -12,7 +12,7 @@ def test_scalar_div_2(test_case):
         return a / 2
 
     x = np.random.rand(10, 10).astype(np.float32) + 1
-    y = Div2Job(x).get().ndarray()
+    y = Div2Job(x).get().numpy()
     test_case.assertTrue(np.allclose(y, x / 2))
 
 
@@ -26,7 +26,7 @@ def test_scalar_div_by_2(test_case):
         return 2 / a
 
     x = np.random.rand(10, 10).astype(np.float32) + 1
-    y = DivBy2Job(x).get().ndarray()
+    y = DivBy2Job(x).get().numpy()
     test_case.assertTrue(np.allclose(y, 2 / x))
 
 

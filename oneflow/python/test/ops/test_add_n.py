@@ -11,7 +11,7 @@ def test_naive(test_case):
         return flow.math.add_n(xs)
 
     inputs = [np.random.rand(5, 2).astype(np.float32) for i in range(3)]
-    r = AddJob(inputs).get().ndarray()
+    r = AddJob(inputs).get().numpy()
     test_case.assertTrue(np.allclose(r, sum(inputs)))
 
 
@@ -85,5 +85,5 @@ def GenerateTest(test_case, shape, num_inputs):
         return flow.math.add_n(xs)
 
     inputs = [np.random.rand(*shape).astype(np.float32) for i in range(num_inputs)]
-    r = AddJob(inputs).get().ndarray()
+    r = AddJob(inputs).get().numpy()
     test_case.assertTrue(np.allclose(r, sum(inputs)))

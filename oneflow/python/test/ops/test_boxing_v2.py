@@ -30,7 +30,7 @@ def _test_split_to_split(
         return dst
 
     x = np.random.rand(96, 96).astype(np.float32)
-    y = split_to_split_job(x).get().ndarray()
+    y = split_to_split_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
 
 
@@ -71,7 +71,7 @@ def _test_split_to_broadcast(
         return dst
 
     x = np.random.rand(96, 96).astype(np.float32)
-    y = split_to_broadcast_job(x).get().ndarray()
+    y = split_to_broadcast_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
 
 
@@ -111,7 +111,7 @@ def _test_broadcast_to_split(
         return dst
 
     x = np.random.rand(96, 96).astype(np.float32)
-    y = broadcast_to_split_job(x).get().ndarray()
+    y = broadcast_to_split_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
 
 
@@ -152,7 +152,7 @@ def _test_partial_sum_to_split(
         return dst
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    y = partial_sum_to_split_job(x).get().ndarray()
+    y = partial_sum_to_split_job(x).get().numpy()
     test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
 
 
@@ -188,7 +188,7 @@ def _test_partial_sum_to_broadcast(
         return dst
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    y = partial_sum_to_broadcast_job(x).get().ndarray()
+    y = partial_sum_to_broadcast_job(x).get().numpy()
     test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
 
 
@@ -222,7 +222,7 @@ def _test_broadcast_to_broadcast(
         return dst
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    y = broadcast_to_broadcast_job(x).get().ndarray()
+    y = broadcast_to_broadcast_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
 
 
@@ -263,9 +263,9 @@ def _test_multi_lbi(
         return t1_0, t1_1, t1_2
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    r0 = multi_lbi_job(x).get()[0].ndarray()
-    r1 = multi_lbi_job(x).get()[1].ndarray()
-    r2 = multi_lbi_job(x).get()[2].ndarray()
+    r0 = multi_lbi_job(x).get()[0].numpy()
+    r1 = multi_lbi_job(x).get()[1].numpy()
+    r2 = multi_lbi_job(x).get()[2].numpy()
     test_case.assertTrue(np.array_equal(x, r0))
     test_case.assertTrue(np.array_equal(x, r1))
     test_case.assertTrue(np.array_equal(x, r2))

@@ -56,7 +56,7 @@ def RunOneflowBinaryOp(device_type, flow_op, x, y, data_type):
     # Oneflow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    out = FlowJob(x, y).get().ndarray()
+    out = FlowJob(x, y).get().numpy()
     x_diff = test_global_storage.Get("x_diff")
     y_diff = test_global_storage.Get("y_diff")
     return out, x_diff, y_diff
