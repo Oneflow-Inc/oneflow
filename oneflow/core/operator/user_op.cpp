@@ -274,6 +274,16 @@ void UserOp::InitFromOpConf() {
       return nullptr;
     };
     val_->input_arg_modify_fn(GetInputArgModifierFn, user_conf_wrapper);
+
+    user_op::GetOutputArgModifier GetOutputArgModifierFn =
+        [&](const std::string& out_arg_name, int32_t out_arg_index) -> user_op::OutputArgModifier* {
+      std::string obn = GenRepeatedBn(out_arg_name, out_arg_index);
+      if (std::find(output_bns().begin(), output_bns().end(), obn) != output_bns().end()) {
+        return MutOutputBlobModifier4Obn(obn);
+      }
+      return nullptr;
+    };
+    val_->output_arg_modify_fn(GetOutputArgModifierFn, user_conf_wrapper);
   }
 }
 

@@ -22,7 +22,7 @@ def fixed_tensor_def_test(test_case, func_config):
         return ccrelu(a, "my_cc_relu_op")
 
     x = np.random.rand(5, 2).astype(np.float32)
-    y = ReluJob(x).get().ndarray()
+    y = ReluJob(x).get().numpy()
     test_case.assertTrue(np.array_equal(y, np.maximum(x, 0)))
 
 

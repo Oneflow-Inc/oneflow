@@ -11,5 +11,5 @@ def test_repeat_acc(test_case):
         return flow.acc(flow.repeat(a, 3), 3)
 
     x = np.random.rand(3, 4).astype(np.float32)
-    y = RepeatAccJob(x).get().ndarray()
+    y = RepeatAccJob(x).get().numpy()
     test_case.assertTrue(np.array_equal(y, x * 3))

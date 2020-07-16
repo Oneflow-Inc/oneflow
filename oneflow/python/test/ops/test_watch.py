@@ -7,7 +7,7 @@ def test_simple(test_case):
     data = np.ones((10,), dtype=np.float32)
 
     def EqOnes(x):
-        test_case.assertTrue(np.allclose(data, x.ndarray()))
+        test_case.assertTrue(np.allclose(data, x.numpy()))
 
     @flow.global_function()
     def ReluJob(x=flow.FixedTensorDef((10,))):
@@ -21,7 +21,7 @@ def test_two_device(test_case):
     data = np.ones((10,), dtype=np.float32)
 
     def EqOnes(x):
-        test_case.assertTrue(np.allclose(data, x.ndarray()))
+        test_case.assertTrue(np.allclose(data, x.numpy()))
 
     @flow.global_function()
     def ReluJob(x=flow.FixedTensorDef((10,))):
