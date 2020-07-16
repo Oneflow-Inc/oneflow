@@ -138,13 +138,16 @@ class SSDRandomCropGenerator final : public user_op::OpKernelState {
  protected:
   template<typename Iter>
   Iter RandomChoice(Iter start, Iter end) {
+    CHECK(start != end);
     std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
     std::advance(start, dis(gen_));
     return start;
   }
 
   template<typename T>
-  T RandomUniform(std::pair<T, T> range) {
+  T RandomUniform(const std::pair<T, T>& range) {
+    CHECK_LE(range.first, range.second);
+    if (range.first == range.second) { return range.first; }
     std::uniform_real_distribution<T> dis(range.first, range.second);
     return dis(gen_);
   }
@@ -311,7 +314,7 @@ class SSDRandomCropKernel final : public user_op::OpKernel {
     };
     auto* kernel_state = dynamic_cast<SSDRandomCropKernelState*>(state);
 
-    MultiThreadLoop(image_tensor->shape().elem_cnt(), [&](size_t i) {
+    MultiThreadLoop(batch_size, [&](size_t i) {
       const TensorBuffer& image_buffer = image_tensor->dptr<TensorBuffer>()[i];
       CHECK_EQ(image_buffer.shape().NumAxes(), 3);
       const int64_t image_height = image_buffer.shape().At(0);

@@ -479,6 +479,7 @@ def ssd_random_crop(
     if iou_overlap_ranges is not None:
         min_ious = []
         max_ious = []
+        assert len(iou_overlap_ranges) > 0
         for iou_range in iou_overlap_ranges:
             if iou_range is None:
                 min_ious.append(-1.0)
@@ -493,7 +494,7 @@ def ssd_random_crop(
                     max_iou = iou_range[1]
                 assert 0.0 <= min_iou <= 1.0
                 assert 0.0 <= max_iou <= 1.0
-                assert min_iou <= max_iou
+                assert min_iou < max_iou
                 min_ious.append(min_iou)
                 max_ious.append(max_iou)
 
@@ -504,6 +505,7 @@ def ssd_random_crop(
         assert shrink_rate_array.shape == (2, 2)
         assert numpy.all(shrink_rate_array[0, :] > 0.0)
         assert numpy.all(shrink_rate_array[1, :] <= 1.0)
+        assert numpy.all(shrink_rate_array[0, :] <= shrink_rate_array[1, :])
         op.Attr("min_width_shrink_rate", shrink_rate_array[0][0]).Attr(
             "max_width_shrink_rate", shrink_rate_array[0][1]
         ).Attr("min_height_shrink_rate", shrink_rate_array[1][0]).Attr(
@@ -513,6 +515,7 @@ def ssd_random_crop(
     if aspect_ratio_range is not None:
         assert len(aspect_ratio_range) == 2
         assert all(a > 0.0 for a in aspect_ratio_range)
+        assert aspect_ratio_range[0] < aspect_ratio_range[1]
         op.Attr("min_crop_aspect_ratio", aspect_ratio_range[0]).Attr(
             "max_crop_aspect_ratio", aspect_ratio_range[1]
         )

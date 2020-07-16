@@ -15,6 +15,8 @@ Maybe<void> CheckOpAttr(const user_op::UserOpDefWrapper& def,
   bool invalid_iou = false;
   if (min_iou_vec.size() != max_iou_vec.size()) {
     invalid_iou = true;
+  } else if (min_iou_vec.size() == 0) {
+    invalid_iou = true;
   } else {
     FOR_RANGE(size_t, i, 0, min_iou_vec.size()) {
       if (min_iou_vec.at(i) > 1.0f || max_iou_vec.at(i) > 1.0f) { invalid_iou = true; }
@@ -36,8 +38,8 @@ Maybe<void> CheckOpAttr(const user_op::UserOpDefWrapper& def,
   float min_height_shrink_rate = conf.attr<float>("min_height_shrink_rate");
   float max_height_shrink_rate = conf.attr<float>("max_height_shrink_rate");
   if (min_width_shrink_rate <= 0.0f || min_height_shrink_rate <= 0.0f
-      || min_width_shrink_rate >= max_width_shrink_rate
-      || min_height_shrink_rate >= max_height_shrink_rate || max_width_shrink_rate > 1.0f
+      || min_width_shrink_rate > max_width_shrink_rate
+      || min_height_shrink_rate > max_height_shrink_rate || max_width_shrink_rate > 1.0f
       || max_height_shrink_rate >= 1.0f) {
     err << ", min_width_shrink_rate: " << min_width_shrink_rate
         << ", max_width_shrink_rate: " << max_width_shrink_rate
