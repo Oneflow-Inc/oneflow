@@ -307,6 +307,11 @@ class Session(object):
 
 @oneflow_export("enable_eager_execution")
 def api_enable_eager_execution(val: bool = True) -> None:
+    r"""Whether or not enable eager mode for execute job
+
+    Args:
+        val (bool, optional): True or False. Defaults to True.
+    """
     return enable_if.unique([enable_eager_execution])(val=val)
 
 
@@ -317,6 +322,11 @@ def enable_eager_execution(val=True):
 
 @oneflow_export("eager_execution_enabled")
 def api_eager_execution_enabled() -> bool:
+    """Get current setting of the job, if enable eager execution mode ,then return True
+
+    Returns:
+        bool: True or False,
+    """
     return c_api_util.EagerExecutionEnabled()
 
 
