@@ -17,7 +17,7 @@ def _run_test(test_case, x, value, dtype=None, device="gpu"):
         return flow.constant_like(x, value=value, dtype=dtype)
 
     y = ConstantLikeJob(x).get()
-    _check(test_case, x, y.ndarray(), value, dtype=dtype)
+    _check(test_case, x, y.numpy(), value, dtype=dtype)
 
 
 def test_constant_like_gpu_float(test_case):

@@ -36,7 +36,7 @@ def test_multi_node_comm_net(test_case):
     for i in index:
         data.append(np.ones((10, 2,), dtype=np.float32) * i)
     for i in range(5):
-        ret = ReluJob(data[i]).get().ndarray()
+        ret = ReluJob(data[i]).get().numpy()
         print(ret)
         if index[i] > 0:
             test_case.assertTrue(

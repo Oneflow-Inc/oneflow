@@ -22,12 +22,12 @@ def compare_with_tensorflow(test_case, device_type, value, shape, rtol=1e-5, ato
             z = flow.math.relu(y)
             return x
 
-    numpy0 = ConstantJob().get().ndarray()
+    numpy0 = ConstantJob().get().numpy()
     of_out = ConstantJob().get()
-    test_case.assertTrue(np.allclose(of_out.ndarray(), numpy0, rtol=rtol, atol=atol))
+    test_case.assertTrue(np.allclose(of_out.numpy(), numpy0, rtol=rtol, atol=atol))
     tf_out = tf.constant(value, dtype=float, shape=shape)
     test_case.assertTrue(
-        np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
+        np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
     )
 
 
