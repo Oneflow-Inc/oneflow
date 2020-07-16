@@ -378,11 +378,11 @@ def test_coco_reader(test_case, verbose=VERBOSE):
     image_id, image_size, image, bbox, label, poly, poly_index = of_coco_load_fn().get()
     image_id = image_id.numpy()
     image_size = image_size.numpy()
-    image = image.ndarray_lists()
-    bbox = bbox.ndarray_lists()
-    label = label.ndarray_lists()
-    poly = poly.ndarray_lists()
-    poly_index = poly_index.ndarray_lists()
+    image = image.numpy_lists()
+    bbox = bbox.numpy_lists()
+    label = label.numpy_lists()
+    poly = poly.numpy_lists()
+    poly_index = poly_index.numpy_lists()
 
     samples = _get_coco_image_samples(anno_file, image_dir, image_id)
     for i, sample in enumerate(samples):

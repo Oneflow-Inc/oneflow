@@ -123,9 +123,9 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
             print(
                 "image_size: {}\n".format(image_size.numpy().shape), image_size.numpy(),
             )
-            print("gt_bbox:\n", gt_bbox.ndarray_lists()[0])
-            print("gt_label:\n", gt_label.ndarray_lists()[0])
-            print("gt_mask:\n", gt_mask.ndarray_lists()[0])
+            print("gt_bbox:\n", gt_bbox.numpy_lists()[0])
+            print("gt_label:\n", gt_label.numpy_lists()[0])
+            print("gt_mask:\n", gt_mask.numpy_lists()[0])
 
     print(
         "mean of time elapsed of {} iters (dropped {} first iters): {}".format(

@@ -105,7 +105,7 @@ def MergeLocalBlobs(local_blob_list, mirrored_blob):
     if mirrored_blob.is_tensor_list:
         for local_blob in local_blob_list:
             assert type(local_blob) is LocalMirroredTensorList
-        return LocalMirroredTensorList([x.ndarray_lists()[0] for x in local_blob_list])
+        return LocalMirroredTensorList([x.numpy_lists()[0] for x in local_blob_list])
     return LocalMirroredTensor(
         [x.numpy_list()[0] for x in local_blob_list],
         is_dynamic=mirrored_blob.is_dynamic,

@@ -65,7 +65,7 @@ def test_MirroredTensorListDef(test_case):
         return x
 
     data = np.ones((1, 5), dtype=np.float32)
-    ndarray_list = Foo([[data]]).get().ndarray_lists()
+    ndarray_list = Foo([[data]]).get().numpy_lists()
     test_case.assertEqual(len(ndarray_list), 1)
     test_case.assertEqual(len(ndarray_list[0]), 1)
     test_case.assertTrue(np.allclose(ndarray_list[0][0], data))
