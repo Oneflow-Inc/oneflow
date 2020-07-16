@@ -12,7 +12,7 @@ class TensorListToTensorBufferOp final : public Operator {
   void InitFromOpConf() override {
     CHECK(op_conf().has_tensor_list_to_tensor_buffer_conf());
     EnrollInputBn("in", false);
-    EnrollOutputBn("out", false);
+    EnrollOutputBn("out", false)->set_header_infered_before_compute(false);
   }
 
   const PbMessage& GetCustomizedConf() const override {
