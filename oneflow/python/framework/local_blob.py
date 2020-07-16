@@ -4,6 +4,7 @@ import numpy as np
 import oneflow.python.framework.remote_blob as remote_blob_util
 import traceback
 
+
 class LocalMirroredTensor(object):
     def __init__(self, ndarray_list, is_dynamic, concat_axis=None):
         self.ndarray_list_ = ndarray_list
