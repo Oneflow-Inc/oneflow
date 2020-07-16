@@ -57,11 +57,11 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
 
 @oneflow_export("distribute.mirrored_strategy_enabled")
 def MirroredStrategyEnabled() -> bool:
-    r"""
+    """Determines whether mirroed strategy is enable in current context where this function is called.
 
     Returns:
-        bool: `True` if mirrored strategy is enabled in current context where this function is called.
-
+        bool: `True` if mirrored strategy is enabled, otherwise `False`.
+    
     """
     return distribute_ctx.IsMirroredStrategyEnabled()
 
@@ -92,17 +92,30 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
 
 @oneflow_export("distribute.consistent_strategy_enabled")
 def ConsistentStrategyEnabled() -> bool:
-    r"""
+    """Determines whether consistent strategy is enable in current context where this function is called.
 
     Returns:
-        bool: `True` if consistent strategy is enabled in current context where this function is called.
-
+        bool: `True` if consistent strategy is enabled, otherwise `False`.
+    
     """
     return distribute_ctx.IsConsistentStrategyEnabled()
 
 
 @oneflow_export("distribute.split")
 def split(axis: int) -> SplitDistribute:
+    """Generate a split scheme in which op will be splitted at `axis`.
+
+    Args:
+        axis (int): At `axis` the op will be splitted. 
+
+    Returns:
+        SplitDistribute: Split scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
+    
+    Example:
+
+        weight = weight.with_distribute(distribute.split(1))
+
+    """
     assert type(axis) is int
     assert str(axis) in _axis_str2split_axis_obj, "not a valid split. expected: [0, 11)"
     return _axis_str2split_axis_obj[str(axis)]
@@ -110,11 +123,26 @@ def split(axis: int) -> SplitDistribute:
 
 @oneflow_export("distribute.broadcast")
 def broadcast() -> BroadcastDistribute:
+    """Generate a broadcast scheme.
+
+    Returns:
+        BroadcastDistribute: Broadcast scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
+    
+    Example:
+        segment_ids = segment_ids.with_distribute(flow.distribute.broadcast())
+    
+    """
     return _broadcast
 
 
 @oneflow_export("distribute.auto")
 def auto() -> AutoDistribute:
+    """Generate a broadcast scheme.
+
+    Returns:
+        AutoDistribute: Auto distribute scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
+    
+    """
     return _auto
 
 
