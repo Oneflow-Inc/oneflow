@@ -23,7 +23,7 @@ REGISTER_CPU_ONLY_USER_OP("flush_summary_writer")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
-REGISTER_CPU_ONLY_USER_OP("write_scalar")
+REGISTER_CPU_ONLY_USER_OP("summary_write_scalar")
     .Input("in")
     .Input("step")
     .Input("tag")
@@ -35,7 +35,7 @@ REGISTER_CPU_ONLY_USER_OP("write_scalar")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
-REGISTER_CPU_ONLY_USER_OP("write_histogram")
+REGISTER_CPU_ONLY_USER_OP("summary_write_histogram")
     .Input("in")
     .Input("step")
     .Input("tag")
@@ -45,7 +45,7 @@ REGISTER_CPU_ONLY_USER_OP("write_histogram")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
-REGISTER_CPU_ONLY_USER_OP("write_pb")
+REGISTER_CPU_ONLY_USER_OP("summary_write_pb")
     .Input("in")
     .Input("step")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -54,7 +54,7 @@ REGISTER_CPU_ONLY_USER_OP("write_pb")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
-REGISTER_CPU_ONLY_USER_OP("write_image")
+REGISTER_CPU_ONLY_USER_OP("summary_write_image")
     .Input("in")
     .Input("step")
     .Input("tag")

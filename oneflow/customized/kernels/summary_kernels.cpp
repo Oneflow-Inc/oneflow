@@ -12,10 +12,10 @@ namespace oneflow {
 namespace summary {
 
 template<typename T>
-class WriteScalar final : public user_op::OpKernel {
+class SummaryWriteScalar final : public user_op::OpKernel {
  public:
-  WriteScalar() = default;
-  ~WriteScalar() = default;
+  SummaryWriteScalar() = default;
+  ~SummaryWriteScalar() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -37,8 +37,8 @@ class WriteScalar final : public user_op::OpKernel {
 };
 
 #define REGISTER_SCALAR_USER_KERNEL(dtype)                            \
-  REGISTER_USER_KERNEL("write_scalar")                                \
-      .SetCreateFn<WriteScalar<dtype>>()                              \
+  REGISTER_USER_KERNEL("summary_write_scalar")                        \
+      .SetCreateFn<SummaryWriteScalar<dtype>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
@@ -81,10 +81,10 @@ REGISTER_USER_KERNEL("flush_summary_writer")
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
 
 template<typename T>
-class WriteHistogram final : public user_op::OpKernel {
+class SummaryWriteHistogram final : public user_op::OpKernel {
  public:
-  WriteHistogram() = default;
-  ~WriteHistogram() = default;
+  SummaryWriteHistogram() = default;
+  ~SummaryWriteHistogram() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -103,8 +103,8 @@ class WriteHistogram final : public user_op::OpKernel {
 };
 
 #define REGISTER_HISTOGRAM_USER_KERNEL(dtype)                         \
-  REGISTER_USER_KERNEL("write_histogram")                             \
-      .SetCreateFn<WriteHistogram<dtype>>()                           \
+  REGISTER_USER_KERNEL("summary_write_histogram")                     \
+      .SetCreateFn<SummaryWriteHistogram<dtype>>()                    \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
@@ -116,10 +116,10 @@ REGISTER_HISTOGRAM_USER_KERNEL(int8_t)
 REGISTER_HISTOGRAM_USER_KERNEL(uint8_t)
 
 template<typename T>
-class WritePb final : public user_op::OpKernel {
+class SummaryWritePb final : public user_op::OpKernel {
  public:
-  WritePb() = default;
-  ~WritePb() = default;
+  SummaryWritePb() = default;
+  ~SummaryWritePb() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -135,16 +135,16 @@ class WritePb final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-REGISTER_USER_KERNEL("write_pb")
-    .SetCreateFn<WritePb<int8_t>>()
+REGISTER_USER_KERNEL("summary_write_pb")
+    .SetCreateFn<SummaryWritePb<int8_t>>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      & (user_op::HobDataType("in", 0) == GetDataType<int8_t>::value));
 
 template<typename T>
-class WriteImage final : public user_op::OpKernel {
+class SummaryWriteImage final : public user_op::OpKernel {
  public:
-  WriteImage() = default;
-  ~WriteImage() = default;
+  SummaryWriteImage() = default;
+  ~SummaryWriteImage() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -162,8 +162,8 @@ class WriteImage final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-REGISTER_USER_KERNEL("write_image")
-    .SetCreateFn<WriteImage<uint8_t>>()
+REGISTER_USER_KERNEL("summary_write_image")
+    .SetCreateFn<SummaryWriteImage<uint8_t>>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      & (user_op::HobDataType("in", 0) == GetDataType<uint8_t>::value));
 

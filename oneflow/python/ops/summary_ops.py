@@ -13,7 +13,7 @@ def write_scalar(value, step, tag, name=None):
         name = id_util.UniqueStr("WriteScalar_")
     (
         flow.user_op_builder(name)
-        .Op("write_scalar")
+        .Op("summary_write_scalar")
         .Input("in", [value])
         .Input("step", [step])
         .Input("tag", [tag])
@@ -48,7 +48,7 @@ def write_histogram(value, step, tag, name=None):
         name = id_util.UniqueStr("WriteHistogram_")
     (
         flow.user_op_builder(name)
-        .Op("write_histogram")
+        .Op("summary_write_histogram")
         .Input("in", [value])
         .Input("step", [step])
         .Input("tag", [tag])
@@ -63,7 +63,7 @@ def write_pb(value, step=None, name=None):
         name = id_util.UniqueStr("WritePb_")
     (
         flow.user_op_builder(name)
-        .Op("write_pb")
+        .Op("summary_write_pb")
         .Input("in", [value])
         .Input("step", [step])
         .Build()
@@ -79,7 +79,7 @@ def write_image(value, step=None, tag=None, name=None):
         tag = "image"
     (
         flow.user_op_builder(name)
-        .Op("write_image")
+        .Op("summary_write_image")
         .Input("in", [value])
         .Input("step", [step])
         .Input("tag", [tag])
