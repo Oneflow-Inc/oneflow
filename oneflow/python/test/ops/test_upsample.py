@@ -57,7 +57,7 @@ def compare_with_tensorflow(
         tf_out = tf.keras.layers.UpSampling2D(
             size=size, data_format=channel_pos, interpolation=interpolation
         )(x)
-    
+
     loss_diff = test_global_storage.Get("loss_diff").astype(np.float32)
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
