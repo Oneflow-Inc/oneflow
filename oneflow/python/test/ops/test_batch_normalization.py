@@ -116,7 +116,7 @@ def CompareNnBnWithTensorFlow(
 
     check_point = flow.train.CheckPoint()
     check_point.init()
-    of_y = FlowNnBnJob(x, mean, variance, offset, scale).get().ndarray()
+    of_y = FlowNnBnJob(x, mean, variance, offset, scale).get().numpy()
     of_x_diff = test_global_storage.Get("x_diff")
 
     def TensorFlowNnBn(x, mean, variance, offset, scale):
@@ -199,7 +199,7 @@ def RunOneflowLayerBn(
 
     check_point = flow.train.CheckPoint()
     check_point.init()
-    y = FlowJob(x).get().ndarray()
+    y = FlowJob(x).get().numpy()
     if trainable:
         x_diff = test_global_storage.Get("x_diff")
         return y, x_diff

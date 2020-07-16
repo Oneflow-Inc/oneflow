@@ -12,11 +12,11 @@ def test_bernoulli(test_case):
         return flow.random.bernoulli(a)
 
     x = np.ones((10, 10), dtype=np.float32)
-    y = BernoulliJob(x).get().ndarray()
+    y = BernoulliJob(x).get().numpy()
     test_case.assertTrue(np.array_equal(y, x))
 
     x = np.zeros((10, 10), dtype=np.float32)
-    y = BernoulliJob(x).get().ndarray()
+    y = BernoulliJob(x).get().numpy()
     test_case.assertTrue(np.array_equal(y, x))
 
 

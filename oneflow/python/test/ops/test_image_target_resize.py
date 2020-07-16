@@ -28,7 +28,7 @@ def _of_image_target_resize(images, image_static_shape, target_size, max_size):
         return resized_images, size, scale
 
     resized_images, size, scale = image_target_resize_job([images]).get()
-    resized_images = resized_images.ndarray_lists()[0]
+    resized_images = resized_images.numpy_lists()[0]
     size = size.ndarray_list()[0]
     scale = scale.ndarray_list()[0]
     return resized_images, size, scale

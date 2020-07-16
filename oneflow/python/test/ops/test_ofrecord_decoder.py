@@ -166,11 +166,11 @@ def test_ofrecord_decoder(test_case):
 
     for i in range(num_examples // batch_size):
         d = OfrecordDecoderJob().get()
-        test_case.assertTrue(np.array_equal(d["int32"].ndarray(), int32_np[i]))
-        test_case.assertTrue(np.array_equal(d["int64"].ndarray(), int64_np[i]))
-        # test_case.assertTrue(np.array_equal(d['float'].ndarray(), float_np[i]))
-        assert np.allclose(d["float"].ndarray(), float_np[i], rtol=1e-5, atol=1e-5)
-        test_case.assertTrue(np.array_equal(d["double"].ndarray(), double_np[i]))
+        test_case.assertTrue(np.array_equal(d["int32"].numpy(), int32_np[i]))
+        test_case.assertTrue(np.array_equal(d["int64"].numpy(), int64_np[i]))
+        # test_case.assertTrue(np.array_equal(d['float'].numpy(), float_np[i]))
+        assert np.allclose(d["float"].numpy(), float_np[i], rtol=1e-5, atol=1e-5)
+        test_case.assertTrue(np.array_equal(d["double"].numpy(), double_np[i]))
         for j, int8_list in enumerate(d["bytes"]):
             # print(''.join([chr(x) for x in int8_list[0]]), bytes_data[i*batch_size + j])
             assert (
