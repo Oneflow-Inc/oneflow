@@ -341,7 +341,10 @@ def concat(values, axis, name=None):
         A `Blob`
     """
     assert isinstance(values, (list, tuple))
-    assert len(values) >= 2
+    assert len(values) >= 1
+    if len(values) == 1:
+        return values[0]
+
     if axis < 0:
         axis += len(values[0].shape)
     assert axis >= 0 and axis < len(values[0].shape)
