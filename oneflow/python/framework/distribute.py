@@ -111,7 +111,7 @@ def split(axis: int) -> SplitDistribute:
     Returns:
         SplitDistribute: Split scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
     
-    Example:
+    Example::
 
         weight = weight.with_distribute(distribute.split(1))
 
@@ -128,7 +128,8 @@ def broadcast() -> BroadcastDistribute:
     Returns:
         BroadcastDistribute: Broadcast scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
     
-    Example:
+    Example::
+
         segment_ids = segment_ids.with_distribute(flow.distribute.broadcast())
     
     """

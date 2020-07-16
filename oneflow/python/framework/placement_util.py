@@ -74,7 +74,7 @@ def api_placement(
     Returns:
         placement_ctx.DevicePriorPlacementScope:  Placement scope
     
-    Example:
+    Example::
     
         with flow.fixed_placement("gpu", "0:0"):
             logits = lenet(images, train=False)

@@ -103,13 +103,17 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
 def api_oneflow_function(function_config=FunctionConfig()):
     r"""Creates a callable OneFlow global function from a Python function.
     For instance::
+
         @oneflow.global_function(flow.FunctionConfig())
         def train():
             # your model
+    
     Args:
         function_config: a `FunctionConfig` object
+    
     Returns:
         a callable which is called to execute the compiled function
+    
     """
     api = enable_if.unique([lazy_oneflow_function, eager_oneflow_function])
     return api(function_config)
