@@ -96,6 +96,15 @@ def reduce_min(x, axis=None, keepdims=False, name=None):
     return _do_reduce(x, name, "reduce_min", keepdims, axis)
 
 
+@oneflow_export("math.reduce_max")
+def reduce_max(x, axis=None, keepdims=False, name=None):
+    name = _gen_unique_name_if_need(name, "ReduceMax_")
+    axis = _check_axis(axis, x.shape)
+    if len(axis) == 0:
+        return x
+    return _do_reduce(x, name, "reduce_max", keepdims, axis)
+
+
 @oneflow_export("math.reduce_prod")
 def reduce_prod(x, axis=None, keepdims=False, name=None):
     name = _gen_unique_name_if_need(name, "ReduceProd_")
@@ -116,26 +125,69 @@ def reduce_all(x, axis=None, keepdims=False, name=None):
 
 @oneflow_export("math.reduce_euclidean_norm")
 def reduce_euclidean_norm(input_tensor, axis=None, keepdims=False, name=None):
+    name = _gen_unique_name_if_need(name, "ReduceEuclideanNorm_")
     return flow.math.sqrt(
-        flow.math.reduce_sum(flow.math.square(input_tensor), axis, keepdims)
+        flow.math.reduce_sum(
+            flow.math.square(input_tensor, name + "_square"),
+            axis,
+            keepdims,
+            name + "_reduce_sum",
+        ),
+        name + "_sqrt",
     )
 
 
 @oneflow_export("math.reduce_logsumexp")
 def reduce_logsumexp(input_tensor, axis=None, keepdims=False, name=None):
+    name = _gen_unique_name_if_need(name, "ReduceLogSumExp_")
+    axis = _check_axis(axis, input_tensor.shape)
     return flow.math.log(
-        flow.math.reduce_sum(flow.math.exp(input_tensor), axis, keepdims)
+        flow.math.reduce_sum(
+            flow.math.exp(input_tensor, name + "_exp"),
+            axis,
+            keepdims,
+            name + "_reduce_sum",
+        ),
+        name + "_log",
     )
 
 
 @oneflow_export("math.reduce_std")
 def reduce_std(input_tensor, axis=None, keepdims=False, name=None):
-    return flow.math.sqrt(flow.math.reduce_variance(input_tensor, axis, keepdims))
+    name = _gen_unique_name_if_need(name, "ReduceStd_")
+    axis = _check_axis(axis, input_tensor.shape)
+    if isinstance(axis, list) and len(axis) == 0:
+        return flow.zeros_like(
+            input_tensor, dtype=input_tensor.dtype, name=name + "_zeros_like"
+        )
+    return flow.math.sqrt(
+        flow.math.reduce_variance(
+            input_tensor, axis, keepdims, name + "_reduce_variance"
+        ),
+        name + "_sqrt",
+    )
 
 
 @oneflow_export("math.reduce_variance")
 def reduce_variance(input_tensor, axis=None, keepdims=False, name=None):
+    name = _gen_unique_name_if_need(name, "ReduceVariance_")
+    axis = _check_axis(axis, input_tensor.shape)
+    if isinstance(axis, list) and len(axis) == 0:
+        return flow.zeros_like(
+            input_tensor, dtype=input_tensor.dtype, name=name + "_zeros_like"
+        )
     return flow.math.subtract(
-        flow.math.reduce_mean(flow.math.square(input_tensor), axis, keepdims),
-        flow.math.square(flow.math.reduce_mean(input_tensor, axis, keepdims)),
+        flow.math.reduce_mean(
+            flow.math.square(input_tensor, name + "_square_minuend"),
+            axis,
+            keepdims,
+            name + "_reduce_mean_minuend",
+        ),
+        flow.math.square(
+            flow.math.reduce_mean(
+                input_tensor, axis, keepdims, name + "_reduce_mean_subtrahend"
+            ),
+            name + "_square_subtrahend",
+        ),
+        name + "_subtract",
     )
