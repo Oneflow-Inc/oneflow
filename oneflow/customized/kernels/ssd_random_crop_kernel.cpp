@@ -243,8 +243,6 @@ void FilterLabels(const TensorBuffer& origin_label, const TensorBuffer& keep_mas
   CHECK_EQ(num_keeps, label->shape().At(0));
 }
 
-void IdenticalOutput(const TensorBuffer& input, TensorBuffer* output) { output->CopyFrom(input); }
-
 class SSDRandomCropKernel final : public user_op::OpKernel {
  public:
   SSDRandomCropKernel() = default;
@@ -301,16 +299,14 @@ class SSDRandomCropKernel final : public user_op::OpKernel {
       CHECK_EQ(label_tensor->shape().elem_cnt(), batch_size);
     }
 
-    auto Identity = [&](int i) {
-      IdenticalOutput(image_tensor->dptr<TensorBuffer>()[i],
-                      out_image_tensor->mut_dptr<TensorBuffer>() + i);
+    auto IdenticalOutput = [&](int i) {
+      out_image_tensor->mut_dptr<TensorBuffer>()[i].CopyFrom(image_tensor->dptr<TensorBuffer>()[i]);
       if (bbox_tensor) {
-        IdenticalOutput(bbox_tensor->dptr<TensorBuffer>()[i],
-                        out_bbox_tensor->mut_dptr<TensorBuffer>() + i);
+        out_bbox_tensor->mut_dptr<TensorBuffer>()[i].CopyFrom(bbox_tensor->dptr<TensorBuffer>()[i]);
       }
       if (label_tensor) {
-        IdenticalOutput(label_tensor->dptr<TensorBuffer>()[i],
-                        out_label_tensor->mut_dptr<TensorBuffer>() + i);
+        out_label_tensor->mut_dptr<TensorBuffer>()[i].CopyFrom(
+            label_tensor->dptr<TensorBuffer>()[i]);
       }
     };
     auto* kernel_state = dynamic_cast<SSDRandomCropKernelState*>(state);
@@ -324,7 +320,7 @@ class SSDRandomCropKernel final : public user_op::OpKernel {
       SSDRandomCropGenerator* generator = kernel_state->Get(i);
       std::pair<float, float> iou_range = generator->RandomChoiceIOURange();
       if (iou_range.first < 0.0f || iou_range.second < 0.0f) {
-        Identity(i);
+        IdenticalOutput(i);
       } else {
         CropWindow crop;
         TensorBuffer keep_mask;
@@ -343,7 +339,7 @@ class SSDRandomCropKernel final : public user_op::OpKernel {
         } while (--attempt_count > 0);
 
         if (attempt_count == 0) {
-          Identity(i);
+          IdenticalOutput(i);
         } else {
           CropImage(image_buffer, crop, out_image_tensor->mut_dptr<TensorBuffer>() + i);
           if (bbox_tensor) {
