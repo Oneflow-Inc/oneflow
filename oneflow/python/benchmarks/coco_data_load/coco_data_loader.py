@@ -121,8 +121,8 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
                 image.ndarray_list()[0],
             )
             print(
-                "image_size: {}\n".format(image_size.ndarray().shape),
-                image_size.ndarray(),
+                "image_size: {}\n".format(image_size.numpy().shape),
+                image_size.numpy(),
             )
             print("gt_bbox:\n", gt_bbox.ndarray_lists()[0])
             print("gt_label:\n", gt_label.ndarray_lists()[0])

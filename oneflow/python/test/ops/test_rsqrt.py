@@ -17,7 +17,7 @@ def _run_test(test_case, x, dtype, device):
         return flow.math.rsqrt(x)
 
     y = RsqrtJob(x).get()
-    _check(test_case, x, y.ndarray())
+    _check(test_case, x, y.numpy())
 
 
 def test_rsqrt_random_gpu(test_case):

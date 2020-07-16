@@ -42,7 +42,7 @@ def RunTest(out_shapes, out_types):
 
     input = np.random.random_sample((10, 10)).astype(np.float32)
     outputs = [
-        x.ndarray()
+        x.numpy()
         for x in TestListDataTypeAndListShapeAndListStringAttrJob(input).get()
     ]
     for i in range(len(outputs)):

@@ -38,7 +38,7 @@ def _run_test(test_case, x, y, case, dtype=None, device="gpu"):
             return flow.math.divide(x, y)
 
     out = ScalarByTensorJob(x, y).get()
-    _check(test_case, x, y, out.ndarray(), case)
+    _check(test_case, x, y, out.numpy(), case)
 
 
 def test_scalar_add_by_tensor_gpu_float(test_case):

@@ -152,9 +152,9 @@ non_override_field = set(
 
 def MakeBlobMethod(field_name):
     def ConvertOtherArgs(args):
-        return [x.ndarray() if isinstance(x, LocalMirroredTensor) else x for x in args]
+        return [x.numpy() if isinstance(x, LocalMirroredTensor) else x for x in args]
 
-    return lambda self, *args: getattr(self.ndarray(), field_name)(
+    return lambda self, *args: getattr(self.numpy(), field_name)(
         *ConvertOtherArgs(args)
     )
 

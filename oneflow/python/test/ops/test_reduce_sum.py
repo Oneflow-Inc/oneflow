@@ -32,11 +32,11 @@ def compare_with_tensorflow(
     #    print("tf: ")
     #    print(tf_out.numpy())
     #    print("of: ")
-    #    print(of_out.ndarray())
+    #    print(of_out.numpy())
     #    print("diff: ")
-    #    print(of_out.ndarray() - tf_out.numpy())
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol), (
-        of_out.ndarray(),
+    #    print(of_out.numpy() - tf_out.numpy())
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol), (
+        of_out.numpy(),
         tf_out.numpy(),
     )
 

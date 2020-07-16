@@ -26,7 +26,7 @@ def compare_reduce_any_with_tensorflow(
     of_out = ReduceAnyJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_any(x, axis=axis, keepdims=keepdims)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
 
 
 def test_reduce_any_func(test_case):
@@ -101,7 +101,7 @@ def compare_reduce_prod_with_tensorflow(
     of_out = ReduceProdJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_prod(x, axis=axis, keepdims=keepdims)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
 
 
 def test_reduce_prod_func(test_case):
@@ -176,7 +176,7 @@ def compare_reduce_min_with_tensorflow(
     of_out = ReduceMinJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_min(x, axis=axis, keepdims=keepdims)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
 
 
 def test_reduce_min_func(test_case):
@@ -251,7 +251,7 @@ def compare_reduce_all_with_tensorflow(
     of_out = ReduceAllJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_all(x, axis=axis, keepdims=keepdims)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
 
 
 def test_reduce_all_func(test_case):
@@ -326,7 +326,7 @@ def compare_reduce_sum_with_tensorflow(
     of_out = ReduceSumJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_sum(x, axis=axis, keepdims=keepdims)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
 
 
 def test_reduce_sum_func(test_case):

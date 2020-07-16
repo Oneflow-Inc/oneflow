@@ -9,9 +9,9 @@ def test_FixedTensorDef(test_case):
 
     data = np.ones((2, 5), dtype=np.float32)
     of_ret = Foo(data).get()
-    test_case.assertEqual(of_ret.ndarray().max(), 1)
-    test_case.assertEqual(of_ret.ndarray().min(), 1)
-    test_case.assertTrue(np.allclose(of_ret.ndarray(), data))
+    test_case.assertEqual(of_ret.numpy().max(), 1)
+    test_case.assertEqual(of_ret.numpy().min(), 1)
+    test_case.assertTrue(np.allclose(of_ret.numpy(), data))
 
 
 def test_FixedTensorDef_batch_axis(test_case):
@@ -43,9 +43,9 @@ def test_FixedTensorDef_2_device(test_case):
 
     data = np.ones((2, 5), dtype=np.float32)
     of_ret = Foo(data).get()
-    test_case.assertEqual(of_ret.ndarray().max(), 1)
-    test_case.assertEqual(of_ret.ndarray().min(), 1)
-    test_case.assertTrue(np.allclose(of_ret.ndarray(), data))
+    test_case.assertEqual(of_ret.numpy().max(), 1)
+    test_case.assertEqual(of_ret.numpy().min(), 1)
+    test_case.assertTrue(np.allclose(of_ret.numpy(), data))
 
 
 def test_MirroredTensorDef(test_case):
