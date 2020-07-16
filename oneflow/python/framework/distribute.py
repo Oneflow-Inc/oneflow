@@ -41,7 +41,7 @@ def deprecated_mirrored_strategy():
             "oneflow.scope.mirrored_view"
         ),
     )
-    print(" ".join(traceback.format_stack()[-2]))
+    print(traceback.format_stack()[-2])
     return DistributeMirroredStrategy()
 
 
@@ -79,7 +79,7 @@ def deprecated_consistent_strategy():
             "oneflow.scope.consistent_view"
         ),
     )
-    print(" ".join(traceback.format_stack()[-2]))
+    print(traceback.format_stack()[-2])
     return DistributeConsistentStrategy()
 
 

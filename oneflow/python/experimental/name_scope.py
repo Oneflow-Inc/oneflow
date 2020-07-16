@@ -5,6 +5,7 @@ from contextlib import contextmanager
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_context
 from oneflow.python.oneflow_export import oneflow_export
+import traceback
 
 
 @oneflow_export(
@@ -14,8 +15,11 @@ def deprecated_name_scope(*args, **kwargs):
     print(
         "WARNING:",
         "/".join(deprecated_name_scope._ONEFLOW_API),
-        "will be removed in the future, use oneflow.scope.namespace instead.",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.namespace"
+        ),
     )
+    print(traceback.format_stack()[-2])
     return name_scope(*args, **kwargs)
 
 

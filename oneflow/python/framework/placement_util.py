@@ -50,7 +50,7 @@ def deprecated_placement(*args, **kwargs):
             "oneflow.scope.placement"
         ),
     )
-    print(" ".join(traceback.format_stack()[-2]))
+    print(traceback.format_stack()[-2])
     return api_placement(*args, **kwargs)
 
 
