@@ -23,7 +23,7 @@ def fixed_tensor_def_test(test_case, func_config):
         return TestReshape(x, [5, 4], "xx_test_reshape")
 
     x = np.random.rand(10, 2).astype(np.float32)
-    y = ReshapeJob(x).get().ndarray()
+    y = ReshapeJob(x).get().numpy()
     print(y.shape)
     test_case.assertTrue((5, 4) == y.shape)
     test_case.assertTrue(np.array_equal(x.reshape(5, 4), y))

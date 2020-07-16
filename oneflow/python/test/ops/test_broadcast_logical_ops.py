@@ -15,7 +15,7 @@ def test_naive(test_case):
 
     x = np.random.rand(5, 2).astype(np.float32)
     y = np.random.rand(5, 2).astype(np.float32)
-    z = ModJob(x, y).get().ndarray()
+    z = ModJob(x, y).get().numpy()
     r = func_equal(x, y)
     test_case.assertTrue(np.array_equal(z, x == y))
     flow.clear_default_session()
@@ -32,7 +32,7 @@ def test_broadcast(test_case):
     x = np.random.rand(5, 2).astype(np.float32)
     y = np.random.rand(1, 2).astype(np.float32)
     z = None
-    z = ModJob(x, y).get().ndarray()
+    z = ModJob(x, y).get().numpy()
     test_case.assertTrue(np.array_equal(z, x == y))
     flow.clear_default_session()
 
@@ -102,10 +102,10 @@ def GenerateTest(
     a = np_array(dtype, a_shape)
     b = np_array(dtype, b_shape)
 
-    y = ModJob1(a).get().ndarray()
+    y = ModJob1(a).get().numpy()
     test_case.assertTrue(np.array_equal(y, func(a, a)))
 
-    y = ModJob2(a, b).get().ndarray()
+    y = ModJob2(a, b).get().numpy()
     test_case.assertTrue(np.array_equal(y, func(a, b)))
 
     flow.clear_default_session()

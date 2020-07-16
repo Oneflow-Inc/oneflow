@@ -37,9 +37,9 @@ def _run_test(test_case, indices, values, indices_dtype, values_dtype, device):
         test_case,
         indices,
         values,
-        out_indices.ndarray(),
-        out_values.ndarray(),
-        num_unique.ndarray(),
+        out_indices.numpy(),
+        out_values.numpy(),
+        num_unique.numpy(),
     )
 
 
