@@ -59,14 +59,8 @@
 
 4. #### Build and Install OneFlow
 
-    Enter Build Directory, run:
-
     ```
     cd build
-    ```
-
-    Inside directory `build`, run:
-    ```
     cmake ..
     make -j$(nproc)
     make pip_install
