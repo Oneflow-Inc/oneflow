@@ -49,14 +49,13 @@ bool InsertIfNotExists(const std::string& name, HashSet<std::string>* unique_nam
 
 }  // namespace
 
-OpRegistryWrapperBuilder::OpRegistryWrapperBuilder(const std::string& op_type_name) {
+OpBuilder& OpBuilder::Name(const std::string& op_type_name) {
   CHECK(InsertIfNotExists(op_type_name, &unique_names_));
   wrapper_.op_type_name = op_type_name;
 }
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::ArgImpl(bool is_input, const std::string& name,
-                                                            bool is_optional, int32_t num,
-                                                            bool num_as_min) {
+OpBuilder& OpBuilder::ArgImpl(bool is_input, const std::string& name, bool is_optional, int32_t num,
+                              bool num_as_min) {
   CHECK(InsertIfNotExists(name, &unique_names_));
   UserOpDef::ArgDef arg_def;
   {
@@ -74,15 +73,13 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::ArgImpl(bool is_input, const
 }
 
 #define OP_REG_ARG_MEMBER_FUNC(name_prefix, is_input, is_optional)                           \
-  OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::name_prefix(const std::string& name) { \
+  OpBuilder& OpBuilder::name_prefix(const std::string& name) {                               \
     return ArgImpl(is_input, name, is_optional, 1, false);                                   \
   }                                                                                          \
-  OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::name_prefix(const std::string& name,   \
-                                                                  int32_t num) {             \
+  OpBuilder& OpBuilder::name_prefix(const std::string& name, int32_t num) {                  \
     return ArgImpl(is_input, name, is_optional, num, false);                                 \
   }                                                                                          \
-  OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::name_prefix##WithMinimum(              \
-      const std::string& name, int32_t min_num) {                                            \
+  OpBuilder& OpBuilder::name_prefix##WithMinimum(const std::string& name, int32_t min_num) { \
     return ArgImpl(is_input, name, is_optional, min_num, true);                              \
   }
 
@@ -93,18 +90,17 @@ OP_REG_ARG_MEMBER_FUNC(OptionalOutput, false, true)
 
 #undef OP_REG_ARG_MEMBER_FUNC
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetOutputBufferNum(int32_t num) {
+OpBuilder& OpBuilder::SetOutputBufferNum(int32_t num) {
   wrapper_.reg_val.same_output_regst_num = num;
   return *this;
 }
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SupportCpuOnly() {
+OpBuilder& OpBuilder::SupportCpuOnly() {
   wrapper_.reg_val.cpu_only_supported = true;
   return *this;
 }
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr(const std::string& name,
-                                                         UserOpAttrType type) {
+OpBuilder& OpBuilder::Attr(const std::string& name, UserOpAttrType type) {
   CHECK(InsertIfNotExists(name, &unique_names_));
   UserOpDef::AttrDef attr_def;
   attr_def.set_name(name);
@@ -128,8 +124,8 @@ void AddAttrWithDefault(OpRegistryWrapper* wrapper, const std::string& name, Use
 
 #define ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                        \
   template<>                                                                                \
-  OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<cpp_type>(                       \
-      const std::string& name, UserOpAttrType type, cpp_type&& default_val) {               \
+  OpBuilder& OpBuilder::Attr<cpp_type>(const std::string& name, UserOpAttrType type,        \
+                                       cpp_type&& default_val) {                            \
     CHECK(InsertIfNotExists(name, &unique_names_));                                         \
     CHECK_EQ(type, attr_type);                                                              \
     AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) { \
@@ -142,35 +138,32 @@ OF_PP_FOR_EACH_TUPLE(ATTR_MEMBER_FUNC, ATTR_SEQ)
 
 #undef ATTR_MEMBER_FUNC
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetTensorDescInferFn(
-    TensorDescInferFn tensor_desc_infer_fn) {
+OpBuilder& OpBuilder::SetTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
   wrapper_.reg_val.tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
   return *this;
 }
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetBatchAxisInferFn(
-    BatchAxisInferFn batch_axis_infer_fn) {
+OpBuilder& OpBuilder::SetBatchAxisInferFn(BatchAxisInferFn batch_axis_infer_fn) {
   wrapper_.reg_val.batch_axis_infer_fn = std::move(batch_axis_infer_fn);
   return *this;
 }
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetCheckAttrFn(CheckAttrFn fn) {
+OpBuilder& OpBuilder::SetCheckAttrFn(CheckAttrFn fn) {
   wrapper_.reg_val.check_fn = std::move(fn);
   return *this;
 }
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetGetSbpFn(GetSbpFn get_sbp_fn) {
+OpBuilder& OpBuilder::SetGetSbpFn(GetSbpFn get_sbp_fn) {
   wrapper_.reg_val.get_sbp_fn = std::move(get_sbp_fn);
   return *this;
 }
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetInputArgModifyFn(
-    InputArgModifyFn input_arg_modify_fn) {
+OpBuilder& OpBuilder::SetInputArgModifyFn(InputArgModifyFn input_arg_modify_fn) {
   wrapper_.reg_val.input_arg_modify_fn = std::move(input_arg_modify_fn);
   return *this;
 }
 
-OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
+OpBuilder& OpBuilder::Finish() {
   CHECK(wrapper_.reg_val.tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << wrapper_.op_type_name;
   if (wrapper_.reg_val.check_fn == nullptr) {
@@ -185,8 +178,10 @@ OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
   if (wrapper_.reg_val.input_arg_modify_fn == nullptr) {
     wrapper_.reg_val.input_arg_modify_fn = [](GetInputArgModifier, const UserOpConfWrapper&) {};
   }
-  return wrapper_;
+  return *this;
 }
+
+OpRegistryWrapper OpBuilder::GetResult() { return wrapper_; }
 
 }  // namespace user_op
 

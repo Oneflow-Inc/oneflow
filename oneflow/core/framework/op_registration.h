@@ -53,41 +53,42 @@ struct OpRegistryWrapper final {
   OpRegistrationVal reg_val;
 };
 
-class OpRegistryWrapperBuilder final {
+class OpBuilder final {
  public:
-  OpRegistryWrapperBuilder(const std::string& op_type_name);
-  OpRegistryWrapperBuilder& Input(const std::string& name);
-  OpRegistryWrapperBuilder& Input(const std::string& name, int32_t num);
-  OpRegistryWrapperBuilder& InputWithMinimum(const std::string& name, int32_t min_num);
-  OpRegistryWrapperBuilder& OptionalInput(const std::string& name);
-  OpRegistryWrapperBuilder& OptionalInput(const std::string& name, int32_t num);
-  OpRegistryWrapperBuilder& OptionalInputWithMinimum(const std::string& name, int32_t min_num);
+  OpBuilder& Name(const std::string& op_type_name);
+  OpBuilder& Input(const std::string& name);
+  OpBuilder& Input(const std::string& name, int32_t num);
+  OpBuilder& InputWithMinimum(const std::string& name, int32_t min_num);
+  OpBuilder& OptionalInput(const std::string& name);
+  OpBuilder& OptionalInput(const std::string& name, int32_t num);
+  OpBuilder& OptionalInputWithMinimum(const std::string& name, int32_t min_num);
 
-  OpRegistryWrapperBuilder& Output(const std::string& name);
-  OpRegistryWrapperBuilder& Output(const std::string& name, int32_t num);
-  OpRegistryWrapperBuilder& OutputWithMinimum(const std::string& name, int32_t min_num);
-  OpRegistryWrapperBuilder& OptionalOutput(const std::string& name);
-  OpRegistryWrapperBuilder& OptionalOutput(const std::string& name, int32_t num);
-  OpRegistryWrapperBuilder& OptionalOutputWithMinimum(const std::string& name, int32_t min_num);
+  OpBuilder& Output(const std::string& name);
+  OpBuilder& Output(const std::string& name, int32_t num);
+  OpBuilder& OutputWithMinimum(const std::string& name, int32_t min_num);
+  OpBuilder& OptionalOutput(const std::string& name);
+  OpBuilder& OptionalOutput(const std::string& name, int32_t num);
+  OpBuilder& OptionalOutputWithMinimum(const std::string& name, int32_t min_num);
 
-  OpRegistryWrapperBuilder& SupportCpuOnly();
-  OpRegistryWrapperBuilder& SetOutputBufferNum(int32_t num);
+  OpBuilder& SupportCpuOnly();
+  OpBuilder& SetOutputBufferNum(int32_t num);
 
-  OpRegistryWrapperBuilder& Attr(const std::string& name, UserOpAttrType type);
+  OpBuilder& Attr(const std::string& name, UserOpAttrType type);
   template<typename T>
-  OpRegistryWrapperBuilder& Attr(const std::string& name, UserOpAttrType type, T&& default_val);
+  OpBuilder& Attr(const std::string& name, UserOpAttrType type, T&& default_val);
 
-  OpRegistryWrapperBuilder& SetTensorDescInferFn(TensorDescInferFn fn);
-  OpRegistryWrapperBuilder& SetBatchAxisInferFn(BatchAxisInferFn fn);
-  OpRegistryWrapperBuilder& SetGetSbpFn(GetSbpFn fn);
-  OpRegistryWrapperBuilder& SetInputArgModifyFn(InputArgModifyFn fn);
-  OpRegistryWrapperBuilder& SetCheckAttrFn(CheckAttrFn fn);
+  OpBuilder& SetTensorDescInferFn(TensorDescInferFn fn);
+  OpBuilder& SetBatchAxisInferFn(BatchAxisInferFn fn);
+  OpBuilder& SetGetSbpFn(GetSbpFn fn);
+  OpBuilder& SetInputArgModifyFn(InputArgModifyFn fn);
+  OpBuilder& SetCheckAttrFn(CheckAttrFn fn);
 
-  OpRegistryWrapper Build();
+  OpBuilder& Finish();
+  OpRegistryWrapper GetResult();
 
  private:
-  OpRegistryWrapperBuilder& ArgImpl(bool is_input, const std::string& name, bool is_optional,
-                                    int32_t num, bool num_as_min);
+  OpBuilder& ArgImpl(bool is_input, const std::string& name, bool is_optional, int32_t num,
+                     bool num_as_min);
 
   OpRegistryWrapper wrapper_;
   HashSet<std::string> unique_names_;
@@ -103,9 +104,10 @@ static const std::string kUserSourceOpTickInputArgName = "UserSourceOpTickInput"
 
 }  // namespace oneflow
 
-#define REGISTER_USER_OP(name)                                                                  \
-  static ::oneflow::user_op::Registrar<::oneflow::user_op::OpRegistryWrapperBuilder> OF_PP_CAT( \
-      g_registrar, __COUNTER__) = ::oneflow::user_op::OpRegistryWrapperBuilder(name)
+#define REGISTER_USER_OP(name)                                                               \
+  static ::oneflow::user_op::UserOpRegisterTrigger<::oneflow::user_op::OpBuilder> OF_PP_CAT( \
+      g_registrar, __COUNTER__) =                                                            \
+      ::oneflow::user_op::UserOpManager::Get().GetOpBuilder().Name(name)
 
 #define REGISTER_CPU_ONLY_USER_OP(name) REGISTER_USER_OP(name).SupportCpuOnly()
 
