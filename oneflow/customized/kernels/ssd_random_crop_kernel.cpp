@@ -51,27 +51,31 @@ struct CropWindow {
   }
 };
 
+using IouOverlapRange = std::pair<float, float>;
+using ShrinkRateRange = std::pair<float, float>;
+using SizeShrinkRateRange = std::pair<ShrinkRateRange, ShrinkRateRange>;
+using AspectRatioRange = std::pair<float, float>;
+
 bool CalcIOUAndCheckInRange(const CropWindow& crop, const TensorBuffer& bbox,
-                            const std::pair<float, float>& iou_range) {
+                            const IouOverlapRange& iou_range) {
   CHECK_EQ(bbox.shape().NumAxes(), 2);
   CHECK_EQ(bbox.shape().At(1), 4);
   CHECK_EQ(bbox.data_type(), DataType::kFloat);
   int num_boxes = bbox.shape().At(0);
-  bool is_iou_in_range = true;
   FOR_RANGE(int, i, 0, num_boxes) {
     const float* bbox_ptr = bbox.data<float>() + i * 4;
     float inter_w = std::min(bbox_ptr[2], crop.right()) - std::max(bbox_ptr[0], crop.left());
     float inter_h = std::min(bbox_ptr[3], crop.bottom()) - std::max(bbox_ptr[1], crop.top());
-    float inter_area = 0.0;
+    float inter_area = 0.0f;
     if (inter_w > 0.0f && inter_h > 0.0f) { inter_area = inter_w * inter_h; }
     float box_area = (bbox_ptr[2] - bbox_ptr[0]) * (bbox_ptr[3] - bbox_ptr[1]);
     float crop_area = crop.area();
     CHECK_GT(box_area, 0.0f);
     CHECK_GT(crop_area, 0.0f);
     float iou = inter_area / (box_area + crop_area - inter_area);
-    if (iou < iou_range.first || iou > iou_range.second) { is_iou_in_range = false; }
+    if (iou >= iou_range.first && iou <= iou_range.second) { return true; }
   }
-  return is_iou_in_range;
+  return false;
 }
 
 bool CheckBBoxCenterLocatedInCropWindow(const CropWindow& crop, const TensorBuffer& bbox,
@@ -93,11 +97,6 @@ bool CheckBBoxCenterLocatedInCropWindow(const CropWindow& crop, const TensorBuff
   }
   return has_box_located_in_crop;
 }
-
-using IouOverlapRange = std::pair<float, float>;
-using ShrinkRateRange = std::pair<float, float>;
-using SizeShrinkRateRange = std::pair<ShrinkRateRange, ShrinkRateRange>;
-using AspectRatioRange = std::pair<float, float>;
 
 class SSDRandomCropGenerator final : public user_op::OpKernelState {
  public:
