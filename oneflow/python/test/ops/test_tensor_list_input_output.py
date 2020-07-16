@@ -36,7 +36,7 @@ def test_tensor_list_input_output(test_case):
         )
 
     ret = foo_job([[input_0, input_1]]).get()
-    ndarray_lists = ret.ndarray_lists()
+    ndarray_lists = ret.numpy_lists()
     assert isinstance(ndarray_lists, (list, tuple))
     assert len(ndarray_lists) == 1
     ndarray_list = ndarray_lists[0]

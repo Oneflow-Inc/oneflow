@@ -26,7 +26,7 @@ def test_categorical_ordinal_encoder_gpu(test_case):
     vk_set = set()
     for i in range(256):
         x = tokens[np.random.randint(0, 200000, (10000,))]
-        y = test_job(x).get().ndarray()
+        y = test_job(x).get().numpy()
         for k, v in zip(x, y):
             k_set.add(k)
             v_set.add(v)

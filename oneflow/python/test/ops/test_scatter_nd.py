@@ -116,7 +116,7 @@ def _compare_scatter_nd_with_tf(
     else:
 
         def compare_dy(params_grad):
-            test_case.assertTrue(np.array_equal(dy_dx.numpy(), params_grad.ndarray()))
+            test_case.assertTrue(np.array_equal(dy_dx.numpy(), params_grad.numpy()))
 
     scatter_nd_fn = _make_scatter_nd_fn(
         indices, updates, params_shape, device_type, mirrored, compare_dy
@@ -128,7 +128,7 @@ def _compare_scatter_nd_with_tf(
     if mirrored:
         of_y = scatter_nd_fn([indices], [updates]).get().ndarray_list()[0]
     else:
-        of_y = scatter_nd_fn(indices, updates).get().ndarray()
+        of_y = scatter_nd_fn(indices, updates).get().numpy()
 
     if verbose is True:
         print("device_type:", device_type)
@@ -169,10 +169,10 @@ def _compare_scatter_nd_update_with_tf(
     test_case.assertTrue(np.allclose(z1.numpy(), z2.numpy()))
 
     def compare_dz_dx(params_grad):
-        test_case.assertTrue(np.allclose(dz_dx.numpy(), params_grad.ndarray()))
+        test_case.assertTrue(np.allclose(dz_dx.numpy(), params_grad.numpy()))
 
     def compare_dz_dy(updates_grad):
-        test_case.assertTrue(np.allclose(dz_dy.numpy(), updates_grad.ndarray()))
+        test_case.assertTrue(np.allclose(dz_dy.numpy(), updates_grad.numpy()))
 
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -219,9 +219,9 @@ def _compare_scatter_nd_update_with_tf(
         print("y:", updates)
         print("indices:", indices)
         print("tf_z:", z1.numpy())
-        print("of_z:", of_z.ndarray())
+        print("of_z:", of_z.numpy())
 
-    test_case.assertTrue(np.allclose(z1.numpy(), of_z.ndarray()))
+    test_case.assertTrue(np.allclose(z1.numpy(), of_z.numpy()))
 
 
 def _of_tensor_scatter_nd_add(
@@ -294,7 +294,7 @@ def _of_tensor_scatter_nd_add(
 
         check_point = flow.train.CheckPoint()
         check_point.init()
-        return tensor_scatter_nd_add_fn(params, indices, updates).get().ndarray()
+        return tensor_scatter_nd_add_fn(params, indices, updates).get().numpy()
 
 
 def _compare_tensor_scatter_nd_add_with_tf(
@@ -322,14 +322,14 @@ def _compare_tensor_scatter_nd_add_with_tf(
     def compare_params_grad(of_params_grad):
         tf_params_grad_np = tf_params_grad.numpy()
         of_params_grad_np = (
-            of_params_grad.ndarray_list()[0] if mirrored else of_params_grad.ndarray()
+            of_params_grad.ndarray_list()[0] if mirrored else of_params_grad.numpy()
         )
         test_case.assertTrue(np.allclose(tf_params_grad_np, of_params_grad_np))
 
     def compare_updates_grad(of_updates_grad):
         tf_updates_grad_np = tf_updates_grad.numpy()
         of_updates_grad_np = (
-            of_updates_grad.ndarray_list()[0] if mirrored else of_updates_grad.ndarray()
+            of_updates_grad.ndarray_list()[0] if mirrored else of_updates_grad.numpy()
         )
         test_case.assertTrue(np.allclose(tf_updates_grad_np, of_updates_grad_np))
 

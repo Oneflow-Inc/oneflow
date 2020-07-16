@@ -65,8 +65,8 @@ class TestMatmul(unittest.TestCase):
         print("without xla: ", x)
         print("with xla: ", y)
         print("with tensorrt: ", y)
-        self.assertTrue(np.allclose(x.ndarray(), y.ndarray(), rtol=1e-03, atol=1e-05))
-        self.assertTrue(np.allclose(x.ndarray(), z.ndarray(), rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(x.numpy(), y.numpy(), rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(x.numpy(), z.numpy(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, m, k, n, trans_a, trans_b, dtype=np.float32):
