@@ -13,6 +13,26 @@
 
 namespace oneflow {
 
+class BlobAccessChecker {
+ public:
+  virtual void CheckHeaderMutable() const = 0;
+  virtual void CheckBodyMutable() const = 0;
+};
+
+template<bool is_header_mutable, bool is_body_mutable>
+class BlobAccessCheckerIf final : public BlobAccessChecker {
+ public:
+  void CheckHeaderMutable() const override {
+    CHECK(is_header_mutable)
+        << "header mutable check not passed, blob's shape is not mutable at this moment!";
+  }
+
+  void CheckBodyMutable() const override {
+    CHECK(is_body_mutable)
+        << "body mutable check not passed, blob's data is not mutable at this moment!";
+  }
+};
+
 class Blob;
 
 class TensorBackInserter final {
@@ -72,13 +92,24 @@ class Blob final {
   }
   template<typename T = void>
   T* mut_dptr() {
+    this->blob_access_checker()->CheckBodyMutable();
+    CheckDataType<T>(data_type());
+    return static_cast<T*>(dptr_);
+  }
+  template<typename T = void>
+  T* ForceMutDptr() {
     CheckDataType<T>(data_type());
     return static_cast<T*>(dptr_);
   }
   const Shape& static_shape() const { return blob_desc_->body_shape(); }
   const ShapeView& shape_view() const { return *shape_view_; }
   const ShapeView& shape() const { return *shape_view_; }
-  MutShapeView* mut_shape_view() { return mut_shape_view_.get(); }
+  MutShapeView* mut_shape_view() {
+    this->blob_access_checker()->CheckHeaderMutable();
+    return mut_shape_view_.get();
+  }
+
+  MutShapeView* ForceMutShapeView() { return mut_shape_view_.get(); }
 
   void reset_dptr(char* dptr);
 
@@ -95,6 +126,12 @@ class Blob final {
 
   int32_t record_num() const { return record_num_; }
   void set_record_num(int32_t val) { record_num_ = val; }
+
+  void set_blob_access_checker(const BlobAccessChecker* blob_access_checker) {
+    this->blob_access_checker_ = blob_access_checker;
+  }
+
+  const BlobAccessChecker* blob_access_checker() { return this->blob_access_checker_; }
 
  private:
   void Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
@@ -121,6 +158,7 @@ class Blob final {
   void add_tensor_list_slice();
   void ResetTensorView();
 
+  const BlobAccessChecker* blob_access_checker_;
   MemoryCase mem_case_;
   const RtBlobDesc* blob_desc_;
   void* dptr_;
@@ -160,6 +198,15 @@ class RecordBlob final {
   Blob* records_;
   int32_t record_num_;
 };
+
+#define INIT_GLOBAL_BLOB_MUTABLE_CHECKER(is_header_mutable, is_body_mutable)             \
+  COMMAND(Global<BlobAccessCheckerIf<is_header_mutable, is_body_mutable>>::SetAllocated( \
+      new BlobAccessCheckerIf<is_header_mutable, is_body_mutable>()))
+
+INIT_GLOBAL_BLOB_MUTABLE_CHECKER(false, false);
+INIT_GLOBAL_BLOB_MUTABLE_CHECKER(false, true);
+INIT_GLOBAL_BLOB_MUTABLE_CHECKER(true, false);
+INIT_GLOBAL_BLOB_MUTABLE_CHECKER(true, true);
 
 }  // namespace oneflow
 
