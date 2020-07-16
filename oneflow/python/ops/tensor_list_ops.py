@@ -1,4 +1,4 @@
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -16,7 +16,7 @@ def tensor_list_to_tensor_buffer(input, name=None):
     setattr(op_conf, "name", name)
     setattr(op_conf.tensor_list_to_tensor_buffer_conf, "in", input.unique_name)
     setattr(op_conf.tensor_list_to_tensor_buffer_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
 
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
@@ -35,7 +35,7 @@ def tensor_buffer_to_tensor_list(input, shape, dtype, name=None):
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "out", "out")
     op_conf.tensor_buffer_to_tensor_list_conf.shape.dim[:] = list(shape)
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "data_type", dtype)
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
 
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
@@ -55,7 +55,7 @@ def tensor_list_split(input_tensor_list, name=None):
     op_conf.tensor_list_split_conf.out.extend(
         ["out_{}".format(i) for i in range(output_size)]
     )
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     ret = []
     for i in range(output_size):
         out_lbi = logical_blob_id_util.LogicalBlobId()

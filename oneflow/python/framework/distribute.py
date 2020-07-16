@@ -41,11 +41,8 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
 
     """
 
-    def __enter__(self, *argc, **kwarg):
-        distribute_ctx.PushMirroredStrategyEnabled(True)
-
-    def __exit__(self, *argc, **kwarg):
-        distribute_ctx.PopMirroredStrategyEnabled()
+    def __init__(self):
+        distribute_ctx.DistributeStrategy.__init__(self, True)
 
 
 @oneflow_export("distribute.mirrored_strategy_enabled")
@@ -69,11 +66,8 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
 
     """
 
-    def __enter__(self, *argc, **kwarg):
-        distribute_ctx.PushMirroredStrategyEnabled(False)
-
-    def __exit__(self, *argc, **kwarg):
-        distribute_ctx.PopMirroredStrategyEnabled()
+    def __init__(self):
+        distribute_ctx.DistributeStrategy.__init__(self, False)
 
 
 @oneflow_export("distribute.consistent_strategy_enabled")

@@ -142,24 +142,6 @@ message PReluAlphaGradOpConf {
   required bool channel_shared = 5;
 }
 
-message TanHOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message TanHGradOpConf {
-  required string y = 1;
-  required string dy = 2;
-  required string dx = 3;
-}
-
-enum ScalarReductionType {
-  kSumOverOne = 0;
-  kSumOverWeight = 1;
-  kSumOverN = 2;
-  kSumOverNonZeroWeight = 3;
-}
-
 message SigmoidCrossEntropyOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -463,72 +445,6 @@ message LazyAdamModelUpdateOpConf {
 message AccumulateOpConf {
 }
 
-message PrintRecordConf {
-  required string lbn = 1;
-  optional string name = 2;
-  required EncodeConf encode_case = 3;
-}
-
-message PrintOpConf {
-  repeated PrintRecordConf in = 1;
-  required string print_dir = 2;
-  optional string part_name_prefix = 3 [default = "part-"];
-  optional int32 part_name_suffix_length = 4 [default = -1];
-}
-
-message GeluOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message GeluGradOpConf {
-  required string x = 1;
-  required string dy = 2;
-  required string dx = 3;
-}
-
-message ReduceSumOpConf {
-  required string in = 1;
-  required string out = 3;
-  repeated int32 axis = 4;
-  optional bool keep_dims = 5 [default = false];
-}
-
-message ReduceSumLikeOpConf {
-  required string x = 1;
-  required string like = 2;
-  required string y = 3;
-  repeated int32 axis = 4;
-  optional string temp_storage = 5 [default = "temp_storage"];
-}
-
-message ReduceMeanOpConf {
-  required string in = 1;
-  required string out = 2;
-  repeated int32 axis = 3;
-  optional bool keep_dims = 4 [default = false];
-}
-
-message ReduceMeanGradOpConf {
-  required string dy = 1;
-  required string x = 2; // like
-  required string dx = 3;
-  repeated int32 reduced_axis = 4;
-  optional string temp_storage = 5 [default = "temp_storage"];
-}
-
-message ReshapeOpConf {
-  required string in = 1;
-  required string out = 2;
-  required ShapeProto shape = 3;
-}
-
-message ReshapeLikeOpConf {
-  required string x = 1;
-  required string y = 2;
-  required string like = 3;
-}
-
 message DynamicReshapeOpConf {
   required string in = 1;
   required string out = 2;
@@ -542,11 +458,6 @@ message DynamicReshapeLikeOpConf {
 }
 
 message AddOpConf {
-  repeated string in = 1;
-  required string out = 2;
-}
-
-message MaximumOpConf {
   repeated string in = 1;
   required string out = 2;
 }
@@ -612,16 +523,6 @@ message VariableOpConf {
   required OptInt64 split_axis = 8;
   optional int64 random_seed = 9;
   optional RegularizerConf regularizer = 10;
-}
-
-message LocalResponseNormalizationOpConf {
-  required string in = 1;
-  required string out = 2;
-  required string data_format = 3;
-  optional int32 depth_radius = 4 [default = 5];
-  optional double bias = 5 [default = 1];
-  optional double alpha = 6 [default = 1];
-  optional double beta = 7 [default = 0.5];
 }
 
 message EncodeConf {
@@ -750,24 +651,6 @@ message ReduceGatherOpConf {
   optional int32 in_num = 1 [default = 0];
 }
 
-message DotOpConf {
-  required string in = 1;
-  required string weight = 2;
-  optional string bias = 3;
-  required string out = 4;
-}
-
-message MultiplyOpConf {
-  required string in_0 = 1;
-  required string in_1 = 2;
-  required string out = 4;
-}
-
-enum Norm {
-  L1 = 1;
-  L2 = 2;
-}
-
 message PackOpConf {
   required string in = 1;
   required string out = 2;
@@ -786,101 +669,12 @@ message RepeatOpConf {
   required int32 repeat_num = 3;
 }
 
-message BroadcastLikeOpConf {
-  required string x = 1;
-  required string like = 2;
-  required string y = 3;
-  repeated int32 reduced_axis = 4;
-}
-
-message DimSliceConf {
-  optional int32 start = 1 [default = 0];
-  optional int32 end = 2 [default = 0];
-  optional int32 stride = 3 [default = 1];
-}
-
-message SliceOpConf {
-  required string in = 1;
-  required string out = 2;
-  repeated DimSliceConf dim_slice_conf = 3;
-}
-
-message SliceGradOpConf {
-  required string dy = 1;
-  required string dx = 2;
-  required string like = 3;
-  repeated DimSliceConf dim_slice_conf = 4;
-}
-
-message LayerNormOpConf {
-  // in
-  required string in = 1;
-  optional string beta = 2;
-  optional string gamma = 3;
-
-  // out
-  required string out = 4;
-  optional string normalized = 5 [default = "normalized"];
-  optional string mean = 6 [default = "mean"];
-  optional string inv_variance = 7 [default = "inv_variance"];
-
-  optional bool center = 8 [default = true];
-  optional bool scale = 9 [default = true];
-  optional int64 begin_norm_axis = 11 [default = 1];
-  optional int64 begin_params_axis = 12 [default = -1];
-  optional double epsilon = 13 [default = 1e-5];
-}
-
-message LayerNormGradOpConf {
-  // in
-  required string dy = 1;
-  required string x = 2;
-  optional string mean = 3;
-  optional string inv_variance = 4;
-  // out
-  required string dx = 5;
-
-  required int64 begin_norm_axis = 6;
-  required double epsilon = 7;
-}
-
-message LayerNormParamGradOpConf {
-  // in
-  required string dy = 1;
-  optional string normalized = 2;
-  optional string gamma = 3;
-  // out
-  optional string normalized_diff = 4;
-  optional string beta_diff = 5;
-  optional string gamma_diff = 6;
-
-  required int64 begin_params_axis = 7;
-}
-
 message ConstantOpConf {
   optional string tick = 1;
   required string out = 2;
   optional ShapeProto shape = 3;
   optional DataType data_type = 4;
   optional InitializerConf initializer = 5;
-}
-
-message ScalarAddOpConf {
-  required string in = 1;
-  required string out = 2;
-  oneof scalar_operand {
-    int64 int_operand = 3;
-    double float_operand = 4;
-  }
-}
-
-message ScalarMulOpConf {
-  required string in = 1;
-  required string out = 2;
-  oneof scalar_operand {
-    int64 int_operand = 3;
-    double float_operand = 4;
-  }
 }
 
 message ReduceIdentityOpConf {
@@ -932,22 +726,9 @@ message TupleIdentityOpConf {
   repeated string out = 2;
 }
 
-message TopKOpConf {
-  required string in = 1;
-  required string out = 2;
-  optional int32 k = 3 [default = 1];
-  optional bool sorted = 4 [default = true];
-}
-
 message KeepHeaderOnlyOpConf {
   repeated string in = 1;
   repeated string out = 2;
-}
-
-message AxpyOpConf {
-  required string x = 1;
-  required string y = 2;
-  required double alpha = 3;
 }
 
 message TotalLossInstanceNumOpConf {
@@ -1233,6 +1014,7 @@ message SyncDynamicResizeOpConf {
   required string size = 2;
   required string out = 3;
   required int64 axis = 4;
+  optional bool eager = 5 [default = false];
 }
 
 message ArgWhereOpConf {
@@ -1281,7 +1063,7 @@ message OperatorConf {
   optional bool enable_cudnn = 5;
   optional int64 cudnn_buf_limit_mbyte = 6;
   repeated string ctrl_in_op_name = 7;
-  optional int64 logical_object_id = 8;
+  optional int64 scope_symbol_id = 8;
   oneof op_type {
     // system op
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;
@@ -1349,36 +1131,15 @@ message OperatorConf {
     
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
-    ReshapeOpConf reshape_conf = 202;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
-    ReduceSumOpConf reduce_sum_conf = 219;
     AddOpConf add_conf = 220;
-    DotOpConf dot_conf = 222;
-    MultiplyOpConf multiply_conf = 223;
-    MaximumOpConf maximum_conf = 224;
-    TanHOpConf tanh_conf = 226;
-    PrintOpConf print_conf = 233;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
-    GeluOpConf gelu_conf = 241;
-    SliceOpConf slice_conf = 252;
-    LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
-    ReduceMeanOpConf reduce_mean_conf = 261;
     PReluOpConf prelu_conf = 265;
-    GeluGradOpConf gelu_grad_conf = 267;
-    SliceGradOpConf slice_grad_conf = 269;
-    ReduceSumLikeOpConf reduce_sum_like_conf = 270;
-    LayerNormGradOpConf layer_norm_grad_conf = 272;
-    LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
-    BroadcastLikeOpConf broadcast_like_conf = 277;
-    ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
-    ReshapeLikeOpConf reshape_like_conf = 286;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
-    TanHGradOpConf tanh_grad_conf = 288;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
     EsacOpConf esac_conf = 292;
@@ -1405,13 +1166,9 @@ message OperatorConf {
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op
-    ScalarAddOpConf scalar_add_conf = 516;
-    ScalarMulOpConf scalar_mul_conf = 517;
     SquareSumOpConf square_sum_conf = 522;
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
 
-    // mutable input op
-    AxpyOpConf axpy_conf = 752;
   }
 }
 
