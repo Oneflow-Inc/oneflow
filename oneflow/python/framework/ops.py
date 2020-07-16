@@ -11,10 +11,13 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
+from typing import Union, Optional
 
 
 @oneflow_export("repeat")
-def api_repeat(input, repeat_num, name=None):
+def api_repeat(
+    input: remote_blob_util.BlobDef, repeat_num: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     func = enable_if.unique([repeat])
     return func(input, repeat_num, name=name)
 
@@ -37,7 +40,9 @@ def repeat(input, repeat_num, name=None):
 
 
 @oneflow_export("acc")
-def api_acc(one, max_acc_num, name=None):
+def api_acc(
+    one: remote_blob_util.BlobDef, max_acc_num: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     func = enable_if.unique([acc])
     return func(one, max_acc_num, name=name)
 
@@ -60,7 +65,9 @@ def acc(one, max_acc_num, name=None):
 
 
 @oneflow_export("unpack")
-def api_unpack(input, unpack_num, name=None):
+def api_unpack(
+    input: remote_blob_util.BlobDef, unpack_num: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     func = enable_if.unique([unpack])
     return func(input, unpack_num, name=name)
 
@@ -83,7 +90,9 @@ def unpack(input, unpack_num, name=None):
 
 
 @oneflow_export("pack")
-def api_pack(input, pack_num, name=None):
+def api_pack(
+    input: remote_blob_util.BlobDef, pack_num: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     func = enable_if.unique([pack])
     return func(input, pack_num, name=name)
 
@@ -106,7 +115,12 @@ def pack(input, pack_num, name=None):
 
 
 @oneflow_export("parallel_cast")
-def api_parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
+def api_parallel_cast(
+    input: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+    distribute: Optional[distribute_util.Distribute] = None,
+    gradient_distribute: Optional[distribute_util.Distribute] = None,
+) -> remote_blob_util.BlobDef:
     func = enable_if.unique([parallel_cast])
     return func(
         input, name=name, distribute=distribute, gradient_distribute=gradient_distribute
