@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_OBJECT_MSG_EMBEDDED_LIST_H_
 #define ONEFLOW_CORE_OBJECT_MSG_EMBEDDED_LIST_H_
 
-#include "oneflow/core/common/struct_traits.h"
+#include "oneflow/core/object_msg/struct_traits.h"
 #include <glog/logging.h>
 
 namespace oneflow {

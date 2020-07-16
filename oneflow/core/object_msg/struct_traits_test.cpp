@@ -1,4 +1,4 @@
-#include "oneflow/core/common/struct_traits.h"
+#include "oneflow/core/object_msg/struct_traits.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_
-#define ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_
+#ifndef ONEFLOW_CORE_OBJECT_MSG_STRUCT_MACRO_TRAITS_H_
+#define ONEFLOW_CORE_OBJECT_MSG_STRUCT_MACRO_TRAITS_H_
 
 #include <cstddef>
 #include <type_traits>
@@ -65,4 +65,4 @@ using ConstRefOrPtr = typename ConstRefOrPtrStruct<T>::type;
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_STRUCT_MACRO_TRAITS_H_
+#endif  // ONEFLOW_CORE_OBJECT_MSG_STRUCT_MACRO_TRAITS_H_

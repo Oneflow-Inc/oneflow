@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <typeinfo>
 #include "oneflow/core/common/preprocessor.h"
-#include "oneflow/core/common/struct_traits.h"
+#include "oneflow/core/object_msg/struct_traits.h"
 
 namespace oneflow {
 

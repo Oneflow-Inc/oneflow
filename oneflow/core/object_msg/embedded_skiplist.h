@@ -5,7 +5,7 @@
 #include <tuple>
 #include <random>
 #include <glog/logging.h>
-#include "oneflow/core/common/struct_traits.h"
+#include "oneflow/core/object_msg/struct_traits.h"
 #include "oneflow/core/object_msg/embedded_list.h"
 
 namespace oneflow {

@@ -6,7 +6,7 @@
 #include <glog/logging.h>
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/object_msg/dss.h"
-#include "oneflow/core/common/static_counter.h"
+#include "oneflow/core/object_msg/static_counter.h"
 
 namespace oneflow {
 

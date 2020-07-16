@@ -1,4 +1,4 @@
-#include "oneflow/core/common/static_counter.h"
+#include "oneflow/core/object_msg/static_counter.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

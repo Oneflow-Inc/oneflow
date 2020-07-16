@@ -8,8 +8,8 @@
 #include <set>
 #include <glog/logging.h>
 #include "oneflow/core/object_msg/dss.h"
-#include "oneflow/core/common/static_counter.h"
-#include "oneflow/core/common/struct_traits.h"
+#include "oneflow/core/object_msg/static_counter.h"
+#include "oneflow/core/object_msg/struct_traits.h"
 
 namespace oneflow {
 
