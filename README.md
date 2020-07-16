@@ -73,4 +73,4 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 
 - #### XRT
 
-  You can check this [doc](./oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
+  You can check this [doc](oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
