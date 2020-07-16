@@ -1,9 +1,9 @@
-#ifndef ONEFLOW_CORE_COMMON_OBJECT_MSG_LIST_H_
-#define ONEFLOW_CORE_COMMON_OBJECT_MSG_LIST_H_
+#ifndef ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_LIST_H_
+#define ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_LIST_H_
 
 #include <typeinfo>
-#include "oneflow/core/common/object_msg_core.h"
-#include "oneflow/core/common/embedded_list.h"
+#include "oneflow/core/object_msg/object_msg_core.h"
+#include "oneflow/core/object_msg/embedded_list.h"
 
 namespace oneflow {
 
@@ -428,4 +428,4 @@ class ObjectMsgList : public TrivialObjectMsgList<kDisableSelfLoopLink, LinkFiel
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_OBJECT_MSG_LIST_H_
+#endif  // ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_LIST_H_

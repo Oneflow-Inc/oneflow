@@ -1,5 +1,5 @@
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/flat_msg.h"
+#include "oneflow/core/object_msg/flat_msg.h"
 
 namespace oneflow {
 

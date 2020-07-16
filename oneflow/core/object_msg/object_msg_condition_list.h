@@ -1,9 +1,9 @@
-#ifndef ONEFLOW_CORE_COMMON_CONDITION_LIST_H_
-#define ONEFLOW_CORE_COMMON_CONDITION_LIST_H_
+#ifndef ONEFLOW_CORE_OBJECT_MSG_CONDITION_LIST_H_
+#define ONEFLOW_CORE_OBJECT_MSG_CONDITION_LIST_H_
 
 #include <mutex>
 #include <condition_variable>
-#include "oneflow/core/common/object_msg_list.h"
+#include "oneflow/core/object_msg/object_msg_list.h"
 
 namespace oneflow {
 
@@ -192,4 +192,4 @@ class ObjectMsgConditionList : public TrivialObjectMsgConditionList<LinkField> {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_CONDITION_LIST_H_
+#endif  // ONEFLOW_CORE_OBJECT_MSG_CONDITION_LIST_H_

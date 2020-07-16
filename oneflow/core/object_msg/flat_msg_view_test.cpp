@@ -1,4 +1,4 @@
-#include "oneflow/core/common/flat_msg_view.h"
+#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_VM_VM_RESOURCE_DESC_MSG_H_
 
 #include <unordered_map>
-#include "oneflow/core/common/object_msg.h"
+#include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {

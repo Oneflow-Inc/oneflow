@@ -3,7 +3,7 @@
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
 #define private public
-#include "oneflow/core/common/embedded_list.h"
+#include "oneflow/core/object_msg/embedded_list.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

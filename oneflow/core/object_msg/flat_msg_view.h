@@ -1,10 +1,10 @@
-#ifndef ONEFLOW_CORE_COMMON_FLAT_MSG_VIEW_H_
-#define ONEFLOW_CORE_COMMON_FLAT_MSG_VIEW_H_
+#ifndef ONEFLOW_CORE_OBJECT_MSG_FLAT_MSG_VIEW_H_
+#define ONEFLOW_CORE_OBJECT_MSG_FLAT_MSG_VIEW_H_
 
 #include <vector>
 #include <glog/logging.h>
-#include "oneflow/core/common/dss.h"
-#include "oneflow/core/common/flat_msg.h"
+#include "oneflow/core/object_msg/dss.h"
+#include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/common/struct_traits.h"
 #include "oneflow/core/common/static_counter.h"
 
@@ -318,4 +318,4 @@ struct FlatMsgView final {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_FLAT_MSG_VIEW_H_
+#endif  // ONEFLOW_CORE_OBJECT_MSG_FLAT_MSG_VIEW_H_

@@ -1,8 +1,8 @@
-#ifndef ONEFLOW_CORE_COMMON_MUTEXED_LIST_H_
-#define ONEFLOW_CORE_COMMON_MUTEXED_LIST_H_
+#ifndef ONEFLOW_CORE_OBJECT_MSG_MUTEXED_LIST_H_
+#define ONEFLOW_CORE_OBJECT_MSG_MUTEXED_LIST_H_
 
 #include <mutex>
-#include "oneflow/core/common/object_msg_list.h"
+#include "oneflow/core/object_msg/object_msg_list.h"
 
 namespace oneflow {
 
@@ -138,4 +138,4 @@ class ObjectMsgMutexedList : public TrivialObjectMsgMutexedList<LinkField> {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_MUTEXED_LIST_H_
+#endif  // ONEFLOW_CORE_OBJECT_MSG_MUTEXED_LIST_H_

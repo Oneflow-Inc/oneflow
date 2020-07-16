@@ -1,9 +1,9 @@
-#ifndef ONEFLOW_CORE_COMMON_OBJECT_MSG_FIELD_LIST_H_
-#define ONEFLOW_CORE_COMMON_OBJECT_MSG_FIELD_LIST_H_
+#ifndef ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_FIELD_LIST_H_
+#define ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_FIELD_LIST_H_
 
 #include <type_traits>
 #include <typeinfo>
-#include "oneflow/core/common/object_msg_field_list.pb.h"
+#include "oneflow/core/object_msg/object_msg_field_list.pb.h"
 
 namespace oneflow {
 
@@ -34,4 +34,4 @@ struct ObjectMsgFieldListUtil final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_OBJECT_MSG_FIELD_LIST_H_
+#endif  // ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_FIELD_LIST_H_

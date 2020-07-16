@@ -4,7 +4,7 @@
 #include <sstream>
 #define private public
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/object_msg.h"
+#include "oneflow/core/object_msg/object_msg.h"
 
 namespace oneflow {
 

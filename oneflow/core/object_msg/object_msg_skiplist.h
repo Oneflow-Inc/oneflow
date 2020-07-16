@@ -1,8 +1,8 @@
-#ifndef ONEFLOW_CORE_COMMON_OBJECT_MSG_SKIPLIST_H_
-#define ONEFLOW_CORE_COMMON_OBJECT_MSG_SKIPLIST_H_
+#ifndef ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_SKIPLIST_H_
+#define ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_SKIPLIST_H_
 
-#include "oneflow/core/common/object_msg_core.h"
-#include "oneflow/core/common/embedded_skiplist.h"
+#include "oneflow/core/object_msg/object_msg_core.h"
+#include "oneflow/core/object_msg/embedded_skiplist.h"
 
 namespace oneflow {
 
@@ -222,4 +222,4 @@ class ObjectMsgSkipList final : public TrivialObjectMsgSkipList<ItemField> {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_OBJECT_MSG_SKIPLIST_H_
+#endif  // ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_SKIPLIST_H_

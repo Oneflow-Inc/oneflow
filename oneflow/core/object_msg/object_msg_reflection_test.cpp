@@ -1,8 +1,8 @@
 #include <sstream>
 #include <iostream>
-#include "oneflow/core/common/dss.h"
-#include "oneflow/core/common/object_msg.h"
-#include "oneflow/core/common/object_msg_reflection.h"
+#include "oneflow/core/object_msg/dss.h"
+#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/object_msg/object_msg_reflection.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

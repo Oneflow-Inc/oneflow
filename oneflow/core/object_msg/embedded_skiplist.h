@@ -1,12 +1,12 @@
-#ifndef ONEFLOW_CORE_COMMON_EMBEDDED_SKIPLIST_H_
-#define ONEFLOW_CORE_COMMON_EMBEDDED_SKIPLIST_H_
+#ifndef ONEFLOW_CORE_OBJECT_MSG_EMBEDDED_SKIPLIST_H_
+#define ONEFLOW_CORE_OBJECT_MSG_EMBEDDED_SKIPLIST_H_
 
 #include <array>
 #include <tuple>
 #include <random>
 #include <glog/logging.h>
 #include "oneflow/core/common/struct_traits.h"
-#include "oneflow/core/common/embedded_list.h"
+#include "oneflow/core/object_msg/embedded_list.h"
 
 namespace oneflow {
 
@@ -280,4 +280,4 @@ class EmbeddedSkipListHead {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_EMBEDDED_SKIPLIST_H_
+#endif  // ONEFLOW_CORE_OBJECT_MSG_EMBEDDED_SKIPLIST_H_

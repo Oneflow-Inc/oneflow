@@ -1,8 +1,8 @@
-#ifndef ONEFLOW_CORE_COMMON_OBJECT_MSG_FLAT_H_
-#define ONEFLOW_CORE_COMMON_OBJECT_MSG_FLAT_H_
+#ifndef ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_FLAT_H_
+#define ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_FLAT_H_
 
-#include "oneflow/core/common/object_msg_core.h"
-#include "oneflow/core/common/flat_msg.h"
+#include "oneflow/core/object_msg/object_msg_core.h"
+#include "oneflow/core/object_msg/flat_msg.h"
 
 namespace oneflow {
 
@@ -69,4 +69,4 @@ struct ObjectMsgFlatMsgDelete {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_OBJECT_MSG_FLAT_H_
+#endif  // ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_FLAT_H_

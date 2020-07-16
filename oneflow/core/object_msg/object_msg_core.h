@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMMON_OBJECT_MSG_CORE_H_
-#define ONEFLOW_CORE_COMMON_OBJECT_MSG_CORE_H_
+#ifndef ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_CORE_H_
+#define ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_CORE_H_
 
 #include <cstring>
 #include <atomic>
@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <set>
 #include <glog/logging.h>
-#include "oneflow/core/common/dss.h"
+#include "oneflow/core/object_msg/dss.h"
 #include "oneflow/core/common/static_counter.h"
 #include "oneflow/core/common/struct_traits.h"
 
@@ -570,4 +570,4 @@ struct ObjectMsgContainerLinkEdge {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_OBJECT_MSG_CORE_H_
+#endif  // ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_CORE_H_

@@ -1,6 +1,6 @@
 #include <sstream>
 #include <cxxabi.h>
-#include "oneflow/core/common/object_msg_field_list.h"
+#include "oneflow/core/object_msg/object_msg_field_list.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

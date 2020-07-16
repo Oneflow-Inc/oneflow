@@ -1,11 +1,11 @@
-#ifndef ONEFLOW_CORE_COMMON_OBJECT_MSG_REFLECTION_H_
-#define ONEFLOW_CORE_COMMON_OBJECT_MSG_REFLECTION_H_
+#ifndef ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_REFLECTION_H_
+#define ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_REFLECTION_H_
 
 #include <sstream>
 #include <unordered_map>
 #include <vector>
-#include "oneflow/core/common/object_msg.h"
-#include "oneflow/core/common/object_msg_field_list.h"
+#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/object_msg/object_msg_field_list.h"
 
 namespace oneflow {
 
@@ -265,4 +265,4 @@ std::string ObjectMsgListReflection<Args...>::ToDot(const std::string& digraph_n
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_OBJECT_MSG_REFLECTION_H_
+#endif  // ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_REFLECTION_H_

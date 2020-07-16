@@ -1,4 +1,4 @@
-#include "oneflow/core/common/object_msg_struct.h"
+#include "oneflow/core/object_msg/object_msg_struct.h"
 #include "oneflow/core/common/callback.msg.h"
 #include "oneflow/core/common/util.h"
 

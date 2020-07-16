@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMMON_DSS_H_
-#define ONEFLOW_CORE_COMMON_DSS_H_
+#ifndef ONEFLOW_CORE_OBJECT_MSG_DSS_H_
+#define ONEFLOW_CORE_OBJECT_MSG_DSS_H_
 
 #include <cstddef>
 #include <typeinfo>
@@ -378,4 +378,4 @@ struct MutableTrait<true, Enabled> {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_DSS_H_
+#endif  // ONEFLOW_CORE_OBJECT_MSG_DSS_H_
