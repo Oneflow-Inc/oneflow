@@ -40,13 +40,12 @@ void ComputeTopK(const T* in_ptr, int32_t* indices_ptr, const Range& range, int3
 template<typename T>
 void CpuTopK(DeviceCtx* ctx, const T* in_ptr, int32_t* indices_ptr, int32_t instance_num,
              int32_t instance_size, int32_t k, bool sorted, int32_t* out_ptr) {
-  const int32_t num_thread =
-      std::min(instance_num, Global<ThreadMgr>::Get()->compute_thread_pool()->thread_num());
+  const int32_t num_thread = std::min(instance_num, Global<ThreadPool>::Get()->thread_num());
   const BalancedSplitter bs(instance_num, num_thread);
   BlockingCounter bc(num_thread);
   FOR_RANGE(int32_t, thread_id, 0, num_thread) {
     const Range range = bs.At(thread_id);
-    Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork([=, &bc]() {
+    Global<ThreadPool>::Get()->AddWork([=, &bc]() {
       if (k == 1) {
         ComputeTopOne(in_ptr, range, instance_size, out_ptr);
       } else {
