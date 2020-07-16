@@ -67,7 +67,7 @@
 
 ### Troubleshooting
 
-Please refer to [troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling oneflow from source.
+Please refer to [troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling OneFlow from source.
 
 ### Advanced Features
 
