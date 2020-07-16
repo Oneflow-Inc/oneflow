@@ -5,6 +5,8 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/job/scope.h"
 
 namespace oneflow {
 
@@ -35,16 +37,19 @@ void ResetOpConfName(OperatorConf* op_conf, const std::string& new_op_name) {
   }
 }
 
-void GetOpNames(const Job& job, HashSet<std::string>* op_names) {
-  for (const auto& op_conf : job.net().op()) { CHECK(op_names->insert(op_conf.name()).second); }
+Maybe<void> GetOpNames(const Job& job, HashSet<std::string>* op_names) {
+  for (const auto& op_conf : job.net().op()) {
+    CHECK_OR_RETURN(op_names->insert(op_conf.name()).second);
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
                         void (ForeignCallback::*interpret)(const std::string&, const std::string&)
                             const) {
-  OpGraph op_graph(job);
+  const auto& op_graph = JUST(OpGraph::New(job));
   const auto* foreign_callback = JUST(GlobalMaybe<ForeignCallback>());
-  op_graph.ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
+  JUST(op_graph->ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
     if (!op_names->insert(op_node.op().op_name()).second) { return Maybe<void>::Ok(); }
     const auto& op_attribute = op_node.op().GetOpAttributeWithoutOpNameAndLbn();
     const auto& parallel_conf = op_node.parallel_desc().parallel_conf();
@@ -52,7 +57,7 @@ Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
     const std::string& parallel_conf_str = PbMessage2TxtString(parallel_conf);
     (foreign_callback->*interpret)(op_attribute_str, parallel_conf_str);
     return Maybe<void>::Ok();
-  });
+  }));
   return Maybe<void>::Ok();
 }
 
@@ -409,11 +414,13 @@ Maybe<void> EagerJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(
   return Maybe<void>::Ok();
 }
 
-Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(
-    const OperatorConf& op_conf, const ParallelConf& origin_parallel_conf) {
-  auto op = ConstructOp(op_conf, &GlobalJobDesc());
+Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf& op_conf) {
+  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
+  const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
+  const auto* job_desc = JUST(scope.job_desc());
+  const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
+  auto op = ConstructOp(op_conf, parallel_desc.device_type(), job_desc);
   JUST(CheckAllInputsConvertableToMirroredBlob(*op));
-  ParallelDesc parallel_desc(origin_parallel_conf);
   int32_t parallel_num = parallel_desc.parallel_num();
   JUST(CheckAllInputsWithSameParallelNum(*op, parallel_num));
   auto GetSubOpName = [&](int index) { return GetMirroredOpName(op_conf.name(), index); };
@@ -428,7 +435,8 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(
     }
     const ParallelConf& parallel_conf = GetMirroredOpParallelConf(parallel_desc, i);
     bool is_mirrored_parallel_view = GetIsMirroredParallelView();
-    last_op_attribute = JUST(AddAndInferOp(sub_op_conf, parallel_conf, is_mirrored_parallel_view));
+    last_op_attribute =
+        JUST(AddAndInferOp(sub_op_conf, parallel_conf, job_desc, is_mirrored_parallel_view));
   }
   bool is_broadcast = JUST(AllInputsBroadcastParallel(*op));
   for (const auto& obn : op->output_bns()) {
@@ -458,14 +466,18 @@ Maybe<const LogicalBlobId*> JobBuildAndInferCtx::GetSubLbi(const LogicalBlobId& 
   return &lbi_vec_iter->second.at(index);
 }
 
-Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferConsistentOp(
-    const OperatorConf& op_conf, const ParallelConf& origin_parallel_conf) {
-  return AddAndInferOp(op_conf, origin_parallel_conf, false);
+Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferConsistentOp(const OperatorConf& op_conf) {
+  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
+  const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
+  const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
+  const auto* job_desc = JUST(scope.job_desc());
+  return AddAndInferOp(op_conf, parallel_desc.parallel_conf(), job_desc, false);
 }
 
 // TODO(): add handle error of same interface op blob between jobs
 Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
                                                       const ParallelConf& origin_parallel_conf,
+                                                      const JobDesc* job_desc,
                                                       bool is_mirrored_parallel_view) {
   CHECK_OR_RETURN(has_job_conf_) << JobBuildAndInferError::kJobConfNotSet;
   if (!is_job_conf_frozen_) { is_job_conf_frozen_ = true; }
@@ -477,7 +489,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
       << JobBuildAndInferError::kOpConfDeviceTypeNoSet << "op_name: " << op_name
       << " not set device type";
 
-  op_name2op_.emplace(op_name, ConstructOp(op_conf, &GlobalJobDesc()));
+  op_name2op_.emplace(op_name, ConstructOp(op_conf, job_desc));
   Operator* op = op_name2op_.at(op_name).get();
 
   SbpSignature sbp_sig_conf;
@@ -537,6 +549,8 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   };
   JUST(op->InferOutParallelDescIf(ParallelDesc4Obn, GetBlobDesc4BnInOp, parallel_desc,
                                   JUST(op->sbp_signature())));
+  // TODO(lixinqi): replace lbi2parallel_desc_from_producer_view_  with ParallelSignature
+  JUST(op->InferParallelSignatureIf());
   JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));
   // Infer whether input/output blobs are backward used
   InferBlobBackwardSignature(op);
@@ -828,7 +842,14 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompati
   } else {
     OF_UNIMPLEMENTED() << "`P' consistant blob is not compatible to mirrored blob";
   }
-  JUST(AddAndInferConsistentOp(op_conf, parallel_desc.parallel_conf()));
+  {
+    const auto& producer_op_conf = JUST(Op4OpName(lbi.op_name()))->op_conf();
+    CHECK_OR_RETURN(producer_op_conf.has_scope_symbol_id());
+    int64_t scope_symbol_id = producer_op_conf.scope_symbol_id();
+    const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(scope_symbol_id);
+    const auto* job_desc = JUST(scope.job_desc());
+    JUST(AddAndInferOp(op_conf, parallel_desc.parallel_conf(), job_desc, false));
+  }
   return mirrored_lbi;
 }
 
@@ -842,6 +863,12 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
       << "`P' consistant blob is not compatible to mirrored blob";
   const ParallelDesc& parallel_desc = *JUST(ParallelDesc4Lbi(lbi));
   OperatorConf op_conf;
+  {
+    // inherit scope_symbol_id from producer
+    const auto& producer_op_conf = JUST(Op4OpName(lbi.op_name()))->op_conf();
+    CHECK_OR_RETURN(producer_op_conf.has_scope_symbol_id());
+    op_conf.set_scope_symbol_id(producer_op_conf.scope_symbol_id());
+  }
   op_conf.set_device_type(parallel_desc.device_type());
   op_conf.set_name(kAutoMirroredBlobNamePrefix + "-CastToMirrored-" + NewUniqueId());
   auto* cast_to_mirrored_conf = op_conf.mutable_cast_to_mirrored_conf();
@@ -854,7 +881,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   (*mut_consistent_lbi2mirrored_lbi())[lbi] = mirrored_lbi;
   (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].push_back(mirrored_lbi);
   const auto& parallel_conf = parallel_desc.parallel_conf();
-  const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf, parallel_conf));
+  const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf));
   const std::string& op_attribute_str = PbMessage2TxtString(*op_attribute);
   const std::string& parallel_conf_str = PbMessage2TxtString(parallel_conf);
   JUST(GlobalMaybe<ForeignCallback>())->EagerMirroredCast(op_attribute_str, parallel_conf_str);
@@ -892,7 +919,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
-  GetOpNames(job(), &executed_op_names_);
+  JUST(GetOpNames(job(), &executed_op_names_));
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
     return FunctionPass(pass_name)(mut_job());
@@ -900,6 +927,7 @@ Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   JUST(DoPass("AutoTrainStep"));
   JUST(DoPass("AutoLearningRate"));
   JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+  JUST(DoPass("AddLbiDiffWatcherOpConfs"));
   JUST(EagerRunOps(job(), &executed_op_names_, &ForeignCallback::EagerInterpretCompletedOp));
   return Maybe<void>::Ok();
 }

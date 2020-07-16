@@ -10,6 +10,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/vm/virtual_machine_scope.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
@@ -57,6 +58,9 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitLogging(env_proto.cpp_logging_conf());
+#ifdef WITH_CUDA
+  InitGlobalCudaDeviceProp();
+#endif
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
   Global<CtrlClient>::New();
@@ -89,6 +93,9 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<CtrlClient>::Delete();
   Global<CtrlServer>::Delete();
   Global<EnvDesc>::Delete();
+#ifdef WITH_CUDA
+  Global<cudaDeviceProp>::Delete();
+#endif
 }
 
 }  // namespace oneflow

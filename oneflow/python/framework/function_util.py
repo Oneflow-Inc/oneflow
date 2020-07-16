@@ -4,7 +4,12 @@ import copy
 import functools
 import re
 
-import oneflow.core.job.job_pb2 as job_util
+import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.hob as hob
+import oneflow.python.lib.core.enable_if as enable_if
+from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.framework.function_desc import FunctionDesc
+import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.session_context as session_ctx
@@ -52,36 +57,62 @@ class FunctionConfig(object):
         return FunctionConfigSetter
 
 
-@oneflow_export("global_function")
-def oneflow_function(function_config=FunctionConfig()):
-    r"""Creates a callable OneFlow global function from a Python function.
-    For instance::
+@enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
+def eager_oneflow_function(function_config=FunctionConfig()):
+    assert isinstance(function_config, FunctionConfig)
 
-        @oneflow.global_function(flow.FunctionConfig())
-        def train():
-            # your model
+    def Decorator(job_func):
+        sess = session_ctx.GetDefaultSession()
+        function_desc = _CloneFunctionDesc(function_config.function_desc, job_func)
 
-    Args:
-        function_config: a `FunctionConfig` object
-    Returns:
-        a callable which is called to execute the compiled function
-    """
+        @functools.wraps(job_func)
+        def Func(*args, **kwargs):
+            return _RunEagerJob(sess, function_desc, *args, **kwargs)
+
+        for x in dir(job_func):
+            if x.startswith("__oneflow_"):
+                setattr(Func, x, getattr(job_func, x))
+        return Func
+
+    return Decorator
+
+
+@enable_if.condition(
+    hob.in_normal_mode & ~hob.eager_execution_enabled & ~hob.session_initialized
+)
+def lazy_oneflow_function(function_config=FunctionConfig()):
     assert isinstance(function_config, FunctionConfig)
 
     def Decorator(job_func):
         sess = session_ctx.GetDefaultSession()
 
         @functools.wraps(job_func)
-        def Func(*args):
-            return _RunJob(sess, job_func, *args)
+        def Func(*args, **kwargs):
+            return _RunLazyJob(sess, job_func, *args, **kwargs)
 
+        sess.AddJob(_CloneFunctionDesc(function_config.function_desc, job_func))
         for x in dir(job_func):
             if x.startswith("__oneflow_"):
                 setattr(Func, x, getattr(job_func, x))
-        sess.AddJob(_CloneFunctionDesc(function_config.function_desc, job_func))
         return Func
 
     return Decorator
+
+
+@oneflow_export("global_function")
+def api_oneflow_function(function_config=FunctionConfig()):
+    r"""Creates a callable OneFlow global function from a Python function.
+    For instance::
+        @oneflow.global_function(flow.FunctionConfig())
+        def train():
+            # your model
+    Args:
+        function_config: a `FunctionConfig` object
+    Returns:
+        a callable which is called to execute the compiled function
+    """
+    api = enable_if.unique([lazy_oneflow_function, eager_oneflow_function])
+    return api(function_config)
 
 
 def _CloneFunctionDesc(func_desc, job_func):
@@ -134,8 +165,12 @@ def _MakeLeafJobConfigCall(method):
     return lambda self, *argv, **kwarg: method(self.function_desc, *argv, **kwarg)
 
 
-def _RunJob(session, job_func, *args):
-    return session.TryInit().Run(job_func, *args)
+def _RunEagerJob(session, function_desc, *args):
+    return session.TryInit().EagerRun(function_desc, *args)
+
+
+def _RunLazyJob(session, job_func, *args, **kwargs):
+    return session.TryInit().LazyRun(job_func, *args, **kwargs)
 
 
 @oneflow_function_config("default_data_type")
@@ -412,6 +447,12 @@ def set_tensorrt_use_fp16(func_desc, value=True):
 def set_tensorrt_use_int8(func_desc, value=True):
     set_use_tensorrt(func_desc, True)
     func_desc.job_config_proto.xrt_config.tensorrt_config.use_int8 = value
+
+
+@oneflow_function_config("tensorrt.int8_calibration")
+def set_tensorrt_int8_calibration(func_desc, value):
+    assert func_desc.job_config_proto.xrt_config.tensorrt_config.use_int8
+    func_desc.job_config_proto.xrt_config.tensorrt_config.int8_calibration = value
 
 
 @oneflow_function_config("default_distribute_strategy")

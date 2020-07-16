@@ -10,6 +10,8 @@ namespace platform {
 
 int GetDeviceId(const XrtDevice &device);
 
+void SetDeviceId(const XrtDevice &device, const int device_id);
+
 }  // namespace platform
 
 }  // namespace xrt

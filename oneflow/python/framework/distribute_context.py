@@ -4,7 +4,27 @@ import oneflow.python.framework.session_context as session_ctx
 
 
 class DistributeStrategy(object):
-    pass
+    def __init__(self, is_mirrored):
+        self.is_mirrored_ = is_mirrored
+        self.scope_context_ = None
+        sess = session_ctx.GetDefaultSession()
+        # bypass the first DistributeStrategy for avoiding None old_scope
+        if sess.is_running and len(sess.is_mirrored_strategy_enabled_stack) > 0:
+
+            def BuildScope(old_scope, builder):
+                return old_scope.BuildWithNewIsMirrored(builder, is_mirrored)
+
+            self.scope_context_ = sess.NewCurrentScope(sess.MakeScope(BuildScope))
+
+    def __enter__(self, *argc, **kwarg):
+        PushMirroredStrategyEnabled(self.is_mirrored_)
+        if self.scope_context_ is not None:
+            self.scope_context_.__enter__(*argc, **kwarg)
+
+    def __exit__(self, *argc, **kwarg):
+        PopMirroredStrategyEnabled()
+        if self.scope_context_ is not None:
+            self.scope_context_.__exit__(*argc, **kwarg)
 
 
 def PushMirroredStrategyEnabled(val):
