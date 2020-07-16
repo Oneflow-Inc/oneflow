@@ -45,7 +45,7 @@ int64_t NewOpConfSymbol(InstructionMsgList* list, const std::shared_ptr<Operator
 int64_t NewOpParallelAttribute(InstructionMsgList* list, const std::vector<std::string>& ibns,
                                const std::vector<std::string>& obns) {
   OpParallelAttribute op_parallel_attribute;
-  auto* map = (op_parallel_attribute.mutable_sbp_signature())->mutable_bn_in_op2sbp_parallel();
+  auto* map = op_parallel_attribute.mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
   for (const auto& ibn : ibns) { (*map)[ibn].mutable_broadcast_parallel(); }
   for (const auto& obn : obns) { (*map)[obn].mutable_broadcast_parallel(); }
   int64_t op_parallel_attribute_id = vm::TestUtil::NewSymbol(list);

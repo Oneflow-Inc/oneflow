@@ -4,7 +4,6 @@
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
 
 namespace oneflow {
 namespace eager {
@@ -21,11 +20,6 @@ COMMAND(
     Global<vm::SymbolStorage<OperatorConf>>::SetAllocated(new vm::SymbolStorage<OperatorConf>()));
 using OperatorConfInstr = vm::InitSymbolInstructionType<OperatorConf>;
 COMMAND(vm::RegisterInstructionType<OperatorConfInstr>("InitOperatorConfSymbol"));
-
-COMMAND(
-    Global<vm::SymbolStorage<SbpSignature>>::SetAllocated(new vm::SymbolStorage<SbpSignature>()));
-using SbpSignatureInstr = vm::InitSymbolInstructionType<SbpSignature>;
-COMMAND(vm::RegisterInstructionType<SbpSignatureInstr>("InitSbpSignatureSymbol"));
 
 COMMAND(Global<vm::SymbolStorage<OpParallelAttribute>>::SetAllocated(
     new vm::SymbolStorage<OpParallelAttribute>()));

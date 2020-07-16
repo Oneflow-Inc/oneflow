@@ -312,7 +312,8 @@ Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruc
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  opkernel_obj->ResetOpAndKernel(op_parallel_attribute, &parallel_ctx, BlobDesc4BnInOp);
+  opkernel_obj->ResetOpAndKernel(&(op_parallel_attribute->sbp_signature()), &parallel_ctx,
+                                 BlobDesc4BnInOp);
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
                                  return blob_object->TryInitBlob();
@@ -346,7 +347,8 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  opkernel_obj->ResetKernel(op_parallel_attribute, &parallel_ctx, BlobDesc4BnInOp);
+  opkernel_obj->ResetKernel(&(op_parallel_attribute->sbp_signature()), &parallel_ctx,
+                            BlobDesc4BnInOp);
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
                                  return blob_object->TryInitBlob();

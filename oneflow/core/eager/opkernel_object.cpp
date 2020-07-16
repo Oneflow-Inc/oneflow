@@ -4,20 +4,19 @@ namespace oneflow {
 namespace eager {
 
 void OpKernelObject::ResetOpAndKernel(
-    const OpParallelAttribute* op_parallel_attribute, const ParallelContext* parallel_ctx,
+    const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   auto op = ConstructOp(op_conf_, device_type_, job_desc_.get());
   std::unique_ptr<OpContext> op_ctx;
-  InferBlobDescs(*op, BlobDesc4BnInOp, op_parallel_attribute, parallel_ctx, &op_ctx);
+  InferBlobDescs(*op, BlobDesc4BnInOp, sbp_signature, parallel_ctx, &op_ctx);
   NewPartialInitializedKernel(*op, BlobDesc4BnInOp, parallel_ctx, op_ctx.get());
 }
 
 void OpKernelObject::InferBlobDescs(
     const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const OpParallelAttribute* op_parallel_attribute, const ParallelContext* parallel_ctx,
+    const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
     std::unique_ptr<OpContext>* op_ctx) {
-  CHECK_JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx,
-                                 &(op_parallel_attribute->sbp_signature()),
+  CHECK_JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx, sbp_signature,
                                  [op_ctx](OpContext* ctx) { op_ctx->reset(ctx); }));
 }
 
@@ -33,20 +32,19 @@ void OpKernelObject::NewPartialInitializedKernel(
 }
 
 void SystemOpKernelObject::ResetKernel(
-    const OpParallelAttribute* op_parallel_attribute, const ParallelContext* parallel_ctx,
+    const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   auto op = ConstructOp(op_conf_, device_type_, job_desc_.get());
   std::unique_ptr<OpContext> op_ctx;
-  InferBlobDescs(*op, BlobDesc4BnInOp, op_parallel_attribute, parallel_ctx, &op_ctx);
+  InferBlobDescs(*op, BlobDesc4BnInOp, sbp_signature, parallel_ctx, &op_ctx);
   ResetKernel(*op, BlobDesc4BnInOp, parallel_ctx, op_ctx.get());
 }
 
 void SystemOpKernelObject::InferBlobDescs(
     const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const OpParallelAttribute* op_parallel_attribute, const ParallelContext* parallel_ctx,
+    const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
     std::unique_ptr<OpContext>* op_ctx) {
-  CHECK_JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx,
-                                 &(op_parallel_attribute->sbp_signature()),
+  CHECK_JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx, sbp_signature,
                                  [op_ctx](OpContext* ctx) { op_ctx->reset(ctx); }));
 }
 
