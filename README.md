@@ -1,5 +1,4 @@
 # Oneflow
-![Build and Test CI](https://github.com/Oneflow-Inc/oneflow/workflows/Build%20and%20Test%20CI/badge.svg?branch=develop)
 
 ### Install OneFlow
 
@@ -19,21 +18,25 @@
 
 1. #### System Requirements
 
-    Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable.
+    - Please use a newer version of CMake to build OneFlow. You could download cmake release from here: 
+      https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz
 
-    ```
-    export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
-    ```
+    - Building OneFlow from source requires a [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) libary installed. 
+    
+      It is recommended to install [Intel MKL](https://software.intel.com/content/www/us/en/develop/tools/math-kernel-library.html) which provides APIs compatible with BLAS. Please refer to Intel's official guide on how to install MKL [here](https://software.intel.com/content/www/us/en/develop/tools/math-kernel-library/choose-download.html).
 
-    Or you can install OpenBLAS and other tools through:
+      On CentOS, if you have MKL installed, please update the environment variable.
 
-    ```
-    sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
-    ```
+      ```
+      export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
+      ```
 
-    It is recommended to install MKL. Please refer to Intel's official guide on how to install MKL [here](https://software.intel.com/content/www/us/en/develop/tools/math-kernel-library/choose-download.html)
+      Or you can install OpenBLAS and other tools through:
 
-    If installed CMake doesn't support https scheme, please install a release with support for it. You could download cmake release from here: https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz
+      ```
+      sudo yum -y install epel-release
+      sudo yum -y install gcc-c++ openblas-devel kernel-devel-$(uname -r) nasm swig
+      ```
 
 2. #### Clone Source Code
 
@@ -54,19 +57,13 @@
 
     To install development dependencies and linter tools, run:
     ```
-    pip3 install -r dev-requirements.txt --user
+    python3 -m pip install -r dev-requirements.txt --user
     ```
 
 4. #### Build and Install OneFlow
 
-    Enter Build Directory, run:
-
     ```
     cd build
-    ```
-
-    Inside directory `build`, run:
-    ```
     cmake ..
     make -j$(nproc)
     make pip_install
@@ -74,10 +71,10 @@
 
 ### Troubleshooting
 
-Please refer to [troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling oneflow from source.
+Please refer to [troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling and running OneFlow.
 
 ### Advanced Features
 
 - #### XRT
 
-  You can check this [doc](./oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
+  You can check this [doc](oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
