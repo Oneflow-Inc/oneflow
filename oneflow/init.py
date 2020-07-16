@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 
 from oneflow.core.job.job_set_pb2 import ConfigProto
-from oneflow.core.job.job_pb2 import JobConfigProto
+from oneflow.core.job.job_conf_pb2 import JobConfigProto
 
 import oneflow.python.framework.session_util as session_util
 del session_util
@@ -12,6 +12,8 @@ for x in dir(dtype):
     if x.startswith('_') == False: locals()[x] = getattr(dtype, x)
 del x
 del dtype
+
+import oneflow.python.framework.register_python_callback
 
 import traceback
 try:

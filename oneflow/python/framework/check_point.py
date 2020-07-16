@@ -68,7 +68,8 @@ def eager_checkpoint_save(path):
 
 @enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
 def eager_checkpoint_init():
-    raise NotImplementedError
+    # eager variables are initialized in oneflow.get_variable()
+    pass
 
 
 @enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)

@@ -3,7 +3,8 @@ from __future__ import absolute_import
 
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
+import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -34,7 +35,7 @@ def dynamic_binary_split(
     op_conf.dynamic_binary_split_conf.out[:] = obns
     op_conf.dynamic_binary_split_conf.base_shift = base_shift
 
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     for i in range(out_num):
         out_lbi = logical_blob_id_util.LogicalBlobId()
         out_lbi.op_name = op_conf.name
@@ -81,7 +82,7 @@ def dynamic_binary_concat(
         print("Error! invalid sbp str:", source_sbp)
         op_conf.dynamic_binary_concat_conf.out_sbp.SetInParent()
 
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     out_lbi.op_name = op_conf.name
     out_lbi.blob_name = "out"

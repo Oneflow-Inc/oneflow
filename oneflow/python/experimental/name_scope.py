@@ -24,8 +24,14 @@ def name_scope(name: str) -> None:
     """
     assert isinstance(name, str)
     name_scope_stack_push(name)
+
+    def BuildScope(old_scope, builder):
+        return old_scope.BuildWithNewScopeName(builder, name)
+
+    sess = session_context.GetDefaultSession()
     try:
-        yield None
+        with sess.NewCurrentScope(sess.MakeScope(BuildScope)):
+            yield
     finally:
         name_scope_stack_pop()
 

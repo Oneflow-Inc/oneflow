@@ -6,14 +6,22 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.hob as hob
+import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Union, Tuple, List, Optional, Sequence, Callable
 
 
 @oneflow_export("advanced.distribute_clone")
-def distribute_clone(
+def api_distribute_clone(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> Tuple[remote_blob_util.BlobDef]:
+    func = enable_if.unique([distribute_clone])
+    return func(x, name=name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def distribute_clone(x, name=None):
     if name is None:
         name = id_util.UniqueStr("DistributeClone_")
     op_conf = op_conf_util.OperatorConf()
@@ -35,9 +43,15 @@ def distribute_clone(
 
 
 @oneflow_export("advanced.distribute_add")
-def distribute_add(
+def api_distribute_add(
     xs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    func = enable_if.unique([distribute_add])
+    return func(xs, name=name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def distribute_add(xs, name=None):
     assert oneflow.placement.current_scope().parallel_size == len(xs)
     if name is None:
         name = id_util.UniqueStr("DistributeAdd_")
@@ -55,9 +69,15 @@ def distribute_add(
 
 
 @oneflow_export("advanced.distribute_split")
-def distribute_split(
+def api_distribute_split(
     x: remote_blob_util.BlobDef, axis: int = 0, name: Optional[str] = None
 ) -> Tuple[remote_blob_util.BlobDef]:
+    func = enable_if.unique([distribute_split])
+    return func(x, axis=axis, name=name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def distribute_split(x, axis=0, name=None):
     if name is None:
         name = id_util.UniqueStr("DistributeSplit_")
     op_conf = op_conf_util.OperatorConf()
@@ -80,9 +100,15 @@ def distribute_split(
 
 
 @oneflow_export("advanced.distribute_concat")
-def distribute_concat(
+def api_distribute_concat(
     xs: Sequence[remote_blob_util.BlobDef], axis: int = 0, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    func = enable_if.unique([distribute_concat])
+    return func(xs, axis=axis, name=name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def distribute_concat(xs, axis=0, name=None):
     assert oneflow.placement.current_scope().parallel_size == len(xs)
     if name is None:
         name = id_util.UniqueStr("DistributeConcat_")
@@ -101,13 +127,19 @@ def distribute_concat(
 
 
 @oneflow_export("advanced.distribute_map")
-def distribute_map(
+def api_distribute_map(
     xs: Union[Sequence[remote_blob_util.BlobDef], remote_blob_util.BlobDef],
     f: Callable[
         [remote_blob_util.BlobDef, remote_blob_util.BlobDef], remote_blob_util.BlobDef
     ],
     axis: int = 0,
 ) -> Tuple[remote_blob_util.BlobDef]:
+    func = enable_if.unqiue([distribute_map])
+    return func(xs, f, axis=axis)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def distribute_map(xs, f, axis=0):
     _AssertInputOrOutput(xs)
     if isinstance(xs, (list, tuple)) == False:
         xs = [xs]

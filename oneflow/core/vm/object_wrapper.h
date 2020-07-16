@@ -10,9 +10,7 @@ namespace vm {
 template<typename T>
 class ObjectWrapper final : public Object {
  public:
-  template<typename... Args>
-  explicit ObjectWrapper(Args&&... args)
-      : data_(std::make_shared<T>(std::forward<Args>(args)...)) {}
+  explicit ObjectWrapper(const std::shared_ptr<T>& data) : data_(data) {}
 
   ~ObjectWrapper() = default;
 
