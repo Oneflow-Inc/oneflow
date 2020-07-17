@@ -77,6 +77,7 @@ def test_concat(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
+
 def compare_with_tensorflow_for_1_input(device_type, x_shape, dtype, axis):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
