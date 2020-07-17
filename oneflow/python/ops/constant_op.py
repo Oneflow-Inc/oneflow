@@ -15,7 +15,7 @@ from oneflow.python.oneflow_export import oneflow_export
 @oneflow_export("constant")
 def constant(
     value: Union[int, float],
-    dtype: int,
+    dtype: Optional[int] = None,
     shape: Optional[Sequence[int]] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:

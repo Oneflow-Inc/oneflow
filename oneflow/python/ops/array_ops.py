@@ -226,8 +226,8 @@ def transpose(
 @oneflow_export("slice")
 def slice(
     x: remote_blob_util.BlobDef,
-    begin: Union[list, tuple],
-    size: Union[list, tuple],
+    begin: Sequence[int],
+    size: Sequence[int],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""Extracts a slice from a tensor.
@@ -286,7 +286,7 @@ def slice(
 @oneflow_export("slice_v2")
 def slice_v2(
     x: remote_blob_util.BlobDef,
-    slice_tup_list: Union[list, tuple],
+    slice_tup_list: Sequence[int],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""Extracts a slice from a tensor.
@@ -761,7 +761,7 @@ def expand_dims(
 def broadcast_like(
     x: remote_blob_util.BlobDef,
     like: remote_blob_util.BlobDef,
-    broadcast_axes: Sequence[int] = None,
+    broadcast_axes: Optional[Sequence[int]] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     if name is None:
