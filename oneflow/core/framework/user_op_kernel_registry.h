@@ -63,8 +63,6 @@ struct OpKernelRegistryResult {
   IsMatchedHob is_matched_hob;
 };
 
-bool IsStateless4OpTypeName(const std::string& op_type_name);
-
 class OpKernelRegistry final {
  public:
   OpKernelRegistry& Name(const std::string& op_type_name);
