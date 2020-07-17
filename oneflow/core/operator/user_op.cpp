@@ -1,6 +1,5 @@
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/operator/user_op_util.h"
-#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/sbp_context.h"
@@ -287,7 +286,7 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
                                GetBlobDesc4BnInOp);
   const user_op::OpKernelRegistryResult* kernel_reg_val =
-      JUST(user_op::UserOpMgr::Get().GetOpKernelRegistryResult(
+      JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
           op_conf().user_conf().op_type_name(),
           UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx)));
   CHECK_OR_RETURN(kernel_reg_val != nullptr)

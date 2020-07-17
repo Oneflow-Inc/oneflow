@@ -16,7 +16,6 @@ class KernelConf;
 namespace user_op {
 
 class OpKernel;
-class KernelInitContext;
 class TensorDesc;
 class InferContext;
 
@@ -78,7 +77,7 @@ class OpKernelRegistry final {
   OpKernelRegistry& SetInplaceProposalFn(InplaceProposalFn fn);
 
   OpKernelRegistry& Finish();
-  OpKernelRegistryResult GetResult() { retusn result_; }
+  OpKernelRegistryResult GetResult() { return result_; }
 
  private:
   OpKernelRegistry& SetCreateFn(CreateFn fn);

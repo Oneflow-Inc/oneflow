@@ -8,6 +8,7 @@ namespace user_op {
 OpGradRegistry& OpGradRegistry::Name(const std::string& op_type_name) {
   CHECK(!op_type_name.empty());
   result_.op_type_name = op_type_name;
+  return *this;
 }
 
 OpGradRegistry& OpGradRegistry::SetGenBackwardOpConfFn(GenBackwardOpConfFn fn) {

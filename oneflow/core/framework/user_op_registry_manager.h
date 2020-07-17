@@ -21,15 +21,15 @@ class UserOpRegistryMgr final {
 
  public:
   OpRegistry CheckAndGetOpRegistry(const std::string& op_type_name);
-  void Register(OpRegistryResult& result);
+  void Register(OpRegistryResult result);
   const OpRegistryResult* GetOpRegistryResult(const std::string& op_type_name);
 
   OpGradRegistry CheckAndGetOpGradRegistry(const std::string& op_type_name);
-  void Register(OpGradRegistryResult& result);
+  void Register(OpGradRegistryResult result);
   const OpGradRegistryResult* GetOpGradRegistryResult(const std::string& op_type_name);
 
   OpKernelRegistry CheckAndGetOpKernelRegistry(const std::string& op_type_name);
-  void Register(OpKernelRegistryResult& result);
+  void Register(OpKernelRegistryResult result);
   Maybe<const OpKernelRegistryResult*> GetOpKernelRegistryResult(const std::string& op_type_name,
                                                                  const KernelRegContext& ctx);
 

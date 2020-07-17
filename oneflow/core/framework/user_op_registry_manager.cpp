@@ -22,8 +22,8 @@ OpRegistry UserOpRegistryMgr::CheckAndGetOpRegistry(const std::string& op_type_n
   return OpRegistry().Name(op_type_name);
 }
 
-void UserOpRegistryMgr::Register(OpRegistryResult& result) {
-  CHECK(op_reg_result_.emplace(result.op_type_name, result).seond);
+void UserOpRegistryMgr::Register(OpRegistryResult result) {
+  CHECK(op_reg_result_.emplace(result.op_type_name, result).second);
 }
 
 const OpRegistryResult* UserOpRegistryMgr::GetOpRegistryResult(const std::string& op_type_name) {
@@ -39,8 +39,8 @@ OpGradRegistry UserOpRegistryMgr::CheckAndGetOpGradRegistry(const std::string& o
   return OpGradRegistry().Name(op_type_name);
 }
 
-void UserOpRegistryMgr::Register(OpGradRegistryResult& result) {
-  CHECK(op_grad_reg_result_.emplace(result.op_type_name, result).seond);
+void UserOpRegistryMgr::Register(OpGradRegistryResult result) {
+  CHECK(op_grad_reg_result_.emplace(result.op_type_name, result).second);
 }
 
 const OpGradRegistryResult* UserOpRegistryMgr::GetOpGradRegistryResult(
@@ -55,13 +55,8 @@ OpKernelRegistry UserOpRegistryMgr::CheckAndGetOpKernelRegistry(const std::strin
   return OpKernelRegistry().Name(op_type_name);
 }
 
-void UserOpRegistryMgr::Register(OpKernelRegistryResult& result) {
+void UserOpRegistryMgr::Register(OpKernelRegistryResult result) {
   op_kernel_reg_result_[result.op_type_name].emplace_back(result);
-}
-
-const OpKernelRegistryResult* UserOpRegistryMgr::GetOpKernelRegistryResult(
-    const std::string& op_type_name) {
-  return nullptr;
 }
 
 namespace {
@@ -85,8 +80,8 @@ std::string GetErrorMsgOfSearchedOp(const KernelRegContext& ctx) {
 
 }  // namespace
 
-Maybe<const OpKernelRegistryResult*> GetOpKernelRegistryResult(const std::string& op_type_name,
-                                                               const KernelRegContext& ctx) {
+Maybe<const OpKernelRegistryResult*> UserOpRegistryMgr::GetOpKernelRegistryResult(
+    const std::string& op_type_name, const KernelRegContext& ctx) {
   auto it = op_kernel_reg_result_.find(op_type_name);
   if (it == op_kernel_reg_result_.end()) {
     return Error::OpKernelNotFoundError("There is no kernel registered for Current OperatorConf. ",

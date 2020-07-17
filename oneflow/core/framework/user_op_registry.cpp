@@ -23,8 +23,9 @@ bool InsertIfNotExists(const std::string& name, HashSet<std::string>* unique_nam
 }  // namespace
 
 OpRegistry& OpRegistry::Name(const std::string& op_type_name) {
-  CHECK(InsertIfNotExists(op_type_name, &unique_names_))
+  CHECK(InsertIfNotExists(op_type_name, &unique_names_));
   result_.op_type_name = op_type_name;
+  return *this;
 }
 
 OpRegistry& OpRegistry::ArgImpl(bool is_input, const std::string& name, bool is_optional,
@@ -90,7 +91,7 @@ void AddAttrWithDefault(OpRegistryResult* result, const std::string& name, UserO
   attr_def.set_name(name);
   attr_def.set_type(type);
   handler(&attr_def);
-  *(result.op_def.mutable_attr()->Add()) = std::move(attr_def);
+  *(result->op_def.mutable_attr()->Add()) = std::move(attr_def);
 }
 
 }  // namespace
