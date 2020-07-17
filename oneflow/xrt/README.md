@@ -12,6 +12,63 @@ XRT是一个同时支持多个计算引擎的运行时加速库，目前已经�
 4. 生成引擎相关Executable
 5. 执行Executable
 
+### Build with XLA
+
+- #### Install Bazel
+
+  Download and install bazel from [here](https://docs.bazel.build/versions/1.0.0/bazel-overview.html) , and version 0.24.1 is recommended. You can confirm bazel is installed successfully by running the following command:
+
+  ```shell
+  bazel version
+  ```
+
+- #### Build Third Parties
+
+  Inside directory `build`, run:
+
+  ```shell
+  cmake -DWITH_XLA=ON -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release ..
+  make -j$(nproc)
+  ```
+
+  If the downloading error occurred, you should go back to the previous step to reinstall the cmake, then clean the file CMakeCache.txt and build the third-parties once again.
+
+- #### Build OneFlow
+
+  Inside directory `build`, run:
+  ```shell
+  cmake .. \
+  -DWITH_XLA=ON \
+  -DTHIRD_PARTY=OFF \
+  -DCMAKE_BUILD_TYPE=Release
+  
+  make -j$(nproc)
+  ```
+
+### Build with TensorRT
+
+- #### Build Third Parties
+
+  1. Download TensorRT(>=6.0) .tgz and unzip the package.
+  
+  2. Inside directory `build`, run:
+  
+  ```shell
+  cmake -DWITH_TENSORRT=ON -DTENSORRT_ROOT=your_tensorrt_path -DTHIRD_PARTY=ON ..
+  make -j$(nproc)
+  ```
+- #### Build OneFlow
+
+  Inside directory `build`, run:
+  ```shell
+  cmake .. \
+  -DWITH_TENSORRT=ON \
+  -DTENSORRT_ROOT=your_tensorrt_path \
+  -DTHIRD_PARTY=OFF
+
+  make -j$(nproc)
+  ```
+
 ### 计算图的转换
 
   将OneFlow Job转换成XRT的计算流图 (XrtGraph)，该计算流图经过一序列变换后，最终被编译成后端引擎相关的Executable。

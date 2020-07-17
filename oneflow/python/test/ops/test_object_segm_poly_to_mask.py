@@ -192,7 +192,7 @@ def _of_poly_to_mask_pipline(
         [input_image_list], [input_poly_list], [input_poly_index_list]
     ).get()
 
-    return output_mask_list.ndarray_lists()[0], output_poly_list.ndarray_lists()[0]
+    return output_mask_list.numpy_lists()[0], output_poly_list.numpy_lists()[0]
 
 
 def _get_target_resize_scale(size, target_size, max_size):

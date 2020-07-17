@@ -69,10 +69,10 @@ def test_smooth_l1_loss(_):
         def assert_prediction_grad(b):
             prediction_grad = np_result["prediction_grad"]
             assert prediction_grad.dtype == type_name_to_np_type[data_type]
-            assert np.allclose(prediction_grad, b.ndarray()), (
+            assert np.allclose(prediction_grad, b.numpy()), (
                 case,
                 prediction_grad,
-                b.ndarray(),
+                b.numpy(),
             )
 
         @flow.global_function(func_config)
@@ -100,5 +100,5 @@ def test_smooth_l1_loss(_):
 
         loss_np = np_result["loss"]
         assert loss_np.dtype == type_name_to_np_type[data_type]
-        loss = TestJob(prediction, label).get().ndarray()
+        loss = TestJob(prediction, label).get().numpy()
         assert np.allclose(loss_np, loss), (case, loss_np, loss)

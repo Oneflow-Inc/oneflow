@@ -21,7 +21,7 @@ def of_run(device_type, x_shape, rate, seed):
 
     # OneFlow
     x = np.random.rand(*x_shape).astype(np.float32)
-    of_out = RandomMaskLikeJob(x).get().ndarray()
+    of_out = RandomMaskLikeJob(x).get().numpy()
     assert np.allclose(
         [1 - np.count_nonzero(of_out) / of_out.size], [rate], atol=rate / 5
     )

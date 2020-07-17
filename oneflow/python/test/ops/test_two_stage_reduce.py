@@ -55,7 +55,7 @@ def _test_two_stage_reduce(
             return loss
 
     x = np.random.randint(low=0, high=10, size=(4, 20, 20, 20)).astype(np.float32)
-    y = two_stage_reduce_job(x).get().ndarray()
+    y = two_stage_reduce_job(x).get().numpy()
     _compare_with_numpy(test_case, np_func, x, y, axis=tuple(axis))
 
 

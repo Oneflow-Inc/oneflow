@@ -26,7 +26,7 @@ def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dt
     input = np.random.rand(*input_shape).astype(type_name_to_np_type[dtype])
     of_out = cast_forward(input).get()
     tf_out = tf.cast(input, dtype=type_name_to_np_type[dtype])
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
 
 
 def compare_with_tensorflow(device_type, input_shape, dtype):
@@ -68,7 +68,7 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
         tf_out = tf.cast(x, dtype=type_name_to_np_type[dtype])
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
