@@ -262,6 +262,22 @@ def ofrecord_reader(
     shuffle_after_epoch: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """[summary]
+
+    Args:
+        ofrecord_dir (str): [description]
+        batch_size (int, optional): [description]. Defaults to 1.
+        data_part_num (int, optional): [description]. Defaults to 1.
+        part_name_prefix (str, optional): [description]. Defaults to "part-".
+        part_name_suffix_length (int, optional): [description]. Defaults to -1.
+        random_shuffle (bool, optional): [description]. Defaults to False.
+        shuffle_buffer_size (int, optional): [description]. Defaults to 1024.
+        shuffle_after_epoch (bool, optional): [description]. Defaults to False.
+        name (Optional[str], optional): [description]. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: [description]
+    """
     if name is None:
         name = id_util.UniqueStr("OFRecord_Reader_")
 
