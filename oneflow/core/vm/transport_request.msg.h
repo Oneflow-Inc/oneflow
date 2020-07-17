@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_VM_TRANSPORT_REQUEST_H_
 #define ONEFLOW_CORE_VM_TRANSPORT_REQUEST_H_
 
-#include "oneflow/core/common/flat_msg.h"
-#include "oneflow/core/common/object_msg.h"
+#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/object_msg/object_msg.h"
 
 namespace oneflow {
 namespace vm {

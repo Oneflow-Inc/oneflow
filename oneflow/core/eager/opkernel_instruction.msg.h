@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_EAGER_OPKERNEL_INSTRUCTION_MSG_H_
 #define ONEFLOW_CORE_EAGER_OPKERNEL_INSTRUCTION_MSG_H_
 
-#include "oneflow/core/common/flat_msg_view.h"
+#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 
