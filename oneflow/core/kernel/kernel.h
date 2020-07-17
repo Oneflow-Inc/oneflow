@@ -10,7 +10,7 @@
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/operator/op_conf_util.h"
-#include "oneflow/core/kernel/user_op_registry_manager.h"
+#include "oneflow/core/kernel/kernel_registration.h"
 
 namespace oneflow {
 
