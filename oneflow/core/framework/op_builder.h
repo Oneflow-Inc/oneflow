@@ -3,10 +3,10 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/framework/registrar.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/framework/user_op_manager.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
 
 namespace oneflow {
@@ -34,6 +34,7 @@ using InputArgModifyFn = std::function<void(GetInputArgModifier, const UserOpCon
 struct OpRegistrationVal {
   OpRegistrationVal() : cpu_only_supported(false), same_output_regst_num(-1) {}
   ~OpRegistrationVal() = default;
+  std::string op_type_name;
   bool cpu_only_supported;
   int32_t same_output_regst_num;
   UserOpDef op_def;
@@ -46,16 +47,10 @@ struct OpRegistrationVal {
   InputArgModifyFn input_arg_modify_fn;
 };
 
-struct OpRegistryWrapper final {
-  void InsertToGlobalRegistry();
-
-  std::string op_type_name;
-  OpRegistrationVal reg_val;
-};
-
 class OpBuilder final {
  public:
   OpBuilder& Name(const std::string& op_type_name);
+
   OpBuilder& Input(const std::string& name);
   OpBuilder& Input(const std::string& name, int32_t num);
   OpBuilder& InputWithMinimum(const std::string& name, int32_t min_num);
@@ -84,31 +79,21 @@ class OpBuilder final {
   OpBuilder& SetCheckAttrFn(CheckAttrFn fn);
 
   OpBuilder& Finish();
-  OpRegistryWrapper GetResult();
+  OpBuildResult GetResult();
 
  private:
   OpBuilder& ArgImpl(bool is_input, const std::string& name, bool is_optional, int32_t num,
                      bool num_as_min);
 
-  OpRegistryWrapper wrapper_;
+ private:
+  OpRegistrationVal result_;
   HashSet<std::string> unique_names_;
 };
-
-const OpRegistrationVal* LookUpInOpRegistry(const std::string& op_type_name);
-
-std::vector<std::string> GetAllUserOpInOpRegistry();
 
 static const std::string kUserSourceOpTickInputArgName = "UserSourceOpTickInput";
 
 }  // namespace user_op
 
 }  // namespace oneflow
-
-#define REGISTER_USER_OP(name)                                                               \
-  static ::oneflow::user_op::UserOpRegisterTrigger<::oneflow::user_op::OpBuilder> OF_PP_CAT( \
-      g_registrar, __COUNTER__) =                                                            \
-      ::oneflow::user_op::UserOpManager::Get().GetOpBuilder().Name(name)
-
-#define REGISTER_CPU_ONLY_USER_OP(name) REGISTER_USER_OP(name).SupportCpuOnly()
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_REGISTRATION_H_
