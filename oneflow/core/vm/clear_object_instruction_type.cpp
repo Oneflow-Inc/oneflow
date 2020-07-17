@@ -1,4 +1,4 @@
-#include "oneflow/core/common/flat_msg_view.h"
+#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
