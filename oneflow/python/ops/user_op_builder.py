@@ -68,7 +68,6 @@ class UserOp(object):
 
 @oneflow_export("user_op_builder")
 def api_user_op_builder(op_name):
-def api_user_op_builder(op_name):
     """Generate a `UserOpConfBuilder` object used to build a user op.
 
     Args:
