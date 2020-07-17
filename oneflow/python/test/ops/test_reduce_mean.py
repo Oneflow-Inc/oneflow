@@ -22,7 +22,7 @@ def compare_with_tensorflow(device_type, input_shape, axis, keepdims):
 
     @flow.global_function(func_config)
     def ReduceMeanJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=input_shape,

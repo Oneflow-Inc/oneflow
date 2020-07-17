@@ -28,7 +28,7 @@ def roundup(x, align):
 
 
 def coco_data_load(cfg, machine_id, nrank):
-    with flow.device_prior_placement("cpu", "{}:0-{}".format(machine_id, nrank - 1)):
+    with flow.scope.placement("cpu", "{}:0-{}".format(machine_id, nrank - 1)):
         (
             image,
             image_id,
@@ -91,7 +91,7 @@ def _make_data_load_fn():
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     cfg = COCODataLoadConfig()
 

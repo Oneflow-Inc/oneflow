@@ -82,7 +82,7 @@ class PlacementScope(object):
 class FixedPlacementScope(PlacementScope):
     r"""Class for fixed placement scope.
 
-    This class along with `device_prior_placement` allows to define PlacementScope
+    This class along with `oneflow.scope.placement` allows to define PlacementScope
     with fixed parallel configuration.
     """
 
@@ -96,7 +96,7 @@ class FixedPlacementScope(PlacementScope):
 class DevicePriorPlacementScope(PlacementScope):
     r"""Class for device prior placement scope.
 
-    This class along with `device_prior_placement` allows to define PlacementScope
+    This class along with `oneflow.scope.placement` allows to define PlacementScope
     with device prior parallel configuration.
     """
 
