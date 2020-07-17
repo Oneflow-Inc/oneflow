@@ -6,6 +6,8 @@
 
 namespace oneflow {
 
+namespace summary {
+
 void PlanToPhysicalGraphFile(const Plan& plan) {
   GraphDef physical_graph;
   physical_graph.set_version(3);  // "compute graph version number = 3"
@@ -67,5 +69,7 @@ void PlanToPhysicalGraphFile(const Plan& plan) {
   }
   TeePersistentLogStream::Create("physical_graph")->Write(physical_graph);
 }
+
+}  // namespace summary
 
 }  // namespace oneflow

@@ -1,5 +1,5 @@
 syntax = "proto2";
-package oneflow;
+package oneflow.summary;
 
 message TensorProto {
   required TensorDataType dtype = 1;

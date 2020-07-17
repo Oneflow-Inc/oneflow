@@ -6,7 +6,7 @@ namespace oneflow {
 
 namespace summary {
 
-EventsWriter::EventsWriter() {}
+EventsWriter::EventsWriter() : is_inited_(false) {}
 
 EventsWriter::~EventsWriter() { Close(); }
 
@@ -15,6 +15,7 @@ Maybe<void> EventsWriter::Init(const std::string& logdir) {
   file_system_->RecursivelyCreateDirIfNotExist(logdir);
   log_dir_ = logdir;
   TryToInit();
+  is_inited_ = true;
   last_flush_time_ = CurrentMircoTime();
   return Maybe<void>::Ok();
 }
@@ -90,14 +91,14 @@ void EventsWriter::FileFlush() {
   writable_file_->Flush();
 }
 
-Maybe<void> EventsWriter::Close() {
+void EventsWriter::Close() {
+  if (!is_inited_) { return; }
   queue_mutex.unlock();
   Flush();
   if (writable_file_ != nullptr) {
     writable_file_->Close();
     writable_file_.reset(nullptr);
   }
-  return Maybe<void>::Ok();
 }
 
 }  // namespace summary

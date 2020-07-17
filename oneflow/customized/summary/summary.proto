@@ -1,5 +1,5 @@
 syntax = "proto2";
-package oneflow;
+package oneflow.summary;
 
 import "oneflow/customized/summary/tensor.proto";
 

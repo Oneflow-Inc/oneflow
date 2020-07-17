@@ -5,7 +5,10 @@
 
 namespace oneflow {
 
+namespace summary {
+
 void PlanToPhysicalGraphFile(const Plan& plan);
+}
 
 }  // namespace oneflow
 

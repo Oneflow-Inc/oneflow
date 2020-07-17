@@ -27,7 +27,7 @@ class EventsWriter {
   Maybe<void> Init(const std::string& logdir);
   void WriteEvent(const Event& event);
   void Flush();
-  Maybe<void> Close();
+  void Close();
 
   void AppendQueue(std::unique_ptr<Event> event);
   void FileFlush();
@@ -37,6 +37,7 @@ class EventsWriter {
   inline static void EncodeHead(char* head, size_t size);
   inline static void EncodeTail(char* tail, const char* data, size_t size);
 
+  bool is_inited_;
   std::string log_dir_;
   std::string filename_;
   std::unique_ptr<fs::FileSystem> file_system_;
