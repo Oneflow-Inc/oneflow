@@ -85,11 +85,10 @@ std::string GetErrorMsgOfSearchedOp(const KernelRegContext& ctx) {
 
 }  // namespace
 
-Maybe<const OpKernelRegistryResult*> LookUpInKernelRegistry(const std::string& op_type_name,
-                                                            const KernelRegContext& ctx) {
-  const auto registry = MutKernelRegistry();
-  auto it = registry->find(op_type_name);
-  if (it == registry->end()) {
+Maybe<const OpKernelRegistryResult*> GetOpKernelRegistryResult(const std::string& op_type_name,
+                                                               const KernelRegContext& ctx) {
+  auto it = op_kernel_reg_result_.find(op_type_name);
+  if (it == op_kernel_reg_result_.end()) {
     return Error::OpKernelNotFoundError("There is no kernel registered for Current OperatorConf. ",
                                         {})
            << GetErrorMsgOfSearchedOp(ctx);

@@ -87,9 +87,6 @@ class OpKernelRegistry final {
   OpKernelRegistryResult result_;
 };
 
-// Maybe<const OpKernelRegistryResult*> LookUpInKernelRegistry(const std::string& op_type_name,
-//                                                            const KernelRegContext&);
-
 }  // namespace user_op
 
 }  // namespace oneflow

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_FRAMEWORK_USER_OP_REGISTRY_MANAGER_H_
 #define ONEFLOW_CORE_FRAMEWORK_USER_OP_REGISTRY_MANAGER_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/user_op_grad_registry.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
@@ -29,7 +30,8 @@ class UserOpRegistryMgr final {
 
   OpKernelRegistry CheckAndGetOpKernelRegistry(const std::string& op_type_name);
   void Register(OpKernelRegistryResult& result);
-  const OpKernelRegistryResult* GetOpKernelRegistryResult(const std::string& op_type_name);
+  Maybe<const OpKernelRegistryResult*> GetOpKernelRegistryResult(const std::string& op_type_name,
+                                                                 const KernelRegContext& ctx);
 
  private:
   HashMap<std::string, OpRegistryResult> op_reg_result_;

@@ -82,7 +82,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   explicit UserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                  const JobDesc& job_desc)
       : user_op::KernelInitContext(
-          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+            user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         sbp_signature_(&(kernel_conf.user_conf().sbp_sig())) {
@@ -212,7 +212,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                   const JobDesc& job_desc)
       : user_op::KernelInferContext(
-          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+            user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         op_infer_ctx_(kernel_conf.op_attribute().op_conf(), job_desc) {
@@ -294,7 +294,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   explicit UserKernelComputeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                     const JobDesc& job_desc)
       : user_op::KernelComputeContext(
-          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+            user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(std::move(UserKernelBaseContext(kernel_conf, job_desc))) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
@@ -379,7 +379,7 @@ class UserKernel final : public Kernel {
       const std::string& op_type_name =
           kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
       const user_op::OpKernelRegistryResult* kernel_reg_val =
-          CHECK_JUST(user_op::LookUpInKernelRegistry(
+          CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
               op_type_name, UserKernelRegContext(kernel_conf(), job_desc())));
       CHECK_NOTNULL(kernel_reg_val);
       kernel_.reset(kernel_reg_val->create_fn());
@@ -449,8 +449,8 @@ EagerKernel::EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf)
 
 void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
   const std::string& op_type_name = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
-  auto kernel_reg_val = CHECK_JUST(
-      user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf, job_desc())));
+  auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+      op_type_name, UserKernelRegContext(kernel_conf, job_desc())));
   CHECK_NOTNULL(kernel_reg_val);
   kernel_.reset(kernel_reg_val->create_fn());
 }
