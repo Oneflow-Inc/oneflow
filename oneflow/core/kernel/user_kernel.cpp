@@ -227,7 +227,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     InitArg2Blob(kernel_conf.op_attribute().op_conf().user_conf().input());
     InitArg2Blob(kernel_conf.op_attribute().op_conf().user_conf().output());
 
-    const auto* op_reg_val = user_op::LookUpInOpRegistry(
+    const auto* op_reg_val = user_op::UserOpMgr::Get().GetOpRegistrationResult(
         kernel_conf.op_attribute().op_conf().user_conf().op_type_name());
     CHECK_NOTNULL(op_reg_val);
     tensor_desc_infer_fn_ = op_reg_val->tensor_desc_infer_fn;

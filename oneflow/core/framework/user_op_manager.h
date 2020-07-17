@@ -7,14 +7,14 @@ namespace oneflow {
 
 namespace user_op {
 
-class UserOpManager final {
+class UserOpMgr final {
  private:
-  UserOpManager() {}
+  UserOpMgr() {}
 
  public:
-  UserOpManager(UserOpManager const&) = delete;
-  UserOpManager& operator=(UserOpManager const&) = delete;
-  static UserOpManager& Get();
+  UserOpMgr(UserOpMgr const&) = delete;
+  UserOpMgr& operator=(UserOpMgr const&) = delete;
+  static UserOpMgr& Get();
 
  public:
   OpBuilder CheckAndGetOpBuilder(const std::string& op_type_name);
@@ -28,7 +28,7 @@ class UserOpManager final {
 template<typename BuilderT>
 struct UserOpRegisterTrigger final {
   UserOpRegisterTrigger(BuilderT& builder) {
-    UserOpManager::Get().Register(builder.Finish().GetResult());
+    UserOpMgr::Get().Register(builder.Finish().GetResult());
   }
 };
 
@@ -39,7 +39,7 @@ struct UserOpRegisterTrigger final {
 #define REGISTER_USER_OP(name)                                                               \
   static ::oneflow::user_op::UserOpRegisterTrigger<::oneflow::user_op::OpBuilder> OF_PP_CAT( \
       g_register_trigger, __COUNTER__) =                                                     \
-      ::oneflow::user_op::UserOpManager::Get().CheckAndGetOpBuilder(name)
+      ::oneflow::user_op::UserOpMgr::Get().CheckAndGetOpBuilder(name)
 
 #define REGISTER_CPU_ONLY_USER_OP(name) REGISTER_USER_OP(name).SupportCpuOnly()
 

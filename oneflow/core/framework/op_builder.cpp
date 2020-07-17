@@ -11,20 +11,6 @@ namespace user_op {
 
 namespace {}  // namespace
 
-// const OpRegistrationResult* LookUpInOpRegistry(const std::string& op_type_name) {
-//   const auto registry = MutOpRegistry();
-//   auto it = registry->find(op_type_name);
-//   if (it != registry->end()) { return &(it->second); }
-//   return nullptr;
-// }
-//
-// std::vector<std::string> GetAllUserOpInOpRegistry() {
-//   std::vector<std::string> ret;
-//   const auto registry = MutOpRegistry();
-//   for (auto it = registry->begin(); it != registry->end(); ++it) { ret.push_back(it->first); }
-//   return ret;
-// }
-
 namespace {
 
 bool InsertIfNotExists(const std::string& name, HashSet<std::string>* unique_names) {
