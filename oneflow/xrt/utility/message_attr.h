@@ -4,6 +4,8 @@
 #include "glog/logging.h"
 
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/attr_value_accessor.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 namespace xrt {
@@ -11,8 +13,15 @@ namespace util {
 
 template<typename T>
 inline void Attr(const PbMessage &message, const std::string &attr_name, T *value) {
-  CHECK(HasFieldInPbMessage(message, attr_name));
-  *value = GetValFromPbMessage<T>(message, attr_name);
+  const UserOpConf* user_conf = dynamic_cast<const UserOpConf*>(&message);
+  if (user_conf) {
+    CHECK(user_conf->attr().find(attr_name) != user_conf->attr().end());
+    UserOpAttrVal val = user_conf->attr().at(attr_name);
+    *value = user_op::AttrValAccessor<T>::Attr(val);
+  } else {
+    CHECK(HasFieldInPbMessage(message, attr_name));
+    *value = GetValFromPbMessage<T>(message, attr_name);
+  }
 }
 
 template<typename T>

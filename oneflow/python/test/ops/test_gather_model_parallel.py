@@ -37,7 +37,7 @@ def _test_gather_model_parallel_fw(
             return flow.gather(params=params, indices=indices, axis=axis)
 
     params_arr, indices_arr, out_arr = _gen_test_data(params_shape, indices_shape, axis)
-    out = gather_model_parallel_fw_job(params_arr, indices_arr).get().ndarray()
+    out = gather_model_parallel_fw_job(params_arr, indices_arr).get().numpy()
     if axis == split_axis:
         test_case.assertTrue(np.allclose(out, out_arr))
     else:
@@ -52,6 +52,4 @@ def test_gather_model_parallel_fw(test_case):
     arg_dict["axis"] = [0, 1, 2]
     arg_dict["split_axis"] = [0, 1, 2]
     for arg in GenArgList(arg_dict):
-        if arg[3] == arg[4] and os.getenv("ENABLE_USER_OP") != "True":
-            continue
         _test_gather_model_parallel_fw(test_case, *arg)

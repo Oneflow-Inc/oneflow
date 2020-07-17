@@ -2,8 +2,10 @@ from __future__ import absolute_import
 
 import sys
 from functools import reduce
+from typing import Any, Optional, Sequence, Union, Tuple
 
 import numpy as np
+
 import oneflow
 import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -16,14 +18,11 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+from functools import reduce
 
 
 class ArgBlobDef(blob_desc.BlobDesc):
-    def __init__(
-        self, shape, dtype, batch_axis, split_axis="same_with_batch_axis", name=None
-    ):
-        if split_axis == "same_with_batch_axis":
-            split_axis = batch_axis
+    def __init__(self, shape, dtype, batch_axis, name=None):
         lbi = lbi_util.LogicalBlobId()
         if name is None:
             name = id_util.UniqueStr("Input_")
@@ -37,7 +36,6 @@ class ArgBlobDef(blob_desc.BlobDesc):
         self.shape_ = shape
         self.dtype_ = dtype
         self.batch_axis_ = batch_axis
-        self.split_axis_ = split_axis
 
     @property
     def shape(self):
@@ -78,6 +76,9 @@ class ArgBlobDef(blob_desc.BlobDesc):
     def AddAndInferOp(self, op_conf):
         raise NotImplementedError
 
+    def EagerAddAndInferOp(self, op_conf):
+        raise NotImplementedError
+
     def CheckAndAsyncPush(self, session, arg_ndarray):
         self._CheckNdarray(arg_ndarray)
         self._AsyncPush(session, arg_ndarray)
@@ -88,24 +89,16 @@ class ArgBlobDef(blob_desc.BlobDesc):
     def _AsyncPush(self, session, arg_ndarray):
         raise NotImplementedError
 
+    def SetBatchAxisAndSplitAxis(self, interface_blob_conf):
+        raise NotImplementedError
+
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
         interface_blob_conf.data_type = self.dtype_
         interface_blob_conf.is_dynamic = self.is_dynamic
         interface_blob_conf.is_tensor_list = self.is_tensor_list
-        if type(self.batch_axis_) is int:
-            assert self.batch_axis_ >= 0
-            interface_blob_conf.batch_axis.value = self.batch_axis_
-        else:
-            assert self.batch_axis_ is None or self.batch_axis_ is False
-            interface_blob_conf.batch_axis.ClearField("value")
-        if type(self.split_axis_) is int:
-            assert self.split_axis_ >= 0
-            interface_blob_conf.split_axis.value = self.split_axis_
-        else:
-            assert self.split_axis_ is None or self.split_axis_ is False
-            interface_blob_conf.split_axis.ClearField("value")
+        self.SetBatchAxisAndSplitAxis(interface_blob_conf)
         return interface_blob_conf
 
 
@@ -115,7 +108,7 @@ class FixedTensorDef(ArgBlobDef):
     A `numpy.ndarray` takes a `FixedTensorDef`'s place must have a identical shape.
     For instance::
         
-        @oneflow.function
+        @oneflow.global_function
         def train(
             image_blob=oneflow.FixedTensorDef(
                 shape=(2, 255, 255, 3), dtype=flow.float32
@@ -129,42 +122,64 @@ class FixedTensorDef(ArgBlobDef):
 
     def __init__(
         self,
-        shape,
-        dtype=data_type_util.kFloat,
-        batch_axis=0,
-        split_axis="same_with_batch_axis",
-        name=None,
-    ):
+        shape: Tuple[int],
+        dtype: int = data_type_util.kFloat,
+        batch_axis: int = 0,
+        name: Optional[str] = None,
+    ) -> None:
         if type(batch_axis) is int:
             if batch_axis < 0:
                 batch_axis += len(shape)
             assert batch_axis >= 0
             assert batch_axis < len(shape)
+        else:
+            assert batch_axis is None
         ArgBlobDef.__init__(
-            self,
-            shape,
-            dtype=dtype,
-            batch_axis=batch_axis,
-            split_axis=split_axis,
-            name=name,
+            self, shape, dtype=dtype, batch_axis=batch_axis, name=name,
         )
 
     @property
-    def is_dynamic(self):
+    def is_dynamic(self) -> bool:
         return False
 
     @property
-    def is_tensor_list(self):
+    def is_tensor_list(self) -> bool:
         return False
 
-    def AddAndInferOp(self, op_conf):
+    def AddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
         return compile_context.CurJobAddConsistentOp(op_conf)
 
-    def _CheckNdarray(self, ndarray):
+    def EagerAddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
+        parallel_symbol = oneflow.scope.current_scope().device_parallel_desc_symbol
+        if (
+            parallel_symbol.device_tag == "gpu"
+            and list(parallel_symbol.machine_id2device_id_list.keys()) == [0]
+            and parallel_symbol.parallel_num == 1
+        ):
+            device_tag = "gpu"
+            device_ids = "0:%s" % (parallel_symbol.machine_id2device_id_list[0][0])
+        else:
+            device_tag = "cpu"
+            device_ids = "0:0"
+        with oneflow.fixed_placement(device_tag, device_ids):
+            return compile_context.CurJobAddConsistentOp(op_conf)
+
+    def SetBatchAxisAndSplitAxis(
+        self, interface_blob_conf: op_conf_util.InterfaceBlobConf
+    ) -> None:
+        if self.batch_axis is None:
+            interface_blob_conf.batch_axis.ClearField("value")
+            interface_blob_conf.split_axis.ClearField("value")
+        else:
+            assert type(self.batch_axis) is int
+            interface_blob_conf.batch_axis.value = self.batch_axis
+            interface_blob_conf.split_axis.value = self.batch_axis
+
+    def _CheckNdarray(self, ndarray: np.ndarray) -> None:
         assert isinstance(ndarray, np.ndarray)
         assert ndarray.shape == self.shape
 
-    def _AsyncPush(self, session, arg_ndarray):
+    def _AsyncPush(self, session: object, arg_ndarray: np.ndarray) -> None:
         session.AsyncPush(self.op_name, _MakePushNdarrayCallback(arg_ndarray))
 
 
@@ -174,7 +189,7 @@ class MirroredTensorDef(ArgBlobDef):
     A `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
     For instance::
         
-        @oneflow.function
+        @oneflow.global_function
         def train(
             image_blob=oneflow.MirroredTensorDef(
                 shape=(2, 255, 255, 3), dtype=flow.float32
@@ -189,7 +204,13 @@ class MirroredTensorDef(ArgBlobDef):
 
     """
 
-    def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0, name=None):
+    def __init__(
+        self,
+        shape: Tuple[int],
+        dtype: int = data_type_util.kFloat,
+        batch_axis: int = 0,
+        name: Optional[str] = None,
+    ) -> None:
         assert type(shape) is tuple
         assert type(batch_axis) is int
         if batch_axis < 0:
@@ -200,19 +221,29 @@ class MirroredTensorDef(ArgBlobDef):
         self.sub_consistent_blob_list_ = []
 
     @property
-    def is_dynamic(self):
+    def is_dynamic(self) -> bool:
         return True
 
     @property
-    def is_tensor_list(self):
+    def is_tensor_list(self) -> bool:
         return False
 
-    def AddAndInferOp(self, op_conf):
+    def AddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> None:
         _AddAndInferMirroredOp(
             self.unique_name, op_conf, self.sub_consistent_blob_list_
         )
 
-    def _CheckNdarray(self, ndarray_list):
+    def EagerAddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
+        return compile_context.CurJobAddMirroredOp(op_conf)
+
+    def SetBatchAxisAndSplitAxis(
+        self, interface_blob_conf: op_conf_util.InterfaceBlobConf
+    ) -> None:
+        assert type(self.batch_axis) is int
+        interface_blob_conf.batch_axis.value = self.batch_axis
+        interface_blob_conf.split_axis.ClearField("value")
+
+    def _CheckNdarray(self, ndarray_list: Sequence[np.ndarray]) -> None:
         assert isinstance(ndarray_list, (list, tuple))
         assert len(self.sub_consistent_blob_list_) == len(ndarray_list)
 
@@ -226,7 +257,7 @@ class MirroredTensorDef(ArgBlobDef):
             assert len(ndarray.shape) == len(self.shape)
             assert GetElemCnt(ndarray.shape) <= GetElemCnt(self.shape)
 
-    def _AsyncPush(self, session, ndarray_list):
+    def _AsyncPush(self, session: object, ndarray_list: Sequence[np.ndarray]) -> None:
         for i in range(len(ndarray_list)):
             sub_blob = self.sub_consistent_blob_list_[i]
             session.AsyncPush(
@@ -240,7 +271,7 @@ class MirroredTensorListDef(ArgBlobDef):
     A `list` of `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
     For instance::
         
-        @oneflow.function
+        @oneflow.global_function
         def train(
             image_blob=oneflow.MirroredTensorListDef(
                 shape=(2, 255, 255, 3), dtype=flow.float32
@@ -255,7 +286,13 @@ class MirroredTensorListDef(ArgBlobDef):
 
     """
 
-    def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0, name=None):
+    def __init__(
+        self,
+        shape: Tuple[int],
+        dtype: int = data_type_util.kFloat,
+        batch_axis: int = 0,
+        name: Optional[str] = None,
+    ) -> None:
         assert type(shape) is tuple
         assert type(batch_axis) is int
         if batch_axis < 0:
@@ -266,19 +303,29 @@ class MirroredTensorListDef(ArgBlobDef):
         self.sub_consistent_blob_list_ = []
 
     @property
-    def is_dynamic(self):
+    def is_dynamic(self) -> bool:
         return True
 
     @property
-    def is_tensor_list(self):
+    def is_tensor_list(self) -> bool:
         return True
 
-    def AddAndInferOp(self, op_conf):
+    def AddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> None:
         _AddAndInferMirroredOp(
             self.unique_name, op_conf, self.sub_consistent_blob_list_
         )
 
-    def _CheckNdarray(self, ndarray_lists):
+    def EagerAddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
+        return compile_context.CurJobAddMirroredOp(op_conf)
+
+    def SetBatchAxisAndSplitAxis(
+        self, interface_blob_conf: op_conf_util.InterfaceBlobConf
+    ) -> None:
+        assert type(self.batch_axis) is int
+        interface_blob_conf.batch_axis.value = self.batch_axis
+        interface_blob_conf.split_axis.ClearField("value")
+
+    def _CheckNdarray(self, ndarray_lists: Sequence[np.ndarray]) -> None:
         assert isinstance(ndarray_lists, (list, tuple))
         assert len(self.sub_consistent_blob_list_) == len(ndarray_lists)
 
@@ -296,7 +343,7 @@ class MirroredTensorListDef(ArgBlobDef):
                 elem_cnt += GetElemCnt(ndarray.shape)
             assert elem_cnt <= GetElemCnt(self.shape)
 
-    def _AsyncPush(self, session, ndarray_lists):
+    def _AsyncPush(self, session: object, ndarray_lists: Sequence[np.ndarray]) -> None:
         for i in range(len(ndarray_lists)):
             sub_blob = self.sub_consistent_blob_list_[i]
             session.AsyncPush(
@@ -319,7 +366,14 @@ def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
 
 def _MakePushNdarrayCallback(ndarray):
     copied = np.copy(ndarray)
-    return lambda ofblob: ofblob.CopyFromNdarray(copied)
+
+    def Copy(ofblob):
+        capacity = reduce(lambda x, y: x * y, ofblob.static_shape, 1)
+        elem_cnt = reduce(lambda x, y: x * y, copied.shape, 1)
+        assert elem_cnt <= capacity, "%s v.s. %s" % (copied.shape, ofblob.static_shape)
+        ofblob.CopyFromNdarray(copied)
+
+    return Copy
 
 
 def _MakePushNdarrayListCallback(ndarray_list):

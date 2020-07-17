@@ -287,6 +287,12 @@ REGISTER_USER_OP("TestDynamicSource")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
+    })
+    .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
+                             const user_op::UserOpConfWrapper& conf) {
+      user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
+      CHECK(out_modifier != nullptr);
+      out_modifier->set_header_infered_before_compute(false);
     });
 
 REGISTER_USER_OP("TestRandomSource")
@@ -328,6 +334,13 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
       CHECK_GT_OR_RETURN(string_list.size(), 0);
       return Maybe<void>::Ok();
     });
+
+REGISTER_USER_OP("test_user_op_attr_auto_type")
+    .Input("in")
+    .Output("out")
+    .Attr("int1", UserOpAttrType::kAtInt32)
+    .Attr("int2", UserOpAttrType::kAtInt32)
+    .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged);
 
 REGISTER_CPU_ONLY_USER_OP("cpu_only_relu_test")
     .Input("in")

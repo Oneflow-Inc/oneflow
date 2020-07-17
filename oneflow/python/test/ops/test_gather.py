@@ -94,13 +94,13 @@ def _compare_gather_with_tf(
 
         def compare_dy(params_grad):
             test_case.assertTrue(
-                np.array_equal(dy.numpy(), params_grad.ndarray_list()[0])
+                np.array_equal(dy.numpy(), params_grad.numpy_list()[0])
             )
 
     else:
 
         def compare_dy(params_grad):
-            test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.ndarray()))
+            test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.numpy()))
 
     gather_fn = _make_gather_fn(
         params, indices, axis, batch_dims, device_type, mirrored, compare_dy
@@ -110,9 +110,9 @@ def _compare_gather_with_tf(
     check_point.init()
 
     if mirrored:
-        of_y = gather_fn([params], [indices]).get().ndarray_list()[0]
+        of_y = gather_fn([params], [indices]).get().numpy_list()[0]
     else:
-        of_y = gather_fn(params, indices).get().ndarray()
+        of_y = gather_fn(params, indices).get().numpy()
 
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
 

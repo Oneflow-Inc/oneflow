@@ -1,12 +1,17 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.compiler as compiler
+from typing import Optional, TypeVar
+
 from oneflow.core.job.job_set_pb2 import JobSet
 from oneflow.python.oneflow_export import oneflow_export
 
+_VT = TypeVar("_VT")
+
 
 @oneflow_export("inter_job_reuse_mem_strategy")
-def inter_job_reuse_mem_strategy(strategy_str, job_set=None, **kwargs):
+def inter_job_reuse_mem_strategy(
+    strategy_str: str, job_set: Optional[JobSet] = None, **kwargs: _VT
+) -> None:
     r"""Set memory sharing strategy for job set.
 
     Args:

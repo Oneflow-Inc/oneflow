@@ -13,7 +13,7 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("deprecated.init_worker")
-def init_worker(scp_binary=True, use_uuid=True):
+def init_worker(scp_binary: bool = True, use_uuid: bool = True) -> None:
     assert type(env_util.default_env_proto) is EnvProto
     env_util.defautl_env_proto_mutable = False
     env_proto = env_util.default_env_proto
@@ -53,7 +53,7 @@ def init_worker(scp_binary=True, use_uuid=True):
 
 
 @oneflow_export("deprecated.delete_worker")
-def delete_worker():
+def delete_worker() -> None:
     # assert env_util.env_proto_mutable == False
     env_proto = env_util.default_env_proto
     assert isinstance(env_proto, EnvProto)

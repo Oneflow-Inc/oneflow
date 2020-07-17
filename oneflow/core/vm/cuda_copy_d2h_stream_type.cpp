@@ -32,6 +32,7 @@ void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
     instr_type_id.instruction_type().Compute(instruction);
+    CudaCheck(cudaGetLastError());
   }
   stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
@@ -40,6 +41,7 @@ void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
 
 ObjectMsgPtr<StreamDesc> CudaCopyD2HStreamType::MakeStreamDesc(const Resource& resource,
                                                                int64_t this_machine_id) const {
+  if (!resource.has_gpu_device_num()) { return ObjectMsgPtr<StreamDesc>(); }
   std::size_t device_num = resource.gpu_device_num();
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CudaCopyD2HStreamType>());

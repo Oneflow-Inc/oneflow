@@ -18,6 +18,8 @@ class CallOpKernelInstructionType : public vm::InstructionType {
   virtual ~CallOpKernelInstructionType() = default;
 
  private:
+  Maybe<void> MaybeInfer(vm::Instruction* instruction) const;
+  Maybe<void> MaybeCompute(vm::Instruction* instruction) const;
   virtual const char* device_tag() const = 0;
 };
 
@@ -31,6 +33,10 @@ class UserStatelessCallOpKernelInstructionType : public vm::InstructionType {
   virtual ~UserStatelessCallOpKernelInstructionType() = default;
 
  private:
+  Maybe<void> Infer(vm::Instruction* instruction,
+                    const StatelessCallOpKernelInstrOperand& args) const;
+  Maybe<void> Compute(vm::Instruction* instruction,
+                      const StatelessCallOpKernelInstrOperand& args) const;
   virtual const char* device_tag() const = 0;
 };
 
@@ -47,10 +53,14 @@ class SystemStatelessCallOpKernelInstructionType : public vm::InstructionType {
   virtual ~SystemStatelessCallOpKernelInstructionType() = default;
 
  private:
+  Maybe<void> Infer(vm::Instruction* instruction,
+                    const StatelessCallOpKernelInstrOperand& args) const;
+  Maybe<void> Compute(vm::Instruction* instruction,
+                      const StatelessCallOpKernelInstrOperand& args) const;
   virtual const char* device_tag() const = 0;
 };
 
-class WatchBlobHeaderInstructionType : public vm::InstructionType {
+class FetchBlobHeaderInstructionType : public vm::InstructionType {
  public:
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override {
@@ -58,14 +68,14 @@ class WatchBlobHeaderInstructionType : public vm::InstructionType {
   }
 
  protected:
-  WatchBlobHeaderInstructionType() = default;
-  virtual ~WatchBlobHeaderInstructionType() = default;
+  FetchBlobHeaderInstructionType() = default;
+  virtual ~FetchBlobHeaderInstructionType() = default;
 
  private:
   virtual const char* device_tag() const = 0;
 };
 
-class WatchBlobBodyInstructionType : public vm::InstructionType {
+class FetchBlobBodyInstructionType : public vm::InstructionType {
  public:
   void Infer(vm::Instruction* instruction) const override {
     // do nothing
@@ -73,8 +83,23 @@ class WatchBlobBodyInstructionType : public vm::InstructionType {
   void Compute(vm::Instruction* instruction) const override;
 
  protected:
-  WatchBlobBodyInstructionType() = default;
-  virtual ~WatchBlobBodyInstructionType() = default;
+  FetchBlobBodyInstructionType() = default;
+  virtual ~FetchBlobBodyInstructionType() = default;
+
+ private:
+  virtual const char* device_tag() const = 0;
+};
+
+class FeedBlobInstructionType : public vm::InstructionType {
+ public:
+  void Infer(vm::Instruction* instruction) const override {
+    // do nothing
+  }
+  void Compute(vm::Instruction* instruction) const override;
+
+ protected:
+  FeedBlobInstructionType() = default;
+  virtual ~FeedBlobInstructionType() = default;
 
  private:
   virtual const char* device_tag() const = 0;

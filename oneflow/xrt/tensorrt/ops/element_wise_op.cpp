@@ -22,15 +22,11 @@ class ElementWiseOp : public TrtOpKernel {
       auto *layer = ctx->builder()->addElementWise(*ctx->Input(name), *result, element_wise_op);
       result = layer->getOutput(0);
     }
-    ctx->SetOutput("out", result);
+    ctx->SetSoleOutput(result);
   }
 };
 
 REGISTER_TRT_OP_KERNEL(Add, ElementWiseOp<nvinfer1::ElementWiseOperation::kSUM>)
-    .EnableTrainPhase()
-    .Finalize();
-
-REGISTER_TRT_OP_KERNEL(Multiply, ElementWiseOp<nvinfer1::ElementWiseOperation::kPROD>)
     .EnableTrainPhase()
     .Finalize();
 

@@ -119,7 +119,7 @@ def _GetSequence(value, n, name):
 
 def test_pool(_):
     arg_dict = OrderedDict()
-    is_user_op = os.getenv("ENABLE_USER_OP") == "True"
+    is_user_op = os.getenv("ENABLE_USER_OP") != "False"
     if is_user_op:
         arg_dict["device_type"] = ["gpu", "cpu"]
     else:
@@ -161,10 +161,10 @@ def test_pool(_):
         dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
 
         def assert_grad(b):
-            assert np.allclose(dx_tf.numpy(), b.ndarray()), (
+            assert np.allclose(dx_tf.numpy(), b.numpy()), (
                 case,
                 dx_tf.numpy(),
-                b.ndarray(),
+                b.numpy(),
             )
 
         # 1F results
@@ -214,10 +214,10 @@ def test_pool(_):
             x = [x]
         y = pooling_job(x).get()
         y_ndarray = None
-        if hasattr(y, "ndarray"):
-            y_ndarray = y.ndarray()
+        if is_dynamic:
+            y_ndarray = y.numpy_list()[0]
         else:
-            y_ndarray = y.ndarray_list()[0]
+            y_ndarray = y.numpy()
         assert y_ndarray.shape == y_tf.numpy().shape, (
             y_ndarray.shape,
             y_tf.numpy().shape,

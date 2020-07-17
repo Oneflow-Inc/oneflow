@@ -5,13 +5,25 @@ from contextlib import closing
 
 import oneflow.core.job.env_pb2 as env_pb
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 
 
+@oneflow_export("env.enable_eager_environment")
+def api_enable_eager_execution(val: bool = True) -> None:
+    return enable_if.unique([enable_eager_environment])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_eager_environment(val=True):
+    return c_api_util.EnableEagerEnvironment(val)
+
+
 @oneflow_export("env.init")
-def api_env_init():
+def api_env_init() -> bool:
     return enable_if.unique([env_init, do_nothing])()
 
 
@@ -27,7 +39,7 @@ def env_init():
 
 
 @oneflow_export("env.current_resource", "current_resource")
-def api_get_current_resource():
+def api_get_current_resource() -> resource_util.Resource:
     return enable_if.unique([get_current_resource])()
 
 
@@ -42,12 +54,12 @@ def api_get_current_machine_id():
 
 
 @enable_if.condition(hob.in_normal_mode & hob.env_initialized)
-def get_current_machine_id():
+def get_current_machine_id() -> int:
     return c_api_util.CurrentMachineId()
 
 
 @oneflow_export("env.machine")
-def api_machine(*val):
+def api_machine(*val: list) -> None:
     r"""Set machines' hostnames.  For instance::
 
         oneflow.env.machine([{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}])
@@ -69,7 +81,7 @@ def machine(*val):
 
 
 @oneflow_export("env.ctrl_port")
-def api_ctrl_port(val):
+def api_ctrl_port(val: int) -> None:
     r"""Set port number used to control the execution across multiple machines. Same on every machine.
 
     Args:
@@ -85,7 +97,7 @@ def ctrl_port(val):
 
 
 @oneflow_export("env.data_port")
-def api_data_port(val):
+def api_data_port(val: int) -> None:
     r"""Set port number used to data transfer among multiple machines. Same on every machine.
 
     Args:
@@ -101,8 +113,8 @@ def data_port(val):
 
 
 @oneflow_export("env.grpc_use_no_signal")
-def api_grpc_use_no_signal(val=True):
-    return enable_if.unique([grpc_use_no_signal, do_nothing])(val=True)
+def api_grpc_use_no_signal(val: bool = True) -> None:
+    return enable_if.unique([grpc_use_no_signal, do_nothing])(val=val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
@@ -112,7 +124,7 @@ def grpc_use_no_signal(val=True):
 
 
 @oneflow_export("env.log_dir")
-def api_log_dir(val):
+def api_log_dir(val: str) -> None:
     r"""Specify a dir to store OneFlow's logging files. If not specified, it is `./log` by default.
 
     """
@@ -126,7 +138,7 @@ def log_dir(val):
 
 
 @oneflow_export("env.logtostderr")
-def api_logtostderr(val):
+def api_logtostderr(val: int) -> None:
     return enable_if.unique([logtostderr, do_nothing])(val)
 
 
@@ -137,7 +149,7 @@ def logtostderr(val):
 
 
 @oneflow_export("env.logbuflevel")
-def api_logbuflevel(val):
+def api_logbuflevel(val: int) -> None:
     return enable_if.unique([logbuflevel, do_nothing])(val)
 
 
@@ -202,6 +214,17 @@ def _FindFreePort():
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s.getsockname()[1]
 
+
+def GetEnvDefaultParallelConf(device_tag):
+    if device_tag not in device_tag2default_parallel_conf:
+        parallel_conf = placement_ctx.MakeParallelConf4Resource(
+            device_tag, c_api_util.EnvResource()
+        )
+        device_tag2default_parallel_conf[device_tag] = parallel_conf
+    return device_tag2default_parallel_conf[device_tag]
+
+
+device_tag2default_parallel_conf = {}
 
 default_env_proto = _DefaultEnvProto()
 env_proto_mutable = True

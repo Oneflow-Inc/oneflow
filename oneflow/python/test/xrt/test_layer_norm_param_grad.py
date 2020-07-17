@@ -62,13 +62,13 @@ class TestLayerNormParamGrad(unittest.TestCase):
         self.assertTrue(d_gamma1.shape, d_gamma2.shape)
 
         self.assertTrue(
-            np.allclose(d_norm1.ndarray(), d_norm2.ndarray(), rtol=1e-03, atol=1e-05)
+            np.allclose(d_norm1.numpy(), d_norm2.numpy(), rtol=1e-03, atol=1e-05)
         )
         self.assertTrue(
-            np.allclose(d_beta1.ndarray(), d_beta2.ndarray(), rtol=1e-03, atol=1e-05)
+            np.allclose(d_beta1.numpy(), d_beta2.numpy(), rtol=1e-03, atol=1e-05)
         )
         self.assertTrue(
-            np.allclose(d_gamma1.ndarray(), d_gamma2.ndarray(), rtol=1e-03, atol=1e-05)
+            np.allclose(d_gamma1.numpy(), d_gamma2.numpy(), rtol=1e-03, atol=1e-05)
         )
 
         flow.clear_default_session()

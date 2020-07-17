@@ -31,6 +31,7 @@ void XlaGraphCompiler::SetupKernelContextParam(const XrtNode *node,
                                                XlaOpContext::Param *context_param) {
   util::Map<Argument, XlaValue> input_ops;
   util::Map<std::string /* produce/consume key */, Argument> input_output_args;
+  std::vector<std::string> output_names;
   for (const XrtEdge *edge : node->in_edges()) {
     if (!edge->IsControlEdge()) {
       const Argument &arg = edge->argument();
@@ -46,6 +47,7 @@ void XlaGraphCompiler::SetupKernelContextParam(const XrtNode *node,
       const Argument &arg = edge->argument();
       const std::string &k = arg.meta_data().produce_key;
       input_output_args.emplace(k, arg);
+      output_names.push_back(k);
     }
   }
 
@@ -56,6 +58,7 @@ void XlaGraphCompiler::SetupKernelContextParam(const XrtNode *node,
   context_param->message = OpMessage(node);
   context_param->arguments = std::move(input_output_args);
   context_param->inputs = std::move(input_ops);
+  context_param->output_names = std::move(output_names);
   context_param->num_outputs = num_outputs;
 }
 
@@ -121,7 +124,7 @@ std::shared_ptr<Executable> XlaGraphCompiler::BuildExecutable(
   build_options.set_result_layout(xla_output_shape);
   MOLA_CHECK_AND_ASSIGN(auto executable,
                         client->Compile(computation, argument_layouts, build_options));
-  return std::make_shared<XlaExecutable>(this->device_, xla_input_shapes, xla_output_shape,
+  return std::make_shared<XlaExecutable>(builder_->name(), this->device_, xla_input_shapes, xla_output_shape,
                                          std::move(executable));
 }
 

@@ -28,7 +28,7 @@ def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):
         ]
         return flow.broadcast_to_compatible_with(x_def, compatible_var)
 
-    return broadcast_to_compatible_with_fn([x]).get().ndarray_list()[0]
+    return broadcast_to_compatible_with_fn([x]).get().numpy_list()[0]
 
 
 def _of_broadcast_to_compatible_with_dynamic(
@@ -58,7 +58,7 @@ def _of_broadcast_to_compatible_with_dynamic(
             x_def, [flow.identity(a_def), flow.identity(b_def)]
         )
 
-    return broadcast_to_compatible_with_fn([x], [a], [b]).get().ndarray_list()[0]
+    return broadcast_to_compatible_with_fn([x], [a], [b]).get().numpy_list()[0]
 
 
 def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
@@ -100,7 +100,7 @@ def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
         flow.watch_diff(x_var, dx_watcher)
         return y
 
-    return broadcast_to_compatible_with_fn(x).get().ndarray()
+    return broadcast_to_compatible_with_fn(x).get().numpy()
 
 
 def test_broadcast_to_compatible_with(test_case):
@@ -145,7 +145,7 @@ def test_broadcast_to_compatible_with_grad(test_case):
 
     def compare_dy(dx_blob):
         dx = np.ones([7, 5, 4], dtype=np.float32).sum(axis=1).reshape(x.shape)
-        test_case.assertTrue(np.array_equal(dx, dx_blob.ndarray()))
+        test_case.assertTrue(np.array_equal(dx, dx_blob.numpy()))
 
     ret = _of_broadcast_to_compatible_with_grad(x, compatible_shape, compare_dy)
     exp_ret = np.broadcast_to(x, [7, 5, 4])

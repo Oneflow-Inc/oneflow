@@ -1,6 +1,9 @@
 from __future__ import absolute_import
 
-import oneflow.core.job.job_pb2 as job_util
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
+import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.hob as hob
+import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
@@ -16,7 +19,7 @@ class FunctionAttribute(object):
 class FunctionDesc(object):
     def __init__(self, job_func=None, job_config_proto=None, function_attribute=None):
         if job_config_proto is None:
-            job_config_proto = job_util.JobConfigProto()
+            job_config_proto = job_conf_pb.JobConfigProto()
         if function_attribute is None:
             function_attribute = FunctionAttribute()
         self.job_func = job_func
@@ -61,7 +64,26 @@ class FunctionDesc(object):
             raise NotImplementedError()
 
 
-@oneflow_export("current_global_function_desc")
-def GetCurrentGlobalFunctionDesc():
+@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+def GetCurrentEagerGlobalFunctionDesc():
+    sess = session_ctx.GetDefaultSession()
+    ret = sess.CurrentEagerGlobalFunctionDesc()
+    assert ret is not None
+    return ret
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def GetCurrentLazyGlobalFunctionDesc():
+    sess = session_ctx.GetDefaultSession()
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
+    ret = sess.GetLazyFunctionDesc(job_name)
+    assert ret is not None
+    return ret
+
+
+@oneflow_export("current_global_function_desc")
+def api_current_global_function_desc() -> FunctionDesc:
+    api_func = enable_if.unique(
+        [GetCurrentLazyGlobalFunctionDesc, GetCurrentEagerGlobalFunctionDesc]
+    )
+    return api_func()

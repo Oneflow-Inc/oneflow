@@ -95,7 +95,7 @@ def _make_data_load_fn():
 
     cfg = COCODataLoadConfig()
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def data_load_fn():
         return coco_data_load(cfg, 0, 1)
 
@@ -117,16 +117,15 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
         if verbose:
             print("==== iter {} ====".format(i))
             print(
-                "image: {}\n".format(image.ndarray_list()[0].shape),
-                image.ndarray_list()[0],
+                "image: {}\n".format(image.numpy_list()[0].shape),
+                image.numpy_list()[0],
             )
             print(
-                "image_size: {}\n".format(image_size.ndarray().shape),
-                image_size.ndarray(),
+                "image_size: {}\n".format(image_size.numpy().shape), image_size.numpy(),
             )
-            print("gt_bbox:\n", gt_bbox.ndarray_lists()[0])
-            print("gt_label:\n", gt_label.ndarray_lists()[0])
-            print("gt_mask:\n", gt_mask.ndarray_lists()[0])
+            print("gt_bbox:\n", gt_bbox.numpy_lists()[0])
+            print("gt_label:\n", gt_label.numpy_lists()[0])
+            print("gt_mask:\n", gt_mask.numpy_lists()[0])
 
     print(
         "mean of time elapsed of {} iters (dropped {} first iters): {}".format(

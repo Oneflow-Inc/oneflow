@@ -1,7 +1,12 @@
 # Minimum CMake required
 cmake_minimum_required(VERSION 3.14.0)
 
-option(THIRD_PARTY "Build third party or oneflow" OFF)
+option(THIRD_PARTY "Build third party" ON)
+option(ONEFLOW "Build oneflow" ON)
+
+if (NOT THIRD_PARTY AND NOT ONEFLOW)
+  message(FATAL_ERROR "at least one of flags THIRD_PARTY and ONEFLOW should be ON")
+endif()
 
 option(USE_CLANG_FORMAT "" OFF)
 option(BUILD_RDMA "" OFF)
@@ -14,17 +19,12 @@ option(FOR_CI "" OFF)
 option(BUILD_GIT_VERSION "" ON)
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
-  set(CUDNN_STATIC ON CACHE BOOL "")
-else ()
   set(CUDNN_STATIC OFF CACHE BOOL "")
+else ()
+  set(CUDNN_STATIC ON CACHE BOOL "")
 endif()
 
-# Project
-if(THIRD_PARTY)
-  project(third_party C CXX)
-else()
-  project(oneflow C CXX)
-endif()
+project(oneflow C CXX)
 
 if (NOT DEFINED USE_CXX11_ABI)
   if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5))
@@ -118,7 +118,7 @@ if(WIN32)
     endif()
   endforeach()
 
-  #set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS} /DEBUG:FASTLINK") 
+  #set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS} /DEBUG:FASTLINK")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-sign-compare -Wno-unused-function -fPIC")
@@ -126,7 +126,11 @@ endif()
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-  set(THIRD_PARTY OFF CACHE BOOL "" FORCE)
 else()
+  add_custom_target(prepare_oneflow_third_party ALL)
+endif()
+
+# skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src, swig src
+if (ONEFLOW)
   include(oneflow)
 endif()

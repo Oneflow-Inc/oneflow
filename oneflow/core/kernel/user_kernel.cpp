@@ -470,7 +470,7 @@ void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) co
   kernel_->InferShape(&infer_ctx);
 }
 
-std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerModelForward(
+std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
     const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, DeviceCtx* device_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   std::shared_ptr<user_op::OpKernelState> new_opkernel_state;

@@ -5,7 +5,7 @@ import os
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
@@ -13,9 +13,6 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("constant")
 def constant(value, dtype=None, shape=None, name=None):
-    is_user_op = False
-    if os.getenv("ENABLE_USER_OP") == "True":
-        is_user_op = True
     if name is None:
         name = id_util.UniqueStr("Constant_")
     assert value is not None
@@ -24,7 +21,7 @@ def constant(value, dtype=None, shape=None, name=None):
     if not isinstance(value, (int, float)):
         raise NotImplementedError
 
-    if is_user_op:
+    if os.getenv("ENABLE_USER_OP") != "False":
         if isinstance(value, float):
             is_floating_value = True
         else:
@@ -58,7 +55,7 @@ def constant(value, dtype=None, shape=None, name=None):
             op_conf.constant_conf.shape.dim.extend(list(shape))
 
         setattr(op_conf.constant_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -88,7 +85,7 @@ def constant_like(like, value, dtype=None, name=None):
     if dtype is not None:
         setattr(op_conf.constant_like_conf, "data_type", dtype)
     setattr(op_conf.constant_like_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")

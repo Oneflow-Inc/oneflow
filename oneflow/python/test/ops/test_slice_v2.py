@@ -24,7 +24,7 @@ def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=N
             return do_slice(input_blob, index_args)
 
         outputs = slice([input]).get()
-        return map(lambda x: x.ndarray_list()[0], outputs)
+        return map(lambda x: x.numpy_list()[0], outputs)
 
     else:
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
@@ -34,7 +34,7 @@ def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=N
             return do_slice(input_blob, index_args)
 
         outputs = slice(input).get()
-        return map(lambda x: x.ndarray(), outputs)
+        return map(lambda x: x.numpy(), outputs)
 
 
 def _check(test_case, ref, out):
@@ -163,7 +163,7 @@ def test_slice_grad(test_case):
     ref[:, 2:-2, :] = np.ones(input[:, 2:-2, :].shape, dtype=np.float32)
 
     def slice_grad_cb(dx_blob):
-        dx = dx_blob.ndarray()
+        dx = dx_blob.numpy()
         test_case.assertTrue(np.allclose(ref, dx))
 
     func_config = flow.FunctionConfig()

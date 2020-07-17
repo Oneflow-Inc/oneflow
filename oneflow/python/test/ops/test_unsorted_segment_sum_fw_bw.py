@@ -95,14 +95,12 @@ def _compare_unsorted_segment_sum_with_tf(
     if mirrored:
 
         def compare_dy(data_grad):
-            test_case.assertTrue(
-                np.array_equal(dy.numpy(), data_grad.ndarray_list()[0])
-            )
+            test_case.assertTrue(np.array_equal(dy.numpy(), data_grad.numpy_list()[0]))
 
     else:
 
         def compare_dy(data_grad):
-            test_case.assertTrue(np.array_equal(dy.numpy(), data_grad.ndarray()))
+            test_case.assertTrue(np.array_equal(dy.numpy(), data_grad.numpy()))
 
     unsorted_segment_sum_fn = _make_unsorted_segment_sum_fn(
         data, segment_ids, axis, num_segments, device_type, mirrored, compare_dy
@@ -112,9 +110,9 @@ def _compare_unsorted_segment_sum_with_tf(
     check_point.init()
 
     if mirrored:
-        of_y = unsorted_segment_sum_fn([data], [segment_ids]).get().ndarray_list()[0]
+        of_y = unsorted_segment_sum_fn([data], [segment_ids]).get().numpy_list()[0]
     else:
-        of_y = unsorted_segment_sum_fn(data, segment_ids).get().ndarray()
+        of_y = unsorted_segment_sum_fn(data, segment_ids).get().numpy()
     test_case.assertTrue(np.allclose(y.numpy(), of_y, rtol=1e-5, atol=1e-5))
 
 

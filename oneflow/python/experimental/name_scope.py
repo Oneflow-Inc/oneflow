@@ -9,7 +9,7 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("name_scope", "experimental.name_scope", "deprecated.variable_scope")
 @contextmanager
-def name_scope(name):
+def name_scope(name: str) -> None:
     r"""Create a name scope. All variables within the name scope will have a prefix `[SCOPE NAME]-`. This is for convenience only and has no other effect on the system. 
     Usage::
 
@@ -24,8 +24,14 @@ def name_scope(name):
     """
     assert isinstance(name, str)
     name_scope_stack_push(name)
+
+    def BuildScope(old_scope, builder):
+        return old_scope.BuildWithNewScopeName(builder, name)
+
+    sess = session_context.GetDefaultSession()
     try:
-        yield None
+        with sess.NewCurrentScope(sess.MakeScope(BuildScope)):
+            yield
     finally:
         name_scope_stack_pop()
 

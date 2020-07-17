@@ -1,8 +1,9 @@
 #ifndef ONEFLOW_CORE_VM_MIRRORED_OBJECT_MSG_H_
 #define ONEFLOW_CORE_VM_MIRRORED_OBJECT_MSG_H_
 
-#include "oneflow/core/common/flat_msg.h"
-#include "oneflow/core/common/object_msg.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/mirrored_object_id.msg.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
@@ -40,10 +41,12 @@ OBJECT_MSG_BEGIN(RwMutexedObject);
   PUBLIC template<typename T> bool Has() const {
     return dynamic_cast<const T*>(&object()) != nullptr;
   }
-  PUBLIC template<typename T> const T& Get() const {
+  PUBLIC template<typename T> Maybe<const T*> Get() const {
     const T* obj = dynamic_cast<const T*>(&object());
-    CHECK(obj != nullptr);
-    return *obj;
+    CHECK_NOTNULL_OR_RETURN(obj)
+      << "cast to " << typeid(T).name() << "failed. "
+      << "type: " << (object_ptr() ? typeid(*object_ptr()).name() : "nullptr");
+    return obj;
   }
   PUBLIC template<typename T> T* Mut() {
     T* object = dynamic_cast<T*>(object_ptr().get());

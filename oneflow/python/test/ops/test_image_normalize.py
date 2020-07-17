@@ -20,10 +20,11 @@ def _of_image_normalize(images, image_shape, std, mean):
         )
 
     image_tensor = image_normalize_job([images]).get()
-    return image_tensor.ndarray_lists()[0]
+    return image_tensor.numpy_lists()[0]
 
 
 def _read_images_by_cv(image_files):
+
     images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
     return [np.expand_dims(image, axis=0) for image in images]
 

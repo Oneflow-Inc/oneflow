@@ -19,8 +19,7 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
   MultiThreadLoop(batch_data->size(), [&](size_t i) {
     TensorBuffer* image_buffer = image_tensor->mut_dptr<TensorBuffer>() + i;
     COCOImage* image = batch_data->at(i).get();
-    image_buffer->Resize(image->data.shape(), image->data.data_type());
-    std::memcpy(image_buffer->mut_data(), image->data.data(), image_buffer->nbytes());
+    image_buffer->Swap(&image->data);
     if (image_size_tensor) {
       auto* image_size_ptr = image_size_tensor->mut_dptr<int32_t>() + i * 2;
       image_size_ptr[0] = meta_->GetImageHeight(image->index);

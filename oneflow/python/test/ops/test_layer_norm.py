@@ -54,10 +54,10 @@ def test_layer_norm(_):
         dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
 
         def assert_grad(b):
-            assert np.allclose(dx_tf.numpy(), b.ndarray(), rtol=1e-5, atol=1e-5), (
+            assert np.allclose(dx_tf.numpy(), b.numpy(), rtol=1e-5, atol=1e-5), (
                 case,
                 dx_tf.numpy(),
-                b.ndarray(),
+                b.numpy(),
             )
 
         # 1F results
@@ -93,13 +93,13 @@ def test_layer_norm(_):
         check_point = flow.train.CheckPoint()
         check_point.init()
         y = test_job(x).get()
-        assert y.ndarray().shape == y_tf.numpy().shape, (
-            y.ndarray().shape,
+        assert y.numpy().shape == y_tf.numpy().shape, (
+            y.numpy().shape,
             y_tf.numpy().shape,
         )
-        diff = y.ndarray() - y_tf.numpy()
+        diff = y.numpy() - y_tf.numpy()
         max_diff = np.max(np.abs(diff))
-        assert np.allclose(y.ndarray(), y_tf.numpy(), rtol=1e-5, atol=1e-3), (
+        assert np.allclose(y.numpy(), y_tf.numpy(), rtol=1e-5, atol=2e-3), (
             case,
             max_diff,
         )

@@ -24,6 +24,7 @@ struct OpContext {
 
 class LogicalNode;
 class MirroredSigInferHint;
+class Scope;
 
 class Operator {
  public:
@@ -32,7 +33,7 @@ class Operator {
   virtual ~Operator() = default;
 
   //
-  void InitFromOpConf(const OperatorConf& op_conf);
+  void Init(const OperatorConf& op_conf, const JobDesc* job_desc);
   virtual void InitFromOpConf() = 0;
 
   virtual LogicalNode* NewProperLogicalNode() const;
@@ -94,6 +95,8 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(const_buf_bns);
 
 #undef DEFINE_BLOB_NAMES_GETTER
+
+  Maybe<void> InferParallelSignatureIf();
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs
@@ -184,6 +187,7 @@ class Operator {
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& BlobDesc4BnInOp);
 
  protected:
+  virtual Maybe<void> InferParallelSignature();
   virtual Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
@@ -263,10 +267,24 @@ class Operator {
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
+
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix);
+
+  void EnrollRepeatedOutputBnWithSetter(
+      const std::string& obn_prefix, int32_t num, bool has_diff,
+      const std::function<void(OutputBlobModifier*)>& ModifierSetter);
+  void EnrollRepeatedOutputBnWithSetter(
+      const std::string& obn_prefix, bool has_diff,
+      const std::function<void(OutputBlobModifier*)>& ModifierSetter);
+  void EnrollRepeatedOutputBnWithSetter(
+      const std::string& obn_prefix, int32_t num,
+      const std::function<void(OutputBlobModifier*)>& ModifierSetter);
+  void EnrollRepeatedOutputBnWithSetter(
+      const std::string& obn_prefix,
+      const std::function<void(OutputBlobModifier*)>& ModifierSetter);
   void EnrollConstBufBn(const std::string& cbbn);
 
   InputBlobModifier* EnrollInputBn(const std::string& ibn, bool has_diff);
@@ -299,10 +317,8 @@ class Operator {
     return op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi();
   }
 
-  friend std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc*);
-  void set_job_desc(const JobDesc* job_desc) { job_desc_ = job_desc; }
-
   virtual void EmplaceLbi2Obn(const LogicalBlobId& lbi, const std::string& obn);
+  bool has_job_desc() const { return job_desc_ != nullptr; }
 
   OpAttribute op_attribute_;
   const JobDesc* job_desc_;
@@ -311,6 +327,8 @@ class Operator {
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
 std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn);
+
+bool IsCpuOnly(const OperatorConf& op_conf);
 
 struct OnlyCpuSupportPredicator {
   OnlyCpuSupportPredicator(bool only_cpu) : only_cpu_(only_cpu) {}
@@ -410,7 +428,7 @@ Maybe<bool> ParseDisableBoxingFlag(const std::string& lbn_with_hint, bool* disab
 Maybe<void> InferOpSbpSignature(
     Operator* op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
     const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
-    std::function<Maybe<const OptInt64*>(const LogicalBlobId&)> BatchAxis4Lbi);
+    std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp);
 
 std::string GetInputLbnInOpCustomizedConf(const PbMessage& msg,
                                           const std::string& fd_name_may_have_idx);
@@ -418,6 +436,10 @@ void ReplaceInputLbnInOpCustomizedConf(PbMessage* msg, const std::string& fd_nam
                                        const std::string& old_val, const std::string& new_val);
 
 bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
+
+Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
+                                    const UpstreamSignature& upstream_signature,
+                                    const Scope& scope);
 
 }  // namespace oneflow
 
