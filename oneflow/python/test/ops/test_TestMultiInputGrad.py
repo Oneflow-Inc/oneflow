@@ -69,6 +69,6 @@ def test_TestMultiInput_grad_mirrored_inplace(test_case):
     expect_x2_diff = np.ones(shape, dtype=np.float32) * 2.0
     # print(x1_diff, x2_diff)
     # print(expect_x1_diff, expect_x2_diff)
-    assert np.allclose(out.ndarray(), expect_out)
+    assert np.allclose(out.numpy(), expect_out)
     assert np.allclose(x1_diff, expect_x1_diff)
     assert np.allclose(x2_diff, expect_x2_diff)
