@@ -21,7 +21,10 @@ bool InsertIfNotExists(const std::string& name, HashSet<std::string>* unique_nam
 
 }  // namespace
 
-OpBuilder& OpBuilder::Name(const std::string& op_type_name) { result_.op_type_name = op_type_name; }
+OpBuilder& OpBuilder::Name(const std::string& op_type_name) {
+  CHECK(InsertIfNotExists(op_type_name, &unique_names_))
+  result_.op_type_name = op_type_name;
+}
 
 OpBuilder& OpBuilder::ArgImpl(bool is_input, const std::string& name, bool is_optional, int32_t num,
                               bool num_as_min) {
@@ -59,13 +62,13 @@ OP_REG_ARG_MEMBER_FUNC(OptionalOutput, false, true)
 
 #undef OP_REG_ARG_MEMBER_FUNC
 
-OpBuilder& OpBuilder::SetOutputBufferNum(int32_t num) {
-  result_.same_output_regst_num = num;
+OpBuilder& OpBuilder::SupportCpuOnly() {
+  result_.cpu_only_supported = true;
   return *this;
 }
 
-OpBuilder& OpBuilder::SupportCpuOnly() {
-  result_.cpu_only_supported = true;
+OpBuilder& OpBuilder::SetOutputBufferNum(int32_t num) {
+  result_.same_output_regst_num = num;
   return *this;
 }
 
