@@ -1,7 +1,7 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/framework/user_op_manager.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/eager/eager_symbol_storage.h"
@@ -559,7 +559,7 @@ bool IsCpuOnly(const OperatorConf& op_conf) {
   if (*std::unique_ptr<CpuOnly>(ptr)) { return true; }
   if (!op_conf.has_user_conf()) { return false; }
   auto* registration_val =
-      user_op::UserOpMgr::Get().GetOpRegistrationResult(op_conf.user_conf().op_type_name());
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
   CHECK_NOTNULL(registration_val);
   return registration_val->cpu_only_supported;
 }

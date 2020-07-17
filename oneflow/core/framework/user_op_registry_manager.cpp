@@ -1,43 +1,43 @@
-#include "oneflow/core/framework/user_op_manager.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
 
 namespace user_op {
 
-UserOpMgr& UserOpMgr::Get() {
-  static UserOpMgr mgr;
+UserOpRegistryMgr& UserOpRegistryMgr::Get() {
+  static UserOpRegistryMgr mgr;
   return mgr;
 }
 
-OpBuilder UserOpMgr::CheckAndGetOpBuilder(const std::string& op_type_name) {
+OpRegistry UserOpRegistryMgr::CheckAndGetOpRegistry(const std::string& op_type_name) {
   CHECK(!op_type_name.empty());
   auto it = op_reg_result_.find(op_type_name);
   CHECK(it == op_reg_result_.end());
-  return OpBuilder().Name(op_type_name);
+  return OpRegistry().Name(op_type_name);
 }
 
-void UserOpMgr::Register(OpRegistrationResult& result) {
+void UserOpRegistryMgr::Register(OpRegistryResult& result) {
   CHECK(op_reg_result_.emplace(result.op_type_name, result).seond);
 }
 
-const OpRegistrationResult* UserOpMgr::GetOpRegistrationResult(const std::string& op_type_name) {
+const OpRegistryResult* UserOpRegistryMgr::GetOpRegistryResult(const std::string& op_type_name) {
   auto it = op_reg_result_.find(op_type_name);
   if (it != op_reg_result_.end()) { return &(it->second); }
   return nullptr;
 }
 
-OpGradBuilder UserOpMgr::CheckAndGetOpGradBuilder(const std::string& op_type_name) {
+OpGradRegistry UserOpRegistryMgr::CheckAndGetOpGradRegistry(const std::string& op_type_name) {
   CHECK(!op_type_name.empty());
   auto it = op_grad_reg_result_.find(op_type_name);
   CHECK(it == op_grad_reg_result_.end());
-  return OpGradBuilder().Name(op_type_name);
+  return OpGradRegistry().Name(op_type_name);
 }
 
-void UserOpMgr::Register(OpGradRegistrationResult& result) {
+void UserOpRegistryMgr::Register(OpGradRegistryResult& result) {
   CHECK(op_grad_reg_result_.emplace(result.op_type_name, result).seond);
 }
 
-const OpGradRegistrationResult* UserOpMgr::GetOpGradRegistrationResult(
+const OpGradRegistryResult* UserOpRegistryMgr::GetOpGradRegistryResult(
     const std::string& op_type_name) {
   auto it = op_grad_reg_result_.find(op_type_name);
   if (it != op_grad_reg_result_.end()) { return &(it->second); }

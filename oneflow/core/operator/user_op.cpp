@@ -262,7 +262,8 @@ void UserOp::InitFromOpConf() {
     EnrollRepeatedOutputBn(pair.first, pair.second.s_size());
   }
   EnrollTmpBn(GenRepeatedBn("tmp_buffer", 0));
-  val_ = user_op::UserOpMgr::Get().GetOpRegistrationResult(op_conf().user_conf().op_type_name());
+  val_ =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf().user_conf().op_type_name());
   if (val_ != nullptr) {
     user_op::UserOpConfWrapper user_conf_wrapper(op_conf());
     user_op::GetInputArgModifier GetInputArgModifierFn =

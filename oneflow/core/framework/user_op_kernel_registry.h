@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_FRAMEWORK_KERNEL_REGISTRATION_H_
 #define ONEFLOW_CORE_FRAMEWORK_KERNEL_REGISTRATION_H_
 
-#include "oneflow/core/framework/registrar.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -94,8 +93,6 @@ class KernelRegistryWrapperBuilder final {
 
 Maybe<const KernelRegistrationVal*> LookUpInKernelRegistry(const std::string& op_type_name,
                                                            const KernelRegContext&);
-
-std::vector<std::string> GetAllUserOpInKernelRegistry();
 
 }  // namespace user_op
 

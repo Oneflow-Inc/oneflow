@@ -84,13 +84,6 @@ Maybe<const KernelRegistrationVal*> LookUpInKernelRegistry(const std::string& op
   return ret;
 }
 
-std::vector<std::string> GetAllUserOpInKernelRegistry() {
-  std::vector<std::string> ret;
-  const auto registry = MutKernelRegistry();
-  for (auto it = registry->begin(); it != registry->end(); ++it) { ret.push_back(it->first); }
-  return ret;
-}
-
 HashMap<std::string, bool>* IsStateless4OpTypeName() {
   static HashMap<std::string, bool> op_type_name2is_stateless;
   return &op_type_name2is_stateless;

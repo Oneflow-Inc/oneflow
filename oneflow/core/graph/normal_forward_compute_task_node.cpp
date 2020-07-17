@@ -1,6 +1,6 @@
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 
-#include "oneflow/core/framework/user_op_manager.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -55,7 +55,7 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   size_t mem_block_num = RegstNum4OpSameOutputBlob(op.op_conf().op_type_case());
   if (op.op_conf().has_user_conf()) {
     const std::string& op_type_name = op.op_conf().user_conf().op_type_name();
-    const auto* op_reg_result = user_op::UserOpMgr::Get().GetOpRegistrationResult(op_type_name);
+    const auto* op_reg_result = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
     CHECK(op_reg_result != nullptr) << "op_type_name " << op_type_name << " not register";
     if (op_reg_result->same_output_regst_num > 0) {
       mem_block_num = op_reg_result->same_output_regst_num;

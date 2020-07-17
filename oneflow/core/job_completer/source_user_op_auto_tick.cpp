@@ -1,5 +1,5 @@
 #include "oneflow/core/job_completer/autotick.h"
-#include "oneflow/core/framework/user_op_manager.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
 

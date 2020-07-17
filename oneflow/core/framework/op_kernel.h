@@ -7,7 +7,7 @@
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/infer_util.h"
-#include "oneflow/core/framework/user_op_manager.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/placement.pb.h"
 
