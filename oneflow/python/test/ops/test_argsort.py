@@ -29,7 +29,7 @@ def compare_with_tensorflow(device_type, in_shape, direction, data_type):
 
     input = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
     # OneFlow
-    of_out = ArgSortJob([input]).get().ndarray_list()[0]
+    of_out = ArgSortJob([input]).get().numpy_list()[0]
     # TensorFlow
     tf_out = tf.argsort(input, axis=-1, direction=direction)
 

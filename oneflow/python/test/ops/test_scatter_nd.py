@@ -110,7 +110,7 @@ def _compare_scatter_nd_with_tf(
 
         def compare_dy(params_grad):
             test_case.assertTrue(
-                np.array_equal(dy_dx.numpy(), params_grad.ndarray_list()[0])
+                np.array_equal(dy_dx.numpy(), params_grad.numpy_list()[0])
             )
 
     else:
@@ -126,7 +126,7 @@ def _compare_scatter_nd_with_tf(
     check_point.init()
 
     if mirrored:
-        of_y = scatter_nd_fn([indices], [updates]).get().ndarray_list()[0]
+        of_y = scatter_nd_fn([indices], [updates]).get().numpy_list()[0]
     else:
         of_y = scatter_nd_fn(indices, updates).get().numpy()
 
@@ -278,7 +278,7 @@ def _of_tensor_scatter_nd_add(
         return (
             tensor_scatter_nd_add_fn([params], [indices], [updates])
             .get()
-            .ndarray_list()[0]
+            .numpy_list()[0]
         )
 
     else:
@@ -322,14 +322,14 @@ def _compare_tensor_scatter_nd_add_with_tf(
     def compare_params_grad(of_params_grad):
         tf_params_grad_np = tf_params_grad.numpy()
         of_params_grad_np = (
-            of_params_grad.ndarray_list()[0] if mirrored else of_params_grad.numpy()
+            of_params_grad.numpy_list()[0] if mirrored else of_params_grad.numpy()
         )
         test_case.assertTrue(np.allclose(tf_params_grad_np, of_params_grad_np))
 
     def compare_updates_grad(of_updates_grad):
         tf_updates_grad_np = tf_updates_grad.numpy()
         of_updates_grad_np = (
-            of_updates_grad.ndarray_list()[0] if mirrored else of_updates_grad.numpy()
+            of_updates_grad.numpy_list()[0] if mirrored else of_updates_grad.numpy()
         )
         test_case.assertTrue(np.allclose(tf_updates_grad_np, of_updates_grad_np))
 
@@ -361,7 +361,7 @@ def _of_scatter_nd_dynamic_indices(
         with flow.device_prior_placement("gpu", "0:0"):
             return flow.scatter_nd(indices_def, updates_def, params_shape)
 
-    return scatter_nd_fn([indices], [updates]).get().ndarray_list()[0]
+    return scatter_nd_fn([indices], [updates]).get().numpy_list()[0]
 
 
 def _compare_scatter_nd_dynamic_indices_with_tf(
@@ -404,7 +404,7 @@ def _of_tensor_scatter_nd_update_dynamic_indices(
     return (
         tensor_scatter_nd_update_fn([params], [indices], [updates])
         .get()
-        .ndarray_list()[0]
+        .numpy_list()[0]
     )
 
 
@@ -449,7 +449,7 @@ def _of_tensor_scatter_nd_add_dynamic_indices(
             return flow.tensor_scatter_nd_add(params_def, indices_def, updates_def)
 
     return (
-        tensor_scatter_nd_add_fn([params], [indices], [updates]).get().ndarray_list()[0]
+        tensor_scatter_nd_add_fn([params], [indices], [updates]).get().numpy_list()[0]
     )
 
 

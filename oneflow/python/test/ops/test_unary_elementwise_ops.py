@@ -28,7 +28,7 @@ def test_1n2c_mirror_dynamic_abs(test_case):
 
     x1 = np.random.rand(3, 1).astype(np.float32)
     x2 = np.random.rand(4, 2).astype(np.float32)
-    y1, y2 = AbsJob([x1, x2]).get().ndarray_list()
+    y1, y2 = AbsJob([x1, x2]).get().numpy_list()
     test_case.assertTrue(np.array_equal(y1, np.absolute(x1)))
     test_case.assertTrue(np.array_equal(y2, np.absolute(x2)))
 
@@ -102,7 +102,7 @@ def test_1n2c_mirror_dynamic_acos(test_case):
 
     x1 = np.random.rand(3, 1).astype(np.float32)
     x2 = np.random.rand(4, 2).astype(np.float32)
-    y1, y2 = AcosJob([x1, x2]).get().ndarray_list()
+    y1, y2 = AcosJob([x1, x2]).get().numpy_list()
     test_case.assertTrue(np.allclose(y1, np.arccos(x1)))
     test_case.assertTrue(np.allclose(y2, np.arccos(x2)))
 
