@@ -51,7 +51,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
         func_config.train.model_update_conf(dict(naive_conf={}))
 
     if dynamic:
-        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+        func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
         def clip_fn(values_def=flow.MirroredTensorDef(values.shape, dtype=data_type)):
@@ -62,7 +62,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
         return clip_fn([values]).get().ndarray_list()[0]
 
     else:
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_distribute_strategy(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
         def clip_fn(values_def=flow.FixedTensorDef(values.shape, dtype=data_type)):

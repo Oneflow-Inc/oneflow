@@ -23,7 +23,7 @@ def TestMultiInput(x1, x2):
 def test_TestMultiInput_grad_mirrored_inplace(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
