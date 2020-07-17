@@ -68,6 +68,16 @@ class UserOp(object):
 
 @oneflow_export("user_op_builder")
 def api_user_op_builder(op_name):
+def api_user_op_builder(op_name):
+    """Generate a `UserOpConfBuilder` object used to build a user op.
+
+    Args:
+        op_name (str): name of new user op
+
+    Returns:
+        UserOpConfBuilder: `UserOpConfBuilder` used to generate a wrapper of user op.
+    
+    """
     api = enable_if.unique(
         [
             lazy_user_op_builder,
