@@ -2,7 +2,7 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/operator/variable_op.h"
-#include "oneflow/core/framework/op_registration.h"
+#include "oneflow/core/framework/user_op_manager.h"
 
 namespace oneflow {
 

@@ -14,16 +14,15 @@ class UserOpManager final {
  public:
   UserOpManager(UserOpManager const&) = delete;
   UserOpManager& operator=(UserOpManager const&) = delete;
-
- public:
   static UserOpManager& Get();
 
-  OpBuilder GetOpBuilder() { return OpBuilder(); }
-  void Register(OpRegistResult& result);
-  const OpBuildResult* GetOpInfo(const std::string& op_type_name);
+ public:
+  OpBuilder CheckAndGetOpBuilder(const std::string& op_type_name);
+  void Register(OpRegistrationResult& result);
+  const OpRegistrationResult* GetOpRegistrationResult(const std::string& op_type_name);
 
  private:
-  HashMap<std::string, OpBuildResult> op_info_;
+  HashMap<std::string, OpRegistrationResult> op_reg_result_;
 };
 
 template<typename BuilderT>
@@ -39,8 +38,8 @@ struct UserOpRegisterTrigger final {
 
 #define REGISTER_USER_OP(name)                                                               \
   static ::oneflow::user_op::UserOpRegisterTrigger<::oneflow::user_op::OpBuilder> OF_PP_CAT( \
-      g_registrar, __COUNTER__) =                                                            \
-      ::oneflow::user_op::UserOpManager::Get().GetOpBuilder().Name(name)
+      g_register_trigger, __COUNTER__) =                                                     \
+      ::oneflow::user_op::UserOpManager::Get().CheckAndGetOpBuilder(name)
 
 #define REGISTER_CPU_ONLY_USER_OP(name) REGISTER_USER_OP(name).SupportCpuOnly()
 

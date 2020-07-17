@@ -11,7 +11,7 @@ namespace user_op {
 
 namespace {}  // namespace
 
-// const OpRegistrationVal* LookUpInOpRegistry(const std::string& op_type_name) {
+// const OpRegistrationResult* LookUpInOpRegistry(const std::string& op_type_name) {
 //   const auto registry = MutOpRegistry();
 //   auto it = registry->find(op_type_name);
 //   if (it != registry->end()) { return &(it->second); }
@@ -35,10 +35,7 @@ bool InsertIfNotExists(const std::string& name, HashSet<std::string>* unique_nam
 
 }  // namespace
 
-OpBuilder& OpBuilder::Name(const std::string& op_type_name) {
-  CHECK(InsertIfNotExists(op_type_name, &unique_names_));
-  result_.op_type_name = op_type_name;
-}
+OpBuilder& OpBuilder::Name(const std::string& op_type_name) { result_.op_type_name = op_type_name; }
 
 OpBuilder& OpBuilder::ArgImpl(bool is_input, const std::string& name, bool is_optional, int32_t num,
                               bool num_as_min) {
@@ -97,7 +94,7 @@ OpBuilder& OpBuilder::Attr(const std::string& name, UserOpAttrType type) {
 
 namespace {
 
-void AddAttrWithDefault(OpBuildResult* result, const std::string& name, UserOpAttrType type,
+void AddAttrWithDefault(OpRegistrationResult* result, const std::string& name, UserOpAttrType type,
                         std::function<void(UserOpDef::AttrDef*)> handler) {
   UserOpDef::AttrDef attr_def;
   attr_def.set_name(name);
@@ -165,7 +162,7 @@ OpBuilder& OpBuilder::Finish() {
   return *this;
 }
 
-OpBuildResult OpBuilder::GetResult() { return result_; }
+OpRegistrationResult OpBuilder::GetResult() { return result_; }
 
 }  // namespace user_op
 

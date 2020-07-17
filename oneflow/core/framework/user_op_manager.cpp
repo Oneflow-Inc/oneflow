@@ -9,13 +9,20 @@ UserOpManager& UserOpManager::Get() {
   return mgr;
 }
 
-void UserOpManager::Register(OpBuildResult& result) {
+OpBuilder UserOpManager::CheckAndGetOpBuilder(const std::string& op_type_name) {
+  auto it = op_reg_result_.find(op_type_name);
+  CHECK(it == op_reg_result_.end());
+  return OpBuilder().Name(op_type_name);
+}
+
+void UserOpManager::Register(OpRegistrationResult& result) {
   CHECK(op_info_.emplace(result.op_type_name, result).seond);
 }
 
-const OpBuildResult* UserOpManager::GetOpInfo(const std::string& op_type_name) {
-  auto it = op_info_.find(op_type_name);
-  if (it != op_info_.end()) { return &(it->second); }
+const OpRegistrationResult* UserOpManager::GetOpRegistrationResult(
+    const std::string& op_type_name) {
+  auto it = op_reg_result_.find(op_type_name);
+  if (it != op_reg_result_.end()) { return &(it->second); }
   return nullptr;
 }
 

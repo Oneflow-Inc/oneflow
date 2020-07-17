@@ -1,12 +1,11 @@
-#ifndef ONEFLOW_CORE_FRAMEWORK_OP_REGISTRATION_H_
-#define ONEFLOW_CORE_FRAMEWORK_OP_REGISTRATION_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_OP_BUILDER_H_
+#define ONEFLOW_CORE_FRAMEWORK_OP_BUILDER_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
-#include "oneflow/core/framework/user_op_manager.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
 
 namespace oneflow {
@@ -31,9 +30,9 @@ using GetInputArgModifier =
     std::function<InputArgModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
 using InputArgModifyFn = std::function<void(GetInputArgModifier, const UserOpConfWrapper&)>;
 
-struct OpRegistrationVal {
-  OpRegistrationVal() : cpu_only_supported(false), same_output_regst_num(-1) {}
-  ~OpRegistrationVal() = default;
+struct OpRegistrationResult {
+  OpRegistrationResult() : cpu_only_supported(false), same_output_regst_num(-1) {}
+  ~OpRegistrationResult() = default;
   std::string op_type_name;
   bool cpu_only_supported;
   int32_t same_output_regst_num;
@@ -42,7 +41,7 @@ struct OpRegistrationVal {
   TensorDescInferFn tensor_desc_infer_fn;
   BatchAxisInferFn batch_axis_infer_fn;
   GetSbpFn get_sbp_fn;
-  // TODO(niuchong): move input_arg_modify_fn out of OpRegistrationVal since it is more about
+  // TODO(niuchong): move input_arg_modify_fn out of OpRegistrationResult since it is more about
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;
 };
@@ -79,14 +78,14 @@ class OpBuilder final {
   OpBuilder& SetCheckAttrFn(CheckAttrFn fn);
 
   OpBuilder& Finish();
-  OpBuildResult GetResult();
+  OpRegistrationResult GetResult();
 
  private:
   OpBuilder& ArgImpl(bool is_input, const std::string& name, bool is_optional, int32_t num,
                      bool num_as_min);
 
  private:
-  OpRegistrationVal result_;
+  OpRegistrationResult result_;
   HashSet<std::string> unique_names_;
 };
 
@@ -96,4 +95,4 @@ static const std::string kUserSourceOpTickInputArgName = "UserSourceOpTickInput"
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_OP_REGISTRATION_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_OP_BUILDER_H_
