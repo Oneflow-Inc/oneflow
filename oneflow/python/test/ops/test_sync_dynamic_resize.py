@@ -35,6 +35,6 @@ def test_sync_dynamic_resize(_):
         y = (
             TestJob(x, np.array([size]).astype(type_name_to_np_type[size_type]))
             .get()
-            .ndarray_list()[0]
+            .numpy_list()[0]
         )
         assert np.array_equal(y, x[:size])
