@@ -24,7 +24,7 @@ def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=N
             return do_slice(input_blob, index_args)
 
         outputs = slice([input]).get()
-        return map(lambda x: x.ndarray_list()[0], outputs)
+        return map(lambda x: x.numpy_list()[0], outputs)
 
     else:
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())

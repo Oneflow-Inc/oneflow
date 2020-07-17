@@ -54,7 +54,7 @@ def test_MirroredTensorDef(test_case):
         return x
 
     data = np.ones((1, 5), dtype=np.float32)
-    ndarray_list = Foo([data]).get().ndarray_list()
+    ndarray_list = Foo([data]).get().numpy_list()
     test_case.assertEqual(len(ndarray_list), 1)
     test_case.assertTrue(np.allclose(ndarray_list[0], data))
 
@@ -94,7 +94,7 @@ def test_MirroredTensorDef_4_device(test_case):
     labels = ndarray_lst(label_shape)
     inputs = [images, labels]
 
-    outputs = [output.ndarray_list() for output in Foo(inputs).get()]
+    outputs = [output.numpy_list() for output in Foo(inputs).get()]
     test_case.assertEqual(len(outputs), len(inputs))
     for o, i in zip(outputs, inputs):
         test_case.assertEqual(len(o), len(i))
