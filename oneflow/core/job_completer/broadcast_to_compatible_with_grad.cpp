@@ -1,5 +1,6 @@
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/common/shape_view.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
@@ -22,17 +23,16 @@ Maybe<void> GenBroadcastToCompatibleWithGradOpConf(
         CHECK_EQ(x_extend_shape.At(i), y_shape.At(i));
       }
     }
-
-    OperatorConf reduce_sum_like_op;
-    reduce_sum_like_op.set_name("System-AutoGrad-" + op.op_name());
-    ReduceSumLikeOpConf* conf = reduce_sum_like_op.mutable_reduce_sum_like_conf();
-    conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("y")));
-    conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("x")));
-    conf->set_y("y");
-    *conf->mutable_axis() = StdVec2PbRf(reduced_axes);
-    op_confs->push_back(reduce_sum_like_op);
-    DiffLbi4BnInOp("x")->set_op_name(reduce_sum_like_op.name());
-    DiffLbi4BnInOp("x")->set_blob_name(conf->y());
+    const auto reduce_sum_like_op =
+        user_op::UserOpConfWrapperBuilder("System-AutoGrad-" + op.op_name())
+            .Op("reduce_sum_like")
+            .Input("x", GenLogicalBlobName(*DiffLbi4BnInOp("y")))
+            .Input("like", GenLogicalBlobName(op.BnInOp2Lbi("x")))
+            .Attr<std::vector<int32_t>>("axis", reduced_axes)
+            .Output("y")
+            .Build();
+    op_confs->push_back(reduce_sum_like_op.op_conf());
+    *DiffLbi4BnInOp("x") = GenLogicalBlobId(reduce_sum_like_op.output("y", 0));
   }
   return Maybe<void>::Ok();
 }

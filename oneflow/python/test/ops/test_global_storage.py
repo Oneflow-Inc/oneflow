@@ -2,7 +2,7 @@ global_storage = {}
 
 
 def Get(name):
-    return global_storage.get(name).ndarray()
+    return global_storage.get(name).numpy()
 
 
 def Setter(name):

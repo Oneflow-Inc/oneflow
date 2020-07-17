@@ -42,8 +42,7 @@ def RunTest(out_shapes, out_types):
 
     input = np.random.random_sample((10, 10)).astype(np.float32)
     outputs = [
-        x.ndarray()
-        for x in TestListDataTypeAndListShapeAndListStringAttrJob(input).get()
+        x.numpy() for x in TestListDataTypeAndListShapeAndListStringAttrJob(input).get()
     ]
     for i in range(len(outputs)):
         assert outputs[i].shape == out_shapes[i]

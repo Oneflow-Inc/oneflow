@@ -137,6 +137,11 @@ OpRegistry& OpRegistry::SetInputArgModifyFn(InputArgModifyFn input_arg_modify_fn
   return *this;
 }
 
+OpRegistry& OpRegistry::SetOutputArgModifyFn(OutputArgModifyFn output_arg_modify_fn) {
+  result_.output_arg_modify_fn = std::move(output_arg_modify_fn);
+  return *this;
+}
+
 OpRegistry& OpRegistry::Finish() {
   CHECK(result_.tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
@@ -149,6 +154,9 @@ OpRegistry& OpRegistry::Finish() {
   }
   if (result_.input_arg_modify_fn == nullptr) {
     result_.input_arg_modify_fn = [](GetInputArgModifier, const UserOpConfWrapper&) {};
+  }
+  if (result_.output_arg_modify_fn == nullptr) {
+    result_.output_arg_modify_fn = [](GetOutputArgModifier, const UserOpConfWrapper&) {};
   }
   return *this;
 }

@@ -514,6 +514,33 @@ OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_di
   return ret;
 }
 
+void Operator::EnrollRepeatedOutputBnWithSetter(
+    const std::string& obn_prefix, int32_t num, bool has_diff,
+    const std::function<void(OutputBlobModifier*)>& ModifierSetter) {
+  FOR_RANGE(int32_t, i, 0, num) {
+    ModifierSetter(EnrollOutputBn(GenRepeatedBn(obn_prefix, i), has_diff));
+  }
+}
+
+void Operator::EnrollRepeatedOutputBnWithSetter(
+    const std::string& obn_prefix, bool has_diff,
+    const std::function<void(OutputBlobModifier*)>& ModifierSetter) {
+  EnrollRepeatedOutputBnWithSetter(obn_prefix,
+                                   GetPbRpfFromCustomizedConf<std::string>(obn_prefix).size(),
+                                   has_diff, ModifierSetter);
+}
+
+void Operator::EnrollRepeatedOutputBnWithSetter(
+    const std::string& obn_prefix, int32_t num,
+    const std::function<void(OutputBlobModifier*)>& ModifierSetter) {
+  EnrollRepeatedOutputBnWithSetter(obn_prefix, num, true, ModifierSetter);
+}
+
+void Operator::EnrollRepeatedOutputBnWithSetter(
+    const std::string& obn_prefix, const std::function<void(OutputBlobModifier*)>& ModifierSetter) {
+  EnrollRepeatedOutputBnWithSetter(obn_prefix, true, ModifierSetter);
+}
+
 void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff) {
   FOR_RANGE(int32_t, i, 0, num) { EnrollOutputBn(GenRepeatedBn(obn_prefix, i), has_diff); }
 }

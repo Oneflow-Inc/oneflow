@@ -29,6 +29,10 @@ using InputArgModifier = InputBlobModifier;
 using GetInputArgModifier =
     std::function<InputArgModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
 using InputArgModifyFn = std::function<void(GetInputArgModifier, const UserOpConfWrapper&)>;
+using OutputArgModifier = OutputBlobModifier;
+using GetOutputArgModifier =
+    std::function<OutputArgModifier*(const std::string& out_arg_name, int32_t out_arg_index)>;
+using OutputArgModifyFn = std::function<void(GetOutputArgModifier, const UserOpConfWrapper&)>;
 
 struct OpRegistryResult {
   OpRegistryResult() : cpu_only_supported(false), same_output_regst_num(-1) {}
@@ -45,6 +49,7 @@ struct OpRegistryResult {
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistryResult since it is more about
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;
+  OutputArgModifyFn output_arg_modify_fn;
 };
 
 class OpRegistry final {
@@ -76,6 +81,7 @@ class OpRegistry final {
   OpRegistry& SetBatchAxisInferFn(BatchAxisInferFn fn);
   OpRegistry& SetGetSbpFn(GetSbpFn fn);
   OpRegistry& SetInputArgModifyFn(InputArgModifyFn fn);
+  OpRegistry& SetOutputArgModifyFn(OutputArgModifyFn fn);
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
 
   OpRegistry& Finish();
