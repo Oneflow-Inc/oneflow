@@ -32,7 +32,7 @@ def _make_gather_fn(
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     def do_gather(x_blob, i_blob):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "params",
                 shape=params.shape,

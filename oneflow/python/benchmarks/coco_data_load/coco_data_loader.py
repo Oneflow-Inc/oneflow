@@ -28,7 +28,7 @@ def roundup(x, align):
 
 
 def coco_data_load(cfg, machine_id, nrank):
-    with flow.device_prior_placement("cpu", "{}:0-{}".format(machine_id, nrank - 1)):
+    with flow.scope.placement("cpu", "{}:0-{}".format(machine_id, nrank - 1)):
         (
             image,
             image_id,

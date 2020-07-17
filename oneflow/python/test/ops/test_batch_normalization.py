@@ -95,7 +95,7 @@ def CompareNnBnWithTensorFlow(
         offset=flow.FixedTensorDef(offset.shape),
         scale=flow.FixedTensorDef(scale.shape),
     ):
-        with flow.device_prior_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             x_full_precision += flow.get_variable(
                 name="v1",
                 shape=(1,),
@@ -178,7 +178,7 @@ def RunOneflowLayerBn(
 
     @flow.global_function(func_config)
     def FlowJob(x_full_precision=flow.FixedTensorDef(x.shape, dtype=dtype)):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x_full_precision += flow.get_variable(
                 name="v1", shape=(1,), dtype=dtype, initializer=flow.zeros_initializer()
             )

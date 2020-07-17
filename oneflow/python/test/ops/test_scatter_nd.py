@@ -54,7 +54,7 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     def do_scatter_nd(indices_blob, updates_blob):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "updates",
                 shape=updates.shape,
@@ -187,7 +187,7 @@ def _compare_scatter_nd_update_with_tf(
         indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
         y_def=flow.FixedTensorDef(updates.shape, dtype=flow.float),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "params",
                 shape=params.shape,
@@ -240,7 +240,7 @@ def _of_tensor_scatter_nd_add(
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     def do_tensor_scatter_nd_add(params_blob, indices_blob, updates_blob):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             params_var = flow.get_variable(
                 "params",
                 shape=params_blob.shape,
@@ -358,7 +358,7 @@ def _of_scatter_nd_dynamic_indices(
         indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
         updates_def=flow.MirroredTensorDef(updates_static_shape, dtype=flow.float),
     ):
-        with flow.device_prior_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             return flow.scatter_nd(indices_def, updates_def, params_shape)
 
     return scatter_nd_fn([indices], [updates]).get().ndarray_list()[0]
@@ -398,7 +398,7 @@ def _of_tensor_scatter_nd_update_dynamic_indices(
         indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
         updates_def=flow.MirroredTensorDef(updates_static_shape, dtype=flow.float),
     ):
-        with flow.device_prior_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             return flow.tensor_scatter_nd_update(params_def, indices_def, updates_def)
 
     return (
@@ -445,7 +445,7 @@ def _of_tensor_scatter_nd_add_dynamic_indices(
         indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
         updates_def=flow.MirroredTensorDef(updates_static_shape, dtype=flow.float),
     ):
-        with flow.device_prior_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             return flow.tensor_scatter_nd_add(params_def, indices_def, updates_def)
 
     return (

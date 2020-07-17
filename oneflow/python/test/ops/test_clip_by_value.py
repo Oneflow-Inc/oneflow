@@ -23,7 +23,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
     if callable(grad_cb):
 
         def clip(values_blob):
-            with flow.device_prior_placement(device_type, "0:0"):
+            with flow.scope.placement(device_type, "0:0"):
                 x = flow.get_variable(
                     "values",
                     shape=values.shape,
@@ -40,7 +40,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
     else:
 
         def clip(values_blob):
-            with flow.device_prior_placement(device_type, "0:0"):
+            with flow.scope.placement(device_type, "0:0"):
                 return flow.clip_by_value(values_blob, min, max, name="Clip")
 
     flow.clear_default_session()

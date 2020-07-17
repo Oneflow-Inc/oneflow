@@ -41,7 +41,7 @@ def GetFixedPlacementScope(device_tag, machine_device_ids):
     return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
 
 
-@oneflow_export("device_prior_placement")
+@oneflow_export("scope.placement", "device_prior_placement")
 def api_device_prior_placement(
     device_tag: str, machine_device_ids: str
 ) -> placement_ctx.DevicePriorPlacementScope:

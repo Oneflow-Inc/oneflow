@@ -21,7 +21,7 @@ def compare_with_tensorflow(
 
     @flow.global_function(func_config)
     def ReduceSumJob(x=flow.FixedTensorDef(input_shape)):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
 
     x = np.random.rand(*input_shape).astype(np.float32)

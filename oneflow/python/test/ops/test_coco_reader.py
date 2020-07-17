@@ -37,7 +37,7 @@ def _make_coco_data_load_fn(
 
     @flow.global_function(func_config)
     def coco_load_fn():
-        with flow.device_prior_placement("cpu", "0:0-{}".format(nthread - 1)):
+        with flow.scope.placement("cpu", "0:0-{}".format(nthread - 1)):
             (
                 image,
                 image_id,

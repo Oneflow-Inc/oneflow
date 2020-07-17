@@ -36,7 +36,7 @@ def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
     func_config.default_data_type(data_type)
 
     def do_argwhere(x_blob):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.argwhere(x_blob, dtype=out_data_type)
 
     if dynamic is True:

@@ -34,7 +34,7 @@ def test_TestMultiInput_grad_mirrored_inplace(test_case):
 
     @flow.global_function(func_config)
     def TestMultiInputJob():
-        with flow.device_prior_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             x1 = flow.get_variable(
                 "x1",
                 shape=shape,

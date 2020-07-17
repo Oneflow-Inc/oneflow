@@ -24,7 +24,7 @@ def of_run(device_type, x_shape, data_type, rate, seed):
 
     @flow.global_function(func_config)
     def DropoutJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,

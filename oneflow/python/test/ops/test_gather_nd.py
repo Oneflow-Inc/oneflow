@@ -36,7 +36,7 @@ def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     def do_gather_nd(x_blob, i_blob):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "params",
                 shape=params.shape,
@@ -83,7 +83,7 @@ def _of_dynamic_params_gather_nd(params, indices, static_params_shape, compare_f
         params_def=flow.MirroredTensorDef(static_params_shape, dtype=flow.float),
         indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
     ):
-        with flow.device_prior_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             one_var = flow.get_variable(
                 "one",
                 shape=(1,),
@@ -185,7 +185,7 @@ def _of_gather_nd_dynamic_indices(params, indices, indices_static_shape, device_
         params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
         indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.gather_nd(params_def, indices_def)
 
     return gather_nd_fn([params], [indices]).get().ndarray_list()[0]

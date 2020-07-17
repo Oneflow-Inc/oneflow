@@ -32,7 +32,7 @@ def _make_unsorted_segment_sum_fn(
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     def do_unsorted_segment_sum(x_blob, i_blob):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "data",
                 shape=data.shape,
