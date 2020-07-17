@@ -71,7 +71,7 @@ def test_lazy_get_job_shared_variable(test_case):
         input = np.random.rand(2, 5).astype(np.single)
         train(input).get()
         var = eval().get().numpy()
-        # print("param at iter {}:".format(i), var)
+        # print("variable at iter {}:".format(i), var)
         if i > 0:
             test_case.assertTrue(
                 np.allclose(var, (variables[-1] - learning_rate / var.size))
