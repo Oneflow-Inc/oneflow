@@ -22,7 +22,7 @@ class OpGradRegistry final {
   OpGradRegistry& SetGenBackwardOpConfFn(GenBackwardOpConfFn fn);
 
   OpGradRegistry& Finish();
-  OpGradRegistryResult GetResult();
+  OpGradRegistryResult GetResult() { return result_; }
 
  private:
   OpGradRegistryResult result_;

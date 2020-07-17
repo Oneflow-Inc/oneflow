@@ -79,15 +79,15 @@ class OpRegistry final {
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
 
   OpRegistry& Finish();
-  OpRegistryResult GetResult();
+  OpRegistryResult GetResult() { return result_; }
 
  private:
   OpRegistry& ArgImpl(bool is_input, const std::string& name, bool is_optional, int32_t num,
                       bool num_as_min);
 
  private:
-  OpRegistryResult result_;
   HashSet<std::string> unique_names_;
+  OpRegistryResult result_;
 };
 
 static const std::string kUserSourceOpTickInputArgName = "UserSourceOpTickInput";

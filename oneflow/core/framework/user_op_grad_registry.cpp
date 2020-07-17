@@ -21,8 +21,6 @@ OpGradRegistry& OpGradRegistry::Finish() {
   return *this;
 }
 
-OpGradRegistryResult OpGradRegistry::GetResult() { return result_; }
-
 }  // namespace user_op
 
 }  // namespace oneflow

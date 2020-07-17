@@ -152,8 +152,6 @@ OpRegistry& OpRegistry::Finish() {
   return *this;
 }
 
-OpRegistryResult OpRegistry::GetResult() { return result_; }
-
 }  // namespace user_op
 
 }  // namespace oneflow

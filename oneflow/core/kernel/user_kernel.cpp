@@ -378,7 +378,7 @@ class UserKernel final : public Kernel {
     {
       const std::string& op_type_name =
           kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
-      const user_op::KernelRegistrationVal* kernel_reg_val =
+      const user_op::OpKernelRegistryResult* kernel_reg_val =
           CHECK_JUST(user_op::LookUpInKernelRegistry(
               op_type_name, UserKernelRegContext(kernel_conf(), job_desc())));
       CHECK_NOTNULL(kernel_reg_val);
