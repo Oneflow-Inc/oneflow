@@ -394,9 +394,7 @@ def batch_normalization(
 
 
 @oneflow_export("layers.upsample_2d")
-def upsample(
-    x, size=(2, 2), data_format="channels_first", interpolation="nearest", name=None
-):
+def upsample(x, size=(2, 2), data_format="NCHW", interpolation="nearest", name=None):
     if name is None:
         name = id_util.UniqueStr("Upsample2D_")
 
@@ -408,6 +406,9 @@ def upsample(
         assert len(size) == 2
         height_scale = size[0]
         width_scale = size[1]
+
+    if interpolation != "nearest" and interpolation != "bilinear":
+        raise ValueError('interpolation must be "nearest" or "bilinear".')
 
     if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
         raise ValueError('data_format must be "NHWC" or "NCHW".')
