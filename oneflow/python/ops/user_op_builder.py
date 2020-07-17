@@ -76,6 +76,21 @@ def api_user_op_builder(op_name):
     Returns:
         UserOpConfBuilder: `UserOpConfBuilder` object used to build a wrapper of user op.
     
+    Example:
+
+        def myargmax(
+            input: remote_blob_util.BlobDef
+        ) -> remote_blob_util.BlobDef:
+            return (
+            flow.user_op_builder("myargmax")
+            .Op("argmax")
+            .Input("in", [input])
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+            )   
+
     """
     api = enable_if.unique(
         [
