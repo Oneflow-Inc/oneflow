@@ -101,8 +101,4 @@ std::vector<std::string> GetAllUserOpInKernelRegistry();
 
 }  // namespace oneflow
 
-#define REGISTER_USER_KERNEL(name)                                                       \
-  static ::oneflow::user_op::Registrar<::oneflow::user_op::KernelRegistryWrapperBuilder> \
-      OF_PP_CAT(g_registrar, __COUNTER__) = ::oneflow::user_op::KernelRegistryWrapperBuilder(name)
-
 #endif  // ONEFLOW_CORE_FRAMEWORK_KERNEL_REGISTRATION_H_
