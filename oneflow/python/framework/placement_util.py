@@ -6,6 +6,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.device_scope_stack as device_scope_stack
 import oneflow
+import traceback
 
 
 @oneflow_export("placement.current_scope")
@@ -26,7 +27,6 @@ def normal_mode_cur_placement_scope():
     return device_scope_stack.CurrentPlacement()
 
 
-@oneflow_export("fixed_placement")
 def api_fixed_placement(
     device_tag: str, machine_device_ids: str
 ) -> placement_ctx.FixedPlacementScope:
@@ -41,8 +41,21 @@ def GetFixedPlacementScope(device_tag, machine_device_ids):
     return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
 
 
-@oneflow_export("scope.placement", "device_prior_placement")
-def api_device_prior_placement(
+@oneflow_export("device_prior_placement", "fixed_placement")
+def deprecated_placement(*args, **kwargs):
+    print(
+        "WARNING:",
+        "oneflow.device_prior_placement/oneflow.fixed_placement",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.placement"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+    return api_placement(*args, **kwargs)
+
+
+@oneflow_export("scope.placement")
+def api_placement(
     device_tag: str, machine_device_ids: str
 ) -> placement_ctx.DevicePriorPlacementScope:
     return enable_if.unique([GetDevicePriorPlacementScope])(

@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_VM_INIT_SYMBOL_INSTRUCTION_TYPE_H_
 #define ONEFLOW_CORE_VM_INIT_SYMBOL_INSTRUCTION_TYPE_H_
 
-#include "oneflow/core/common/flat_msg_view.h"
+#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/host_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
