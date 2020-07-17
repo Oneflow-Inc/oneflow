@@ -344,7 +344,6 @@ def concat(values, axis, name=None):
     if len(values) == 1:
         return values[0]
     assert len(values) >= 2
-
     if axis < 0:
         axis += len(values[0].shape)
     assert axis >= 0 and axis < len(values[0].shape)
