@@ -44,6 +44,7 @@ class Session(object):
         self.function_flag_name2default_val_ = {}
         self.job_name2var_name2var_blob_ = {}
         self.var_name2var_blob_ = {}
+        self.var_name2op_attr_ = {}
         self.job_name2name_scope_stack_ = {}
         self.job_name2current_scope_ = {}
         self.eager_global_function_desc_stack_ = []
@@ -258,6 +259,12 @@ class Session(object):
             self.job_name2var_name2var_blob_[job_name] = dict()
         assert var_name not in self.job_name2var_name2var_blob_[job_name]
         self.job_name2var_name2var_blob_[job_name][var_name] = var_blob
+
+    def AddVarOpAttr(self, var_name, op_attribute):
+        self.var_name2op_attr_[var_name] = op_attribute
+
+    def GetOpAttrFromVarName(self, var_name):
+        return self.var_name2op_attr_[var_name]
 
     # return global_variable_blob, job_variable_blob
     def TryGetVariableBlobOfJobFromStash(self, job_name, var_name):

@@ -192,6 +192,7 @@ void VirtualMachine::ConsumeMirroredObject(OperandAccessType access_type,
                                            MirroredObject* mirrored_object,
                                            Instruction* instruction) {
   bool is_const_operand = (access_type == kConstOperandAccess);
+  LOG(INFO) << mirrored_object->mirrored_object_id().logical_object_id_value();
   auto rw_mutexed_object_access = ObjectMsgPtr<RwMutexedObjectAccess>::NewFrom(
       instruction->mut_allocator(), instruction, mirrored_object, is_const_operand);
   bool success = instruction->mut_mirrored_object_id2access()

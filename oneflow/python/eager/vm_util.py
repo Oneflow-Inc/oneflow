@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import re
 from contextlib import contextmanager
 
+import oneflow as flow
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.placement_pb2 as placement_pb_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -22,6 +23,7 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.vm.id_util as vm_id_util
+from oneflow.python.oneflow_export import oneflow_export
 
 
 def PhysicalRun(build):
@@ -40,6 +42,15 @@ def LogicalRun(build):
         c_api_util.RunLogicalInstruction,
         _ReleaseLogicalBlobObject,
     )
+
+
+@session_ctx.try_init_default_session
+@oneflow_export("test")
+def GetOfBlobInRegst(var_name, a, b):
+    def temp(builder):
+        builder.MakeLazyRefBlobObject2(var_name, a, b)
+
+    LogicalRun(temp)
 
 
 def _Run(build, id_generator, run_api, release_blob_object):
@@ -309,6 +320,46 @@ class InstructionsBuilder(object):
         )
         self._ReplaceMirrored(parallel_desc_symbol, [ref_blob_object], [blob_object])
         return ref_blob_object
+
+    def MakeLazyRefBlobObject(self, var_name, id1, id2):
+        parallel_conf = flow.placement.current_scope().default_parallel_conf
+        op_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
+        blob_parallel_desc_sym = op_parallel_desc_sym
+
+        sess = session_ctx.GetDefaultSession()
+        op_attribute = sess.GetOpAttrFromVarName(var_name)
+        obn = "out"
+
+        op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
+            blob_parallel_desc_sym, op_attribute, obn
+        )
+        op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
+
+        blob_object = self._NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
+        self._LazyReference(blob_object, id1, id2)
+        return blob_object
+
+    def MakeLazyRefBlobObject2(self, var_name, id1, id2):
+        parallel_conf = flow.placement.current_scope().default_parallel_conf
+        op_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
+        blob_parallel_desc_sym = op_parallel_desc_sym
+
+        sess = session_ctx.GetDefaultSession()
+        op_attribute = sess.GetOpAttrFromVarName(var_name)
+        obn = "out"
+
+        op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
+            blob_parallel_desc_sym, op_attribute, obn
+        )
+        op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
+        object_id = self._LazyReference2(id1, id2, blob_parallel_desc_sym)
+
+        return object_util.BlobObject(
+            object_id=object_id,
+            op_arg_parallel_attr=op_arg_parallel_attr,
+            op_arg_blob_attr=op_arg_blob_attr,
+            release=self.release_blob_object_,
+        )
 
     def GetSymbol4String(self, string):
         if symbol_storage.HasSymbol4String(string):
@@ -628,6 +679,25 @@ class InstructionsBuilder(object):
         instruction.operand.append(_Int64Operand(object_id))
         self.instruction_list_.instruction.append(instruction)
         return object_id
+
+    def _LazyReference2(self, id1, id2, parallel_desc_sym):
+        object_id = self.id_generator_.NewObjectId()
+        instruction = instr_util.InstructionProto()
+        instruction.instr_type_name = "LazyReference2"
+        instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
+        instruction.operand.append(_Int64Operand(object_id))
+        instruction.operand.append(_Int64Operand(id1))
+        instruction.operand.append(_Int64Operand(id2))
+        self.instruction_list_.instruction.append(instruction)
+        return object_id
+
+    def _LazyReference(self, blob_object, id1, id2):
+        instruction = instr_util.InstructionProto()
+        instruction.instr_type_name = "LazyReference"
+        instruction.operand.append(_Mut2Operand(blob_object.object_id))
+        instruction.operand.append(_Int64Operand(id1))
+        instruction.operand.append(_Int64Operand(id2))
+        self.instruction_list_.instruction.append(instruction)
 
     def _BroadcastObjectReference(self, sole_mirrored_object, parallel_desc_sym):
         object_id = self.id_generator_.NewObjectId()

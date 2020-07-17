@@ -113,6 +113,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     } else {
       UNIMPLEMENTED();
     }
+    regst_desc_id2regst_id2regst_[rt_regst_desc->regst_desc_id()][i] = regst;
     OneRegstDone(regst);
   }
 }
@@ -169,6 +170,14 @@ const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const 
   const auto& it = regst_desc_id2rt_regst_desc_.find(regst_desc_id);
   CHECK(it != regst_desc_id2rt_regst_desc_.end());
   return *it->second;
+}
+
+Regst* RegstMgr::Regst4RegstDescIdAndRegstId(int64_t regst_desc_id, int64_t regst_id) {
+  CHECK(regst_desc_id2regst_id2regst_.find(regst_desc_id) != regst_desc_id2regst_id2regst_.end());
+  auto& regst_id2regst = regst_desc_id2regst_id2regst_[regst_desc_id];
+  CHECK(regst_id2regst.find(regst_id) != regst_id2regst.end());
+  auto regst = regst_id2regst[regst_id];
+  return regst;
 }
 
 }  // namespace oneflow

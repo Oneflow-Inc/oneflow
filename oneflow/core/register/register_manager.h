@@ -18,6 +18,10 @@ class RegstMgr final {
 
   void NewRegsts(const RegstDescProto& regst_desc_proto, std::function<void(Regst*)> OneRegstDone);
   const RtRegstDesc& RegstDesc4RegstDescId(int64_t regst_desc_id) const;
+  Regst* Regst4RegstDescIdAndRegstId(int64_t regst_desc_id, int64_t regst_id);
+  const HashMap<int64_t, HashMap<int64_t, Regst*>>& AllRegsts() {
+    return regst_desc_id2regst_id2regst_;
+  }
 
  private:
   friend class Global<RegstMgr>;
@@ -26,6 +30,7 @@ class RegstMgr final {
   void NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regst*, const RtRegstDesc*,
                           char* main_mem_ptr, char* separated_header_mem_ptr);
   HashMap<int64_t, std::unique_ptr<const RtRegstDesc>> regst_desc_id2rt_regst_desc_;
+  HashMap<int64_t, HashMap<int64_t, Regst*>> regst_desc_id2regst_id2regst_;
   HashMap<int64_t, char*> mem_block_id2ptr_;
 };
 

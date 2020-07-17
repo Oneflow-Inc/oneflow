@@ -1,6 +1,8 @@
 #include <stdint.h>
+#include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/python/oneflow_internal_helper.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/register/register_manager.h"
 
 void RegisterForeignCallbackOnlyOnce(oneflow::ForeignCallback* callback, std::string* error_str) {
   return oneflow::RegisterForeignCallbackOnlyOnce(callback).GetDataAndSerializedErrorProto(
@@ -97,6 +99,13 @@ long DeviceType4DeviceTag(const std::string& device_tag, std::string* error_str)
   return oneflow::GetDeviceType4DeviceTag(device_tag)
       .GetDataAndSerializedErrorProto(error_str,
                                       static_cast<long>(oneflow::DeviceType::kInvalidDevice));
+}
+
+long GetBlobInRegst(int64_t a, int64_t b) {
+  oneflow::Blob* blob = (oneflow::Global<oneflow::RegstMgr>::Get()
+                             ->Regst4RegstDescIdAndRegstId(a, b)
+                             ->GetMutSoleBlob());
+  return reinterpret_cast<long>(new oneflow::OfBlob(new oneflow::CpuDeviceCtx(), blob));
 }
 
 std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& parallel_conf,
