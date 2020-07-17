@@ -117,8 +117,8 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
         if verbose:
             print("==== iter {} ====".format(i))
             print(
-                "image: {}\n".format(image.ndarray_list()[0].shape),
-                image.ndarray_list()[0],
+                "image: {}\n".format(image.numpy_list()[0].shape),
+                image.numpy_list()[0],
             )
             print(
                 "image_size: {}\n".format(image_size.numpy().shape), image_size.numpy(),
