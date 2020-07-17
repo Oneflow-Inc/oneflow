@@ -45,5 +45,5 @@ def TODO_test_mirror_testsource(test_case):
         return ret
 
     y = TestSourceJob().get().numpy()
-    # y = TestSourceJob().get().ndarray_list()[0]
+    # y = TestSourceJob().get().numpy_list()[0]
     test_case.assertTrue(np.array_equal(y, np.arange(5.0)))

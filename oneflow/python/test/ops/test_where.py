@@ -83,7 +83,7 @@ def _of_where(
 
         check_point = flow.train.CheckPoint()
         check_point.init()
-        return where_fn([condition], [x], [y]).get().ndarray_list()[0]
+        return where_fn([condition], [x], [y]).get().numpy_list()[0]
 
     else:
         func_config.default_placement_scope(
@@ -138,13 +138,13 @@ def _compare_with_tf(
             print("tf_dz_dx:", dz_dx.numpy())
             print(
                 "of_dz_dx:",
-                dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.numpy(),
+                dz_dx_blob.numpy_list()[0] if dynamic else dz_dx_blob.numpy(),
             )
 
         test_case.assertTrue(
             np.array_equal(
                 dz_dx.numpy(),
-                dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.numpy(),
+                dz_dx_blob.numpy_list()[0] if dynamic else dz_dx_blob.numpy(),
             )
         )
 
@@ -154,13 +154,13 @@ def _compare_with_tf(
             print("tf_dz_dy:", dz_dy.numpy())
             print(
                 "of_dz_dy:",
-                dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.numpy(),
+                dz_dy_blob.numpy_list()[0] if dynamic else dz_dy_blob.numpy(),
             )
 
         test_case.assertTrue(
             np.array_equal(
                 dz_dy.numpy(),
-                dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.numpy(),
+                dz_dy_blob.numpy_list()[0] if dynamic else dz_dy_blob.numpy(),
             )
         )
 
@@ -196,7 +196,7 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
         def where_fn(input_def=flow.MirroredTensorDef(input_shape, dtype=flow.float)):
             return flow.where(input_def)
 
-    return where_fn([input]).get().ndarray_list()[0]
+    return where_fn([input]).get().numpy_list()[0]
 
 
 def test_where(test_case):

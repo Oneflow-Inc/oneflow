@@ -453,7 +453,7 @@ def compare_reduce_euclidean_norm_with_tensorflow(
     of_out = ReduceEuclideanNormJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_euclidean_norm(x, axis=axis, keepdims=keepdims)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
 
 
 def test_reduce_euclidean_norm_func(test_case):
@@ -540,7 +540,7 @@ def compare_reduce_logsumexp_with_tensorflow(
     of_out = ReduceLogSumExpJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_logsumexp(x, axis=axis, keepdims=keepdims)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
 
 
 def test_reduce_logsumexp_func(test_case):
@@ -625,7 +625,7 @@ def compare_reduce_std_with_tensorflow(
     of_out = ReduceStdJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_std(x, axis=axis, keepdims=keepdims)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
 
 
 def test_reduce_std_func(test_case):
@@ -712,7 +712,7 @@ def compare_reduce_variance_with_tensorflow(
     of_out = ReduceVarianceJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_variance(x, axis=axis, keepdims=keepdims)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
 
 
 def test_reduce_variance_func(test_case):
@@ -797,7 +797,7 @@ def compare_reduce_max_with_tensorflow(
     of_out = ReduceMaxJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_max(x, axis=axis, keepdims=keepdims)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
 
 
 def test_reduce_max_func(test_case):
