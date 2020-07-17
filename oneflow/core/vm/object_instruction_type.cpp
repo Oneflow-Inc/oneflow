@@ -7,7 +7,7 @@
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/vm/object_wrapper.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/flat_msg_view.h"
+#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
 

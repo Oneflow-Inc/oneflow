@@ -3,8 +3,8 @@
 
 #include <cstring>
 #include <typeindex>
-#include "oneflow/core/common/flat_msg.h"
-#include "oneflow/core/common/object_msg.h"
+#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/stream_type_id.h"
