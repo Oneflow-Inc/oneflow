@@ -101,7 +101,7 @@ def _of_where(
 
         check_point = flow.train.CheckPoint()
         check_point.init()
-        return where_fn(condition, x, y).get().ndarray()
+        return where_fn(condition, x, y).get().numpy()
 
 
 def _compare_with_np(test_case, cond_shape, x_shape, y_shape, device_type, dynamic):
@@ -138,13 +138,13 @@ def _compare_with_tf(
             print("tf_dz_dx:", dz_dx.numpy())
             print(
                 "of_dz_dx:",
-                dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.ndarray(),
+                dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.numpy(),
             )
 
         test_case.assertTrue(
             np.array_equal(
                 dz_dx.numpy(),
-                dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.ndarray(),
+                dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.numpy(),
             )
         )
 
@@ -154,13 +154,13 @@ def _compare_with_tf(
             print("tf_dz_dy:", dz_dy.numpy())
             print(
                 "of_dz_dy:",
-                dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.ndarray(),
+                dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.numpy(),
             )
 
         test_case.assertTrue(
             np.array_equal(
                 dz_dy.numpy(),
-                dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.ndarray(),
+                dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.numpy(),
             )
         )
 

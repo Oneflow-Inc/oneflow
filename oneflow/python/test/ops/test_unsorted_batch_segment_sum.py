@@ -80,7 +80,7 @@ def _run_test(test_case, device, out_shape, num_segments, segment_ids_shape):
     unsorted_batch_segment_sum_out = _make_unsoted_segment_sum_fn(
         device, data, segment_ids, num_segments
     ).get()
-    out_ndarray = unsorted_batch_segment_sum_out.ndarray()
+    out_ndarray = unsorted_batch_segment_sum_out.numpy()
     grad_in_ndarray = test_global_storage.Get("x_diff")
     grad_out_ndarray = test_global_storage.Get("loss_diff")
     check_point = flow.train.CheckPoint()
