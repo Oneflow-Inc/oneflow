@@ -755,6 +755,17 @@ def elem_cnt(
     dtype: Optional[int] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Reduce shape emements count accross 'axis'
+
+    Args:
+        input_blob: a 'Blob'
+        axis: The axis need to be reduced
+        dtype: 'int'
+        name: This operator's name
+
+    Returns:
+        A 'Blob'
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -784,6 +795,17 @@ def top_k(
     sorted: bool = True,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Returns a 'Blob' whose value is the index of top-k values accross the last axes of 'input'
+
+    Args:
+        input: a 'Blob'
+        k: Number of top elements to look for along the last dimension
+        sorted: 'True' or 'False'
+        name: This operator's name
+
+    Returns:
+        A 'Blob' with the index 'input'
+    """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
         .Op("top_k")
@@ -801,6 +823,15 @@ def top_k(
 def argmax(
     input: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    r"""Returns a 'Blob' whose value is the index with largest value accross the last axes of 'input'
+
+    Args:
+        input: a 'Blob'
+        name: This operator's name
+
+    Returns:
+        A 'Blob' with type 'flow.int32'
+    """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
         .Op("argmax")
@@ -818,6 +849,16 @@ def broadcast_to_compatible_with(
     compatible: Sequence[remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r""" 
+
+    Args:
+        x (remote_blob_util.BlobDef): [description]
+        compatible (Sequence[remote_blob_util.BlobDef]): [description]
+        name (Optional[str], optional): [description]. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: [description]
+    """
     assert isinstance(compatible, (list, tuple))
     if name is None:
         name = id_util.UniqueStr("BroadcastToCompatibleWith_")
@@ -928,6 +969,16 @@ def squared_difference(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Returns (x-y)(x-y) element-wise
+
+    Args:
+        x: a 'Blob'
+        y: a 'Blob'
+        name: This operator's name
+
+    Returns:
+        A 'Blob' with type of 'int' or 'float'
+    """
     name_subtract, name_square = None, None
     if name is not None:
         name_subtract = name + "_subtract"
