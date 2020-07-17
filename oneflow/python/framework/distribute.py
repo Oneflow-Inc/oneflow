@@ -59,7 +59,20 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
         distribute_ctx.DistributeStrategy.__init__(self, True)
 
 
-@oneflow_export("scope.mirrored_view_enabled", "distribute.mirrored_strategy_enabled")
+@oneflow_export("distribute.mirrored_strategy_enabled")
+def deprecated_mirrored_strategy_enabled():
+    print(
+        "WARNING:",
+        "oneflow.distribute.mirrored_strategy_enabled",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.mirrored_view_enabled"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+    return MirroredStrategyEnabled()
+
+
+@oneflow_export("scope.mirrored_view_enabled")
 def MirroredStrategyEnabled() -> bool:
     r"""
 
@@ -97,7 +110,20 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
         distribute_ctx.DistributeStrategy.__init__(self, False)
 
 
-@oneflow_export("scope.consistent_view_enabled", "distribute.consistent_strategy_enabled")
+@oneflow_export("distribute.consistent_strategy_enabled")
+def deprecated_consistent_strategy_enabled():
+    print(
+        "WARNING:",
+        "oneflow.distribute.consistent_strategy_enabled",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.consistent_view_enabled"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+    return ConsistentStrategyEnabled()
+
+
+@oneflow_export("scope.consistent_view_enabled")
 def ConsistentStrategyEnabled() -> bool:
     r"""
 

@@ -182,9 +182,7 @@ def _UnderSingleDevicePlacementScope(f, *args):
     current_scope = oneflow.placement.current_scope()
     for machine_id, device_id in _EachMachineIdAndDeviceId(current_scope):
         mch_dev_str = "%d:%d" % (machine_id, device_id)
-        with oneflow.scope.placement(
-            current_scope.default_device_tag, mch_dev_str
-        ):
+        with oneflow.scope.placement(current_scope.default_device_tag, mch_dev_str):
             return f(*args)
 
 

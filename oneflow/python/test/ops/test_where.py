@@ -68,9 +68,7 @@ def _of_where(
             return flow.where(condition, x, y)
 
     if dynamic:
-        func_config.default_placement_scope(
-            flow.scope.placement(device_type, "0:0")
-        )
+        func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
         func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
