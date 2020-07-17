@@ -1,6 +1,6 @@
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/operator/user_op_util.h"
-#include "oneflow/core/framework/kernel_registration.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/sbp_context.h"

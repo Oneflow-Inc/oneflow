@@ -16,7 +16,7 @@
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/object.h"
-#include "oneflow/core/framework/kernel_registration.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/register/ofblob.h"
 
