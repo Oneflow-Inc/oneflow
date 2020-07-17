@@ -14,7 +14,7 @@ import traceback
 def deprecated_name_scope(*args, **kwargs):
     print(
         "WARNING:",
-        "/".join(deprecated_name_scope._ONEFLOW_API),
+        "oneflow.name_scope/oneflow.experimental.name_scope/deprecated.variable_scope",
         "will be removed in the future, use {} instead.".format(
             "oneflow.scope.namespace"
         ),

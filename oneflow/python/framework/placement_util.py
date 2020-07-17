@@ -45,7 +45,7 @@ def GetFixedPlacementScope(device_tag, machine_device_ids):
 def deprecated_placement(*args, **kwargs):
     print(
         "WARNING:",
-        "/".join(deprecated_placement._ONEFLOW_API),
+        "oneflow.device_prior_placement/oneflow.fixed_placement",
         "will be removed in the future, use {} instead.".format(
             "oneflow.scope.placement"
         ),

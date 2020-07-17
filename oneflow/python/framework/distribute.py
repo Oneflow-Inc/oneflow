@@ -36,7 +36,7 @@ class SplitDistribute(Distribute):
 def deprecated_mirrored_strategy():
     print(
         "WARNING:",
-        "/".join(deprecated_mirrored_strategy._ONEFLOW_API),
+        "oneflow.distribute.mirrored_strategy",
         "will be removed in the future, use {} instead.".format(
             "oneflow.scope.mirrored_view"
         ),
@@ -74,7 +74,7 @@ def MirroredStrategyEnabled() -> bool:
 def deprecated_consistent_strategy():
     print(
         "WARNING:",
-        "/".join(deprecated_consistent_strategy._ONEFLOW_API),
+        "oneflow.distribute.consistent_strategy",
         "will be removed in the future, use {} instead.".format(
             "oneflow.scope.consistent_view"
         ),
