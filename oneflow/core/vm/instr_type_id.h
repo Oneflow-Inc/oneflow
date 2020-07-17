@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_VM_INSTRUCTION_ID_H_
 
 #include <typeindex>
-#include "oneflow/core/common/flat_msg.h"
+#include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/common/layout_standardize.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/interpret_type.h"
