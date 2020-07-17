@@ -34,9 +34,9 @@ OpBuilder& OpBuilder::ArgImpl(bool is_input, const std::string& name, bool is_op
     arg_def.set_num_as_min(num_as_min);
   }
   if (is_input) {
-    *(result_.reg_val.op_def.mutable_input()->Add()) = arg_def;
+    *(result_.op_def.mutable_input()->Add()) = arg_def;
   } else {
-    *(result_.reg_val.op_def.mutable_output()->Add()) = arg_def;
+    *(result_.op_def.mutable_output()->Add()) = arg_def;
   }
   return *this;
 }
@@ -60,12 +60,12 @@ OP_REG_ARG_MEMBER_FUNC(OptionalOutput, false, true)
 #undef OP_REG_ARG_MEMBER_FUNC
 
 OpBuilder& OpBuilder::SetOutputBufferNum(int32_t num) {
-  result_.reg_val.same_output_regst_num = num;
+  result_.same_output_regst_num = num;
   return *this;
 }
 
 OpBuilder& OpBuilder::SupportCpuOnly() {
-  result_.reg_val.cpu_only_supported = true;
+  result_.cpu_only_supported = true;
   return *this;
 }
 
@@ -74,7 +74,7 @@ OpBuilder& OpBuilder::Attr(const std::string& name, UserOpAttrType type) {
   UserOpDef::AttrDef attr_def;
   attr_def.set_name(name);
   attr_def.set_type(type);
-  *(result_.reg_val.op_def.mutable_attr()->Add()) = attr_def;
+  *(result_.op_def.mutable_attr()->Add()) = attr_def;
   return *this;
 }
 
@@ -108,42 +108,42 @@ OF_PP_FOR_EACH_TUPLE(ATTR_MEMBER_FUNC, ATTR_SEQ)
 #undef ATTR_MEMBER_FUNC
 
 OpBuilder& OpBuilder::SetTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
-  result_.reg_val.tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
+  result_.tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
   return *this;
 }
 
 OpBuilder& OpBuilder::SetBatchAxisInferFn(BatchAxisInferFn batch_axis_infer_fn) {
-  result_.reg_val.batch_axis_infer_fn = std::move(batch_axis_infer_fn);
+  result_.batch_axis_infer_fn = std::move(batch_axis_infer_fn);
   return *this;
 }
 
 OpBuilder& OpBuilder::SetCheckAttrFn(CheckAttrFn fn) {
-  result_.reg_val.check_fn = std::move(fn);
+  result_.check_fn = std::move(fn);
   return *this;
 }
 
 OpBuilder& OpBuilder::SetGetSbpFn(GetSbpFn get_sbp_fn) {
-  result_.reg_val.get_sbp_fn = std::move(get_sbp_fn);
+  result_.get_sbp_fn = std::move(get_sbp_fn);
   return *this;
 }
 
 OpBuilder& OpBuilder::SetInputArgModifyFn(InputArgModifyFn input_arg_modify_fn) {
-  result_.reg_val.input_arg_modify_fn = std::move(input_arg_modify_fn);
+  result_.input_arg_modify_fn = std::move(input_arg_modify_fn);
   return *this;
 }
 
 OpBuilder& OpBuilder::Finish() {
-  CHECK(result_.reg_val.tensor_desc_infer_fn != nullptr)
+  CHECK(result_.tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
-  if (result_.reg_val.check_fn == nullptr) { result_.reg_val.check_fn = CheckAttrFnUtil::NoCheck; }
-  if (result_.reg_val.batch_axis_infer_fn == nullptr) {
-    result_.reg_val.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
+  if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
+  if (result_.batch_axis_infer_fn == nullptr) {
+    result_.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
   }
-  if (result_.reg_val.get_sbp_fn == nullptr) {
-    result_.reg_val.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
+  if (result_.get_sbp_fn == nullptr) {
+    result_.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
   }
-  if (result_.reg_val.input_arg_modify_fn == nullptr) {
-    result_.reg_val.input_arg_modify_fn = [](GetInputArgModifier, const UserOpConfWrapper&) {};
+  if (result_.input_arg_modify_fn == nullptr) {
+    result_.input_arg_modify_fn = [](GetInputArgModifier, const UserOpConfWrapper&) {};
   }
   return *this;
 }
