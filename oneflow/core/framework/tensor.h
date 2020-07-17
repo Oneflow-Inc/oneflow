@@ -4,9 +4,10 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/register/blob.h"
-
 namespace oneflow {
+
+class Blob;
+class BlobAccessChecker;
 
 namespace user_op {
 
@@ -22,9 +23,10 @@ class Tensor final {
 
   const ShapeView& shape() const { return shape_; }
   MutShapeView* mut_shape() {
-    this->blob_access_checker_->CheckHeaderMutable();
+    this->header_access_check();
     return mut_shape_.get();
   }
+
   DataType data_type() const { return data_type_; }
   const MemoryCase& mem_case() const { return *mem_case_; }
 
@@ -36,7 +38,7 @@ class Tensor final {
 
   template<typename T = void>
   T* mut_dptr() {
-    this->blob_access_checker_->CheckBodyMutable();
+    this->body_access_check();
     CheckDataType<T>();
     return static_cast<T*>(dptr_);
   }
@@ -49,6 +51,9 @@ class Tensor final {
         << "tensor data_type " << data_type_ << " must match template data_type "
         << GetDataType<T>::value;
   }
+
+  void header_access_check();
+  void body_access_check();
 
   void* dptr_;
   ShapeView shape_;

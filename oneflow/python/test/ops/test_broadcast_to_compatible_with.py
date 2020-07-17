@@ -28,7 +28,7 @@ def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):
         ]
         return flow.broadcast_to_compatible_with(x_def, compatible_var)
 
-    return broadcast_to_compatible_with_fn([x]).get().ndarray_list()[0]
+    return broadcast_to_compatible_with_fn([x]).get().numpy_list()[0]
 
 
 def _of_broadcast_to_compatible_with_dynamic(
@@ -58,7 +58,7 @@ def _of_broadcast_to_compatible_with_dynamic(
             x_def, [flow.identity(a_def), flow.identity(b_def)]
         )
 
-    return broadcast_to_compatible_with_fn([x], [a], [b]).get().ndarray_list()[0]
+    return broadcast_to_compatible_with_fn([x], [a], [b]).get().numpy_list()[0]
 
 
 def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):

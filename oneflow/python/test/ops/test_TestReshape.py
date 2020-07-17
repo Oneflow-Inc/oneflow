@@ -37,7 +37,7 @@ def mirrored_tensor_def_test(test_case, func_config):
         return TestReshape(x, [5, 4], "xx_test_reshape")
 
     x = np.random.rand(8, 2).astype(np.float32)
-    y = ReshapeJob([x]).get().ndarray_list()[0]
+    y = ReshapeJob([x]).get().numpy_list()[0]
     test_case.assertTrue((5, 4) == y.shape)
     reshape_x = np.concatenate((x, np.zeros((2, 2))), axis=0).reshape(5, 4)
     test_case.assertTrue(np.array_equal(reshape_x, y))
@@ -65,7 +65,7 @@ def test_mirrored_TestReshape_1n2c(test_case):
 
     x1 = np.random.rand(10, 1).astype(np.float32)
     x2 = np.random.rand(7, 2).astype(np.float32)
-    y1, y2 = ReshapeJob([x1, x2]).get().ndarray_list()
+    y1, y2 = ReshapeJob([x1, x2]).get().numpy_list()
     test_case.assertTrue((5, 4) == y1.shape)
     test_case.assertTrue((5, 4) == y2.shape)
     reshape_x1 = np.concatenate((x1, np.zeros((10, 1)))).reshape(5, 4)
