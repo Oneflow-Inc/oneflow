@@ -1,4 +1,4 @@
-#include "oneflow/core/common/flat_msg_view.h"
+#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
