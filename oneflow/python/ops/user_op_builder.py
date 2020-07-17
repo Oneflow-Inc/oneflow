@@ -76,7 +76,7 @@ def api_user_op_builder(op_name):
     Returns:
         UserOpConfBuilder: `UserOpConfBuilder` object used to build a wrapper of user op.
     
-    Example:
+    Example::
 
         def myargmax(
             input: remote_blob_util.BlobDef
