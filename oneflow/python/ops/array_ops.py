@@ -329,12 +329,13 @@ def slice_v2(x, slice_tup_list, name=None):
 
 @oneflow_export("concat")
 def concat(
-    inputs: Sequence[remote_blob_util.BlobDef],
+    inputs: Optional[Sequence[remote_blob_util.BlobDef]] = None,
     axis: int = 0,
     max_dims: Optional[int] = None,
     name: Optional[str] = None,
+    values: Optional[Sequence[remote_blob_util.BlobDef]] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Concatenate two or more `Blob` s at specified axis. 
+    r"""Concatenate two or more `Blob` s at specified axis.
 
     Analogous to `numpy.concatenate <https://docs.scipy.org/doc/numpy/reference/generated/numpy.concatenate.html>`_
 
@@ -343,10 +344,16 @@ def concat(
         axis: a `int`. `0` by default
         max_dims: specify max dimensions at axis when inputs contain dynamic tensor
         name: name of this operator. `None` by default
+        values: # deprecated param, use inputs instead
 
     Returns:
         A `Blob`
     """
+    if values is not None:
+        assert inputs is None
+        inputs = values
+
+    assert isinstance(inputs, (list, tuple))
     if len(inputs) == 1:
         return inputs[0]
 
