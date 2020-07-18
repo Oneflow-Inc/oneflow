@@ -31,7 +31,7 @@ def _test_gather_model_parallel_fw(
         params=flow.FixedTensorDef(params_shape, dtype=flow.float),
         indices=flow.FixedTensorDef(indices_shape, dtype=flow.int32),
     ):
-        with flow.fixed_placement(device_type, "0:0-3"):
+        with flow.scope.placement(device_type, "0:0-3"):
             params = params.with_distribute(flow.distribute.split(split_axis))
             indices = indices.with_distribute(flow.distribute.broadcast())
             return flow.gather(params=params, indices=indices, axis=axis)
