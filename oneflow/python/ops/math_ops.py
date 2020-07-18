@@ -166,17 +166,17 @@ def scalar_add(x, operand, name=None):
     builder = flow.user_op_builder(name).Op("scalar_add").Input("in", [x]).Output("out")
     if isinstance(operand, int):
         builder = (
-            builder.Attr("has_int_operand", True, "AttrTypeBool")
-            .Attr("has_float_operand", False, "AttrTypeBool")
-            .Attr("int_operand", operand, "AttrTypeInt64")
-            .Attr("float_operand", 0.0, "AttrTypeDouble")
+            builder.Attr("has_int_operand", True)
+            .Attr("has_float_operand", False)
+            .Attr("int_operand", operand)
+            .Attr("float_operand", 0.0)
         )
     elif isinstance(operand, float):
         builder = (
-            builder.Attr("has_int_operand", False, "AttrTypeBool")
-            .Attr("has_float_operand", True, "AttrTypeBool")
-            .Attr("int_operand", 0, "AttrTypeInt64")
-            .Attr("float_operand", operand, "AttrTypeDouble")
+            builder.Attr("has_int_operand", False)
+            .Attr("has_float_operand", True)
+            .Attr("int_operand", 0)
+            .Attr("float_operand", operand)
         )
     return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
