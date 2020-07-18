@@ -23,7 +23,7 @@ def test_lazy_input_output(test_case):
     input = np.arange(10).reshape(2, 5).astype(np.single)
     ret = foo_job(input).get()
     output = input + np.ones(shape=(2, 5), dtype=np.single)
-    test_case.assertTrue(np.array_equal(output, ret.ndarray()))
+    test_case.assertTrue(np.array_equal(output, ret.numpy()))
 
 
 def test_eager_output(test_case):
@@ -40,7 +40,7 @@ def test_eager_output(test_case):
 
     ret = foo_job().get()
     test_case.assertTrue(
-        np.array_equal(np.ones(shape=(2, 5), dtype=np.single), ret.ndarray_list()[0])
+        np.array_equal(np.ones(shape=(2, 5), dtype=np.single), ret.numpy_list()[0])
     )
 
 
@@ -64,10 +64,10 @@ def test_eager_multi_output(test_case):
 
     x, y = foo_job().get()
     test_case.assertTrue(
-        np.array_equal(np.ones(shape=(2, 5), dtype=np.single), x.ndarray_list()[0])
+        np.array_equal(np.ones(shape=(2, 5), dtype=np.single), x.numpy_list()[0])
     )
     test_case.assertTrue(
-        np.array_equal(np.zeros(shape=(64, 4), dtype=np.single), y.ndarray())
+        np.array_equal(np.zeros(shape=(64, 4), dtype=np.single), y.numpy())
     )
 
 
@@ -145,7 +145,7 @@ def test_eager_input_output(test_case):
         return y
 
     ret = foo_job([input]).get()
-    test_case.assertTrue(np.allclose(output, ret.ndarray_list()[0]))
+    test_case.assertTrue(np.allclose(output, ret.numpy_list()[0]))
 
 
 # TODO: system op need manaully register blob_object in default_blob_register or bw_blob_register
@@ -169,4 +169,4 @@ def test_eager_input_output(test_case):
 
 #     foo_job()
 #     # ret = foo_job(input).get()
-#     # test_case.assertTrue(np.allclose(input, ret.ndarray()))
+#     # test_case.assertTrue(np.allclose(input, ret.numpy()))

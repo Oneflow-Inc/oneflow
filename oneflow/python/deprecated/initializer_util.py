@@ -6,7 +6,7 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("truncated_normal")
-def truncated_normal_initializer(stddev=1.0):
+def truncated_normal_initializer(stddev: float = 1.0) -> op_conf_util.InitializerConf:
     initializer = op_conf_util.InitializerConf()
     setattr(initializer.truncated_normal_conf, "std", float(stddev))
 

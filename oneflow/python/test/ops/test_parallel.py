@@ -29,5 +29,5 @@ def NaiveTest(test_case):
 
     x = np.random.rand(*shape).astype(np.float32)
     y = np.random.rand(*shape).astype(np.float32)
-    z = AddJob(x, y).get().ndarray()
+    z = AddJob(x, y).get().numpy()
     test_case.assertTrue(np.array_equal(z, x + y + y))

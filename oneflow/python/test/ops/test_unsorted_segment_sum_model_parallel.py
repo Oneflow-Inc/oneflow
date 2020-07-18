@@ -79,8 +79,8 @@ def _test_unsorted_segment_sum_model_parallel_fw(
             return out0, out1
 
     out0, out1 = unsorted_segment_sum_job(data_arr, segment_ids_arr, out_arr).get()
-    test_case.assertTrue(np.allclose(out0.ndarray(), out_arr))
-    test_case.assertTrue(np.allclose(out1.ndarray(), out_arr))
+    test_case.assertTrue(np.allclose(out0.numpy(), out_arr))
+    test_case.assertTrue(np.allclose(out1.numpy(), out_arr))
 
 
 def test_unsorted_segment_sum_model_parallel_fw(test_case):

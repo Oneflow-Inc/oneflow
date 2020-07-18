@@ -23,6 +23,8 @@ bool TensorBackInserter::IsCurMutTensorAvailable() const {
 }
 
 FullyMutTensorView* TensorBackInserter::add_tensor() {
+  blob_->blob_access_checker()->CheckHeaderMutable();
+  blob_->blob_access_checker()->CheckBodyMutable();
   blob_->AddTensor(&cur_mut_tensor_);
   return &cur_mut_tensor_;
 }
@@ -48,6 +50,7 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
   blob_desc_ = blob_desc;
   dptr_ = body_ptr;
   header_ptr_.reset(new PodPtr(blob_desc_->header_pod_desc(), header_ptr));
+  this->blob_access_checker_ = Global<BlobAccessCheckerIf<true, true>>::Get();
   FOR_RANGE(int32_t, i, 0, FieldKey::kFieldKeySize) {
     FieldKey key = static_cast<FieldKey>(i);
     header_fields_[i] = header_ptr_->MutTensorPtr<int64_t>(key);
@@ -189,7 +192,7 @@ void Blob::ReserveOneEmptyTensorList() {
 FullyMutTensorView Blob::EndFullyMutTensor() {
   size_t shape_list_capacity = header_field_capacity<FieldKey::kTensorShapeList>();
   int64_t* end_shape_ptr = mut_header_field<FieldKey::kTensorShapeList>() + shape_list_capacity;
-  char* end_tensor_dptr = mut_dptr<char>() + blob_desc().ByteSizeOfBlobBody();
+  char* end_tensor_dptr = ForceMutDptr<char>() + blob_desc().ByteSizeOfBlobBody();
   return FullyMutTensorView(this, end_shape_ptr, end_tensor_dptr);
 }
 
@@ -217,12 +220,14 @@ size_t Blob::ByteSizeOfBlobBody() const {
 
 void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
+  this->blob_access_checker()->CheckBodyMutable();
   AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfBlobBody(), mem_case(),
              rhs->mem_case());
 }
 
 void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
+  this->blob_access_checker()->CheckBodyMutable();
   const size_t body_byte_size = ByteSizeOfBlobBody();
   CHECK_EQ(rhs->ByteSizeOfBlobBody(), body_byte_size);
   AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), body_byte_size, mem_case(), rhs->mem_case());

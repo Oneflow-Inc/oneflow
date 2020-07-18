@@ -28,6 +28,6 @@ def test_dynamic_reshape(test_case):
         return reshape_out1
 
     data = [np.random.rand(*data_shape).astype(np.float32) for i in range(num_gpus)]
-    out = DynamicReshapeJob(data).get().ndarray_list()
+    out = DynamicReshapeJob(data).get().numpy_list()
     for i in range(num_gpus):
         test_case.assertTrue(np.array_equal(np.reshape(data[i], (50, 20)), out[i]))

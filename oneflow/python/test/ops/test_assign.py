@@ -50,7 +50,7 @@ def _of_assign_and_relu(value, dtype, device_type):
         return flow.nn.relu(var)
 
     assign_fn(value)
-    return relu_fn().get().ndarray()
+    return relu_fn().get().numpy()
 
 
 def _np_relu(x):
