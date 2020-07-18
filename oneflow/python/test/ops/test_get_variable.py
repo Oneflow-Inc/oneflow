@@ -55,7 +55,7 @@ def test_get_job_shared_variable(test_case):
         var = get_var("var", trainable=True)
         loss = var + x_def
         flow.losses.add_loss(loss)
-        return loss
+        return var
 
     @flow.global_function()
     def eval():
@@ -67,15 +67,18 @@ def test_get_job_shared_variable(test_case):
     variables = []
     for i in range(10):
         input = np.random.rand(2, 5).astype(np.single)
-        train(input).get()
-        var = eval().get().numpy()
+        eval_var = eval().get()
+        train_var = train(input).get()
         # print("variable at iter {}:".format(i), var)
+        test_case.assertTrue(np.array_equal(eval_var.numpy(), train_var.numpy()))
         if i > 0:
             test_case.assertTrue(
-                np.allclose(var, (variables[-1] - learning_rate / var.size))
+                np.allclose(
+                    eval_var.numpy(), (variables[-1] - learning_rate / eval_var.size)
+                )
             )
 
-        variables.append(var)
+        variables.append(eval_var.numpy())
 
 
 def test_get_job_inter_and_intra_shared_variable(test_case):
@@ -102,7 +105,7 @@ def test_get_job_inter_and_intra_shared_variable(test_case):
         var = get_var("var", trainable=True)
         loss = var + x_def
         flow.losses.add_loss(loss)
-        return loss
+        return var
 
     @flow.global_function()
     def eval():
@@ -116,10 +119,11 @@ def test_get_job_inter_and_intra_shared_variable(test_case):
     variables = []
     for i in range(10):
         input = np.random.rand(*variable_shape).astype(np.single)
-        train(input).get()
         var1, var2 = eval().get()
-        test_case.assertTrue(np.array_equal(var1.numpy(), var2.numpy()))
+        train_var = train(input).get()
         # print("variable at iter {}:".format(i), var1.numpy())
+        test_case.assertTrue(np.array_equal(var1.numpy(), var2.numpy()))
+        test_case.assertTrue(np.array_equal(var1.numpy(), train_var.numpy()))
         if i > 0:
             test_case.assertTrue(
                 np.allclose(var1.numpy(), (variables[-1] - learning_rate / var1.size))
