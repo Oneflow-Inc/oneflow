@@ -107,7 +107,7 @@ def get_eager_variable(
     else:
         assert isinstance(job_var_blob, remote_blob_util.EagerConsistentBlob)
         assert isinstance(var_blob, remote_blob_util.EagerConsistentBlob)
-        assert var_blob == job_var_blob
+        assert var_blob.IdenticalTo(job_var_blob)
 
     bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
     bw_blob_register.TrySetObject4BlobName(
@@ -155,11 +155,11 @@ def get_lazy_variable(
         sess.StashVariableBlob4Job(job_name, op_conf.name, job_var_blob)
         if var_blob is not None:
             assert isinstance(var_blob, remote_blob_util.LazyConsistentBlob)
-            assert var_blob == job_var_blob
+            assert var_blob.IdenticalTo(job_var_blob)
     else:
         assert isinstance(job_var_blob, remote_blob_util.LazyConsistentBlob)
         assert isinstance(var_blob, remote_blob_util.LazyConsistentBlob)
-        assert var_blob == job_var_blob
+        assert var_blob.IdenticalTo(job_var_blob)
 
     return job_var_blob
 

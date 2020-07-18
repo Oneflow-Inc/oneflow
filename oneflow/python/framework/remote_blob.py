@@ -100,19 +100,6 @@ class LazyConsistentBlob(ConsistentBlob):
         if auto_watched_within_scope:
             watch_scope_util.TryWatchOnce(self)
 
-    def __eq__(self, rhs):
-        return (
-            self.unique_name == rhs.unique_name
-            and self.shape == rhs.shape
-            and self.shape == rhs.shape
-            and self.batch_axis == rhs.batch_axis
-            and self.split_axis == rhs.split_axis
-            and self.is_dynamic == rhs.is_dynamic
-            and self.disable_boxing == rhs.disable_boxing
-            and self.is_tensor_list == rhs.is_tensor_list
-            and self.parallel_conf == rhs.parallel_conf
-        )
-
     @property
     def shape(self):
         return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.lbn_)
@@ -147,6 +134,19 @@ class LazyConsistentBlob(ConsistentBlob):
     def parallel_conf(self):
         return c_api_util.JobBuildAndInferCtx_GetParallelConfFromProducerView(
             self.job_name_, self.lbn_
+        )
+
+    def IdenticalTo(self, rhs):
+        return (
+            self.unique_name == rhs.unique_name
+            and self.shape == rhs.shape
+            and self.shape == rhs.shape
+            and self.batch_axis == rhs.batch_axis
+            and self.split_axis == rhs.split_axis
+            and self.is_dynamic == rhs.is_dynamic
+            and self.disable_boxing == rhs.disable_boxing
+            and self.is_tensor_list == rhs.is_tensor_list
+            and self.parallel_conf == rhs.parallel_conf
         )
 
 
@@ -384,7 +384,7 @@ class EagerBlobTrait(object):
         blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object)
         return blob_cache.GetCachedNumpyMirroredList(FetchBlobNumpyMirroredList)
 
-    def __eq__(self, rhs):
+    def IdenticalTo(self, rhs):
         return (
             self.blob_object.op_arg_blob_attr == rhs.blob_object.op_arg_blob_attr
             and self.blob_object.op_arg_parallel_attr
