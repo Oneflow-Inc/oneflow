@@ -339,28 +339,6 @@ class InstructionsBuilder(object):
         self._LazyReference(blob_object, id1, id2)
         return blob_object
 
-    def MakeLazyRefBlobObject2(self, var_name, id1, id2):
-        parallel_conf = flow.placement.current_scope().default_parallel_conf
-        op_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
-        blob_parallel_desc_sym = op_parallel_desc_sym
-
-        sess = session_ctx.GetDefaultSession()
-        op_attribute = sess.GetOpAttrFromVarName(var_name)
-        obn = "out"
-
-        op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-            blob_parallel_desc_sym, op_attribute, obn
-        )
-        op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
-        object_id = self._LazyReference2(id1, id2, blob_parallel_desc_sym)
-
-        return object_util.BlobObject(
-            object_id=object_id,
-            op_arg_parallel_attr=op_arg_parallel_attr,
-            op_arg_blob_attr=op_arg_blob_attr,
-            release=self.release_blob_object_,
-        )
-
     def GetSymbol4String(self, string):
         if symbol_storage.HasSymbol4String(string):
             return symbol_storage.GetSymbol4String(string)

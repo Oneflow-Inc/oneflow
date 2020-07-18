@@ -53,94 +53,31 @@ class LazyReferenceInstructionType final : public InstructionType {
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(LazyReferenceInstruction);
     // FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, eager_blob_lbi);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(Mut2Operand, eager_blob);
+    FLAT_MSG_VIEW_DEFINE_PATTERN(MutOperand, eager_blob);
     FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, regst_desc_id);
     FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, regst_id);
   FLAT_MSG_VIEW_END(LazyReferenceInstruction);
   // clang-format on
 
-  void Infer(Instruction* instruction) const override {
-    Run<&IdUtil::GetTypeId, true>(instruction);
-  };
-  void Compute(Instruction* instruction) const override {
-    Run<&IdUtil::GetValueId, false>(instruction);
+  void Infer(Instruction* instruction) const override { Run<&IdUtil::GetTypeId>(instruction); };
+  void Compute(Instruction* instruction) const override{
+      // do nothing
   };
 
  private:
-  template<int64_t (*GetLogicalObjectId)(int64_t), bool infer>
+  template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(Instruction* instruction) const {
     FlatMsgView<LazyReferenceInstruction> args(instruction->instr_msg().operand());
     const int64_t regst_desc_id = args->regst_desc_id();
     const int64_t regst_id = args->regst_id();
     RwMutexedObject* eager_blob_rw;
-    if (infer) {
-      eager_blob_rw = instruction->mut_operand_type(args->eager_blob());
-    } else {
-      eager_blob_rw = instruction->mut_operand_value(args->eager_blob());
-    }
+    eager_blob_rw = instruction->mut_operand_type(args->eager_blob());
     Regst* regst = Global<RegstMgr>::Get()->Regst4RegstDescIdAndRegstId(regst_desc_id, regst_id);
     Blob* blob = regst->GetMutSoleBlob();
     eager_blob_rw->Init<eager::LazyRefBlobObject>(blob);
   }
 };
 COMMAND(RegisterInstructionType<LazyReferenceInstructionType>("LazyReference"));
-
-class LazyReferenceInstructionType2 final : public InstructionType {
- public:
-  LazyReferenceInstructionType2() = default;
-  ~LazyReferenceInstructionType2() override = default;
-
-  using stream_type = ControlStreamType;
-
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(LazyReferenceInstruction2);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, new_object);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, regst_desc_id);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, regst_id);
-  FLAT_MSG_VIEW_END(LazyReferenceInstruction2);
-  // clang-format on
-
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    Run<&IdUtil::GetTypeId>(vm, instr_msg);
-  }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    Run<&IdUtil::GetValueId>(vm, instr_msg);
-  }
-  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
-  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
-
- private:
-  template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
-    FlatMsgView<LazyReferenceInstruction2> args(instr_msg->operand());
-    const int64_t regst_desc_id = args->regst_desc_id();
-    const int64_t regst_id = args->regst_id();
-    const int64_t new_object = GetLogicalObjectId(args->new_object());
-    std::shared_ptr<ParallelDesc> parallel_desc = vm->GetInstructionParallelDesc(*instr_msg);
-    CHECK(static_cast<bool>(parallel_desc));
-    const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(parallel_desc->device_type()));
-    auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
-                                                               new_object, parallel_desc);
-    CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
-    auto* global_device_id2mirrored_object = logical_object->mut_global_device_id2mirrored_object();
-    ForEachMachineIdAndDeviceIdInRange(
-        *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
-          int64_t global_device_id =
-              vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
-          auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
-              vm->mut_allocator(), logical_object.Mutable(), global_device_id);
-          Regst* regst =
-              Global<RegstMgr>::Get()->Regst4RegstDescIdAndRegstId(regst_desc_id, regst_id);
-          Blob* blob = regst->GetMutSoleBlob();
-          RwMutexedObject rw;
-          rw.mut_object_ptr()->release();
-          rw.Init<eager::LazyRefBlobObject>(blob);
-          mirrored_object->reset_rw_mutexed_object(rw);
-          CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
-        });
-  }
-};
-COMMAND(RegisterInstructionType<LazyReferenceInstructionType2>("LazyReference2"));
 
 class NewObjectInstructionType final : public InstructionType {
  public:
