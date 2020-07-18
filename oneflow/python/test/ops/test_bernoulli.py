@@ -29,9 +29,9 @@ def test_bernoulli_mirrored(test_case):
         return flow.random.bernoulli(a)
 
     x = np.ones((10, 10), dtype=np.float32)
-    y = BernoulliJob([x]).get().ndarray_list()[0]
+    y = BernoulliJob([x]).get().numpy_list()[0]
     test_case.assertTrue(np.array_equal(y, x))
 
     x = np.zeros((10, 10), dtype=np.float32)
-    y = BernoulliJob([x]).get().ndarray_list()[0]
+    y = BernoulliJob([x]).get().numpy_list()[0]
     test_case.assertTrue(np.array_equal(y, x))

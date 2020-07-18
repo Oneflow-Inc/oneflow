@@ -20,7 +20,7 @@ def _of_image_batch_align(images, input_shape, output_shape, alignment):
         return image
 
     image = image_batch_align_job([images]).get()
-    return image.ndarray_list()[0]
+    return image.numpy_list()[0]
 
 
 def _read_images_by_cv(image_files):

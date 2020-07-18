@@ -20,7 +20,7 @@ def deprecated_name_scope(*args, **kwargs):
         ),
     )
     print(traceback.format_stack()[-2])
-    name_scope(*args, **kwargs)
+    return name_scope(*args, **kwargs)
 
 
 @oneflow_export("scope.namespace")

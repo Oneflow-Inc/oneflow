@@ -99,7 +99,7 @@ def _of_dynamic_params_gather_nd(params, indices, static_params_shape, compare_f
 
     check_point = flow.train.CheckPoint()
     check_point.init()
-    return gather_nd_fn([params], [indices]).get().ndarray_list()[0]
+    return gather_nd_fn([params], [indices]).get().numpy_list()[0]
 
 
 def _compare_gather_nd_with_tf(
@@ -124,7 +124,7 @@ def _compare_gather_nd_with_tf(
 
         def compare_dy(params_grad):
             test_case.assertTrue(
-                np.array_equal(dy.numpy(), params_grad.ndarray_list()[0])
+                np.array_equal(dy.numpy(), params_grad.numpy_list()[0])
             )
 
     else:
@@ -140,7 +140,7 @@ def _compare_gather_nd_with_tf(
     check_point.init()
 
     if mirrored:
-        of_y = gather_nd_fn([params], [indices]).get().ndarray_list()[0]
+        of_y = gather_nd_fn([params], [indices]).get().numpy_list()[0]
     else:
         of_y = gather_nd_fn(params, indices).get().numpy()
 
@@ -166,7 +166,7 @@ def _compare_dynamic_gather_nd_with_tf(
         dy = tf.tensor_scatter_nd_add(zero_params, i, dy.values)
 
     def compare_dy(params_grad):
-        test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.ndarray_list()[0]))
+        test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.numpy_list()[0]))
 
     of_y = _of_dynamic_params_gather_nd(
         params, indices, static_params_shape, compare_dy
@@ -188,7 +188,7 @@ def _of_gather_nd_dynamic_indices(params, indices, indices_static_shape, device_
         with flow.scope.placement(device_type, "0:0"):
             return flow.gather_nd(params_def, indices_def)
 
-    return gather_nd_fn([params], [indices]).get().ndarray_list()[0]
+    return gather_nd_fn([params], [indices]).get().numpy_list()[0]
 
 
 def _compare_gather_nd_dynamic_indices_with_tf(

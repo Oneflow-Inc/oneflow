@@ -94,7 +94,7 @@ def _compare_gather_with_tf(
 
         def compare_dy(params_grad):
             test_case.assertTrue(
-                np.array_equal(dy.numpy(), params_grad.ndarray_list()[0])
+                np.array_equal(dy.numpy(), params_grad.numpy_list()[0])
             )
 
     else:
@@ -110,7 +110,7 @@ def _compare_gather_with_tf(
     check_point.init()
 
     if mirrored:
-        of_y = gather_fn([params], [indices]).get().ndarray_list()[0]
+        of_y = gather_fn([params], [indices]).get().numpy_list()[0]
     else:
         of_y = gather_fn(params, indices).get().numpy()
 

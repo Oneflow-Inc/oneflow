@@ -32,7 +32,7 @@ def _of_tensor_list_split(input_tensor_list, input_static_shape, device_tag="gpu
         return outputs
 
     outputs = tensor_list_split_job([input_tensor_list]).get()
-    return [output.ndarray_list()[0] for output in outputs]
+    return [output.numpy_list()[0] for output in outputs]
 
 
 def test_tensor_list_input_output(test_case, verbose=False):
