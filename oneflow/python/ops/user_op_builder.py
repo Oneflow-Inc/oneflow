@@ -236,7 +236,11 @@ class UserOpConfBuilder(object):
     def Attr(self, attr_name, attr_value, attr_type_name=None):
         if attr_type_name != None:
             print(
-                "WARNING: The 3rd argument 'attr_type_name' of Attr has been deprecated, remove it."
+                """WARNING: Argument 'attr_type_name' of UserOpConfBuilder.Attr has been deprecated. Please remove it.
+For instance:
+        -     .Attr("out_num", out_num, "AttrTypeInt64")
+        +     .Attr("out_num", out_num)
+                """
             )
             print(traceback.format_stack()[-2])
 
