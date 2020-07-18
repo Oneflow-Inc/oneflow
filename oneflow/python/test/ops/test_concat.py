@@ -2,6 +2,8 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 import test_global_storage
+import random
+import math
 
 from test_util import GenArgList, type_name_to_flow_type
 from collections import OrderedDict
@@ -127,7 +129,9 @@ def _of_dynamic_concat(
             flow.watch(var_0, watch_cb)
             flow.watch(var_1, watch_cb)
 
-        result = flow.concat([var_0, var_1], axis=axis)
+        result = flow.concat(
+            [var_0, var_1], axis=axis, max_dim_size=input_static_shape[axis]
+        )
         flow.losses.add_loss(result)
         flow.watch_diff(var_0, make_watch_diff_cb(0))
         flow.watch_diff(var_1, make_watch_diff_cb(1))
@@ -139,25 +143,43 @@ def _of_dynamic_concat(
     return ret.numpy(0)
 
 
-def _test_dynamic_concat(test_case, output_shape, axis, device_type, verbose=False):
-    assert output_shape[axis] > 2
+def _rand_part_range(start, stop, part_num):
+    part_size = math.ceil((stop - start) / part_num)
+    begin = start
+    for i in range(part_num):
+        end = part_size * (i + 2)
+        end = random.randrange(begin + 1, min(end, stop - (part_num - i - 1)))
+        yield (begin, end)
+        begin = end
 
-    low = np.random.randint(low=1, high=output_shape[axis] - 1)
-    high = np.random.randint(low=low, high=output_shape[axis])
-    rand_output = np.random.rand(*output_shape).astype(np.single)
-    slice_list_0 = []
-    slice_list_1 = []
-    for i in range(len(output_shape)):
+
+def _slice(input, axis, start, stop):
+    slice_list = []
+    for i in range(input.ndim):
         if i == axis:
-            slice_list_0.append(slice(0, low))
-            slice_list_1.append(slice(low, high))
+            slice_list.append(slice(start, stop))
         else:
-            slice_list_0.append(slice(None))
-            slice_list_1.append(slice(None))
+            slice_list.append(slice(None))
 
-    input_0 = rand_output[tuple(slice_list_0)]
-    input_1 = rand_output[tuple(slice_list_1)]
-    inputs = [input_0, input_1]
+    return input[tuple(slice_list)]
+
+
+def _rand_inputs(shape, split_axis, part_num):
+    entire_input = np.random.rand(*shape).astype(np.single)
+    inputs = []
+    last_stop = 0
+    for start, stop in _rand_part_range(0, shape[split_axis], part_num):
+        last_stop = stop
+        input_slice = _slice(entire_input, split_axis, start, stop)
+        inputs.append(input_slice)
+
+    return _slice(entire_input, split_axis, 0, last_stop), inputs
+
+
+def _test_dynamic_concat(test_case, shape, axis, device_type, verbose=False):
+    assert axis >= 0 and axis < len(shape)
+
+    output, inputs = _rand_inputs(shape, axis, 2)
 
     def print_blob(blob):
         print(blob.numpy(0), blob.numpy(0).shape)
@@ -175,29 +197,72 @@ def _test_dynamic_concat(test_case, output_shape, axis, device_type, verbose=Fal
 
     of_output = _of_dynamic_concat(
         inputs,
-        tuple(output_shape),
+        tuple(shape),
         axis,
         device_type,
         print_blob if verbose else None,
         make_watch_diff_cb,
     )
-    slice_list_all = []
-    for i in range(len(output_shape)):
-        if i == axis:
-            slice_list_all.append(slice(0, high))
-        else:
-            slice_list_all.append(slice(None))
 
-    exp_output = rand_output[tuple(slice_list_all)]
     if verbose:
         print("inputs shapes:", [input.shape for input in inputs])
+        print("output shape:", output.shape)
         print("of_output shape:", of_output.shape)
-        print("exp_output shape:", exp_output.shape)
+        print("output:\n", output)
         print("of_output:\n", of_output)
-        print("exp_output:\n", exp_output)
 
-    test_case.assertTrue(np.array_equal(of_output, exp_output))
+    test_case.assertTrue(np.array_equal(of_output, output))
 
 
 def test_dynamic_concat_case_0(test_case):
     _test_dynamic_concat(test_case, (64, 4), 0, "gpu")
+
+
+def test_dynamic_concat_case_1(test_case):
+    _test_dynamic_concat(test_case, (2, 10), 1, "cpu")
+
+
+def test_dynamic_concat_case_2(test_case):
+    _test_dynamic_concat(test_case, (4, 7, 128), 2, "gpu")
+
+
+def test_dynamic_concat_case_3(test_case):
+    _test_dynamic_concat(test_case, (16,), 0, "cpu")
+
+
+def _test_hybrid_concat(test_case, static_shape, axis):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.train.primary_lr(1e-3)
+    func_config.train.model_update_conf(dict(naive_conf={}))
+
+    def compare_var_diff(var_blob):
+        test_case.assertTrue(
+            np.array_equal(
+                var_blob.numpy(), np.ones(shape=static_shape, dtype=np.single)
+            )
+        )
+
+    @flow.global_function(func_config)
+    def hybrid_concat_job(
+        input_0_def=flow.MirroredTensorDef(shape=static_shape, dtype=flow.float),
+        input_1_def=flow.MirroredTensorDef(shape=static_shape, dtype=flow.float),
+    ):
+        var = flow.get_variable(
+            "var",
+            shape=static_shape,
+            dtype=flow.float,
+            initializer=flow.random_uniform_initializer(),
+            trainable=True,
+        )
+        constant = flow.constant(1.0, dtype=flow.float, shape=static_shape)
+        loss = flow.concat(
+            [input_0_def, var, input_1_def, constant],
+            axis=axis,
+            max_dim_size=static_shape,
+        )
+        flow.losses.add_loss(loss)
+        flow.watch_diff(var, compare_var_diff)
+        return var
+
+    var = hybrid_concat_job().get()
