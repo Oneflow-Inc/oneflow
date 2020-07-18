@@ -8,7 +8,7 @@ def TestReshape(x, shape, name):
         .Op("TestReshape")
         .Input("in", [x])
         .Output("out")
-        .Attr("shape", shape, "AttrTypeShape")
+        .Attr("shape", shape)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

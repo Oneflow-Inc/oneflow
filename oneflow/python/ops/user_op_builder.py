@@ -308,6 +308,6 @@ class UserOpConfBuilder(object):
                 "Unknow distirbute strategy when set random seed to user op"
             )
 
-        return self.Attr("has_seed", (seed is not None), "AttrTypeBool").Attr(
-            "seed", seed, "AttrTypeInt64"
+        return self.Attr("has_seed", (seed is not None)).Attr(
+            "seed", seed
         )
