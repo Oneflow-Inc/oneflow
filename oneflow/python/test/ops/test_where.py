@@ -37,7 +37,7 @@ def _of_where(
         func_config.train.model_update_conf(dict(naive_conf={}))
 
         def do_where(condition, x, y):
-            with flow.device_prior_placement(device_type, "0:0"):
+            with flow.scope.placement(device_type, "0:0"):
                 x_var = flow.get_variable(
                     "x",
                     shape=x.shape,
@@ -55,7 +55,7 @@ def _of_where(
 
             z = flow.where(condition, x_var, y_var)
 
-            with flow.device_prior_placement(device_type, "0:0"):
+            with flow.scope.placement(device_type, "0:0"):
                 flow.losses.add_loss(z)
 
             flow.watch_diff(x_var, dz_dx_watcher)
@@ -68,10 +68,8 @@ def _of_where(
             return flow.where(condition, x, y)
 
     if dynamic:
-        func_config.default_placement_scope(
-            flow.device_prior_placement(device_type, "0:0")
-        )
-        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+        func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
+        func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
         def where_fn(
@@ -87,9 +85,9 @@ def _of_where(
 
     else:
         func_config.default_placement_scope(
-            flow.device_prior_placement(device_type, machine_device_ids)
+            flow.scope.placement(device_type, machine_device_ids)
         )
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_distribute_strategy(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
         def where_fn(
@@ -183,14 +181,14 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
     func_config.default_data_type(flow.float)
 
     if input_shape is None:
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_distribute_strategy(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
         def where_fn(input_def=flow.FixedTensorDef(input.shape, dtype=flow.float)):
             return flow.where(input_def)
 
     else:
-        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+        func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
         def where_fn(input_def=flow.MirroredTensorDef(input_shape, dtype=flow.float)):

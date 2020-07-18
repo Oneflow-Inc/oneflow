@@ -22,7 +22,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis, epsilon):
 
     @flow.global_function(func_config)
     def L2NormalizeJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
