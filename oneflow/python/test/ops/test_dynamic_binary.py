@@ -5,7 +5,7 @@ import oneflow as flow
 @flow.unittest.num_nodes_required(2)
 def test_multi_node_dynamic_binary_split_concat_empty(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
     func_config.default_data_type(flow.float)
     flow.config.machine_num(2)
@@ -35,6 +35,6 @@ def test_multi_node_dynamic_binary_split_concat_empty(test_case):
     for i in size:
         data.append(np.ones((i,), dtype=np.float32))
     for i in range(5):
-        ret = DynamicBinaryJob([data[i]]).get().ndarray_list()[0]
+        ret = DynamicBinaryJob([data[i]]).get().numpy_list()[0]
         print(ret)
         test_case.assertTrue(np.array_equal(ret, data[i]))

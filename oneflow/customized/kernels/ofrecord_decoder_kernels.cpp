@@ -68,7 +68,7 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
     int64_t record_num = in_blob->shape().At(0);
     int64_t sample_elem_cnt = out_blob->shape().Count(1);
     CHECK(record_num > 0);
-    OFRecord* records = in_blob->mut_dptr<OFRecord>();
+    const OFRecord* records = in_blob->dptr<OFRecord>();
     T* out_dptr = out_blob->mut_dptr<T>();
     const std::string& name = ctx->Attr<std::string>("name");
 
@@ -219,7 +219,7 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
     CHECK(record_num > 0);
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK_EQ(out_blob->shape(), in_blob->shape());
-    OFRecord* records = in_blob->mut_dptr<OFRecord>();
+    const OFRecord* records = in_blob->dptr<OFRecord>();
     TensorBuffer* buffers = out_blob->mut_dptr<TensorBuffer>();
     const std::string& name = ctx->Attr<std::string>("name");
     const std::string& color_space = ctx->Attr<std::string>("color_space");
@@ -252,7 +252,7 @@ class OFRecordImageDecoderKernel final : public user_op::OpKernel {
     CHECK(record_num > 0);
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK_EQ(out_blob->shape(), in_blob->shape());
-    OFRecord* records = in_blob->mut_dptr<OFRecord>();
+    const OFRecord* records = in_blob->dptr<OFRecord>();
     TensorBuffer* buffers = out_blob->mut_dptr<TensorBuffer>();
     const std::string& name = ctx->Attr<std::string>("name");
     const std::string& color_space = ctx->Attr<std::string>("color_space");

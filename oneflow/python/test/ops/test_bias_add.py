@@ -23,7 +23,7 @@ def RunOneflowBiasAdd(device_type, value, bias, flow_args):
     def FlowJob(
         value=flow.FixedTensorDef(value.shape), bias=flow.FixedTensorDef(bias.shape)
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             value += flow.get_variable(
                 name="v1",
                 shape=(1,),

@@ -17,7 +17,7 @@ def ccrelu(x, name):
 @flow.unittest.num_nodes_required(2)
 def test_multi_node_comm_net(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.default_data_type(flow.float)
     flow.config.gpu_device_num(1)
 
@@ -51,7 +51,7 @@ def test_multi_node_comm_net(test_case):
 @flow.unittest.num_nodes_required(2)
 def test_multi_node_comm_net_dynamic(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.default_placement_scope(flow.fixed_placement("gpu", "0:0"))
     func_config.default_data_type(flow.float)
     flow.config.machine_num(2)
@@ -72,7 +72,7 @@ def test_multi_node_comm_net_dynamic(test_case):
     for i in index:
         data.append(np.ones((5, 2,), dtype=np.float32) * i)
     for i in range(5):
-        ret = ReluJob([data[i]]).get().ndarray_list()[0]
+        ret = ReluJob([data[i]]).get().numpy_list()[0]
         print(ret)
         if index[i] > 0:
             test_case.assertTrue(
@@ -87,7 +87,7 @@ def test_multi_node_comm_net_dynamic(test_case):
 @flow.unittest.num_nodes_required(2)
 def test_multi_node_comm_net_dynamic_empty(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
     func_config.default_data_type(flow.float)
     flow.config.machine_num(2)
@@ -108,7 +108,7 @@ def test_multi_node_comm_net_dynamic_empty(test_case):
     for i in index:
         data.append(np.ones((0, 0,), dtype=np.float32) * i)
     for i in range(5):
-        ret = ReluJob([data[i]]).get().ndarray_list()[0]
+        ret = ReluJob([data[i]]).get().numpy_list()[0]
         print(ret)
         if index[i] > 0:
             test_case.assertTrue(
