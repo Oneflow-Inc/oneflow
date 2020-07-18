@@ -24,6 +24,7 @@ import oneflow.python.lib.core.enable_if as enable_if
 import random
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.blob_register as blob_register_util
+import traceback
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
 
@@ -232,7 +233,13 @@ class UserOpConfBuilder(object):
         self.user_op_.output_arg_key_list_.append(output_name)
         return self
 
-    def Attr(self, attr_name, attr_value):
+    def Attr(self, attr_name, attr_value, attr_type_name=None):
+        if attr_type_name != None:
+            print(
+                "WARNING: The 3rd argument 'attr_type_name' of Attr has been deprecated, remove it."
+            )
+            print(traceback.format_stack()[-2])
+
         attribute = user_op_attr_util.UserOpAttrVal()
         assert isinstance(attr_name, str)
         attr_type = c_api_util.GetUserOpAttrType(
