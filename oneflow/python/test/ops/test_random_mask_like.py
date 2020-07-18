@@ -15,7 +15,7 @@ def of_run(device_type, x_shape, rate, seed):
 
     @flow.global_function(func_config)
     def RandomMaskLikeJob(x=flow.FixedTensorDef(x_shape)):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             mask = flow.nn.random_mask_like(x, rate=rate, seed=seed)
             return mask
 

@@ -10,7 +10,7 @@ from test_util import Args, GenArgDict, type_name_to_flow_type, type_name_to_np_
 
 def test_no_watch_scope_consistent(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
@@ -23,7 +23,7 @@ def test_no_watch_scope_consistent(test_case):
 def test_train_consistent(test_case):
     flow.config.enable_debug_mode(True)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.default_data_type(flow.float32)
     func_config.train.primary_lr(0.001)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -65,7 +65,7 @@ def CompareNnBnWithTensorFlow(
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.default_data_type(flow.float32)
     func_config.train.primary_lr(0)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -95,7 +95,7 @@ def CompareNnBnWithTensorFlow(
         offset=flow.FixedTensorDef(offset.shape),
         scale=flow.FixedTensorDef(scale.shape),
     ):
-        with flow.device_prior_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             x_full_precision += flow.get_variable(
                 name="v1",
                 shape=(1,),
@@ -161,7 +161,7 @@ def RunOneflowLayerBn(
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     if data_type == "float16":
         func_config.enable_auto_mixed_precision(True)
         dtype = flow.float
@@ -178,7 +178,7 @@ def RunOneflowLayerBn(
 
     @flow.global_function(func_config)
     def FlowJob(x_full_precision=flow.FixedTensorDef(x.shape, dtype=dtype)):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x_full_precision += flow.get_variable(
                 name="v1", shape=(1,), dtype=dtype, initializer=flow.zeros_initializer()
             )

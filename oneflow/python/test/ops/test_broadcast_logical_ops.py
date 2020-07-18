@@ -88,7 +88,7 @@ def GenerateTest(
 
     @flow.global_function(func_config)
     def ModJob1(a=flow.FixedTensorDef(a_shape, dtype=dtype)):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return func(a, a)
 
     @flow.global_function(func_config)
@@ -96,7 +96,7 @@ def GenerateTest(
         a=flow.FixedTensorDef(a_shape, dtype=dtype),
         b=flow.FixedTensorDef(b_shape, dtype=dtype),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return func(a, b)
 
     a = np_array(dtype, a_shape)
