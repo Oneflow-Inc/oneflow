@@ -344,7 +344,7 @@ def concat(
         axis: a `int`. `0` by default
         max_dims: specify max dimensions at axis when inputs contain dynamic tensor
         name: name of this operator. `None` by default
-        values: # deprecated param, use inputs instead
+        values: deprecated param, use inputs instead
 
     Returns:
         A `Blob`
