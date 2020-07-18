@@ -1,17 +1,24 @@
 from __future__ import absolute_import
 
-from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.ops.user_op_builder as user_op_builder
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.distribute as distribute_util
-import oneflow.python.framework.hob as hob
-import oneflow.python.lib.core.enable_if as enable_if
+from typing import Optional, Sequence, Union
 
 import oneflow as flow
+import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.framework.hob as hob
+import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.python.ops.user_op_builder as user_op_builder
+from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("math.two_stage_reduce_max")
-def api_two_stage_reduce_max(x, axis=None, keepdims=False, name=None):
+def api_two_stage_reduce_max(
+    x: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     func = enable_if.unique([two_stage_reduce_max])
     return func(x, axis=axis, keepdims=keepdims, name=name)
 
@@ -23,7 +30,12 @@ def two_stage_reduce_max(x, axis=None, keepdims=False, name=None):
 
 
 @oneflow_export("math.two_stage_reduce_min")
-def api_two_stage_reduce_min(x, axis=None, keepdims=False, name=None):
+def api_two_stage_reduce_min(
+    x: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     func = enable_if.unique([two_stage_reduce_min])
     return func(x, axis=axis, keepdims=keepdims, name=name)
 

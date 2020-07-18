@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 import oneflow.python.framework.distribute_context as distribute_ctx
 from oneflow.python.oneflow_export import oneflow_export
+import traceback
 
 
 class Distribute(object):
@@ -32,11 +33,24 @@ class SplitDistribute(Distribute):
 
 
 @oneflow_export("distribute.mirrored_strategy")
+def deprecated_mirrored_strategy():
+    print(
+        "WARNING:",
+        "oneflow.distribute.mirrored_strategy",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.mirrored_view"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+    return DistributeMirroredStrategy()
+
+
+@oneflow_export("scope.mirrored_view")
 class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
-    r"""Create a mirrored strategy scope. All operators within the scope will be mirrored among diffierent accelerators.
+    r"""Create a scope in mirrored view. All operators within the scope will be mirrored among diffierent accelerators.
     Usage::
 
-        with oneflow.distribute.mirrored_strategy():
+        with oneflow.scope.mirrored_view():
             ...
 
     """
@@ -57,11 +71,24 @@ def MirroredStrategyEnabled() -> bool:
 
 
 @oneflow_export("distribute.consistent_strategy")
+def deprecated_consistent_strategy():
+    print(
+        "WARNING:",
+        "oneflow.distribute.consistent_strategy",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.consistent_view"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+    return DistributeConsistentStrategy()
+
+
+@oneflow_export("scope.consistent_view")
 class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
-    r"""Create a consistent strategy scope. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
+    r"""Create a scope in consistent view. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
     Usage::
 
-        with oneflow.distribute.consistent_strategy():
+        with oneflow.scope.consistent_view():
             ...
 
     """
