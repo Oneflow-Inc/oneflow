@@ -31,7 +31,7 @@ def RunOneflowOp(device_type, flow_op, x, y, data_type):
         x=flow.FixedTensorDef(x.shape, dtype=flow_type),
         y=flow.FixedTensorDef(y.shape, dtype=flow_type),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
                 name="x",
                 shape=x.shape,
@@ -136,7 +136,7 @@ def compare_with_tensorflow(
         x=flow.FixedTensorDef(x_shape, dtype=flow_type),
         y=flow.FixedTensorDef(y_shape, dtype=flow_type),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow_op(x, y)
 
     np_type = type_name_to_np_type[data_type]

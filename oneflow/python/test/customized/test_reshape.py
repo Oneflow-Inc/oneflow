@@ -4,7 +4,7 @@ import oneflow as flow
 flow.config.gpu_device_num(1)
 
 func_config = flow.FunctionConfig()
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_distribute_strategy(flow.scope.consistent_view())
 func_config.default_data_type(flow.float)
 
 
