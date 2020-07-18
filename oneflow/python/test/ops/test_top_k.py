@@ -29,7 +29,7 @@ def compare_with_tensorflow(device_type, in_shape, k, data_type, sorted):
 
     input = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
     # OneFlow
-    of_out = TopKJob([input]).get().ndarray_list()[0]
+    of_out = TopKJob([input]).get().numpy_list()[0]
     # TensorFlow
     if k <= in_shape[-1]:
         _, tf_out = tf.math.top_k(input, k, sorted)
