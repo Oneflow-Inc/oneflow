@@ -7,12 +7,16 @@ import unittest
 
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Any, Dict, Callable
 
 
 @oneflow_export("unittest.register_test_cases")
 def register_test_cases(
-    scope, directory, filter_by_num_nodes, base_class=unittest.TestCase
-):
+    scope: Dict[str, Any],
+    directory: str,
+    filter_by_num_nodes: Callable[[bool], int],
+    base_class: unittest.TestCase = unittest.TestCase,
+) -> None:
     def FilterTestPyFile(f):
         return (
             os.path.isfile(os.path.join(directory, f))
@@ -42,7 +46,7 @@ def register_test_cases(
 
 
 @oneflow_export("unittest.num_nodes_required")
-def num_nodes_required(num_nodes):
+def num_nodes_required(num_nodes: int) -> Callable[[Callable], Callable]:
     def Decorator(f):
         f.__oneflow_test_case_num_nodes_required__ = num_nodes
         return f

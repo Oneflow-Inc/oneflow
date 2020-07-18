@@ -112,7 +112,7 @@ def _of_target_resize_bbox_scale(images, bbox_list, target_size, max_size):
     output_bbox_list, output_image_size = target_resize_bbox_scale_job(
         [input_image_list], [input_bbox_list]
     ).get()
-    return output_bbox_list.ndarray_lists()[0], output_image_size.ndarray_list()[0]
+    return output_bbox_list.numpy_lists()[0], output_image_size.numpy_list()[0]
 
 
 def _compare_bbox_scale(

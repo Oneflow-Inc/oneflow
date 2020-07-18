@@ -27,7 +27,9 @@ class DynamicBinarySplitOp final : public Operator {
 void DynamicBinarySplitOp::InitFromOpConf() {
   CHECK(op_conf().has_dynamic_binary_split_conf());
   EnrollInputBn("in");
-  EnrollRepeatedOutputBn("out");
+  EnrollRepeatedOutputBnWithSetter("out", [](OutputBlobModifier* ob_modifier) {
+    ob_modifier->set_header_infered_before_compute(false);
+  });
 }
 
 const PbMessage& DynamicBinarySplitOp::GetCustomizedConf() const {

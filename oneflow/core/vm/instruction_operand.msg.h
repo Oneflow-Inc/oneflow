@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_VM_INSTRUCTION_OPERAND_H_
 #define ONEFLOW_CORE_VM_INSTRUCTION_OPERAND_H_
 
-#include "oneflow/core/common/flat_msg.h"
+#include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/mirrored_object_id.msg.h"
 

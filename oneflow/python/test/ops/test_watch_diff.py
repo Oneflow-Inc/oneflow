@@ -20,7 +20,7 @@ def WatchDiff(test_case, device_type, input_shape, dtype):
 
     def CheckOnes(diff):
         ones = np.ones(input_shape)
-        test_case.assertTrue(np.allclose(diff.ndarray(), ones, rtol=1e-5, atol=1e-5))
+        test_case.assertTrue(np.allclose(diff.numpy(), ones, rtol=1e-5, atol=1e-5))
 
     @flow.global_function(func_config)
     def TrainJob():

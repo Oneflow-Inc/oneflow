@@ -37,7 +37,9 @@ void DistributeCloneOp::InitFromOpConf() {
   CHECK(op_conf().has_distribute_clone_conf());
 
   EnrollInputBn("in");
-  EnrollRepeatedOutputBn("out");
+  EnrollRepeatedOutputBnWithSetter("out", [&](OutputBlobModifier* ob_modifier) {
+    ob_modifier->set_is_mutable(op_conf().distribute_clone_conf().is_variable_ref());
+  });
 }
 
 const PbMessage& DistributeCloneOp::GetCustomizedConf() const {
