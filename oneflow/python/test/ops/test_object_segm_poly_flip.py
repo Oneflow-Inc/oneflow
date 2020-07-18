@@ -10,7 +10,7 @@ def _of_object_segm_poly_flip(poly_list, image_size, flip_code):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def object_segm_poly_flip_job(
@@ -27,7 +27,7 @@ def _of_object_segm_poly_flip(poly_list, image_size, flip_code):
 
     input_poly_list = [np.expand_dims(bbox, axis=0) for bbox in poly_list]
     poly_tensor = object_segm_poly_flip_job([input_poly_list], [image_size]).get()
-    return poly_tensor.ndarray_lists()[0]
+    return poly_tensor.numpy_lists()[0]
 
 
 def _get_segm_poly_static_shape(poly_list):

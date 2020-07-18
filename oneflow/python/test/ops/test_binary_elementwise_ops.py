@@ -31,7 +31,7 @@ def RunOneflowBinaryOp(device_type, flow_op, x, y, data_type):
         x=flow.FixedTensorDef(x.shape, dtype=flow_type),
         y=flow.FixedTensorDef(y.shape, dtype=flow_type),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
                 name="x",
                 shape=x.shape,
@@ -56,7 +56,7 @@ def RunOneflowBinaryOp(device_type, flow_op, x, y, data_type):
     # Oneflow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    out = FlowJob(x, y).get().ndarray()
+    out = FlowJob(x, y).get().numpy()
     x_diff = test_global_storage.Get("x_diff")
     y_diff = test_global_storage.Get("y_diff")
     return out, x_diff, y_diff

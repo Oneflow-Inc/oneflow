@@ -17,7 +17,7 @@ def my_test_source(name, out_num):
 def test_testsource_2_gpu(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def TestSourceJob():
@@ -27,5 +27,5 @@ def test_testsource_2_gpu(test_case):
         test_case.assertTrue(ret.batch_axis is not None and ret.batch_axis == 0)
         return ret
 
-    y = TestSourceJob().get().ndarray()
+    y = TestSourceJob().get().numpy()
     test_case.assertTrue(np.array_equal(y, np.append(np.arange(5.0), np.arange(5.0))))

@@ -161,10 +161,10 @@ def test_pool(_):
         dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
 
         def assert_grad(b):
-            assert np.allclose(dx_tf.numpy(), b.ndarray()), (
+            assert np.allclose(dx_tf.numpy(), b.numpy()), (
                 case,
                 dx_tf.numpy(),
-                b.ndarray(),
+                b.numpy(),
             )
 
         # 1F results
@@ -192,7 +192,7 @@ def test_pool(_):
             )
             flow.watch_diff(v, assert_grad)
             x += v
-            with flow.device_prior_placement(device_type, "0:0"):
+            with flow.scope.placement(device_type, "0:0"):
                 pooling_f = None
                 if pooling_type == "AVG":
                     pooling_f = getattr(flow.nn, "avg_pool{}d".format(dim))
@@ -215,9 +215,9 @@ def test_pool(_):
         y = pooling_job(x).get()
         y_ndarray = None
         if is_dynamic:
-            y_ndarray = y.ndarray_list()[0]
+            y_ndarray = y.numpy_list()[0]
         else:
-            y_ndarray = y.ndarray()
+            y_ndarray = y.numpy()
         assert y_ndarray.shape == y_tf.numpy().shape, (
             y_ndarray.shape,
             y_tf.numpy().shape,

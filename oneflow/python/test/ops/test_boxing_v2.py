@@ -18,8 +18,7 @@ def _test_split_to_split(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    func_config.use_boxing_v2(True)
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def split_to_split_job(x=flow.FixedTensorDef((96, 96))):
@@ -30,7 +29,7 @@ def _test_split_to_split(
         return dst
 
     x = np.random.rand(96, 96).astype(np.float32)
-    y = split_to_split_job(x).get().ndarray()
+    y = split_to_split_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
 
 
@@ -43,7 +42,6 @@ def test_split_to_split(test_case):
     arg_dict["src_axis"] = [0, 1]
     arg_dict["dst_axis"] = [0, 1]
     for arg in GenArgList(arg_dict):
-        print(arg)
         _test_split_to_split(test_case, *arg)
 
 
@@ -59,8 +57,7 @@ def _test_split_to_broadcast(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    func_config.use_boxing_v2(True)
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def split_to_broadcast_job(x=flow.FixedTensorDef((96, 96))):
@@ -71,7 +68,7 @@ def _test_split_to_broadcast(
         return dst
 
     x = np.random.rand(96, 96).astype(np.float32)
-    y = split_to_broadcast_job(x).get().ndarray()
+    y = split_to_broadcast_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
 
 
@@ -83,7 +80,6 @@ def test_split_to_broadcast(test_case):
     arg_dict["dst_device_num"] = [1, 2, 3]
     arg_dict["src_axis"] = [0, 1]
     for arg in GenArgList(arg_dict):
-        print(arg)
         _test_split_to_broadcast(test_case, *arg)
 
 
@@ -99,8 +95,7 @@ def _test_broadcast_to_split(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    func_config.use_boxing_v2(True)
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def broadcast_to_split_job(x=flow.FixedTensorDef((96, 96))):
@@ -111,7 +106,7 @@ def _test_broadcast_to_split(
         return dst
 
     x = np.random.rand(96, 96).astype(np.float32)
-    y = broadcast_to_split_job(x).get().ndarray()
+    y = broadcast_to_split_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
 
 
@@ -123,7 +118,6 @@ def test_broadcast_to_split(test_case):
     arg_dict["dst_device_num"] = [1, 2, 3]
     arg_dict["dst_axis"] = [0, 1]
     for arg in GenArgList(arg_dict):
-        print(arg)
         _test_broadcast_to_split(test_case, *arg)
 
 
@@ -139,8 +133,7 @@ def _test_partial_sum_to_split(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    func_config.use_boxing_v2(True)
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def partial_sum_to_split_job(x=flow.FixedTensorDef((96, 96, 96))):
@@ -152,7 +145,7 @@ def _test_partial_sum_to_split(
         return dst
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    y = partial_sum_to_split_job(x).get().ndarray()
+    y = partial_sum_to_split_job(x).get().numpy()
     test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
 
 
@@ -164,7 +157,6 @@ def test_partial_sum_to_split(test_case):
     arg_dict["dst_device_num"] = [1, 2, 3]
     arg_dict["dst_axis"] = [0, 1]
     for arg in GenArgList(arg_dict):
-        print(arg)
         _test_partial_sum_to_split(test_case, *arg)
 
 
@@ -175,8 +167,7 @@ def _test_partial_sum_to_broadcast(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    func_config.use_boxing_v2(True)
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def partial_sum_to_broadcast_job(x=flow.FixedTensorDef((96, 96, 96))):
@@ -188,7 +179,7 @@ def _test_partial_sum_to_broadcast(
         return dst
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    y = partial_sum_to_broadcast_job(x).get().ndarray()
+    y = partial_sum_to_broadcast_job(x).get().numpy()
     test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
 
 
@@ -199,7 +190,6 @@ def test_partial_sum_to_broadcast(test_case):
     arg_dict["src_device_num"] = [2, 3]
     arg_dict["dst_device_num"] = [1, 2, 3]
     for arg in GenArgList(arg_dict):
-        print(arg)
         _test_partial_sum_to_broadcast(test_case, *arg)
 
 
@@ -210,8 +200,7 @@ def _test_broadcast_to_broadcast(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    func_config.use_boxing_v2(True)
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def broadcast_to_broadcast_job(x=flow.FixedTensorDef((96, 96, 96))):
@@ -222,7 +211,7 @@ def _test_broadcast_to_broadcast(
         return dst
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    y = broadcast_to_broadcast_job(x).get().ndarray()
+    y = broadcast_to_broadcast_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
 
 
@@ -234,7 +223,6 @@ def test_broadcast_to_broadcast(test_case):
     arg_dict["dst_device_num"] = [1, 2, 3]
 
     for arg in GenArgList(arg_dict):
-        print(arg)
         _test_broadcast_to_broadcast(test_case, *arg)
 
 
@@ -245,8 +233,7 @@ def _test_multi_lbi(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    func_config.use_boxing_v2(True)
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def multi_lbi_job(x=flow.FixedTensorDef((96, 96, 96))):
@@ -263,9 +250,9 @@ def _test_multi_lbi(
         return t1_0, t1_1, t1_2
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    r0 = multi_lbi_job(x).get()[0].ndarray()
-    r1 = multi_lbi_job(x).get()[1].ndarray()
-    r2 = multi_lbi_job(x).get()[2].ndarray()
+    r0 = multi_lbi_job(x).get()[0].numpy()
+    r1 = multi_lbi_job(x).get()[1].numpy()
+    r2 = multi_lbi_job(x).get()[2].numpy()
     test_case.assertTrue(np.array_equal(x, r0))
     test_case.assertTrue(np.array_equal(x, r1))
     test_case.assertTrue(np.array_equal(x, r2))
@@ -278,5 +265,4 @@ def test_multi_lbi(test_case):
     arg_dict["src_device_num"] = [1, 2, 3]
     arg_dict["dst_device_num"] = [1, 2, 3]
     for arg in GenArgList(arg_dict):
-        print(arg)
         _test_multi_lbi(test_case, *arg)

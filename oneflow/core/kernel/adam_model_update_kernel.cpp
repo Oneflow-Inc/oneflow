@@ -48,7 +48,7 @@ void AdamMdUpdateKernel<device_type, T>::UpdateModel(
       static_cast<T>(adam_conf.beta1()), static_cast<T>(adam_conf.beta2()),
       static_cast<T>(adam_conf.epsilon()), adam_conf.do_bias_correction(), train_step,
       (beta1_t_blob ? beta1_t_blob->dptr<T>() : nullptr),
-      (beta2_t_blob ? beta2_t_blob->dptr<T>() : nullptr), BnInOp2Blob("model_diff")->mut_dptr<T>(),
+      (beta2_t_blob ? beta2_t_blob->dptr<T>() : nullptr), BnInOp2Blob("model_diff")->dptr<T>(),
       model_blob->mut_dptr<T>(), m_blob->mut_dptr<T>(), v_blob->mut_dptr<T>());
 }
 
@@ -58,14 +58,14 @@ class AdamMdUpdateKernelUtil<DeviceType::kCPU, T> final {
   static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T weight_decay,
                           T beta1, T beta2, T epsilon, bool do_bias_correction,
                           const int64_t* train_step, const T* beta1_t, const T* beta2_t,
-                          T* model_diff, T* model, T* m, T* v) {
+                          const T* model_diff, T* model, T* m, T* v) {
     // first-order moment
     UpdateMomentEstimate<T>(n, do_bias_correction, beta1, 1, model_diff, beta1_t, m);
     // second-order moment
     UpdateMomentEstimate<T>(n, do_bias_correction, beta2, 2, model_diff, beta2_t, v);
     FOR_RANGE(int64_t, i, 0, n) {
-      model_diff[i] = m[i] / (std::sqrt(v[i]) + epsilon);
-      model[i] = model[i] - *learning_rate * (model_diff[i] + weight_decay * model[i]);
+      const T mdv = m[i] / (std::sqrt(v[i]) + epsilon);
+      model[i] = model[i] - *learning_rate * (mdv + weight_decay * model[i]);
     }
   }
   static void DoBiasCorrection(DeviceCtx*, const int64_t* train_step, const T beta1, const T beta2,

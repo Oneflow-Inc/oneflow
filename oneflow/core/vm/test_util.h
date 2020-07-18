@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <string>
-#include "oneflow/core/common/object_msg.h"
+#include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/vm_resource_desc.msg.h"

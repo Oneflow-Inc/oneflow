@@ -13,9 +13,9 @@ def do_test(test_case, mirrored):
     func_config.train.primary_lr(5)
     func_config.train.model_update_conf(dict(naive_conf={}))
     if mirrored:
-        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+        func_config.default_distribute_strategy(flow.scope.mirrored_view())
     else:
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo():
@@ -25,9 +25,9 @@ def do_test(test_case, mirrored):
 
     check_point = flow.train.CheckPoint()
     check_point.init()
-    r1 = Foo().get().ndarray()
+    r1 = Foo().get().numpy()
     test_case.assertTrue(np.all(r1 == 1.0))
-    r2 = Foo().get().ndarray()
+    r2 = Foo().get().numpy()
     test_case.assertTrue(np.all(r2 == 0.5))
 
 

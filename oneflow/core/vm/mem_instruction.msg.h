@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_VM_MEM_INSTRUCTION_H_
 #define ONEFLOW_CORE_VM_MEM_INSTRUCTION_H_
 
-#include "oneflow/core/common/flat_msg_view.h"
+#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 
 namespace oneflow {

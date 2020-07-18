@@ -7,7 +7,7 @@ def _of_image_batch_align(images, input_shape, output_shape, alignment):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def image_batch_align_job(
@@ -20,7 +20,7 @@ def _of_image_batch_align(images, input_shape, output_shape, alignment):
         return image
 
     image = image_batch_align_job([images]).get()
-    return image.ndarray_list()[0]
+    return image.numpy_list()[0]
 
 
 def _read_images_by_cv(image_files):

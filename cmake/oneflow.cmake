@@ -34,7 +34,7 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
     error( "Expanding macro in WIN32 is not supported yet")
   else()
     add_custom_command(OUTPUT ${of_e_h_expanded}
-      COMMAND ${CMAKE_C_COMPILER} 
+      COMMAND ${CMAKE_C_COMPILER}
       ARGS -E -I"${PROJECT_SOURCE_DIR}" -I"${PROJECT_BINARY_DIR}"
       -o "${of_e_h_expanded}" "${oneflow_hdr_to_be_expanded}"
       DEPENDS ${oneflow_hdr_to_be_expanded}
@@ -100,7 +100,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cuh$")
-    if(BUILD_CUDA) 
+    if(BUILD_CUDA)
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
@@ -118,7 +118,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
     set(group_this ON)
   endif()
-  
+
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*_test\\.cpp$")
       # test file
@@ -168,7 +168,7 @@ message("-- Using Python executable: " ${Python_EXECUTABLE})
 if (NOT Python_INCLUDE_DIRS)
   message(STATUS "Getting python include directory from sysconfig..")
   execute_process(
-    COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_paths()['include'])" 
+    COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_paths()['include'])"
     OUTPUT_VARIABLE Python_INCLUDE_DIRS
     RESULT_VARIABLE ret_code)
   string(STRIP ${Python_INCLUDE_DIRS} Python_INCLUDE_DIRS)
@@ -185,11 +185,11 @@ message(STATUS "Found python include directory ${Python_INCLUDE_DIRS}")
 if (NOT Python_NumPy_INCLUDE_DIRS)
   message(STATUS "Getting numpy include directory by numpy.get_include()..")
   execute_process(
-    COMMAND ${Python_EXECUTABLE} -c "import numpy; print(numpy.get_include())" 
+    COMMAND ${Python_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
     OUTPUT_VARIABLE Python_NumPy_INCLUDE_DIRS
     RESULT_VARIABLE ret_code)
   string(STRIP ${Python_NumPy_INCLUDE_DIRS} Python_NumPy_INCLUDE_DIRS)
-  if ((NOT ret_code EQUAL 0) OR (NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS}) 
+  if ((NOT ret_code EQUAL 0) OR (NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS})
     OR (NOT EXISTS ${Python_NumPy_INCLUDE_DIRS}/numpy/arrayobject.h))
     set(Python_NumPy_INCLUDE_DIRS "")
   endif()
@@ -265,7 +265,7 @@ elseif(UNIX)
   set(of_libs -Wl,--whole-archive of_ccobj of_protoobj -Wl,--no-whole-archive)
 elseif(WIN32)
   set(of_libs of_ccobj of_protoobj)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj") 
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
 endif()
 
 # build swig
@@ -313,6 +313,15 @@ add_custom_target(generate_api ALL
   COMMAND export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH && ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow/generated)
 add_dependencies(generate_api of_pyscript_copy)
 add_dependencies(generate_api oneflow_internal)
+
+file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
+add_custom_target(pip_install)
+add_dependencies(pip_install generate_api)
+add_custom_command(
+  TARGET pip_install
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  COMMAND ${Python_EXECUTABLE} -m pip install -e ${PROJECT_SOURCE_DIR} --install-option="--build_dir=${PROJECT_BINARY_DIR_RELATIVE}" --user)
+
 # get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 # foreach(dir ${include_dirs})
 #   message("-I'${dir}' ")
