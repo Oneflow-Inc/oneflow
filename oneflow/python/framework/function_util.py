@@ -360,6 +360,11 @@ def set_prune_parallel_cast_ops(func_desc, value=True):
     func_desc.job_config_proto.prune_parallel_cast_ops = value
 
 
+@oneflow_function_config("prune_cast_to_static_shape_ops")
+def set_prune_cast_to_static_shape_ops(func_desc, value=True):
+    func_desc.job_config_proto.prune_cast_to_static_shape_ops = value
+
+
 @oneflow_function_config("non_distributed_optimizer_group_size_mbyte")
 def set_non_distributed_optimizer_group_size_mbyte(func_desc, value):
     func_desc.job_config_proto.non_distributed_optimizer_group_size_mbyte = value
