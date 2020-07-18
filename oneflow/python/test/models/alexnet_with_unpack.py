@@ -284,7 +284,7 @@ def main(args):
     flow.config.gpu_device_num(args.gpu_num_per_node)
 
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.default_data_type(flow.float)
     func_config.train.primary_lr(0.00001)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -304,7 +304,7 @@ def main(args):
     #  print(func_config.function_desc.job_config_proto)
     @flow.global_function(func_config)
     def alexnet_eval_job():
-        with flow.distribute.consistent_strategy():
+        with flow.scope.consistent_view():
             (labels, images) = _data_load_layer(args, args.eval_dir)
             loss = alexnet(args, images, labels)
             return flow.pack(loss, args.num_piece_in_batch)
