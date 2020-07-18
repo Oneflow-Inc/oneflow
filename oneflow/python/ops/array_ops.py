@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import operator
 import os
 from functools import reduce
+from typing import Iterable, List, Optional, Sequence, Union
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -327,73 +328,68 @@ def slice_v2(x, slice_tup_list, name=None):
 
 
 @oneflow_export("concat")
-def concat(values, axis, name=None):
+def concat(
+    inputs: Sequence[remote_blob_util.BlobDef],
+    axis: int = 0,
+    max_dims: Optional[int] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""Concatenate two or more `Blob` s at specified axis. 
 
     Analogous to `numpy.concatenate <https://docs.scipy.org/doc/numpy/reference/generated/numpy.concatenate.html>`_
 
     Args:
-        values: a `list` of `Blob`
-        axis: a `int`
+        inputs: a `list` of `Blob`
+        axis: a `int`. `0` by default
+        max_dims: specify max dimensions at axis when inputs contain dynamic tensor
         name: name of this operator. `None` by default
-    
+
     Returns:
         A `Blob`
     """
-    assert isinstance(values, (list, tuple))
-    assert len(values) >= 2
+    if len(inputs) == 1:
+        return inputs[0]
+
+    assert len(inputs) >= 2
     if axis < 0:
-        axis += len(values[0].shape)
-    assert axis >= 0 and axis < len(values[0].shape)
-    out = (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Concat_"))
-        .Op("concat")
-        .Input("in", values)
-        .Output("out")
-        .Attr("axis", int(axis), "AttrTypeInt32")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-    return out
-
-
-@oneflow_export("dynamic_concat")
-def dynamic_concat(inputs, axis, max_dims=None, name=None):
-    if name is None:
-        name = id_util.UniqueStr("DynamicConcat_")
-
-    assert isinstance(inputs, (list, tuple)), "inputs must be list/tuple of BlobDef"
-    assert isinstance(axis, int)
-    first_input_shape = inputs[0].shape
-    if axis < 0:
-        axis += len(first_input_shape)
+        axis += len(inputs[0].shape)
     assert axis >= 0 and axis < len(
-        first_input_shape
+        inputs[0].shape
     ), "axis must be in range [0, num_axes of inputs)"
-    max_dims_on_axis = first_input_shape[axis] if max_dims is None else int(max_dims)
+
+    first_input_shape = inputs[0].shape
+    static_dims_at_axis = 0
+    dynamic_dims_at_axis = 0
     for input in inputs:
         assert len(input.shape) == len(first_input_shape)
         for i in range(len(input.shape)):
             if i == axis:
-                if max_dims is None:
-                    max_dims_on_axis = max(max_dims_on_axis, input.shape[i])
+                if input.is_dynamic:
+                    dynamic_dims_at_axis = max(dynamic_dims_at_axis, input.shape[i])
                 else:
-                    assert (
-                        input.shape[i] <= max_dims_on_axis
-                    ), "input shape {} do not match max_dims {}".format(
-                        input.shape, max_dims
-                    )
+                    static_dims_at_axis += input.shape[i]
             else:
                 assert input.shape[i] == first_input_shape[i]
 
+    if max_dims is None:
+        max_dims = static_dims_at_axis + dynamic_dims_at_axis
+
+    assert (
+        max_dims >= static_dims_at_axis + dynamic_dims_at_axis
+    ), "max_dims is too small to hold concatenated dims {} at axis".format(
+        static_dims_at_axis + dynamic_dims_at_axis
+    )
+
+    if name is None:
+        name = id_util.UniqueStr("Concat_")
+
     op = (
         flow.user_op_builder(name)
-        .Op("dynamic_concat")
+        .Op("concat")
         .Input("in", inputs)
         .Output("out")
         .Attr("axis", axis, "AttrTypeInt64")
-        .Attr("max_dims", max_dims_on_axis, "AttrTypeInt64")
+        .Attr("max_dims", max_dims, "AttrTypeInt64")
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
