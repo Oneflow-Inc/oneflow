@@ -683,7 +683,7 @@ class InstructionsBuilder(object):
     def _LazyReference(self, blob_object, id1, id2):
         instruction = instr_util.InstructionProto()
         instruction.instr_type_name = "LazyReference"
-        instruction.operand.append(_Mut2Operand(blob_object.object_id))
+        instruction.operand.append(_MutOperand(blob_object.object_id))
         instruction.operand.append(_Int64Operand(id1))
         instruction.operand.append(_Int64Operand(id2))
         self.instruction_list_.instruction.append(instruction)

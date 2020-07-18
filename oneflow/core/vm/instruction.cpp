@@ -207,8 +207,10 @@ const RwMutexedObject* Instruction::operand_value(const Operand& operand,
 RwMutexedObject* Instruction::mut_operand_type(const Operand& operand,
                                                int64_t default_global_device_id) {
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
-  return MutMirroredObject<&IdUtil::GetTypeId>(operand, default_global_device_id)
-      ->mut_rw_mutexed_object();
+  auto tmp = MutMirroredObject<&IdUtil::GetTypeId>(operand, default_global_device_id);
+  LOG(INFO) << "tmp: " << tmp << std::endl;
+  LOG(INFO) << operand.logical_object_id();
+  return tmp->mut_rw_mutexed_object();
 }
 
 RwMutexedObject* Instruction::mut_operand_value(const Operand& operand,
@@ -216,8 +218,6 @@ RwMutexedObject* Instruction::mut_operand_value(const Operand& operand,
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
   auto tmp = MutMirroredObject<&IdUtil::GetValueId>(operand, default_global_device_id);
-  LOG(INFO) << "tmp: " << tmp << std::endl;
-  LOG(INFO) << operand.logical_object_id();
   return tmp->mut_rw_mutexed_object();
 }
 

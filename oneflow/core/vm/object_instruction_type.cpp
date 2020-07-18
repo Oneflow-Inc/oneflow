@@ -1,4 +1,5 @@
 #include "oneflow/core/vm/cpu_stream_type.h"
+#include "oneflow/core/vm/host_stream_type.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -48,7 +49,7 @@ class LazyReferenceInstructionType final : public InstructionType {
   LazyReferenceInstructionType() = default;
   ~LazyReferenceInstructionType() override = default;
 
-  using stream_type = vm::CpuStreamType;
+  using stream_type = vm::HostStreamType;
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(LazyReferenceInstruction);
@@ -59,13 +60,12 @@ class LazyReferenceInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(LazyReferenceInstruction);
   // clang-format on
 
-  void Infer(Instruction* instruction) const override { Run<&IdUtil::GetTypeId>(instruction); };
+  void Infer(Instruction* instruction) const override { Run(instruction); };
   void Compute(Instruction* instruction) const override{
       // do nothing
   };
 
  private:
-  template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(Instruction* instruction) const {
     FlatMsgView<LazyReferenceInstruction> args(instruction->instr_msg().operand());
     const int64_t regst_desc_id = args->regst_desc_id();
@@ -117,6 +117,7 @@ class NewObjectInstructionType final : public InstructionType {
           logical_object->mut_global_device_id2mirrored_object();
       ForEachMachineIdAndDeviceIdInRange(
           *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
+            LOG(INFO) << "device_id: " << device_id;
             int64_t global_device_id =
                 vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
             auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
