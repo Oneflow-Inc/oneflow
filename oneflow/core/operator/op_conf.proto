@@ -1066,11 +1066,6 @@ message OperatorConf {
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-<<<<<<< HEAD
-    ReduceSumOpConf reduce_sum_conf = 219;
-=======
-    AddOpConf add_conf = 220;
->>>>>>> develop
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
