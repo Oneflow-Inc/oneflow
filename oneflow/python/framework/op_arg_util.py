@@ -11,6 +11,16 @@ class OpArgBlobAttribute(object):
         self.shape_ = tuple(self.blob_desc_.body.shape.dim)
         self.logical_blob_name_ = logical_blob_name
 
+    def __eq__(self, rhs):
+        return (
+            self.shape == rhs.shape
+            and self.dtype == rhs.dtype
+            and self.batch_axis == rhs.batch_axis
+            and self.is_tensor_list == rhs.is_tensor_list
+            and self.is_dynamic == rhs.is_dynamic
+            and self.logical_blob_name == rhs.logical_blob_name
+        )
+
     @property
     def shape(self):
         return self.shape_
