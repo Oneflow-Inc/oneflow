@@ -71,10 +71,6 @@ void AddFuncForFindBldSubTskGphMthd(const std::string& k, BldSubTskGphMthd v) {
 }
 #define REGISTER_BLD_SUB_TSK_GPH_MTHD(k, v) COMMAND(AddFuncForFindBldSubTskGphMthd(k, v))
 
-BldSubTskGphMthd BldSubTskGphToNormalMdUpdt(const LogicalNode*, const LogicalNode* updt) {
-  TODO();  // outdate
-}
-
 }  // namespace
 
 std::shared_ptr<Operator> LogicalNode::SoleOp() const {
@@ -219,9 +215,6 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   return &TaskGraph::BldSubTskGphByBoxing;
 }
 
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"
-                              "NormalForward",
-                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("RecordLoad"
                               "Decode",
                               &TaskGraph::BldSubTskGphByOneToOne);
