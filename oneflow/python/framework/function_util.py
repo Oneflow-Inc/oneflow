@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import copy
 import functools
 import re
+from typing import Any, Callable, Optional, Union
 
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
@@ -24,16 +25,20 @@ class FunctionConfig(object):
         
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.function_desc = FunctionDesc()
 
-    def __getattr__(self, attr_name):
+    def __getattr__(
+        self, attr_name: str
+    ) -> Callable[[Optional[Union[bool, int, float, str]]], None]:
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         assert attr_name in name2default
         flag_name2flag_value = self.function_desc.job_config_proto.flag_name2flag_value
         default_val = name2default[attr_name]
 
-        def FunctionConfigSetter(attr_value=None):
+        def FunctionConfigSetter(
+            attr_value: Optional[Union[bool, int, float, str]] = None
+        ) -> None:
             if default_val.HasField("at_bool"):
                 if attr_value is None:
                     attr_value = True
@@ -100,7 +105,9 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
 
 
 @oneflow_export("global_function")
-def api_oneflow_function(function_config=FunctionConfig()):
+def api_oneflow_function(
+    function_config: FunctionConfig = FunctionConfig(),
+) -> Callable[[Callable], Callable]:
     r"""Creates a callable OneFlow global function from a Python function.
     For instance::
         @oneflow.global_function(flow.FunctionConfig())

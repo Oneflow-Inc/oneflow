@@ -3,7 +3,7 @@
 
 #include <mutex>
 #include <thread>
-#include "oneflow/core/common/object_msg.h"
+#include "oneflow/core/object_msg/object_msg.h"
 
 namespace oneflow {
 

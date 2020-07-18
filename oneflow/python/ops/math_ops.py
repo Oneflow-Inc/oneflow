@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import os
+from typing import Union, Optional, Sequence
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -13,7 +14,11 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("math.add")
-def add(x, y, name=None):
+def add(
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
         return scalar_add(y, x, name)
     elif isinstance(y, (int, float)):
@@ -52,7 +57,9 @@ def _recursive_build_add_n(inputs, name=None):
 
 
 @oneflow_export("math.add_n")
-def add_n(inputs, name=None):
+def add_n(
+    inputs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     if os.getenv("ENABLE_USER_OP") == "False":
         op_conf = op_conf_util.OperatorConf()
         setattr(
@@ -71,7 +78,11 @@ def add_n(inputs, name=None):
 
 
 @oneflow_export("math.subtract")
-def subtract(x, y, name=None):
+def subtract(
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
         return scalar_add(-1 * y, x, name)
     elif isinstance(y, (int, float)):
@@ -88,7 +99,11 @@ def subtract(x, y, name=None):
 
 
 @oneflow_export("math.multiply")
-def multiply(x, y, name=None):
+def multiply(
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
         return scalar_mul(y, x, name)
     elif isinstance(y, (int, float)):
@@ -104,7 +119,11 @@ def multiply(x, y, name=None):
 
 
 @oneflow_export("math.divide")
-def divide(x, y, name=None):
+def divide(
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
         return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
     elif isinstance(y, (int, float)):
@@ -125,7 +144,11 @@ def divide(x, y, name=None):
 
 
 @oneflow_export("math.mod")
-def floor_mod(x, y, name=None):
+def floor_mod(
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     if isinstance(x, (int, float)):
         raise NotImplementedError
     elif isinstance(y, (int, float)):
@@ -299,7 +322,9 @@ def broadcast_floor_mod(x, y, name=None):
 
 
 @oneflow_export("math.tanh", "keras.activations.tanh")
-def tanh(x, name=None):
+def tanh(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     r"""Computes hyperbolic tangent of `x` element-wise.
 
     Args:
@@ -320,7 +345,9 @@ def tanh(x, name=None):
 
 
 @oneflow_export("math.gelu", "keras.activations.gelu")
-def gelu(x, name=None):
+def gelu(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     r"""Gaussian Error Linear Units.
 
     Args:
@@ -340,7 +367,9 @@ def gelu(x, name=None):
 
 
 @oneflow_export("math.relu", "nn.relu")
-def relu(x, name=None):
+def relu(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     r"""ReLU activation
 
     Args:
@@ -361,7 +390,9 @@ def relu(x, name=None):
 
 
 @oneflow_export("math.sigmoid")
-def sigmoid(x, name=None):
+def sigmoid(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     r"""Computes sigmoid of `x` element-wise.
 
     Args:
@@ -383,7 +414,13 @@ def sigmoid(x, name=None):
 
 
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
-def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
+def unsorted_segment_sum(
+    data: remote_blob_util.BlobDef,
+    segment_ids: remote_blob_util.BlobDef,
+    num_segments: int,
+    axis: int = 0,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("UnsortedSegmentSum_")
@@ -401,7 +438,13 @@ def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
 
 
 @oneflow_export("math.unsorted_segment_sum_like", "unsorted_segment_sum_like")
-def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
+def unsorted_segment_sum_like(
+    data: remote_blob_util.BlobDef,
+    segment_ids: remote_blob_util.BlobDef,
+    like: remote_blob_util.BlobDef,
+    axis: int = 0,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("UnsortedSegmentSumLike_")
@@ -419,7 +462,12 @@ def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
 
 
 @oneflow_export("math.unsorted_batch_segment_sum", "unsorted_batch_segment_sum")
-def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
+def unsorted_batch_segment_sum(
+    data: remote_blob_util.BlobDef,
+    segment_ids: remote_blob_util.BlobDef,
+    num_segments: int,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("UnsortedBatchSegmentSum_")
@@ -436,7 +484,9 @@ def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
 
 
 @oneflow_export("cast")
-def cast(x, dtype, name=None):
+def cast(
+    x: remote_blob_util.BlobDef, dtype: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     r"""Return a `Blob` of given data type `dtype` and indentical shape to `x`
 
     Args:
@@ -463,52 +513,75 @@ def cast(x, dtype, name=None):
 
 
 @oneflow_export("math.equal")
-def equal(x, y, name=None):
+def equal(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return build_broadcast_binary_op("broadcast_equal", x, y, name)
 
 
 @oneflow_export("math.not_equal")
-def not_equal(x, y, name=None):
+def not_equal(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
 
 
 @oneflow_export("math.less")
-def less(x, y, name=None):
+def less(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return build_broadcast_binary_op("broadcast_less", x, y, name)
 
 
 @oneflow_export("math.less_equal")
-def less_equal(x, y, name=None):
+def less_equal(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
 
 
 @oneflow_export("math.greater")
-def greater(x, y, name=None):
+def greater(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return build_broadcast_binary_op("broadcast_greater", x, y, name)
 
 
 @oneflow_export("math.greater_equal")
-def greater_equal(x, y, name=None):
+def greater_equal(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
 
 
 @oneflow_export("math.logical_and")
-def logical_and(x, y, name=None):
+def logical_and(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
 
 
 @oneflow_export("math.minimum")
-def broadcast_min(x, y, name=None):
+def broadcast_min(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return build_broadcast_binary_op("broadcast_minimum", x, y, name)
 
 
 @oneflow_export("math.maximum")
-def broadcast_max(x, y, name=None):
+def broadcast_max(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return build_broadcast_binary_op("broadcast_maximum", x, y, name)
 
 
 @oneflow_export("math.reduced_shape_elem_cnt")
-def elem_cnt(input_blob, axis=None, dtype=None, name=None):
+def elem_cnt(
+    input_blob: remote_blob_util.BlobDef,
+    axis: Optional[Sequence[int]] = None,
+    dtype: Optional[int] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -532,7 +605,12 @@ def elem_cnt(input_blob, axis=None, dtype=None, name=None):
 
 
 @oneflow_export("math.top_k")
-def top_k(input, k=1, sorted=True, name=None):
+def top_k(
+    input: remote_blob_util.BlobDef,
+    k: int = 1,
+    sorted: bool = True,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
         .Op("top_k")
@@ -547,7 +625,9 @@ def top_k(input, k=1, sorted=True, name=None):
 
 
 @oneflow_export("math.argmax")
-def argmax(input, name=None):
+def argmax(
+    input: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
         .Op("argmax")
@@ -560,7 +640,11 @@ def argmax(input, name=None):
 
 
 @oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
-def broadcast_to_compatible_with(x, compatible, name=None):
+def broadcast_to_compatible_with(
+    x: remote_blob_util.BlobDef,
+    compatible: Sequence[remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     assert isinstance(compatible, (list, tuple))
     if name is None:
         name = id_util.UniqueStr("BroadcastToCompatibleWith_")
@@ -583,7 +667,12 @@ def broadcast_to_compatible_with(x, compatible, name=None):
 @oneflow_export(
     "math.clip_by_value", "clip_by_value", "clip_by_scalar", "clip", "clamp"
 )
-def clip_by_value(values, min_value=None, max_value=None, name=None):
+def clip_by_value(
+    values: remote_blob_util.BlobDef,
+    min_value: Optional[Union[int, float]] = None,
+    max_value: Optional[Union[int, float]] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     if name is None:
         name = id_util.UniqueStr("ClipByValue_")
 
@@ -623,7 +712,12 @@ def clip_by_value(values, min_value=None, max_value=None, name=None):
 
 
 @oneflow_export("math.l2_normalize")
-def l2_normalize(input, axis=None, epsilon=1e-12, name=None):
+def l2_normalize(
+    input: remote_blob_util.BlobDef,
+    axis: Optional[int] = None,
+    epsilon: float = 1e-12,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     if axis < 0:
         axis += len(input.shape)
     assert axis >= 0 and axis < len(input.shape)
@@ -645,7 +739,11 @@ def l2_normalize(input, axis=None, epsilon=1e-12, name=None):
 
 
 @oneflow_export("math.squared_difference")
-def squared_difference(x, y, name=None):
+def squared_difference(
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     name_subtract, name_square = None, None
     if name is not None:
         name_subtract = name + "_subtract"

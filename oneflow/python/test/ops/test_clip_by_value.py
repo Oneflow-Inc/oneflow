@@ -59,7 +59,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
 
         check_point = flow.train.CheckPoint()
         check_point.init()
-        return clip_fn([values]).get().ndarray_list()[0]
+        return clip_fn([values]).get().numpy_list()[0]
 
     else:
         func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
@@ -70,7 +70,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
 
         check_point = flow.train.CheckPoint()
         check_point.init()
-        return clip_fn(values).get().ndarray()
+        return clip_fn(values).get().numpy()
 
 
 def _compare_with_tf(test_case, values, min, max, device_type, dynamic):
@@ -82,7 +82,7 @@ def _compare_with_tf(test_case, values, min, max, device_type, dynamic):
     def compare_dy(dy_blob):
         test_case.assertTrue(
             np.array_equal(
-                dy.numpy(), dy_blob.ndarray_list()[0] if dynamic else dy_blob.ndarray()
+                dy.numpy(), dy_blob.numpy_list()[0] if dynamic else dy_blob.numpy()
             )
         )
 

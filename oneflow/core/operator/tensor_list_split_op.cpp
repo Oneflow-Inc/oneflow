@@ -12,7 +12,9 @@ class TensorListSplitOp final : public Operator {
   void InitFromOpConf() override {
     CHECK(op_conf().has_tensor_list_split_conf());
     EnrollInputBn("in", false);
-    EnrollRepeatedOutputBn("out", false);
+    EnrollRepeatedOutputBnWithSetter("out", false, [](OutputBlobModifier* ob_modifier) {
+      ob_modifier->set_header_infered_before_compute(false);
+    });
   }
 
   const PbMessage& GetCustomizedConf() const override { return op_conf().tensor_list_split_conf(); }

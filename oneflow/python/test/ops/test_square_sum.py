@@ -17,7 +17,7 @@ def _run_test(test_case, x, dtype, device):
             return flow.experimental.square_sum(x)
 
     y = SquareSum(x).get()
-    _check(test_case, x, y.ndarray())
+    _check(test_case, x, y.numpy())
 
 
 def test_square_sum_random_gpu(test_case):

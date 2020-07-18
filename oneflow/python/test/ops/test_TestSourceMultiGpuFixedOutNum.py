@@ -27,5 +27,5 @@ def test_testsource_2_gpu(test_case):
         test_case.assertTrue(ret.batch_axis is not None and ret.batch_axis == 0)
         return ret
 
-    y = TestSourceJob().get().ndarray()
+    y = TestSourceJob().get().numpy()
     test_case.assertTrue(np.array_equal(y, np.append(np.arange(5.0), np.arange(5.0))))

@@ -20,7 +20,7 @@ def _of_image_flip(images, image_shape, flip_code):
         )
 
     image_tensor = image_flip_job([images]).get()
-    return image_tensor.ndarray_lists()[0]
+    return image_tensor.numpy_lists()[0]
 
 
 def _read_images_by_cv(image_files):

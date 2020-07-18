@@ -96,7 +96,7 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
         tf_weight_diff = tape.gradient(tf_out, w, loss_diff)
 
         assert np.allclose(
-            of_out.ndarray().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-4, atol=1e-4
+            of_out.numpy().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-02, atol=1e-02
         )
         assert np.allclose(
             test_global_storage.Get("x_diff").transpose(0, 2, 3, 1),
@@ -126,11 +126,11 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
         tf_x_diff = tape.gradient(tf_out, x, loss_diff)
         tf_weight_diff = tape.gradient(tf_out, w, loss_diff)
 
-        assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-4, atol=1e-4), (
-            of_out.ndarray() - tf_out.numpy()
+        assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-02, atol=1e-02), (
+            of_out.numpy() - tf_out.numpy()
         )
         assert np.allclose(
-            test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-4, atol=1e-4
+            test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-02, atol=1e-02
         )
         assert np.allclose(
             test_global_storage.Get("weight_diff").transpose(1, 2, 3, 0),

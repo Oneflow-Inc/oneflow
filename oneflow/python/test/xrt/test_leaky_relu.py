@@ -36,7 +36,7 @@ class TestLeakyRelu(unittest.TestCase):
         b = f2(x).get()
         print("oneflow: ", a)
         print("oneflow with tensorrt: ", b)
-        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, alpha=0.1, dtype=np.float32):

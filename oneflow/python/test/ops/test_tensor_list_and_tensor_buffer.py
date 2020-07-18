@@ -17,7 +17,7 @@ def _of_tensor_list_identity(test_case, verbose=False):
     input_2 = np.random.rand(1, 4).astype(np.float32)
 
     ret = job_fn([[input_1, input_2]]).get()
-    ret_arr_list = ret.ndarray_lists()
+    ret_arr_list = ret.numpy_lists()
 
     if verbose:
         print("input_1 =", input_1)
@@ -42,7 +42,7 @@ def _of_tensor_list_to_tensor_buffer(test_case, verbose=False):
     input_1 = np.random.rand(1, 3, 4).astype(np.float32)
     input_2 = np.random.rand(1, 2, 4).astype(np.float32)
     ret = job_fn([[input_1, input_2]]).get()
-    ret_arr_list = ret.ndarray_lists()
+    ret_arr_list = ret.numpy_lists()
 
     if verbose:
         print("input_1 =", input_1)
