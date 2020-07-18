@@ -15,20 +15,24 @@ class SplitLikeKernel final : public user_op::OpKernel {
   void InferShape(user_op::KernelInferContext* ctx) const override {
     const int64_t axis = ctx->Attr<int64_t>("axis");
     const ShapeView& in_shape_view = ctx->ShapeView4ArgNameAndIndex("in", 0);
-    int64_t total_dims_on_axis = 0;
+    int64_t total_dim_size = 0;
     FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
       const ShapeView& like_shape_view = ctx->ShapeView4ArgNameAndIndex("like", i);
       CHECK_EQ(like_shape_view.NumAxes(), in_shape_view.NumAxes());
       FOR_RANGE(int64_t, j, 0, like_shape_view.NumAxes()) {
         if (j == axis) {
-          total_dims_on_axis += like_shape_view.At(j);
+          total_dim_size += like_shape_view.At(j);
         } else {
           CHECK_EQ(like_shape_view.At(j), in_shape_view.At(j));
         }
       }
-      ctx->MutShapeView4ArgNameAndIndex("out", i)->set_shape(like_shape_view);
+      if (ctx->TensorDesc4ArgNameAndIndex("out", i)->is_dynamic()) {
+        auto* mut_shape_view = ctx->MutShapeView4ArgNameAndIndex("out", i);
+        CHECK_NOTNULL(mut_shape_view);
+        mut_shape_view->set_shape(like_shape_view);
+      }
     }
-    CHECK_EQ(total_dims_on_axis, in_shape_view.At(axis));
+    CHECK_EQ(total_dim_size, in_shape_view.At(axis));
   }
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
