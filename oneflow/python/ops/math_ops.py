@@ -57,7 +57,6 @@ def _recursive_build_add_n(inputs, name=None):
 
 
 @oneflow_export("math.add_n")
-=======
 def add_n(
     inputs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
