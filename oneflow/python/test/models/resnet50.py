@@ -235,7 +235,7 @@ def resnet50(args, data_dir):
     g_output_key.append("input_img")
     g_output.append(images)
 
-    with flow.deprecated.variable_scope("Resnet"):
+    with flow.scope.namespace("Resnet"):
         stem = resnet_stem(images)
         body = resnet_conv_x_body(stem, lambda x: x)
         pool5 = flow.nn.avg_pool2d(

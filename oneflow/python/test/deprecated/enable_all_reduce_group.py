@@ -7,7 +7,7 @@ flow.config.gpu_device_num(2)
 
 
 def UpdateVariable(x, scope_name):
-    with flow.variable_scope(scope_name):
+    with flow.scope.namespace(scope_name):
         w = flow.get_variable(
             name=scope_name + "-w",
             shape=(10,),
