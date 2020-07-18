@@ -17,11 +17,11 @@ def test_name_scope(test_case):
 
     @flow.global_function(func_config)
     def test_name_scope_job():
-        with flow.experimental.name_scope("backbone"):
-            with flow.experimental.name_scope("branch"):
+        with flow.scope.namespace("backbone"):
+            with flow.scope.namespace("branch"):
                 var1 = get_var("var")
 
-            with flow.experimental.name_scope("branch"):
+            with flow.scope.namespace("branch"):
                 var2 = get_var("var")
 
         var3 = get_var("backbone-branch-var")
