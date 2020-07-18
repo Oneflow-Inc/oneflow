@@ -230,7 +230,56 @@ def test_dynamic_concat_case_3(test_case):
     _test_dynamic_concat(test_case, (16,), 0, "cpu")
 
 
-def _test_hybrid_concat(test_case, static_shape, axis):
+def _test_static_concat(test_case, shape, axis):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.train.primary_lr(1e-3)
+    func_config.train.model_update_conf(dict(naive_conf={}))
+
+    def compare_var_diff(var_blob):
+        test_case.assertTrue(
+            np.array_equal(var_blob.numpy(), np.ones(shape=shape, dtype=np.single))
+        )
+
+    @flow.global_function(func_config)
+    def static_concat_job(
+        input_0_def=flow.FixedTensorDef(shape=shape, dtype=flow.float),
+        input_1_def=flow.FixedTensorDef(shape=shape, dtype=flow.float),
+    ):
+        var = flow.get_variable(
+            "var",
+            shape=shape,
+            dtype=flow.float,
+            initializer=flow.random_uniform_initializer(),
+            trainable=True,
+        )
+        concated = flow.concat([input_0_def, input_1_def, var], axis=axis)
+        test_case.assertTrue(not concated.is_dynamic)
+        flow.losses.add_loss(concated)
+        flow.watch_diff(var, compare_var_diff)
+        return var, concated
+
+    inputs = []
+    for i in range(2):
+        inputs.append(np.random.rand(*shape).astype(np.single))
+    var, concated = static_concat_job(inputs[0], inputs[1]).get()
+    test_case.assertTrue(
+        np.array_equal(
+            np.concatenate([inputs[0], inputs[1], var.numpy()], axis=axis,),
+            concated.numpy(),
+        )
+    )
+
+
+def test_static_concat_case_0(test_case):
+    _test_static_concat(test_case, (10, 7), 0)
+
+
+def test_static_concat_case_1(test_case):
+    _test_static_concat(test_case, (3, 8, 4), 1)
+
+
+def _test_hybrid_concat(test_case, static_shape, axis, max_dim_size=None, verbose=False):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.train.primary_lr(1e-3)
@@ -242,6 +291,10 @@ def _test_hybrid_concat(test_case, static_shape, axis):
                 var_blob.numpy(), np.ones(shape=static_shape, dtype=np.single)
             )
         )
+
+    rand_sub_shape = list(static_shape).copy()
+    rand_sub_shape[axis] = random.randrange(1, static_shape[axis])
+    rand_sub_shape = tuple(rand_sub_shape)
 
     @flow.global_function(func_config)
     def hybrid_concat_job(
@@ -255,14 +308,56 @@ def _test_hybrid_concat(test_case, static_shape, axis):
             initializer=flow.random_uniform_initializer(),
             trainable=True,
         )
-        constant = flow.constant(1.0, dtype=flow.float, shape=static_shape)
-        loss = flow.concat(
-            [input_0_def, var, input_1_def, constant],
+        constant = flow.constant(1.0, dtype=flow.float, shape=rand_sub_shape)
+        concated = flow.concat(
+            [var, input_0_def, input_1_def, constant],
             axis=axis,
-            max_dim_size=static_shape,
+            max_dim_size=max_dim_size,
         )
-        flow.losses.add_loss(loss)
-        flow.watch_diff(var, compare_var_diff)
-        return var
+        if verbose:
+            print("concated static shape:", concated.shape)
 
-    var = hybrid_concat_job().get()
+        flow.losses.add_loss(concated)
+        flow.watch_diff(var, compare_var_diff)
+
+        if max_dim_size is None:
+            test_case.assertTrue(concated.shape[axis] == (static_shape[axis] * 3 + rand_sub_shape[axis]))
+        else:
+            test_case.assertTrue(concated.shape[axis] == max_dim_size)
+
+        return var, concated
+
+    output, inputs = _rand_inputs(static_shape, axis, 2)
+    if verbose:
+        print("static_shape:", static_shape)
+        print("input_0 shape:", inputs[0].shape)
+        print("input_1 shape:", inputs[1].shape)
+        print("output shape:", output.shape)
+        print("rand_sub_shape:", rand_sub_shape)
+
+    var, concated = hybrid_concat_job([inputs[0]], [inputs[1]]).get()
+    if verbose:
+        print("var shape:", var.numpy().shape)
+        print("concated shape:", concated.numpy(0).shape)
+
+    test_case.assertTrue(
+        np.array_equal(
+            np.concatenate(
+                [var.numpy(), output, np.ones(shape=rand_sub_shape, dtype=np.single)],
+                axis=axis,
+            ),
+            concated.numpy(0),
+        )
+    )
+
+
+def test_hybrid_concat_case_0(test_case):
+    _test_hybrid_concat(test_case, (64, 4), 0)
+
+
+def test_hybrid_concat_case_1(test_case):
+    _test_hybrid_concat(test_case, (10,), 0, 30)
+
+
+def test_hybrid_concat_case_2(test_case):
+    _test_hybrid_concat(test_case, (10, 7, 5), 1, 21)
