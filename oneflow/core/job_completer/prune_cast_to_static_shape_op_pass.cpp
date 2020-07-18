@@ -10,7 +10,8 @@ class PruneCastToStaticShapeOpsPass final : public OpGraphPass {
   PruneCastToStaticShapeOpsPass() = default;
   ~PruneCastToStaticShapeOpsPass() override = default;
   bool IsEnabled() const override {
-    return GlobalJobDesc().IsTrain() && GlobalJobDesc().prune_cast_to_static_shape_ops();
+    return GlobalJobDesc().IsTrain() && GlobalJobDesc().prune_cast_to_static_shape_ops()
+           && GlobalJobDesc().use_boxing_v2();
   }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
