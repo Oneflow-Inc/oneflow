@@ -613,44 +613,6 @@ message DecodeRandomOpConf {
   required int64 batch_size = 8;
 }
 
-message ReduceConcatOpConf {
-  repeated string in = 1;
-  required string out = 2;
-  repeated int64 data_offset = 3;
-  required int64 out_size = 4;
-}
-
-message NcclAllReduceOpConf {
-  optional string in = 1;
-  optional string out = 2;
-}
-
-message NcclReduceScatterOpConf {
-}
-
-message NcclAllGatherOpConf {
-}
-
-message ReduceSplitOpConf {
-  required string in = 1;
-  repeated string out = 2;
-  repeated ShapeProto out_shape = 3;
-  repeated int64 data_offset = 4;
-  optional int32 order_in_graph = 5;
-}
-
-message ReduceScatterOpConf {
-  optional int32 out_num = 1 [default = 0];
-}
-
-message ReduceAddOpConf {
-  optional int32 in_num = 1 [default = 0];
-}
-
-message ReduceGatherOpConf {
-  optional int32 in_num = 1 [default = 0];
-}
-
 message PackOpConf {
   required string in = 1;
   required string out = 2;
@@ -675,12 +637,6 @@ message ConstantOpConf {
   optional ShapeProto shape = 3;
   optional DataType data_type = 4;
   optional InitializerConf initializer = 5;
-}
-
-message ReduceIdentityOpConf {
-  optional string in = 1;
-  optional string out = 2;
-  optional int32 order_in_graph = 3;
 }
 
 message TickOpConf {
@@ -785,11 +741,6 @@ message ModelLoadOpConf {
   repeated string out = 2;
   repeated string variable_op_name = 3;
   repeated VariableOpConf original_variable_conf = 4;
-}
-
-message AllReduceFacadeOpConf {
-  required string in = 1;
-  required string out = 2;
 }
 
 message IdentityOpConf {
@@ -1077,18 +1028,9 @@ message OperatorConf {
     CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     BoxingOpConf boxing_conf = 108;
-    ReduceScatterOpConf reduce_scatter_conf = 109;
-    ReduceAddOpConf reduce_add_conf = 110;
-    ReduceGatherOpConf reduce_gather_conf = 111;
-    ReduceConcatOpConf reduce_concat_conf = 112;
-    ReduceSplitOpConf reduce_split_conf = 113;
-    NcclAllReduceOpConf nccl_all_reduce_conf = 114;
-    NcclReduceScatterOpConf nccl_reduce_scatter_conf = 115;
-    NcclAllGatherOpConf nccl_all_gather_conf = 116;
     AccumulateOpConf accumulate_conf = 117;
     NormalModelUpdateOpConf normal_mdupdt_conf = 118;
     VariableOpConf variable_conf = 122;
-    ReduceIdentityOpConf reduce_identity_conf = 123;
     TickOpConf tick_conf = 124;
     KeepHeaderOnlyOpConf keep_header_only_conf = 125;
     TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
@@ -1099,7 +1041,6 @@ message OperatorConf {
     AdamModelUpdateOpConf adam_model_update_conf = 131;
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
     AccOpConf acc_conf = 133;
-    AllReduceFacadeOpConf all_reduce_facade_conf = 134;
     SourceTickOpConf source_tick_conf = 135;
     SinkTickOpConf sink_tick_conf = 136;
     InputOpConf input_conf = 137;
