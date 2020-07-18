@@ -48,7 +48,7 @@ def LogicalRun(build):
 @oneflow_export("test")
 def GetOfBlobInRegst(var_name, a, b):
     def temp(builder):
-        builder.MakeLazyRefBlobObject2(var_name, a, b)
+        builder.MakeLazyRefBlobObject(var_name, a, b)
 
     LogicalRun(temp)
 
