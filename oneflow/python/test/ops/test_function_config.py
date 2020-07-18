@@ -3,7 +3,7 @@ import oneflow as flow
 
 def test_default_placement_scope(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
+    func_config.default_placement_scope(flow.scope.placement("cpu", "0:0"))
 
     @flow.global_function(func_config)
     def Foo():
@@ -21,7 +21,7 @@ def test_config_setter_getter(test_case):
 
 def test_global_function_desc(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
+    func_config.default_placement_scope(flow.scope.placement("cpu", "0:0"))
 
     @flow.global_function(func_config)
     def Foo():
