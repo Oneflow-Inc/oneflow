@@ -232,7 +232,7 @@ class UserOpConfBuilder(object):
         self.user_op_.output_arg_key_list_.append(output_name)
         return self
 
-    def Attr(self, attr_name, attr_value, attr_type_name=""):
+    def Attr(self, attr_name, attr_value):
         attribute = user_op_attr_util.UserOpAttrVal()
         assert isinstance(attr_name, str)
         attr_type = c_api_util.GetUserOpAttrType(
