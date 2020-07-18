@@ -19,7 +19,7 @@ def constant(device_type):
 
     @flow.global_function(func_config)
     def ConstantJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.constant(
                 6, dtype=flow.float, shape=(1024 * 1024 * 1024, 1024 * 1024 * 1024)
             )

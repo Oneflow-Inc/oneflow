@@ -43,7 +43,7 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
 
     @flow.global_function(func_config)
     def ActivationJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=shape,
@@ -74,7 +74,7 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
 
     rtol = 1e-3 if activation_type is "gelu" else 1e-5
     atol = 1e-3 if activation_type is "gelu" else 1e-5
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol, atol)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol, atol)
     assert np.allclose(test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol, atol)
 
 

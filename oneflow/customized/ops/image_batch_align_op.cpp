@@ -67,6 +67,12 @@ REGISTER_CPU_ONLY_USER_OP("image_batch_align")
       CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
       return Maybe<void>::Ok();
+    })
+    .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
+                             const user_op::UserOpConfWrapper& conf) {
+      user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
+      CHECK(out_modifier != nullptr);
+      out_modifier->set_header_infered_before_compute(false);
     });
 
 }  // namespace oneflow

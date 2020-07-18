@@ -6,7 +6,7 @@ from test_util import GenArgList
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_distribute_strategy(flow.scope.consistent_view())
 
 
 def _check(test_case, data, segment_ids, out_shape, axis, out):
@@ -71,11 +71,11 @@ def _run_test(test_case, device, out_shape, axis, segment_ids_shape):
             )
 
     out = unsorted_segment_sum_job(data, segment_ids).get()
-    _check(test_case, data, segment_ids, out_shape, axis, out.ndarray())
+    _check(test_case, data, segment_ids, out_shape, axis, out.numpy())
 
     like = np.zeros(out_shape, dtype=np.float32)
     out = unsorted_segment_sum_like_job(data, segment_ids, like).get()
-    _check(test_case, data, segment_ids, out_shape, axis, out.ndarray())
+    _check(test_case, data, segment_ids, out_shape, axis, out.numpy())
 
 
 def test_unsorted_segment_sum(test_case):

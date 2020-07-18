@@ -9,7 +9,7 @@ def test_deadlock(test_case):
 
     @flow.global_function(func_config)
     def DistributeConcat():
-        with flow.device_prior_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             w = flow.get_variable(
                 "w", (2, 5), initializer=flow.constant_initializer(10)
             )

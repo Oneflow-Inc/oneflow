@@ -267,10 +267,24 @@ class Operator {
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
+
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix);
+
+  void EnrollRepeatedOutputBnWithSetter(
+      const std::string& obn_prefix, int32_t num, bool has_diff,
+      const std::function<void(OutputBlobModifier*)>& ModifierSetter);
+  void EnrollRepeatedOutputBnWithSetter(
+      const std::string& obn_prefix, bool has_diff,
+      const std::function<void(OutputBlobModifier*)>& ModifierSetter);
+  void EnrollRepeatedOutputBnWithSetter(
+      const std::string& obn_prefix, int32_t num,
+      const std::function<void(OutputBlobModifier*)>& ModifierSetter);
+  void EnrollRepeatedOutputBnWithSetter(
+      const std::string& obn_prefix,
+      const std::function<void(OutputBlobModifier*)>& ModifierSetter);
   void EnrollConstBufBn(const std::string& cbbn);
 
   InputBlobModifier* EnrollInputBn(const std::string& ibn, bool has_diff);

@@ -28,7 +28,7 @@ def compare_broadcast_like_with_tf(
     like = np.random.rand(*like_shape).astype(np.float32)
     of_out = broadcast_like_forward(x, like).get()
     np_out = np.broadcast_to(x, like_shape)
-    assert np.allclose(of_out.ndarray(), np_out, rtol=rtol, atol=atol)
+    assert np.allclose(of_out.numpy(), np_out, rtol=rtol, atol=atol)
 
 
 def test_broadcast_like(test_case):

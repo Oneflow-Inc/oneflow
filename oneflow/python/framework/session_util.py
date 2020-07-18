@@ -270,14 +270,16 @@ class Session(object):
     def TryGetVariableBlobOfJobFromStash(self, job_name, var_name):
         if var_name not in self.var_name2var_blob_:
             return None, None
+
         global_variable_blob = self.var_name2var_blob_[var_name]
+
         if job_name not in self.job_name2var_name2var_blob_:
             return global_variable_blob, None
 
         var_name2var_blob = self.job_name2var_name2var_blob_[job_name]
         if var_name not in var_name2var_blob:
             return global_variable_blob, None
-        assert global_variable_blob is var_name2var_blob[var_name]
+
         return global_variable_blob, var_name2var_blob[var_name]
 
     def CurrentEagerGlobalFunctionDesc(self):
