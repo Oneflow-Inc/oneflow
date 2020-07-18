@@ -7,8 +7,8 @@ namespace {
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const int64_t axis = ctx->Attr<int64_t>("axis");
   const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  int64_t dynamic_dims = 0;
-  int64_t static_dims = 0;
+  int64_t dynamic_dim_size = 0;
+  int64_t static_dim_size = 0;
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
     const user_op::TensorDesc* like_i_desc = ctx->TensorDesc4ArgNameAndIndex("like", i);
     user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
@@ -16,9 +16,9 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     FOR_RANGE(int64_t, j, 0, in_desc->shape().NumAxes()) {
       if (j == axis) {
         if (like_i_desc->is_dynamic()) {
-          dynamic_dims = std::max(dynamic_dims, like_i_desc->shape().At(j));
+          dynamic_dim_size += like_i_desc->shape().At(j);
         } else {
-          static_dims += like_i_desc->shape().At(j);
+          static_dim_size += like_i_desc->shape().At(j);
         }
       } else {
         CHECK_EQ_OR_RETURN(in_desc->shape().At(j), like_i_desc->shape().At(j));
@@ -28,8 +28,13 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     *out_i_desc->mut_data_type() = in_desc->data_type();
     out_i_desc->set_is_dynamic(like_i_desc->is_dynamic());
   }
-  CHECK_LE_OR_RETURN(static_dims + dynamic_dims, in_desc->shape().At(axis));
-  if (!in_desc->is_dynamic()) { CHECK_EQ_OR_RETURN(dynamic_dims, 0); }
+  if (dynamic_dim_size == 0) {
+    CHECK_EQ_OR_RETURN(static_dim_size, in_desc->shape().At(axis));
+    CHECK_OR_RETURN(!in_desc->is_dynamic());
+  } else {
+    CHECK_LE_OR_RETURN(static_dim_size, in_desc->shape().At(axis));
+    CHECK_OR_RETURN(in_desc->is_dynamic());
+  }
   return Maybe<void>::Ok();
 }
 

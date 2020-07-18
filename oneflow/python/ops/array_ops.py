@@ -331,7 +331,7 @@ def slice_v2(x, slice_tup_list, name=None):
 def concat(
     inputs: Optional[Sequence[remote_blob_util.BlobDef]] = None,
     axis: int = 0,
-    max_dims: Optional[int] = None,
+    max_dim_size: Optional[int] = None,
     name: Optional[str] = None,
     values: Optional[Sequence[remote_blob_util.BlobDef]] = None,
 ) -> remote_blob_util.BlobDef:
@@ -342,7 +342,7 @@ def concat(
     Args:
         inputs: a `list` of `Blob`
         axis: a `int`. `0` by default
-        max_dims: specify max dimensions at axis when inputs contain dynamic tensor
+        max_dim_size: max dimension size along the given axis
         name: name of this operator. `None` by default
         values: deprecated param, use inputs instead
 
@@ -365,27 +365,30 @@ def concat(
     ), "axis must be in range [0, num_axes of inputs)"
 
     first_input_shape = inputs[0].shape
-    static_dims_at_axis = 0
-    dynamic_dims_at_axis = 0
+    static_dim_size = 0
+    dynamic_dim_size = 0
     for input in inputs:
         assert len(input.shape) == len(first_input_shape)
         for i in range(len(input.shape)):
             if i == axis:
                 if input.is_dynamic:
-                    dynamic_dims_at_axis = max(dynamic_dims_at_axis, input.shape[i])
+                    dynamic_dim_size += input.shape[i]
                 else:
-                    static_dims_at_axis += input.shape[i]
+                    static_dim_size += input.shape[i]
             else:
                 assert input.shape[i] == first_input_shape[i]
 
-    if max_dims is None:
-        max_dims = static_dims_at_axis + dynamic_dims_at_axis
-
-    assert (
-        max_dims >= static_dims_at_axis + dynamic_dims_at_axis
-    ), "max_dims is too small to hold concatenated dims {} at axis".format(
-        static_dims_at_axis + dynamic_dims_at_axis
-    )
+    if max_dim_size is None:
+        max_dim_size = static_dim_size + dynamic_dim_size
+    else:
+        if dynamic_dim_size == 0:
+            max_dim_size = static_dim_size
+        else:
+            assert (
+                max_dim_size >= static_dim_size
+            ), "max diemension size is too small to hold concatenated dimension size {} along the given axis".format(
+                static_dim_size
+            )
 
     if name is None:
         name = id_util.UniqueStr("Concat_")
@@ -396,7 +399,7 @@ def concat(
         .Input("in", inputs)
         .Output("out")
         .Attr("axis", axis, "AttrTypeInt64")
-        .Attr("max_dims", max_dims, "AttrTypeInt64")
+        .Attr("max_dim_size", max_dim_size, "AttrTypeInt64")
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()

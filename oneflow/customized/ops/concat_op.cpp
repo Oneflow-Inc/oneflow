@@ -11,7 +11,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_LT_OR_RETURN(axis, first_in_desc->shape().NumAxes());
   DimVector out_dim_vec = first_in_desc->shape().dim_vec();
   out_dim_vec.at(axis) = 0;
-  int64_t dynamic_max_dims = 0;
+  int64_t dynamic_dim_size = 0;
   for (const auto& in_arg_pair : ctx->inputs()) {
     const user_op::TensorDesc* in_desc =
         ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
@@ -20,23 +20,28 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     FOR_RANGE(int64_t, i, 0, in_desc->shape().NumAxes()) {
       if (i == axis) {
         if (in_desc->is_dynamic()) {
-          dynamic_max_dims = std::max(dynamic_max_dims, in_desc->shape().At(i));
+          dynamic_dim_size += in_desc->shape().At(i);
         } else {
           out_dim_vec.at(axis) += in_desc->shape().At(i);
         }
       } else {
-        CHECK_EQ_OR_RETURN(in_desc->shape().At(i), first_in_desc->shape().At(i));
+        CHECK_EQ_OR_RETURN(in_desc->shape().At(i), out_dim_vec.at(i));
       }
     }
   }
-  const int64_t max_dims = ctx->Attr<int64_t>("max_dims");
-  CHECK_LE_OR_RETURN(out_dim_vec.at(axis) + dynamic_max_dims, max_dims);
-  out_dim_vec.at(axis) = max_dims;
 
   user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  const int64_t max_dim_size = ctx->Attr<int64_t>("max_dim_size");
+  if (dynamic_dim_size == 0) {
+    CHECK_EQ_OR_RETURN(out_dim_vec.at(axis), max_dim_size);
+    out_desc->set_is_dynamic(false);
+  } else {
+    CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size);
+    out_desc->set_is_dynamic(true);
+    out_dim_vec.at(axis) = max_dim_size;
+  }
   *out_desc->mut_shape() = Shape(out_dim_vec);
   *out_desc->mut_data_type() = first_in_desc->data_type();
-  if (dynamic_max_dims > 0) { out_desc->set_is_dynamic(true); }
   return Maybe<void>::Ok();
 }
 
@@ -81,7 +86,7 @@ REGISTER_USER_OP("concat")
     .InputWithMinimum("in", 2)
     .Output("out")
     .Attr("axis", UserOpAttrType::kAtInt64)
-    .Attr("max_dims", UserOpAttrType::kAtInt64)
+    .Attr("max_dim_size", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn(InferTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn(GetSbpSignature);
