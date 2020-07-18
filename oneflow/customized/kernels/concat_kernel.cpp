@@ -67,15 +67,15 @@ class ConcatKernel final : public user_op::OpKernel {
       (user_op::HobDeviceType() == device)                                                   \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_CONCAT_KERNEL_WITH_DEVICES(device) \
-  REGISTER_CONCAT_KERNEL(device, float)             \
-  REGISTER_CONCAT_KERNEL(device, double)            \
-  REGISTER_CONCAT_KERNEL(device, int8_t)            \
-  REGISTER_CONCAT_KERNEL(device, int32_t)           \
+#define REGISTER_CONCAT_KERNEL_WITH_DEVICE(device) \
+  REGISTER_CONCAT_KERNEL(device, float)            \
+  REGISTER_CONCAT_KERNEL(device, double)           \
+  REGISTER_CONCAT_KERNEL(device, int8_t)           \
+  REGISTER_CONCAT_KERNEL(device, int32_t)          \
   REGISTER_CONCAT_KERNEL(device, int64_t)
 
-REGISTER_CONCAT_KERNEL_WITH_DEVICES(DeviceType::kCPU)
-REGISTER_CONCAT_KERNEL_WITH_DEVICES(DeviceType::kGPU)
+REGISTER_CONCAT_KERNEL_WITH_DEVICE(DeviceType::kCPU)
+REGISTER_CONCAT_KERNEL_WITH_DEVICE(DeviceType::kGPU)
 REGISTER_CONCAT_KERNEL(DeviceType::kGPU, float16)
 
 }  // namespace oneflow

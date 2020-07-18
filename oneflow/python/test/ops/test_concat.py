@@ -92,7 +92,7 @@ def _of_dynamic_concat(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_placement_scope(flow.device_prior_placement(device_type, "0:0"))
+    func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -136,7 +136,7 @@ def _of_dynamic_concat(
     check_point = flow.train.CheckPoint()
     check_point.init()
     ret = dynamic_concat_job([inputs[0]], [inputs[1]]).get()
-    return ret.numpy()
+    return ret.numpy(0)
 
 
 def _test_dynamic_concat(test_case, output_shape, axis, device_type, verbose=False):
@@ -160,13 +160,13 @@ def _test_dynamic_concat(test_case, output_shape, axis, device_type, verbose=Fal
     inputs = [input_0, input_1]
 
     def print_blob(blob):
-        print(blob.numpy(), blob.numpy().shape)
+        print(blob.numpy(0), blob.numpy(0).shape)
 
     def make_watch_diff_cb(input_idx):
         def watch_diff_cb(blob):
             test_case.assertTrue(
                 np.array_equal(
-                    blob.numpy(),
+                    blob.numpy(0),
                     np.ones(shape=inputs[input_idx].shape, dtype=np.single),
                 )
             )

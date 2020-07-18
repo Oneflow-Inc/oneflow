@@ -64,15 +64,15 @@ class SplitLikeKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == device) \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_SPLIT_LIKE_KERNEL_WITH_DEVICES(device) \
-  REGISTER_SPLIT_LIKE_KERNEL(device, float)             \
-  REGISTER_SPLIT_LIKE_KERNEL(device, double)            \
-  REGISTER_SPLIT_LIKE_KERNEL(device, int8_t)            \
-  REGISTER_SPLIT_LIKE_KERNEL(device, int32_t)           \
+#define REGISTER_SPLIT_LIKE_KERNEL_WITH_DEVICE(device) \
+  REGISTER_SPLIT_LIKE_KERNEL(device, float)            \
+  REGISTER_SPLIT_LIKE_KERNEL(device, double)           \
+  REGISTER_SPLIT_LIKE_KERNEL(device, int8_t)           \
+  REGISTER_SPLIT_LIKE_KERNEL(device, int32_t)          \
   REGISTER_SPLIT_LIKE_KERNEL(device, int64_t)
 
-REGISTER_SPLIT_LIKE_KERNEL_WITH_DEVICES(DeviceType::kCPU)
-REGISTER_SPLIT_LIKE_KERNEL_WITH_DEVICES(DeviceType::kGPU)
+REGISTER_SPLIT_LIKE_KERNEL_WITH_DEVICE(DeviceType::kCPU)
+REGISTER_SPLIT_LIKE_KERNEL_WITH_DEVICE(DeviceType::kGPU)
 REGISTER_SPLIT_LIKE_KERNEL(DeviceType::kGPU, float16)
 
 }  // namespace oneflow

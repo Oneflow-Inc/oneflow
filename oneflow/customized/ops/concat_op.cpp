@@ -28,7 +28,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
         CHECK_EQ_OR_RETURN(in_desc->shape().At(i), first_in_desc->shape().At(i));
       }
     }
-    CHECK_OR_RETURN(in_desc->is_dynamic());
   }
   const int64_t max_dims = ctx->Attr<int64_t>("max_dims");
   CHECK_LE_OR_RETURN(out_dim_vec.at(axis) + dynamic_max_dims, max_dims);
