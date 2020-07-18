@@ -236,11 +236,11 @@ def layer_norm(
         )
         op.Input("gamma", [gamma])
         op.Output("normalized")
-    op.Attr("center", center, "AttrTypeBool")
-    op.Attr("scale", scale, "AttrTypeBool")
-    op.Attr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
-    op.Attr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
-    op.Attr("epsilon", epsilon, "AttrTypeDouble")
+    op.Attr("center", center)
+    op.Attr("scale", scale)
+    op.Attr("begin_norm_axis", begin_norm_axis)
+    op.Attr("begin_params_axis", begin_params_axis)
+    op.Attr("epsilon", epsilon)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
