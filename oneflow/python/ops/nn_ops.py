@@ -706,9 +706,7 @@ def random_mask_like(
     if seed is not None:
         mask_op.Attr("seed", seed)
     else:
-        mask_op.Attr(
-            "seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1), "AttrTypeInt64"
-        )
+        mask_op.Attr("seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1))
 
     if noise_shape is not None:
         assert 0, "noise_shape will be supported later."
