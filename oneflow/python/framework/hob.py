@@ -71,4 +71,4 @@ def is_current_machine_master(ctx):
 
 @bool_functor("Consistent view enabled")
 def consistent_view_enabled(ctx):
-    return oneflow.distribute.consistent_strategy_enabled()
+    return oneflow.scope.consistent_view_enabled()

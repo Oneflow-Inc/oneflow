@@ -28,7 +28,7 @@ def compare_with_tensorflow(
             (batch_size,), dtype=type_name_to_flow_type[label_type]
         )
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=(batch_size, num_classes),

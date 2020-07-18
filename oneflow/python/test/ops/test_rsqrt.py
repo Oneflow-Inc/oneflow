@@ -10,7 +10,7 @@ def _check(test_case, x, y):
 def _run_test(test_case, x, dtype, device):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def RsqrtJob(x=flow.FixedTensorDef(x.shape, dtype=dtype)):
