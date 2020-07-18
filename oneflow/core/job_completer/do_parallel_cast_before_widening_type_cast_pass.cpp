@@ -29,8 +29,7 @@ class DoParallelCastBeforeWideningTypeCast final : public OpGraphPass {
   DoParallelCastBeforeWideningTypeCast() = default;
   ~DoParallelCastBeforeWideningTypeCast() override = default;
   bool IsEnabled() const override {
-    return GlobalJobDesc().do_parallel_cast_before_widening_type_cast()
-           && GlobalJobDesc().use_boxing_v2();
+    return GlobalJobDesc().do_parallel_cast_before_widening_type_cast();
   }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
