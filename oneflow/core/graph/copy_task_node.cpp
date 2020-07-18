@@ -13,16 +13,6 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
     ForEachNodeOnOutDataEdge([&](TaskNode* node) {
       if (first_dst_node == nullptr) { first_dst_node = node; }
     });
-    TaskType dst_node_type = first_dst_node->GetTaskType();
-    if (copy_hd->copy_type() == CopyHdOpConf::H2D
-        && (dst_node_type == TaskType::kReduceAdd || dst_node_type == TaskType::kReduceGather)) {
-      out_regst = ProduceRegst(name, false, 1, 1);
-    }
-    TaskType src_node_type = SoleInDataEdge()->src_node()->GetTaskType();
-    if (copy_hd->copy_type() == CopyHdOpConf::D2H
-        && (src_node_type == TaskType::kReduceScatter || src_node_type == TaskType::kReduceAdd)) {
-      out_regst = ProduceRegst(name, false, 1, 1);
-    }
     if (out_regst == nullptr) {
       // normal copy hd task can reuse mem
       out_regst = ProduceRegst(name, true);

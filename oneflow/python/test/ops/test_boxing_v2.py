@@ -19,7 +19,6 @@ def _test_split_to_split(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.scope.consistent_view())
-    func_config.use_boxing_v2(True)
 
     @flow.global_function(func_config)
     def split_to_split_job(x=flow.FixedTensorDef((96, 96))):
@@ -59,7 +58,6 @@ def _test_split_to_broadcast(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.scope.consistent_view())
-    func_config.use_boxing_v2(True)
 
     @flow.global_function(func_config)
     def split_to_broadcast_job(x=flow.FixedTensorDef((96, 96))):
@@ -98,7 +96,6 @@ def _test_broadcast_to_split(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.scope.consistent_view())
-    func_config.use_boxing_v2(True)
 
     @flow.global_function(func_config)
     def broadcast_to_split_job(x=flow.FixedTensorDef((96, 96))):
@@ -137,7 +134,6 @@ def _test_partial_sum_to_split(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.scope.consistent_view())
-    func_config.use_boxing_v2(True)
 
     @flow.global_function(func_config)
     def partial_sum_to_split_job(x=flow.FixedTensorDef((96, 96, 96))):
@@ -172,7 +168,6 @@ def _test_partial_sum_to_broadcast(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.scope.consistent_view())
-    func_config.use_boxing_v2(True)
 
     @flow.global_function(func_config)
     def partial_sum_to_broadcast_job(x=flow.FixedTensorDef((96, 96, 96))):
@@ -206,7 +201,6 @@ def _test_broadcast_to_broadcast(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.scope.consistent_view())
-    func_config.use_boxing_v2(True)
 
     @flow.global_function(func_config)
     def broadcast_to_broadcast_job(x=flow.FixedTensorDef((96, 96, 96))):
@@ -240,7 +234,6 @@ def _test_multi_lbi(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.scope.consistent_view())
-    func_config.use_boxing_v2(True)
 
     @flow.global_function(func_config)
     def multi_lbi_job(x=flow.FixedTensorDef((96, 96, 96))):
