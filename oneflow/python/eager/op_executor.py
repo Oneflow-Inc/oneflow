@@ -53,7 +53,7 @@ def _FindOrCreateVarBlobObject(op_attribute, parallel_conf, blob_register):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + op_attribute.op_conf.name
     sess = session_ctx.GetDefaultSession()
-    var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
+    var_blob, _ = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
     if var_blob is not None:
         blob_register.SetObject4BlobName(
             var_blob.logical_blob_name, var_blob.blob_object
