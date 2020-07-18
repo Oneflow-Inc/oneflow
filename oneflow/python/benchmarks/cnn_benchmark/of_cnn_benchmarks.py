@@ -142,7 +142,7 @@ optimizer_dict = {
 #        "warmup_conf": {"linear_conf": {"warmup_batches":10000, "start_multiplier":0}},
 
 func_config = flow.FunctionConfig()
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_distribute_strategy(flow.scope.consistent_view())
 func_config.train.primary_lr(args.learning_rate)
 func_config.default_data_type(flow.float)
 func_config.train.model_update_conf(optimizer_dict[args.optimizer])

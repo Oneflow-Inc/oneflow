@@ -218,7 +218,7 @@ def main(args):
     flow.config.machine_num(args.num_nodes)
     flow.config.gpu_device_num(args.gpu_num_per_node)
     train_config = flow.FunctionConfig()
-    train_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    train_config.default_distribute_strategy(flow.scope.consistent_view())
     train_config.default_data_type(flow.float)
     train_config.train.primary_lr(0.00001)
     train_config.train.model_update_conf(dict(naive_conf={}))
@@ -233,7 +233,7 @@ def main(args):
         return loss
 
     eval_config = flow.FunctionConfig()
-    eval_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    eval_config.default_distribute_strategy(flow.scope.consistent_view())
     eval_config.default_data_type(flow.float)
     eval_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 

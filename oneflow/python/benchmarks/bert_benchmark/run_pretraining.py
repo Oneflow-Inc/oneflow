@@ -223,7 +223,7 @@ _BERT_MODEL_UPDATE_CONF = dict(
 )
 
 func_config = flow.FunctionConfig()
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_distribute_strategy(flow.scope.consistent_view())
 func_config.train.primary_lr(args.learning_rate)
 func_config.default_data_type(flow.float)
 func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
