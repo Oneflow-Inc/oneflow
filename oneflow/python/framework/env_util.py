@@ -17,7 +17,7 @@ def api_enable_eager_execution(val: bool = True) -> None:
     return enable_if.unique([enable_eager_environment])(val)
 
 
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
 def enable_eager_environment(val=True):
     return c_api_util.EnableEagerEnvironment(val)
 
