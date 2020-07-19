@@ -429,7 +429,12 @@ class UserKernel final : public Kernel {
                 ->shape();
         const ShapeView& shape_view =
             infer_ctx_->ShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
-        CHECK_LE(shape_view.elem_cnt(), static_shape.elem_cnt());
+        CHECK_LE(shape_view.elem_cnt(), static_shape.elem_cnt())
+            << "InferShape of OpKernel (op_type_name: " << op_conf().user_conf().op_type_name()
+            << ", op_name: " << op_conf().name()
+            << ") raise error, output arg's (name: " << out_arg_pair.first
+            << ", index: " << out_arg_pair.second << ") runtime shape " << shape_view.ToString()
+            << " surpass the limit of static shape " << static_shape.ToString();
       }
       infer_cache_->UpdateCacheValue(infer_ctx_.get());
     } else {
