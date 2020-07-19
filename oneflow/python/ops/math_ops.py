@@ -9,6 +9,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -579,7 +580,7 @@ def broadcast_max(
 def elem_cnt(
     input_blob: remote_blob_util.BlobDef,
     axis: Optional[Sequence[int]] = None,
-    dtype: Optional[int] = None,
+    dtype: Optional[dtype_util.dtype] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()

@@ -34,7 +34,7 @@ def tensor_buffer_to_tensor_list(input, shape, dtype, name=None):
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "in", input.unique_name)
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "out", "out")
     op_conf.tensor_buffer_to_tensor_list_conf.shape.dim[:] = list(shape)
-    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "data_type", dtype)
+    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "data_type", dtype.oneflow_dtype)
     interpret_util.Forward(op_conf)
 
     lbi = logical_blob_id_util.LogicalBlobId()

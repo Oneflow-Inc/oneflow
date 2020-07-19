@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import sys
 from functools import reduce
-from typing import Any, Optional, Sequence, Union, Tuple
+from typing import Any, Optional, Sequence, Union
 
 import numpy as np
 
@@ -122,8 +122,8 @@ class FixedTensorDef(ArgBlobDef):
 
     def __init__(
         self,
-        shape: Tuple[int],
-        dtype: dtype_util.Dtype = dtype_util.float,
+        shape: Sequence[int],
+        dtype: dtype_util.dtype = dtype_util.float,
         batch_axis: int = 0,
         name: Optional[str] = None,
     ) -> None:
@@ -206,8 +206,8 @@ class MirroredTensorDef(ArgBlobDef):
 
     def __init__(
         self,
-        shape: Tuple[int],
-        dtype: dtype_util.Dtype = dtype_util.float,
+        shape: Sequence[int],
+        dtype: dtype_util.dtype = dtype_util.float,
         batch_axis: int = 0,
         name: Optional[str] = None,
     ) -> None:
@@ -288,8 +288,8 @@ class MirroredTensorListDef(ArgBlobDef):
 
     def __init__(
         self,
-        shape: Tuple[int],
-        dtype: dtype_util.Dtype = dtype_util.float,
+        shape: Sequence[int],
+        dtype: dtype_util.dtype = dtype_util.float,
         batch_axis: int = 0,
         name: Optional[str] = None,
     ) -> None:

@@ -4,72 +4,59 @@ import numpy as np
 import oneflow.core.common.data_type_pb2 as data_type_pb2
 
 
-class Dtype(object):
-    def __init__(self, oneflow_dtype, numpy_dtype):
-        self.oneflow_dtype = oneflow_dtype
-        self.numpy_dtype = numpy_dtype
+class dtype(object):
+    oneflow_dtype = data_type_pb2.kInvalidDataType
+    numpy_dtype = data_type_pb2.kInvalidDataType
 
 
-class Char(Dtype):
-    def __init__(self, oneflow_dtype, numpy_dtype):
-        Dtype.__init__(self, oneflow_dtype, numpy_dtype)
+class char(dtype):
+    oneflow_dtype = data_type_pb2.kChar
+    numpy_dtype = np.byte
 
 
-class Float(Dtype):
-    def __init__(self, oneflow_dtype, numpy_dtype):
-        Dtype.__init__(self, oneflow_dtype, numpy_dtype)
+class float(dtype):
+    oneflow_dtype = data_type_pb2.kFloat
+    numpy_dtype = np.float
 
 
-class Float16(Dtype):
-    def __init__(self, oneflow_dtype, numpy_dtype):
-        Dtype.__init__(self, oneflow_dtype, numpy_dtype)
+class float16(dtype):
+    oneflow_dtype = data_type_pb2.kFloat16
+    numpy_dtype = np.float16
 
 
-class Float32(Dtype):
-    def __init__(self, oneflow_dtype, numpy_dtype):
-        Dtype.__init__(self, oneflow_dtype, numpy_dtype)
+class float32(dtype):
+    oneflow_dtype = data_type_pb2.kFloat
+    numpy_dtype = np.float32
 
 
-class Float64(Dtype):
-    def __init__(self, oneflow_dtype, numpy_dtype):
-        Dtype.__init__(self, oneflow_dtype, numpy_dtype)
+class float64(dtype):
+    oneflow_dtype = data_type_pb2.kDouble
+    numpy_dtype = np.double
 
 
-class Double(Dtype):
-    def __init__(self, oneflow_dtype, numpy_dtype):
-        Dtype.__init__(self, oneflow_dtype, numpy_dtype)
+class double(dtype):
+    oneflow_dtype = data_type_pb2.kDouble
+    numpy_dtype = np.double
 
 
-class Int8(Dtype):
-    def __init__(self, oneflow_dtype, numpy_dtype):
-        Dtype.__init__(self, oneflow_dtype, numpy_dtype)
+class int8(dtype):
+    oneflow_dtype = data_type_pb2.kInt8
+    numpy_dtype = np.int8
 
 
-class Int32(Dtype):
-    def __init__(self, oneflow_dtype, numpy_dtype):
-        Dtype.__init__(self, oneflow_dtype, numpy_dtype)
+class int32(dtype):
+    oneflow_dtype = data_type_pb2.kInt32
+    numpy_dtype = np.int32
 
 
-class Int64(Dtype):
-    def __init__(self, oneflow_dtype, numpy_dtype):
-        Dtype.__init__(self, oneflow_dtype, numpy_dtype)
+class int64(dtype):
+    oneflow_dtype = data_type_pb2.kInt64
+    numpy_dtype = np.int64
 
 
-class Uint8(Dtype):
-    def __init__(self, oneflow_dtype, numpy_dtype):
-        Dtype.__init__(self, oneflow_dtype, numpy_dtype)
-
-
-char = Char(data_type_pb2.kChar, np.byte)
-float = Float(data_type_pb2.kFloat, np.float)
-float16 = Float16(data_type_pb2.kFloat16, np.float16)
-float32 = Float32(data_type_pb2.kFloat, np.float32)
-float64 = Float64(data_type_pb2.kDouble, np.double)
-double = Double(data_type_pb2.kDouble, np.double)
-int8 = Int8(data_type_pb2.kInt8, np.int8)
-int32 = Int32(data_type_pb2.kInt32, np.int32)
-int64 = Int64(data_type_pb2.kInt64, np.int64)
-uint8 = Uint8(data_type_pb2.kUInt8, np.uint8)
+class uint8(dtype):
+    oneflow_dtype = data_type_pb2.kUInt8
+    numpy_dtype = np.uint8
 
 
 dtypes = [

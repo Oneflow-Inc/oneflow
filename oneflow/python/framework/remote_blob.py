@@ -7,6 +7,7 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.watch_scope_util as watch_scope_util
 import oneflow.python.framework.blob_trait as blob_trait
+from oneflow.python.framework.dtype import convert_of_dtype_to_oneflow_dtype_class
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 import oneflow.python.eager.eager_blob_util as eager_blob_util
@@ -106,7 +107,9 @@ class LazyConsistentBlob(ConsistentBlob):
 
     @property
     def dtype(self):
-        return c_api_util.JobBuildAndInferCtx_GetDataType(self.job_name_, self.lbn_)
+        return convert_of_dtype_to_oneflow_dtype_class(
+            c_api_util.JobBuildAndInferCtx_GetDataType(self.job_name_, self.lbn_)
+        )
 
     @property
     def batch_axis(self):
@@ -186,8 +189,10 @@ class LazyMirroredBlob(MirroredBlob):
 
     @property
     def dtype(self):
-        return c_api_util.JobBuildAndInferCtx_MirroredBlobGetDataType(
-            self.job_name_, self.lbn_
+        return convert_of_dtype_to_oneflow_dtype_class(
+            c_api_util.JobBuildAndInferCtx_MirroredBlobGetDataType(
+                self.job_name_, self.lbn_
+            )
         )
 
     @property
@@ -266,7 +271,9 @@ class EagerBlobTrait(object):
 
     @property
     def dtype(self):
-        return self.blob_object.op_arg_blob_attr.dtype
+        return convert_of_dtype_to_oneflow_dtype_class(
+            convert_of_dtype_to_oneflow_dtype_class
+        )
 
     @property
     def batch_axis(self):
