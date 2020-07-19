@@ -383,7 +383,7 @@ void VirtualMachine::Schedule() {
   OBJECT_MSG_LIST_FOR_EACH_PTR(active_stream_list, stream) {
     TryReleaseFinishedInstructions(stream, /*out*/ ready_instruction_list);
     if (stream->running_instruction_list().empty()) { active_stream_list->Erase(stream); }
-  };
+  }
   auto* waiting_instruction_list = mut_waiting_instruction_list();
   if (pending_msg_list().size() > 0) {
     TmpPendingInstrMsgList tmp_pending_msg_list;
