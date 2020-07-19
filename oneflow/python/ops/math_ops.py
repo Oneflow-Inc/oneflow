@@ -166,17 +166,17 @@ def scalar_add(x, operand, name=None):
     builder = flow.user_op_builder(name).Op("scalar_add").Input("in", [x]).Output("out")
     if isinstance(operand, int):
         builder = (
-            builder.Attr("has_int_operand", True, "AttrTypeBool")
-            .Attr("has_float_operand", False, "AttrTypeBool")
-            .Attr("int_operand", operand, "AttrTypeInt64")
-            .Attr("float_operand", 0.0, "AttrTypeDouble")
+            builder.Attr("has_int_operand", True)
+            .Attr("has_float_operand", False)
+            .Attr("int_operand", operand)
+            .Attr("float_operand", 0.0)
         )
     elif isinstance(operand, float):
         builder = (
-            builder.Attr("has_int_operand", False, "AttrTypeBool")
-            .Attr("has_float_operand", True, "AttrTypeBool")
-            .Attr("int_operand", 0, "AttrTypeInt64")
-            .Attr("float_operand", operand, "AttrTypeDouble")
+            builder.Attr("has_int_operand", False)
+            .Attr("has_float_operand", True)
+            .Attr("int_operand", 0)
+            .Attr("float_operand", operand)
         )
     return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
@@ -272,17 +272,17 @@ def scalar_mul(x, operand, name=None):
     builder = flow.user_op_builder(name).Op("scalar_mul").Input("in", [x]).Output("out")
     if isinstance(operand, int):
         builder = (
-            builder.Attr("has_int_operand", True, "AttrTypeBool")
-            .Attr("has_float_operand", False, "AttrTypeBool")
-            .Attr("int_operand", operand, "AttrTypeInt64")
-            .Attr("float_operand", 0.0, "AttrTypeDouble")
+            builder.Attr("has_int_operand", True)
+            .Attr("has_float_operand", False)
+            .Attr("int_operand", operand)
+            .Attr("float_operand", 0.0)
         )
     elif isinstance(operand, float):
         builder = (
-            builder.Attr("has_int_operand", False, "AttrTypeBool")
-            .Attr("has_float_operand", True, "AttrTypeBool")
-            .Attr("int_operand", 0, "AttrTypeInt64")
-            .Attr("float_operand", operand, "AttrTypeDouble")
+            builder.Attr("has_int_operand", False)
+            .Attr("has_float_operand", True)
+            .Attr("int_operand", 0)
+            .Attr("float_operand", operand)
         )
     return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
@@ -429,8 +429,8 @@ def unsorted_segment_sum(
         .Input("data", [data])
         .Input("segment_ids", [segment_ids])
         .Output("out")
-        .Attr("axis", int(axis), "AttrTypeInt64")
-        .Attr("num_segments", int(num_segments), "AttrTypeInt64")
+        .Attr("axis", int(axis))
+        .Attr("num_segments", int(num_segments))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -454,7 +454,7 @@ def unsorted_segment_sum_like(
         .Input("segment_ids", [segment_ids])
         .Input("like", [like])
         .Output("out")
-        .Attr("axis", int(axis), "AttrTypeInt64")
+        .Attr("axis", int(axis))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -476,7 +476,7 @@ def unsorted_batch_segment_sum(
         .Input("data", [data])
         .Input("segment_ids", [segment_ids])
         .Output("out")
-        .Attr("num_segments", int(num_segments), "AttrTypeInt64")
+        .Attr("num_segments", int(num_segments))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -505,7 +505,7 @@ def cast(
         .Op("cast")
         .Input("in", [x])
         .Output("out")
-        .Attr("dtype", dtype, "AttrTypeDataType")
+        .Attr("dtype", dtype)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -616,8 +616,8 @@ def top_k(
         .Op("top_k")
         .Input("in", [input])
         .Output("out")
-        .Attr("k", k, "AttrTypeInt32",)
-        .Attr("sorted", sorted, "AttrTypeBool",)
+        .Attr("k", k)
+        .Attr("sorted", sorted)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -680,24 +680,24 @@ def clip_by_value(
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar")
-            .Attr("floating_min", float(min_value), "AttrTypeDouble")
-            .Attr("integral_min", int(min_value), "AttrTypeInt64")
-            .Attr("floating_max", float(max_value), "AttrTypeDouble")
-            .Attr("integral_max", int(max_value), "AttrTypeInt64")
+            .Attr("floating_min", float(min_value))
+            .Attr("integral_min", int(min_value))
+            .Attr("floating_max", float(max_value))
+            .Attr("integral_max", int(max_value))
         )
     elif min_value is not None:
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar_min")
-            .Attr("floating_min", float(min_value), "AttrTypeDouble")
-            .Attr("integral_min", int(min_value), "AttrTypeInt64")
+            .Attr("floating_min", float(min_value))
+            .Attr("integral_min", int(min_value))
         )
     elif max_value is not None:
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar_max")
-            .Attr("floating_max", float(max_value), "AttrTypeDouble")
-            .Attr("integral_max", int(max_value), "AttrTypeInt64")
+            .Attr("floating_max", float(max_value))
+            .Attr("integral_max", int(max_value))
         )
     else:
         raise ValueError("min_value and max_value cannot be None at the same time")
@@ -729,8 +729,8 @@ def l2_normalize(
         .Input("x", [input])
         .Output("y")
         .Output("square_x_sum")
-        .Attr("axis", int(axis), "AttrTypeInt32")
-        .Attr("epsilon", float(epsilon), "AttrTypeFloat")
+        .Attr("axis", int(axis))
+        .Attr("epsilon", float(epsilon))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()

@@ -7,7 +7,7 @@ def my_test_source(name, out_num):
         flow.user_op_builder(name)
         .Op("TestSourceMultiGpuFixedOutNum")
         .Output("out")
-        .Attr("out_num", out_num, "AttrTypeInt64")
+        .Attr("out_num", out_num)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
