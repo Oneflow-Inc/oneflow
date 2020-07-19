@@ -124,7 +124,6 @@ message KernelConf {
     ArgWhereKernelConf arg_where_conf = 361;
 
     SliceKernelConf slice_conf = 402;
-    ConstantKernelConf constant_conf = 403;
     VariableKernelConf variable_conf = 407;
     RecordLoadKernelConf record_load_conf = 408;
     PReluAlphaGradKernelConf prelu_alpha_grad_conf = 409;
