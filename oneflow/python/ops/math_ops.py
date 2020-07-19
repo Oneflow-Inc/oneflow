@@ -60,20 +60,6 @@ def _recursive_build_add_n(inputs, name=None):
 def add_n(
     inputs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    if os.getenv("ENABLE_USER_OP") == "False":
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("AddN_"),
-        )
-        assert len(inputs) > 1
-        for blob in inputs:
-            getattr(op_conf.add_conf, "in").append(blob.unique_name)
-        op_conf.add_conf.out = "out"
-        interpret_util.Forward(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
     return _recursive_build_add_n(inputs, name)
 
 
@@ -195,22 +181,7 @@ def scalar_add_by_tensor(x, scalar, name=None):
 
 
 def element_wise_add(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return flow.math.add_n([x, y], name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ElementWiseAdd_"),
-    )
-    getattr(op_conf.add_conf, "in").append(x.unique_name)
-    getattr(op_conf.add_conf, "in").append(y.unique_name)
-    op_conf.add_conf.out = "out"
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return flow.math.add_n([x, y], name)
 
 
 def build_broadcast_binary_op(math_op, x, y, name=None):
