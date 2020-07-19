@@ -31,7 +31,6 @@ class ConcatKernel final : public user_op::OpKernel {
         }
       }
     }
-    CHECK_LE(dim_vec.at(axis), ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().At(axis));
     ctx->MutShapeView4ArgNameAndIndex("out", 0)->set_shape(Shape(dim_vec));
   }
 

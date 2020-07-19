@@ -30,10 +30,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   }
   if (dynamic_dim_size == 0) {
     CHECK_EQ_OR_RETURN(static_dim_size, in_desc->shape().At(axis));
-    CHECK_OR_RETURN(!in_desc->is_dynamic());
   } else {
     CHECK_LE_OR_RETURN(static_dim_size, in_desc->shape().At(axis));
-    CHECK_OR_RETURN(in_desc->is_dynamic());
   }
   return Maybe<void>::Ok();
 }
@@ -75,6 +73,11 @@ Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
       .PartialSum(user_op::OpArg("in", 0))
       .Broadcast(like_arg_vec)
       .PartialSum(ctx->outputs())
+      .Build();
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("in", 0))
+      .PartialSum(like_arg_vec)
+      .Broadcast(ctx->outputs())
       .Build();
   return Maybe<void>::Ok();
 }

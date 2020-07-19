@@ -32,11 +32,10 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
   user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   const int64_t max_dim_size = ctx->Attr<int64_t>("max_dim_size");
+  CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size);
   if (dynamic_dim_size == 0) {
-    CHECK_EQ_OR_RETURN(out_dim_vec.at(axis), max_dim_size);
     out_desc->set_is_dynamic(false);
   } else {
-    CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size);
     out_desc->set_is_dynamic(true);
     out_dim_vec.at(axis) = max_dim_size;
   }

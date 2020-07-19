@@ -342,13 +342,14 @@ def concat(
     Args:
         inputs: a `list` of `Blob`
         axis: a `int`. `0` by default
-        max_dim_size: max dimension size along the given axis
+        max_dim_size: hint of max dimension size along the given axis
         name: name of this operator. `None` by default
         values: deprecated param, use inputs instead
 
     Returns:
         A `Blob`
     """
+    # backward compatible with values param name
     if values is not None:
         assert inputs is None
         inputs = values
@@ -381,14 +382,11 @@ def concat(
     if max_dim_size is None:
         max_dim_size = static_dim_size + dynamic_dim_size
     else:
-        if dynamic_dim_size == 0:
-            max_dim_size = static_dim_size
-        else:
-            assert (
-                max_dim_size >= static_dim_size
-            ), "max diemension size is too small to hold concatenated dimension size {} along the given axis".format(
-                static_dim_size
-            )
+        assert (
+            max_dim_size >= static_dim_size
+        ), "max diemension size {} is too small to hold concatenated static dimension size {} along the given axis".format(
+            max_dim_size, static_dim_size
+        )
 
     if name is None:
         name = id_util.UniqueStr("Concat_")

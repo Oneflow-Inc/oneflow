@@ -423,6 +423,14 @@ class UserKernel final : public Kernel {
       CHECK_NOTNULL(op_infer_ctx);
       op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob);
       kernel_->InferShape(infer_ctx_.get());
+      for (const auto& out_arg_pair : infer_ctx_->outputs()) {
+        const Shape& static_shape =
+            infer_ctx_->TensorDesc4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second)
+                ->shape();
+        const ShapeView& shape_view =
+            infer_ctx_->ShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
+        CHECK_LE(shape_view.elem_cnt(), static_shape.elem_cnt());
+      }
       infer_cache_->UpdateCacheValue(infer_ctx_.get());
     } else {
       std::shared_ptr<const OpInferCacheValue> cache_value_ptr = infer_cache_->GetCacheValue();
