@@ -35,8 +35,8 @@ def matmul(
             .Input("a", [a])
             .Input("b", [b])
             .Output("out")
-            .Attr("transpose_a", transpose_a, "AttrTypeBool")
-            .Attr("transpose_b", transpose_b, "AttrTypeBool")
+            .Attr("transpose_a", transpose_a)
+            .Attr("transpose_b", transpose_b)
             .Build()
         )
     else:
@@ -46,8 +46,8 @@ def matmul(
             .Input("a", [a])
             .Input("b", [b])
             .Output("out")
-            .Attr("transpose_a", transpose_a, "AttrTypeBool")
-            .Attr("transpose_b", transpose_b, "AttrTypeBool")
+            .Attr("transpose_a", transpose_a)
+            .Attr("transpose_b", transpose_b)
             .Build()
         )
     return op.InferAndTryRun().RemoteBlobList()[0]

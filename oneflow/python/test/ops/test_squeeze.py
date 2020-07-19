@@ -23,7 +23,7 @@ def compare_with_tensorflow(device_type, x_shape, axis):
 
     @flow.global_function(func_config)
     def SqueezeJob():
-        with flow.fixed_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "var",
                 shape=x_shape,

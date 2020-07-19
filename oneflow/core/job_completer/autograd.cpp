@@ -728,4 +728,23 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
   }
 }
 
+void AddDiffStaticShapeCast(const OpGraph& op_graph, JobBuilder* job_builder,
+                            HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
+  for (auto& pair : *lbi2diff_lbi) {
+    const LogicalBlobId& lbi = pair.first;
+    LogicalBlobId& diff_lbi = pair.second;
+    const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
+    OperatorConf cast_to_static_shape_op_conf{};
+    cast_to_static_shape_op_conf.set_name("System-AutoGrad-StaticShapeCast-" + NewUniqueId());
+    CastToStaticShapeOpConf* cast_to_static_shape_conf =
+        cast_to_static_shape_op_conf.mutable_cast_to_static_shape_conf();
+    cast_to_static_shape_conf->set_in(GenLogicalBlobName(diff_lbi));
+    cast_to_static_shape_conf->set_out("out");
+    job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
+                        {cast_to_static_shape_op_conf});
+    diff_lbi.set_op_name(cast_to_static_shape_op_conf.name());
+    diff_lbi.set_blob_name(cast_to_static_shape_conf->out());
+  }
+}
+
 }  // namespace oneflow

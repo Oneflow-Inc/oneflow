@@ -8,7 +8,7 @@ def TestReshape(x, shape, name):
         .Op("TestReshape")
         .Input("in", [x])
         .Output("out")
-        .Attr("shape", shape, "AttrTypeShape")
+        .Attr("shape", shape)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -45,7 +45,7 @@ def mirrored_tensor_def_test(test_case, func_config):
 
 def test_fixed_TestReshape(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     fixed_tensor_def_test(test_case, func_config)
 
 

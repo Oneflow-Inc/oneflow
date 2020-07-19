@@ -76,7 +76,7 @@ def gather(
             .Input("in", [params])
             .Input("indices", [indices])
             .Output("out")
-            .Attr("axis", int(axis), "AttrTypeInt64")
+            .Attr("axis", int(axis))
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]
@@ -120,7 +120,7 @@ def reshape(
             .Op("reshape")
             .Input("in", [x])
             .Output("out")
-            .Attr("shape", infer_shape(x, shape), "AttrTypeShape")
+            .Attr("shape", infer_shape(x, shape))
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]
@@ -216,7 +216,7 @@ def transpose(
         .Op("transpose")
         .Input("input", [a])
         .Output("output")
-        .Attr("perm", perm, "AttrTypeListInt32")
+        .Attr("perm", perm)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -346,11 +346,11 @@ def slice_v2(
         .Op("slice_v2")
         .Input("x", [x])
         .Output("y")
-        .Attr("begin", begin_list, "AttrTypeListInt64")
-        .Attr("end", end_list, "AttrTypeListInt64")
-        .Attr("stride", stride_list, "AttrTypeListInt64")
-        .Attr("has_begin", has_begin_list, "AttrTypeListInt64")
-        .Attr("has_end", has_end_list, "AttrTypeListInt64")
+        .Attr("begin", begin_list)
+        .Attr("end", end_list)
+        .Attr("stride", stride_list)
+        .Attr("has_begin", has_begin_list)
+        .Attr("has_end", has_end_list)
         .Build()
     )
     return op.InferAndTryRun().RemoteBlobList()[0]
@@ -382,7 +382,7 @@ def concat(
         .Op("concat")
         .Input("in", values)
         .Output("out")
-        .Attr("axis", int(axis), "AttrTypeInt32")
+        .Attr("axis", int(axis))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -423,7 +423,7 @@ def scatter_nd(
         .Op("scatter_nd")
         .Input("indices", [indices])
         .Input("updates", [updates])
-        .Attr("shape", shape, "AttrTypeShape")
+        .Attr("shape", shape)
         .Output("out")
         .Build()
     )
@@ -643,9 +643,9 @@ def generate_random_batch_permutation_indices(
         .Output("y")
     )
     if seed is not None:
-        op.Attr("seed", seed, "AttrTypeInt64")
+        op.Attr("seed", seed)
     else:
-        op.Attr("seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1), "AttrTypeInt64")
+        op.Attr("seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1))
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
@@ -730,7 +730,7 @@ def squeeze(
         .Op("squeeze")
         .Input("in", [input])
         .Output("out")
-        .Attr("axes", list(axis), "AttrTypeListInt32")
+        .Attr("axes", list(axis))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -750,7 +750,7 @@ def expand_dims(
         .Op("expand_dims")
         .Input("in", [input])
         .Output("out")
-        .Attr("axis", axis, "AttrTypeInt32")
+        .Attr("axis", axis)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -782,7 +782,7 @@ def broadcast_like(
         .Op("broadcast_like")
         .Input("x", [x])
         .Input("like", [like])
-        .Attr("broadcast_axes", broadcast_axes, "AttrTypeListInt32")
+        .Attr("broadcast_axes", broadcast_axes)
         .Output("y")
         .Build()
     )

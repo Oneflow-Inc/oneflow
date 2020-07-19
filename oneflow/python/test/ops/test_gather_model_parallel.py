@@ -24,14 +24,14 @@ def _test_gather_model_parallel_fw(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def gather_model_parallel_fw_job(
         params=flow.FixedTensorDef(params_shape, dtype=flow.float),
         indices=flow.FixedTensorDef(indices_shape, dtype=flow.int32),
     ):
-        with flow.fixed_placement(device_type, "0:0-3"):
+        with flow.scope.placement(device_type, "0:0-3"):
             params = params.with_distribute(flow.distribute.split(split_axis))
             indices = indices.with_distribute(flow.distribute.broadcast())
             return flow.gather(params=params, indices=indices, axis=axis)

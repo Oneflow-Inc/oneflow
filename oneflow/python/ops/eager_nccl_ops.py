@@ -19,7 +19,7 @@ def eager_nccl_all_reduce(
         .Op("eager_nccl_all_reduce")
         .Input("in", [x])
         .Output("out")
-        .Attr("parallel_conf", parallel_conf, "AttrTypeString")
+        .Attr("parallel_conf", parallel_conf)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

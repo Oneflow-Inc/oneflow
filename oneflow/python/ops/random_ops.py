@@ -25,7 +25,7 @@ def Bernoulli(
         .Op("bernoulli")
         .Input("in", [x])
         .Output("out")
-        .Attr("dtype", dtype, "AttrTypeDataType")
+        .Attr("dtype", dtype)
         .SetRandomSeed(seed)
         .Build()
         .InferAndTryRun()

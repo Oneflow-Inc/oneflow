@@ -192,7 +192,7 @@ def test_pool(_):
             )
             flow.watch_diff(v, assert_grad)
             x += v
-            with flow.device_prior_placement(device_type, "0:0"):
+            with flow.scope.placement(device_type, "0:0"):
                 pooling_f = None
                 if pooling_type == "AVG":
                     pooling_f = getattr(flow.nn, "avg_pool{}d".format(dim))

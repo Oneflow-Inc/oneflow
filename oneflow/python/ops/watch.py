@@ -55,7 +55,7 @@ def LazyWatch(blob_watched, handler_or_prompt=None):
         tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
             blob_watched.parallel_conf
         )
-        with oneflow.fixed_placement(*tag_and_dev_ids):
+        with oneflow.scope.placement(*tag_and_dev_ids):
             compile_context.CurJobAddOp(op_conf)
         watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
     elif isinstance(blob_watched, MirroredBlob):
