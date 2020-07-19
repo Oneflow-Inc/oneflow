@@ -7,7 +7,7 @@ def my_test_source(name, seed):
         flow.user_op_builder(name)
         .Op("TestRandomSource")
         .Output("out")
-        .Attr("seed", seed, "AttrTypeInt64")
+        .Attr("seed", seed)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
