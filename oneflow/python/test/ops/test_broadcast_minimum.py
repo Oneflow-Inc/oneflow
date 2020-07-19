@@ -15,7 +15,7 @@ def _run_test(test_case, a, b, dtype, device):
         a=flow.FixedTensorDef(a.shape, dtype=dtype),
         b=flow.FixedTensorDef(b.shape, dtype=dtype),
     ):
-        with flow.fixed_placement(device, "0:0"):
+        with flow.scope.placement(device, "0:0"):
             return flow.math.minimum(a, b)
 
     out = BroadcastMinimum(a, b).get()

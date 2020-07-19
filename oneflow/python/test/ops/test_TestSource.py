@@ -20,7 +20,7 @@ def test_testsource(test_case):
 
     @flow.global_function(func_config)
     def TestSourceJob():
-        with flow.fixed_placement("cpu", "0:0"):
+        with flow.scope.placement("cpu", "0:0"):
             ret = my_test_source("my_cc_test_source_op")
         # print("cons_test_source_batch_axis", ret.batch_axis)
         test_case.assertTrue(ret.batch_axis is not None and ret.batch_axis == 0)
