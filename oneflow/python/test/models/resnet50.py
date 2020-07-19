@@ -275,7 +275,7 @@ def main(args):
     flow.config.gpu_device_num(args.gpu_num_per_node)
 
     train_config = flow.FunctionConfig()
-    train_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    train_config.default_distribute_strategy(flow.scope.consistent_view())
     train_config.default_data_type(flow.float)
     train_config.train.primary_lr(0.0032)
     train_config.train.model_update_conf(dict(naive_conf={}))
@@ -294,7 +294,7 @@ def main(args):
 
     @flow.global_function(eval_config)
     def evaluate():
-        with flow.distribute.consistent_strategy():
+        with flow.scope.consistent_view():
             _set_trainable(False)
             return resnet50(args, args.eval_dir)
 

@@ -27,7 +27,7 @@ def test_shuffle(_):
         def TestJob(
             x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
         ):
-            with flow.fixed_placement(device_type, "0:0"):
+            with flow.scope.placement(device_type, "0:0"):
                 return flow.random.shuffle(x)
 
         x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
@@ -47,7 +47,7 @@ def test_shuffle(_):
         def TestJob1(
             x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
         ):
-            with flow.fixed_placement(device_type, "0:0"):
+            with flow.scope.placement(device_type, "0:0"):
                 return flow.random.generate_random_batch_permutation_indices(x)
 
         x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])

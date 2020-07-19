@@ -30,14 +30,14 @@ def _make_gather_fn(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     if mirrored:
-        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+        func_config.default_distribute_strategy(flow.scope.mirrored_view())
     else:
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     def do_gather(x_blob, i_blob):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "params",
                 shape=params.shape,
@@ -90,7 +90,7 @@ def _compare_gather_with_tf(
 
         def compare_dy(params_grad):
             test_case.assertTrue(
-                np.allclose(dy, params_grad.ndarray_list()[0], atol=1e-5, rtol=1e-5)
+                np.allclose(dy, params_grad.numpy_list()[0], atol=1e-5, rtol=1e-5)
             )
 
     else:
@@ -108,7 +108,7 @@ def _compare_gather_with_tf(
     check_point.init()
 
     if mirrored:
-        of_y = gather_fn([params], [indices]).get().ndarray_list()[0]
+        of_y = gather_fn([params], [indices]).get().numpy_list()[0]
     else:
         of_y = gather_fn(params, indices).get().numpy()
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))

@@ -93,7 +93,7 @@ def test_smooth_l1_loss(_):
             )
             flow.watch_diff(v, assert_prediction_grad)
             prediction += v
-            with flow.fixed_placement(device_type, "0:0"):
+            with flow.scope.placement(device_type, "0:0"):
                 loss = flow.smooth_l1_loss(prediction, label, beta)
                 flow.losses.add_loss(loss)
                 return loss

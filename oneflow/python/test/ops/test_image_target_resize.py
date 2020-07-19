@@ -8,7 +8,7 @@ def _of_image_target_resize(images, image_static_shape, target_size, max_size):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def image_target_resize_job(
@@ -29,8 +29,8 @@ def _of_image_target_resize(images, image_static_shape, target_size, max_size):
 
     resized_images, size, scale = image_target_resize_job([images]).get()
     resized_images = resized_images.numpy_lists()[0]
-    size = size.ndarray_list()[0]
-    scale = scale.ndarray_list()[0]
+    size = size.numpy_list()[0]
+    scale = scale.numpy_list()[0]
     return resized_images, size, scale
 
 
