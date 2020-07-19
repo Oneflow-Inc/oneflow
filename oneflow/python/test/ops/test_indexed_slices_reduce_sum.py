@@ -29,7 +29,7 @@ def _run_test(test_case, indices, values, indices_dtype, values_dtype, device):
         indices=flow.FixedTensorDef(indices.shape, dtype=indices_dtype),
         values=flow.FixedTensorDef(values.shape, dtype=values_dtype),
     ):
-        with flow.fixed_placement(device, "0:0"):
+        with flow.scope.placement(device, "0:0"):
             return flow.experimental.indexed_slices_reduce_sum(indices, values)
 
     out_indices, out_values, num_unique = TestJob(indices, values).get()

@@ -13,7 +13,7 @@ def sort(input, direction="ASCENDING", name=None):
         .Op("sort")
         .Input("in", [input])
         .Output("out")
-        .Attr("direction", direction, "AttrTypeString")
+        .Attr("direction", direction)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -30,7 +30,7 @@ def argsort(input, direction="ASCENDING", name=None):
         .Op("arg_sort")
         .Input("in", [input])
         .Output("out")
-        .Attr("direction", direction, "AttrTypeString")
+        .Attr("direction", direction)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
