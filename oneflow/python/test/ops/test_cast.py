@@ -20,7 +20,7 @@ def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dt
             shape=input_shape, dtype=type_name_to_flow_type[dtype]
         )
     ):
-        with flow.fixed_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.cast(input_def, dtype=type_name_to_flow_type[dtype])
 
     input = np.random.rand(*input_shape).astype(type_name_to_np_type[dtype])

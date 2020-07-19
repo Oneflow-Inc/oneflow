@@ -53,7 +53,7 @@ def _test_unsorted_segment_sum_model_parallel_fw(
         segment_ids=flow.FixedTensorDef(segment_ids_arr.shape, dtype=flow.int32),
         like=flow.FixedTensorDef(out_arr.shape, dtype=flow.float),
     ):
-        with flow.fixed_placement(device_type, "0:0-3"):
+        with flow.scope.placement(device_type, "0:0-3"):
             if split_axis < axis:
                 data = data.with_distribute(flow.distribute.split(split_axis))
             elif split_axis == axis:

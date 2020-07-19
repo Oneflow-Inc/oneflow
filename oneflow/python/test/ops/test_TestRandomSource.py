@@ -21,7 +21,7 @@ def test_testsource(test_case):
 
     @flow.global_function(func_config)
     def TestSourceJob():
-        with flow.fixed_placement("cpu", "0:0"):
+        with flow.scope.placement("cpu", "0:0"):
             ret = my_test_source("my_cc_test_source_op", 0)
         return ret
 
