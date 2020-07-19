@@ -119,11 +119,7 @@ def _GetSequence(value, n, name):
 
 def test_pool(_):
     arg_dict = OrderedDict()
-    is_user_op = os.getenv("ENABLE_USER_OP") != "False"
-    if is_user_op:
-        arg_dict["device_type"] = ["gpu", "cpu"]
-    else:
-        arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["pool_conf"] = pool_confs
     arg_dict["data_type"] = ["float32"]
     arg_dict["pooling_type"] = ["AVG", "MAX"]
