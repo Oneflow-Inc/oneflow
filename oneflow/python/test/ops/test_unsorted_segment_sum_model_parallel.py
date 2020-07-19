@@ -84,8 +84,6 @@ def _test_unsorted_segment_sum_model_parallel_fw(
 
 
 def test_unsorted_segment_sum_model_parallel_fw(test_case):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["out_shape"] = [(96, 96, 96)]
