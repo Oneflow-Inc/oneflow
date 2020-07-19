@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import copy
 import functools
 import re
+import inspect
 from typing import Any, Callable, Optional, Union
 
 import oneflow.python.framework.session_context as session_ctx
@@ -62,11 +63,31 @@ class FunctionConfig(object):
         return FunctionConfigSetter
 
 
+@oneflow_export("global_function")
+def api_oneflow_function(
+    function_config: FunctionConfig = FunctionConfig(),
+) -> Callable[[Callable], Callable]:
+    r"""Creates a callable OneFlow global function from a Python function.
+    For instance::
+        @oneflow.global_function(flow.FunctionConfig())
+        def train():
+            # your model
+    Args:
+        function_config: a `FunctionConfig` object
+    Returns:
+        a callable which is called to execute the compiled function
+    """
+    api = enable_if.unique([eager_oneflow_function, lazy_oneflow_function])
+    return api(function_config)
+
+
 @enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
 def eager_oneflow_function(function_config=FunctionConfig()):
     assert isinstance(function_config, FunctionConfig)
 
     def Decorator(job_func):
+        if not hasattr(job_func, "__oneflow_function_signature__"):
+            job_func.__oneflow_function_signature__ = inspect.signature(job_func)
         sess = session_ctx.GetDefaultSession()
         function_desc = _CloneFunctionDesc(function_config.function_desc, job_func)
 
@@ -89,6 +110,8 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
     assert isinstance(function_config, FunctionConfig)
 
     def Decorator(job_func):
+        if not hasattr(job_func, "__oneflow_function_signature__"):
+            job_func.__oneflow_function_signature__ = inspect.signature(job_func)
         sess = session_ctx.GetDefaultSession()
 
         @functools.wraps(job_func)
@@ -102,24 +125,6 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
         return Func
 
     return Decorator
-
-
-@oneflow_export("global_function")
-def api_oneflow_function(
-    function_config: FunctionConfig = FunctionConfig(),
-) -> Callable[[Callable], Callable]:
-    r"""Creates a callable OneFlow global function from a Python function.
-    For instance::
-        @oneflow.global_function(flow.FunctionConfig())
-        def train():
-            # your model
-    Args:
-        function_config: a `FunctionConfig` object
-    Returns:
-        a callable which is called to execute the compiled function
-    """
-    api = enable_if.unique([lazy_oneflow_function, eager_oneflow_function])
-    return api(function_config)
 
 
 def _CloneFunctionDesc(func_desc, job_func):
