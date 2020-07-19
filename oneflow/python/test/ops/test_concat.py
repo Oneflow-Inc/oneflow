@@ -279,7 +279,9 @@ def test_static_concat_case_1(test_case):
     _test_static_concat(test_case, (3, 8, 4), 1)
 
 
-def _test_hybrid_concat(test_case, static_shape, axis, max_dim_size=None, verbose=False):
+def _test_hybrid_concat(
+    test_case, static_shape, axis, max_dim_size=None, verbose=False
+):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.train.primary_lr(1e-3)
@@ -321,7 +323,9 @@ def _test_hybrid_concat(test_case, static_shape, axis, max_dim_size=None, verbos
         flow.watch_diff(var, compare_var_diff)
 
         if max_dim_size is None:
-            test_case.assertTrue(concated.shape[axis] == (static_shape[axis] * 3 + rand_sub_shape[axis]))
+            test_case.assertTrue(
+                concated.shape[axis] == (static_shape[axis] * 3 + rand_sub_shape[axis])
+            )
         else:
             test_case.assertTrue(concated.shape[axis] == max_dim_size)
 
