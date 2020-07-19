@@ -25,7 +25,7 @@ def compare_with_tensorflow(
 
     @flow.global_function(func_config)
     def UpsampleJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "input",
                 shape=input_shape,
