@@ -92,7 +92,19 @@ def _CompileJob(function_desc):
 
 def _InterpretGlobalFunction(function_desc, args):
     func = function_desc.job_func
-    func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
+    parameters = func.__oneflow_function_signature__.parameters
+    if len(parameters) == 0:
+        func.__oneflow_input_blob_defs__ = ()
+    elif all(p.annotation is inspect._empty for _, p in parameters.items()):
+        func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
+    elif all(p.annotation is not inspect._empty for _, p in parameters.items()):
+        func.__oneflow_input_blob_defs__ = _MakeInputBlobDefFromParameterSignature(
+            parameters
+        )
+    else:
+        raise NotImplementedError(
+            "All parameters of global function should be annotated"
+        )
     inputs = push_util.MakeEagerInputBlobs(func.__oneflow_input_blob_defs__, args)
     ret = func(*inputs)
     return _RecursiveMakeRetRemoteBlobs(
