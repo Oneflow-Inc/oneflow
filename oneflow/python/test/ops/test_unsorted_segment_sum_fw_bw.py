@@ -25,14 +25,14 @@ def _make_unsorted_segment_sum_fn(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     if mirrored:
-        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+        func_config.default_distribute_strategy(flow.scope.mirrored_view())
     else:
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     def do_unsorted_segment_sum(x_blob, i_blob):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "data",
                 shape=data.shape,
@@ -95,9 +95,7 @@ def _compare_unsorted_segment_sum_with_tf(
     if mirrored:
 
         def compare_dy(data_grad):
-            test_case.assertTrue(
-                np.array_equal(dy.numpy(), data_grad.ndarray_list()[0])
-            )
+            test_case.assertTrue(np.array_equal(dy.numpy(), data_grad.numpy_list()[0]))
 
     else:
 
@@ -112,7 +110,7 @@ def _compare_unsorted_segment_sum_with_tf(
     check_point.init()
 
     if mirrored:
-        of_y = unsorted_segment_sum_fn([data], [segment_ids]).get().ndarray_list()[0]
+        of_y = unsorted_segment_sum_fn([data], [segment_ids]).get().numpy_list()[0]
     else:
         of_y = unsorted_segment_sum_fn(data, segment_ids).get().numpy()
     test_case.assertTrue(np.allclose(y.numpy(), of_y, rtol=1e-5, atol=1e-5))

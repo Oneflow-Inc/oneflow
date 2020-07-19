@@ -36,35 +36,18 @@ class JobDesc final {
   bool enable_experiment_run() const;
   bool enable_reuse_mem() const { return job_conf_.enable_reuse_mem(); }
   bool enable_inplace() const { return job_conf_.enable_inplace(); }
-  bool enable_inplace_in_reduce_struct() const {
-    return job_conf_.enable_inplace_in_reduce_struct();
-  }
   bool enable_float_compute_for_half_gemm() const {
     return job_conf_.enable_float_compute_for_half_gemm();
   }
   bool enable_auto_mixed_precision() const { return job_conf_.enable_auto_mixed_precision(); }
-  bool enable_nccl() const { return job_conf_.enable_nccl(); }
-  bool use_nccl_inter_node_communication() const {
-    return job_conf_.use_nccl_inter_node_communication();
-  }
-  bool use_boxing_v2() const { return job_conf_.use_boxing_v2(); }
   bool do_parallel_cast_before_widening_type_cast() const {
     return job_conf_.do_parallel_cast_before_widening_type_cast();
   };
-  bool enable_all_reduce_group() const { return job_conf_.enable_all_reduce_group(); }
   bool enable_non_distributed_optimizer() const {
     return job_conf_.enable_non_distributed_optimizer();
   }
-  int64_t non_distributed_optimizer_group_size_mbyte() const {
-    return job_conf_.non_distributed_optimizer_group_size_mbyte();
-  }
-  bool disable_all_reduce_sequence() const { return job_conf_.disable_all_reduce_sequence(); }
   bool prune_parallel_cast_ops() const { return job_conf_.prune_parallel_cast_ops(); }
-  int64_t all_reduce_group_num() const;
-  int64_t all_reduce_group_min_byte() const;
-  float all_reduce_group_size_warmup() const;
-  float all_reduce_lazy_ratio() const;
-  bool all_reduce_fp16() const;
+  bool prune_cast_to_static_shape_ops() const { return job_conf_.prune_cast_to_static_shape_ops(); }
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
 
   bool enable_keep_header_only() const { return job_conf_.enable_keep_header_only(); }

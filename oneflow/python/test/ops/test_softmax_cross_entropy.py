@@ -29,7 +29,7 @@ def compare_with_tensorflow(device_type, data_type, shape):
     def SoftmaxCrossEntropyWithLogitsJob(
         labels=flow.FixedTensorDef(shape, dtype=type_name_to_flow_type[data_type])
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=shape,

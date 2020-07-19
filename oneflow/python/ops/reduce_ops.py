@@ -1,11 +1,12 @@
+import os
+from typing import Optional, Sequence, Sized, Union
+
 import oneflow as flow
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import os
-
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -39,15 +40,20 @@ def _do_reduce(x, name, op_type_name, keepdims, axis):
         .Op(op_type_name)
         .Input("input_tensor", [x])
         .Output("output_tensor")
-        .Attr("axis", axis, "AttrTypeListInt32")
-        .Attr("keepdims", keepdims, "AttrTypeBool")
+        .Attr("axis", axis)
+        .Attr("keepdims", keepdims)
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("math.reduce_sum")
-def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
+def reduce_sum(
+    input_tensor: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""Computes the sum of elements across dimensions of a tensor.
 
     Args:
@@ -71,15 +77,20 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
         .Op("reduce_sum")
         .Input("input_tensor", [input_tensor])
         .Output("output_tensor")
-        .Attr("axis", axis, "AttrTypeListInt32")
-        .Attr("keepdims", keepdims, "AttrTypeBool")
+        .Attr("axis", axis)
+        .Attr("keepdims", keepdims)
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("math.reduce_any")
-def reduce_any(x, axis=None, keepdims=False, name=None):
+def reduce_any(
+    x: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     name = _gen_unique_name_if_need(name, "ReduceAny_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
@@ -88,7 +99,12 @@ def reduce_any(x, axis=None, keepdims=False, name=None):
 
 
 @oneflow_export("math.reduce_min")
-def reduce_min(x, axis=None, keepdims=False, name=None):
+def reduce_min(
+    x: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     name = _gen_unique_name_if_need(name, "ReduceMin_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
@@ -97,7 +113,12 @@ def reduce_min(x, axis=None, keepdims=False, name=None):
 
 
 @oneflow_export("math.reduce_max")
-def reduce_max(x, axis=None, keepdims=False, name=None):
+def reduce_max(
+    x: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     name = _gen_unique_name_if_need(name, "ReduceMax_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
@@ -106,7 +127,12 @@ def reduce_max(x, axis=None, keepdims=False, name=None):
 
 
 @oneflow_export("math.reduce_prod")
-def reduce_prod(x, axis=None, keepdims=False, name=None):
+def reduce_prod(
+    x: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     name = _gen_unique_name_if_need(name, "ReduceProd_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
@@ -115,7 +141,12 @@ def reduce_prod(x, axis=None, keepdims=False, name=None):
 
 
 @oneflow_export("math.reduce_all")
-def reduce_all(x, axis=None, keepdims=False, name=None):
+def reduce_all(
+    x: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     name = _gen_unique_name_if_need(name, "ReduceAll_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
@@ -124,7 +155,12 @@ def reduce_all(x, axis=None, keepdims=False, name=None):
 
 
 @oneflow_export("math.reduce_euclidean_norm")
-def reduce_euclidean_norm(input_tensor, axis=None, keepdims=False, name=None):
+def reduce_euclidean_norm(
+    input_tensor: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     name = _gen_unique_name_if_need(name, "ReduceEuclideanNorm_")
     return flow.math.sqrt(
         flow.math.reduce_sum(
@@ -138,7 +174,12 @@ def reduce_euclidean_norm(input_tensor, axis=None, keepdims=False, name=None):
 
 
 @oneflow_export("math.reduce_logsumexp")
-def reduce_logsumexp(input_tensor, axis=None, keepdims=False, name=None):
+def reduce_logsumexp(
+    input_tensor: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     name = _gen_unique_name_if_need(name, "ReduceLogSumExp_")
     axis = _check_axis(axis, input_tensor.shape)
     return flow.math.log(
@@ -153,7 +194,12 @@ def reduce_logsumexp(input_tensor, axis=None, keepdims=False, name=None):
 
 
 @oneflow_export("math.reduce_std")
-def reduce_std(input_tensor, axis=None, keepdims=False, name=None):
+def reduce_std(
+    input_tensor: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     name = _gen_unique_name_if_need(name, "ReduceStd_")
     axis = _check_axis(axis, input_tensor.shape)
     if isinstance(axis, list) and len(axis) == 0:
@@ -169,7 +215,12 @@ def reduce_std(input_tensor, axis=None, keepdims=False, name=None):
 
 
 @oneflow_export("math.reduce_variance")
-def reduce_variance(input_tensor, axis=None, keepdims=False, name=None):
+def reduce_variance(
+    input_tensor: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     name = _gen_unique_name_if_need(name, "ReduceVariance_")
     axis = _check_axis(axis, input_tensor.shape)
     if isinstance(axis, list) and len(axis) == 0:
