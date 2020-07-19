@@ -24,8 +24,13 @@ def AsyncPush(session, job_func, *arg):
 
 def _AsyncPushArg(session, arg_blob_def, arg_ndarray):
     if isinstance(arg_blob_def, (list, tuple)):
-        assert type(arg_blob_def) is type(arg_ndarray)
-        assert len(arg_blob_def) == len(arg_ndarray)
+        assert isinstance(arg_ndarray, (list, tuple)), "type(arg_ndarray): %s" % (
+            type(arg_ndarray)
+        )
+        assert len(arg_blob_def) == len(arg_ndarray), "%s v.s. %s" % (
+            len(arg_blob_def),
+            len(arg_ndarray),
+        )
         for blob_def, ndarray in zip(arg_blob_def, arg_ndarray):
             _AsyncPushArg(session, blob_def, ndarray)
     elif isinstance(arg_blob_def, dict):
@@ -40,7 +45,9 @@ def _AsyncPushArg(session, arg_blob_def, arg_ndarray):
 
 def MakeEagerInputBlobs(arg_blob_def, arg_ndarray):
     if isinstance(arg_blob_def, (list, tuple)):
-        assert type(arg_blob_def) is type(arg_ndarray)
+        assert isinstance(arg_ndarray, (list, tuple)), "type(arg_ndarray): %s" % (
+            type(arg_ndarray)
+        )
         assert len(arg_blob_def) == len(arg_ndarray)
         return type(arg_blob_def)(
             MakeEagerInputBlobs(blob_def, ndarray)

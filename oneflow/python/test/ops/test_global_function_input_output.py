@@ -28,8 +28,6 @@ def test_lazy_input_output(test_case):
 
 
 def test_eager_output(test_case):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
 
     flow.clear_default_session()
     flow.enable_eager_execution()
@@ -46,8 +44,6 @@ def test_eager_output(test_case):
 
 
 def test_eager_multi_output(test_case):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
 
     flow.clear_default_session()
     flow.enable_eager_execution()
@@ -73,8 +69,6 @@ def test_eager_multi_output(test_case):
 
 
 def test_eager_input(test_case):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
 
     flow.clear_default_session()
     flow.enable_eager_execution()
@@ -91,8 +85,6 @@ def test_eager_input(test_case):
 
 
 def test_eager_input_fixed(test_case):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
 
     flow.clear_default_session()
     flow.enable_eager_execution()
@@ -109,8 +101,6 @@ def test_eager_input_fixed(test_case):
 
 
 def test_eager_multi_input(test_case):
-    if os.getenv("ENABLE_USER_OP") != "True":
-        return
 
     flow.clear_default_session()
     flow.enable_eager_execution()
@@ -131,8 +121,6 @@ def test_eager_multi_input(test_case):
 
 
 def test_eager_input_output(test_case):
-    if os.getenv("ENABLE_USER_OP") != "True":
-        return
 
     flow.clear_default_session()
     flow.enable_eager_execution()
@@ -201,8 +189,6 @@ def test_input_ndarray_contiguous(test_case):
 
 # TODO: system op need manaully register blob_object in default_blob_register or bw_blob_register
 # def test_eager_system_op(test_case):
-#     if os.getenv("ENABLE_USER_OP") != "True":
-#         return
 
 #     flow.clear_default_session()
 #     flow.enable_eager_execution()
