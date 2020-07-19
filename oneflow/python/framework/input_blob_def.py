@@ -161,7 +161,7 @@ class FixedTensorDef(ArgBlobDef):
         else:
             device_tag = "cpu"
             device_ids = "0:0"
-        with oneflow.fixed_placement(device_tag, device_ids):
+        with oneflow.scope.placement(device_tag, device_ids):
             return compile_context.CurJobAddConsistentOp(op_conf)
 
     def SetBatchAxisAndSplitAxis(

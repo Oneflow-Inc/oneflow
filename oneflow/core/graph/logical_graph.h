@@ -34,12 +34,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
 
   void MergeEdge();
   void SetNodeDataLbi();
-  void AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst,
-                                      const ReduceRankCtx& prev_rank_ctx);
-  void AddAllReduce(LogicalNode* src, LogicalNode* dst);
-  void AddNcclAllReduce(LogicalNode* src, LogicalNode* dst);
-  void AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNode* dst);
-  void ReplaceAllReduceFacades();
 
   void UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn);
   void UpdateEdge2Obn(const LogicalEdge* edge, const std::string& obn);

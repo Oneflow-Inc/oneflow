@@ -23,11 +23,11 @@ def test_multi_node_comm_net(test_case):
 
     @flow.global_function(func_config)
     def ReluJob(x=flow.FixedTensorDef((10, 2))):
-        with flow.fixed_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             out0 = ccrelu(x, "my_op_0_0")
-        with flow.fixed_placement("gpu", "1:0"):
+        with flow.scope.placement("gpu", "1:0"):
             out1 = ccrelu(out0, "my_op_1_0")
-        with flow.fixed_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             out2 = ccrelu(out1, "my_op_print")
         return out2
 
@@ -52,18 +52,18 @@ def test_multi_node_comm_net(test_case):
 def test_multi_node_comm_net_dynamic(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.scope.mirrored_view())
-    func_config.default_placement_scope(flow.fixed_placement("gpu", "0:0"))
+    func_config.default_placement_scope(flow.scope.placement("gpu", "0:0"))
     func_config.default_data_type(flow.float)
     flow.config.machine_num(2)
     flow.config.gpu_device_num(1)
 
     @flow.global_function(func_config)
     def ReluJob(x=flow.MirroredTensorDef((10, 2))):
-        with flow.fixed_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             out0 = flow.keras.activations.relu(x)
-        with flow.fixed_placement("gpu", "1:0"):
+        with flow.scope.placement("gpu", "1:0"):
             out1 = flow.keras.activations.relu(out0)
-        with flow.fixed_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             out2 = flow.keras.activations.relu(out1)
         return out2
 
@@ -88,18 +88,18 @@ def test_multi_node_comm_net_dynamic(test_case):
 def test_multi_node_comm_net_dynamic_empty(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.scope.mirrored_view())
-    func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
+    func_config.default_placement_scope(flow.scope.placement("cpu", "0:0"))
     func_config.default_data_type(flow.float)
     flow.config.machine_num(2)
     flow.config.gpu_device_num(1)
 
     @flow.global_function(func_config)
     def ReluJob(x=flow.MirroredTensorDef((10, 2))):
-        with flow.fixed_placement("cpu", "0:0"):
+        with flow.scope.placement("cpu", "0:0"):
             out0 = flow.keras.activations.relu(x)
-        with flow.fixed_placement("cpu", "1:0"):
+        with flow.scope.placement("cpu", "1:0"):
             out1 = flow.keras.activations.relu(out0)
-        with flow.fixed_placement("cpu", "0:0"):
+        with flow.scope.placement("cpu", "0:0"):
             out2 = flow.keras.activations.relu(out1)
         return out2
 
