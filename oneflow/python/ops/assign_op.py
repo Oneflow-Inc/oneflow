@@ -48,7 +48,7 @@ def lazy_system_assign(ref, value, validate_shape=None, use_locking=None, name=N
     device_tag, machine_device_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
         ref.parallel_conf
     )
-    with oneflow.fixed_placement(device_tag, machine_device_ids):
+    with oneflow.scope.placement(device_tag, machine_device_ids):
         interpret_util.Forward(op_conf)
     return ref
 

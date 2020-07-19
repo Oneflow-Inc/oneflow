@@ -65,7 +65,7 @@ def test_acos_consistent_1n2c(test_case):
 def test_acos_cpu(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
+    func_config.default_placement_scope(flow.scope.placement("cpu", "0:0"))
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
