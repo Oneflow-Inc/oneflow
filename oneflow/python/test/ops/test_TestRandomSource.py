@@ -7,7 +7,7 @@ def my_test_source(name, seed):
         flow.user_op_builder(name)
         .Op("TestRandomSource")
         .Output("out")
-        .Attr("seed", seed, "AttrTypeInt64")
+        .Attr("seed", seed)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -21,7 +21,7 @@ def test_testsource(test_case):
 
     @flow.global_function(func_config)
     def TestSourceJob():
-        with flow.fixed_placement("cpu", "0:0"):
+        with flow.scope.placement("cpu", "0:0"):
             ret = my_test_source("my_cc_test_source_op", 0)
         return ret
 

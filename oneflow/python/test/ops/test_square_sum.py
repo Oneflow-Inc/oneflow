@@ -13,7 +13,7 @@ def _check(test_case, x, y):
 def _run_test(test_case, x, dtype, device):
     @flow.global_function(func_config)
     def SquareSum(x=flow.FixedTensorDef(x.shape, dtype=dtype)):
-        with flow.fixed_placement(device, "0:0"):
+        with flow.scope.placement(device, "0:0"):
             return flow.experimental.square_sum(x)
 
     y = SquareSum(x).get()

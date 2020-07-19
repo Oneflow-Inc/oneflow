@@ -63,7 +63,7 @@ def two_stage_reduce(x, axis=None, keepdims=False, op_type_name=None, name=None)
         device_ids,
     ) in current_placement_scope.machine_id2device_id_list.items():
         for device_id in device_ids:
-            with flow.fixed_placement(
+            with flow.scope.placement(
                 device_tag, str(machine_id) + ":" + str(device_id)
             ):
                 device_stage_out, device_stage_count = reduce_device_stage(
@@ -104,7 +104,7 @@ def reduce_device_stage(x, axis, op_name, name):
         .Output("out")
         .Output("mask")
         .Output("count")
-        .Attr("axis", axis, "AttrTypeListInt32")
+        .Attr("axis", axis)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()
@@ -120,8 +120,8 @@ def reduce_global_stage(x, device_count, axis, keepdims, op_name, name):
         .Input("device_count", [device_count])
         .Output("out")
         .Output("mask")
-        .Attr("axis", axis, "AttrTypeListInt32")
-        .Attr("keepdims", keepdims, "AttrTypeBool")
+        .Attr("axis", axis)
+        .Attr("keepdims", keepdims)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()

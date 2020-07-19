@@ -7,7 +7,7 @@ def my_test_source(name, out_num):
         flow.user_op_builder(name)
         .Op("TestSourceMultiGpuFixedOutNum")
         .Output("out")
-        .Attr("out_num", out_num, "AttrTypeInt64")
+        .Attr("out_num", out_num)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -21,7 +21,7 @@ def test_testsource_2_gpu(test_case):
 
     @flow.global_function(func_config)
     def TestSourceJob():
-        with flow.fixed_placement("cpu", "0:0-1"):
+        with flow.scope.placement("cpu", "0:0-1"):
             ret = my_test_source("my_cc_test_source_op", 10)
         # print("cons_test_source_batch_axis", ret.batch_axis)
         test_case.assertTrue(ret.batch_axis is not None and ret.batch_axis == 0)

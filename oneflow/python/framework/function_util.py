@@ -292,22 +292,30 @@ def set_enable_inplace(func_desc, value=True):
 
 @oneflow_function_config("enable_inplace_in_reduce_struct")
 def set_enable_inplace_in_reduce_struct(func_desc, value=True):
-    func_desc.job_config_proto.enable_inplace_in_reduce_struct = value
+    print(
+        "'enable_inplace_in_reduce_struct' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("enable_nccl")
 def set_enable_nccl(func_desc, value=True):
-    func_desc.job_config_proto.enable_nccl = value
+    print(
+        "'enable_nccl' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("use_nccl_inter_node_communication")
 def set_use_nccl_inter_node_communication(func_desc, value=True):
-    func_desc.job_config_proto.use_nccl_inter_node_communication = value
+    print(
+        "'use_nccl_inter_node_communication' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("use_boxing_v2")
 def set_use_boxing_v2(func_desc, value=True):
-    func_desc.job_config_proto.use_boxing_v2 = value
+    print(
+        "'use_boxing_v2' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("do_parallel_cast_before_widening_type_cast")
@@ -317,32 +325,44 @@ def set_do_parallel_cast_before_widening_type_cast(func_desc, value=True):
 
 @oneflow_function_config("enable_all_reduce_group")
 def set_enable_all_reduce_group(func_desc, value=True):
-    func_desc.job_config_proto.enable_all_reduce_group = value
+    print(
+        "'enable_all_reduce_group' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("all_reduce_group_num")
 def set_all_reduce_group_num(func_desc, value):
-    func_desc.job_config_proto.all_reduce_group_num = value
+    print(
+        "'all_reduce_group_num' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("all_reduce_lazy_ratio")
 def set_all_reduce_lazy_ratio(func_desc, value):
-    func_desc.job_config_proto.all_reduce_lazy_ratio = value
+    print(
+        "'all_reduce_lazy_ratio' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("all_reduce_group_min_mbyte")
 def set_all_reduce_group_min_mbyte(func_desc, value):
-    func_desc.job_config_proto.all_reduce_group_min_mbyte = value
+    print(
+        "'all_reduce_group_min_mbyte' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("all_reduce_group_size_warmup")
 def set_all_reduce_group_size_warmup(func_desc, value):
-    func_desc.job_config_proto.all_reduce_group_size_warmup = value
+    print(
+        "'all_reduce_group_size_warmup' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("all_reduce_fp16")
 def set_all_reduce_fp16(func_desc, value=True):
-    func_desc.job_config_proto.all_reduce_fp16 = value
+    print(
+        "'all_reduce_fp16' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("enable_non_distributed_optimizer")
@@ -352,7 +372,9 @@ def set_enable_non_distributed_optimizer(func_desc, value=True):
 
 @oneflow_function_config("disable_all_reduce_sequence")
 def set_disable_all_reduce_sequence(func_desc, value=True):
-    func_desc.job_config_proto.disable_all_reduce_sequence = value
+    print(
+        "'disable_all_reduce_sequence' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("prune_parallel_cast_ops")
@@ -360,9 +382,16 @@ def set_prune_parallel_cast_ops(func_desc, value=True):
     func_desc.job_config_proto.prune_parallel_cast_ops = value
 
 
+@oneflow_function_config("prune_cast_to_static_shape_ops")
+def set_prune_cast_to_static_shape_ops(func_desc, value=True):
+    func_desc.job_config_proto.prune_cast_to_static_shape_ops = value
+
+
 @oneflow_function_config("non_distributed_optimizer_group_size_mbyte")
 def set_non_distributed_optimizer_group_size_mbyte(func_desc, value):
-    func_desc.job_config_proto.non_distributed_optimizer_group_size_mbyte = value
+    print(
+        "'non_distributed_optimizer_group_size_mbyte' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config(

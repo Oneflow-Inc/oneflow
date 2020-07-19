@@ -34,14 +34,14 @@ def _test_two_stage_reduce(
 
     @flow.global_function(func_config)
     def two_stage_reduce_job(x=flow.FixedTensorDef((4, 20, 20, 20))):
-        with flow.fixed_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
                 name="v1",
                 shape=(1,),
                 dtype=flow.float,
                 initializer=flow.zeros_initializer(),
             )
-        with flow.fixed_placement(device_type, "0:0-3"):
+        with flow.scope.placement(device_type, "0:0-3"):
             loss = flow_func(
                 x.with_distribute(flow.distribute.split(split_axis)),
                 axis=axis,
