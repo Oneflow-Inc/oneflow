@@ -79,7 +79,7 @@ def test_layer_norm(_):
             )
             flow.watch_diff(v, assert_grad)
             x += v
-            with flow.device_prior_placement(device_type, "0:0"):
+            with flow.scope.placement(device_type, "0:0"):
                 y = flow.layers.layer_norm(
                     x,
                     begin_norm_axis=begin_norm_axis,

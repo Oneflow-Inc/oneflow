@@ -236,11 +236,11 @@ def layer_norm(
         )
         op.Input("gamma", [gamma])
         op.Output("normalized")
-    op.Attr("center", center, "AttrTypeBool")
-    op.Attr("scale", scale, "AttrTypeBool")
-    op.Attr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
-    op.Attr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
-    op.Attr("epsilon", epsilon, "AttrTypeDouble")
+    op.Attr("center", center)
+    op.Attr("scale", scale)
+    op.Attr("begin_norm_axis", begin_norm_axis)
+    op.Attr("begin_params_axis", begin_params_axis)
+    op.Attr("epsilon", epsilon)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
@@ -262,8 +262,8 @@ def layer_norm_grad(
         .Input("mean", [mean])
         .Input("inv_variance", [inv_variance])
         .Output("dx")
-        .Attr("begin_norm_axis", begin_norm_axis, "AttrTypeInt64")
-        .Attr("epsilon", 1e-5, "AttrTypeDouble")
+        .Attr("begin_norm_axis", begin_norm_axis)
+        .Attr("epsilon", 1e-5)
     )
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
@@ -287,7 +287,7 @@ def layer_norm_param_grad(
         .Output("beta_diff")
         .Output("gamma_diff")
         .Output("reduce_buf")
-        .Attr("begin_params_axis", begin_params_axis, "AttrTypeInt64")
+        .Attr("begin_params_axis", begin_params_axis)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()
@@ -383,10 +383,10 @@ def batch_normalization(
         .Input("gamma", [gamma])
         .Input("beta", [beta])
         .Output("y")
-        .Attr("axis", axis, "AttrTypeInt32")
-        .Attr("epsilon", epsilon, "AttrTypeFloat")
-        .Attr("training", training, "AttrTypeBool")
-        .Attr("momentum", momentum, "AttrTypeFloat")
+        .Attr("axis", axis)
+        .Attr("epsilon", epsilon)
+        .Attr("training", training)
+        .Attr("momentum", momentum)
     )
     if trainable and training:
         builder = builder.Output("mean").Output("inv_variance")

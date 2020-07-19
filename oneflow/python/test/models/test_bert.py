@@ -142,7 +142,7 @@ def PretrainJob():
 
 
 func_config = flow.FunctionConfig()
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_distribute_strategy(flow.scope.consistent_view())
 func_config.train.primary_lr(FLAGS.lr)
 func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
 func_config.enable_auto_mixed_precision(FLAGS.enable_auto_mixed_precision)
@@ -187,7 +187,7 @@ def GetSeveralLossesAsNumpy(enable_inplace, num_iters=10):
     flow.config.enable_debug_mode(True)
     flow.config.gpu_device_num(1)
     train_config = flow.FunctionConfig()
-    train_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    train_config.default_distribute_strategy(flow.scope.consistent_view())
     train_config.train.primary_lr(FLAGS.lr)
     train_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
     train_config.enable_inplace(enable_inplace)

@@ -17,7 +17,7 @@ def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=N
         return outputs
 
     if dynamic is True:
-        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+        func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
         def slice(input_blob=flow.MirroredTensorDef(shape=input_shape, dtype=dtype)):
@@ -27,7 +27,7 @@ def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=N
         return map(lambda x: x.numpy_list()[0], outputs)
 
     else:
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_distribute_strategy(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
         def slice(input_blob=flow.FixedTensorDef(shape=input_shape, dtype=dtype)):
@@ -168,7 +168,7 @@ def test_slice_grad(test_case):
 
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 

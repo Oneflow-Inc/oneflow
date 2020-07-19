@@ -26,7 +26,7 @@ def _run_test(
     def one_hot_job(
         x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[dtype])
     ):
-        with flow.fixed_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.one_hot(
                 x,
                 depth=depth,

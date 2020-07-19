@@ -40,7 +40,7 @@ def mirrored_tensor_def_test(test_case, func_config):
 
 def test_ccrelu(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     fixed_tensor_def_test(test_case, func_config)
 
 
@@ -68,5 +68,5 @@ def test_1n2c_mirror_dynamic_ccrelu(test_case):
 @flow.unittest.num_nodes_required(2)
 def test_ccrelu_2n1c(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     fixed_tensor_def_test(test_case, func_config)

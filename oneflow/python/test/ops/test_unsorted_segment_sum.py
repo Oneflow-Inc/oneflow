@@ -6,7 +6,7 @@ from test_util import GenArgList
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_distribute_strategy(flow.scope.consistent_view())
 
 
 def _check(test_case, data, segment_ids, out_shape, axis, out):
@@ -51,7 +51,7 @@ def _run_test(test_case, device, out_shape, axis, segment_ids_shape):
         data=flow.FixedTensorDef(data.shape, dtype=flow.float),
         segment_ids=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),
     ):
-        with flow.fixed_placement(device, "0:0"):
+        with flow.scope.placement(device, "0:0"):
             return flow.math.unsorted_segment_sum(
                 data=data,
                 segment_ids=segment_ids,
@@ -65,7 +65,7 @@ def _run_test(test_case, device, out_shape, axis, segment_ids_shape):
         segment_ids=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),
         like=flow.FixedTensorDef(out_shape, dtype=flow.float32),
     ):
-        with flow.fixed_placement(device, "0:0"):
+        with flow.scope.placement(device, "0:0"):
             return flow.math.unsorted_segment_sum_like(
                 data=data, segment_ids=segment_ids, like=like, axis=axis
             )

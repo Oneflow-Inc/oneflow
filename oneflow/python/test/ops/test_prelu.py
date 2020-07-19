@@ -37,7 +37,7 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
 
     @flow.global_function(func_config)
     def PreluJob(x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[dtype])):
-        with flow.fixed_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
                 name="v1",
                 shape=(1,),

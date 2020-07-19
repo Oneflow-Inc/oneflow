@@ -26,33 +26,6 @@ void CheckFunctionConfig(const JobConfigProto& job_conf) {
 
 }  // namespace
 
-int64_t JobDesc::all_reduce_group_min_byte() const {
-  int64_t ret = job_conf_.all_reduce_group_min_mbyte() * 1024 * 1024;
-  CHECK_GT(ret, 0);
-  return ret;
-}
-
-float JobDesc::all_reduce_group_size_warmup() const {
-  float ret = job_conf_.all_reduce_group_size_warmup();
-  CHECK_GT(ret, 1);
-  return ret;
-}
-
-int64_t JobDesc::all_reduce_group_num() const {
-  int64_t ret = job_conf_.all_reduce_group_num();
-  CHECK_GT(ret, 0);
-  return ret;
-}
-
-float JobDesc::all_reduce_lazy_ratio() const {
-  float ratio = job_conf_.all_reduce_lazy_ratio();
-  CHECK_GE(ratio, 0.0);
-  CHECK_LE(ratio, 1.0);
-  return ratio;
-}
-
-bool JobDesc::all_reduce_fp16() const { return job_conf_.all_reduce_fp16(); }
-
 int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.exp_run_conf().piece_num_of_experiment_phase();
 }
@@ -80,9 +53,6 @@ void JobDesc::Init() {
   CHECK_EQ((Global<ResourceDesc, ForSession>::Get()->use_rdma()), false)
       << "Please compile ONEFLOW with RDMA";
 #endif
-#ifndef WITH_CUDA
-  CHECK_EQ(job_conf_.enable_nccl(), false) << "Please compile ONEFLOW with NCCL";
-#endif  // WITH_CUDA
   int64_t piece_exp = job_conf_.exp_run_conf().piece_num_of_experiment_phase();
   if (job_conf_.has_train_conf()) {
     if (piece_exp == -1) { piece_exp = 19 * NumOfPiecesInBatch(); }
