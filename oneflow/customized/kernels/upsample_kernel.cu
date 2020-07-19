@@ -6,6 +6,13 @@ namespace oneflow {
 
 namespace {
 
+__device__ int64_t GetNearestInputIndex(const int64_t out_dim_idx, const float scale,
+                                        const int64_t in_dim_size) {
+  return max(min(static_cast<int64_t>(floorf((static_cast<float>(out_dim_idx) + 0.5f) * scale)),
+                 in_dim_size - 1),
+             static_cast<int64_t>(0));
+}
+
 template<typename T>
 __global__ void UpsampleNearestForward(const int64_t elem_cnt, const T* in_dptr,
                                        NdIndexOffsetHelper<int64_t, 4> in_helper,
@@ -15,12 +22,8 @@ __global__ void UpsampleNearestForward(const int64_t elem_cnt, const T* in_dptr,
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     out_helper.OffsetToNdIndex(index, n, c, h, w);
-    const int64_t in_h = max(
-        min(static_cast<int64_t>(floorf((static_cast<float>(h) + 0.5f) * scale_h)), in_height - 1),
-        static_cast<int64_t>(0));
-    const int64_t in_w = max(
-        min(static_cast<int64_t>(floorf((static_cast<float>(w) + 0.5f) * scale_w)), in_width - 1),
-        static_cast<int64_t>(0));
+    const int64_t in_h = GetNearestInputIndex(h, scale_h, in_height);
+    const int64_t in_w = GetNearestInputIndex(w, scale_w, in_width);
     out_dptr[index] = in_dptr[in_helper.NdIndexToOffset(n, c, in_h, in_w)];
   }
 }
@@ -34,13 +37,9 @@ __global__ void UpsampleNearestBackward(const int64_t elem_cnt, const T* dy_dptr
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
-    const int64_t in_h = max(
-        min(static_cast<int64_t>(floorf((static_cast<float>(h) + 0.5f) * scale_h)), dx_height - 1),
-        static_cast<int64_t>(0));
-    const int64_t in_w = max(
-        min(static_cast<int64_t>(floorf((static_cast<float>(w) + 0.5f) * scale_w)), dx_width - 1),
-        static_cast<int64_t>(0));
-    atomicAdd(dx_dptr + dx_helper.NdIndexToOffset(n, c, in_h, in_w), dy_dptr[index]);
+    const int64_t dx_h = GetNearestInputIndex(h, scale_h, dx_height);
+    const int64_t dx_w = GetNearestInputIndex(w, scale_w, dx_width);
+    atomicAdd(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h, dx_w), dy_dptr[index]);
   }
 }
 
