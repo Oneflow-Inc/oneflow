@@ -161,7 +161,11 @@ def _MakeInputOpConfAndRetLbi(arg_blob_def):
 class FeedContext(object):
     def __init__(self, op_arg_parallel_attr, arg_ndarray, rank=0):
         self.op_arg_parallel_attr_ = op_arg_parallel_attr
-        self.arg_ndarray_ = arg_ndarray
+        self.arg_ndarray_ = (
+            arg_ndarray
+            if arg_ndarray.data.contiguous
+            else numpy.ascontiguousarray(arg_ndarray)
+        )
         self.rank_ = rank
         # balanced_range is used in split_parallel
         self.balanced_range_ = None
