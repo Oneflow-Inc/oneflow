@@ -432,7 +432,7 @@ def argwhere(condition, dtype=None, name=None):
     setattr(op_conf.arg_where_conf, "out", "out")
     setattr(op_conf.arg_where_conf, "out_size", "out_size")
     if dtype is not None:
-        setattr(op_conf.arg_where_conf, "data_type", dtype)
+        setattr(op_conf.arg_where_conf, "data_type", dtype.oneflow_dtype)
     interpret_util.Forward(op_conf)
 
     arg_where_out_lbi = logical_blob_id_util.LogicalBlobId()
@@ -501,7 +501,7 @@ def elem_cnt(inputs, dtype=None, name=None):
 
     op_conf.shape_elem_cnt_conf.exclude_axis_conf.SetInParent()
     if dtype is not None:
-        op_conf.shape_elem_cnt_conf.data_type = dtype
+        op_conf.shape_elem_cnt_conf.data_type = dtype.oneflow_dtype
     op_conf.shape_elem_cnt_conf.y = "y"
     interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()

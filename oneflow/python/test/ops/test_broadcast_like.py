@@ -3,7 +3,6 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-import oneflow.core.common.data_type_pb2 as data_type_util
 import tensorflow as tf
 from test_util import GenArgList
 
@@ -18,8 +17,8 @@ def compare_broadcast_like_with_tf(
 
     @flow.global_function(func_config)
     def broadcast_like_forward(
-        x=flow.FixedTensorDef(shape=input_shape, dtype=data_type_util.kFloat),
-        y=flow.FixedTensorDef(shape=like_shape, dtype=data_type_util.kFloat),
+        x=flow.FixedTensorDef(shape=input_shape, dtype=flow.float),
+        y=flow.FixedTensorDef(shape=like_shape, dtype=flow.float),
     ):
         with flow.scope.placement(device_type, "0:0"):
             return flow.broadcast_like(x, y, broadcast_axes=broadcast_axes)

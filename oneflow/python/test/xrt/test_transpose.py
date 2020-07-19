@@ -59,13 +59,11 @@ class TestTranspose(unittest.TestCase):
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, permute, dtype=flow.float32):
-        np_dtype = flow.convert_of_dtype_to_numpy_dtype(dtype)
-        x = np.ones(shape, dtype=np_dtype)
+        x = np.ones(shape, dtype=dtype.numpy_dtype)
         self._test_body(x, permute, dtype=dtype)
 
     def _test_random_body(self, shape, permute, dtype=flow.float32):
-        np_dtype = flow.convert_of_dtype_to_numpy_dtype(dtype)
-        x = np.random.random(shape).astype(np_dtype)
+        x = np.random.random(shape).astype(dtype.numpy_dtype)
         self._test_body(x, permute, dtype=dtype)
 
     def test_ones_input(self):
