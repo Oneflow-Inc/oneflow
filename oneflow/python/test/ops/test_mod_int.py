@@ -18,7 +18,7 @@ def test_naive(test_case):
     x = (np.random.rand(5, 2) * 1000).astype(np.int32) + 1
     y = (np.random.rand(5, 2) * 1000).astype(np.int32) + 1
     z = None
-    z = ModJob(x, y).get().ndarray()
+    z = ModJob(x, y).get().numpy()
     test_case.assertTrue(np.array_equal(z, x % y))
 
 
@@ -33,7 +33,7 @@ def test_broadcast(test_case):
     x = (np.random.rand(5, 2) * 1000).astype(np.int32) + 1
     y = (np.random.rand(1, 2) * 1000).astype(np.int32) + 1
     z = None
-    z = ModJob(x, y).get().ndarray()
+    z = ModJob(x, y).get().numpy()
     test_case.assertTrue(np.array_equal(z, x % y))
 
 
@@ -63,5 +63,5 @@ def GenerateTest(test_case, a_shape, b_shape):
 
     a = (np.random.rand(*a_shape) * 1000).astype(np.int32) + 1
     b = (np.random.rand(*b_shape) * 1000).astype(np.int32) + 1
-    y = ModJob(a, b).get().ndarray()
+    y = ModJob(a, b).get().numpy()
     test_case.assertTrue(np.array_equal(y, a % b))

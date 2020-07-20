@@ -29,5 +29,5 @@ def test_get_variable_with_same_name(test_case):
     check_point.init()
     j0_v1, j0_v2 = TestJob0().get()
     j1_v = TestJob1().get()
-    test_case.assertTrue(np.array_equal(j0_v1.ndarray(), j0_v2.ndarray()))
-    test_case.assertTrue(np.array_equal(j0_v1.ndarray(), j1_v.ndarray()))
+    test_case.assertTrue(np.array_equal(j0_v1.numpy(), j0_v2.numpy()))
+    test_case.assertTrue(np.array_equal(j0_v1.numpy(), j1_v.numpy()))
