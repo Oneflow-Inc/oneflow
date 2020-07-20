@@ -1,6 +1,7 @@
 import oneflow as flow
 import numpy as np
 import os
+import random
 
 
 def test_lazy_input_output(test_case):
@@ -134,6 +135,56 @@ def test_eager_input_output(test_case):
 
     ret = foo_job([input]).get()
     test_case.assertTrue(np.allclose(output, ret.numpy_list()[0]))
+
+
+def _test_input_ndarray_contiguous(test_case, shape):
+    assert len(shape) > 1
+    more_than_one_dim_list = []
+    for axis, dim in enumerate(shape[1:], 1):
+        if dim > 1:
+            more_than_one_dim_list.append((axis, dim))
+    assert len(more_than_one_dim_list) > 0
+
+    input = np.random.rand(*shape).astype(np.single)
+    rand_axis = random.choice(more_than_one_dim_list)[0]
+    rand_dim_slice_start = random.randrange(0, input.shape[rand_axis] - 1)
+    rand_dim_slice_stop = random.randrange(
+        rand_dim_slice_start + 1, input.shape[rand_axis]
+    )
+    slice_list = []
+    for axis in range(input.ndim):
+        if axis == rand_axis:
+            slice_list.append(slice(rand_dim_slice_start, rand_dim_slice_stop))
+        else:
+            slice_list.append(slice(None))
+
+    slice_input = input[tuple(slice_list)]
+    assert (
+        not slice_input.data.contiguous
+    ), "shape: {}\nslice axis: {}, start~stop: {}~{}\nsliced shape: {}\nflags:\n{}".format(
+        shape,
+        rand_axis,
+        rand_dim_slice_start,
+        rand_dim_slice_stop,
+        slice_input.shape,
+        slice_input.flags,
+    )
+
+    flow.clear_default_session()
+
+    @flow.global_function()
+    def foo_job(x_def=flow.FixedTensorDef(shape=slice_input.shape, dtype=flow.float)):
+        y = x_def + flow.constant(1.0, shape=(1,), dtype=flow.float)
+        return y
+
+    ret = foo_job(slice_input).get()
+    # print(ret.numpy().flags)
+    test_case.assertTrue(ret.numpy().data.c_contiguous)
+    test_case.assertTrue(np.array_equal(ret.numpy(), slice_input + 1.0))
+
+
+def test_input_ndarray_contiguous(test_case):
+    _test_input_ndarray_contiguous(test_case, (10, 20, 30))
 
 
 # TODO: system op need manaully register blob_object in default_blob_register or bw_blob_register
