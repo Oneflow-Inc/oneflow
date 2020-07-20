@@ -904,11 +904,10 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("AutoTrainStep"));
     JUST(DoPass("AutoLearningRate"));
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+    JUST(DoPass("PruneCastToStaticShapeOpsPass"));
     JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
-    JUST(DoPass("AddAllReduceGroupPass"));
     JUST(DoPass("AddLbiDiffWatcherOpConfs"));
-    JUST(DoPass("SequentializeAllReduceGroupPass"));
     JUST(DoPass("PruneParallelCastOpsPass"));
     JUST(DoPass("DumpVariableInfoPass"));
   }

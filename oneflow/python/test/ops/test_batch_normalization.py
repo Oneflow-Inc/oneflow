@@ -323,8 +323,6 @@ def test_layer_batchnorm_inference(test_case):
 
 
 def test_layer_batchnorm_trainable_without_training(test_case):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict["data_type"] = ["float32"]
@@ -343,8 +341,6 @@ def test_layer_batchnorm_trainable_without_training(test_case):
 
 
 def test_nn_batchnorm(test_case):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [(2, 4, 3, 5)]
     arg_dict["data_type"] = ["float32"]
@@ -355,8 +351,6 @@ def test_nn_batchnorm(test_case):
 
 
 def test_batchnorm_fp16(test_case):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict["input_shape"] = [(2, 4, 3, 5)]

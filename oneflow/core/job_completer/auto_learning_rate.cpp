@@ -1,6 +1,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
@@ -43,15 +44,17 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
       job_builder.AddOps(parallel_conf, {schedule_op_conf});
       return GenLogicalBlobName(op_name, schedule_conf->out());
     } else {
-      OperatorConf constant_op_conf{};
-      constant_op_conf.set_name(op_name);
-      ConstantOpConf* constant_conf = constant_op_conf.mutable_constant_conf();
-      constant_conf->set_out("out");
-      *constant_conf->mutable_shape()->mutable_dim()->Add() = 1;
-      constant_conf->set_data_type(DataType::kFloat);
-      constant_conf->mutable_initializer()->mutable_constant_conf()->set_value(learning_rate);
-      job_builder.AddOps(parallel_conf, {constant_op_conf});
-      return GenLogicalBlobName(op_name, constant_conf->out());
+      const auto constant_op = user_op::UserOpConfWrapperBuilder(op_name)
+                                   .Op("constant")
+                                   .Attr<double>("floating_value", learning_rate)
+                                   .Attr<int64_t>("integer_value", 0)
+                                   .Attr<bool>("is_floating_value", true)
+                                   .Attr<DataType>("dtype", DataType::kFloat)
+                                   .Attr<Shape>("shape", Shape({1}))
+                                   .Output("out")
+                                   .Build();
+      job_builder.AddOps(parallel_conf, {constant_op.op_conf()});
+      return constant_op.output("out", 0);
     }
   };
   if (!train_conf.has_primary_lr_lbn()) {

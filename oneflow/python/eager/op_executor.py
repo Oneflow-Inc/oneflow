@@ -104,7 +104,7 @@ def _MakeEagerLogicalBlob(op_attribute, obn, blob_register):
 
 
 def EagerInitVariableBlob(var_op_conf, var_blob):
-    with oneflow.fixed_placement("cpu", "0:0"):
+    with oneflow.scope.placement("cpu", "0:0"):
         _Assign(var_blob.blob_object, _ModelInit(var_op_conf))
 
 
