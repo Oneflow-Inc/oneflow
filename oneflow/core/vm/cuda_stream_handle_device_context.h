@@ -22,8 +22,8 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx {
   CudaStreamHandleDeviceCtx(CallbackMsgListPtr callback_msg_list, int64_t device_id)
       : cuda_handler_(new CudaStreamHandle(nullptr)),
         callback_msg_list_(callback_msg_list),
-        cuda_allocator_(new SingleThreadOnlyAllocator(
-            std::unique_ptr<Allocator>(new CudaAllocator(device_id)))) {}
+        cuda_allocator_(
+            new ThreadSafeAllocator(std::unique_ptr<Allocator>(new CudaAllocator(device_id)))) {}
 
   const cudaStream_t& cuda_stream() const override { return *(cuda_handler_->cuda_stream()); }
   const cublasHandle_t& cublas_pmh_handle() const override {
