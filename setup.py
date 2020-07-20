@@ -38,6 +38,7 @@ REQUIRED_PACKAGES = [
     'numpy',
     'protobuf',
     'tqdm',
+    'requests',
 ]
 
 
