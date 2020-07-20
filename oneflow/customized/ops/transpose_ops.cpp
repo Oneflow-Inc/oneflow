@@ -1,5 +1,4 @@
 #include <oneflow/core/common/maybe.h>
-#include <oneflow/core/framework/op_registration.h>
 #include <oneflow/core/framework/tensor_desc.h>
 #include "oneflow/core/framework/framework.h"
 

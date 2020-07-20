@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/high_order_bool.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/framework/kernel_registration.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
 
