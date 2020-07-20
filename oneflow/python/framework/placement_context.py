@@ -66,7 +66,9 @@ class PlacementScope(object):
         return device_util.DeviceType4DeviceTag(self.GetDeviceTag4OpConf(op_conf))
 
     def GetDeviceTag4OpConf(self, op_conf):
-        raise NotImplementedError
+        if op_util.IsOpConfOnlyCpuSupported(op_conf):
+            return "cpu"
+        return self.default_device_tag
 
     def __enter__(self):
         PlacementScopeStackPush(self)
@@ -77,36 +79,6 @@ class PlacementScope(object):
         assert self == PlacementScopeStackPop()
         if self.scope_context_ is not None:
             self.scope_context_.__exit__(*args)
-
-
-class FixedPlacementScope(PlacementScope):
-    r"""Class for fixed placement scope.
-
-    This class along with `oneflow.scope.placement` allows to define PlacementScope
-    with fixed parallel configuration.
-    """
-
-    def __init__(self, device_tag, machine_device_ids):
-        PlacementScope.__init__(self, device_tag, machine_device_ids)
-
-    def GetDeviceTag4OpConf(self, op_conf):
-        return self.default_device_tag
-
-
-class DevicePriorPlacementScope(PlacementScope):
-    r"""Class for device prior placement scope.
-
-    This class along with `oneflow.scope.placement` allows to define PlacementScope
-    with device prior parallel configuration.
-    """
-
-    def __init__(self, device_tag, machine_device_ids):
-        PlacementScope.__init__(self, device_tag, machine_device_ids)
-
-    def GetDeviceTag4OpConf(self, op_conf):
-        if op_util.IsOpConfOnlyCpuSupported(op_conf):
-            return "cpu"
-        return self.default_device_tag
 
 
 def PlacementScopeStackPush(placement_policy):
