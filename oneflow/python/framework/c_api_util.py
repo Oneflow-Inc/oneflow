@@ -68,8 +68,8 @@ def EnableEagerEnvironment(enable_eager_execution):
     return oneflow_internal.EnableEagerEnvironment(enable_eager_execution)
 
 
-def EnableEagerSession(enable_eager_execution):
-    return oneflow_internal.EnableEagerSession(enable_eager_execution)
+# def EnableEagerSession(enable_eager_execution):
+#     return oneflow_internal.EnableEagerSession(enable_eager_execution)
 
 
 def EagerExecutionEnabled():

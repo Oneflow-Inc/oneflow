@@ -307,14 +307,14 @@ class Session(object):
         self.cond_var_.release()
 
 
-@oneflow_export("enable_eager_execution")
-def api_enable_eager_execution(val: bool = True) -> None:
-    return enable_if.unique([enable_eager_execution])(val=val)
+# @oneflow_export("enable_eager_execution")
+# def api_enable_eager_execution(val: bool = True) -> None:
+#     return enable_if.unique([enable_eager_execution])(val=val)
 
 
-@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
-def enable_eager_execution(val=True):
-    return c_api_util.EnableEagerSession(val)
+# @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
+# def enable_eager_execution(val=True):
+#     return c_api_util.EnableEagerSession(val)
 
 
 @oneflow_export("eager_execution_enabled")
@@ -329,7 +329,7 @@ def clear_default_session() -> None:
     """
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
-    c_api_util.EnableEagerSession(False)
+    # c_api_util.EnableEagerSession(False)
 
 
 @oneflow_export("scope.current_scope")

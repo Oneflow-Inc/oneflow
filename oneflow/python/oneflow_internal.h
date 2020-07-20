@@ -34,10 +34,10 @@ void EnableEagerEnvironment(bool enable_eager_execution) {
   *Global<bool, EagerExecution<ForEnv>>::Get() = enable_eager_execution;
 }
 
-void EnableEagerSession(bool enable_eager_execution) {
-  using namespace oneflow;
-  *Global<bool, EagerExecution<ForSession>>::Get() = enable_eager_execution;
-}
+// void EnableEagerSession(bool enable_eager_execution) {
+//   using namespace oneflow;
+//   *Global<bool, EagerExecution<ForSession>>::Get() = enable_eager_execution;
+// }
 
 bool EagerExecutionEnabled() { return oneflow::EagerExecutionEnabled(); }
 
