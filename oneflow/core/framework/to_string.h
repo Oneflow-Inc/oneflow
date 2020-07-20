@@ -21,6 +21,11 @@ inline std::string ToString(const DeviceType& device_type) {
   return CHECK_JUST(DeviceTag4DeviceType(device_type));
 }
 
+template<>
+inline std::string ToString(const std::string& value) {
+  return value;
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_TO_STRING_H_
