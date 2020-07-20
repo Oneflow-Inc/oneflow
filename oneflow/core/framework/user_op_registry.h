@@ -10,9 +10,6 @@
 
 namespace oneflow {
 
-class TensorDesc;
-class SbpSignatureList;
-
 namespace user_op {
 
 class UserOpDefWrapper;

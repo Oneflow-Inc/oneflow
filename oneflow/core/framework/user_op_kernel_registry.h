@@ -11,8 +11,6 @@
 
 namespace oneflow {
 
-class KernelConf;
-
 namespace user_op {
 
 class OpKernel;

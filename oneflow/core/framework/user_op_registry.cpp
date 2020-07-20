@@ -10,8 +10,6 @@ namespace oneflow {
 
 namespace user_op {
 
-namespace {}  // namespace
-
 namespace {
 
 bool InsertIfNotExists(const std::string& name, HashSet<std::string>* unique_names) {
