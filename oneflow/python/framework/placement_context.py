@@ -66,7 +66,9 @@ class PlacementScope(object):
         return device_util.DeviceType4DeviceTag(self.GetDeviceTag4OpConf(op_conf))
 
     def GetDeviceTag4OpConf(self, op_conf):
-        raise NotImplementedError
+        if op_util.IsOpConfOnlyCpuSupported(op_conf):
+            return "cpu"
+        return self.default_device_tag
 
     def __enter__(self):
         PlacementScopeStackPush(self)
