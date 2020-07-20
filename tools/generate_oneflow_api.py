@@ -75,6 +75,7 @@ def collect_exports():
     exports = {}
     for mod in sys.modules.values():
         if mod.__name__.startswith("oneflow"):
+            print(mod.__name__)
             for attr in dir(mod):
                 symbol = getattr(mod, attr)
                 if hasattr(symbol, "__force_no_export__"):
@@ -98,7 +99,8 @@ def collect_exports():
 
 def main():
     mod = collect_exports()
-    # for name in mod.submodule_names():
+    for name in mod.submodule_names():
+        print(name)
     #     joined = os.path.join(args.root_path, name)
     #     if os.path.isdir(joined):
     #         shutil.rmtree(joined)

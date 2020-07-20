@@ -14,12 +14,6 @@ del dtype
 
 import oneflow.python.framework.register_python_callback
 
-import traceback
-try:
-    from oneflow.generated import *
-except Exception as _e:
-    pass
-
 import atexit
 import oneflow.python.framework.c_api_util
 atexit.register(oneflow.python.framework.c_api_util.DestroyEnv)
