@@ -4,6 +4,9 @@ from typing import Sequence, Optional
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.input_blob_def as input_blob_def
 import oneflow.python.framework.dtype as dtype_util
+import typing
+import inspect
+import sys
 
 
 @oneflow_export("Numpy")
@@ -163,3 +166,24 @@ class ListOfListOfNumpyDef(OneflowNumpyDef):
         return input_blob_def.MirroredTensorListDef(
             subclass.shape, dtype=subclass.dtype, batch_axis=subclass.batch_axis
         )
+
+
+def OriginFrom(parameterised, generic):
+    if inspect.isclass(parameterised) and inspect.isclass(generic):
+        return issubclass(parameterised, generic)
+    if inspect.isclass(parameterised) != inspect.isclass(generic):
+        return False
+    if (sys.version_info.major, sys.version_info.minor) >= (3, 7):
+        if not hasattr(parameterised, "__origin__"):
+            return False
+        if generic == typing.Tuple:
+            return (
+                type(parameterised) is type(typing.Tuple[int])
+                and parameterised.__origin__ is tuple
+            )
+        if generic == typing.List:
+            return (
+                type(parameterised) is type(typing.List[int])
+                and parameterised.__origin__ is list
+            )
+    raise NotImplementedError("python typing is a monster torturing everyone.")
