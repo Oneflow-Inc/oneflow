@@ -44,9 +44,7 @@ def deprecated_placement(*args, **kwargs):
 def api_placement(
     device_tag: str, machine_device_ids: str
 ) -> placement_ctx.DevicePriorPlacementScope:
-    return enable_if.unique([GetPlacementScope])(
-        device_tag, machine_device_ids
-    )
+    return enable_if.unique([GetPlacementScope])(device_tag, machine_device_ids)
 
 
 @enable_if.condition(
