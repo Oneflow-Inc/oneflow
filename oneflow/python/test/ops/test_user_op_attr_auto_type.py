@@ -9,7 +9,7 @@ def _test_user_op_attr_auto_type(input, attr1, attr2):
         .Input("in", [input])
         .Output("out")
         .Attr("int1", attr1)
-        .Attr("int2", attr2, "AttrTypeInt32")
+        .Attr("int2", attr2)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()

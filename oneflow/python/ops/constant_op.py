@@ -21,45 +21,27 @@ def constant(value, dtype=None, shape=None, name=None):
     if not isinstance(value, (int, float)):
         raise NotImplementedError
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        if isinstance(value, float):
-            is_floating_value = True
-        else:
-            is_floating_value = False
-        if shape is not None:
-            assert isinstance(shape, (list, tuple))
-        else:
-            shape = []
-        return (
-            flow.user_op_builder(name)
-            .Op("constant")
-            .Output("out")
-            .Attr("floating_value", float(value), "AttrTypeDouble")
-            .Attr("integer_value", int(value), "AttrTypeInt64")
-            .Attr("is_floating_value", is_floating_value, "AttrTypeBool")
-            .Attr("dtype", dtype, "AttrTypeDataType")
-            .Attr("shape", shape, "AttrTypeShape")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
+    if isinstance(value, float):
+        is_floating_value = True
     else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(op_conf, "name", name)
-        setattr(op_conf.constant_conf, "data_type", dtype)
-        op_conf.constant_conf.initializer.CopyFrom(
-            flow.constant_initializer(value, dtype)
-        )
-        if shape is not None:
-            assert isinstance(shape, (list, tuple))
-            op_conf.constant_conf.shape.dim.extend(list(shape))
-
-        setattr(op_conf.constant_conf, "out", "out")
-        interpret_util.Forward(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+        is_floating_value = False
+    if shape is not None:
+        assert isinstance(shape, (list, tuple))
+    else:
+        shape = []
+    return (
+        flow.user_op_builder(name)
+        .Op("constant")
+        .Output("out")
+        .Attr("floating_value", float(value))
+        .Attr("integer_value", int(value))
+        .Attr("is_floating_value", is_floating_value)
+        .Attr("dtype", dtype)
+        .Attr("shape", shape)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("constant_scalar")

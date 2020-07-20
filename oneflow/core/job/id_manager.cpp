@@ -13,11 +13,8 @@ int64_t IDMgr::GetGpuNcclThrdId(int64_t dev_phy_id) const {
 int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 4 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuReduceCtrlThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 5 + dev_phy_id;
-}
 int64_t IDMgr::GetGpuMdUpdtThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 6 + dev_phy_id;
+  return gpu_device_num_ * 5 + dev_phy_id;
 }
 int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * GetCudaWorkTypeSize() + dev_phy_id;

@@ -21,7 +21,7 @@ def compare_with_tensorflow(
 
     @flow.global_function(func_config)
     def ReduceSumJob(x=flow.FixedTensorDef(input_shape)):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
 
     x = np.random.rand(*input_shape).astype(np.float32)
@@ -84,7 +84,7 @@ def test_scalar(test_case):
 def test_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo(x=flow.FixedTensorDef((10,))):

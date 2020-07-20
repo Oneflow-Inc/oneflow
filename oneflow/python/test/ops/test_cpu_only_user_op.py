@@ -17,7 +17,7 @@ def _check_cpu_only_relu_device(test_case, verbose=False):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_placement_scope(flow.device_prior_placement("gpu", "0:0"))
+    func_config.default_placement_scope(flow.scope.placement("gpu", "0:0"))
 
     @flow.global_function(func_config)
     def cpu_only_relu_job(x_def=flow.FixedTensorDef(shape=(2, 5), dtype=flow.float)):
@@ -35,11 +35,11 @@ def _check_non_cpu_only_relu_device(test_case):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_placement_scope(flow.device_prior_placement("gpu", "0:0"))
+    func_config.default_placement_scope(flow.scope.placement("gpu", "0:0"))
 
     @flow.global_function(func_config)
     def relu_job(x_def=flow.FixedTensorDef(shape=(2, 5), dtype=flow.float)):
-        with flow.device_prior_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             y = flow.math.relu(x_def)
 
         for device in y.parallel_conf.device_name:

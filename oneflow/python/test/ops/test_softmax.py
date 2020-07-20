@@ -28,7 +28,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
 
     @flow.global_function(func_config)
     def SoftmaxJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
@@ -74,7 +74,4 @@ def test_softmax(test_case):
             continue
         if arg[3] >= len(arg[1]):
             continue
-        if os.getenv("ENABLE_USER_OP") == "False":
-            if arg[3] != -1:
-                continue  # axis
         compare_with_tensorflow(*arg)
