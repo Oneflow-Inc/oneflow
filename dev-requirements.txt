@@ -2,3 +2,5 @@ black==19.10b0
 numpy
 protobuf
 wheel
+tqdm
+requests
