@@ -13,8 +13,14 @@ del dtype
 
 import oneflow.python.framework.register_python_callback
 
+import oneflow.python.__export_symbols__
+
 import atexit
 import oneflow.python.framework.c_api_util
 atexit.register(oneflow.python.framework.c_api_util.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 del atexit
+
+del absolute_import
+del oneflow
+del python
