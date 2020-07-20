@@ -35,7 +35,7 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel {
           ctx->device_ctx(),
           XpuVarNdarray<T>(CreateReducedShape(tensor_x->shape(), {axis.begin(), axis.end()}),
                            tensor_y->mut_dptr<T>()),
-          XpuVarNdarray<const T>(tensor_x->shape(), tensor_x->mut_dptr<T>(),
+          XpuVarNdarray<const T>(tensor_x->shape(), tensor_x->dptr<T>(),
                                  tensor_x->shape().NumAxes()),
           XpuVarNdarray<T>(tensor_x->shape(), temp_storage, tensor_x->shape().NumAxes()));
     }

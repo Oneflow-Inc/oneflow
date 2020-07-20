@@ -37,6 +37,8 @@ sys.argv = ['setup.py'] + remain_args
 REQUIRED_PACKAGES = [
     'numpy',
     'protobuf',
+    'tqdm',
+    'requests',
     'onnx',
 ]
 
@@ -71,7 +73,7 @@ if args.with_xla:
 
 setup(
     name='oneflow',
-    version='0.1.1',
+    version='0.1.2',
     url='https://www.oneflow.org/',
     install_requires=REQUIRED_PACKAGES,
     packages=packages,

@@ -3,6 +3,8 @@ from __future__ import absolute_import
 import copy
 import functools
 import re
+import inspect
+from typing import Any, Callable, Optional, Union
 
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
@@ -24,16 +26,20 @@ class FunctionConfig(object):
         
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.function_desc = FunctionDesc()
 
-    def __getattr__(self, attr_name):
+    def __getattr__(
+        self, attr_name: str
+    ) -> Callable[[Optional[Union[bool, int, float, str]]], None]:
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         assert attr_name in name2default
         flag_name2flag_value = self.function_desc.job_config_proto.flag_name2flag_value
         default_val = name2default[attr_name]
 
-        def FunctionConfigSetter(attr_value=None):
+        def FunctionConfigSetter(
+            attr_value: Optional[Union[bool, int, float, str]] = None
+        ) -> None:
             if default_val.HasField("at_bool"):
                 if attr_value is None:
                     attr_value = True
@@ -57,11 +63,31 @@ class FunctionConfig(object):
         return FunctionConfigSetter
 
 
+@oneflow_export("global_function")
+def api_oneflow_function(
+    function_config: FunctionConfig = FunctionConfig(),
+) -> Callable[[Callable], Callable]:
+    r"""Creates a callable OneFlow global function from a Python function.
+    For instance::
+        @oneflow.global_function(flow.FunctionConfig())
+        def train():
+            # your model
+    Args:
+        function_config: a `FunctionConfig` object
+    Returns:
+        a callable which is called to execute the compiled function
+    """
+    api = enable_if.unique([eager_oneflow_function, lazy_oneflow_function])
+    return api(function_config)
+
+
 @enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
 def eager_oneflow_function(function_config=FunctionConfig()):
     assert isinstance(function_config, FunctionConfig)
 
     def Decorator(job_func):
+        if not hasattr(job_func, "__oneflow_function_signature__"):
+            job_func.__oneflow_function_signature__ = inspect.signature(job_func)
         sess = session_ctx.GetDefaultSession()
         function_desc = _CloneFunctionDesc(function_config.function_desc, job_func)
 
@@ -84,6 +110,8 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
     assert isinstance(function_config, FunctionConfig)
 
     def Decorator(job_func):
+        if not hasattr(job_func, "__oneflow_function_signature__"):
+            job_func.__oneflow_function_signature__ = inspect.signature(job_func)
         sess = session_ctx.GetDefaultSession()
 
         @functools.wraps(job_func)
@@ -97,22 +125,6 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
         return Func
 
     return Decorator
-
-
-@oneflow_export("global_function")
-def api_oneflow_function(function_config=FunctionConfig()):
-    r"""Creates a callable OneFlow global function from a Python function.
-    For instance::
-        @oneflow.global_function(flow.FunctionConfig())
-        def train():
-            # your model
-    Args:
-        function_config: a `FunctionConfig` object
-    Returns:
-        a callable which is called to execute the compiled function
-    """
-    api = enable_if.unique([lazy_oneflow_function, eager_oneflow_function])
-    return api(function_config)
 
 
 def _CloneFunctionDesc(func_desc, job_func):
@@ -285,22 +297,30 @@ def set_enable_inplace(func_desc, value=True):
 
 @oneflow_function_config("enable_inplace_in_reduce_struct")
 def set_enable_inplace_in_reduce_struct(func_desc, value=True):
-    func_desc.job_config_proto.enable_inplace_in_reduce_struct = value
+    print(
+        "'enable_inplace_in_reduce_struct' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("enable_nccl")
 def set_enable_nccl(func_desc, value=True):
-    func_desc.job_config_proto.enable_nccl = value
+    print(
+        "'enable_nccl' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("use_nccl_inter_node_communication")
 def set_use_nccl_inter_node_communication(func_desc, value=True):
-    func_desc.job_config_proto.use_nccl_inter_node_communication = value
+    print(
+        "'use_nccl_inter_node_communication' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("use_boxing_v2")
 def set_use_boxing_v2(func_desc, value=True):
-    func_desc.job_config_proto.use_boxing_v2 = value
+    print(
+        "'use_boxing_v2' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("do_parallel_cast_before_widening_type_cast")
@@ -310,32 +330,44 @@ def set_do_parallel_cast_before_widening_type_cast(func_desc, value=True):
 
 @oneflow_function_config("enable_all_reduce_group")
 def set_enable_all_reduce_group(func_desc, value=True):
-    func_desc.job_config_proto.enable_all_reduce_group = value
+    print(
+        "'enable_all_reduce_group' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("all_reduce_group_num")
 def set_all_reduce_group_num(func_desc, value):
-    func_desc.job_config_proto.all_reduce_group_num = value
+    print(
+        "'all_reduce_group_num' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("all_reduce_lazy_ratio")
 def set_all_reduce_lazy_ratio(func_desc, value):
-    func_desc.job_config_proto.all_reduce_lazy_ratio = value
+    print(
+        "'all_reduce_lazy_ratio' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("all_reduce_group_min_mbyte")
 def set_all_reduce_group_min_mbyte(func_desc, value):
-    func_desc.job_config_proto.all_reduce_group_min_mbyte = value
+    print(
+        "'all_reduce_group_min_mbyte' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("all_reduce_group_size_warmup")
 def set_all_reduce_group_size_warmup(func_desc, value):
-    func_desc.job_config_proto.all_reduce_group_size_warmup = value
+    print(
+        "'all_reduce_group_size_warmup' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("all_reduce_fp16")
 def set_all_reduce_fp16(func_desc, value=True):
-    func_desc.job_config_proto.all_reduce_fp16 = value
+    print(
+        "'all_reduce_fp16' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("enable_non_distributed_optimizer")
@@ -345,7 +377,9 @@ def set_enable_non_distributed_optimizer(func_desc, value=True):
 
 @oneflow_function_config("disable_all_reduce_sequence")
 def set_disable_all_reduce_sequence(func_desc, value=True):
-    func_desc.job_config_proto.disable_all_reduce_sequence = value
+    print(
+        "'disable_all_reduce_sequence' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config("prune_parallel_cast_ops")
@@ -353,9 +387,16 @@ def set_prune_parallel_cast_ops(func_desc, value=True):
     func_desc.job_config_proto.prune_parallel_cast_ops = value
 
 
+@oneflow_function_config("prune_cast_to_static_shape_ops")
+def set_prune_cast_to_static_shape_ops(func_desc, value=True):
+    func_desc.job_config_proto.prune_cast_to_static_shape_ops = value
+
+
 @oneflow_function_config("non_distributed_optimizer_group_size_mbyte")
 def set_non_distributed_optimizer_group_size_mbyte(func_desc, value):
-    func_desc.job_config_proto.non_distributed_optimizer_group_size_mbyte = value
+    print(
+        "'non_distributed_optimizer_group_size_mbyte' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_function_config(

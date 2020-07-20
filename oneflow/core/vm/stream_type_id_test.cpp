@@ -1,4 +1,4 @@
-#include "oneflow/core/common/object_msg.h"
+#include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/vm/stream_type_id.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/common/util.h"

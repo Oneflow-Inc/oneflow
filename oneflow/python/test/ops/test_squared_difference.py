@@ -17,7 +17,7 @@ def test_naive(test_case):
     x = np.random.rand(5, 2).astype(np.float32)
     y = np.random.rand(5, 2).astype(np.float32)
     z = None
-    z = SqrDiffJob(x, y).get().ndarray()
+    z = SqrDiffJob(x, y).get().numpy()
     test_case.assertTrue(np.allclose(z, (x - y) * (x - y)))
 
 
@@ -29,7 +29,7 @@ def test_broadcast(test_case):
     x = np.random.rand(5, 2).astype(np.float32)
     y = np.random.rand(1, 2).astype(np.float32)
     z = None
-    z = SqrDiffJob(x, y).get().ndarray()
+    z = SqrDiffJob(x, y).get().numpy()
     test_case.assertTrue(np.allclose(z, (x - y) * (x - y)))
 
 
@@ -56,7 +56,7 @@ def GenerateTest(test_case, a_shape, b_shape):
 
     a = np.random.rand(*a_shape).astype(np.float32)
     b = np.random.rand(*b_shape).astype(np.float32)
-    y = SqrDiffJob(a, b).get().ndarray()
+    y = SqrDiffJob(a, b).get().numpy()
     test_case.assertTrue(np.allclose(y, (a - b) * (a - b)))
 
 

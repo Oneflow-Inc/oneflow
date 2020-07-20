@@ -27,7 +27,7 @@ def test_inplace_variable(test_case):
 
     flow.train.CheckPoint().init()
     test_case.assertTrue(
-        np.allclose(InplaceVariable().get().ndarray(), np.ones((10,), np.float32))
+        np.allclose(InplaceVariable().get().numpy(), np.ones((10,), np.float32))
     )
 
 
@@ -67,7 +67,7 @@ def test_const_inplace_variable(test_case):
         return y
 
     flow.train.CheckPoint().init()
-    of_ret = InplaceVariable().get().ndarray()
+    of_ret = InplaceVariable().get().numpy()
     test_case.assertTrue(np.allclose(of_ret, np.ones((10,), np.float32)))
 
 

@@ -50,7 +50,7 @@ def compare_with_tensorflow(
 
     @flow.global_function(func_config)
     def ConvJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
@@ -118,10 +118,10 @@ def compare_with_tensorflow(
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
     max_diff = np.max(
-        np.absolute(of_out.ndarray().transpose(0, 2, 3, 1) - tf_out.numpy())
+        np.absolute(of_out.numpy().transpose(0, 2, 3, 1) - tf_out.numpy())
     )
     assert np.allclose(
-        of_out.ndarray().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-5, atol=1e-5
+        of_out.numpy().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-5, atol=1e-5
     ), max_diff
     assert np.allclose(
         test_global_storage.Get("x_diff").transpose(0, 2, 3, 1),
@@ -139,8 +139,6 @@ def compare_with_tensorflow(
 
 def test_cpu1(test_case):
     return
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
     arg_dict["x_shape"] = [(10, 32, 226, 226)]
@@ -153,8 +151,6 @@ def test_cpu1(test_case):
 
 def test_cpu2(test_case):
     return
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
     arg_dict["x_shape"] = [(10, 32, 226, 226)]
@@ -167,8 +163,6 @@ def test_cpu2(test_case):
 
 def test_cpu3(test_case):
     return
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
     arg_dict["x_shape"] = [(10, 32, 20, 20)]

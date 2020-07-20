@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import collections
 import os
 import random
-
+from typing import Union, Optional, Sequence
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -15,15 +15,15 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("nn.conv2d")
 def conv2d(
-    input,
-    filters,
-    strides,
-    padding,
-    data_format="NHWC",
-    dilations=None,
-    groups=1,
-    name=None,
-):
+    input: remote_blob_util.BlobDef,
+    filters: remote_blob_util.BlobDef,
+    strides: Union[int, Sequence[int]],
+    padding: str,
+    data_format: str = "NHWC",
+    dilations: Optional[Union[int, Sequence[int]]] = None,
+    groups: int = 1,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""2d convolution 
 
     Analogous to `tf.nn.conv2d <https://www.tensorflow.org/api_docs/python/tf/nn/conv2d>`_
@@ -87,13 +87,13 @@ def conv2d(
         .Input("in", [input])
         .Input("weight", [filters])
         .Output("out")
-        .Attr("filters", filters.shape[0], "AttrTypeInt32")
-        .Attr("padding", padding.lower(), "AttrTypeString")
-        .Attr("data_format", channel_pos, "AttrTypeString")
-        .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
-        .Attr("strides", strides, "AttrTypeListInt32")
-        .Attr("dilation_rate", dilations, "AttrTypeListInt32")
-        .Attr("groups", groups, "AttrTypeInt32")
+        .Attr("filters", filters.shape[0])
+        .Attr("padding", padding.lower())
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size_list)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilations)
+        .Attr("groups", groups)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -102,8 +102,15 @@ def conv2d(
 
 @oneflow_export("nn.batch_normalization")
 def batch_normalization(
-    x, mean, variance, offset, scale, variance_epsilon, axis=-1, name=None
-):
+    x: remote_blob_util.BlobDef,
+    mean: remote_blob_util.BlobDef,
+    variance: remote_blob_util.BlobDef,
+    offset: remote_blob_util.BlobDef,
+    scale: remote_blob_util.BlobDef,
+    variance_epsilon: float,
+    axis: int = -1,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""
     This op does not fully align with tf.nn.batch_normalization. mean, variable, offset and scale
     are always 1D. Users need to specify "axis" to 1 for NCHW data format.
@@ -126,26 +133,26 @@ def batch_normalization(
         .Input("gamma", [scale])
         .Input("beta", [offset])
         .Output("y")
-        .Attr("axis", axis, "AttrTypeInt32")
-        .Attr("epsilon", variance_epsilon, "AttrTypeFloat")
-        .Attr("training", False, "AttrTypeBool")
+        .Attr("axis", axis)
+        .Attr("epsilon", variance_epsilon)
+        .Attr("training", False)
         # momentum is not used
-        .Attr("momentum", 0.0, "AttrTypeFloat")
+        .Attr("momentum", 0.0)
     )
     return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("nn.compat_conv2d")
 def tf_conv2d(
-    input,
-    filters,
-    strides,
-    padding,
-    data_format="NHWC",
-    dilations=None,
-    groups=1,
-    name=None,
-):
+    input: remote_blob_util.BlobDef,
+    filters: remote_blob_util.BlobDef,
+    strides: Union[int, Sequence[int]],
+    padding: str,
+    data_format: str = "NHWC",
+    dilations: Optional[Union[int, Sequence[int]]] = None,
+    groups: int = 1,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     assert len(input.shape) == 4
     assert len(filters.shape) == 4
     NDims = 2
@@ -178,7 +185,6 @@ def tf_conv2d(
         else:
             raise ValueError("dilations must be an int or a list.")
 
-    assert os.getenv("ENABLE_USER_OP") != "False"
     if channel_pos == "channels_first":
         input_size = input.shape[2:4]
         kernel_size_list = filters.shape[2:4]
@@ -235,13 +241,13 @@ def tf_conv2d(
         .Input("in", [input])
         .Input("weight", [filters])
         .Output("out")
-        .Attr("filters", filters.shape[0], "AttrTypeInt32")
-        .Attr("padding", padding.lower(), "AttrTypeString")
-        .Attr("data_format", channel_pos, "AttrTypeString")
-        .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
-        .Attr("strides", strides, "AttrTypeListInt32")
-        .Attr("dilation_rate", dilations, "AttrTypeListInt32")
-        .Attr("groups", groups, "AttrTypeInt32")
+        .Attr("filters", filters.shape[0])
+        .Attr("padding", padding.lower())
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size_list)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilations)
+        .Attr("groups", groups)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -249,7 +255,12 @@ def tf_conv2d(
 
 
 @oneflow_export("nn.bias_add")
-def bias_add(value, bias, data_format=None, name=None):
+def bias_add(
+    value: remote_blob_util.BlobDef,
+    bias: remote_blob_util.BlobDef,
+    data_format: Optional[str] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.bias_add <https://www.tensorflow.org/api_docs/python/tf/nn/bias_add>`_
 
@@ -274,7 +285,7 @@ def bias_add(value, bias, data_format=None, name=None):
         .Input("a", [value])
         .Input("b", [bias])
         .Output("out")
-        .Attr("axis", bias_add_axis, "AttrTypeInt32")
+        .Attr("axis", bias_add_axis)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -282,19 +293,40 @@ def bias_add(value, bias, data_format=None, name=None):
 
 
 @oneflow_export("nn.max_pool1d")
-def max_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
+def max_pool1d(
+    input: remote_blob_util.BlobDef,
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
+    padding: str,
+    data_format: str = "NWC",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     # TODO: fix cuDNN bugs in pooling_1d
     raise NotImplementedError
 
 
 @oneflow_export("nn.avg_pool1d")
-def avg_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
+def avg_pool1d(
+    input: remote_blob_util.BlobDef,
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
+    padding: str,
+    data_format: str = "NWC",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     # TODO: fix cuDNN bugs in pooling_1d
     raise NotImplementedError
 
 
 @oneflow_export("nn.max_pool2d")
-def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
+def max_pool2d(
+    input: remote_blob_util.BlobDef,
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
+    padding: str,
+    data_format: str = "NHWC",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.max_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool2d>`_
 
@@ -308,19 +340,26 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
         .Output("y")
     )
     assert padding in ["VALID", "SAME"]
-    op.Attr("padding", padding.lower(), "AttrTypeString")
+    op.Attr("padding", padding.lower())
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
     data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-    op.Attr("data_format", data_format, "AttrTypeString")
+    op.Attr("data_format", data_format)
     pool_size = _GetSequence(ksize, 2, "ksize")
-    op.Attr("pool_size", pool_size, "AttrTypeListInt32")
+    op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 2, "strides")
-    op.Attr("strides", strides, "AttrTypeListInt32")
+    op.Attr("strides", strides)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("nn.avg_pool2d")
-def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
+def avg_pool2d(
+    input: remote_blob_util.BlobDef,
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
+    padding: str,
+    data_format: str = "NHWC",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.avg_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool2d>`_
 
@@ -334,19 +373,26 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
         .Output("y")
     )
     assert padding in ["VALID", "SAME"]
-    op.Attr("padding", padding.lower(), "AttrTypeString")
+    op.Attr("padding", padding.lower())
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
     data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-    op.Attr("data_format", data_format, "AttrTypeString")
+    op.Attr("data_format", data_format)
     pool_size = _GetSequence(ksize, 2, "ksize")
-    op.Attr("pool_size", pool_size, "AttrTypeListInt32")
+    op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 2, "strides")
-    op.Attr("strides", strides, "AttrTypeListInt32")
+    op.Attr("strides", strides)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("nn.max_pool3d")
-def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
+def max_pool3d(
+    input: remote_blob_util.BlobDef,
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
+    padding: str,
+    data_format: str = "NDHWC",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.max_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool3d>`_
 
@@ -360,19 +406,26 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
         .Output("y")
     )
     assert padding in ["VALID", "SAME"]
-    op.Attr("padding", padding.lower(), "AttrTypeString")
+    op.Attr("padding", padding.lower())
     assert data_format in ["NDHWC", "NCDHW"]
     data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-    op.Attr("data_format", data_format, "AttrTypeString")
+    op.Attr("data_format", data_format)
     pool_size = _GetSequence(ksize, 3, "ksize")
-    op.Attr("pool_size", pool_size, "AttrTypeListInt32")
+    op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 3, "strides")
-    op.Attr("strides", strides, "AttrTypeListInt32")
+    op.Attr("strides", strides)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("nn.avg_pool3d")
-def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
+def avg_pool3d(
+    input: remote_blob_util.BlobDef,
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
+    padding: str,
+    data_format: str = "NDHWC",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.avg_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool3d>`_
 
@@ -386,14 +439,14 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
         .Output("y")
     )
     assert padding in ["VALID", "SAME"]
-    op.Attr("padding", padding.lower(), "AttrTypeString")
+    op.Attr("padding", padding.lower())
     assert data_format in ["NDHWC", "NCDHW"]
     data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-    op.Attr("data_format", data_format, "AttrTypeString")
+    op.Attr("data_format", data_format)
     pool_size = _GetSequence(ksize, 3, "ksize")
-    op.Attr("pool_size", pool_size, "AttrTypeListInt32")
+    op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 3, "strides")
-    op.Attr("strides", strides, "AttrTypeListInt32")
+    op.Attr("strides", strides)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
@@ -416,7 +469,11 @@ def _softmax_need_transpose(x, axis):
 
 
 @oneflow_export("nn.softmax")
-def softmax(logits, axis=None, name=None):
+def softmax(
+    logits: remote_blob_util.BlobDef,
+    axis: Optional[int] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.softmax <https://www.tensorflow.org/api_docs/python/tf/nn/softmax>`_
 
@@ -446,7 +503,12 @@ def softmax(logits, axis=None, name=None):
 
 
 @oneflow_export("nn.softmax_grad")
-def softmax_grad(y, dy, axis=None, name=None):
+def softmax_grad(
+    y: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    axis: Optional[int] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     if axis is None:
         axis = -1
 
@@ -474,7 +536,11 @@ def softmax_grad(y, dy, axis=None, name=None):
 
 
 @oneflow_export("nn.sparse_cross_entropy")
-def sparse_cross_entropy(labels=None, prediction=None, name=None):
+def sparse_cross_entropy(
+    labels: remote_blob_util.BlobDef,
+    prediction: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     assert labels is not None
     assert prediction is not None
 
@@ -499,7 +565,11 @@ def sparse_cross_entropy(labels=None, prediction=None, name=None):
 
 
 @oneflow_export("nn.softmax_cross_entropy_with_logits")
-def softmax_cross_entropy_with_logits(labels=None, logits=None, name=None):
+def softmax_cross_entropy_with_logits(
+    labels: remote_blob_util.BlobDef,
+    logits: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/softmax_cross_entropy_with_logits>`_
 
@@ -528,7 +598,11 @@ def softmax_cross_entropy_with_logits(labels=None, logits=None, name=None):
 
 
 @oneflow_export("nn.sparse_softmax_cross_entropy_with_logits")
-def sparse_softmax_cross_entropy_with_logits(labels=None, logits=None, name=None):
+def sparse_softmax_cross_entropy_with_logits(
+    labels: remote_blob_util.BlobDef,
+    logits: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.sparse_softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sparse_softmax_cross_entropy_with_logits>`_
 
@@ -536,35 +610,36 @@ def sparse_softmax_cross_entropy_with_logits(labels=None, logits=None, name=None
     assert labels is not None
     assert logits is not None
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        if len(labels.shape) == len(logits.shape):
-            assert labels.shape[-1] == 1
-            labels = flow.squeeze(labels, axis=[-1])
-        else:
-            assert len(labels.shape) == len(logits.shape) - 1
-
-        prob, out = (
-            flow.user_op_builder(
-                name
-                if name is not None
-                else id_util.UniqueStr("SparseSoftmaxCrossEntropy_")
-            )
-            .Op("sparse_softmax_cross_entropy")
-            .Input("prediction", [logits])
-            .Input("label", [labels])
-            .Output("prob")
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()
-        )
-        return out
+    if len(labels.shape) == len(logits.shape):
+        assert labels.shape[-1] == 1
+        labels = flow.squeeze(labels, axis=[-1])
     else:
-        return sparse_cross_entropy(labels=labels, prediction=softmax(logits))
+        assert len(labels.shape) == len(logits.shape) - 1
+
+    prob, out = (
+        flow.user_op_builder(
+            name
+            if name is not None
+            else id_util.UniqueStr("SparseSoftmaxCrossEntropy_")
+        )
+        .Op("sparse_softmax_cross_entropy")
+        .Input("prediction", [logits])
+        .Input("label", [labels])
+        .Output("prob")
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    return out
 
 
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")
-def sigmoid_cross_entropy_with_logits(labels=None, logits=None, name=None):
+def sigmoid_cross_entropy_with_logits(
+    labels: remote_blob_util.BlobDef,
+    logits: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.sigmoid_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>`_
 
@@ -607,7 +682,13 @@ def _GetSequence(value, n, name):
 
 
 @oneflow_export("nn.random_mask_like")
-def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
+def random_mask_like(
+    like: remote_blob_util.BlobDef,
+    rate: float,
+    seed: Optional[int] = None,
+    noise_shape: Optional[Sequence] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     assert rate is not None and rate >= 0.0 and rate < 1.0
     mask_op = (
         flow.user_op_builder(
@@ -616,14 +697,12 @@ def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
         .Op("random_mask_like")
         .Input("like", [like])
         .Output("out")
-        .Attr("rate", float(rate), "AttrTypeFloat")
+        .Attr("rate", float(rate))
     )
     if seed is not None:
-        mask_op.Attr("seed", seed, "AttrTypeInt64")
+        mask_op.Attr("seed", seed)
     else:
-        mask_op.Attr(
-            "seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1), "AttrTypeInt64"
-        )
+        mask_op.Attr("seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1))
 
     if noise_shape is not None:
         assert 0, "noise_shape will be supported later."
@@ -632,7 +711,13 @@ def random_mask_like(like, rate, seed=None, noise_shape=None, name=None):
 
 
 @oneflow_export("nn.dropout")
-def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
+def dropout(
+    x: remote_blob_util.BlobDef,
+    rate: float,
+    noise_shape: Optional[remote_blob_util.BlobDef] = None,
+    seed: Optional[int] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.nn.dropout <https://www.tensorflow.org/api_docs/python/tf/nn/dropout>`_
 
@@ -649,7 +734,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
         .Input("in", [x])
         .Input("mask", [mask])
         .Output("out")
-        .Attr("scale", float(1.0 / (1.0 - rate)), "AttrTypeFloat")
+        .Attr("scale", float(1.0 / (1.0 - rate)))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -658,17 +743,17 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
 
 @oneflow_export("nn.conv2d_transpose")
 def deconv2d(
-    value=None,
-    filter=None,
-    output_shape=None,
-    strides=None,
-    padding="VALID",
-    data_format="NHWC",
-    name=None,
-    input=None,
-    filters=None,
-    dilations=None,
-):
+    value: Optional[remote_blob_util.BlobDef] = None,
+    filter: Optional[remote_blob_util.BlobDef] = None,
+    output_shape: Optional[remote_blob_util.BlobDef] = None,
+    strides: Optional[Union[int, Sequence[int]]] = None,
+    padding: str = "VALID",
+    data_format: str = "NHWC",
+    name: Optional[str] = None,
+    input: Optional[remote_blob_util.BlobDef] = None,
+    filters: Optional[remote_blob_util.BlobDef] = None,
+    dilations: Optional[Union[int, Sequence[int]]] = None,
+) -> remote_blob_util.BlobDef:
     r"""2d transposed convolution
 
     Args:
@@ -784,13 +869,13 @@ def deconv2d(
             .Input("in", [input])
             .Input("weight", [filters])
             .Output("out")
-            .Attr("filters", channels, "AttrTypeInt32")
-            .Attr("padding", "valid", "AttrTypeString")
-            .Attr("data_format", channel_pos, "AttrTypeString")
-            .Attr("kernel_size", kernel_size, "AttrTypeListInt32")
-            .Attr("strides", strides, "AttrTypeListInt32")
-            .Attr("dilation_rate", dilations, "AttrTypeListInt32")
-            .Attr("output_shape", padded_output_shape, "AttrTypeListInt32")
+            .Attr("filters", channels)
+            .Attr("padding", "valid")
+            .Attr("data_format", channel_pos)
+            .Attr("kernel_size", kernel_size)
+            .Attr("strides", strides)
+            .Attr("dilation_rate", dilations)
+            .Attr("output_shape", padded_output_shape)
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]
@@ -812,13 +897,13 @@ def deconv2d(
         .Input("in", [input])
         .Input("weight", [filters])
         .Output("out")
-        .Attr("filters", channels, "AttrTypeInt32")
-        .Attr("padding", padding.lower(), "AttrTypeString")
-        .Attr("data_format", channel_pos, "AttrTypeString")
-        .Attr("kernel_size", kernel_size, "AttrTypeListInt32")
-        .Attr("strides", strides, "AttrTypeListInt32")
-        .Attr("dilation_rate", dilations, "AttrTypeListInt32")
-        .Attr("output_shape", output_shape, "AttrTypeListInt32")
+        .Attr("filters", channels)
+        .Attr("padding", padding.lower())
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilations)
+        .Attr("output_shape", output_shape)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -826,7 +911,9 @@ def deconv2d(
 
 
 @oneflow_export("nn.leaky_relu")
-def leaky_relu(x, alpha=0.2, name=None):
+def leaky_relu(
+    x: remote_blob_util.BlobDef, alpha: float = 0.2, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("LeakyRelu_")
@@ -834,7 +921,7 @@ def leaky_relu(x, alpha=0.2, name=None):
         .Op("leaky_relu")
         .Input("x", [x])
         .Output("y")
-        .Attr("alpha", float(alpha), "AttrTypeFloat")
+        .Attr("alpha", float(alpha))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

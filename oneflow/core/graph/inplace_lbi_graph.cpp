@@ -11,14 +11,13 @@ bool IsSourceNode(const Operator& op) {
       && op_conf.user_conf().output().size() == 1) {
     return true;
   }
-  if (op_conf.has_constant_conf()) { return true; };
-  if (op_conf.has_variable_conf()) { return true; };
+  if (op_conf.has_variable_conf()) { return true; }
   if (op_conf.has_distribute_clone_conf() && op_conf.distribute_clone_conf().is_variable_ref()) {
     return true;
-  };
+  }
   if (op_conf.has_distribute_split_conf() && op_conf.distribute_split_conf().is_variable_ref()) {
     return true;
-  };
+  }
   return false;
 }
 

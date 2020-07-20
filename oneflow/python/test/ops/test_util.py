@@ -45,7 +45,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
 
     @flow.global_function(func_config)
     def FlowJob(x=flow.FixedTensorDef(x.shape)):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
                 name="v1",
                 shape=(1,),
@@ -62,7 +62,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    y = FlowJob(x).get().ndarray()
+    y = FlowJob(x).get().numpy()
     x_diff = test_global_storage.Get("x_diff")
     return y, x_diff
 

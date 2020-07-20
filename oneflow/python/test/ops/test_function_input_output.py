@@ -1,17 +1,18 @@
 import numpy as np
 import oneflow as flow
+from typing import Tuple
 
 
 def test_FixedTensorDef(test_case):
     @flow.global_function()
-    def Foo(x=flow.FixedTensorDef((2, 5))):
+    def Foo(x: flow.Numpy.Def((2, 5))):
         return x
 
     data = np.ones((2, 5), dtype=np.float32)
     of_ret = Foo(data).get()
-    test_case.assertEqual(of_ret.ndarray().max(), 1)
-    test_case.assertEqual(of_ret.ndarray().min(), 1)
-    test_case.assertTrue(np.allclose(of_ret.ndarray(), data))
+    test_case.assertEqual(of_ret.numpy().max(), 1)
+    test_case.assertEqual(of_ret.numpy().min(), 1)
+    test_case.assertTrue(np.allclose(of_ret.numpy(), data))
 
 
 def test_FixedTensorDef_batch_axis(test_case):
@@ -43,9 +44,9 @@ def test_FixedTensorDef_2_device(test_case):
 
     data = np.ones((2, 5), dtype=np.float32)
     of_ret = Foo(data).get()
-    test_case.assertEqual(of_ret.ndarray().max(), 1)
-    test_case.assertEqual(of_ret.ndarray().min(), 1)
-    test_case.assertTrue(np.allclose(of_ret.ndarray(), data))
+    test_case.assertEqual(of_ret.numpy().max(), 1)
+    test_case.assertEqual(of_ret.numpy().min(), 1)
+    test_case.assertTrue(np.allclose(of_ret.numpy(), data))
 
 
 def test_MirroredTensorDef(test_case):
@@ -54,18 +55,18 @@ def test_MirroredTensorDef(test_case):
         return x
 
     data = np.ones((1, 5), dtype=np.float32)
-    ndarray_list = Foo([data]).get().ndarray_list()
+    ndarray_list = Foo([data]).get().numpy_list()
     test_case.assertEqual(len(ndarray_list), 1)
     test_case.assertTrue(np.allclose(ndarray_list[0], data))
 
 
 def test_MirroredTensorListDef(test_case):
     @flow.global_function()
-    def Foo(x=flow.MirroredTensorListDef((2, 5))):
+    def Foo(x: flow.List.List.Numpy.Def((2, 5))):
         return x
 
     data = np.ones((1, 5), dtype=np.float32)
-    ndarray_list = Foo([[data]]).get().ndarray_lists()
+    ndarray_list = Foo([[data]]).get().numpy_lists()
     test_case.assertEqual(len(ndarray_list), 1)
     test_case.assertEqual(len(ndarray_list[0]), 1)
     test_case.assertTrue(np.allclose(ndarray_list[0][0], data))
@@ -80,9 +81,8 @@ def test_MirroredTensorDef_4_device(test_case):
 
     @flow.global_function()
     def Foo(
-        image_label=[
-            flow.MirroredTensorDef(image_shape),
-            flow.MirroredTensorDef(label_shape),
+        image_label: Tuple[
+            flow.List.Numpy.Def(image_shape), flow.List.Numpy.Def(label_shape),
         ]
     ):
         return image_label
@@ -94,7 +94,7 @@ def test_MirroredTensorDef_4_device(test_case):
     labels = ndarray_lst(label_shape)
     inputs = [images, labels]
 
-    outputs = [output.ndarray_list() for output in Foo(inputs).get()]
+    outputs = [output.numpy_list() for output in Foo(inputs).get()]
     test_case.assertEqual(len(outputs), len(inputs))
     for o, i in zip(outputs, inputs):
         test_case.assertEqual(len(o), len(i))

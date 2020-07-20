@@ -28,7 +28,7 @@ def roundup(x, align):
 
 
 def coco_data_load(cfg, machine_id, nrank):
-    with flow.device_prior_placement("cpu", "{}:0-{}".format(machine_id, nrank - 1)):
+    with flow.scope.placement("cpu", "{}:0-{}".format(machine_id, nrank - 1)):
         (
             image,
             image_id,
@@ -91,7 +91,7 @@ def _make_data_load_fn():
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     cfg = COCODataLoadConfig()
 
@@ -117,16 +117,15 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
         if verbose:
             print("==== iter {} ====".format(i))
             print(
-                "image: {}\n".format(image.ndarray_list()[0].shape),
-                image.ndarray_list()[0],
+                "image: {}\n".format(image.numpy_list()[0].shape),
+                image.numpy_list()[0],
             )
             print(
-                "image_size: {}\n".format(image_size.ndarray().shape),
-                image_size.ndarray(),
+                "image_size: {}\n".format(image_size.numpy().shape), image_size.numpy(),
             )
-            print("gt_bbox:\n", gt_bbox.ndarray_lists()[0])
-            print("gt_label:\n", gt_label.ndarray_lists()[0])
-            print("gt_mask:\n", gt_mask.ndarray_lists()[0])
+            print("gt_bbox:\n", gt_bbox.numpy_lists()[0])
+            print("gt_label:\n", gt_label.numpy_lists()[0])
+            print("gt_mask:\n", gt_mask.numpy_lists()[0])
 
     print(
         "mean of time elapsed of {} iters (dropped {} first iters): {}".format(

@@ -11,6 +11,8 @@ Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
                      HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi);
 void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
                          HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
+void AddDiffStaticShapeCast(const OpGraph& op_graph, JobBuilder* job_builder,
+                            HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
                                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
