@@ -1,9 +1,12 @@
-import oneflow
 import sys
 import os
 import argparse
 import inspect
 import shutil
+
+import oneflow
+# module unittest not included in sys.modules.values, import it by hand
+import oneflow.python.framework.unittest
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -35,22 +38,23 @@ class VirtualModule(object):
             ret += "  * {}\n".format(k)
         return ret
 
-    def dump(self, dir_path):
+    def dump(self, dir_path, is_root=False):
         if os.path.isdir(dir_path) == False:
             os.mkdir(dir_path)
         for k, v in self._submodule_dict.items():
             sub_dir_path = os.path.join(dir_path, k)
             v.dump(sub_dir_path)
-        init_file_path = os.path.join(dir_path, "__init__.py")
-        with open(init_file_path, 'w') as f:
-            mod_set = set()
-            lines = []
-            for k in self._submodule_dict.keys():
-                mod_set.add(include_submodule(k))
-            for k, v in self._func_or_class_dict.items():
-                lines += include_export(k, v)
-            lines = list(mod_set) + lines
-            f.write("\n".join(lines))
+        if is_root == False:
+            init_file_path = os.path.join(dir_path, "__init__.py")
+            with open(init_file_path, 'w') as f:
+                mod_set = set()
+                lines = []
+                for k in self._submodule_dict.keys():
+                    mod_set.add(include_submodule(k))
+                for k, v in self._func_or_class_dict.items():
+                    lines += include_export(k, v)
+                lines = list(mod_set) + lines
+                f.write("\n".join(lines))
 
     def submodule_names(self):
         return self._submodule_dict.keys()
@@ -74,8 +78,7 @@ def include_export(api_name_base, symbol):
 def collect_exports():
     exports = {}
     for mod in sys.modules.values():
-        if mod.__name__.startswith("oneflow"):
-            print(mod.__name__)
+        if mod.__name__.startswith("oneflow.python"):
             for attr in dir(mod):
                 symbol = getattr(mod, attr)
                 if hasattr(symbol, "__force_no_export__"):
@@ -99,12 +102,7 @@ def collect_exports():
 
 def main():
     mod = collect_exports()
-    for name in mod.submodule_names():
-        print(name)
-    #     joined = os.path.join(args.root_path, name)
-    #     if os.path.isdir(joined):
-    #         shutil.rmtree(joined)
-    mod.dump(args.root_path)
+    mod.dump(args.root_path, is_root=True)
 
 if __name__ == "__main__":
     main()
