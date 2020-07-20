@@ -21,6 +21,15 @@ import oneflow as flow
 
 @oneflow_export("summary.text")
 def text(text, tag=None):
+    r"""Add a text list to Summary
+
+    Args:
+        text: A str list
+        tag: The tag of summary 
+
+    Returns:
+        A protobuf message [Summary]
+    """
     if isinstance(text, (tuple, list)) and len(text) > 0:
         if not isinstance(tag, str) or tag is None:
             tag = "text"
@@ -61,6 +70,18 @@ def _get_tensor(values, dtype=None, shape=None):
 
 @oneflow_export("summary.hparams")
 def hparams(hparams):
+    r"""Add hparams to Summary
+
+    Args:
+        hparams: A dict of Hparams
+
+    Raises:
+        TypeError: If the type of hparam not in (str, int, float, bool) 
+        TypeError: If the type of metric not in (float, int)
+
+    Returns:
+        A protobuf message [Summary]
+    """
     hparams, metrics = _get_hparams_dict(hparams)
     jparams = json.dumps(hparams, sort_keys=True, separators=(",", ":"))
     group_name = hashlib.sha256(jparams.encode("utf-8")).hexdigest()
@@ -132,7 +153,21 @@ def _get_value(value):
 
 @oneflow_export("summary.Hparam")
 class HParam(object):
+    r"""The class of Hparam
+
+    This class describes the name and the type of Hparam
+    """
+
     def __init__(self, name, dtype=None):
+        r"""Create a Hparam object
+
+        Args:
+            name: Hparam name 
+            dtype: Hparam type
+
+        Raises:
+            ValueError: If Hparam type not in (IntegerRange, RealRange, ValueSet)
+        """
         self.name_ = name
         self.dtype_ = dtype
         if not isinstance(self.dtype_, (IntegerRange, RealRange, ValueSet, type(None))):
@@ -152,7 +187,22 @@ class HParam(object):
 
 @oneflow_export("summary.IntegerRange")
 class IntegerRange(object):
+    r"""The class of IntegerRange
+
+    This class takes a integer range between min_value and max_value
+    """
+
     def __init__(self, min_value, max_value):
+        r"""Create an 'IntegerRange' object
+
+        Args:
+            min_value: The min value of the range 
+            max_value: The max value of the range
+
+        Raises:
+            TypeError: If 'min_value' or 'max_value' is not an int
+            ValueError: If 'min_value' > 'max_value'
+        """
         if not isinstance(max_value, int):
             raise TypeError("max_value is not an integer value: %r" % (max_value,))
         if not isinstance(min_value, int):
@@ -175,7 +225,22 @@ class IntegerRange(object):
 
 @oneflow_export("summary.RealRange")
 class RealRange(object):
+    r"""The class of RealRange
+
+    This class takes a realnumber range between min_value and max_value
+    """
+
     def __init__(self, min_value, max_value):
+        r"""Create a 'RealRange' object
+
+        Args:
+            min_value: The min value of the range 
+            max_value: The max value of the range
+
+        Raises:
+            TypeError: If 'min_value' or 'max_value' is not an float
+            ValueError: If 'min_value' > 'max_value'
+        """
         if not isinstance(max_value, float):
             raise TypeError("max_value is not an float value: %r" % (max_value,))
         if not isinstance(min_value, float):
@@ -198,7 +263,22 @@ class RealRange(object):
 
 @oneflow_export("summary.ValueSet")
 class ValueSet(object):
+    r"""The class of ValueSet
+
+    This class takes a list of value
+    """
+
     def __init__(self, values, dtype=None):
+        r"""Create a ValueSet object
+
+        Args:
+            values: a list of values
+            dtype: the value type
+
+        Raises:
+            ValueError: If the value type not in (int, float, bool, str)
+            TypeError: If the value in the list is not same 
+        """
         self.values_ = list(values)
         if dtype is None:
             if self.values_:
@@ -228,7 +308,21 @@ class ValueSet(object):
 
 @oneflow_export("summary.Metric")
 class Metric(object):
+    r"""The class of Metric
+
+    This class takes a 'int' or 'float' value
+    """
+
     def __init__(self, name, dtype=None):
+        r"""Create a Metric object 
+
+        Args:
+            name: Metric name 
+            dtype: Value type
+
+        Raises:
+            ValueError: If type is not 'int' or 'float'
+        """
         self.name_ = name
         if dtype is None:
             dtype = float

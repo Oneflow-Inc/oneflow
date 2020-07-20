@@ -992,6 +992,67 @@ std::string OpConf2ClassName(const OperatorConf& op_conf) {
   }
 }
 
+void FormateUserConf(nlohmann::json& json_conf) {
+  nlohmann::json user_conf = json_conf["user_conf"];
+  if (user_conf.is_null()) {
+    json_conf.erase(json_conf.find("user_conf"));
+    return;
+  }
+  std::string nomarl_array[] = {"at_int32",  "at_int64",  "at_bool",  "at_float",
+                                "at_double", "at_string", "at_shape", "at_data_type"};
+  std::string list_array[] = {"at_list_int32",     "at_list_int64", "at_list_float",
+                              "at_list_data_type", "at_list_shape", "at_list_string"};
+  nlohmann::json attr_json = user_conf["attr"];
+  for (int32_t i = 0; i < attr_json.size(); i++) {
+    std::string key = attr_json[i]["key"];
+    nlohmann::json value_json = attr_json[i]["value"];
+    bool is_found_normal = false;
+    for (int32_t j = 0; j < nomarl_array->length(); j++) {
+      std::string value_key = nomarl_array[j];
+      if (value_json.contains(value_key)) {
+        is_found_normal = true;
+        if ("at_shape" == value_key) {
+          json_conf[key] = value_json[value_key]["dim"];
+        } else {
+          json_conf[key] = value_json[value_key];
+        }
+        break;
+      }
+    }
+    if (is_found_normal) { continue; }
+    for (int32_t j = 0; j < list_array->length(); j++) {
+      std::string value_key = list_array[j];
+      if (value_json.contains(value_key)) {
+        if (value_json[value_key].contains("val")) {
+          json_conf[key] = value_json[value_key]["val"];
+          break;
+        } else if (value_json[value_key].contains("dim")) {
+          json_conf[key] = value_json[value_key]["dim"];
+          break;
+        }
+      }
+    }
+  }
+  json_conf.erase(json_conf.find("user_conf"));
+}
+
+void FormateVariableConf(nlohmann::json& json_conf) {
+  nlohmann::json variable_conf = json_conf["variable_conf"];
+  if (variable_conf == nullptr) {
+    json_conf.erase(json_conf.find("variable_conf"));
+    return;
+  }
+  for (nlohmann::json::iterator it = variable_conf.begin(); it != variable_conf.end(); ++it) {
+    std::string key = it.key();
+    if ("shape" == key) {
+      json_conf[key] = it.value()["dim"];
+    } else {
+      json_conf[key] = it.value();
+    }
+  }
+  json_conf.erase(json_conf.find("variable_conf"));
+}
+
 }  // namespace
 
 std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
@@ -1021,6 +1082,8 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
 
     nlohmann::json json_conf;
     summary::ConvertProtobufMsg2Json(json_conf, op->op_conf());
+    FormateUserConf(json_conf);
+    FormateVariableConf(json_conf);
     json_layers_pair["config"] = json_conf;
 
     std::vector<std::string> inbound_nodes_vec;

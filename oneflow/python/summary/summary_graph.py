@@ -10,11 +10,25 @@ import oneflow as flow
 
 @oneflow_export("summary.Graph")
 class Graph(object):
+    r"""The class of Graph
+
+    This class can write 'computing_graph' or 'structure_graph' into log file
+    """
+
     def __init__(self, logdir=None):
+        r"""Create a Graph object
+
+        Args:
+            logdir: The log dir
+
+        Raises:
+            Exception: If log dir is None or illegal
+        """
         if logdir is None:
             raise Exception("logdir should not be None!")
         if not os.path.isdir(logdir):
             raise Exception("Logdir %r is illegal!" % logdir)
+        logdir += "/graph"
         if not os.path.exists(logdir):
             os.makedirs(logdir)
         self.logdir_ = logdir

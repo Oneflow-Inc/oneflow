@@ -9,6 +9,14 @@ import oneflow as flow
 
 @oneflow_export("summary.scalar")
 def write_scalar(value, step, tag, name=None):
+    r"""Write scalar to log file
+
+    Args:
+        value: A 'Blob' with 1 value and dtype in (flow.float, flow.double, flow.int64, flow.int32)
+        step: A 'Blob' with 1 value and dtype is 'flow.int64'
+        tag: A 'Blob' with 1 value and dtype is 'flow.int8'
+        name: This operator's name 
+    """
     if name is None:
         name = id_util.UniqueStr("WriteScalar_")
     (
@@ -24,6 +32,12 @@ def write_scalar(value, step, tag, name=None):
 
 @oneflow_export("summary.create_summary_writer")
 def create_summary_writer(logdir, name=None):
+    r"""Create a summary writer object
+
+    Args:
+        logdir: log dir
+        name: This operator's name
+    """
     if name is None:
         name = id_util.UniqueStr("CreateWriter_")
     (
@@ -37,6 +51,11 @@ def create_summary_writer(logdir, name=None):
 
 @oneflow_export("summary.flush_summary_writer")
 def flush_summary_writer(name=None):
+    r"""Flush the summary writer
+
+    Args:
+        name: This operator's name
+    """
     if name is None:
         name = id_util.UniqueStr("FlushWriter_")
     (flow.user_op_builder(name).Op("flush_summary_writer").Build().InferAndTryRun())
@@ -44,6 +63,14 @@ def flush_summary_writer(name=None):
 
 @oneflow_export("summary.histogram")
 def write_histogram(value, step, tag, name=None):
+    r"""Write histogram to log file
+
+    Args:
+        value: A 'Blob' with dtype in (flow.float, flow.double, flow.int64, flow.int32, flow.int8, flow.uint8)
+        step: A 'Blob' with 1 value and dtype is 'flow.int64'
+        tag: A 'Blob' with 1 value and dtype is 'flow.int8'
+        name: This operator's name 
+    """
     if name is None:
         name = id_util.UniqueStr("WriteHistogram_")
     (
@@ -59,6 +86,13 @@ def write_histogram(value, step, tag, name=None):
 
 @oneflow_export("summary.pb")
 def write_pb(value, step=None, name=None):
+    r"""Write raw protobuf data to log file
+
+    Args:
+        value: A 'Blob' with dtype in 'flow.int8'
+        step: A 'Blob' with 1 value and dtype is 'flow.int64'
+        name: This operator's name 
+    """
     if name is None:
         name = id_util.UniqueStr("WritePb_")
     (
@@ -73,6 +107,14 @@ def write_pb(value, step=None, name=None):
 
 @oneflow_export("summary.image")
 def write_image(value, step=None, tag=None, name=None):
+    r"""Write image to log file
+
+    Args:
+        value: A 'Blob' with dtype in 'flow.uint8'
+        step: A 'Blob' with 1 value and dtype is 'flow.int64'
+        tag: A 'Blob' with 1 value and dtype is 'flow.int8'
+        name: This operator's name 
+    """
     if name is None:
         name = id_util.UniqueStr("WriteImage_")
     if tag is None:

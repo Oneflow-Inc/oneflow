@@ -8,11 +8,25 @@ import oneflow as flow
 
 @oneflow_export("summary.Projector")
 class Projector(object):
+    r"""The class of Projector
+
+    This class can create an 'embedding_projector' or 'exception_projector'
+    """
+
     def __init__(self, logdir=None):
+        r"""Create a Projector objector
+
+        Args:
+            logdir: The log dir
+
+        Raises:
+            Exception: If 'logdir' is None or illegal
+        """
         if logdir is None:
             raise Exception("logdir should not be None!")
         if not os.path.isdir(logdir):
             raise Exception("Logdir %r is illegal!" % logdir)
+        logdir += "/projector"
         if not os.path.exists(logdir):
             os.makedirs(logdir)
         self.logdir_ = logdir

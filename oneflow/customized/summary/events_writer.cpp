@@ -12,8 +12,8 @@ EventsWriter::~EventsWriter() { Close(); }
 
 Maybe<void> EventsWriter::Init(const std::string& logdir) {
   file_system_ = std::make_unique<fs::PosixFileSystem>();
-  file_system_->RecursivelyCreateDirIfNotExist(logdir);
-  log_dir_ = logdir;
+  log_dir_ = logdir + "/event";
+  file_system_->RecursivelyCreateDirIfNotExist(log_dir_);
   TryToInit();
   is_inited_ = true;
   last_flush_time_ = CurrentMircoTime();
