@@ -5,7 +5,7 @@ import os
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
@@ -28,8 +28,8 @@ def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
             .Input("a", [a])
             .Input("b", [b])
             .Output("out")
-            .Attr("transpose_a", transpose_a, "AttrTypeBool")
-            .Attr("transpose_b", transpose_b, "AttrTypeBool")
+            .Attr("transpose_a", transpose_a)
+            .Attr("transpose_b", transpose_b)
             .Build()
         )
     else:
@@ -39,8 +39,8 @@ def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
             .Input("a", [a])
             .Input("b", [b])
             .Output("out")
-            .Attr("transpose_a", transpose_a, "AttrTypeBool")
-            .Attr("transpose_b", transpose_b, "AttrTypeBool")
+            .Attr("transpose_a", transpose_a)
+            .Attr("transpose_b", transpose_b)
             .Build()
         )
     return op.InferAndTryRun().RemoteBlobList()[0]

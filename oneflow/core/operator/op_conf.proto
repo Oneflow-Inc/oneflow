@@ -142,13 +142,6 @@ message PReluAlphaGradOpConf {
   required bool channel_shared = 5;
 }
 
-enum ScalarReductionType {
-  kSumOverOne = 0;
-  kSumOverWeight = 1;
-  kSumOverN = 2;
-  kSumOverNonZeroWeight = 3;
-}
-
 message SigmoidCrossEntropyOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -452,61 +445,6 @@ message LazyAdamModelUpdateOpConf {
 message AccumulateOpConf {
 }
 
-message PrintRecordConf {
-  required string lbn = 1;
-  optional string name = 2;
-  required EncodeConf encode_case = 3;
-}
-
-message PrintOpConf {
-  repeated PrintRecordConf in = 1;
-  required string print_dir = 2;
-  optional string part_name_prefix = 3 [default = "part-"];
-  optional int32 part_name_suffix_length = 4 [default = -1];
-}
-
-message ReduceSumOpConf {
-  required string in = 1;
-  required string out = 3;
-  repeated int32 axis = 4;
-  optional bool keep_dims = 5 [default = false];
-}
-
-message ReduceSumLikeOpConf {
-  required string x = 1;
-  required string like = 2;
-  required string y = 3;
-  repeated int32 axis = 4;
-  optional string temp_storage = 5 [default = "temp_storage"];
-}
-
-message ReduceMeanOpConf {
-  required string in = 1;
-  required string out = 2;
-  repeated int32 axis = 3;
-  optional bool keep_dims = 4 [default = false];
-}
-
-message ReduceMeanGradOpConf {
-  required string dy = 1;
-  required string x = 2; // like
-  required string dx = 3;
-  repeated int32 reduced_axis = 4;
-  optional string temp_storage = 5 [default = "temp_storage"];
-}
-
-message ReshapeOpConf {
-  required string in = 1;
-  required string out = 2;
-  required ShapeProto shape = 3;
-}
-
-message ReshapeLikeOpConf {
-  required string x = 1;
-  required string y = 2;
-  required string like = 3;
-}
-
 message DynamicReshapeOpConf {
   required string in = 1;
   required string out = 2;
@@ -517,16 +455,6 @@ message DynamicReshapeLikeOpConf {
   required string x = 1;
   required string y = 2;
   required string like = 3;
-}
-
-message AddOpConf {
-  repeated string in = 1;
-  required string out = 2;
-}
-
-message MaximumOpConf {
-  repeated string in = 1;
-  required string out = 2;
 }
 
 message InterfaceBlobConf {
@@ -590,16 +518,6 @@ message VariableOpConf {
   required OptInt64 split_axis = 8;
   optional int64 random_seed = 9;
   optional RegularizerConf regularizer = 10;
-}
-
-message LocalResponseNormalizationOpConf {
-  required string in = 1;
-  required string out = 2;
-  required string data_format = 3;
-  optional int32 depth_radius = 4 [default = 5];
-  optional double bias = 5 [default = 1];
-  optional double alpha = 6 [default = 1];
-  optional double beta = 7 [default = 0.5];
 }
 
 message EncodeConf {
@@ -690,56 +608,6 @@ message DecodeRandomOpConf {
   required int64 batch_size = 8;
 }
 
-message ReduceConcatOpConf {
-  repeated string in = 1;
-  required string out = 2;
-  repeated int64 data_offset = 3;
-  required int64 out_size = 4;
-}
-
-message NcclAllReduceOpConf {
-  optional string in = 1;
-  optional string out = 2;
-}
-
-message NcclReduceScatterOpConf {
-}
-
-message NcclAllGatherOpConf {
-}
-
-message ReduceSplitOpConf {
-  required string in = 1;
-  repeated string out = 2;
-  repeated ShapeProto out_shape = 3;
-  repeated int64 data_offset = 4;
-  optional int32 order_in_graph = 5;
-}
-
-message ReduceScatterOpConf {
-  optional int32 out_num = 1 [default = 0];
-}
-
-message ReduceAddOpConf {
-  optional int32 in_num = 1 [default = 0];
-}
-
-message ReduceGatherOpConf {
-  optional int32 in_num = 1 [default = 0];
-}
-
-message DotOpConf {
-  required string in = 1;
-  required string weight = 2;
-  optional string bias = 3;
-  required string out = 4;
-}
-
-enum Norm {
-  L1 = 1;
-  L2 = 2;
-}
-
 message PackOpConf {
   required string in = 1;
   required string out = 2;
@@ -756,27 +624,6 @@ message RepeatOpConf {
   required string in = 1;
   required string out = 2;
   required int32 repeat_num = 3;
-}
-
-message BroadcastLikeOpConf {
-  required string x = 1;
-  required string like = 2;
-  required string y = 3;
-  repeated int32 reduced_axis = 4;
-}
-
-message ConstantOpConf {
-  optional string tick = 1;
-  required string out = 2;
-  optional ShapeProto shape = 3;
-  optional DataType data_type = 4;
-  optional InitializerConf initializer = 5;
-}
-
-message ReduceIdentityOpConf {
-  optional string in = 1;
-  optional string out = 2;
-  optional int32 order_in_graph = 3;
 }
 
 message TickOpConf {
@@ -822,22 +669,9 @@ message TupleIdentityOpConf {
   repeated string out = 2;
 }
 
-message TopKOpConf {
-  required string in = 1;
-  required string out = 2;
-  optional int32 k = 3 [default = 1];
-  optional bool sorted = 4 [default = true];
-}
-
 message KeepHeaderOnlyOpConf {
   repeated string in = 1;
   repeated string out = 2;
-}
-
-message AxpyOpConf {
-  required string x = 1;
-  required string y = 2;
-  required double alpha = 3;
 }
 
 message TotalLossInstanceNumOpConf {
@@ -894,11 +728,6 @@ message ModelLoadOpConf {
   repeated string out = 2;
   repeated string variable_op_name = 3;
   repeated VariableOpConf original_variable_conf = 4;
-}
-
-message AllReduceFacadeOpConf {
-  required string in = 1;
-  required string out = 2;
 }
 
 message IdentityOpConf {
@@ -1123,6 +952,7 @@ message SyncDynamicResizeOpConf {
   required string size = 2;
   required string out = 3;
   required int64 axis = 4;
+  optional bool eager = 5 [default = false];
 }
 
 message ArgWhereOpConf {
@@ -1164,6 +994,11 @@ message BoxingIdentityOpConf {
   required LogicalBlobId lbi = 1;
 }
 
+message CastToStaticShapeOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1171,7 +1006,7 @@ message OperatorConf {
   optional bool enable_cudnn = 5;
   optional int64 cudnn_buf_limit_mbyte = 6;
   repeated string ctrl_in_op_name = 7;
-  optional int64 logical_object_id = 8;
+  optional int64 scope_symbol_id = 8;
   oneof op_type {
     // system op
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;
@@ -1180,18 +1015,9 @@ message OperatorConf {
     CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     BoxingOpConf boxing_conf = 108;
-    ReduceScatterOpConf reduce_scatter_conf = 109;
-    ReduceAddOpConf reduce_add_conf = 110;
-    ReduceGatherOpConf reduce_gather_conf = 111;
-    ReduceConcatOpConf reduce_concat_conf = 112;
-    ReduceSplitOpConf reduce_split_conf = 113;
-    NcclAllReduceOpConf nccl_all_reduce_conf = 114;
-    NcclReduceScatterOpConf nccl_reduce_scatter_conf = 115;
-    NcclAllGatherOpConf nccl_all_gather_conf = 116;
     AccumulateOpConf accumulate_conf = 117;
     NormalModelUpdateOpConf normal_mdupdt_conf = 118;
     VariableOpConf variable_conf = 122;
-    ReduceIdentityOpConf reduce_identity_conf = 123;
     TickOpConf tick_conf = 124;
     KeepHeaderOnlyOpConf keep_header_only_conf = 125;
     TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
@@ -1202,7 +1028,6 @@ message OperatorConf {
     AdamModelUpdateOpConf adam_model_update_conf = 131;
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
     AccOpConf acc_conf = 133;
-    AllReduceFacadeOpConf all_reduce_facade_conf = 134;
     SourceTickOpConf source_tick_conf = 135;
     SinkTickOpConf sink_tick_conf = 136;
     InputOpConf input_conf = 137;
@@ -1235,29 +1060,17 @@ message OperatorConf {
     CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
     BoxingIdentityOpConf boxing_identity_conf = 171;
     TensorListSplitOpConf tensor_list_split_conf = 172;
+    CastToStaticShapeOpConf cast_to_static_shape_conf = 173;
     UserOpConf user_conf = 199;
     
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
-    ReshapeOpConf reshape_conf = 202;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
-    ReduceSumOpConf reduce_sum_conf = 219;
-    AddOpConf add_conf = 220;
-    DotOpConf dot_conf = 222;
-    MaximumOpConf maximum_conf = 224;
-    PrintOpConf print_conf = 233;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
-    ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
-    ReduceMeanOpConf reduce_mean_conf = 261;
     PReluOpConf prelu_conf = 265;
-    ReduceSumLikeOpConf reduce_sum_like_conf = 270;
-    BroadcastLikeOpConf broadcast_like_conf = 277;
-    ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
-    ReshapeLikeOpConf reshape_like_conf = 286;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
@@ -1288,8 +1101,6 @@ message OperatorConf {
     SquareSumOpConf square_sum_conf = 522;
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
 
-    // mutable input op
-    AxpyOpConf axpy_conf = 752;
   }
 }
 

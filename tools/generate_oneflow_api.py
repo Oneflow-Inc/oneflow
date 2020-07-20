@@ -71,10 +71,12 @@ def collect_exports():
         if mod.__name__.startswith("oneflow"):
             for attr in dir(mod):
                 symbol = getattr(mod, attr)
+                if hasattr(symbol, "__force_no_export__"):
+                    continue
                 if hasattr(symbol, "_ONEFLOW_API"):
                     for api_name in getattr(symbol, "_ONEFLOW_API"):
                         is_existing = api_name in exports
-                        assert is_existing == False, "exported twice: {}".format(api_name)
+                        assert is_existing == False, "exported twice: {}, previous exported: {}".format(api_name, exports[api_name])
                         exports[api_name] = symbol
 
     root_virmod = VirtualModule()

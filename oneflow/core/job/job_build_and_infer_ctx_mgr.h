@@ -10,8 +10,6 @@
 
 namespace oneflow {
 
-class EagerExecutionOption {};
-
 class JobBuildAndInferCtxMgr {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtxMgr);
@@ -65,6 +63,8 @@ class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
   void VirtualCloseJob() override;
   JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
 };
+
+bool EagerExecutionEnabled();
 
 }  // namespace oneflow
 

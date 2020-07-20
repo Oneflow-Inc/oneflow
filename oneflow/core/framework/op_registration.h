@@ -30,8 +30,16 @@ using InputArgModifier = InputBlobModifier;
 using GetInputArgModifier =
     std::function<InputArgModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
 using InputArgModifyFn = std::function<void(GetInputArgModifier, const UserOpConfWrapper&)>;
+using OutputArgModifier = OutputBlobModifier;
+using GetOutputArgModifier =
+    std::function<OutputArgModifier*(const std::string& out_arg_name, int32_t out_arg_index)>;
+using OutputArgModifyFn = std::function<void(GetOutputArgModifier, const UserOpConfWrapper&)>;
 
 struct OpRegistrationVal {
+  OpRegistrationVal() : cpu_only_supported(false), same_output_regst_num(-1) {}
+  ~OpRegistrationVal() = default;
+  bool cpu_only_supported;
+  int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
   TensorDescInferFn tensor_desc_infer_fn;
@@ -40,8 +48,7 @@ struct OpRegistrationVal {
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistrationVal since it is more about
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;
-  bool cpu_only_supported = false;
-  int32_t same_output_regst_num = -1;
+  OutputArgModifyFn output_arg_modify_fn;
 };
 
 struct OpRegistryWrapper final {
@@ -79,6 +86,7 @@ class OpRegistryWrapperBuilder final {
   OpRegistryWrapperBuilder& SetBatchAxisInferFn(BatchAxisInferFn fn);
   OpRegistryWrapperBuilder& SetGetSbpFn(GetSbpFn fn);
   OpRegistryWrapperBuilder& SetInputArgModifyFn(InputArgModifyFn fn);
+  OpRegistryWrapperBuilder& SetOutputArgModifyFn(OutputArgModifyFn fn);
   OpRegistryWrapperBuilder& SetCheckAttrFn(CheckAttrFn fn);
 
   OpRegistryWrapper Build();

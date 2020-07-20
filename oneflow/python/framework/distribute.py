@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 import oneflow.python.framework.distribute_context as distribute_ctx
 from oneflow.python.oneflow_export import oneflow_export
+import traceback
 
 
 class Distribute(object):
@@ -32,23 +33,46 @@ class SplitDistribute(Distribute):
 
 
 @oneflow_export("distribute.mirrored_strategy")
+def deprecated_mirrored_strategy():
+    print(
+        "WARNING:",
+        "oneflow.distribute.mirrored_strategy",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.mirrored_view"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+    return DistributeMirroredStrategy()
+
+
+@oneflow_export("scope.mirrored_view")
 class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
-    r"""Create a mirrored strategy scope. All operators within the scope will be mirrored among diffierent accelerators.
+    r"""Create a scope in mirrored view. All operators within the scope will be mirrored among diffierent accelerators.
     Usage::
 
-        with oneflow.distribute.mirrored_strategy():
+        with oneflow.scope.mirrored_view():
             ...
 
     """
 
-    def __enter__(self, *argc, **kwarg):
-        distribute_ctx.PushMirroredStrategyEnabled(True)
-
-    def __exit__(self, *argc, **kwarg):
-        distribute_ctx.PopMirroredStrategyEnabled()
+    def __init__(self):
+        distribute_ctx.DistributeStrategy.__init__(self, True)
 
 
 @oneflow_export("distribute.mirrored_strategy_enabled")
+def deprecated_mirrored_strategy_enabled():
+    print(
+        "WARNING:",
+        "oneflow.distribute.mirrored_strategy_enabled",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.mirrored_view_enabled"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+    return MirroredStrategyEnabled()
+
+
+@oneflow_export("scope.mirrored_view_enabled")
 def MirroredStrategyEnabled() -> bool:
     r"""
 
@@ -60,23 +84,46 @@ def MirroredStrategyEnabled() -> bool:
 
 
 @oneflow_export("distribute.consistent_strategy")
+def deprecated_consistent_strategy():
+    print(
+        "WARNING:",
+        "oneflow.distribute.consistent_strategy",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.consistent_view"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+    return DistributeConsistentStrategy()
+
+
+@oneflow_export("scope.consistent_view")
 class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
-    r"""Create a consistent strategy scope. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
+    r"""Create a scope in consistent view. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
     Usage::
 
-        with oneflow.distribute.consistent_strategy():
+        with oneflow.scope.consistent_view():
             ...
 
     """
 
-    def __enter__(self, *argc, **kwarg):
-        distribute_ctx.PushMirroredStrategyEnabled(False)
-
-    def __exit__(self, *argc, **kwarg):
-        distribute_ctx.PopMirroredStrategyEnabled()
+    def __init__(self):
+        distribute_ctx.DistributeStrategy.__init__(self, False)
 
 
 @oneflow_export("distribute.consistent_strategy_enabled")
+def deprecated_consistent_strategy_enabled():
+    print(
+        "WARNING:",
+        "oneflow.distribute.consistent_strategy_enabled",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.consistent_view_enabled"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+    return ConsistentStrategyEnabled()
+
+
+@oneflow_export("scope.consistent_view_enabled")
 def ConsistentStrategyEnabled() -> bool:
     r"""
 

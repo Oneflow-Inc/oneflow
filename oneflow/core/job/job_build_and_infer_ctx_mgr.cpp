@@ -78,6 +78,4 @@ void EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
   clear_job_name2infer_ctx();
 }
 
-COMMAND(Global<bool, EagerExecutionOption>::SetAllocated(new bool(false)));
-
 }  // namespace oneflow

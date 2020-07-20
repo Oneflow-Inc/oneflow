@@ -7,7 +7,7 @@ from functools import reduce
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -68,7 +68,7 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
             .Input("in", [params])
             .Input("indices", [indices])
             .Output("out")
-            .Attr("axis", int(axis), "AttrTypeInt64")
+            .Attr("axis", int(axis))
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]
@@ -102,7 +102,7 @@ def reshape(x, shape, name=None):
     shape = list(shape)
     assert all(dim == -1 or dim > 0 for dim in shape)
     assert shape.count(-1) <= 1
-    if (not x.is_dynamic) and (os.getenv("ENABLE_USER_OP") != "False"):
+    if not x.is_dynamic:
         if name is None:
             name = id_util.UniqueStr("Reshape_")
         return (
@@ -110,28 +110,22 @@ def reshape(x, shape, name=None):
             .Op("reshape")
             .Input("in", [x])
             .Output("out")
-            .Attr("shape", infer_shape(x, shape), "AttrTypeShape")
+            .Attr("shape", infer_shape(x, shape))
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]
         )
     else:
         op_conf = op_conf_util.OperatorConf()
-        if x.is_dynamic:
-            setattr(
-                op_conf,
-                "name",
-                name if name is not None else id_util.UniqueStr("DynamicReshape_"),
-            )
-            setattr(op_conf.dynamic_reshape_conf, "in", x.unique_name)
-            op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
-            setattr(op_conf.dynamic_reshape_conf, "out", "out")
-        else:
-            op_conf.name = id_util.UniqueStr("Reshape_" + x.op_name)
-            setattr(op_conf.reshape_conf, "in", x.unique_name)
-            op_conf.reshape_conf.shape.dim[:] = list(infer_shape(x, shape))
-            op_conf.reshape_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("DynamicReshape_"),
+        )
+        setattr(op_conf.dynamic_reshape_conf, "in", x.unique_name)
+        op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
+        setattr(op_conf.dynamic_reshape_conf, "out", "out")
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -140,30 +134,18 @@ def reshape(x, shape, name=None):
 
 @oneflow_export("reshape_like")
 def reshape_like(x, like, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        if name is None:
-            name = id_util.UniqueStr("ReshapeLike_")
-        return (
-            flow.user_op_builder(name)
-            .Op("reshape_like")
-            .Input("in", [x])
-            .Input("like", [like])
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = id_util.UniqueStr("ReshapeLike_")
-        setattr(op_conf.reshape_like_conf, "x", x.unique_name)
-        setattr(op_conf.reshape_like_conf, "like", like.unique_name)
-        op_conf.reshape_like_conf.y = "y"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "y"
-        return remote_blob_util.RemoteBlob(lbi)
+    if name is None:
+        name = id_util.UniqueStr("ReshapeLike_")
+    return (
+        flow.user_op_builder(name)
+        .Op("reshape_like")
+        .Input("in", [x])
+        .Input("like", [like])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("dynamic_reshape")
@@ -179,7 +161,7 @@ def dynamic_reshape(x, shape, name=None):
     setattr(op_conf.dynamic_reshape_conf, "in", x.unique_name)
     op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
     setattr(op_conf.dynamic_reshape_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -213,7 +195,7 @@ def transpose(a, perm=None, conjugate=False, name=None):
         .Op("transpose")
         .Input("input", [a])
         .Output("output")
-        .Attr("perm", perm, "AttrTypeListInt32")
+        .Attr("perm", perm)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -334,11 +316,11 @@ def slice_v2(x, slice_tup_list, name=None):
         .Op("slice_v2")
         .Input("x", [x])
         .Output("y")
-        .Attr("begin", begin_list, "AttrTypeListInt64")
-        .Attr("end", end_list, "AttrTypeListInt64")
-        .Attr("stride", stride_list, "AttrTypeListInt64")
-        .Attr("has_begin", has_begin_list, "AttrTypeListInt64")
-        .Attr("has_end", has_end_list, "AttrTypeListInt64")
+        .Attr("begin", begin_list)
+        .Attr("end", end_list)
+        .Attr("stride", stride_list)
+        .Attr("has_begin", has_begin_list)
+        .Attr("has_end", has_end_list)
         .Build()
     )
     return op.InferAndTryRun().RemoteBlobList()[0]
@@ -368,7 +350,7 @@ def concat(values, axis, name=None):
         .Op("concat")
         .Input("in", values)
         .Output("out")
-        .Attr("axis", int(axis), "AttrTypeInt32")
+        .Attr("axis", int(axis))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -400,7 +382,7 @@ def scatter_nd(indices, updates, shape, name=None):
         .Op("scatter_nd")
         .Input("indices", [indices])
         .Input("updates", [updates])
-        .Attr("shape", shape, "AttrTypeShape")
+        .Attr("shape", shape)
         .Output("out")
         .Build()
     )
@@ -451,7 +433,7 @@ def argwhere(condition, dtype=None, name=None):
     setattr(op_conf.arg_where_conf, "out_size", "out_size")
     if dtype is not None:
         setattr(op_conf.arg_where_conf, "data_type", dtype)
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
 
     arg_where_out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(arg_where_out_lbi, "op_name", op_conf.name)
@@ -521,7 +503,7 @@ def elem_cnt(inputs, dtype=None, name=None):
     if dtype is not None:
         op_conf.shape_elem_cnt_conf.data_type = dtype
     op_conf.shape_elem_cnt_conf.y = "y"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "y")
@@ -540,7 +522,8 @@ def sync_dynamic_resize(inputs, size, name=None):
     setattr(op_conf.sync_dynamic_resize_conf, "size", size.unique_name)
     setattr(op_conf.sync_dynamic_resize_conf, "axis", 0)
     setattr(op_conf.sync_dynamic_resize_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
+    setattr(op_conf.sync_dynamic_resize_conf, "eager", flow.eager_execution_enabled())
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
@@ -562,7 +545,7 @@ def stack(inputs, axis, name=None):
     getattr(op_conf.stack_conf, "in").extend([input.unique_name for input in inputs])
     setattr(op_conf.stack_conf, "axis", axis)
     setattr(op_conf.stack_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -584,9 +567,9 @@ def generate_random_batch_permutation_indices(value, seed=None, name=None):
         .Output("y")
     )
     if seed is not None:
-        op.Attr("seed", seed, "AttrTypeInt64")
+        op.Attr("seed", seed)
     else:
-        op.Attr("seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1), "AttrTypeInt64")
+        op.Attr("seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1))
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
@@ -612,7 +595,7 @@ def identity(x, name=None):
     op_conf.name = name
     setattr(op_conf.identity_conf, "in", x.unique_name)
     op_conf.identity_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -632,7 +615,7 @@ def identity_n(inputs, name=None):
         out_bn = "out_" + str(idx)
         getattr(op_conf.tuple_identity_conf, "out").append(out_bn)
         out_bns.append(out_bn)
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
 
     def bn_to_remote_blob(bn):
         lbi = logical_blob_id_util.LogicalBlobId()
@@ -659,7 +642,7 @@ def squeeze(input, axis=None, name=None):
         .Op("squeeze")
         .Input("in", [input])
         .Output("out")
-        .Attr("axes", list(axis), "AttrTypeListInt32")
+        .Attr("axes", list(axis))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -677,7 +660,7 @@ def expand_dims(input, axis, name=None):
         .Op("expand_dims")
         .Input("in", [input])
         .Output("out")
-        .Attr("axis", axis, "AttrTypeInt32")
+        .Attr("axis", axis)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -704,7 +687,7 @@ def broadcast_like(x, like, broadcast_axes=None, name=None):
         .Op("broadcast_like")
         .Input("x", [x])
         .Input("like", [like])
-        .Attr("broadcast_axes", broadcast_axes, "AttrTypeListInt32")
+        .Attr("broadcast_axes", broadcast_axes)
         .Output("y")
         .Build()
     )

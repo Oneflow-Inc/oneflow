@@ -8,7 +8,7 @@ def test_dynamic_reshape(test_case):
     flow.config.gpu_device_num(num_gpus)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -28,6 +28,6 @@ def test_dynamic_reshape(test_case):
         return reshape_out1
 
     data = [np.random.rand(*data_shape).astype(np.float32) for i in range(num_gpus)]
-    out = DynamicReshapeJob(data).get().ndarray_list()
+    out = DynamicReshapeJob(data).get().numpy_list()
     for i in range(num_gpus):
         test_case.assertTrue(np.array_equal(np.reshape(data[i], (50, 20)), out[i]))

@@ -6,16 +6,21 @@ namespace oneflow {
 namespace user_op {
 
 Tensor::Tensor(Blob* blob) {
-  dptr_ = blob->mut_dptr();
+  dptr_ = blob->ForceMutDptr();
   shape_ = blob->shape();
-  if (blob->mut_shape_view()) {
-    mut_shape_.reset(new MutShapeView(*blob->mut_shape_view()));
+  blob_access_checker_ = blob->blob_access_checker();
+  if (blob->ForceMutShapeView()) {
+    mut_shape_.reset(new MutShapeView(*blob->ForceMutShapeView()));
   } else {
     mut_shape_.reset();
   }
   data_type_ = blob->data_type();
   mem_case_ = &(blob->mem_case());
 }
+
+void Tensor::header_access_check() { this->blob_access_checker_->CheckHeaderMutable(); }
+
+void Tensor::body_access_check() { this->blob_access_checker_->CheckBodyMutable(); }
 
 void Tensor::CopyWithoutData(const Tensor& rhs) {
   dptr_ = rhs.dptr_;
@@ -27,6 +32,7 @@ void Tensor::CopyWithoutData(const Tensor& rhs) {
   }
   data_type_ = rhs.data_type_;
   mem_case_ = rhs.mem_case_;
+  blob_access_checker_ = rhs.blob_access_checker_;
 }
 
 Tensor& Tensor::operator=(Tensor&& rhs) {
@@ -35,6 +41,7 @@ Tensor& Tensor::operator=(Tensor&& rhs) {
   mut_shape_ = std::move(rhs.mut_shape_);
   data_type_ = rhs.data_type_;
   mem_case_ = rhs.mem_case_;
+  blob_access_checker_ = rhs.blob_access_checker_;
   return *this;
 }
 

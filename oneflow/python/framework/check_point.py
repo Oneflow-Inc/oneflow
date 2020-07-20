@@ -7,6 +7,7 @@ import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
+from typing import List, Union
 
 
 @oneflow_export("train.CheckPoint")
@@ -15,11 +16,11 @@ class CheckPoint(object):
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @session_ctx.try_init_default_session
-    def save(self, path):
+    def save(self, path: str) -> None:
         r"""save a checkpoint to `path`.
 
         Args:
@@ -29,13 +30,13 @@ class CheckPoint(object):
         enable_if.unique([lazy_checkpoint_save, eager_checkpoint_save])(path)
 
     @session_ctx.try_init_default_session
-    def init(self):
+    def init(self) -> None:
         r"""Initialize models by default initializer of op or Job.
         """
         enable_if.unique([lazy_checkpoint_init, eager_checkpoint_init])()
 
     @session_ctx.try_init_default_session
-    def load(self, path):
+    def load(self, path: str) -> None:
         r"""load a checkpoint from `path` and initialize models.
 
         Args:
@@ -67,7 +68,8 @@ def eager_checkpoint_save(path):
 
 @enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
 def eager_checkpoint_init():
-    raise NotImplementedError
+    # eager variables are initialized in oneflow.get_variable()
+    pass
 
 
 @enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
@@ -129,7 +131,7 @@ class SimpleCheckPointManager(object):
         prefix: prefix of snapshot
     """
 
-    def __init__(self, root_path, prefix="snapshot_"):
+    def __init__(self, root_path: str, prefix: str = "snapshot_") -> None:
         if not os.path.exists(root_path):
             os.makedirs(root_path)
         else:
@@ -138,7 +140,7 @@ class SimpleCheckPointManager(object):
         self._prefix = prefix
         self._checkpoint = CheckPoint()
 
-    def list_checkpoints(self):
+    def list_checkpoints(self) -> List[str]:
         def is_snapshot(name):
             if not name.startswith(self._prefix):
                 return False
@@ -147,14 +149,14 @@ class SimpleCheckPointManager(object):
 
         return sorted([f for f in os.listdir(self._root_path) if is_snapshot(f)])
 
-    def latest_checkpoint(self):
+    def latest_checkpoint(self) -> Union[str, None]:
         names = self.list_checkpoints()
         if not names:
             return None
         else:
             return names[-1]
 
-    def initialize_or_restore(self):
+    def initialize_or_restore(self) -> None:
         name = self.latest_checkpoint()
         if name:
             self._checkpoint.load(self._GetSnapshotPath(name))
@@ -162,11 +164,11 @@ class SimpleCheckPointManager(object):
             self._checkpoint.init()
             self.save()
 
-    def save(self):
+    def save(self) -> None:
         self._checkpoint.save(self._GetSnapshotPath(self._NextSnapshotName()))
 
-    def _NextSnapshotName(self):
+    def _NextSnapshotName(self) -> str:
         return self._prefix + datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
 
-    def _GetSnapshotPath(self, name):
+    def _GetSnapshotPath(self, name: str) -> str:
         return os.path.join(self._root_path, name)

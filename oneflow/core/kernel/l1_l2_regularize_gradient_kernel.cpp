@@ -23,10 +23,9 @@ void L1L2RegularizeGradientKernel<device_type, T>::ForwardDataContent(
   const Blob* model = BnInOp2Blob("model");
   const Blob* model_diff = BnInOp2Blob("model_diff");
   Blob* out = BnInOp2Blob("out");
-  out->CopyDataContentFrom(ctx.device_ctx, model_diff);
   L1L2RegularizeGradientKernelUtil<device_type, T>::RegularizeGradient(
-      ctx.device_ctx, out->shape().elem_cnt(), model->dptr<T>(), out->dptr<T>(), out->mut_dptr<T>(),
-      conf.l1(), conf.l2());
+      ctx.device_ctx, out->shape().elem_cnt(), model->dptr<T>(), model_diff->dptr<T>(),
+      out->mut_dptr<T>(), conf.l1(), conf.l2());
 }
 
 template<DeviceType device_type, typename T>

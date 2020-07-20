@@ -10,18 +10,7 @@ from test_util import Args, GenArgDict, type_name_to_flow_type, type_name_to_np_
 
 def test_no_watch_scope_consistent(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    func_config.default_data_type(flow.float32)
-
-    @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((2, 8, 32, 32))):
-        return flow.layers.batch_normalization(x)
-
-    Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
-
-
-def TODO_test_no_watch_scope(test_case):
-    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
@@ -34,7 +23,7 @@ def TODO_test_no_watch_scope(test_case):
 def test_train_consistent(test_case):
     flow.config.enable_debug_mode(True)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.default_data_type(flow.float32)
     func_config.train.primary_lr(0.001)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -62,22 +51,6 @@ def TODO_test_train(test_case):
     Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
 
 
-def test_watch_scope(test_case):
-    func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    func_config.default_data_type(flow.float32)
-    func_config.train.primary_lr(0.001)
-    func_config.train.model_update_conf(dict(naive_conf={}))
-
-    @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((2, 8, 32, 32))):
-        with flow.watch_scope({}, {}):
-            y = flow.layers.batch_normalization(x, axis=1)
-        flow.losses.add_loss(flow.math.reduce_sum(y))
-
-    Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
-
-
 def CompareNnBnWithTensorFlow(
     input_shape,
     data_type,
@@ -92,7 +65,7 @@ def CompareNnBnWithTensorFlow(
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.default_data_type(flow.float32)
     func_config.train.primary_lr(0)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -122,7 +95,7 @@ def CompareNnBnWithTensorFlow(
         offset=flow.FixedTensorDef(offset.shape),
         scale=flow.FixedTensorDef(scale.shape),
     ):
-        with flow.device_prior_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             x_full_precision += flow.get_variable(
                 name="v1",
                 shape=(1,),
@@ -143,7 +116,7 @@ def CompareNnBnWithTensorFlow(
 
     check_point = flow.train.CheckPoint()
     check_point.init()
-    of_y = FlowNnBnJob(x, mean, variance, offset, scale).get().ndarray()
+    of_y = FlowNnBnJob(x, mean, variance, offset, scale).get().numpy()
     of_x_diff = test_global_storage.Get("x_diff")
 
     def TensorFlowNnBn(x, mean, variance, offset, scale):
@@ -188,7 +161,7 @@ def RunOneflowLayerBn(
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     if data_type == "float16":
         func_config.enable_auto_mixed_precision(True)
         dtype = flow.float
@@ -205,7 +178,7 @@ def RunOneflowLayerBn(
 
     @flow.global_function(func_config)
     def FlowJob(x_full_precision=flow.FixedTensorDef(x.shape, dtype=dtype)):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x_full_precision += flow.get_variable(
                 name="v1", shape=(1,), dtype=dtype, initializer=flow.zeros_initializer()
             )
@@ -226,7 +199,7 @@ def RunOneflowLayerBn(
 
     check_point = flow.train.CheckPoint()
     check_point.init()
-    y = FlowJob(x).get().ndarray()
+    y = FlowJob(x).get().numpy()
     if trainable:
         x_diff = test_global_storage.Get("x_diff")
         return y, x_diff
@@ -350,8 +323,6 @@ def test_layer_batchnorm_inference(test_case):
 
 
 def test_layer_batchnorm_trainable_without_training(test_case):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict["data_type"] = ["float32"]
@@ -370,8 +341,6 @@ def test_layer_batchnorm_trainable_without_training(test_case):
 
 
 def test_nn_batchnorm(test_case):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [(2, 4, 3, 5)]
     arg_dict["data_type"] = ["float32"]
@@ -382,8 +351,6 @@ def test_nn_batchnorm(test_case):
 
 
 def test_batchnorm_fp16(test_case):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict["input_shape"] = [(2, 4, 3, 5)]

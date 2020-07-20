@@ -18,7 +18,7 @@ def TestMultiOutputOrder(x, name):
 def GenerateTest(test_case, shape):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def TestMultiOutputOrderJob(x=flow.FixedTensorDef(shape)):
@@ -27,8 +27,8 @@ def GenerateTest(test_case, shape):
     x = np.random.rand(*shape).astype(np.float32)
     # print("x", x)
     out1, out2 = TestMultiOutputOrderJob(x).get()
-    out1_ndarray = out1.ndarray()
-    out2_ndarray = out2.ndarray()
+    out1_ndarray = out1.numpy()
+    out2_ndarray = out2.numpy()
     # print("out1", out1_ndarray)
     # print("out2", out2_ndarray)
     out2_shape = list(shape)

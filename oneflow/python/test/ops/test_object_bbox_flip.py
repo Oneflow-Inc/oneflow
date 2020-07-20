@@ -10,7 +10,7 @@ def _of_object_bbox_flip(bbox_list, image_size, flip_code):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def object_bbox_flip_job(
@@ -25,7 +25,7 @@ def _of_object_bbox_flip(bbox_list, image_size, flip_code):
 
     input_bbox_list = [np.expand_dims(bbox, axis=0) for bbox in bbox_list]
     bbox_tensor = object_bbox_flip_job([input_bbox_list], [image_size]).get()
-    return bbox_tensor.ndarray_lists()[0]
+    return bbox_tensor.numpy_lists()[0]
 
 
 def _get_bbox_static_shape(bbox_list):

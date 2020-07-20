@@ -5,7 +5,7 @@ import oneflow as flow
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_distribute_strategy(flow.scope.consistent_view())
 
 
 def test_categorical_ordinal_encoder_gpu(test_case):
@@ -26,7 +26,7 @@ def test_categorical_ordinal_encoder_gpu(test_case):
     vk_set = set()
     for i in range(256):
         x = tokens[np.random.randint(0, 200000, (10000,))]
-        y = test_job(x).get().ndarray()
+        y = test_job(x).get().numpy()
         for k, v in zip(x, y):
             k_set.add(k)
             v_set.add(v)

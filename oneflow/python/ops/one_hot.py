@@ -5,7 +5,6 @@ import os
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -25,12 +24,12 @@ def one_hot(indices, depth, on_value=1, off_value=0, axis=-1, dtype=None, name=N
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("OneHot_"))
         .Op("one_hot")
         .Input("indices", [indices])
-        .Attr("depth", int(depth), "AttrTypeInt64")
-        .Attr("floating_on_value", float(on_value), "AttrTypeDouble")
-        .Attr("integer_on_value", int(on_value), "AttrTypeInt64")
-        .Attr("floating_off_value", float(off_value), "AttrTypeDouble")
-        .Attr("integer_off_value", int(off_value), "AttrTypeInt64")
-        .Attr("dtype", dtype, "AttrTypeDataType")
+        .Attr("depth", int(depth))
+        .Attr("floating_on_value", float(on_value))
+        .Attr("integer_on_value", int(on_value))
+        .Attr("floating_off_value", float(off_value))
+        .Attr("integer_off_value", int(off_value))
+        .Attr("dtype", dtype)
         .Output("out")
         .Build()
         .InferAndTryRun()

@@ -36,26 +36,26 @@ def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
     func_config.default_data_type(data_type)
 
     def do_argwhere(x_blob):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.argwhere(x_blob, dtype=out_data_type)
 
     if dynamic is True:
-        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+        func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
         def argwhere_fn(x_def=flow.MirroredTensorDef(x.shape, dtype=data_type)):
             return do_argwhere(x_def)
 
-        return argwhere_fn([x]).get().ndarray_list()[0]
+        return argwhere_fn([x]).get().numpy_list()[0]
 
     else:
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_distribute_strategy(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
         def argwhere_fn(x_def=flow.FixedTensorDef(x.shape, dtype=data_type)):
             return do_argwhere(x_def)
 
-        return argwhere_fn(x).get().ndarray_list()[0]
+        return argwhere_fn(x).get().numpy_list()[0]
 
 
 def _compare_with_np(

@@ -11,31 +11,12 @@ import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/register/blob_desc.proto";
 
-message LossKernelConf {
-  required DataType prediction_type = 1;
-  required DataType label_type = 2;
-  required float weight_scalar = 3;
-  required ScalarReductionType reduction = 4;
-}
-
-message ReduceSumKernelConf {
-  required ShapeProto kept_dims_shape = 1;
-}
-
-message LocalResponseNormalizationKernelConf {
-  required ShapeProto batch = 1;
-}
-
 message DecodeRandomKernelConf {
   required uint32 random_seed = 1;
 }
 
 message DecodeOFRecordKernelConf {
   required uint32 random_seed = 1;
-}
-
-message ReduceGatherKernelConf {
-  repeated int64 data_offset = 1;
 }
 
 message SliceKernelConf {
@@ -133,9 +114,6 @@ message KernelConf {
     UserKernelConf user_conf = 100;
     DecodeRandomKernelConf decode_random_conf = 103;
     DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
-    ReduceSumKernelConf reduce_sum_conf = 120;
-    LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
-    ReduceGatherKernelConf reduce_gather_conf = 350;
     XrtLaunchKernelConf xrt_launch_conf = 353;
     UniqueWithCountsKernelConf unique_with_counts_conf = 354;
     IndexedSlicesReduceSumKernelConf indexed_slices_reduce_sum_conf = 355;
@@ -146,7 +124,6 @@ message KernelConf {
     ArgWhereKernelConf arg_where_conf = 361;
 
     SliceKernelConf slice_conf = 402;
-    ConstantKernelConf constant_conf = 403;
     VariableKernelConf variable_conf = 407;
     RecordLoadKernelConf record_load_conf = 408;
     PReluAlphaGradKernelConf prelu_alpha_grad_conf = 409;

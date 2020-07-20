@@ -41,9 +41,11 @@ class DistributeSplitOp final : public Operator {
 
 void DistributeSplitOp::InitFromOpConf() {
   CHECK(op_conf().has_distribute_split_conf());
-
   EnrollInputBn("in");
-  EnrollRepeatedOutputBn("out");
+  EnrollRepeatedOutputBnWithSetter("out", [&](OutputBlobModifier* ob_modifier) {
+    ob_modifier->set_header_infered_before_compute(false);
+    ob_modifier->set_is_mutable(op_conf().distribute_split_conf().is_variable_ref());
+  });
 }
 
 const PbMessage& DistributeSplitOp::GetCustomizedConf() const {
