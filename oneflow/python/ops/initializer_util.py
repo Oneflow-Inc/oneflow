@@ -37,11 +37,13 @@ def constant_initializer(value=0, dtype=data_type_conf_util.kFloat):
 
 @oneflow_export("zeros_initializer")
 def zeros_initializer(dtype=data_type_conf_util.kFloat):
+    r"""Initializer that generates tensors initialized to 0."""
     return constant_initializer(0.0, dtype)
 
 
 @oneflow_export("ones_initializer")
 def ones_initializer(dtype=data_type_conf_util.kFloat):
+    r"""Initializer that generates tensors initialized to 1."""
     return constant_initializer(1.0, dtype)
 
 

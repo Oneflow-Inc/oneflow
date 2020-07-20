@@ -391,7 +391,6 @@ def tanh(
     Returns:
         A `Blob` with the same type as `x`.
     """
-
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("TanH_"))
         .Op("tanh")
@@ -436,7 +435,6 @@ def relu(
     Returns:
         A `Blob` with the same type as `x`.
     """
-
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
         .Op("relu")
@@ -483,7 +481,7 @@ def unsorted_segment_sum(
     r"""Computes the sum along segment of 'data'
 
     Args:
-        data: A 'Blob'
+        data: a 'Blob'
         segment_ids: A 'Blob' contains of segment ids
         num_segments: the number of segments
         axis: 
@@ -516,17 +514,17 @@ def unsorted_segment_sum_like(
     axis: int = 0,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """[summary]
+    r"""Computes the sum along segment of 'data'
 
     Args:
-        data (remote_blob_util.BlobDef): [description]
-        segment_ids (remote_blob_util.BlobDef): [description]
-        like (remote_blob_util.BlobDef): [description]
-        axis (int, optional): [description]. Defaults to 0.
+        data: a 'Blob'
+        segment_ids: A 'Blob' contains of segment ids
+        like: The shape for output
+        axis:
         name (Optional[str], optional): [description]. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: [description]
+        A `Blob` with the same shape as `like`.
     """
     return (
         flow.user_op_builder(
