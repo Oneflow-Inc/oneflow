@@ -37,17 +37,6 @@ logged_op_confs = set({})
 
 
 def CurJobAddOp(op_conf, scope_symbol=None):
-    # TODO: tsai: remove this debug code when transition ends
-    import os
-
-    if (
-        os.getenv("ENABLE_USER_OP") != "False"
-        and op_conf.HasField("user_conf") == False
-    ):
-        op_type = op_conf.WhichOneof("op_type")
-        if op_type not in logged_op_confs and op_type != "return_conf":
-            print("non-user op added: {}".format(op_type))
-            logged_op_confs.add(op_type)
     if distribute_ctx.IsMirroredStrategyEnabled():
         return CurJobAddMirroredOp(op_conf, scope_symbol)
     return CurJobAddConsistentOp(op_conf, scope_symbol)
