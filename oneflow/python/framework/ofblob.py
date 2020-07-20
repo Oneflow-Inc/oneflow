@@ -164,6 +164,7 @@ class OfBlob(object):
         copy_method = getattr(oneflow_api, method_name)
         oneflow_api.OfBlob_ClearTensorLists(self.of_blob_ptr_)
         for i, tensor in enumerate(tensor_list):
+            assert tensor.data.contiguous
             if is_new_slice_start_mask[i]:
                 oneflow_api.OfBlob_AddTensorListSlice(self.of_blob_ptr_)
             oneflow_api.OfBlob_AddTensor(self.of_blob_ptr_)

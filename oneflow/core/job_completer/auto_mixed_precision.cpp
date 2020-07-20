@@ -1,9 +1,11 @@
-#include <algorithm>
 #include "oneflow/core/job_completer/auto_mixed_precision_lists.h"
-#include "oneflow/core/job_completer/op_graph_pass.h"
-#include "oneflow/core/job/job_desc.h"
+
+#include <algorithm>
+
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job_completer/op_graph_pass.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -40,7 +42,7 @@ std::string Container2Str(const ContainerT& container,
 
 void VerifyAMPList(const AMPList& amp_list) {
   for (const auto& op_type : amp_list) {
-    CHECK(user_op::LookUpInOpRegistry(op_type) != nullptr)
+    CHECK(user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type) != nullptr)
         << "Cannot find " << op_type << " of AutoMixedPrecision list in OpRegistry.";
   }
 }
