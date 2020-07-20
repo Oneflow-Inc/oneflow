@@ -25,7 +25,7 @@ void SingleThreadOnlyAllocator::Deallocate(char* mem_ptr, std::size_t size) {
 }
 
 void SingleThreadOnlyAllocator::CheckUniqueThreadAccess() {
-  std::unique_lock<std::mutex> lock(mutex4ccessed_thread_id_);
+  std::unique_lock<std::mutex> lock(mutex4accessed_thread_id_);
   CHECK(accessed_thread_id_ == std::this_thread::get_id());
 }
 

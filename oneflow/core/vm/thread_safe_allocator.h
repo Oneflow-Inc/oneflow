@@ -40,7 +40,7 @@ class SingleThreadOnlyAllocator final : public Allocator {
 
   std::unique_ptr<Allocator> backend_allocator_;
   std::thread::id accessed_thread_id_;
-  std::mutex mutex4ccessed_thread_id_;
+  std::mutex mutex4accessed_thread_id_;
 };
 
 }  // namespace vm
