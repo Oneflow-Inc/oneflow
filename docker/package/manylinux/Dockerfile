@@ -12,7 +12,7 @@ ENV LD_LIBRARY_PATH /usr/local/lib64:/usr/local/lib
 ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
 
 # use tuna mirror
-COPY CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo
+# COPY CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo
 ARG MANYLINUX_SHA=f5da004
 RUN yum -y install unzip && curl -L -o manylinux.zip https://github.com/pypa/manylinux/archive/${MANYLINUX_SHA}.zip && unzip manylinux.zip -d tmp && cp -r tmp/*/docker/build_scripts /build_scripts && bash build_scripts/build.sh && rm -r build_scripts tmp manylinux.zip
 
