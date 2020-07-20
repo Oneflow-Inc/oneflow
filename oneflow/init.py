@@ -20,8 +20,6 @@ try:
 except Exception as _e:
     pass
 
-import oneflow.python.__export_symbols__
-
 import atexit
 import oneflow.python.framework.c_api_util
 atexit.register(oneflow.python.framework.c_api_util.DestroyEnv)

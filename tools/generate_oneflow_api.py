@@ -3,6 +3,7 @@ import sys
 import os
 import argparse
 import inspect
+import shutil
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -35,7 +36,8 @@ class VirtualModule(object):
         return ret
 
     def dump(self, dir_path):
-        os.mkdir(dir_path)
+        if os.path.isdir(dir_path) == False:
+            os.mkdir(dir_path)
         for k, v in self._submodule_dict.items():
             sub_dir_path = os.path.join(dir_path, k)
             v.dump(sub_dir_path)
@@ -49,6 +51,10 @@ class VirtualModule(object):
                 lines += include_export(k, v)
             lines = list(mod_set) + lines
             f.write("\n".join(lines))
+
+    def submodule_names(self):
+        return self._submodule_dict.keys()
+
 
 def include_submodule(modname):
     return "from . import {}".format(modname)
@@ -91,7 +97,12 @@ def collect_exports():
 
 
 def main():
-    collect_exports().dump(args.root_path)
+    mod = collect_exports()
+    # for name in mod.submodule_names():
+    #     joined = os.path.join(args.root_path, name)
+    #     if os.path.isdir(joined):
+    #         shutil.rmtree(joined)
+    mod.dump(args.root_path)
 
 if __name__ == "__main__":
     main()
