@@ -84,7 +84,7 @@ class AdamMdUpdateKernelUtil<DeviceType::kGPU, T> final {
   static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T weight_decay,
                           T beta1, T beta2, T epsilon, bool do_bias_correction,
                           const int64_t* train_step, const T* beta1_t, const T* beta2_t,
-                          T* model_diff, T* model, T* m, T* v) {
+                          const T* model_diff, T* model, T* m, T* v) {
     if (do_bias_correction) {
       UpdateModelGpu<true, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(

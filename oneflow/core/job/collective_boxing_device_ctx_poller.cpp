@@ -26,18 +26,21 @@ std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint>
 CollectiveBoxingDeviceCtxPoller::CreateCheckpoint() {
   auto mutex = mutex_;
   auto checkpoint2callbacks = checkpoint2callbacks_;
-  auto thread_pool = thread_pool_;
   std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> checkpoint(
       new CollectiveBoxingDeviceCtxCheckpoint());
   std::weak_ptr<CollectiveBoxingDeviceCtxCheckpoint> weak_checkpoint(checkpoint);
-  auto callback = [mutex, checkpoint2callbacks, thread_pool, weak_checkpoint]() {
-    std::lock_guard<std::mutex> lock(*mutex);
-    auto checkpoint_ptr = weak_checkpoint.lock();
-    CHECK(checkpoint_ptr);
-    auto callbacks_it = checkpoint2callbacks->find(checkpoint_ptr.get());
-    CHECK(callbacks_it != checkpoint2callbacks->end());
-    for (const auto& callback : callbacks_it->second) { thread_pool->AddWork(callback); }
-    checkpoint2callbacks->erase(callbacks_it);
+  auto callback = [mutex, checkpoint2callbacks, weak_checkpoint]() {
+    std::list<std::function<void()>> callbacks;
+    {
+      std::lock_guard<std::mutex> lock(*mutex);
+      auto checkpoint_ptr = weak_checkpoint.lock();
+      CHECK(checkpoint_ptr);
+      auto callbacks_it = checkpoint2callbacks->find(checkpoint_ptr.get());
+      CHECK(callbacks_it != checkpoint2callbacks->end());
+      callbacks = std::move(callbacks_it->second);
+      checkpoint2callbacks->erase(callbacks_it);
+    }
+    for (const auto& callback : callbacks) { callback(); }
   };
   checkpoint->SetCallback(callback);
   {

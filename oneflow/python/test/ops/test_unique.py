@@ -23,7 +23,7 @@ def _check_unique(test_case, x, y, idx, count, num_unique):
 def _run_test(test_case, x, dtype, device):
     @flow.global_function(func_config)
     def UniqueWithCountsJob(x=flow.FixedTensorDef(x.shape, dtype=dtype)):
-        with flow.fixed_placement(device, "0:0"):
+        with flow.scope.placement(device, "0:0"):
             return flow.experimental.unique_with_counts(x)
 
     y, idx, count, num_unique = UniqueWithCountsJob(x).get()

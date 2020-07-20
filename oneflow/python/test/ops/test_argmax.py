@@ -24,7 +24,7 @@ def compare_with_tensorflow(device_type, in_shape, data_type):
             dtype=type_name_to_flow_type[data_type],
         )
     ):
-        with flow.fixed_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.math.argmax(input)
 
     input = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])

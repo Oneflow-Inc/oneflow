@@ -33,11 +33,11 @@ def _make_coco_data_load_fn(
     flow.config.cpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def coco_load_fn():
-        with flow.device_prior_placement("cpu", "0:0-{}".format(nthread - 1)):
+        with flow.scope.placement("cpu", "0:0-{}".format(nthread - 1)):
             (
                 image,
                 image_id,
