@@ -19,11 +19,11 @@ def compare_with_tensorflow(device_type, x_shape, axis):
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     def check_grad(x_diff_blob):
-        assert np.array_equal(x_diff_blob.ndarray(), np.ones(x_shape))
+        assert np.array_equal(x_diff_blob.numpy(), np.ones(x_shape))
 
     @flow.global_function(func_config)
     def SqueezeJob():
-        with flow.fixed_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "var",
                 shape=x_shape,
@@ -39,7 +39,7 @@ def compare_with_tensorflow(device_type, x_shape, axis):
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    of_out = SqueezeJob().get().ndarray()
+    of_out = SqueezeJob().get().numpy()
     # TensorFlow
     tf_out = tf.squeeze(np.ones(x_shape, dtype=np.float32), axis).numpy()
     tf_out = np.array([tf_out]) if isinstance(tf_out, np.float32) else tf_out

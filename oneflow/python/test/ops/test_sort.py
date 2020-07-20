@@ -24,12 +24,12 @@ def compare_with_tensorflow(device_type, in_shape, direction, data_type):
             dtype=type_name_to_flow_type[data_type],
         )
     ):
-        with flow.fixed_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.sort(input, direction)
 
     input = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
     # OneFlow
-    of_out = SortJob([input]).get().ndarray_list()[0]
+    of_out = SortJob([input]).get().numpy_list()[0]
     # TensorFlow
     tf_out = tf.sort(input, axis=-1, direction=direction)
 

@@ -12,7 +12,7 @@ def TestDataTypeAttr(input, output_type):
         .Op("TestDataTypeAttr")
         .Input("in", [input])
         .Output("out")
-        .Attr("output_type", output_type, "AttrTypeDataType")
+        .Attr("output_type", output_type)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -29,7 +29,7 @@ def RunTest(data_type):
         return TestDataTypeAttr(input, type_name_to_flow_type[data_type])
 
     input = np.random.random_sample((10, 10)).astype(np.float32)
-    output = TestDataTypeAttrJob(input).get().ndarray()
+    output = TestDataTypeAttrJob(input).get().numpy()
     assert output.dtype == type_name_to_np_type[data_type]
 
 

@@ -50,7 +50,7 @@ def compare_with_tensorflow(
 
     @flow.global_function(func_config)
     def ConvJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
@@ -124,7 +124,7 @@ def compare_with_tensorflow(
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
 
     assert np.allclose(
-        of_out.ndarray().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-5, atol=1e-5
+        of_out.numpy().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-5, atol=1e-5
     )
     assert np.allclose(
         test_global_storage.Get("x_diff").transpose(0, 2, 3, 1),
@@ -141,99 +141,91 @@ def compare_with_tensorflow(
 
 
 def test_conv1(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["x_shape"] = [(10, 32, 20, 20)]
-        arg_dict["filters"] = [64]
-        arg_dict["kernel_size"] = [3]
-        arg_dict["groups"] = [1]
-        for arg in GenArgList(arg_dict):
-            compare_with_tensorflow(*arg)
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(10, 32, 20, 20)]
+    arg_dict["filters"] = [64]
+    arg_dict["kernel_size"] = [3]
+    arg_dict["groups"] = [1]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)
 
 
 def test_conv2(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["x_shape"] = [(10, 32, 20, 20)]
-        arg_dict["filters"] = [64]
-        arg_dict["kernel_size"] = [3]
-        arg_dict["groups"] = [4]
-        for arg in GenArgList(arg_dict):
-            compare_with_tensorflow(*arg)
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(10, 32, 20, 20)]
+    arg_dict["filters"] = [64]
+    arg_dict["kernel_size"] = [3]
+    arg_dict["groups"] = [4]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)
 
 
 def test_conv3(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["x_shape"] = [(10, 32, 20, 20)]
-        arg_dict["filters"] = [64]
-        arg_dict["kernel_size"] = [3]
-        arg_dict["groups"] = [8]
-        for arg in GenArgList(arg_dict):
-            compare_with_tensorflow(*arg)
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(10, 32, 20, 20)]
+    arg_dict["filters"] = [64]
+    arg_dict["kernel_size"] = [3]
+    arg_dict["groups"] = [8]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)
 
 
 def test_conv4(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["x_shape"] = [(10, 32, 20, 20)]
-        arg_dict["filters"] = [64]
-        arg_dict["kernel_size"] = [3]
-        arg_dict["groups"] = [32]
-        for arg in GenArgList(arg_dict):
-            compare_with_tensorflow(*arg)
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(10, 32, 20, 20)]
+    arg_dict["filters"] = [64]
+    arg_dict["kernel_size"] = [3]
+    arg_dict["groups"] = [32]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)
 
 
 def test_conv5(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["x_shape"] = [(10, 32, 20, 20)]
-        arg_dict["filters"] = [64]
-        arg_dict["kernel_size"] = [1]
-        arg_dict["groups"] = [8]
-        for arg in GenArgList(arg_dict):
-            compare_with_tensorflow(*arg)
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(10, 32, 20, 20)]
+    arg_dict["filters"] = [64]
+    arg_dict["kernel_size"] = [1]
+    arg_dict["groups"] = [8]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)
 
 
 def test_conv6(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["x_shape"] = [(10, 32, 20, 20)]
-        arg_dict["filters"] = [64]
-        arg_dict["kernel_size"] = [1]
-        arg_dict["groups"] = [32]
-        for arg in GenArgList(arg_dict):
-            compare_with_tensorflow(*arg)
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(10, 32, 20, 20)]
+    arg_dict["filters"] = [64]
+    arg_dict["kernel_size"] = [1]
+    arg_dict["groups"] = [32]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)
 
 
 def test_conv7(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["x_shape"] = [(2, 4, 8, 8)]
-        arg_dict["filters"] = [64]
-        arg_dict["kernel_size"] = [4]
-        arg_dict["groups"] = [1]
-        arg_dict["padding"] = ["SAME"]
-        for arg in GenArgList(arg_dict):
-            compare_with_tensorflow(*arg)
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(2, 4, 8, 8)]
+    arg_dict["filters"] = [64]
+    arg_dict["kernel_size"] = [4]
+    arg_dict["groups"] = [1]
+    arg_dict["padding"] = ["SAME"]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)
 
 
 def test_conv8(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["x_shape"] = [(2, 4, 8, 8)]
-        arg_dict["filters"] = [64]
-        arg_dict["kernel_size"] = [5]
-        arg_dict["groups"] = [1]
-        arg_dict["padding"] = ["SAME"]
-        arg_dict["stride"] = [2]
-        for arg in GenArgList(arg_dict):
-            compare_with_tensorflow(*arg)
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(2, 4, 8, 8)]
+    arg_dict["filters"] = [64]
+    arg_dict["kernel_size"] = [5]
+    arg_dict["groups"] = [1]
+    arg_dict["padding"] = ["SAME"]
+    arg_dict["stride"] = [2]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)

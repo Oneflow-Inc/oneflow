@@ -9,10 +9,13 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Union, Tuple, List, Optional, Sequence, Callable
 
 
 @oneflow_export("advanced.distribute_clone")
-def api_distribute_clone(x, name=None):
+def api_distribute_clone(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> Tuple[remote_blob_util.BlobDef]:
     func = enable_if.unique([distribute_clone])
     return func(x, name=name)
 
@@ -40,7 +43,9 @@ def distribute_clone(x, name=None):
 
 
 @oneflow_export("advanced.distribute_add")
-def api_distribute_add(xs, name=None):
+def api_distribute_add(
+    xs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     func = enable_if.unique([distribute_add])
     return func(xs, name=name)
 
@@ -64,7 +69,9 @@ def distribute_add(xs, name=None):
 
 
 @oneflow_export("advanced.distribute_split")
-def api_distribute_split(x, axis=0, name=None):
+def api_distribute_split(
+    x: remote_blob_util.BlobDef, axis: int = 0, name: Optional[str] = None
+) -> Tuple[remote_blob_util.BlobDef]:
     func = enable_if.unique([distribute_split])
     return func(x, axis=axis, name=name)
 
@@ -93,7 +100,9 @@ def distribute_split(x, axis=0, name=None):
 
 
 @oneflow_export("advanced.distribute_concat")
-def api_distribute_concat(xs, axis=0, name=None):
+def api_distribute_concat(
+    xs: Sequence[remote_blob_util.BlobDef], axis: int = 0, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     func = enable_if.unique([distribute_concat])
     return func(xs, axis=axis, name=name)
 
@@ -118,7 +127,13 @@ def distribute_concat(xs, axis=0, name=None):
 
 
 @oneflow_export("advanced.distribute_map")
-def api_distribute_map(xs, f, axis=0):
+def api_distribute_map(
+    xs: Union[Sequence[remote_blob_util.BlobDef], remote_blob_util.BlobDef],
+    f: Callable[
+        [remote_blob_util.BlobDef, remote_blob_util.BlobDef], remote_blob_util.BlobDef
+    ],
+    axis: int = 0,
+) -> Tuple[remote_blob_util.BlobDef]:
     func = enable_if.unqiue([distribute_map])
     return func(xs, f, axis=axis)
 
@@ -167,9 +182,7 @@ def _UnderSingleDevicePlacementScope(f, *args):
     current_scope = oneflow.placement.current_scope()
     for machine_id, device_id in _EachMachineIdAndDeviceId(current_scope):
         mch_dev_str = "%d:%d" % (machine_id, device_id)
-        with oneflow.device_prior_placement(
-            current_scope.default_device_tag, mch_dev_str
-        ):
+        with oneflow.scope.placement(current_scope.default_device_tag, mch_dev_str):
             return f(*args)
 
 
