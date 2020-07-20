@@ -136,6 +136,19 @@ class LazyConsistentBlob(ConsistentBlob):
             self.job_name_, self.lbn_
         )
 
+    def IdenticalTo(self, rhs):
+        return (
+            self.unique_name == rhs.unique_name
+            and self.shape == rhs.shape
+            and self.shape == rhs.shape
+            and self.batch_axis == rhs.batch_axis
+            and self.split_axis == rhs.split_axis
+            and self.is_dynamic == rhs.is_dynamic
+            and self.disable_boxing == rhs.disable_boxing
+            and self.is_tensor_list == rhs.is_tensor_list
+            and self.parallel_conf == rhs.parallel_conf
+        )
+
 
 class MirroredBlob(BlobDef):
     def __init__(self, *args, **kwargs):
@@ -370,6 +383,13 @@ class EagerBlobTrait(object):
 
         blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object)
         return blob_cache.GetCachedNumpyMirroredList(FetchBlobNumpyMirroredList)
+
+    def IdenticalTo(self, rhs):
+        return (
+            self.blob_object.op_arg_blob_attr == rhs.blob_object.op_arg_blob_attr
+            and self.blob_object.op_arg_parallel_attr
+            == rhs.blob_object.op_arg_parallel_attr
+        )
 
 
 class EagerConsistentBlob(EagerBlobTrait, ConsistentBlob):

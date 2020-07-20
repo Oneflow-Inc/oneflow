@@ -7,7 +7,7 @@ def my_test_source(name, seed):
         flow.user_op_builder(name)
         .Op("TestRandomSource")
         .Output("out")
-        .Attr("seed", seed, "AttrTypeInt64")
+        .Attr("seed", seed)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -17,11 +17,11 @@ def my_test_source(name, seed):
 def test_testsource(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def TestSourceJob():
-        with flow.fixed_placement("cpu", "0:0"):
+        with flow.scope.placement("cpu", "0:0"):
             ret = my_test_source("my_cc_test_source_op", 0)
         return ret
 

@@ -11,7 +11,7 @@ def test_2d_gpu_variable(test_case):
 
     @flow.global_function(function_config)
     def Foo():
-        with flow.fixed_placement("gpu", device_name):
+        with flow.scope.placement("gpu", device_name):
             w = flow.get_variable(
                 "w",
                 shape=(10,),
