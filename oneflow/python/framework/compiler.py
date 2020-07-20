@@ -20,6 +20,7 @@ import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
 import typing
 import oneflow
+import inspect
 
 
 def Compile(session, function_desc, config_proto):
@@ -161,9 +162,9 @@ def _MakeInputBlobDefFromParameterSignature(parameters):
 
 
 def _RecusiveMakeInputBlobDef(cls):
-    if issubclass(cls, oft.OneflowNumpyDef):
+    if oft.OriginFrom(cls, oft.OneflowNumpyDef):
         return cls.NewInputBlobDef()
-    elif issubclass(cls, typing.Tuple):
+    elif oft.OriginFrom(cls, typing.Tuple):
         return tuple(_RecusiveMakeInputBlobDef(a) for a in cls.__args__)
     else:
         raise NotImplementedError(
