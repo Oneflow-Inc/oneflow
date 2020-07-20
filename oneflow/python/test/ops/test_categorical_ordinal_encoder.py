@@ -5,7 +5,7 @@ import oneflow as flow
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_distribute_strategy(flow.scope.consistent_view())
 
 
 def test_categorical_ordinal_encoder_gpu(test_case):

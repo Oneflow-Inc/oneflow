@@ -38,9 +38,6 @@ constexpr char _XrtLaunchPrefix[] = "_xrt_launch_";
 constexpr char _XrtInArgumentPrefix[] = "_input_argument_";
 constexpr char _XrtOutArgumentPrefix[] = "_output_argument_";
 
-constexpr char _ReduceSplitType[] = "ReduceSplit";
-constexpr char _ReduceConcatType[] = "ReduceConcat";
-
 constexpr char MutableVariablesAttrName[] = "MutableVariables";
 constexpr char IsOptimizerOpAttrName[] = "IsOptimizerOp";
 constexpr char TrainPhaseEnabledAttrName[] = "TrainPhaseEnabled";

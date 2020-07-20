@@ -1,4 +1,5 @@
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
@@ -16,6 +17,10 @@ Tensor::Tensor(Blob* blob) {
   data_type_ = blob->data_type();
   mem_case_ = &(blob->mem_case());
 }
+
+void Tensor::header_access_check() { this->blob_access_checker_->CheckHeaderMutable(); }
+
+void Tensor::body_access_check() { this->blob_access_checker_->CheckBodyMutable(); }
 
 void Tensor::CopyWithoutData(const Tensor& rhs) {
   dptr_ = rhs.dptr_;

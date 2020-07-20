@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_COMMON_CALLBACK_MSG_H_
 
 #include <functional>
-#include "oneflow/core/common/object_msg.h"
+#include "oneflow/core/object_msg/object_msg.h"
 
 namespace oneflow {
 

@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 import oneflow.python.framework.distribute_context as distribute_ctx
 from oneflow.python.oneflow_export import oneflow_export
+import traceback
 
 
 class Distribute(object):
@@ -35,9 +36,12 @@ class SplitDistribute(Distribute):
 def deprecated_mirrored_strategy():
     print(
         "WARNING:",
-        "/".join(deprecated_mirrored_strategy._ONEFLOW_API),
-        "will be removed in the future, use oneflow.scope.mirrored_view instead.",
+        "oneflow.distribute.mirrored_strategy",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.mirrored_view"
+        ),
     )
+    print(traceback.format_stack()[-2])
     return DistributeMirroredStrategy()
 
 
@@ -56,6 +60,19 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
 
 
 @oneflow_export("distribute.mirrored_strategy_enabled")
+def deprecated_mirrored_strategy_enabled():
+    print(
+        "WARNING:",
+        "oneflow.distribute.mirrored_strategy_enabled",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.mirrored_view_enabled"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+    return MirroredStrategyEnabled()
+
+
+@oneflow_export("scope.mirrored_view_enabled")
 def MirroredStrategyEnabled() -> bool:
     """Determines whether mirroed strategy is enable in current context where this function is called.
 
@@ -70,9 +87,12 @@ def MirroredStrategyEnabled() -> bool:
 def deprecated_consistent_strategy():
     print(
         "WARNING:",
-        "/".join(deprecated_consistent_strategy._ONEFLOW_API),
-        "will be removed in the future, use oneflow.scope.consistent_view instead.",
+        "oneflow.distribute.consistent_strategy",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.consistent_view"
+        ),
     )
+    print(traceback.format_stack()[-2])
     return DistributeConsistentStrategy()
 
 
@@ -91,6 +111,19 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
 
 
 @oneflow_export("distribute.consistent_strategy_enabled")
+def deprecated_consistent_strategy_enabled():
+    print(
+        "WARNING:",
+        "oneflow.distribute.consistent_strategy_enabled",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.consistent_view_enabled"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+    return ConsistentStrategyEnabled()
+
+
+@oneflow_export("scope.consistent_view_enabled")
 def ConsistentStrategyEnabled() -> bool:
     """Determines whether consistent strategy is enable in current context where this function is called.
 

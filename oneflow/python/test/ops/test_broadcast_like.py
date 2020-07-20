@@ -21,7 +21,7 @@ def compare_broadcast_like_with_tf(
         x=flow.FixedTensorDef(shape=input_shape, dtype=data_type_util.kFloat),
         y=flow.FixedTensorDef(shape=like_shape, dtype=data_type_util.kFloat),
     ):
-        with flow.fixed_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.broadcast_like(x, y, broadcast_axes=broadcast_axes)
 
     x = np.random.rand(*input_shape).astype(np.float32)
