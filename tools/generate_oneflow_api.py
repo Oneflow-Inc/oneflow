@@ -5,8 +5,12 @@ import inspect
 import shutil
 
 import oneflow
-# module unittest not included in sys.modules.values, import it by hand
+import oneflow.python
+# modules not included in sys.modules.values, import it by hand
 import oneflow.python.framework.unittest
+import oneflow.python.framework.function_util
+import oneflow.python.framework.check_point
+import oneflow.python.ops.get_variable
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -44,17 +48,21 @@ class VirtualModule(object):
         for k, v in self._submodule_dict.items():
             sub_dir_path = os.path.join(dir_path, k)
             v.dump(sub_dir_path)
-        if is_root == False:
-            init_file_path = os.path.join(dir_path, "__init__.py")
-            with open(init_file_path, 'w') as f:
-                mod_set = set()
-                lines = []
-                for k in self._submodule_dict.keys():
-                    mod_set.add(include_submodule(k))
-                for k, v in self._func_or_class_dict.items():
-                    lines += include_export(k, v)
-                lines = list(mod_set) + lines
-                f.write("\n".join(lines))
+        init_file_path = os.path.join(dir_path, "__init__.py")
+        filemode = 'w'
+        if is_root:
+            filemode = 'a+'
+        with open(init_file_path, filemode) as f:
+            mod_set = set()
+            lines = []
+            if is_root:
+                lines = [""]
+            for k in self._submodule_dict.keys():
+                mod_set.add(include_submodule(k))
+            for k, v in self._func_or_class_dict.items():
+                lines += include_export(k, v)
+            lines = list(mod_set) + lines
+            f.write("\n".join(lines))
 
     def submodule_names(self):
         return self._submodule_dict.keys()
