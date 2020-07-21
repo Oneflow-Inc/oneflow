@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_OPERATOR_USER_OP_H_
 #define ONEFLOW_CORE_OPERATOR_USER_OP_H_
 
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/framework/op_registration.h"
 
 namespace oneflow {
 
@@ -37,7 +37,7 @@ class UserOp final : public Operator {
       const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
       std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const override;
 
-  const user_op::OpRegistrationVal* val_;
+  const user_op::OpRegistryResult* val_;
 };
 
 }  // namespace oneflow
