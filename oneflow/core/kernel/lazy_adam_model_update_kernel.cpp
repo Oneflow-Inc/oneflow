@@ -29,8 +29,8 @@ void LazyAdamMdUpdateKernel<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), learning_rate, weight_decay,
       static_cast<T>(lazy_adam_conf.beta1()), static_cast<T>(lazy_adam_conf.beta2()),
       static_cast<T>(lazy_adam_conf.epsilon()), train_step, beta1_t_blob->mut_dptr<T>(),
-      beta2_t_blob->mut_dptr<T>(), BnInOp2Blob("model_diff")->dptr<T>(),
-      model_blob->mut_dptr<T>(), m_blob->mut_dptr<T>(), v_blob->mut_dptr<T>());
+      beta2_t_blob->mut_dptr<T>(), BnInOp2Blob("model_diff")->dptr<T>(), model_blob->mut_dptr<T>(),
+      m_blob->mut_dptr<T>(), v_blob->mut_dptr<T>());
 }
 
 template<typename T>
