@@ -88,8 +88,8 @@ def random_uniform_initializer(
 def random_normal_initializer(
     mean: float = 0.0,
     stddev: float = 1.0,
-    seed: Optional[None] = None,
-    dtype: Optional[None] = None,
+    seed: Optional[int] = None,
+    dtype: Optional[int] = None,
 ) -> op_conf_util.InitializerConf:
     r"""Initializer that generates blob with a normal distribution.
 

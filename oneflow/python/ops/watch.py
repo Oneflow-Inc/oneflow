@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import uuid
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -23,7 +23,8 @@ import oneflow
 
 @oneflow_export("watch")
 def Watch(
-    blob_watched: remote_blob_util.BlobDef, handler_or_prompt: Optional[Callable] = None
+    blob_watched: remote_blob_util.BlobDef,
+    handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
     r"""Register callback for a blob. The callback will be called after the computation produce the blob finishes.
 
