@@ -6,10 +6,13 @@ import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Optional
 
 
 @oneflow_export("sleep_identity")
-def sleep_identity(x, seconds, name=None):
+def sleep_identity(
+    x: remote_blob_util.BlobDef, seconds: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     if name is None:
         name = id_util.UniqueStr("Sleep_")
     op_conf = op_conf_util.OperatorConf()
