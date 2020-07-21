@@ -8,11 +8,11 @@ import hashlib
 import json
 import time
 
-import oneflow.customized.utils.plugin_data_pb2 as plugin_data_pb2
-import oneflow.customized.utils.summary_pb2 as summary_pb2
-import oneflow.customized.utils.event_pb2 as event_pb2
-import oneflow.customized.utils.tensor_pb2 as tensor_pb2
-import oneflow.customized.utils.projector_pb2 as projector_pb2
+import oneflow.customized.summary.plugin_data_pb2 as plugin_data_pb2
+import oneflow.customized.summary.summary_pb2 as summary_pb2
+import oneflow.customized.summary.event_pb2 as event_pb2
+import oneflow.customized.summary.tensor_pb2 as tensor_pb2
+import oneflow.customized.summary.projector_pb2 as projector_pb2
 from oneflow.python.oneflow_export import oneflow_export
 
 

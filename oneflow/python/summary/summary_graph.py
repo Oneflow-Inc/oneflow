@@ -1,5 +1,5 @@
 import os
-import oneflow.customized.utils.projector_pb2 as projector_pb2
+import oneflow.customized.summary.projector_pb2 as projector_pb2
 import oneflow.python.framework.c_api_util as c_api_util
 from oneflow.python.oneflow_export import oneflow_export
 import time
