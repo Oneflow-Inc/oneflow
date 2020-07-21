@@ -15,7 +15,7 @@ def make_job(shape, dtype=flow.float32):
         y=flow.FixedTensorDef(shape, dtype=dtype),
         dy=flow.FixedTensorDef(shape, dtype=dtype),
     ):
-        return flow.keras.activations.tanh_grad(y, dy)
+        return flow.math.tanh_grad(y, dy)
 
     return tanh_grad_job
 
@@ -29,7 +29,7 @@ def make_xla_job(shape, dtype=flow.float32):
         y=flow.FixedTensorDef(shape, dtype=dtype),
         dy=flow.FixedTensorDef(shape, dtype=dtype),
     ):
-        return flow.keras.activations.tanh_grad(y, dy)
+        return flow.math.tanh_grad(y, dy)
 
     return xla_tanh_grad_job
 
