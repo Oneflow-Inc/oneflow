@@ -61,7 +61,8 @@ RegstMgr::RegstMgr(const Plan& plan) {
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != this_machine_id) { continue; }
     for (const auto& pair : task.produced_regst_desc()) {
-      const RegstDescProto& regst_desc = pair.second;
+      RegstDescProto regst_desc = pair.second;
+      *regst_desc.mutable_parallel_ctx() = task.parallel_ctx();
       CHECK(
           regst_desc_id2rt_regst_desc_
               .emplace(regst_desc.regst_desc_id(), std::make_unique<const RtRegstDesc>(regst_desc))
@@ -172,12 +173,34 @@ const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const 
   return *it->second;
 }
 
-Regst* RegstMgr::Regst4RegstDescIdAndRegstId(int64_t regst_desc_id, int64_t regst_id) {
-  CHECK(regst_desc_id2regst_id2regst_.find(regst_desc_id) != regst_desc_id2regst_id2regst_.end());
-  auto& regst_id2regst = regst_desc_id2regst_id2regst_[regst_desc_id];
-  CHECK(regst_id2regst.find(regst_id) != regst_id2regst.end());
-  auto regst = regst_id2regst[regst_id];
-  return regst;
+Blob* RegstMgr::Blob4LbnAndParallelId(const std::string& lbn, const int64_t parallel_id) {
+  for (const auto& x : regst_desc_id2regst_id2regst_) {
+    for (const auto& y : x.second) {
+      LOG(INFO) << "regst desc id: " << x.first;
+      LOG(INFO) << "regst id: " << y.first;
+      LOG(INFO) << "lbi: ";
+      for (const auto& z : y.second->lbi2blob()) {
+        LOG(INFO) << z.first.DebugString();
+        LOG(INFO) << lbn;
+        const auto& lbi = z.first;
+        if (lbi.op_name() + "/" + lbi.blob_name() == lbn) {
+          CHECK(x.second.size() == 1)
+              << "Only the blobs in regst_desc where regst_num == 1 is supported";
+          LOG(INFO) << RegstDesc4RegstDescId(x.first).parallel_ctx().DebugString();
+          const auto& parallel_ctx = RegstDesc4RegstDescId(x.first).parallel_ctx();
+          if (parallel_ctx.has_parallel_id() && parallel_ctx.parallel_id() == parallel_id) {
+            return z.second.get();
+          }
+        }
+      }
+      LOG(INFO) << "-----------";
+    }
+  }
+  return nullptr;
+  // CHECK(regst_desc_id2regst_id2regst_.find(regst_desc_id) !=
+  // regst_desc_id2regst_id2regst_.end()); auto& regst_id2regst =
+  // regst_desc_id2regst_id2regst_[regst_desc_id]; CHECK(regst_id2regst.find(regst_id) !=
+  // regst_id2regst.end()); auto regst = regst_id2regst[regst_id]; return regst;
 }
 
 }  // namespace oneflow

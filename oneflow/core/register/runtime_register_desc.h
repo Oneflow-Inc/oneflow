@@ -31,6 +31,7 @@ class RtRegstDesc {
   size_t MainByteSize4OneRegst() const;
   const Shape& data_regst_time_shape() const;
   bool is_body_disabled() const { return packed_blob_desc_->is_body_disabled(); }
+  const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
 
   void ForEachBlobDescOffsetInOnRegst(
       const std::vector<LbiBlobDescPair>& lbis,
@@ -43,6 +44,7 @@ class RtRegstDesc {
   std::vector<int64_t> consumers_actor_id_;
   int64_t register_num_;
   RegstDescTypeProto regst_desc_type_;
+  ParallelContext parallel_ctx_;
   MemoryCase mem_case_;
   HashMap<LogicalBlobId, std::unique_ptr<RtBlobDesc>> lbi2blob_desc_;
   std::unique_ptr<RtBlobDesc> packed_blob_desc_;

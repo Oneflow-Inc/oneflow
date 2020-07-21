@@ -207,18 +207,16 @@ const RwMutexedObject* Instruction::operand_value(const Operand& operand,
 RwMutexedObject* Instruction::mut_operand_type(const Operand& operand,
                                                int64_t default_global_device_id) {
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
-  auto tmp = MutMirroredObject<&IdUtil::GetTypeId>(operand, default_global_device_id);
-  LOG(INFO) << "tmp: " << tmp << std::endl;
-  LOG(INFO) << operand.logical_object_id();
-  return tmp->mut_rw_mutexed_object();
+  return MutMirroredObject<&IdUtil::GetTypeId>(operand, default_global_device_id)
+      ->mut_rw_mutexed_object();
 }
 
 RwMutexedObject* Instruction::mut_operand_value(const Operand& operand,
                                                 int64_t default_global_device_id) {
   CHECK(IdUtil::IsValueId(operand.logical_object_id()));
   CHECK_EQ(instr_msg().instr_type_id().stream_type_id().interpret_type(), InterpretType::kCompute);
-  auto tmp = MutMirroredObject<&IdUtil::GetValueId>(operand, default_global_device_id);
-  return tmp->mut_rw_mutexed_object();
+  return MutMirroredObject<&IdUtil::GetValueId>(operand, default_global_device_id)
+      ->mut_rw_mutexed_object();
 }
 
 template<InterpretType interpret_type>
@@ -251,12 +249,6 @@ MirroredObject* Instruction::MutMirroredObject(const Operand& operand,
                                                int64_t default_global_device_id) {
   FlatMsg<MirroredObjectId> mirrored_object_id;
   mirrored_object_id->__Init__<TransformLogicalObjectId>(operand, default_global_device_id);
-  LOG(INFO) << "size: " << mut_mirrored_object_id2access()->size() << std::endl;
-  for (int i = 0; i < mut_mirrored_object_id2access()->size(); i++) {
-    auto* x = mut_mirrored_object_id2access()->Begin() + i;
-    LOG(INFO) << "i: " << i << std::endl;
-    LOG(INFO) << x->mirrored_object_id().logical_object_id_value();
-  }
   auto* access = mut_mirrored_object_id2access()->FindPtr(mirrored_object_id.Get());
   if (access == nullptr) { return nullptr; }
   return access->mut_mirrored_object();

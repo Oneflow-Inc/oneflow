@@ -21,12 +21,6 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.session_context as session_ctx
 
 
-@session_ctx.try_init_default_session
-@oneflow_export("test2")
-def GetOfBlobInRegst(a, b):
-    return OfBlob(oneflow_internal.GetBlobInRegst(a, b))
-
-
 def RegisterWatcherOnlyOnce(watcher):
     error_str = oneflow_internal.RegisterWatcherOnlyOnce(watcher)
     error = text_format.Parse(error_str, error_util.ErrorProto())

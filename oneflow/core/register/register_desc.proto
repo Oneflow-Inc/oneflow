@@ -5,6 +5,7 @@ import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/memory/memory_case.proto";
 import "oneflow/core/common/shape.proto";
+import "oneflow/core/job/placement.proto";
 
 message LbiBlobDescPair {
   required LogicalBlobId lbi = 1;
@@ -44,4 +45,5 @@ message RegstDescProto {
   optional int64 separated_header_mem_block_id = 12 [default = -1];
   optional int64 inplace_consumed_regst_desc_id = 13 [default = -1];
   optional int64 hint_inplace_consumed_regst_desc_id = 14 [default = -1];
+  optional ParallelContext parallel_ctx = 15;
 }

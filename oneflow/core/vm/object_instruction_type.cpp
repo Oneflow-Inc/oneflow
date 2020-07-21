@@ -5,6 +5,7 @@
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/infer_stream_type.h"
+#include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/vm/object_wrapper.h"
@@ -44,41 +45,6 @@ void ForEachMachineIdAndDeviceIdInRange(const ParallelDesc& parallel_desc,
 
 }  // namespace
 
-class LazyReferenceInstructionType final : public InstructionType {
- public:
-  LazyReferenceInstructionType() = default;
-  ~LazyReferenceInstructionType() override = default;
-
-  using stream_type = vm::HostStreamType;
-
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(LazyReferenceInstruction);
-    // FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, eager_blob_lbi);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(MutOperand, eager_blob);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, regst_desc_id);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, regst_id);
-  FLAT_MSG_VIEW_END(LazyReferenceInstruction);
-  // clang-format on
-
-  void Infer(Instruction* instruction) const override { Run(instruction); };
-  void Compute(Instruction* instruction) const override{
-      // do nothing
-  };
-
- private:
-  void Run(Instruction* instruction) const {
-    FlatMsgView<LazyReferenceInstruction> args(instruction->instr_msg().operand());
-    const int64_t regst_desc_id = args->regst_desc_id();
-    const int64_t regst_id = args->regst_id();
-    RwMutexedObject* eager_blob_rw;
-    eager_blob_rw = instruction->mut_operand_type(args->eager_blob());
-    Regst* regst = Global<RegstMgr>::Get()->Regst4RegstDescIdAndRegstId(regst_desc_id, regst_id);
-    Blob* blob = regst->GetMutSoleBlob();
-    eager_blob_rw->Init<eager::LazyRefBlobObject>(blob);
-  }
-};
-COMMAND(RegisterInstructionType<LazyReferenceInstructionType>("LazyReference"));
-
 class NewObjectInstructionType final : public InstructionType {
  public:
   NewObjectInstructionType() = default;
@@ -117,7 +83,6 @@ class NewObjectInstructionType final : public InstructionType {
           logical_object->mut_global_device_id2mirrored_object();
       ForEachMachineIdAndDeviceIdInRange(
           *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
-            LOG(INFO) << "device_id: " << device_id;
             int64_t global_device_id =
                 vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
             auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
