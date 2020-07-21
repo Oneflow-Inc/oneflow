@@ -293,7 +293,7 @@ def broadcast_floor_mod(x, y, name=None):
     return build_broadcast_binary_op("broadcast_floor_mod", x, y, name)
 
 
-@oneflow_export("math.tanh", "keras.activations.tanh")
+@oneflow_export("math.tanh")
 def tanh(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
@@ -316,7 +316,7 @@ def tanh(
     )
 
 
-@oneflow_export("math.gelu", "keras.activations.gelu")
+@oneflow_export("math.gelu")
 def gelu(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
@@ -721,3 +721,43 @@ def squared_difference(
         name_subtract = name + "_subtract"
         name_square = name + "_square"
     return flow.math.square(flow.math.subtract(x, y, name_subtract), name_square)
+
+
+@oneflow_export("math.gelu_grad")
+def gelu_grad(
+    x: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("GeluGrad_")
+        )
+        .Op("gelu_grad")
+        .Input("x", [x])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("math.tanh_grad")
+def tanh_grad(
+    y: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("TanhGrad_")
+        )
+        .Op("tanh_grad")
+        .Input("y", [y])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
