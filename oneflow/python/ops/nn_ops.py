@@ -24,10 +24,20 @@ def conv2d(
     groups: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""2d convolution 
+    r"""Computes a 2-D convolution given `input` and 4-D `filters` `Blob`.
 
-    Analogous to `tf.nn.conv2d <https://www.tensorflow.org/api_docs/python/tf/nn/conv2d>`_
+    Args:
+        input: A `Blob` of rank at least 4. 
+        filters: A `Blob` with the same type as `input` and has the shape `[filter_height, filter_width, in_channels, out_channels]`
+        strides: An int or list of `ints` that has length `1`, `2` or `4`. The stride of the sliding window for each dimension of `input`. 
+        padding: `string` `"SAME"` or `"VALID"` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
+        data_format: `"NHWC" or "NCHW"`. Defaults to `"NHWC"`.
+        dilations: The dilation factor for each dimension of`input`. Defaults to None.
+        groups: int value greater than 0. Defaults to 1.
+        name: This operator's name(optional).
 
+    Returns:
+        A `Blob` with the same type as `input` and the same outer batch shape.
     """
     assert len(input.shape) == 4
     assert len(filters.shape) == 4
@@ -111,10 +121,20 @@ def batch_normalization(
     axis: int = -1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    This op does not fully align with tf.nn.batch_normalization. mean, variable, offset and scale
-    are always 1D. Users need to specify "axis" to 1 for NCHW data format.
+    r"""Batch normalization
 
+    Args:
+        x: Input `Blob` of arbitrary dimensionality.
+        mean: 	A 1D mean `Blob`.
+        variance: A 1D variance `Blob`.
+        offset: An 1D offset `Blob`, often denoted  in equations, or None. If present, will be added to the normalized `Blob`.
+        scale: A 1D scale `Blob`, often denoted  in equations, or None. If present, the scale is applied to the normalized `Blob`.
+        variance_epsilon: A small float number to avoid dividing by 0.
+        axis: 1 for '`NCHW'` data format. Defaults to -1.
+        name: This operator's name(optional).
+
+    Returns:
+        the normalized, scaled, offset `Blob`.
     """
 
     assert axis >= -len(x.shape) and axis < len(x.shape)
@@ -153,6 +173,21 @@ def tf_conv2d(
     groups: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+   r"""Computes a 2-D convolution given `input` and 4-D `filters` `Blob`.
+
+    Args:
+        input: A `Blob` of rank at least 4. 
+        filters: A `Blob` with the same type as `input` and has the shape `[filter_height, filter_width, in_channels, out_channels]`
+        strides: An int or list of `ints` that has length `1`, `2` or `4`. The stride of the sliding window for each dimension of `input`. 
+        padding: `"SAME"` or `"VALID"` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
+        data_format: `"NHWC"` or `"NCHW"`. Defaults to `"NHWC"`.
+        dilations: The dilation factor for each dimension of`input`. Defaults to None.
+        groups: int value greater than 0. Defaults to 1.
+        name: This operator's name(optional).
+
+    Returns:
+        A `Blob` with the same type as `input` and the same outer batch shape.
+    """
     assert len(input.shape) == 4
     assert len(filters.shape) == 4
     NDims = 2
@@ -262,9 +297,18 @@ def bias_add(
     data_format: Optional[str] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.nn.bias_add <https://www.tensorflow.org/api_docs/python/tf/nn/bias_add>`_
+    r"""Adds bias to value.
 
+    Args:
+        value: A `Blob`.
+        bias: A 1-D `Blob` with size matching the channel dimension of value. And has the same type as value unless value is a quantized type.
+        data_format: A string. '`N...C'` or '`NC...'`.
+        name: This operator's name(optional).
+    Returns:
+        A `Blob` with the same type as value.
+
+    Raises:
+        ValueError if data format is unrecognized, if value has less than two dimensions with '`N..C'`/None data_format or value has less than three dimensions with '`NC..'` data_format, if bias is a vector, or if the size of bias does not match the size of the channel dimension of value.
     """
     # TODO: name unused, fix it
     if name is None:
@@ -302,6 +346,19 @@ def max_pool1d(
     data_format: str = "NWC",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Performs the max pooling on the input.
+
+    Args:
+        input: A 3-D `Blob` of the format specified by data_format.
+        ksize: An int or list of ints that has length 1 or 3. The size of the window for each dimension of the input `Blob`.
+        strides: An int or list of ints that has length 1 or 3. The stride of the sliding window for each dimension of the input `Blob`.
+        padding: '`VALID'` or '`SAME'`. The padding algorithm. 
+        data_format: An optional string from: '`NWC'`, '`NCW'`. Defaults to '`NWC'`.
+        name: This operator's name(optional).
+
+    Returns:
+        A `Blob` of format specified by data_format. The max pooled output `Blob`.
+    """
     # TODO: fix cuDNN bugs in pooling_1d
     raise NotImplementedError
 
@@ -315,6 +372,19 @@ def avg_pool1d(
     data_format: str = "NWC",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Performs the average pooling on the input `Blob`.
+
+    Args:
+        input: 	A 3-D `Blob` of the format specified by data_format.
+        ksize: An int or list of ints that has length 1 or 3. The size of the window for each dimension of the input `Blob`.
+        strides: An int or list of ints that has length 1 or 3. The stride of the sliding window for each dimension of the input `Blob`.
+        padding: '`VALID'` or '`SAME'`.
+        data_format: '`NWC'` or '`NCW'`. Defaults to '`NWC'`.
+        name: This operator's name(optional).
+
+    Returns:
+        A `Blob` of format specified by data_format. The max pooled output `Blob`.
+    """
     # TODO: fix cuDNN bugs in pooling_1d
     raise NotImplementedError
 
@@ -328,9 +398,18 @@ def max_pool2d(
     data_format: str = "NHWC",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.nn.max_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool2d>`_
+    r"""Performs the max pooling on the input `Blob`.
 
+    Args:
+        input: A 4-D `Blob` of the format specified by data_format.
+        ksize: 	An int or list of ints that has length 1, 2 or 4. The size of the window for each dimension of the input `Blob`.
+        strides: An int or list of ints that has length 1, 2 or 4. The stride of the sliding window for each dimension of the input `Blob`.
+        padding: '`VALID'` or '`SAME'`. The padding algorithm. 
+        data_format: '`NHWC'`, '`NCHW'` or '`NCHW_VECT_C'`.
+        name: This operator's name(optional).
+
+    Returns:
+        A `Blob` of format specified by data_format. The max pooled output `Blob`.
     """
     op = (
         flow.user_op_builder(
@@ -361,9 +440,18 @@ def avg_pool2d(
     data_format: str = "NHWC",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.nn.avg_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool2d>`_
+    r"""Performs the average pooling on the input
 
+    Args:
+        input: A 4-D `Blob` of shape [batch, height, width, channels].
+        ksize: An int or list of ints that has length 1, 2 or 4. The size of the window for each dimension of the input `Blob`.
+        strides: An int or list of ints that has length 1, 2 or 4. The stride of the sliding window for each dimension of the input `Blob`.
+        padding: '`VALID'` or '`SAME'`. The padding algorithm.
+        data_format: '`NHWC'` or '`NCHW'`.
+        name: This operator's name(optional).
+
+    Returns:
+        A `Blob` with the same type as '`value'`. The average pooled output `Blob`.
     """
     op = (
         flow.user_op_builder(
@@ -394,9 +482,18 @@ def max_pool3d(
     data_format: str = "NDHWC",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.nn.max_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool3d>`_
+    r"""Performs the max pooling on the input.
 
+    Args:
+        input: A 5-D `Blob` of the format specified by data_format.
+        ksize: An int or list of ints that has length 1, 3 or 5. The size of the window for each dimension of the input `Blob`.
+        strides: An int or list of ints that has length 1, 3 or 5. The stride of the sliding window for each dimension of the input `Blob`.
+        padding: '`VALID'` or '`SAME'`. The padding algorithm
+        data_format: "NDHWC" or "NCDHW". Defaults to "NDHWC".
+        name: This operator's name(optional).
+
+    Returns:
+        A `Blob` of format specified by data_format. The max pooled output `Blob`.
     """
     op = (
         flow.user_op_builder(
@@ -427,9 +524,18 @@ def avg_pool3d(
     data_format: str = "NDHWC",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.nn.avg_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool3d>`_
+    r"""Performs the average pooling on the input.
 
+    Args:
+        input: A 5-D `Blob` of shape [batch, height, width, channels].
+        ksize: An int or list of ints that has length 1, 3 or 5. The size of the window for each dimension of the input `Blob`.
+        strides: An int or list of ints that has length 1, 3 or 5. The stride of the sliding window for each dimension of the input `Blob`.
+        padding: '`VALID'` or '`SAME'`. 
+        data_format: '`NDHWC'` or '`NCDHW'`. Defaults to "NDHWC".
+        name: Optional name for the operation. Defaults to None.
+
+    Returns:
+        A `Blob` with the same type as value. The average pooled output `Blob`.
     """
     op = (
         flow.user_op_builder(
@@ -475,9 +581,18 @@ def softmax(
     axis: Optional[int] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.nn.softmax <https://www.tensorflow.org/api_docs/python/tf/nn/softmax>`_
+    r"""Computes softmax activations.
 
+    Args:
+        logits: A non-empty `Blob`. 
+        axis: The dimension softmax would be performed on. Defaults to None.
+        name: This operator's name(optional).
+
+    Returns:
+        A `Blob` has the same type and shape as logits.
+
+    Raises:
+        InvalidArgumentError: if logits is empty or axis is beyond the last dimension of logits.
     """
     if axis is None:
         axis = -1
@@ -510,6 +625,17 @@ def softmax_grad(
     axis: Optional[int] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Computes gradient of softmax activations.
+
+    Args:
+        y: A `Blob` representing the softmax of x.
+        dy: gradient of y.
+        axis: The dimension softmax would be performed on. Defaults to None.
+        name: This operator's name(optional).
+
+    Returns:
+        A `Blob` representing the gradient of x.
+    """
     if axis is None:
         axis = -1
 
@@ -542,6 +668,16 @@ def sparse_cross_entropy(
     prediction: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""computer sparse cross entropy
+
+    Args:
+        labels: A `Blob` of shape [d_0, d_1, ..., d_{r-1}] (where r is rank of labels and result). Each entry in labels must be an index in [0, num_classes).
+        prediction: A `Blob` with the rank that is equal to the rank of the labels plus one.
+        name: This operator's name(optional).
+
+    Returns:
+        A `Blob` of the same shape as labels.
+    """
     assert labels is not None
     assert prediction is not None
 
@@ -571,9 +707,15 @@ def softmax_cross_entropy_with_logits(
     logits: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.nn.softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/softmax_cross_entropy_with_logits>`_
+    """Computes softmax cross entropy between logits and labels.
 
+    Args:
+        labels: Each vector along the class dimension should hold a valid probability distribution.
+        logits: Per-label activations, typically a linear output. logits has same shape and dtype as labels.
+        name: This operator's name(optional)
+
+    Returns:
+        A `Blob` that contains the softmax cross entropy loss. Its type is the same as logits and its shape is the same as labels except that it does not have the last dimension of labels.
     """
 
     assert labels is not None
@@ -604,9 +746,18 @@ def sparse_softmax_cross_entropy_with_logits(
     logits: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.nn.sparse_softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sparse_softmax_cross_entropy_with_logits>`_
+    r"""Computes sparse softmax cross entropy between logits and labels.
 
+    Args:
+        labels: `Blob` of shape [d_0, d_1, ..., d_{r-1}] (where r is rank of labels and result). Each entry in labels must be an index in [0, num_classes).
+        logits: Unscaled log probabilities of shape [d_0, d_1, ..., d_{r-1},num_classes].
+        name: This operator's name(optional)
+
+    Returns:
+        A `Blob` of the same shape as labels and of the same type as logits with the softmax cross entropy loss.
+
+    Raises:
+        ValueError: If logits are scalars (need to have rank >= 1) or if the rank of the labels is not equal to the rank of the logits minus one.    
     """
     assert labels is not None
     assert logits is not None
@@ -644,9 +795,18 @@ def sigmoid_cross_entropy_with_logits(
     logits: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.nn.sigmoid_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>`_
+    r"""Computes sigmoid cross entropy given logits
 
+    Args:
+        labels: A `Blob` of the same type and shape as logits.
+        logits: A `Blob` of type float.
+        name: This operator's name(optional)
+
+    Returns:
+        A `Blob` of the same shape as logits with the componentwise logistic losses.
+
+    Raises:
+        ValueError: If logits and labels do not have the same shape.
     """
     assert labels is not None
     assert logits is not None
@@ -693,6 +853,21 @@ def random_mask_like(
     noise_shape: Optional[Sequence] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""random mask `Blob` with same shape as '`like'`.
+
+    Args:
+        like: A `Blob`
+        rate: A float value for the probability that each element is dropped
+        seed: Optional, int value.
+        noise_shape: Optional, A 1-D `Blob`, representing the shape for randomly generated keep/drop flags. Defaults to None.
+        name: This operator's name(optional)
+
+    Returns:
+        A random mask `Blob` of the same shape of '`like'`.
+
+    Raises:
+        ValueError: If rate is not in [0, 1). Rate=1 is not allowed.
+    """
     assert rate is not None and rate >= 0.0 and rate < 1.0
     mask_op = (
         flow.user_op_builder(
@@ -724,9 +899,20 @@ def dropout(
     seed: Optional[int] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.nn.dropout <https://www.tensorflow.org/api_docs/python/tf/nn/dropout>`_
+    r"""For preventing overfitting, randomly set elements to zero.
 
+    Args:
+        x: A floating point `Blob`
+        rate: A scalar `Blob` with the same type as x. The probability that each element is dropped
+        noise_shape: optional: A 1-D `Blob`, representing the shape for randomly generated keep/drop flags. Defaults to None.
+        seed: optional int value. Defaults to None.
+        name: This operator's name(optional)
+
+    Returns:
+        A `Blob` of the same shape of x.
+
+    Raises:
+        ValueError: If rate is not in [0, 1) or if x is not a floating point `Blob`. Rate=1 is not allowed.
     """
     assert rate is not None and rate >= 0.0 and rate < 1.0
     if not flow.current_global_function_desc().IsTrainable() or rate == 0.0:
@@ -765,11 +951,11 @@ def deconv2d(
     Args:
     value: 4-d `Blob`
     filter: filter of transposed convolution, usually a variable
-    output_shape: A 1-D Tensor representing the output shape of the deconvolution op
+    output_shape: A 1-D `Blob` representing the output shape of the deconvolution op
     strides: `int` or `int list`
     padding: `'VALID'` or `'SAME'`
     data_format: `'NHWC'` or `'NCHW'`
-    name: This operator's name
+    name: This operator's name(optional)
     input: Alias for value
     filters: Alias for filter
     dilations: The dilation factor for each dimension of input.
@@ -920,6 +1106,16 @@ def deconv2d(
 def leaky_relu(
     x: remote_blob_util.BlobDef, alpha: float = 0.2, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    r"""Leaky ReLU activation value
+
+    Args:
+        x : A `Blob` representing preactivation values.
+        alpha: Slope of the activation function at x < 0 with float type. Default value is 0.2.
+        name: This operator's name(optional)
+
+    Returns:
+        The activation `Blob`
+    """
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("LeakyRelu_")
