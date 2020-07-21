@@ -131,6 +131,8 @@ Maybe<void> StartGlobalSession() {
   const JobSet& job_set = Global<LazyJobBuildAndInferCtxMgr>::Get()->job_set();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
+    TeePersistentLogStream::Create("structure_graph.json")
+        ->Write(Global<LazyJobBuildAndInferCtxMgr>::Get()->structure_graph());
   }
   if (job_set.job().empty()) { return Error::JobSetEmpty() << "no function defined"; }
   CHECK_ISNULL_OR_RETURN(Global<Oneflow>::Get());
@@ -139,6 +141,12 @@ Maybe<void> StartGlobalSession() {
   Global<Oneflow>::New();
   JUST(Global<Oneflow>::Get()->Init(job_set));
   return Maybe<void>::Ok();
+}
+
+Maybe<std::string> GetSerializedStructureGraph() {
+  const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
+  return job_ctx_mgr->structure_graph();
 }
 
 Maybe<void> StopGlobalSession() {
