@@ -247,9 +247,9 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
 
     def BuildFeedInstruction(builder):
         builder.FeedBlob(blob_object, FeedBlob)
+        builder.InsertRemoveForeignCallbackInstruction(blob_object.object_id, FeedBlob)
 
     vm_util.PhysicalRun(BuildFeedInstruction)
-    python_callback.DeleteRegisteredCallback(FeedBlob)
 
 
 def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):

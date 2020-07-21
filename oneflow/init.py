@@ -14,12 +14,6 @@ del dtype_util
 
 import oneflow.python.framework.register_python_callback
 
-import traceback
-try:
-    from oneflow.generated import *
-except Exception as _e:
-    pass
-
 import oneflow.python.__export_symbols__
 
 import atexit
@@ -31,4 +25,3 @@ del atexit
 del absolute_import
 del oneflow
 del python
-#del core
