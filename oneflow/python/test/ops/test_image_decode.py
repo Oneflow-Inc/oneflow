@@ -13,7 +13,7 @@ def _of_image_decode(images):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def image_decode_job(
@@ -28,7 +28,7 @@ def _of_image_decode(images):
     images_np_arr = [
         np.frombuffer(bys, dtype=np.byte).reshape(1, -1) for bys in images_bytes
     ]
-    decoded_images = image_decode_job([images_np_arr]).get().ndarray_lists()
+    decoded_images = image_decode_job([images_np_arr]).get().numpy_lists()
     return decoded_images[0]
 
 

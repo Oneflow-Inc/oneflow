@@ -15,9 +15,9 @@ def TestListDataTypeAndListShapeAndListStringAttr(
         .Op("TestListDataTypeAndListShapeAndListStringAttr")
         .Input("in", [input])
         .Output("out", 3)
-        .Attr("out_shapes", out_shapes, "AttrTypeListShape")
-        .Attr("out_types", out_types, "AttrTypeListDataType")
-        .Attr("string_list", string_list, "AttrTypeListString")
+        .Attr("out_shapes", out_shapes)
+        .Attr("out_types", out_types)
+        .Attr("string_list", string_list)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()
@@ -42,8 +42,7 @@ def RunTest(out_shapes, out_types):
 
     input = np.random.random_sample((10, 10)).astype(np.float32)
     outputs = [
-        x.ndarray()
-        for x in TestListDataTypeAndListShapeAndListStringAttrJob(input).get()
+        x.numpy() for x in TestListDataTypeAndListShapeAndListStringAttrJob(input).get()
     ]
     for i in range(len(outputs)):
         assert outputs[i].shape == out_shapes[i]

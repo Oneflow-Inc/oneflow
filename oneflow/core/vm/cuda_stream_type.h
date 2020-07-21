@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_VM_CUDA_STREAM_TYPE_H_
 #define ONEFLOW_CORE_VM_CUDA_STREAM_TYPE_H_
 
-#include "oneflow/core/common/flat_msg_view.h"
+#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/device/device_context.h"

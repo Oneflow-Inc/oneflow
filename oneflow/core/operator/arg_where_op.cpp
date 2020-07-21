@@ -45,6 +45,7 @@ class ArgWhereOp final : public Operator {
     const BlobDesc* in_desc = GetBlobDesc4BnInOp("in");
     const BlobDesc* out_desc = GetBlobDesc4BnInOp("out");
     BlobDesc* tmp_desc = GetBlobDesc4BnInOp("tmp");
+    CHECK_NOTNULL_OR_RETURN(tmp_desc);
     int64_t tmp_bytes = 0;
     InferArgWhereWorkspaceSizeInBytes(device_type(), in_desc->data_type(), out_desc->data_type(),
                                       in_desc->shape().NumAxes(), in_desc->shape().elem_cnt(),

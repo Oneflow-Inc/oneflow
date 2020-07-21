@@ -39,19 +39,15 @@ bool CurJobBuildAndInferCtx_HasJobConf(std::string* error_str) {
                                                                                      false);
 }
 
-std::string CurJobBuildAndInferCtx_AddAndInferMirroredOp(
-    const std::string& serialized_op_conf, const std::string& serialized_parallel_conf,
-    std::string* error_str) {
-  return oneflow::CurJobBuildAndInferCtx_AddAndInferMirroredOp(serialized_op_conf,
-                                                               serialized_parallel_conf)
+std::string CurJobBuildAndInferCtx_AddAndInferMirroredOp(const std::string& serialized_op_conf,
+                                                         std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_AddAndInferMirroredOp(serialized_op_conf)
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
-std::string CurJobBuildAndInferCtx_AddAndInferConsistentOp(
-    const std::string& serialized_op_conf, const std::string& serialized_parallel_conf,
-    std::string* error_str) {
-  return oneflow::CurJobBuildAndInferCtx_AddAndInferConsistentOp(serialized_op_conf,
-                                                                 serialized_parallel_conf)
+std::string CurJobBuildAndInferCtx_AddAndInferConsistentOp(const std::string& serialized_op_conf,
+                                                           std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_AddAndInferConsistentOp(serialized_op_conf)
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 

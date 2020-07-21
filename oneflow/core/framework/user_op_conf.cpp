@@ -1,5 +1,5 @@
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/framework/op_registration.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/framework/user_op_def.h"
@@ -281,11 +281,24 @@ Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf*
 
 }  // namespace
 
+Maybe<long long> GetUserOpAttrTypeImpl(const std::string& op_type_name,
+                                       const std::string& attr_name) {
+  const user_op::OpRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
+  CHECK_OR_RETURN(val) << " Cannot find op " << op_type_name;
+  const UserOpDef& op_def = val->op_def;
+  for (int32_t i = 0; i < op_def.attr_size(); ++i) {
+    if (op_def.attr(i).name() == attr_name) { return op_def.attr(i).type(); }
+  }
+  CHECK_OR_RETURN(false) << " Cannot find attr " << attr_name << " in op " << op_type_name;
+}
+
 Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf) {
   CHECK_OR_RETURN(op_conf.has_user_conf()) << " Add default value only for user op";
   OperatorConf ret = op_conf;
   UserOpConf* user_conf = ret.mutable_user_conf();
-  const user_op::OpRegistrationVal* val = user_op::LookUpInOpRegistry(user_conf->op_type_name());
+  const user_op::OpRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_conf->op_type_name());
   CHECK_OR_RETURN(val) << " Cannot find op_type_name: " << user_conf->op_type_name();
   const UserOpDef& op_def = val->op_def;
 

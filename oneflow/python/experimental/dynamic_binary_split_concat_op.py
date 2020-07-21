@@ -1,20 +1,24 @@
 from __future__ import absolute_import
 
-import operator
-from functools import reduce
 
-import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Optional, List, Sequence
 
 
 @oneflow_export("experimental.dynamic_binary_split")
-def dynamic_binary_split(x, base_shift=2, out_num=2, name=None):
+def dynamic_binary_split(
+    x: input_blob_util.ArgBlobDef,
+    base_shift: int = 2,
+    out_num: int = 2,
+    name: Optional[str] = None,
+) -> List[remote_blob_util.BlobDef]:
     op_conf = op_conf_util.OperatorConf()
     if name is None:
         op_conf.name = id_util.UniqueStr("DynamicBinarySplit_")
@@ -31,7 +35,7 @@ def dynamic_binary_split(x, base_shift=2, out_num=2, name=None):
     op_conf.dynamic_binary_split_conf.out[:] = obns
     op_conf.dynamic_binary_split_conf.base_shift = base_shift
 
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     for i in range(out_num):
         out_lbi = logical_blob_id_util.LogicalBlobId()
         out_lbi.op_name = op_conf.name
@@ -42,7 +46,12 @@ def dynamic_binary_split(x, base_shift=2, out_num=2, name=None):
 
 
 @oneflow_export("experimental.dynamic_binary_concat")
-def dynamic_binary_concat(input_blob_list, source_blob, source_sbp="S:0", name=None):
+def dynamic_binary_concat(
+    input_blob_list: Sequence[remote_blob_util.BlobDef],
+    source_blob: input_blob_util.ArgBlobDef,
+    source_sbp: str = "S:0",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
     if name is None:
         op_conf.name = id_util.UniqueStr("DynamicBinaryConcat_")
@@ -73,7 +82,7 @@ def dynamic_binary_concat(input_blob_list, source_blob, source_sbp="S:0", name=N
         print("Error! invalid sbp str:", source_sbp)
         op_conf.dynamic_binary_concat_conf.out_sbp.SetInParent()
 
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     out_lbi.op_name = op_conf.name
     out_lbi.blob_name = "out"

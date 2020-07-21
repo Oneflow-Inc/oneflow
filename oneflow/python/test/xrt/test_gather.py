@@ -15,7 +15,7 @@ class TestGather(unittest.TestCase):
         b = f2(x, indices).get()
         print("without xla: ", a)
         print("with xla", b)
-        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def make_job(self, input_shape, indices_shape, axis, dtype=flow.float32):

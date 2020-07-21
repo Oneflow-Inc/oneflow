@@ -10,14 +10,14 @@ def _check(test_case, x, y, value, dtype=None):
 def _run_test(test_case, x, value, dtype=None, device="gpu"):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def ConstantLikeJob(x=flow.FixedTensorDef(x.shape)):
         return flow.constant_like(x, value=value, dtype=dtype)
 
     y = ConstantLikeJob(x).get()
-    _check(test_case, x, y.ndarray(), value, dtype=dtype)
+    _check(test_case, x, y.numpy(), value, dtype=dtype)
 
 
 def test_constant_like_gpu_float(test_case):

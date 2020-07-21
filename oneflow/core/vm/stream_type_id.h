@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_VM_STREAM_TYPE_ID_H_
 
 #include "oneflow/core/vm/interpret_type.h"
-#include "oneflow/core/common/flat_msg.h"
+#include "oneflow/core/object_msg/flat_msg.h"
 
 namespace oneflow {
 namespace vm {

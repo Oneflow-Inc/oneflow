@@ -26,7 +26,7 @@ def _run_test(
     def one_hot_job(
         x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[dtype])
     ):
-        with flow.fixed_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.one_hot(
                 x,
                 depth=depth,
@@ -38,7 +38,7 @@ def _run_test(
 
     x = np.random.randint(0, depth, x_shape).astype(type_name_to_np_type[dtype])
     y = one_hot_job(x).get()
-    _check(test_case, x, y.ndarray(), depth, on_value, off_value, axis)
+    _check(test_case, x, y.numpy(), depth, on_value, off_value, axis)
 
 
 def test_one_hot(test_case):

@@ -28,7 +28,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
 
     @flow.global_function(func_config)
     def SoftmaxJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
@@ -57,7 +57,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
 
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
@@ -74,7 +74,4 @@ def test_softmax(test_case):
             continue
         if arg[3] >= len(arg[1]):
             continue
-        if os.getenv("ENABLE_USER_OP") == "False":
-            if arg[3] != -1:
-                continue  # axis
         compare_with_tensorflow(*arg)

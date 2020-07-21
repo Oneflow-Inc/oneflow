@@ -1,20 +1,46 @@
 from __future__ import absolute_import
 
-from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.ops.user_op_builder as user_op_builder
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.distribute as distribute_util
+from typing import Optional, Sequence, Union
 
 import oneflow as flow
+import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.framework.hob as hob
+import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.python.ops.user_op_builder as user_op_builder
+from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("math.two_stage_reduce_max")
+def api_two_stage_reduce_max(
+    x: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    func = enable_if.unique([two_stage_reduce_max])
+    return func(x, axis=axis, keepdims=keepdims, name=name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def two_stage_reduce_max(x, axis=None, keepdims=False, name=None):
     name = name if name is not None else id_util.UniqueStr("ReduceMax_")
     return two_stage_reduce(x, axis, keepdims, "reduce_max", name)
 
 
 @oneflow_export("math.two_stage_reduce_min")
+def api_two_stage_reduce_min(
+    x: remote_blob_util.BlobDef,
+    axis: Optional[Union[int, Sequence[int]]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    func = enable_if.unique([two_stage_reduce_min])
+    return func(x, axis=axis, keepdims=keepdims, name=name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def two_stage_reduce_min(x, axis=None, keepdims=False, name=None):
     name = name if name is not None else id_util.UniqueStr("ReduceMin_")
     return two_stage_reduce(x, axis, keepdims, "reduce_min", name)
@@ -37,7 +63,7 @@ def two_stage_reduce(x, axis=None, keepdims=False, op_type_name=None, name=None)
         device_ids,
     ) in current_placement_scope.machine_id2device_id_list.items():
         for device_id in device_ids:
-            with flow.fixed_placement(
+            with flow.scope.placement(
                 device_tag, str(machine_id) + ":" + str(device_id)
             ):
                 device_stage_out, device_stage_count = reduce_device_stage(
@@ -78,7 +104,7 @@ def reduce_device_stage(x, axis, op_name, name):
         .Output("out")
         .Output("mask")
         .Output("count")
-        .Attr("axis", axis, "AttrTypeListInt32")
+        .Attr("axis", axis)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()
@@ -94,8 +120,8 @@ def reduce_global_stage(x, device_count, axis, keepdims, op_name, name):
         .Input("device_count", [device_count])
         .Output("out")
         .Output("mask")
-        .Attr("axis", axis, "AttrTypeListInt32")
-        .Attr("keepdims", keepdims, "AttrTypeBool")
+        .Attr("axis", axis)
+        .Attr("keepdims", keepdims)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()

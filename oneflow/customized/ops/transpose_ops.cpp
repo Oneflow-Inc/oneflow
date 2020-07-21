@@ -1,5 +1,4 @@
 #include <oneflow/core/common/maybe.h>
-#include <oneflow/core/framework/op_registration.h>
 #include <oneflow/core/framework/tensor_desc.h>
 #include "oneflow/core/framework/framework.h"
 
@@ -54,6 +53,7 @@ REGISTER_USER_OP("transpose")
         CHECK_LT(axis, perm.size());
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), axis).Build();
       }
+      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
       return Maybe<void>::Ok();
     });
 

@@ -1,4 +1,4 @@
-#include "oneflow/core/common/flat_msg_view.h"
+#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
@@ -129,6 +129,8 @@ void L2RSenderStreamType::Compute(Instruction* instruction) const {
 
 ObjectMsgPtr<StreamDesc> L2RSenderStreamType::MakeStreamDesc(const Resource& resource,
                                                              int64_t this_machine_id) const {
+  // TODO(lixinqi) refactor for multi nodes
+  if (this_machine_id != 0) { return ObjectMsgPtr<StreamDesc>(); }
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<L2RSenderStreamType>());
   ret->set_num_machines(1);

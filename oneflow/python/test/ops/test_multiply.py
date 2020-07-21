@@ -48,7 +48,7 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
         x=flow.FixedTensorDef(shape, dtype=flow.float),
         y=flow.FixedTensorDef(shape, dtype=flow.float),
     ):
-        with flow.fixed_placement(device, "0:0"):
+        with flow.scope.placement(device, "0:0"):
             x += flow.get_variable(
                 name="vx",
                 shape=(1,),

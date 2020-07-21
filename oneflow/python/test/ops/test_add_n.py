@@ -1,5 +1,6 @@
 import numpy as np
 import oneflow as flow
+from typing import Tuple
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -7,11 +8,11 @@ func_config.default_data_type(flow.float)
 
 def test_naive(test_case):
     @flow.global_function(func_config)
-    def AddJob(xs=[flow.FixedTensorDef((5, 2))] * 3):
+    def AddJob(xs: Tuple[(flow.Numpy.Def((5, 2)),) * 3]):
         return flow.math.add_n(xs)
 
     inputs = [np.random.rand(5, 2).astype(np.float32) for i in range(3)]
-    r = AddJob(inputs).get().ndarray()
+    r = AddJob(inputs).get().numpy()
     test_case.assertTrue(np.allclose(r, sum(inputs)))
 
 
@@ -85,5 +86,5 @@ def GenerateTest(test_case, shape, num_inputs):
         return flow.math.add_n(xs)
 
     inputs = [np.random.rand(*shape).astype(np.float32) for i in range(num_inputs)]
-    r = AddJob(inputs).get().ndarray()
+    r = AddJob(inputs).get().numpy()
     test_case.assertTrue(np.allclose(r, sum(inputs)))

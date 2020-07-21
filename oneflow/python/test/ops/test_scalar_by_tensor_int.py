@@ -21,7 +21,7 @@ def _check(test_case, x, y, out, case):
 def _run_test(test_case, x, y, case, dtype=None, device="gpu"):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def ScalarByTensorJob(
@@ -38,7 +38,7 @@ def _run_test(test_case, x, y, case, dtype=None, device="gpu"):
             return flow.math.divide(x, y)
 
     out = ScalarByTensorJob(x, y).get()
-    _check(test_case, x, y, out.ndarray(), case)
+    _check(test_case, x, y, out.numpy(), case)
 
 
 def test_scalar_add_by_tensor_gpu_float(test_case):

@@ -7,7 +7,7 @@ def _of_image_flip(images, image_shape, flip_code):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def image_flip_job(
@@ -20,10 +20,11 @@ def _of_image_flip(images, image_shape, flip_code):
         )
 
     image_tensor = image_flip_job([images]).get()
-    return image_tensor.ndarray_lists()[0]
+    return image_tensor.numpy_lists()[0]
 
 
 def _read_images_by_cv(image_files):
+
     images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
     return [np.expand_dims(image, axis=0) for image in images]
 
@@ -43,6 +44,7 @@ def _get_images_static_shape(images):
 
 
 def _compare_image_flip_with_cv(test_case, image_files):
+
     images = _read_images_by_cv(image_files)
     assert all([len(image.shape) == 4 for image in images])
     image_shape = _get_images_static_shape(images)

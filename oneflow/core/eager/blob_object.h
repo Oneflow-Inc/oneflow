@@ -4,6 +4,7 @@
 #include "oneflow/core/vm/object.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 namespace eager {
@@ -21,18 +22,18 @@ class BlobObject : public vm::Object {
 
   const Blob& blob() const { return *blob_; }
   Blob* mut_blob() { return blob_.get(); }
-  Blob* mutable_blob();
+  Maybe<void> TryInitBlob();
 
   void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx);
 
  private:
-  void InitBlob();
+  Maybe<void> InitBlob();
 
   std::shared_ptr<MemoryCase> mem_case_;
   BlobDesc blob_desc_;
   std::unique_ptr<RtBlobDesc> rt_blob_desc_;
-  std::unique_ptr<char[]> header_buffer_;
   std::unique_ptr<Blob> blob_;
+  std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
   std::size_t blob_body_bytes_;
 };
