@@ -7,7 +7,7 @@
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
-#include "oneflow/core/common/object_msg_reflection.h"
+#include "oneflow/core/object_msg/object_msg_reflection.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

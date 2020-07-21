@@ -23,7 +23,7 @@ def RunOneflowBiasAdd(device_type, value, bias, flow_args):
     def FlowJob(
         value=flow.FixedTensorDef(value.shape), bias=flow.FixedTensorDef(bias.shape)
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             value += flow.get_variable(
                 name="v1",
                 shape=(1,),
@@ -47,7 +47,7 @@ def RunOneflowBiasAdd(device_type, value, bias, flow_args):
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    y = FlowJob(value, bias).get().ndarray()
+    y = FlowJob(value, bias).get().numpy()
     value_diff = test_global_storage.Get("value_diff")
     bias_diff = test_global_storage.Get("bias_diff")
     return y, value_diff, bias_diff

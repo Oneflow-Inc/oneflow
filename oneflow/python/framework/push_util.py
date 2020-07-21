@@ -24,8 +24,13 @@ def AsyncPush(session, job_func, *arg):
 
 def _AsyncPushArg(session, arg_blob_def, arg_ndarray):
     if isinstance(arg_blob_def, (list, tuple)):
-        assert type(arg_blob_def) is type(arg_ndarray)
-        assert len(arg_blob_def) == len(arg_ndarray)
+        assert isinstance(arg_ndarray, (list, tuple)), "type(arg_ndarray): %s" % (
+            type(arg_ndarray)
+        )
+        assert len(arg_blob_def) == len(arg_ndarray), "%s v.s. %s" % (
+            len(arg_blob_def),
+            len(arg_ndarray),
+        )
         for blob_def, ndarray in zip(arg_blob_def, arg_ndarray):
             _AsyncPushArg(session, blob_def, ndarray)
     elif isinstance(arg_blob_def, dict):
@@ -40,7 +45,9 @@ def _AsyncPushArg(session, arg_blob_def, arg_ndarray):
 
 def MakeEagerInputBlobs(arg_blob_def, arg_ndarray):
     if isinstance(arg_blob_def, (list, tuple)):
-        assert type(arg_blob_def) is type(arg_ndarray)
+        assert isinstance(arg_ndarray, (list, tuple)), "type(arg_ndarray): %s" % (
+            type(arg_ndarray)
+        )
         assert len(arg_blob_def) == len(arg_ndarray)
         return type(arg_blob_def)(
             MakeEagerInputBlobs(blob_def, ndarray)
@@ -178,14 +185,14 @@ class FeedContext(object):
         sbp_parallel = self.op_arg_parallel_attr_.sbp_parallel
         parallel_num = self.op_arg_parallel_attr_.parallel_desc_symbol.parallel_num
         if sbp_parallel.HasField("broadcast_parallel") or parallel_num == 1:
-            return self.arg_ndarray_
+            return self._AsContiguousNdArray(self.arg_ndarray_)
         elif sbp_parallel.HasField("split_parallel"):
             axis = sbp_parallel.split_parallel.axis
             start, end = self._GetBalancedRanges(logical_shape[axis])[self.rank_]
             slc = [slice(None)] * len(logical_shape)
             slc[axis] = slice(start, end)
             ndarray = self.arg_ndarray_[tuple(slc)]
-            return ndarray
+            return self._AsContiguousNdArray(ndarray)
         else:
             raise NotImplementedError
 
@@ -206,7 +213,7 @@ class FeedContext(object):
         ndarray = self.arg_ndarray_[self.rank_]
         elem_cnt = reduce(lambda x, y: x * y, ndarray.shape, 1)
         assert elem_cnt <= capacity, "%s v.s. %s" % (ndarray.shape, static_shape)
-        return ndarray
+        return self._AsContiguousNdArray(ndarray)
 
     def GetMirroredTensorList(self, static_shape):
         assert isinstance(self.arg_ndarray_, (list, tuple))
@@ -219,7 +226,17 @@ class FeedContext(object):
         assert all(isinstance(arr, numpy.ndarray) for arr in ndarray_list)
         capacity = numpy.prod(static_shape) / static_shape[0]
         assert all(numpy.prod(arr.shape) <= capacity for arr in ndarray_list)
-        return ndarray_list
+        return self._AsContiguousNdArray(ndarray_list)
+
+    def _AsContiguousNdArray(self, ndarray):
+        if isinstance(ndarray, numpy.ndarray):
+            return (
+                ndarray if ndarray.data.contiguous else numpy.ascontiguousarray(ndarray)
+            )
+        elif isinstance(ndarray, (tuple, list)):
+            return type(ndarray)(self._AsContiguousNdArray(a) for a in ndarray)
+        else:
+            raise NotImplementedError
 
 
 def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
@@ -231,9 +248,9 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
 
     def BuildFeedInstruction(builder):
         builder.FeedBlob(blob_object, FeedBlob)
+        builder.InsertRemoveForeignCallbackInstruction(blob_object.object_id, FeedBlob)
 
     vm_util.PhysicalRun(BuildFeedInstruction)
-    python_callback.DeleteRegisteredCallback(FeedBlob)
 
 
 def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):

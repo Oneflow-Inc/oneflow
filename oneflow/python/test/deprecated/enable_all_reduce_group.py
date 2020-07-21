@@ -30,13 +30,13 @@ func_config.enable_all_reduce_group(True)
 
 @flow.global_function(func_config)
 def OneDeviceUpdateVariable(x=input_blob_def):
-    with flow.device_prior_placement("gpu", "0:0"):
+    with flow.scope.placement("gpu", "0:0"):
         return UpdateVariable(x, "one-device")
 
 
 @flow.global_function(func_config)
 def TwoDeviceUpdateVariable(x=input_blob_def):
-    with flow.device_prior_placement("gpu", "0:0-1"):
+    with flow.scope.placement("gpu", "0:0-1"):
         return UpdateVariable(x, "two-device")
 
 
@@ -45,7 +45,7 @@ func_config.enable_all_reduce_group(True)
 
 @flow.global_function(func_config)
 def DisableAllReduceGroupUpdateVariable(x=input_blob_def):
-    with flow.device_prior_placement("gpu", "0:0-1"):
+    with flow.scope.placement("gpu", "0:0-1"):
         return UpdateVariable(x, "disable-all-reduce-group")
 
 

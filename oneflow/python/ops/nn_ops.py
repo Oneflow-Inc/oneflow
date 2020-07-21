@@ -97,13 +97,13 @@ def conv2d(
         .Input("in", [input])
         .Input("weight", [filters])
         .Output("out")
-        .Attr("filters", filters.shape[0], "AttrTypeInt32")
-        .Attr("padding", padding.lower(), "AttrTypeString")
-        .Attr("data_format", channel_pos, "AttrTypeString")
-        .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
-        .Attr("strides", strides, "AttrTypeListInt32")
-        .Attr("dilation_rate", dilations, "AttrTypeListInt32")
-        .Attr("groups", groups, "AttrTypeInt32")
+        .Attr("filters", filters.shape[0])
+        .Attr("padding", padding.lower())
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size_list)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilations)
+        .Attr("groups", groups)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -153,11 +153,11 @@ def batch_normalization(
         .Input("gamma", [scale])
         .Input("beta", [offset])
         .Output("y")
-        .Attr("axis", axis, "AttrTypeInt32")
-        .Attr("epsilon", variance_epsilon, "AttrTypeFloat")
-        .Attr("training", False, "AttrTypeBool")
+        .Attr("axis", axis)
+        .Attr("epsilon", variance_epsilon)
+        .Attr("training", False)
         # momentum is not used
-        .Attr("momentum", 0.0, "AttrTypeFloat")
+        .Attr("momentum", 0.0)
     )
     return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
@@ -220,7 +220,6 @@ def tf_conv2d(
         else:
             raise ValueError("dilations must be an int or a list.")
 
-    assert os.getenv("ENABLE_USER_OP") != "False"
     if channel_pos == "channels_first":
         input_size = input.shape[2:4]
         kernel_size_list = filters.shape[2:4]
@@ -277,13 +276,13 @@ def tf_conv2d(
         .Input("in", [input])
         .Input("weight", [filters])
         .Output("out")
-        .Attr("filters", filters.shape[0], "AttrTypeInt32")
-        .Attr("padding", padding.lower(), "AttrTypeString")
-        .Attr("data_format", channel_pos, "AttrTypeString")
-        .Attr("kernel_size", kernel_size_list, "AttrTypeListInt32")
-        .Attr("strides", strides, "AttrTypeListInt32")
-        .Attr("dilation_rate", dilations, "AttrTypeListInt32")
-        .Attr("groups", groups, "AttrTypeInt32")
+        .Attr("filters", filters.shape[0])
+        .Attr("padding", padding.lower())
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size_list)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilations)
+        .Attr("groups", groups)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -330,7 +329,7 @@ def bias_add(
         .Input("a", [value])
         .Input("b", [bias])
         .Output("out")
-        .Attr("axis", bias_add_axis, "AttrTypeInt32")
+        .Attr("axis", bias_add_axis)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -420,14 +419,14 @@ def max_pool2d(
         .Output("y")
     )
     assert padding in ["VALID", "SAME"]
-    op.Attr("padding", padding.lower(), "AttrTypeString")
+    op.Attr("padding", padding.lower())
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
     data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-    op.Attr("data_format", data_format, "AttrTypeString")
+    op.Attr("data_format", data_format)
     pool_size = _GetSequence(ksize, 2, "ksize")
-    op.Attr("pool_size", pool_size, "AttrTypeListInt32")
+    op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 2, "strides")
-    op.Attr("strides", strides, "AttrTypeListInt32")
+    op.Attr("strides", strides)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
@@ -462,14 +461,14 @@ def avg_pool2d(
         .Output("y")
     )
     assert padding in ["VALID", "SAME"]
-    op.Attr("padding", padding.lower(), "AttrTypeString")
+    op.Attr("padding", padding.lower())
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
     data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-    op.Attr("data_format", data_format, "AttrTypeString")
+    op.Attr("data_format", data_format)
     pool_size = _GetSequence(ksize, 2, "ksize")
-    op.Attr("pool_size", pool_size, "AttrTypeListInt32")
+    op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 2, "strides")
-    op.Attr("strides", strides, "AttrTypeListInt32")
+    op.Attr("strides", strides)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
@@ -504,14 +503,14 @@ def max_pool3d(
         .Output("y")
     )
     assert padding in ["VALID", "SAME"]
-    op.Attr("padding", padding.lower(), "AttrTypeString")
+    op.Attr("padding", padding.lower())
     assert data_format in ["NDHWC", "NCDHW"]
     data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-    op.Attr("data_format", data_format, "AttrTypeString")
+    op.Attr("data_format", data_format)
     pool_size = _GetSequence(ksize, 3, "ksize")
-    op.Attr("pool_size", pool_size, "AttrTypeListInt32")
+    op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 3, "strides")
-    op.Attr("strides", strides, "AttrTypeListInt32")
+    op.Attr("strides", strides)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
@@ -546,14 +545,14 @@ def avg_pool3d(
         .Output("y")
     )
     assert padding in ["VALID", "SAME"]
-    op.Attr("padding", padding.lower(), "AttrTypeString")
+    op.Attr("padding", padding.lower())
     assert data_format in ["NDHWC", "NCDHW"]
     data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-    op.Attr("data_format", data_format, "AttrTypeString")
+    op.Attr("data_format", data_format)
     pool_size = _GetSequence(ksize, 3, "ksize")
-    op.Attr("pool_size", pool_size, "AttrTypeListInt32")
+    op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 3, "strides")
-    op.Attr("strides", strides, "AttrTypeListInt32")
+    op.Attr("strides", strides)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
@@ -762,31 +761,28 @@ def sparse_softmax_cross_entropy_with_logits(
     assert labels is not None
     assert logits is not None
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        if len(labels.shape) == len(logits.shape):
-            assert labels.shape[-1] == 1
-            labels = flow.squeeze(labels, axis=[-1])
-        else:
-            assert len(labels.shape) == len(logits.shape) - 1
-
-        prob, out = (
-            flow.user_op_builder(
-                name
-                if name is not None
-                else id_util.UniqueStr("SparseSoftmaxCrossEntropy_")
-            )
-            .Op("sparse_softmax_cross_entropy")
-            .Input("prediction", [logits])
-            .Input("label", [labels])
-            .Output("prob")
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()
-        )
-        return out
+    if len(labels.shape) == len(logits.shape):
+        assert labels.shape[-1] == 1
+        labels = flow.squeeze(labels, axis=[-1])
     else:
-        return sparse_cross_entropy(labels=labels, prediction=softmax(logits))
+        assert len(labels.shape) == len(logits.shape) - 1
+
+    prob, out = (
+        flow.user_op_builder(
+            name
+            if name is not None
+            else id_util.UniqueStr("SparseSoftmaxCrossEntropy_")
+        )
+        .Op("sparse_softmax_cross_entropy")
+        .Input("prediction", [logits])
+        .Input("label", [labels])
+        .Output("prob")
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    return out
 
 
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")
@@ -876,14 +872,12 @@ def random_mask_like(
         .Op("random_mask_like")
         .Input("like", [like])
         .Output("out")
-        .Attr("rate", float(rate), "AttrTypeFloat")
+        .Attr("rate", float(rate))
     )
     if seed is not None:
-        mask_op.Attr("seed", seed, "AttrTypeInt64")
+        mask_op.Attr("seed", seed)
     else:
-        mask_op.Attr(
-            "seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1), "AttrTypeInt64"
-        )
+        mask_op.Attr("seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1))
 
     if noise_shape is not None:
         assert 0, "noise_shape will be supported later."
@@ -926,7 +920,7 @@ def dropout(
         .Input("in", [x])
         .Input("mask", [mask])
         .Output("out")
-        .Attr("scale", float(1.0 / (1.0 - rate)), "AttrTypeFloat")
+        .Attr("scale", float(1.0 / (1.0 - rate)))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -1061,13 +1055,13 @@ def deconv2d(
             .Input("in", [input])
             .Input("weight", [filters])
             .Output("out")
-            .Attr("filters", channels, "AttrTypeInt32")
-            .Attr("padding", "valid", "AttrTypeString")
-            .Attr("data_format", channel_pos, "AttrTypeString")
-            .Attr("kernel_size", kernel_size, "AttrTypeListInt32")
-            .Attr("strides", strides, "AttrTypeListInt32")
-            .Attr("dilation_rate", dilations, "AttrTypeListInt32")
-            .Attr("output_shape", padded_output_shape, "AttrTypeListInt32")
+            .Attr("filters", channels)
+            .Attr("padding", "valid")
+            .Attr("data_format", channel_pos)
+            .Attr("kernel_size", kernel_size)
+            .Attr("strides", strides)
+            .Attr("dilation_rate", dilations)
+            .Attr("output_shape", padded_output_shape)
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]
@@ -1089,13 +1083,13 @@ def deconv2d(
         .Input("in", [input])
         .Input("weight", [filters])
         .Output("out")
-        .Attr("filters", channels, "AttrTypeInt32")
-        .Attr("padding", padding.lower(), "AttrTypeString")
-        .Attr("data_format", channel_pos, "AttrTypeString")
-        .Attr("kernel_size", kernel_size, "AttrTypeListInt32")
-        .Attr("strides", strides, "AttrTypeListInt32")
-        .Attr("dilation_rate", dilations, "AttrTypeListInt32")
-        .Attr("output_shape", output_shape, "AttrTypeListInt32")
+        .Attr("filters", channels)
+        .Attr("padding", padding.lower())
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilations)
+        .Attr("output_shape", output_shape)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -1123,7 +1117,7 @@ def leaky_relu(
         .Op("leaky_relu")
         .Input("x", [x])
         .Output("y")
-        .Attr("alpha", float(alpha), "AttrTypeFloat")
+        .Attr("alpha", float(alpha))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

@@ -48,7 +48,7 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
 
     @flow.global_function(func_config)
     def ConvJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
@@ -119,7 +119,7 @@ def compare_with_tensorflow(device_type, x_shape, filters, kernel_size, groups):
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
 
     assert np.allclose(
-        of_out.ndarray().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-5, atol=1e-5
+        of_out.numpy().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-5, atol=1e-5
     )
     of_x_diff_arr = test_global_storage.Get("x_diff").transpose(0, 2, 3, 1)
     tf_x_diff_arr = tf_x_diff.numpy()

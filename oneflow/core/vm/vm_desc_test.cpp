@@ -5,7 +5,7 @@
 #define private public
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/object_msg_reflection.h"
+#include "oneflow/core/object_msg/object_msg_reflection.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"

@@ -12,7 +12,6 @@ void NaiveActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   });
 }
 
-REGISTER_ACTOR(TaskType::kReduceIdentity, NaiveActor);
 REGISTER_ACTOR(TaskType::kSliceBoxing, NaiveActor);
 REGISTER_ACTOR(TaskType::kBoxingIdentity, NaiveActor);
 

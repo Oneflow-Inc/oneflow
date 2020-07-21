@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 from contextlib import contextmanager
 
+import inspect
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.python.framework.distribute as distribute_util
@@ -13,12 +14,13 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.scope_util as scope_util
+import oneflow.python.framework.typing as oft
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
-
-from oneflow.python.lib.core.box import Box
+import typing
 import oneflow
+import inspect
 
 
 def Compile(session, function_desc, config_proto):
@@ -69,24 +71,46 @@ def _SessionInitialScope(session, scope):
 
 def _CompileJob(function_desc):
     func = function_desc.job_func
-    func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
+    parameters = func.__oneflow_function_signature__.parameters
+    if len(parameters) == 0:
+        func.__oneflow_input_blob_defs__ = ()
+    elif all(p.annotation is inspect._empty for _, p in parameters.items()):
+        func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
+    elif all(p.annotation is not inspect._empty for _, p in parameters.items()):
+        func.__oneflow_input_blob_defs__ = _MakeInputBlobDefFromParameterSignature(
+            parameters
+        )
+    else:
+        raise NotImplementedError(
+            "All parameters of global function should be annotated"
+        )
     inputs = _RecursiveMakeInputBlobs(func.__oneflow_input_blob_defs__)
-    kwarg = dict(
-        allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
-    )
     ret = func(*inputs)
-    func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(ret, kwarg)
+    func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(
+        ret, allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
+    )
 
 
 def _InterpretGlobalFunction(function_desc, args):
     func = function_desc.job_func
-    func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
+    parameters = func.__oneflow_function_signature__.parameters
+    if len(parameters) == 0:
+        func.__oneflow_input_blob_defs__ = ()
+    elif all(p.annotation is inspect._empty for _, p in parameters.items()):
+        func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
+    elif all(p.annotation is not inspect._empty for _, p in parameters.items()):
+        func.__oneflow_input_blob_defs__ = _MakeInputBlobDefFromParameterSignature(
+            parameters
+        )
+    else:
+        raise NotImplementedError(
+            "All parameters of global function should be annotated"
+        )
     inputs = push_util.MakeEagerInputBlobs(func.__oneflow_input_blob_defs__, args)
-    kwarg = dict(
-        allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
-    )
     ret = func(*inputs)
-    return _RecursiveMakeRetRemoteBlobs(ret, kwarg)
+    return _RecursiveMakeRetRemoteBlobs(
+        ret, allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
+    )
 
 
 @contextmanager
@@ -129,18 +153,40 @@ def _RecursiveMakeInputBlobs(input_blob_def):
     )
 
 
-def _RecursiveMakeRetRemoteBlobs(remote_blobs, kwarg):
+def _MakeInputBlobDefFromParameterSignature(parameters):
+    def CheckAndRecusiveMake(p):
+        assert p.kind == inspect._ParameterKind.POSITIONAL_OR_KEYWORD
+        return _RecusiveMakeInputBlobDef(p.annotation)
+
+    return tuple(CheckAndRecusiveMake(p) for _, p in parameters.items())
+
+
+def _RecusiveMakeInputBlobDef(cls):
+    if oft.OriginFrom(cls, oft.OneflowNumpyDef):
+        return cls.NewInputBlobDef()
+    elif oft.OriginFrom(cls, typing.Tuple):
+        return tuple(_RecusiveMakeInputBlobDef(a) for a in cls.__args__)
+    else:
+        raise NotImplementedError(
+            ("\nannotation %s" % cls)
+            + "not supported"
+            + "\nonly support oneflow.Numpy.Def(), "
+            "oneflow.List.Numpy.Def and oneflow.List.List.Numpy.Def()"
+        )
+
+
+def _RecursiveMakeRetRemoteBlobs(remote_blobs, **kwarg):
     if remote_blobs is None:
         return None
     if isinstance(remote_blobs, remote_blob_util.BlobDef):
         return ops.ReturnRemoteBlob(remote_blobs, **kwarg)
     if isinstance(remote_blobs, (tuple, list)):
         return type(remote_blobs)(
-            _RecursiveMakeRetRemoteBlobs(x, kwarg) for x in remote_blobs
+            _RecursiveMakeRetRemoteBlobs(x, **kwarg) for x in remote_blobs
         )
     if isinstance(remote_blobs, dict):
         return {
-            k: _RecursiveMakeRetRemoteBlobs(v, kwarg) for k, v in remote_blobs.items()
+            k: _RecursiveMakeRetRemoteBlobs(v, **kwarg) for k, v in remote_blobs.items()
         }
     raise NotImplementedError(
         "oneflow.global_function returns "

@@ -25,7 +25,7 @@ void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   if (op_conf().variable_conf().has_tick()) { EnrollInputBn("tick", false); }
   bool is_trainable = job_desc().IsTrain() && op_conf().trainable();
-  EnrollOutputBn("out", is_trainable)->set_is_mutable(is_trainable);
+  EnrollOutputBn("out", is_trainable)->set_is_mutable(true);
 }
 
 const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variable_conf(); }
