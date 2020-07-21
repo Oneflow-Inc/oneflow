@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/tensor_buffer.h"
+#include "oneflow/core/framework/tensor.h"
 #include <opencv2/opencv.hpp>
 
 namespace oneflow {
@@ -21,6 +22,10 @@ inline cv::Mat CreateMatWithPtr(int H, int W, int type, const T* ptr,
 }
 
 cv::Mat GenCvMat4ImageBuffer(const TensorBuffer& image_buffer);
+
+cv::Mat GenCvMat4ImageTensor(const user_op::Tensor* image_tensor, int image_offset);
+
+int GetCvInterpolationFlag(const std::string& inter_type);
 
 }  // namespace oneflow
 

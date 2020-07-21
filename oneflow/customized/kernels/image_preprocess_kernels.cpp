@@ -26,52 +26,47 @@ int GetOpencvInterp(const std::string& interp_type) {
 
 }  // namespace
 
-class ResizeToStaticShapeKernel final : public user_op::OpKernel {
+class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
  public:
-  ResizeToStaticShapeKernel() = default;
-  ~ResizeToStaticShapeKernel() override = default;
+  ImageResizeToFixedSizeKernel() = default;
+  ~ImageResizeToFixedSizeKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t record_num = in_blob->shape().At(0);
-    CHECK_GT(record_num, 0);
+    const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const int64_t batch_size = in_tensor->shape().elem_cnt();
+    CHECK_GT(batch_size, 0);
 
-    const TensorBuffer* buffers = in_blob->dptr<TensorBuffer>();
-    uint8_t* out_dptr = out_blob->mut_dptr<uint8_t>();
-    const ShapeView& out_shape = out_blob->shape();
-    CHECK(out_shape.NumAxes() == 4);  // {N, H, W, C}
-    int rsz_h = out_shape.At(1);
-    int rsz_w = out_shape.At(2);
-    int C = out_shape.At(3);
-    CHECK(C == 3 || C == 1);
-    int channel_flag = C == 3 ? CV_8UC3 : CV_8UC1;
-    const std::string& interp_type = ctx->Attr<std::string>("interp_type");
-    int64_t one_sample_elem_cnt = rsz_h * rsz_w * C;
-    int opencv_inter_type = GetOpencvInterp(interp_type);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(out_tensor->shape().NumAxes(), 4);
+    CHECK_EQ(out_tensor->shape().At(0), batch_size);
+    int64_t res_h = out_tensor->shape().At(1);
+    int64_t res_w = out_tensor->shape().At(2);
+    int64_t channels = out_tensor->shape().At(3);
+    int interpolaion_flag = GetCvInterpolationFlag(ctx->Attr<std::string>("interpolation"));
 
-    MultiThreadLoop(record_num, [&](size_t i) {
-      const TensorBuffer* buffer = buffers + i;
-      uint8_t* dptr = out_dptr + one_sample_elem_cnt * i;
-      const Shape& in_shape = buffer->shape();
-      CHECK(in_shape.NumAxes() == 3);  // {H, W, C}
-      int H = in_shape.At(0);
-      int W = in_shape.At(1);
-      CHECK_EQ(C, in_shape.At(2));
-      const cv::Mat image = CreateMatWithPtr(H, W, channel_flag, buffer->data<uint8_t>());
-      cv::Mat rsz_image = CreateMatWithPtr(rsz_h, rsz_w, channel_flag, dptr);
-      cv::resize(image, rsz_image, cv::Size(rsz_w, rsz_h), 0, 0, opencv_inter_type);
+    MultiThreadLoop(batch_size, [&](size_t i) {
+      const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
+      CHECK_EQ(in_buffer.shape().NumAxes(), 3);
+      const int64_t origin_height = in_buffer.shape().At(0);
+      const int64_t origin_width = in_buffer.shape().At(1);
+      CHECK_EQ(in_buffer.shape().At(2), channels);
+      CHECK_EQ(in_buffer.data_type(), ctx->Attr<DataType>("data_type"));
+
+      const cv::Mat in_img_mat = GenCvMat4ImageBuffer(in_buffer);
+      cv::Mat res_img_mat = GenCvMat4ImageTensor(out_tensor, i);
+      cv::resize(in_img_mat, res_img_mat, cv::Size(res_w, res_h), 0, 0, interpolaion_flag);
+      CHECK_EQ(res_img_mat.ptr(), out_tensor->mut_dptr());
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("image_resize")
-    .SetCreateFn<ResizeToStaticShapeKernel>()
+    .SetCreateFn<ImageResizeToFixedSizeKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("out", 0) == DataType::kUInt8));
+                     & (user_op::HobDataType("out", 0) == user_op::HobAttr<DataType>("data_type")));
 
 class ResizeShorterToTensorBufferKernel final : public user_op::OpKernel {
  public:
