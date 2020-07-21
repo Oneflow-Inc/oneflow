@@ -4,11 +4,12 @@ src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
 docker_tag=${ONEFLOW_CI_DOCKER_TAG:-"oneflow:ci-manylinux2014-cuda10.2"}
 
 docker_proxy_build_args=""
-docker_proxy_build_args+="--build-arg http_proxy=${ONEFLOW_CI_HTTP_PROXY} --build-arg https_proxy=${ONEFLOW_CI_HTTPS_PROXY}"
+# docker_proxy_build_args+="--build-arg http_proxy=${ONEFLOW_CI_HTTP_PROXY} --build-arg https_proxy=${ONEFLOW_CI_HTTPS_PROXY}"
 
 
-cd $src_dir/docker/package/manylinux
-docker build $docker_proxy_build_args -t $docker_tag .
+cd $src_dir
+docker build -f $src_dir/docker/package/manylinux/Dockerfile \
+    $docker_proxy_build_args -t $docker_tag .
 
 set +e
 cd $src_dir
