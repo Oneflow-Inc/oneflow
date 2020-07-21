@@ -104,22 +104,6 @@ class ArgBlobDef(blob_desc.BlobDesc):
 
 
 class FixedTensorDef(ArgBlobDef):
-    """`FixedTensorDef` is a placeholder for numpy input of a OneFlow function. 
-    A `numpy.ndarray` takes a `FixedTensorDef`'s place must have a identical shape.
-    For instance::
-        
-        @oneflow.global_function
-        def train(
-            image_blob=oneflow.FixedTensorDef(
-                shape=(2, 255, 255, 3), dtype=flow.float32
-            )
-        ):
-            # your network
-        
-        train(np.random.randn(2, 255, 255, 3).astype(np.float32))
-        
-    """
-
     def __init__(
         self,
         shape: Tuple[int],
@@ -183,27 +167,7 @@ class FixedTensorDef(ArgBlobDef):
         session.AsyncPush(self.op_name, _MakePushNdarrayCallback(arg_ndarray))
 
 
-
 class MirroredTensorDef(ArgBlobDef):
-    """`MirroredTensorDef` is a placeholder for numpy input of a OneFlow function. 
-    A `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
-    For instance::
-        
-        @oneflow.global_function
-        def train(
-            image_blob=oneflow.MirroredTensorDef(
-                shape=(2, 255, 255, 3), dtype=flow.float32
-            )
-        ):
-            # your network
-        
-        input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
-        input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
-        train([input1])
-        train([input2])
-
-    """
-
     def __init__(
         self,
         shape: Tuple[int],
@@ -266,25 +230,6 @@ class MirroredTensorDef(ArgBlobDef):
 
 
 class MirroredTensorListDef(ArgBlobDef):
-    """`MirroredTensorListDef` is a placeholder for numpy input of a OneFlow function. 
-    A `list` of `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
-    For instance::
-        
-        @oneflow.global_function
-        def train(
-            image_blob=oneflow.MirroredTensorListDef(
-                shape=(2, 255, 255, 3), dtype=flow.float32
-            )
-        ):
-            # your network
-        
-        input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
-        input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
-        train([[input1]])
-        train([[input2]])
-
-    """
-
     def __init__(
         self,
         shape: Tuple[int],
@@ -384,7 +329,7 @@ def _MakePushNdarrayListCallback(ndarray_list):
 class DeprecatedFixedTensorDef(FixedTensorDef):
     def __init__(self, *args, **kwargs):
         running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
-        if not running_script.endswith("input_blob_def.py\""):
+        if not running_script.endswith('input_blob_def.py"'):
             print(
                 "WARNING: oneflow.FixedTensorDef has been deprecated. "
                 "Please use oneflow.typing.Numpy.Placeholder instead."
@@ -398,11 +343,12 @@ class DeprecatedFixedTensorDef(FixedTensorDef):
 
         super().__init__(*args, **kwargs)
 
+
 @oneflow_export("MirroredTensorDef")
 class DeprecatedMirroredTensorDef(MirroredTensorDef):
     def __init__(self, *args, **kwargs):
         running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
-        if not running_script.endswith("input_blob_def.py\""):
+        if not running_script.endswith('input_blob_def.py"'):
             print(
                 "WARNING: oneflow.MirroredTensorDef has been deprecated. "
                 "Please use oneflow.typing.ListNumpy.Placeholder instead."
@@ -416,11 +362,12 @@ class DeprecatedMirroredTensorDef(MirroredTensorDef):
 
         super().__init__(*args, **kwargs)
 
+
 @oneflow_export("MirroredTensorListDef")
 class DeprecatedTensorListDef(MirroredTensorListDef):
     def __init__(self, *args, **kwargs):
         running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
-        if not running_script.endswith("input_blob_def.py\""):
+        if not running_script.endswith('input_blob_def.py"'):
             print(
                 "WARNING: oneflow.MirroredTensorListDef has been deprecated. "
                 "Please use oneflow.typing.ListListNumpy.Placeholder instead."
@@ -433,4 +380,3 @@ class DeprecatedTensorListDef(MirroredTensorListDef):
             print(traceback.format_stack()[-2])
 
         super().__init__(*args, **kwargs)
-
