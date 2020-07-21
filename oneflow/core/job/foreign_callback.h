@@ -18,6 +18,8 @@ class ForeignCallback {
   }
 
   virtual void OfBlobCall(int64_t unique_id, int64_t ofblob_ptr) const { UNIMPLEMENTED(); }
+
+  virtual void RemoveForeignCallback(int64_t unique_id) const { UNIMPLEMENTED(); }
 };
 
 }  // namespace oneflow
