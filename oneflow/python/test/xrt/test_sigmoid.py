@@ -12,7 +12,7 @@ def make_job(input_shape, dtype=flow.float32):
 
     @flow.global_function(config)
     def sigmoid_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.keras.activations.sigmoid(x)
+        return flow.math.sigmoid(x)
 
     return sigmoid_job
 
@@ -23,7 +23,7 @@ def make_xla_job(input_shape, dtype=flow.float32):
 
     @flow.global_function(config)
     def xla_sigmoid_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.keras.activations.sigmoid(x)
+        return flow.math.sigmoid(x)
 
     return xla_sigmoid_job
 
@@ -34,7 +34,7 @@ def make_trt_job(input_shape, dtype=flow.float32):
 
     @flow.global_function(config)
     def trt_sigmoid_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.keras.activations.sigmoid(x)
+        return flow.math.sigmoid(x)
 
     return trt_sigmoid_job
 
