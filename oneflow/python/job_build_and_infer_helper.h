@@ -9,11 +9,7 @@
 
 namespace oneflow {
 
-bool EagerExecutionEnabled() {
-  // return *Global<bool, EagerExecution<ForEnv>>::Get()
-  //        || *Global<bool, EagerExecution<ForSession>>::Get();
-  return *Global<bool, EagerExecution<ForEnv>>::Get();
-}
+bool EagerExecutionEnabled() { return *Global<bool, EagerExecution<ForEnv>>::Get(); }
 
 namespace {
 
