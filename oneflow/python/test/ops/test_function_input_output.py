@@ -5,7 +5,7 @@ from typing import Tuple
 
 def test_FixedTensorDef(test_case):
     @flow.global_function()
-    def Foo(x: flow.Numpy.Def((2, 5))):
+    def Foo(x: flow.typing.Numpy.Placeholder((2, 5))):
         return x
 
     data = np.ones((2, 5), dtype=np.float32)
@@ -62,7 +62,7 @@ def test_MirroredTensorDef(test_case):
 
 def test_MirroredTensorListDef(test_case):
     @flow.global_function()
-    def Foo(x: flow.List.List.Numpy.Def((2, 5))):
+    def Foo(x: flow.typing.ListListNumpy.Placeholder((2, 5))):
         return x
 
     data = np.ones((1, 5), dtype=np.float32)
@@ -82,7 +82,8 @@ def test_MirroredTensorDef_4_device(test_case):
     @flow.global_function()
     def Foo(
         image_label: Tuple[
-            flow.List.Numpy.Def(image_shape), flow.List.Numpy.Def(label_shape),
+            flow.typing.ListNumpy.Placeholder(image_shape),
+            flow.typing.ListNumpy.Placeholder(label_shape),
         ]
     ):
         return image_label

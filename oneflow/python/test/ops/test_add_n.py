@@ -8,7 +8,7 @@ func_config.default_data_type(flow.float)
 
 def test_naive(test_case):
     @flow.global_function(func_config)
-    def AddJob(xs: Tuple[(flow.Numpy.Def((5, 2)),) * 3]):
+    def AddJob(xs: Tuple[(flow.typing.Numpy.Placeholder((5, 2)),) * 3]):
         return flow.math.add_n(xs)
 
     inputs = [np.random.rand(5, 2).astype(np.float32) for i in range(3)]
