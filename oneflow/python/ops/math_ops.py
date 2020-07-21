@@ -20,14 +20,14 @@ def add(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""Computes 'x' add 'y'
- 
+
     Args:
-        x: A 'Blob' with type of 'int' or 'float' 
-        y: A 'Blob' with type of 'int' or 'float' 
-        name: This operator's name
+        x (Union[int, float, remote_blob_util.BlobDef]): A 'Blob' with type of 'int' or 'float' 
+        y (Union[int, float, remote_blob_util.BlobDef]): A 'Blob' with type of 'int' or 'float' 
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with the same type as 'x' and 'y'
+        remote_blob_util.BlobDef: A 'Blob' with the same type as 'x' and 'y'
     """
     if isinstance(x, (int, float)):
         return scalar_add(y, x, name)
@@ -70,14 +70,14 @@ def _recursive_build_add_n(inputs, name=None):
 def add_n(
     inputs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""add all input blobs element-wise.
+    r"""Add all input blobs element-wise.
 
     Args:
-        inputs: Sequence of 'Blob'
-        name: This operator's name
+        inputs (Sequence[remote_blob_util.BlobDef]): Sequence of 'Blob'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with the same type as 'inputs' Blobs
+        remote_blob_util.BlobDef: A 'Blob' with the same type as 'inputs' Blobs
     """
     if os.getenv("ENABLE_USER_OP") == "False":
         op_conf = op_conf_util.OperatorConf()
@@ -105,12 +105,12 @@ def subtract(
     r"""Computes 'x' subtract 'y'
 
     Args:
-        x: A 'Blob' with type of 'int' or 'float' 
-        y: A 'Blob' with type of 'int' or 'float' 
-        name: This operator's name
+        x (Union[int, float, remote_blob_util.BlobDef]): A 'Blob' with type of 'int' or 'float' 
+        y (Union[int, float, remote_blob_util.BlobDef]): A 'Blob' with type of 'int' or 'float'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with the same type as 'x' and 'y'
+        remote_blob_util.BlobDef: A 'Blob' with the same type as 'x' and 'y'
     """
     if isinstance(x, (int, float)):
         return scalar_add(-1 * y, x, name)
@@ -136,12 +136,12 @@ def multiply(
     r"""Computes 'x' multiply 'y'
 
     Args:
-        x: A 'Blob' with type of 'int' or 'float' 
-        y: A 'Blob' with type of 'int' or 'float' 
-        name: This operator's name
+        x (Union[int, float, remote_blob_util.BlobDef]): A 'Blob' with type of 'int' or 'float' 
+        y (Union[int, float, remote_blob_util.BlobDef]): A 'Blob' with type of 'int' or 'float'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with the same type as 'x' and 'y'
+        remote_blob_util.BlobDef: A 'Blob' with the same type as 'x' and 'y'
     """
     if isinstance(x, (int, float)):
         return scalar_mul(y, x, name)
@@ -166,12 +166,12 @@ def divide(
     r"""Computes 'x' divide 'y'
 
     Args:
-        x: A 'Blob' with type of 'int' or 'float' 
-        y: A 'Blob' with type of 'int' or 'float' 
-        name: This operator's name
+        x (Union[int, float, remote_blob_util.BlobDef]): A 'Blob' with type of 'int' or 'float'
+        y (Union[int, float, remote_blob_util.BlobDef]): A 'Blob' with type of 'int' or 'float'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with the same type as 'x' and 'y'
+        remote_blob_util.BlobDef: A 'Blob' with the same type as 'x' and 'y'
     """
     if isinstance(x, (int, float)):
         return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
@@ -201,12 +201,16 @@ def floor_mod(
     r"""Computes 'x' mod 'y'
 
     Args:
-        x: A 'Blob' with type of 'int' or 'float' 
-        y: A 'Blob' with type of 'int' or 'float' 
-        name: This operator's name
+        x (Union[int, float, remote_blob_util.BlobDef]): A 'Blob' with type of 'int' or 'float'
+        y (Union[int, float, remote_blob_util.BlobDef]): A 'Blob' with type of 'int' or 'float'
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
+    Raises:
+        NotImplementedError: If 'x' is 'int' or 'float'
+        NotImplementedError: If 'y' is 'int' or 'float'
 
     Returns:
-        A 'Blob' with the same type as 'x' and 'y'
+        remote_blob_util.BlobDef: A 'Blob' with the same type as 'x' and 'y'
     """
     if isinstance(x, (int, float)):
         raise NotImplementedError
@@ -387,9 +391,11 @@ def tanh(
     r"""Computes hyperbolic tangent of `x` element-wise.
 
     Args:
-        x: Input `Blob`.
+        x (remote_blob_util.BlobDef): Input `Blob`.
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
     Returns:
-        A `Blob` with the same type as `x`.
+        remote_blob_util.BlobDef: A `Blob` with the same type as `x`.
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("TanH_"))
@@ -409,9 +415,11 @@ def gelu(
     r"""Gaussian Error Linear Units.
 
     Args:
-        x: Input `Blob`.
+        x (remote_blob_util.BlobDef): x: Input `Blob`.
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
     Returns:
-        A `Blob` with the same type as `x`.
+        remote_blob_util.BlobDef: A `Blob` with the same type as `x`.
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Gelu_"))
@@ -431,9 +439,11 @@ def relu(
     r"""ReLU activation
 
     Args:
-        x: Input `Blob`.
+        x (remote_blob_util.BlobDef): Input `Blob`.
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
     Returns:
-        A `Blob` with the same type as `x`.
+        remote_blob_util.BlobDef: A `Blob` with the same type as `x`.
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
@@ -453,9 +463,11 @@ def sigmoid(
     r"""Computes sigmoid of `x` element-wise.
 
     Args:
-        x: Input `Blob`.
+        x (remote_blob_util.BlobDef): Input `Blob`.
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
     Returns:
-        A `Blob` with the same type as `x`.
+        remote_blob_util.BlobDef: A `Blob` with the same type as `x`.
     """
     return (
         flow.user_op_builder(
@@ -481,14 +493,14 @@ def unsorted_segment_sum(
     r"""Computes the sum along segment of 'data'
 
     Args:
-        data: a 'Blob'
-        segment_ids: A 'Blob' contains of segment ids
-        num_segments: the number of segments
-        axis: 
-        name: This operator's name
+        data (remote_blob_util.BlobDef): Input 'Blob'
+        segment_ids (remote_blob_util.BlobDef): A 'Blob' contains of segment ids
+        num_segments (int): The number of segments
+        axis (int, optional): The axis need to be sum. Defaults to 0.
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A `Blob` with the same type as `data`.
+        remote_blob_util.BlobDef: A `Blob` with the same type as `data`.
     """
     return (
         flow.user_op_builder(
@@ -517,14 +529,14 @@ def unsorted_segment_sum_like(
     r"""Computes the sum along segment of 'data'
 
     Args:
-        data: a 'Blob'
-        segment_ids: A 'Blob' contains of segment ids
-        like: The shape for output
-        axis:
-        name (Optional[str], optional): [description]. Defaults to None.
+        data (remote_blob_util.BlobDef): Input 'Blob'
+        segment_ids (remote_blob_util.BlobDef): A 'Blob' contains of segment ids
+        like (remote_blob_util.BlobDef): The shape for output
+        axis (int, optional): The axis need to be sum. Defaults to 0.
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A `Blob` with the same shape as `like`.
+        remote_blob_util.BlobDef: A `Blob` with the same shape as `like`.
     """
     return (
         flow.user_op_builder(
@@ -549,6 +561,17 @@ def unsorted_batch_segment_sum(
     num_segments: int,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Convert sparse Blob 'data' into a dense 'Blob' according to sement_ids
+
+    Args:
+        data (remote_blob_util.BlobDef): Input 'Blob'
+        segment_ids (remote_blob_util.BlobDef): A 'Blob' contains of segment ids
+        num_segments (int):  The number of segments
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef:  A dense 'Blob'
+    """
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("UnsortedBatchSegmentSum_")
@@ -571,10 +594,12 @@ def cast(
     r"""Return a `Blob` of given data type `dtype` and indentical shape to `x`
 
     Args:
-        x: a `Blob`.
-        dtype: a OneFlow data type. For instance, `oneflow.float`.
+        x (remote_blob_util.BlobDef): Input `Blob`.
+        dtype (int): A OneFlow data type. For instance, `oneflow.float`.
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
     Returns:
-        A `Blob`
+        remote_blob_util.BlobDef: A `Blob`
     """
     if x.dtype == dtype:
         return x
@@ -600,12 +625,12 @@ def equal(
     r"""Return a 'Blob' of (x == y) element-wise 
 
     Args:
-        x: a 'Blob'
-        y: a 'Blob'
-        name: This operator's name
+        x (remote_blob_util.BlobDef): a 'Blob'
+        y (remote_blob_util.BlobDef): a 'Blob'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with value '1' or '0'
+        remote_blob_util.BlobDef: A 'Blob' with value '1' or '0'
     """
     return build_broadcast_binary_op("broadcast_equal", x, y, name)
 
@@ -617,12 +642,12 @@ def not_equal(
     r"""Return a 'Blob' of (x != y) element-wise 
 
     Args:
-        x: a 'Blob'
-        y: a 'Blob'
-        name: This operator's name
+        x (remote_blob_util.BlobDef): a 'Blob'
+        y (remote_blob_util.BlobDef): a 'Blob'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with value '1' or '0'
+        remote_blob_util.BlobDef: A 'Blob' with value '1' or '0'
     """
     return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
 
@@ -634,12 +659,12 @@ def less(
     r"""Return a 'Blob' of (x < y) element-wise 
 
     Args:
-        x: a 'Blob'
-        y: a 'Blob'
-        name: This operator's name
+        x (remote_blob_util.BlobDef): a 'Blob'
+        y (remote_blob_util.BlobDef): a 'Blob'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with value '1' or '0'
+        remote_blob_util.BlobDef: A 'Blob' with value '1' or '0'
     """
     return build_broadcast_binary_op("broadcast_less", x, y, name)
 
@@ -651,12 +676,12 @@ def less_equal(
     r"""Return a 'Blob' of (x <= y) element-wise 
 
     Args:
-        x: a 'Blob'
-        y: a 'Blob'
-        name: This operator's name
+        x (remote_blob_util.BlobDef): a 'Blob'
+        y (remote_blob_util.BlobDef): a 'Blob'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with value '1' or '0'
+        remote_blob_util.BlobDef: A 'Blob' with value '1' or '0'
     """
     return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
 
@@ -668,12 +693,12 @@ def greater(
     r"""Return a 'Blob' of (x > y) element-wise 
 
     Args:
-        x: a 'Blob'
-        y: a 'Blob'
-        name: This operator's name
+        x (remote_blob_util.BlobDef): a 'Blob'
+        y (remote_blob_util.BlobDef): a 'Blob'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with value '1' or '0'
+        remote_blob_util.BlobDef: A 'Blob' with value '1' or '0'
     """
     return build_broadcast_binary_op("broadcast_greater", x, y, name)
 
@@ -685,12 +710,12 @@ def greater_equal(
     r"""Return a 'Blob' of (x >= y) element-wise 
 
     Args:
-        x: a 'Blob'
-        y: a 'Blob'
-        name: This operator's name
+        x (remote_blob_util.BlobDef): a 'Blob'
+        y (remote_blob_util.BlobDef): a 'Blob'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with value '1' or '0'
+        remote_blob_util.BlobDef: A 'Blob' with value '1' or '0'
     """
     return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
 
@@ -702,12 +727,12 @@ def logical_and(
     r"""Return a 'Blob' of (x && y) element-wise 
 
     Args:
-        x: a 'Blob'
-        y: a 'Blob'
-        name: This operator's name
+        x (remote_blob_util.BlobDef): a 'Blob'
+        y (remote_blob_util.BlobDef): a 'Blob'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with value '1' or '0'
+        remote_blob_util.BlobDef: A 'Blob' with value '1' or '0'
     """
     return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
 
@@ -719,12 +744,12 @@ def broadcast_min(
     r"""Return a 'Blob' with the min value of (x < y ? x : y) element-wise 
 
     Args:
-        x: a 'Blob'
-        y: a 'Blob'
-        name: This operator's name
+        x (remote_blob_util.BlobDef): a 'Blob'
+        y (remote_blob_util.BlobDef): a 'Blob'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with min value
+        remote_blob_util.BlobDef: A 'Blob' with min value
     """
     return build_broadcast_binary_op("broadcast_minimum", x, y, name)
 
@@ -733,15 +758,15 @@ def broadcast_min(
 def broadcast_max(
     x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Return a 'Blob' with the max value of (x > y ? x : y) element-wise 
+    r"""Return a 'Blob' with the min value of (x > y ? x : y) element-wise 
 
     Args:
-        x: a 'Blob'
-        y: a 'Blob'
-        name: This operator's name
+        x (remote_blob_util.BlobDef): a 'Blob'
+        y (remote_blob_util.BlobDef): a 'Blob'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with max value
+        remote_blob_util.BlobDef: A 'Blob' with max value
     """
     return build_broadcast_binary_op("broadcast_maximum", x, y, name)
 
@@ -756,13 +781,13 @@ def elem_cnt(
     r"""Reduce shape emements count accross 'axis'
 
     Args:
-        input_blob: a 'Blob'
-        axis: The axis need to be reduced
-        dtype: 'int'
-        name: This operator's name
+        input_blob (remote_blob_util.BlobDef): a 'Blob'
+        axis (Optional[Sequence[int]], optional): The axis need to be reduced. Defaults to None.
+        dtype (Optional[int], optional): A OneFlow data type (flow.int32). Defaults to None.
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob'
+        remote_blob_util.BlobDef: A 'Blob'
     """
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -796,13 +821,13 @@ def top_k(
     r"""Returns a 'Blob' whose value is the index of top-k values accross the last axes of 'input'
 
     Args:
-        input: a 'Blob'
-        k: Number of top elements to look for along the last dimension
-        sorted: 'True' or 'False'
-        name: This operator's name
+        input (remote_blob_util.BlobDef):  a 'Blob'
+        k (int, optional): Number of top elements to look for along the last dimension. Defaults to 1.
+        sorted (bool, optional): 'True' or 'False'. Defaults to True.
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with the index 'input'
+        remote_blob_util.BlobDef: A 'Blob' with the index 'input'
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
@@ -824,11 +849,11 @@ def argmax(
     r"""Returns a 'Blob' whose value is the index with largest value accross the last axes of 'input'
 
     Args:
-        input: a 'Blob'
-        name: This operator's name
+        input (remote_blob_util.BlobDef): a 'Blob'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with type 'flow.int32'
+        remote_blob_util.BlobDef: A 'Blob' with type 'flow.int32'
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
@@ -847,15 +872,15 @@ def broadcast_to_compatible_with(
     compatible: Sequence[remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r""" 
+    r"""Returns a 'Blob' with the shape can be broadcasted by other shapes
 
     Args:
-        x (remote_blob_util.BlobDef): [description]
-        compatible (Sequence[remote_blob_util.BlobDef]): [description]
-        name (Optional[str], optional): [description]. Defaults to None.
+        x (remote_blob_util.BlobDef): a 'Blob'
+        compatible (Sequence[remote_blob_util.BlobDef]): Sequence of different shape
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: [description]
+        remote_blob_util.BlobDef: A 'Blob' with the biggest shape
     """
     assert isinstance(compatible, (list, tuple))
     if name is None:
@@ -885,6 +910,20 @@ def clip_by_value(
     max_value: Optional[Union[int, float]] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Clip the 'values' in the range
+
+    Args:
+        values (remote_blob_util.BlobDef): a 'Blob'
+        min_value (Optional[Union[int, float]], optional): The min value 'int' or 'float'. Defaults to None.
+        max_value (Optional[Union[int, float]], optional): The max value 'int' or 'float'. Defaults to None.
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
+    Raises:
+        ValueError: If both 'min_value' and 'max_value' are None
+
+    Returns:
+        remote_blob_util.BlobDef: A 'Blob' with value in the range of [min_value, max_value] or [min_value, 'values'.max_value] or ['values'.min_value, max_value]
+    """
     if name is None:
         name = id_util.UniqueStr("ClipByValue_")
 
@@ -933,13 +972,13 @@ def l2_normalize(
     r"""L2 Normalization
 
     Args:
-        input: a 'Blob'
-        axis: Dimension along which to normalize
-        epsilon: a lower bound value for the norm
-        name: This operator's name
+        input (remote_blob_util.BlobDef): a 'Blob'
+        axis (Optional[int], optional): Dimension along which to normalize. Defaults to None.
+        epsilon (float, optional): a lower bound value for the norm. Defaults to 1e-12.
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with the same shape as 'input'
+        remote_blob_util.BlobDef: A 'Blob' with the same shape as 'input'
     """
     if axis < 0:
         axis += len(input.shape)
@@ -970,12 +1009,12 @@ def squared_difference(
     r"""Returns (x-y)(x-y) element-wise
 
     Args:
-        x: a 'Blob'
-        y: a 'Blob'
-        name: This operator's name
+        x (Union[int, float, remote_blob_util.BlobDef]): a 'Blob'
+        y (Union[int, float, remote_blob_util.BlobDef]): a 'Blob'
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        A 'Blob' with type of 'int' or 'float'
+        remote_blob_util.BlobDef: A 'Blob' with type of 'int' or 'float'
     """
     name_subtract, name_square = None, None
     if name is not None:
