@@ -10,7 +10,7 @@ def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def broadcast_to_compatible_with_fn(
@@ -46,7 +46,7 @@ def _of_broadcast_to_compatible_with_dynamic(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def broadcast_to_compatible_with_fn(
@@ -68,7 +68,7 @@ def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 

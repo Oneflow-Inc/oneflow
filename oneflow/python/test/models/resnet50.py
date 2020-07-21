@@ -138,9 +138,6 @@ def conv2d_affine(
     # input data_format must be NCHW, cannot check now
     padding = "SAME" if strides > 1 or kernel_size > 1 else "VALID"
     output = _conv2d(name, input, filters, kernel_size, strides, padding)
-    # output = _batch_norm(output, name + "_bn")
-    # if activation != op_conf_util.kNone:
-    #     output = flow.keras.activations.relu(output)
 
     return output
 
@@ -181,7 +178,7 @@ def residual_block(input, block_name, filters, filters_inner, strides_init):
         input, block_name, filters, filters_inner, strides_init
     )
 
-    return flow.keras.activations.relu(shortcut + bottleneck)
+    return flow.math.relu(shortcut + bottleneck)
 
 
 def residual_stage(input, stage_name, counts, filters, filters_inner, stride_init=2):
@@ -216,7 +213,6 @@ def resnet_stem(input):
     g_output_key.append("conv1")
     g_output.append(conv1)
 
-    # conv1_bn = flow.keras.activations.relu(_batch_norm(conv1, "conv1_bn"))
     # for test
     conv1_bn = conv1
 
@@ -275,7 +271,7 @@ def main(args):
     flow.config.gpu_device_num(args.gpu_num_per_node)
 
     train_config = flow.FunctionConfig()
-    train_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    train_config.default_distribute_strategy(flow.scope.consistent_view())
     train_config.default_data_type(flow.float)
     train_config.train.primary_lr(0.0032)
     train_config.train.model_update_conf(dict(naive_conf={}))
@@ -294,7 +290,7 @@ def main(args):
 
     @flow.global_function(eval_config)
     def evaluate():
-        with flow.distribute.consistent_strategy():
+        with flow.scope.consistent_view():
             _set_trainable(False)
             return resnet50(args, args.eval_dir)
 

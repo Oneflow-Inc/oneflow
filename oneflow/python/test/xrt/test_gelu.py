@@ -12,7 +12,7 @@ def make_job(input_shape, dtype=flow.float32):
 
     @flow.global_function(config)
     def gelu_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.keras.activations.gelu(x)
+        return flow.math.gelu(x)
 
     return gelu_job
 
@@ -23,7 +23,7 @@ def make_xla_job(input_shape, dtype=flow.float32):
 
     @flow.global_function(config)
     def xla_gelu_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.keras.activations.gelu(x)
+        return flow.math.gelu(x)
 
     return xla_gelu_job
 

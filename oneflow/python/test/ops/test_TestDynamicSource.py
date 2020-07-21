@@ -16,11 +16,11 @@ def my_test_source(name):
 def test_test_dynamic_source(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def TestSourceJob():
-        with flow.fixed_placement("cpu", "0:0"):
+        with flow.scope.placement("cpu", "0:0"):
             ret = my_test_source("my_cc_test_source_op")
         return ret
 

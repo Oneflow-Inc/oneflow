@@ -9,10 +9,17 @@ import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Optional
 
 
 @oneflow_export("matmul", "linalg.matmul")
-def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
+def matmul(
+    a: remote_blob_util.BlobDef,
+    b: remote_blob_util.BlobDef,
+    transpose_a: bool = False,
+    transpose_b: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""
     Analogous to `tf.linalg.matmul <https://www.tensorflow.org/api_docs/python/tf/linalg/matmul>`_
 
@@ -28,8 +35,8 @@ def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
             .Input("a", [a])
             .Input("b", [b])
             .Output("out")
-            .Attr("transpose_a", transpose_a, "AttrTypeBool")
-            .Attr("transpose_b", transpose_b, "AttrTypeBool")
+            .Attr("transpose_a", transpose_a)
+            .Attr("transpose_b", transpose_b)
             .Build()
         )
     else:
@@ -39,8 +46,8 @@ def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
             .Input("a", [a])
             .Input("b", [b])
             .Output("out")
-            .Attr("transpose_a", transpose_a, "AttrTypeBool")
-            .Attr("transpose_b", transpose_b, "AttrTypeBool")
+            .Attr("transpose_a", transpose_a)
+            .Attr("transpose_b", transpose_b)
             .Build()
         )
     return op.InferAndTryRun().RemoteBlobList()[0]

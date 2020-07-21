@@ -20,6 +20,7 @@ import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Union, Optional, Sequence
 import oneflow
 
 import os
@@ -27,16 +28,16 @@ import os
 
 @oneflow_export("get_variable")
 def api_get_variable(
-    name,
-    shape=None,
-    dtype=dtype_util.float32,
-    initializer=None,
-    regularizer=None,
-    trainable=None,
-    model_name=None,
-    random_seed=None,
-    distribute=distribute_util.broadcast(),
-):
+    name: str,
+    shape: Optional[Sequence[int]] = None,
+    dtype: Optional[int] = dtype_util.float32,
+    initializer: Optional[op_conf_util.InitializerConf] = None,
+    regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    trainable: Optional[bool] = None,
+    model_name: Optional[str] = None,
+    random_seed: Optional[int] = None,
+    distribute: distribute_util.Distribute = distribute_util.broadcast(),
+) -> remote_blob_util.BlobDef:
     r"""Create a variable or retrieve an existing one.
 
     Args:
@@ -101,21 +102,17 @@ def get_eager_variable(
         if var_blob is None:
             var_blob = _CreateEagerVariableBlob(op_attribute)
             op_executor.EagerInitVariableBlob(op_conf, var_blob)
-        job_var_blob = var_blob
+
+        assert isinstance(var_blob, remote_blob_util.EagerConsistentBlob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
     else:
-        assert var_blob is not None
+        assert isinstance(job_var_blob, remote_blob_util.EagerConsistentBlob)
+        assert isinstance(var_blob, remote_blob_util.EagerConsistentBlob)
+        assert var_blob.IdenticalTo(job_var_blob)
+
     bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
     bw_blob_register.TrySetObject4BlobName(
         var_blob.logical_blob_name, var_blob.blob_object
-    )
-    assert var_blob.shape == job_var_blob.shape, "%s v.s. %s" % (
-        var_blob.shape,
-        job_var_blob.shape,
-    )
-    assert var_blob.dtype == job_var_blob.dtype, "%s v.s. %s" % (
-        var_blob.dtype,
-        job_var_blob.dtype,
     )
     return var_blob
 
@@ -155,19 +152,16 @@ def get_lazy_variable(
             distribute=distribute,
         )
         job_var_blob = _CreateVariableBlob(op_conf)
+        assert isinstance(job_var_blob, remote_blob_util.LazyConsistentBlob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, job_var_blob)
-        if var_blob is None:
-            var_blob = job_var_blob
+        if var_blob is not None:
+            assert isinstance(var_blob, remote_blob_util.LazyConsistentBlob)
+            assert var_blob.IdenticalTo(job_var_blob)
     else:
-        assert var_blob is not None
-    assert var_blob.shape == job_var_blob.shape, "%s v.s. %s" % (
-        var_blob.shape,
-        job_var_blob.shape,
-    )
-    assert var_blob.dtype == job_var_blob.dtype, "%s v.s. %s" % (
-        var_blob.dtype,
-        job_var_blob.dtype,
-    )
+        assert isinstance(job_var_blob, remote_blob_util.LazyConsistentBlob)
+        assert isinstance(var_blob, remote_blob_util.LazyConsistentBlob)
+        assert var_blob.IdenticalTo(job_var_blob)
+
     return job_var_blob
 
 

@@ -7,7 +7,7 @@ from test_util import GenArgList
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_distribute_strategy(flow.scope.consistent_view())
 
 
 def _check(test_case, data, segment_ids, out_shape, out):
@@ -54,7 +54,7 @@ def _make_unsoted_segment_sum_fn(device, data, segment_ids, num_segments):
         data=flow.FixedTensorDef(data.shape, dtype=flow.float),
         segment_ids=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),
     ):
-        with flow.fixed_placement(device, "0:0"):
+        with flow.scope.placement(device, "0:0"):
             x = flow.get_variable(
                 "data",
                 shape=data.shape,

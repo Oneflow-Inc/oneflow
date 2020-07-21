@@ -1,10 +1,12 @@
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
+from typing import Tuple
 
 
 def test_FixedTensorDef(test_case):
     @flow.global_function()
-    def Foo(x=flow.FixedTensorDef((2, 5))):
+    def Foo(x: oft.Numpy.Placeholder((2, 5))):
         return x
 
     data = np.ones((2, 5), dtype=np.float32)
@@ -61,7 +63,7 @@ def test_MirroredTensorDef(test_case):
 
 def test_MirroredTensorListDef(test_case):
     @flow.global_function()
-    def Foo(x=flow.MirroredTensorListDef((2, 5))):
+    def Foo(x: oft.ListListNumpy.Placeholder((2, 5))):
         return x
 
     data = np.ones((1, 5), dtype=np.float32)
@@ -80,9 +82,9 @@ def test_MirroredTensorDef_4_device(test_case):
 
     @flow.global_function()
     def Foo(
-        image_label=[
-            flow.MirroredTensorDef(image_shape),
-            flow.MirroredTensorDef(label_shape),
+        image_label: Tuple[
+            oft.ListNumpy.Placeholder(image_shape),
+            oft.ListNumpy.Placeholder(label_shape),
         ]
     ):
         return image_label

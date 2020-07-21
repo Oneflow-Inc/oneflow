@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import collections
+from typing import Optional, Union
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -11,7 +12,12 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("math.reduce_mean")
-def reduce_mean(input_blob, axis=None, keepdims=False, name=None):
+def reduce_mean(
+    input_blob: remote_blob_util.BlobDef,
+    axis: Optional[Union[collections.Sized, int]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     reduce_sum = flow.math.reduce_sum(
         input_blob, axis=axis, keepdims=keepdims, name=name
     )

@@ -60,20 +60,6 @@ def _recursive_build_add_n(inputs, name=None):
 def add_n(
     inputs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    if os.getenv("ENABLE_USER_OP") == "False":
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("AddN_"),
-        )
-        assert len(inputs) > 1
-        for blob in inputs:
-            getattr(op_conf.add_conf, "in").append(blob.unique_name)
-        op_conf.add_conf.out = "out"
-        interpret_util.Forward(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
     return _recursive_build_add_n(inputs, name)
 
 
@@ -166,17 +152,17 @@ def scalar_add(x, operand, name=None):
     builder = flow.user_op_builder(name).Op("scalar_add").Input("in", [x]).Output("out")
     if isinstance(operand, int):
         builder = (
-            builder.Attr("has_int_operand", True, "AttrTypeBool")
-            .Attr("has_float_operand", False, "AttrTypeBool")
-            .Attr("int_operand", operand, "AttrTypeInt64")
-            .Attr("float_operand", 0.0, "AttrTypeDouble")
+            builder.Attr("has_int_operand", True)
+            .Attr("has_float_operand", False)
+            .Attr("int_operand", operand)
+            .Attr("float_operand", 0.0)
         )
     elif isinstance(operand, float):
         builder = (
-            builder.Attr("has_int_operand", False, "AttrTypeBool")
-            .Attr("has_float_operand", True, "AttrTypeBool")
-            .Attr("int_operand", 0, "AttrTypeInt64")
-            .Attr("float_operand", operand, "AttrTypeDouble")
+            builder.Attr("has_int_operand", False)
+            .Attr("has_float_operand", True)
+            .Attr("int_operand", 0)
+            .Attr("float_operand", operand)
         )
     return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
@@ -195,22 +181,7 @@ def scalar_add_by_tensor(x, scalar, name=None):
 
 
 def element_wise_add(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return flow.math.add_n([x, y], name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ElementWiseAdd_"),
-    )
-    getattr(op_conf.add_conf, "in").append(x.unique_name)
-    getattr(op_conf.add_conf, "in").append(y.unique_name)
-    op_conf.add_conf.out = "out"
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return flow.math.add_n([x, y], name)
 
 
 def build_broadcast_binary_op(math_op, x, y, name=None):
@@ -272,17 +243,17 @@ def scalar_mul(x, operand, name=None):
     builder = flow.user_op_builder(name).Op("scalar_mul").Input("in", [x]).Output("out")
     if isinstance(operand, int):
         builder = (
-            builder.Attr("has_int_operand", True, "AttrTypeBool")
-            .Attr("has_float_operand", False, "AttrTypeBool")
-            .Attr("int_operand", operand, "AttrTypeInt64")
-            .Attr("float_operand", 0.0, "AttrTypeDouble")
+            builder.Attr("has_int_operand", True)
+            .Attr("has_float_operand", False)
+            .Attr("int_operand", operand)
+            .Attr("float_operand", 0.0)
         )
     elif isinstance(operand, float):
         builder = (
-            builder.Attr("has_int_operand", False, "AttrTypeBool")
-            .Attr("has_float_operand", True, "AttrTypeBool")
-            .Attr("int_operand", 0, "AttrTypeInt64")
-            .Attr("float_operand", operand, "AttrTypeDouble")
+            builder.Attr("has_int_operand", False)
+            .Attr("has_float_operand", True)
+            .Attr("int_operand", 0)
+            .Attr("float_operand", operand)
         )
     return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
@@ -321,7 +292,7 @@ def broadcast_floor_mod(x, y, name=None):
     return build_broadcast_binary_op("broadcast_floor_mod", x, y, name)
 
 
-@oneflow_export("math.tanh", "keras.activations.tanh")
+@oneflow_export("math.tanh")
 def tanh(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
@@ -344,7 +315,7 @@ def tanh(
     )
 
 
-@oneflow_export("math.gelu", "keras.activations.gelu")
+@oneflow_export("math.gelu")
 def gelu(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
@@ -429,8 +400,8 @@ def unsorted_segment_sum(
         .Input("data", [data])
         .Input("segment_ids", [segment_ids])
         .Output("out")
-        .Attr("axis", int(axis), "AttrTypeInt64")
-        .Attr("num_segments", int(num_segments), "AttrTypeInt64")
+        .Attr("axis", int(axis))
+        .Attr("num_segments", int(num_segments))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -454,7 +425,7 @@ def unsorted_segment_sum_like(
         .Input("segment_ids", [segment_ids])
         .Input("like", [like])
         .Output("out")
-        .Attr("axis", int(axis), "AttrTypeInt64")
+        .Attr("axis", int(axis))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -476,7 +447,7 @@ def unsorted_batch_segment_sum(
         .Input("data", [data])
         .Input("segment_ids", [segment_ids])
         .Output("out")
-        .Attr("num_segments", int(num_segments), "AttrTypeInt64")
+        .Attr("num_segments", int(num_segments))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -505,7 +476,7 @@ def cast(
         .Op("cast")
         .Input("in", [x])
         .Output("out")
-        .Attr("dtype", dtype, "AttrTypeDataType")
+        .Attr("dtype", dtype)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -616,8 +587,8 @@ def top_k(
         .Op("top_k")
         .Input("in", [input])
         .Output("out")
-        .Attr("k", k, "AttrTypeInt32",)
-        .Attr("sorted", sorted, "AttrTypeBool",)
+        .Attr("k", k)
+        .Attr("sorted", sorted)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -680,24 +651,24 @@ def clip_by_value(
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar")
-            .Attr("floating_min", float(min_value), "AttrTypeDouble")
-            .Attr("integral_min", int(min_value), "AttrTypeInt64")
-            .Attr("floating_max", float(max_value), "AttrTypeDouble")
-            .Attr("integral_max", int(max_value), "AttrTypeInt64")
+            .Attr("floating_min", float(min_value))
+            .Attr("integral_min", int(min_value))
+            .Attr("floating_max", float(max_value))
+            .Attr("integral_max", int(max_value))
         )
     elif min_value is not None:
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar_min")
-            .Attr("floating_min", float(min_value), "AttrTypeDouble")
-            .Attr("integral_min", int(min_value), "AttrTypeInt64")
+            .Attr("floating_min", float(min_value))
+            .Attr("integral_min", int(min_value))
         )
     elif max_value is not None:
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar_max")
-            .Attr("floating_max", float(max_value), "AttrTypeDouble")
-            .Attr("integral_max", int(max_value), "AttrTypeInt64")
+            .Attr("floating_max", float(max_value))
+            .Attr("integral_max", int(max_value))
         )
     else:
         raise ValueError("min_value and max_value cannot be None at the same time")
@@ -729,8 +700,8 @@ def l2_normalize(
         .Input("x", [input])
         .Output("y")
         .Output("square_x_sum")
-        .Attr("axis", int(axis), "AttrTypeInt32")
-        .Attr("epsilon", float(epsilon), "AttrTypeFloat")
+        .Attr("axis", int(axis))
+        .Attr("epsilon", float(epsilon))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()
@@ -749,3 +720,43 @@ def squared_difference(
         name_subtract = name + "_subtract"
         name_square = name + "_square"
     return flow.math.square(flow.math.subtract(x, y, name_subtract), name_square)
+
+
+@oneflow_export("math.gelu_grad")
+def gelu_grad(
+    x: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("GeluGrad_")
+        )
+        .Op("gelu_grad")
+        .Input("x", [x])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("math.tanh_grad")
+def tanh_grad(
+    y: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("TanhGrad_")
+        )
+        .Op("tanh_grad")
+        .Input("y", [y])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

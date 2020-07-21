@@ -27,12 +27,9 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     of_activation_map = {
-        # "relu": flow.keras.activations.relu,
         "relu": flow.nn.relu,
         "sigmoid": flow.math.sigmoid,
-        # "tanh": flow.keras.activations.tanh,
         "tanh": flow.math.tanh,
-        #        "gelu": flow.keras.activations.gelu,
     }
     tf_activation_map = {
         "relu": tf.nn.relu,
@@ -43,7 +40,7 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
 
     @flow.global_function(func_config)
     def ActivationJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=shape,

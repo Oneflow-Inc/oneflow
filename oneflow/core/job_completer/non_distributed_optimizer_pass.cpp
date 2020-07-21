@@ -36,17 +36,7 @@ class NonDistributedOptimizerPass final : public OpGraphPass {
   NonDistributedOptimizerPass() = default;
   ~NonDistributedOptimizerPass() = default;
   bool IsEnabled() const override {
-    if (GlobalJobDesc().IsTrain() && GlobalJobDesc().enable_non_distributed_optimizer()) {
-      if (GlobalJobDesc().use_boxing_v2()) {
-        return true;
-      } else {
-        LOG(WARNING)
-            << "NonDistributedOptimizerPass will be enabled only when use_boxing_v2 is true";
-        return false;
-      }
-    } else {
-      return false;
-    }
+    return GlobalJobDesc().IsTrain() && GlobalJobDesc().enable_non_distributed_optimizer();
   }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };

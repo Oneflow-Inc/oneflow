@@ -1,12 +1,20 @@
 from __future__ import absolute_import
 
+from typing import Optional, Sequence, Union
+
 import oneflow
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("pad")
-def pad(x, paddings, constant_value=0, name=None):
+def pad(
+    x: remote_blob_util.BlobDef,
+    paddings: Sequence[int],
+    constant_value: Union[int, float] = 0,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):
@@ -26,10 +34,10 @@ def pad(x, paddings, constant_value=0, name=None):
         .Op("pad")
         .Input("x", [x])
         .Output("y")
-        .Attr("padding_before", padding_before, "AttrTypeListInt64")
-        .Attr("padding_after", padding_after, "AttrTypeListInt64")
-        .Attr("floating_constant_value", float(constant_value), "AttrTypeDouble")
-        .Attr("integral_constant_value", int(constant_value), "AttrTypeInt64")
+        .Attr("padding_before", padding_before)
+        .Attr("padding_after", padding_after)
+        .Attr("floating_constant_value", float(constant_value))
+        .Attr("integral_constant_value", int(constant_value))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -37,7 +45,12 @@ def pad(x, paddings, constant_value=0, name=None):
 
 
 @oneflow_export("pad_grad")
-def pad_grad(x, paddings, constant_value=0, name=None):
+def pad_grad(
+    x: remote_blob_util.BlobDef,
+    paddings: Sequence[int],
+    constant_value: Union[int, float] = 0,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):
@@ -59,10 +72,10 @@ def pad_grad(x, paddings, constant_value=0, name=None):
         .Op("pad_grad")
         .Input("dy", [x])
         .Output("dx")
-        .Attr("padding_before", padding_before, "AttrTypeListInt64")
-        .Attr("padding_after", padding_after, "AttrTypeListInt64")
-        .Attr("floating_constant_value", float(constant_value), "AttrTypeDouble")
-        .Attr("integral_constant_value", int(constant_value), "AttrTypeInt64")
+        .Attr("padding_before", padding_before)
+        .Attr("padding_after", padding_after)
+        .Attr("floating_constant_value", float(constant_value))
+        .Attr("integral_constant_value", int(constant_value))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

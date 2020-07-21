@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import uuid
+from typing import Callable, Optional, Union
 
 import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -9,6 +10,7 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.local_blob as local_blob_util
+import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.watcher as watcher_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
@@ -20,7 +22,10 @@ import oneflow
 
 
 @oneflow_export("watch")
-def Watch(blob_watched, handler_or_prompt=None):
+def Watch(
+    blob_watched: remote_blob_util.BlobDef,
+    handler_or_prompt: Optional[Union[Callable, str]] = None,
+) -> None:
     r"""Register callback for a blob. The callback will be called after the computation produce the blob finishes.
 
     Args:
@@ -51,7 +56,7 @@ def LazyWatch(blob_watched, handler_or_prompt=None):
         tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
             blob_watched.parallel_conf
         )
-        with oneflow.fixed_placement(*tag_and_dev_ids):
+        with oneflow.scope.placement(*tag_and_dev_ids):
             compile_context.CurJobAddOp(op_conf)
         watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
     elif isinstance(blob_watched, MirroredBlob):
@@ -66,7 +71,9 @@ def LazyWatch(blob_watched, handler_or_prompt=None):
 
 
 @oneflow_export("watch_diff")
-def WatchDiff(blob_watched, handler_or_prompt=None):
+def WatchDiff(
+    blob_watched: remote_blob_util.BlobDef, handler_or_prompt: Optional[Callable] = None
+) -> None:
     r"""Register callback for gradient of a blob. The callback will be called after the computation produce the gradient blob finishes.
 
     Args:

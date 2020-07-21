@@ -97,7 +97,7 @@ def _conv2d_layer(
 
     if activation is not None:
         if activation == op_conf_util.kRelu:
-            output = flow.keras.activations.relu(output)
+            output = flow.math.relu(output)
         else:
             raise NotImplementedError
 
@@ -177,7 +177,7 @@ def alexnet(args, images, labels, trainable=True):
     fc1 = flow.layers.dense(
         inputs=pool5,
         units=4096,
-        activation=flow.keras.activations.relu,
+        activation=flow.math.relu,
         use_bias=False,
         kernel_initializer=_get_initializer(),
         bias_initializer=False,
@@ -191,7 +191,7 @@ def alexnet(args, images, labels, trainable=True):
     fc2 = flow.layers.dense(
         inputs=dropout1,
         units=4096,
-        activation=flow.keras.activations.relu,
+        activation=flow.math.relu,
         use_bias=False,
         kernel_initializer=_get_initializer(),
         bias_initializer=False,
@@ -224,7 +224,7 @@ def main(args):
     flow.config.gpu_device_num(args.gpu_num_per_node)
 
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.default_data_type(flow.float)
     func_config.train.primary_lr(0.00001)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -244,7 +244,7 @@ def main(args):
     #  print(func_config.function_desc.job_config_proto)
     @flow.global_function(func_config)
     def alexnet_eval_job():
-        with flow.distribute.consistent_strategy():
+        with flow.scope.consistent_view():
             (labels, images) = _data_load_layer(args, args.eval_dir)
             return alexnet(args, images, labels, False)
 
