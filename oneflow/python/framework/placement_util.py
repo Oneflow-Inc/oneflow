@@ -43,7 +43,7 @@ def deprecated_placement(*args, **kwargs):
 @oneflow_export("scope.placement")
 def api_placement(
     device_tag: str, machine_device_ids: str
-) -> placement_ctx.GetPlacementScope:
+) -> placement_ctx.PlacementScope:
     return enable_if.unique([GetPlacementScope])(device_tag, machine_device_ids)
 
 
