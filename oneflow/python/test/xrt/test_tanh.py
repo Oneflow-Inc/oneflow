@@ -12,7 +12,7 @@ def make_job(input_shape, dtype=flow.float32):
 
     @flow.global_function(config)
     def tanh_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.keras.activations.tanh(x)
+        return flow.math.tanh(x)
 
     return tanh_job
 
@@ -23,7 +23,7 @@ def make_xla_job(input_shape, dtype=flow.float32):
 
     @flow.global_function(config)
     def xla_tanh_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.keras.activations.tanh(x)
+        return flow.math.tanh(x)
 
     return xla_tanh_job
 
@@ -34,7 +34,7 @@ def make_trt_job(input_shape, dtype=flow.float32):
 
     @flow.global_function(config)
     def trt_tanh_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.keras.activations.tanh(x)
+        return flow.math.tanh(x)
 
     return trt_tanh_job
 
