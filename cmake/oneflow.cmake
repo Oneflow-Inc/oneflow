@@ -230,6 +230,7 @@ set(of_proto_python_dir "${PROJECT_BINARY_DIR}/of_proto_python")
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
   COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${of_proto_python_dir}
 	)
 add_dependencies(make_pyproto_dir prepare_oneflow_third_party)
 foreach(proto_name ${of_all_proto})
@@ -285,15 +286,17 @@ target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Pyt
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 file(REMOVE_RECURSE "${of_pyscript_dir}/oneflow/python")
 add_custom_target(of_pyscript_copy ALL
+    COMMAND rm -rf "${of_pyscript_dir}/oneflow/*/"
     COMMAND "${CMAKE_COMMAND}" -E copy
         "${PROJECT_SOURCE_DIR}/oneflow/init.py" "${of_pyscript_dir}/oneflow/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
 file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
 copy_files("${oneflow_all_python_file}" "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}" of_pyscript_copy)
+
 file(WRITE ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags = []\n")
 if (BUILD_CUDA)
   file(APPEND ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-DWITH_CUDA')\n")
