@@ -16,7 +16,7 @@
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/object.h"
-#include "oneflow/core/framework/kernel_registration.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/register/ofblob.h"
 
@@ -302,16 +302,18 @@ Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruc
   }
   std::function<BlobDesc*(const std::string&)> BlobDesc4BnInOp;
   JUST(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj, &BlobDesc4BnInOp));
-  const SbpSignature* sbp_signature = nullptr;
+  const OpParallelAttribute* op_parallel_attribute = nullptr;
   {
-    const auto* operand = instruction->operand_type(args.sbp_signature());
-    const auto* sbp_sig_object = JUST(operand->template Get<vm::ObjectWrapper<SbpSignature>>());
-    sbp_signature = &sbp_sig_object->Get();
+    const auto* operand = instruction->operand_type(args.op_parallel_attribute());
+    const auto* op_parallel_attribute_object =
+        JUST(operand->template Get<vm::ObjectWrapper<OpParallelAttribute>>());
+    op_parallel_attribute = &op_parallel_attribute_object->Get();
   }
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  opkernel_obj->ResetOpAndKernel(sbp_signature, &parallel_ctx, BlobDesc4BnInOp);
+  opkernel_obj->ResetOpAndKernel(&(op_parallel_attribute->sbp_signature()), &parallel_ctx,
+                                 BlobDesc4BnInOp);
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
                                  return blob_object->TryInitBlob();
@@ -335,16 +337,18 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
   }
   std::function<BlobDesc*(const std::string&)> BlobDesc4BnInOp;
   JUST(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj, &BlobDesc4BnInOp));
-  const SbpSignature* sbp_signature = nullptr;
+  const OpParallelAttribute* op_parallel_attribute = nullptr;
   {
-    const auto* operand = instruction->operand_type(args.sbp_signature());
-    const auto* sbp_sig_object = JUST(operand->template Get<vm::ObjectWrapper<SbpSignature>>());
-    sbp_signature = &sbp_sig_object->Get();
+    const auto* operand = instruction->operand_type(args.op_parallel_attribute());
+    const auto* op_parallel_attribute_object =
+        JUST(operand->template Get<vm::ObjectWrapper<OpParallelAttribute>>());
+    op_parallel_attribute = &op_parallel_attribute_object->Get();
   }
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  opkernel_obj->ResetKernel(sbp_signature, &parallel_ctx, BlobDesc4BnInOp);
+  opkernel_obj->ResetKernel(&(op_parallel_attribute->sbp_signature()), &parallel_ctx,
+                            BlobDesc4BnInOp);
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
                                  return blob_object->TryInitBlob();

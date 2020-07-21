@@ -20,8 +20,8 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
-    T* dptr_x = tensor_x->mut_dptr<T>();
-    T* dptr_y = tensor_y->mut_dptr<T>();
+    const T* dptr_x = tensor_x->dptr<T>();
+    const T* dptr_y = tensor_y->dptr<T>();
     K* dptr_z = tensor_z->mut_dptr<K>();
     size_t num_axes = tensor_z->shape().NumAxes();
     binary_func(ctx->device_ctx(), XpuVarNdarray<K>(tensor_z->shape(), dptr_z, num_axes),

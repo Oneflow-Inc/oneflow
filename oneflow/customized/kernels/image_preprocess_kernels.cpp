@@ -38,7 +38,7 @@ class ResizeToStaticShapeKernel final : public user_op::OpKernel {
     int64_t record_num = in_blob->shape().At(0);
     CHECK_GT(record_num, 0);
 
-    TensorBuffer* buffers = in_blob->mut_dptr<TensorBuffer>();
+    const TensorBuffer* buffers = in_blob->dptr<TensorBuffer>();
     uint8_t* out_dptr = out_blob->mut_dptr<uint8_t>();
     const ShapeView& out_shape = out_blob->shape();
     CHECK(out_shape.NumAxes() == 4);  // {N, H, W, C}
@@ -52,7 +52,7 @@ class ResizeToStaticShapeKernel final : public user_op::OpKernel {
     int opencv_inter_type = GetOpencvInterp(interp_type);
 
     MultiThreadLoop(record_num, [&](size_t i) {
-      TensorBuffer* buffer = buffers + i;
+      const TensorBuffer* buffer = buffers + i;
       uint8_t* dptr = out_dptr + one_sample_elem_cnt * i;
       const Shape& in_shape = buffer->shape();
       CHECK(in_shape.NumAxes() == 3);  // {H, W, C}
@@ -85,12 +85,12 @@ class ResizeShorterToTensorBufferKernel final : public user_op::OpKernel {
     int64_t record_num = in_blob->shape().At(0);
     CHECK_GT(record_num, 0);
 
-    TensorBuffer* in_buffers = in_blob->mut_dptr<TensorBuffer>();
+    const TensorBuffer* in_buffers = in_blob->dptr<TensorBuffer>();
     TensorBuffer* out_buffers = out_blob->mut_dptr<TensorBuffer>();
     int64_t resize_shorter = ctx->Attr<int64_t>("resize_shorter");
 
     MultiThreadLoop(record_num, [&](size_t i) {
-      TensorBuffer* in_buffer = in_buffers + i;
+      const TensorBuffer* in_buffer = in_buffers + i;
       TensorBuffer* out_buffer = out_buffers + i;
       const Shape& in_shape = in_buffer->shape();
       CHECK_EQ(in_shape.NumAxes(), 3);  // {H, W, C}

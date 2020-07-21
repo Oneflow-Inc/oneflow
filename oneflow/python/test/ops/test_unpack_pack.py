@@ -11,5 +11,5 @@ def test_unpack_pack(test_case):
         return flow.pack(flow.unpack(a, 3), 3)
 
     x = np.random.rand(3, 4).astype(np.float32)
-    y = UnpackPackJob(x).get().ndarray()
+    y = UnpackPackJob(x).get().numpy()
     test_case.assertTrue(np.array_equal(y, x))

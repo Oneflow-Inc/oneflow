@@ -27,7 +27,7 @@ def test_sync_dynamic_resize(_):
             x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type]),
             size=flow.FixedTensorDef((1,), dtype=type_name_to_flow_type[size_type]),
         ):
-            with flow.fixed_placement(device_type, "0:0"):
+            with flow.scope.placement(device_type, "0:0"):
                 return flow.sync_dynamic_resize(x, size)
 
         size = np.random.randint(0, x_shape[0])
@@ -35,6 +35,6 @@ def test_sync_dynamic_resize(_):
         y = (
             TestJob(x, np.array([size]).astype(type_name_to_np_type[size_type]))
             .get()
-            .ndarray_list()[0]
+            .numpy_list()[0]
         )
         assert np.array_equal(y, x[:size])

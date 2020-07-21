@@ -1,7 +1,7 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/framework/op_registration.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/eager/eager_symbol_storage.h"
@@ -514,6 +514,33 @@ OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_di
   return ret;
 }
 
+void Operator::EnrollRepeatedOutputBnWithSetter(
+    const std::string& obn_prefix, int32_t num, bool has_diff,
+    const std::function<void(OutputBlobModifier*)>& ModifierSetter) {
+  FOR_RANGE(int32_t, i, 0, num) {
+    ModifierSetter(EnrollOutputBn(GenRepeatedBn(obn_prefix, i), has_diff));
+  }
+}
+
+void Operator::EnrollRepeatedOutputBnWithSetter(
+    const std::string& obn_prefix, bool has_diff,
+    const std::function<void(OutputBlobModifier*)>& ModifierSetter) {
+  EnrollRepeatedOutputBnWithSetter(obn_prefix,
+                                   GetPbRpfFromCustomizedConf<std::string>(obn_prefix).size(),
+                                   has_diff, ModifierSetter);
+}
+
+void Operator::EnrollRepeatedOutputBnWithSetter(
+    const std::string& obn_prefix, int32_t num,
+    const std::function<void(OutputBlobModifier*)>& ModifierSetter) {
+  EnrollRepeatedOutputBnWithSetter(obn_prefix, num, true, ModifierSetter);
+}
+
+void Operator::EnrollRepeatedOutputBnWithSetter(
+    const std::string& obn_prefix, const std::function<void(OutputBlobModifier*)>& ModifierSetter) {
+  EnrollRepeatedOutputBnWithSetter(obn_prefix, true, ModifierSetter);
+}
+
 void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff) {
   FOR_RANGE(int32_t, i, 0, num) { EnrollOutputBn(GenRepeatedBn(obn_prefix, i), has_diff); }
 }
@@ -558,7 +585,8 @@ bool IsCpuOnly(const OperatorConf& op_conf) {
   CHECK(ptr != nullptr) << "op_conf\n" << op_conf.DebugString();
   if (*std::unique_ptr<CpuOnly>(ptr)) { return true; }
   if (!op_conf.has_user_conf()) { return false; }
-  auto* registration_val = user_op::LookUpInOpRegistry(op_conf.user_conf().op_type_name());
+  auto* registration_val =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
   CHECK_NOTNULL(registration_val);
   return registration_val->cpu_only_supported;
 }

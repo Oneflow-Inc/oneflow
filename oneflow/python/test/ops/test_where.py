@@ -37,7 +37,7 @@ def _of_where(
         func_config.train.model_update_conf(dict(naive_conf={}))
 
         def do_where(condition, x, y):
-            with flow.device_prior_placement(device_type, "0:0"):
+            with flow.scope.placement(device_type, "0:0"):
                 x_var = flow.get_variable(
                     "x",
                     shape=x.shape,
@@ -55,7 +55,7 @@ def _of_where(
 
             z = flow.where(condition, x_var, y_var)
 
-            with flow.device_prior_placement(device_type, "0:0"):
+            with flow.scope.placement(device_type, "0:0"):
                 flow.losses.add_loss(z)
 
             flow.watch_diff(x_var, dz_dx_watcher)
@@ -68,10 +68,8 @@ def _of_where(
             return flow.where(condition, x, y)
 
     if dynamic:
-        func_config.default_placement_scope(
-            flow.device_prior_placement(device_type, "0:0")
-        )
-        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+        func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
+        func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
         def where_fn(
@@ -83,13 +81,13 @@ def _of_where(
 
         check_point = flow.train.CheckPoint()
         check_point.init()
-        return where_fn([condition], [x], [y]).get().ndarray_list()[0]
+        return where_fn([condition], [x], [y]).get().numpy_list()[0]
 
     else:
         func_config.default_placement_scope(
-            flow.device_prior_placement(device_type, machine_device_ids)
+            flow.scope.placement(device_type, machine_device_ids)
         )
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_distribute_strategy(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
         def where_fn(
@@ -101,7 +99,7 @@ def _of_where(
 
         check_point = flow.train.CheckPoint()
         check_point.init()
-        return where_fn(condition, x, y).get().ndarray()
+        return where_fn(condition, x, y).get().numpy()
 
 
 def _compare_with_np(test_case, cond_shape, x_shape, y_shape, device_type, dynamic):
@@ -138,13 +136,13 @@ def _compare_with_tf(
             print("tf_dz_dx:", dz_dx.numpy())
             print(
                 "of_dz_dx:",
-                dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.ndarray(),
+                dz_dx_blob.numpy_list()[0] if dynamic else dz_dx_blob.numpy(),
             )
 
         test_case.assertTrue(
             np.array_equal(
                 dz_dx.numpy(),
-                dz_dx_blob.ndarray_list()[0] if dynamic else dz_dx_blob.ndarray(),
+                dz_dx_blob.numpy_list()[0] if dynamic else dz_dx_blob.numpy(),
             )
         )
 
@@ -154,13 +152,13 @@ def _compare_with_tf(
             print("tf_dz_dy:", dz_dy.numpy())
             print(
                 "of_dz_dy:",
-                dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.ndarray(),
+                dz_dy_blob.numpy_list()[0] if dynamic else dz_dy_blob.numpy(),
             )
 
         test_case.assertTrue(
             np.array_equal(
                 dz_dy.numpy(),
-                dz_dy_blob.ndarray_list()[0] if dynamic else dz_dy_blob.ndarray(),
+                dz_dy_blob.numpy_list()[0] if dynamic else dz_dy_blob.numpy(),
             )
         )
 
@@ -183,20 +181,20 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
     func_config.default_data_type(flow.float)
 
     if input_shape is None:
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_distribute_strategy(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
         def where_fn(input_def=flow.FixedTensorDef(input.shape, dtype=flow.float)):
             return flow.where(input_def)
 
     else:
-        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+        func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
         def where_fn(input_def=flow.MirroredTensorDef(input_shape, dtype=flow.float)):
             return flow.where(input_def)
 
-    return where_fn([input]).get().ndarray_list()[0]
+    return where_fn([input]).get().numpy_list()[0]
 
 
 def test_where(test_case):

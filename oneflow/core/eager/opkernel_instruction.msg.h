@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_EAGER_OPKERNEL_INSTRUCTION_MSG_H_
 #define ONEFLOW_CORE_EAGER_OPKERNEL_INSTRUCTION_MSG_H_
 
-#include "oneflow/core/common/flat_msg_view.h"
+#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 
@@ -21,7 +21,7 @@ FLAT_MSG_VIEW_END(DeleteOpKernelObjectInstrOperand);
 
 FLAT_MSG_VIEW_BEGIN(CallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, opkernel);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, sbp_signature);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, op_parallel_attribute);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_ibn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, ibn);
@@ -39,7 +39,7 @@ FLAT_MSG_VIEW_END(CallOpKernelInstrOperand);
 FLAT_MSG_VIEW_BEGIN(StatelessCallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, job_desc);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, op_conf);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, sbp_signature);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, op_parallel_attribute);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, shared_opkernel);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_ibn);
@@ -64,6 +64,11 @@ FLAT_MSG_VIEW_BEGIN(FeedBlobInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::Mut2Operand, blob);
   FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
 FLAT_MSG_VIEW_END(FeedBlobInstrOperand);
+
+FLAT_MSG_VIEW_BEGIN(RemoveForeignCallbackInstrOperand);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, object_id);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
+FLAT_MSG_VIEW_END(RemoveForeignCallbackInstrOperand);
 // clang-format on
 
 }  // namespace eager

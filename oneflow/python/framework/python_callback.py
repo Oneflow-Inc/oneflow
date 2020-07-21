@@ -30,6 +30,14 @@ class PythonCallback(oneflow_internal.ForeignCallback):
             print(traceback.format_exc())
             raise e
 
+    def RemoveForeignCallback(self, unique_id):
+        global unique_id2handler
+        try:
+            del unique_id2handler[unique_id]
+        except Exception as e:
+            print(traceback.format_exc())
+            raise e
+
     def EagerInterpretCompletedOp(self, op_attribute_str, parallel_conf_str):
         try:
             interpreter_callback.InterpretCompletedOp(
