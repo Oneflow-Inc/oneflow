@@ -286,6 +286,7 @@ target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Pyt
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 file(REMOVE_RECURSE "${of_pyscript_dir}/oneflow/python")
 add_custom_target(of_pyscript_copy ALL
+    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/clean_generated_api.py --root_path=${of_pyscript_dir}/oneflow
     COMMAND "${CMAKE_COMMAND}" -E copy
         "${PROJECT_SOURCE_DIR}/oneflow/init.py" "${of_pyscript_dir}/oneflow/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python"

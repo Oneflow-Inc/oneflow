@@ -2,15 +2,8 @@ import sys
 import os
 import argparse
 import inspect
-import shutil
 
 import oneflow
-import oneflow.python
-# modules not included in sys.modules.values, import it by hand
-import oneflow.python.framework.unittest
-import oneflow.python.framework.function_util
-import oneflow.python.framework.check_point
-import oneflow.python.ops.get_variable
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
