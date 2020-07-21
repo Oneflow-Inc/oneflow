@@ -220,6 +220,14 @@ class InstructionsBuilder(object):
         self._TryClearObject(blob_object)
         self._DeleteObject(blob_object)
 
+    def InsertRemoveForeignCallbackInstruction(self, object_id, callback):
+        unique_callback_id = python_callback.GetIdForRegisteredCallback(callback)
+        instruction = instr_util.InstructionProto()
+        instruction.instr_type_name = "RemoveForeignCallback"
+        instruction.operand.append(_DelObjectOperand(object_id))
+        instruction.operand.append(_Int64Operand(unique_callback_id))
+        self.instruction_list_.instruction.append(instruction)
+
     def FetchBlobHeader(self, blob_object, callback):
         return self._FetchBlob("FetchBlobHeader", blob_object, callback)
 
