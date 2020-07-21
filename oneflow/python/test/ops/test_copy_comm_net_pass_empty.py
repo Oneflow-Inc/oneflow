@@ -60,11 +60,11 @@ def test_multi_node_comm_net_dynamic(test_case):
     @flow.global_function(func_config)
     def ReluJob(x=flow.MirroredTensorDef((10, 2))):
         with flow.scope.placement("gpu", "0:0"):
-            out0 = flow.keras.activations.relu(x)
+            out0 = flow.math.relu(x)
         with flow.scope.placement("gpu", "1:0"):
-            out1 = flow.keras.activations.relu(out0)
+            out1 = flow.math.relu(out0)
         with flow.scope.placement("gpu", "0:0"):
-            out2 = flow.keras.activations.relu(out1)
+            out2 = flow.math.relu(out1)
         return out2
 
     index = [-2, -1, 0, 1, 2]
@@ -96,11 +96,11 @@ def test_multi_node_comm_net_dynamic_empty(test_case):
     @flow.global_function(func_config)
     def ReluJob(x=flow.MirroredTensorDef((10, 2))):
         with flow.scope.placement("cpu", "0:0"):
-            out0 = flow.keras.activations.relu(x)
+            out0 = flow.math.relu(x)
         with flow.scope.placement("cpu", "1:0"):
-            out1 = flow.keras.activations.relu(out0)
+            out1 = flow.math.relu(out0)
         with flow.scope.placement("cpu", "0:0"):
-            out2 = flow.keras.activations.relu(out1)
+            out2 = flow.math.relu(out1)
         return out2
 
     index = [-2, -1, 0, 1, 2]
