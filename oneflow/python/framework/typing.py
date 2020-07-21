@@ -109,7 +109,7 @@ class ListOfListOfNumpy:
                 print(mirrored_tensors)
     """
 
-    def Def(
+    def Placeholder(
         shape: Sequence[int], dtype=dtype_util.float, batch_axis: Optional[int] = 0
     ):
         """`ListListNumpy.Placeholder` is a typing function for numpy input of a OneFlow global function. 
