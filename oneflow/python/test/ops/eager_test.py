@@ -15,7 +15,7 @@ flow.unittest.register_test_cases(
 
 def main(argv):
     flow.env.init()
-    flow.env.enable_eager_environment()
+    flow.enable_eager_execution()
     absltest.main()
 
 
