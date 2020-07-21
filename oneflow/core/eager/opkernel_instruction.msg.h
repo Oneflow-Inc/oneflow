@@ -64,6 +64,11 @@ FLAT_MSG_VIEW_BEGIN(FeedBlobInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::Mut2Operand, blob);
   FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
 FLAT_MSG_VIEW_END(FeedBlobInstrOperand);
+
+FLAT_MSG_VIEW_BEGIN(RemoveForeignCallbackInstrOperand);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, object_id);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
+FLAT_MSG_VIEW_END(RemoveForeignCallbackInstrOperand);
 // clang-format on
 
 }  // namespace eager

@@ -1,10 +1,9 @@
-#ifndef ONEFLOW_CORE_FRAMEWORK_KERNEL_REGISTRATION_H_
-#define ONEFLOW_CORE_FRAMEWORK_KERNEL_REGISTRATION_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_USER_OP_KERNEL_REGISTRY_H_
+#define ONEFLOW_CORE_FRAMEWORK_USER_OP_KERNEL_REGISTRY_H_
 
-#include "oneflow/core/framework/registrar.h"
-#include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/user_op_conf.h"
@@ -12,12 +11,9 @@
 
 namespace oneflow {
 
-class KernelConf;
-
 namespace user_op {
 
 class OpKernel;
-class KernelInitContext;
 class TensorDesc;
 class InferContext;
 
@@ -55,54 +51,41 @@ using AddInplaceArgPair = std::function<Maybe<void>(
 using InplaceProposalFn = std::function<Maybe<void>(const InferContext&, AddInplaceArgPair)>;
 using IsMatchedHob = hob::BoolFunctorPtr<user_op::KernelRegContext>;
 
-struct KernelRegistrationVal {
+struct OpKernelRegistryResult {
+  std::string op_type_name;
+
   CreateFn create_fn;
   InferTmpSizeFn infer_tmp_size_fn;
   InplaceProposalFn inplace_proposal_fn;
   IsMatchedHob is_matched_hob;
 };
 
-struct KernelRegistryWrapper final {
-  void InsertToGlobalRegistry();
-
-  std::string op_type_name;
-  KernelRegistrationVal reg_val;
-};
-
-bool IsStateless4OpTypeName(const std::string& op_type_name);
-
-class KernelRegistryWrapperBuilder final {
+class OpKernelRegistry final {
  public:
-  KernelRegistryWrapperBuilder(const std::string& op_type_name);
+  OpKernelRegistry& Name(const std::string& op_type_name);
+
   template<typename T>
-  KernelRegistryWrapperBuilder& SetCreateFn() {
+  OpKernelRegistry& SetCreateFn() {
     //    static_assert(sizeof(OpKernel) == sizeof(T), "no data member allowed in derived
     //    OpKernel");
     return SetCreateFn([]() -> const OpKernel* { return NewOpKernel<T>(); });
   }
-  KernelRegistryWrapperBuilder& SetIsMatchedHob(IsMatchedHob hob);
-  KernelRegistryWrapperBuilder& SetInferTmpSizeFn(InferTmpSizeFn fn);
-  KernelRegistryWrapperBuilder& SetInplaceProposalFn(InplaceProposalFn fn);
+  OpKernelRegistry& SetIsMatchedHob(IsMatchedHob hob);
+  OpKernelRegistry& SetInferTmpSizeFn(InferTmpSizeFn fn);
+  OpKernelRegistry& SetInplaceProposalFn(InplaceProposalFn fn);
 
-  KernelRegistryWrapper Build();
+  OpKernelRegistry& Finish();
+  OpKernelRegistryResult GetResult() { return result_; }
 
  private:
-  KernelRegistryWrapperBuilder& SetCreateFn(CreateFn fn);
+  OpKernelRegistry& SetCreateFn(CreateFn fn);
 
-  KernelRegistryWrapper wrapper_;
+ private:
+  OpKernelRegistryResult result_;
 };
-
-Maybe<const KernelRegistrationVal*> LookUpInKernelRegistry(const std::string& op_type_name,
-                                                           const KernelRegContext&);
-
-std::vector<std::string> GetAllUserOpInKernelRegistry();
 
 }  // namespace user_op
 
 }  // namespace oneflow
 
-#define REGISTER_USER_KERNEL(name)                                                       \
-  static ::oneflow::user_op::Registrar<::oneflow::user_op::KernelRegistryWrapperBuilder> \
-      OF_PP_CAT(g_registrar, __COUNTER__) = ::oneflow::user_op::KernelRegistryWrapperBuilder(name)
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_KERNEL_REGISTRATION_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_USER_OP_KERNEL_REGISTRY_H_
