@@ -1,5 +1,6 @@
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def ccrelu(x, name):
@@ -22,7 +23,7 @@ def test_multi_node_comm_net(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function(func_config)
-    def ReluJob(x=flow.FixedTensorDef((10, 2))):
+    def ReluJob(x: oft.Numpy.Placeholder((10, 2))):
         with flow.scope.placement("gpu", "0:0"):
             out0 = ccrelu(x, "my_op_0_0")
         with flow.scope.placement("gpu", "1:0"):
@@ -58,7 +59,7 @@ def test_multi_node_comm_net_dynamic(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function(func_config)
-    def ReluJob(x=flow.MirroredTensorDef((10, 2))):
+    def ReluJob(x: oft.ListNumpy.Placeholder((10, 2))):
         with flow.scope.placement("gpu", "0:0"):
             out0 = flow.keras.activations.relu(x)
         with flow.scope.placement("gpu", "1:0"):
@@ -94,7 +95,7 @@ def test_multi_node_comm_net_dynamic_empty(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function(func_config)
-    def ReluJob(x=flow.MirroredTensorDef((10, 2))):
+    def ReluJob(x: oft.ListNumpy.Placeholder((10, 2))):
         with flow.scope.placement("cpu", "0:0"):
             out0 = flow.keras.activations.relu(x)
         with flow.scope.placement("cpu", "1:0"):
