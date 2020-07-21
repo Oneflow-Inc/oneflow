@@ -2,8 +2,7 @@
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
-#include "oneflow/core/framework/op_registration.h"
-#include "oneflow/core/framework/kernel_registration.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/infer_util.h"
@@ -228,7 +227,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     InitArg2Blob(kernel_conf.op_attribute().op_conf().user_conf().input());
     InitArg2Blob(kernel_conf.op_attribute().op_conf().user_conf().output());
 
-    const auto* op_reg_val = user_op::LookUpInOpRegistry(
+    const auto* op_reg_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(
         kernel_conf.op_attribute().op_conf().user_conf().op_type_name());
     CHECK_NOTNULL(op_reg_val);
     tensor_desc_infer_fn_ = op_reg_val->tensor_desc_infer_fn;
@@ -384,8 +383,8 @@ class UserKernel final : public Kernel {
     {
       const std::string& op_type_name =
           kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
-      const user_op::KernelRegistrationVal* kernel_reg_val =
-          CHECK_JUST(user_op::LookUpInKernelRegistry(
+      const user_op::OpKernelRegistryResult* kernel_reg_val =
+          CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
               op_type_name, UserKernelRegContext(kernel_conf(), job_desc())));
       CHECK_NOTNULL(kernel_reg_val);
       kernel_.reset(kernel_reg_val->create_fn());
@@ -468,8 +467,8 @@ EagerKernel::EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf)
 
 void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
   const std::string& op_type_name = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
-  auto kernel_reg_val = CHECK_JUST(
-      user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf, job_desc())));
+  auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+      op_type_name, UserKernelRegContext(kernel_conf, job_desc())));
   CHECK_NOTNULL(kernel_reg_val);
   kernel_.reset(kernel_reg_val->create_fn());
 }
