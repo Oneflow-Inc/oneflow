@@ -35,7 +35,7 @@ def format_file(path):
     txt = get_txt(path)
     with open(path, "r") as r:
         content = r.read()
-    if content.startswith(txt):
+    if content.startswith(txt) or (not content):
         return True
     else:
         with open(path, "w") as w:
