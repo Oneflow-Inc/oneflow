@@ -83,7 +83,6 @@ Maybe<void> LazyReferenceInstructionType::MaybeRun(vm::Instruction* instruction)
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
   Blob* blob = Global<RegstMgr>::Get()->Blob4LbnAndParallelId(lbn, parallel_ctx.parallel_id());
-  // Blob* blob = regst->GetMutSoleBlob();
   eager_blob_rw->Init<eager::LazyRefBlobObject>(blob);
   return Maybe<void>::Ok();
 }

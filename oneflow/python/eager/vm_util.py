@@ -3,6 +3,8 @@ from __future__ import absolute_import
 import re
 from contextlib import contextmanager
 
+import numpy as np
+
 import oneflow as flow
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.placement_pb2 as placement_pb_util
@@ -54,6 +56,10 @@ def GetOfBlobInRegst(var_name):
         def fetcher(ofblob):
             print(ofblob.CopyToNdarray())
 
+        def feeder(ofblob):
+            ofblob.CopyFromNdarray(np.random.random(ofblob.shape).astype(np.float32))
+
+        builder.FeedBlob(blob_object, feeder)
         builder.FetchBlobBody(blob_object, fetcher)
 
     LogicalRun(temp)
