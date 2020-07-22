@@ -87,9 +87,12 @@ if __name__ == "__main__":
     assert args.check != args.fix
     with Pool(10) as p:
         if args.check:
+            any_absence = False
             for (p, is_formatted) in p.map(do_check, files):
                 if is_formatted == False:
                     print("license absent:", p)
+                    any_absence = True
+            exit(1)
         if args.fix:
             for (p, is_formatted) in p.map(do_format, files):
                 if is_formatted == False:
