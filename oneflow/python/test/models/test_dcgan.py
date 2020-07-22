@@ -2,9 +2,11 @@ import oneflow as flow
 import numpy as np
 import os
 
+
 def test_1n1c(test_case):
     dcgan = DCGAN()
     dcgan.compare_with_tf(1)
+
 
 def test_1n4c(test_case):
     dcgan = DCGAN()
@@ -17,14 +19,14 @@ class DCGAN:
         self.z_dim = 100
         self.batch_size = 32
 
-    def compare_with_tf(self, gpu_num, result_dir='/dataset/gan_test/dcgan/'):
+    def compare_with_tf(self, gpu_num, result_dir="/dataset/gan_test/dcgan/"):
         flow.config.gpu_device_num(gpu_num)
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_distribute_strategy(flow.scope.consistent_view())
         func_config.train.primary_lr(self.lr)
         func_config.train.model_update_conf(dict(naive_conf={}))
-    
+
         @flow.global_function(func_config)
         def test_generator(
             z=flow.FixedTensorDef((self.batch_size, self.z_dim)),
@@ -33,12 +35,14 @@ class DCGAN:
             g_out = self.generator(z, trainable=True, const_init=True)
             g_logits = self.discriminator(g_out, trainable=False, const_init=True)
             g_loss = flow.nn.sigmoid_cross_entropy_with_logits(
-                flow.ones_like(g_logits), g_logits, name="Gloss_sigmoid_cross_entropy_with_logits"
+                flow.ones_like(g_logits),
+                g_logits,
+                name="Gloss_sigmoid_cross_entropy_with_logits",
             )
 
             flow.losses.add_loss(g_loss)
             return g_loss
-        
+
         @flow.global_function(func_config)
         def test_discriminator(
             z=flow.FixedTensorDef((self.batch_size, 100)),
@@ -49,12 +53,18 @@ class DCGAN:
             g_out = self.generator(z, trainable=False, const_init=True)
             g_logits = self.discriminator(g_out, trainable=True, const_init=True)
             d_loss_fake = flow.nn.sigmoid_cross_entropy_with_logits(
-                flow.zeros_like(g_logits), g_logits, name="Dloss_fake_sigmoid_cross_entropy_with_logits"
+                flow.zeros_like(g_logits),
+                g_logits,
+                name="Dloss_fake_sigmoid_cross_entropy_with_logits",
             )
 
-            d_logits = self.discriminator(images, trainable=True, reuse=True, const_init=True)
+            d_logits = self.discriminator(
+                images, trainable=True, reuse=True, const_init=True
+            )
             d_loss_real = flow.nn.sigmoid_cross_entropy_with_logits(
-                flow.ones_like(d_logits), d_logits, name="Dloss_real_sigmoid_cross_entropy_with_logits"
+                flow.ones_like(d_logits),
+                d_logits,
+                name="Dloss_real_sigmoid_cross_entropy_with_logits",
             )
             d_loss = d_loss_fake + d_loss_real
             flow.losses.add_loss(d_loss)
@@ -65,7 +75,7 @@ class DCGAN:
         check_point.init()
 
         z = np.load(os.path.join(result_dir, "z.npy"))
-        imgs = np.load(os.path.join(result_dir, "img.npy")).transpose(0,3,1,2)
+        imgs = np.load(os.path.join(result_dir, "img.npy")).transpose(0, 3, 1, 2)
         label1 = np.ones((self.batch_size, 1)).astype(np.float32)
         label0 = np.zeros((self.batch_size, 1)).astype(np.float32)
         g_loss = test_generator(z, label1).get()
@@ -73,9 +83,13 @@ class DCGAN:
         tf_g_loss = np.load(os.path.join(result_dir, "g_loss.npy"))
         tf_d_loss = np.load(os.path.join(result_dir, "d_loss.npy"))
 
-        if gpu_num == 1:
-            assert np.allclose(g_loss.numpy(), tf_g_loss, rtol=1e-2, atol=1e-1), "{}-{}".format(g_loss.ndarray().mean(), tf_g_loss.mean())
-            assert np.allclose(d_loss.numpy(), tf_d_loss, rtol=1e-2, atol=1e-1), "{}-{}".format(d_loss.ndarray().mean(), tf_d_loss.mean())
+        if gpu_num > 1:  # multi gpu result is different
+            assert np.allclose(
+                g_loss.numpy(), tf_g_loss, rtol=1e-2, atol=1e-1
+            ), "{}-{}".format(g_loss.ndarray().mean(), tf_g_loss.mean())
+            assert np.allclose(
+                d_loss.numpy(), tf_d_loss, rtol=1e-2, atol=1e-1
+            ), "{}-{}".format(d_loss.ndarray().mean(), tf_d_loss.mean())
 
     def generator(self, z, const_init=False, trainable=True):
         # (n, 256, 7, 7)
@@ -155,6 +169,7 @@ class DCGAN:
         )
         return out
 
+
 class layers:
     @classmethod
     def deconv2d(
@@ -210,7 +225,7 @@ class layers:
 
             output = flow.nn.bias_add(output, bias, "NCHW")
         return output
-    
+
     @classmethod
     def conv2d(
         cls,
@@ -259,10 +274,17 @@ class layers:
 
             output = flow.nn.bias_add(output, bias, "NCHW")
         return output
-     
+
     @classmethod
     def dense(
-        cls, input, units, name, use_bias=False, trainable=True, reuse=False, const_init=False
+        cls,
+        input,
+        units,
+        name,
+        use_bias=False,
+        trainable=True,
+        reuse=False,
+        const_init=False,
     ):
         name_ = name if reuse == False else name + "_reuse"
 
@@ -300,7 +322,7 @@ class layers:
 
         out = flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
         return out
-    
+
     @classmethod
     def batchnorm(cls, input, name, axis=1, reuse=False):
         return flow.layers.batch_normalization(input, axis=axis)
