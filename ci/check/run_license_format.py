@@ -19,7 +19,7 @@ limitations under the License.
 """
 
 CPP_TXT = "/*\n{}*/\n".format(LICENSE_TXT)
-PY_TXT = "'''\n{}'''\n".format(LICENSE_TXT)
+PY_TXT = "\"\"\"\n{}\"\"\"\n".format(LICENSE_TXT)
 
 
 def get_txt(path: str):
