@@ -295,6 +295,7 @@ std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(bool enable_reuse_mem,
   auto regst = std::make_shared<RegstDesc>();
   regst->set_producer(this);
   *(regst->mut_regst_desc_type()) = regst_desc_type;
+  if (parallel_ctx() != nullptr) { *(regst->mut_parallel_ctx()) = *parallel_ctx(); }
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
   regst->set_enable_reuse_mem(GlobalJobDesc().enable_reuse_mem() && enable_reuse_mem);

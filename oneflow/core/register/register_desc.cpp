@@ -136,6 +136,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   } else {
     UNIMPLEMENTED();
   }
+  if (has_parallel_ctx()) { *(ret->mutable_parallel_ctx()) = parallel_ctx(); }
   ret->set_min_register_num(min_register_num_);
   ret->set_max_register_num(max_register_num_);
   ret->set_register_num(min_register_num_);
