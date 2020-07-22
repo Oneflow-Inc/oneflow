@@ -1,5 +1,6 @@
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _gen_random_input_list(input_static_shape):
@@ -24,7 +25,7 @@ def _of_tensor_list_split(input_tensor_list, input_static_shape, device_tag="gpu
 
     @flow.global_function(func_config)
     def tensor_list_split_job(
-        input_def=flow.MirroredTensorListDef(
+        input_def: oft.ListListNumpy.Placeholder(
             shape=tuple(input_static_shape), dtype=flow.float
         ),
     ):

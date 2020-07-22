@@ -1,5 +1,6 @@
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def test_get_variable_with_same_name(test_case):
@@ -51,7 +52,7 @@ def test_get_job_shared_variable(test_case):
     train_func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(train_func_config)
-    def train(x_def=flow.FixedTensorDef(shape=(2, 5), dtype=flow.float)):
+    def train(x_def: oft.Numpy.Placeholder(shape=(2, 5), dtype=flow.float)):
         var = get_var("var", trainable=True)
         loss = var + x_def
         flow.losses.add_loss(loss)
@@ -101,7 +102,7 @@ def test_get_job_inter_and_intra_shared_variable(test_case):
     train_func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(train_func_config)
-    def train(x_def=flow.FixedTensorDef(shape=variable_shape, dtype=flow.float)):
+    def train(x_def: oft.Numpy.Placeholder(shape=variable_shape, dtype=flow.float)):
         var = get_var("var", trainable=True)
         loss = var + x_def
         flow.losses.add_loss(loss)
