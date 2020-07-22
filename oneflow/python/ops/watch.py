@@ -12,6 +12,8 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.watcher as watcher_util
+import oneflow.python.framework.typing as oft
+import oneflow.python.framework.typing_util as oft_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
@@ -19,6 +21,7 @@ from oneflow.python.framework.remote_blob import ConsistentBlob, MirroredBlob
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager as eager_util
 import oneflow
+import inspect
 
 
 @oneflow_export("watch")
@@ -38,14 +41,14 @@ def Watch(
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def EagerWatch(blob_watched, handler_or_prompt=None):
-    handler = _MakeHandler(handler_or_prompt)
+    handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     local_blob = local_blob_util.MakeLocalBlob4EagerBlob(blob_watched)
     handler(local_blob)
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def LazyWatch(blob_watched, handler_or_prompt=None):
-    handler = _MakeHandler(handler_or_prompt)
+    handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     if isinstance(blob_watched, ConsistentBlob):
         handler_uuid = str(uuid.uuid1())
         op_conf = op_conf_util.OperatorConf()
@@ -86,7 +89,7 @@ def WatchDiff(
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def EagerWatchDiff(blob_watched, handler_or_prompt=None):
-    handler = _MakeHandler(handler_or_prompt)
+    handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     handler_uuid = str(uuid.uuid1())
     lbi_and_uuid = LbiAndDiffWatcherUuidPair()
     lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
@@ -98,7 +101,7 @@ def EagerWatchDiff(blob_watched, handler_or_prompt=None):
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def LazyWatchDiff(blob_watched, handler_or_prompt=None):
-    handler = _MakeHandler(handler_or_prompt)
+    handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     if isinstance(blob_watched, ConsistentBlob):
         handler_uuid = str(uuid.uuid1())
         lbi_and_uuid = LbiAndDiffWatcherUuidPair()
@@ -117,12 +120,23 @@ def LazyWatchDiff(blob_watched, handler_or_prompt=None):
         raise NotImplementedError
 
 
-def _MakeHandler(handler_or_prompt):
+def _CheckOrMakeHandler(blob_watched, handler_or_prompt):
     if callable(handler_or_prompt):
+        parameters = inspect.signature(handler_or_prompt).parameters
+        oft_util.CheckWatchCallbackParameterAnnotation(parameters)
+        annotation = parameters[list(parameters.keys())[0]].annotation
+        oft_util.CheckWatchedBlobByAnnotation(blob_watched, annotation)
         return handler_or_prompt
     prompt = handler_or_prompt
 
-    def Handler(x):
+    if not blob_watched.is_dynamic:
+        blob_annotation = oft.Numpy
+    elif not blob_watched.is_tensor:
+        blob_annotation = oft.ListNumpy
+    else:
+        blob_annotation = oft.ListListNumpy
+
+    def Handler(x: blob_annotation):
         if prompt is not None:
             print(str(prompt))
         print(x)

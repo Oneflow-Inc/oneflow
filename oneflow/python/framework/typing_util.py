@@ -88,10 +88,46 @@ def _CheckReturnByAnnotation(function_name, ret, annotation):
             _CheckReturnByAnnotation(function_name, ret_i, annotation_i)
     elif oft.OriginFrom(annotation, oft.Numpy):
         assert isinstance(ret, remote_blob_util.BlobDef), "type(ret): %s" % type(ret)
-        assert not ret.is_dynamic, "only fixed blob compatible to oneflow.typing.Numpy"
+        assert not ret.is_dynamic, (
+            "only fixed shaped blob compatible to oneflow.typing.Numpy. "
+            "you can change annotation to oneflow.typing.ListNumpy "
+            "or oneflow.typing.ListListNumpy"
+        )
     elif oft.OriginFrom(annotation, oft.ListNumpy):
         assert isinstance(ret, remote_blob_util.BlobDef), "type(ret): %s" % type(ret)
     elif oft.OriginFrom(annotation, oft.ListListNumpy):
         assert isinstance(ret, remote_blob_util.BlobDef), "type(ret): %s" % type(ret)
     else:
         raise NotImplementedError("invalid return annotation %s found" % annotation)
+
+
+def CheckWatchCallbackParameterAnnotation(parameters):
+    assert len(parameters) == 1, "watch callback should accept only one parameter"
+    annotation = parameters[list(parameters.keys())[0]].annotation
+    if annotation is inspect._empty:
+        return
+    if not oft.OriginFrom(annotation, oft.PyStructCompatibleToBlob):
+        raise NotImplementedError(
+            "invalid watch callback paremeter annotation. "
+            "candidate annotations: oneflow.typing.Numpy, oneflow.typing.ListNumpy, "
+            "oneflow.typing.ListListNumpy"
+        )
+
+
+def CheckWatchedBlobByAnnotation(blob, annotation):
+    if annotation is inspect._empty:
+        return
+    if oft.OriginFrom(annotation, oft.Numpy):
+        assert not blob.is_dynamic, (
+            "only fixed shaped blob compatible to oneflow.typing.Numpy. "
+            "you can change annotation to oneflow.typing.ListNumpy "
+            "or oneflow.typing.ListListNumpy"
+        )
+    elif oft.OriginFrom(annotation, oft.ListNumpy):
+        pass
+    elif oft.OriginFrom(annotation, oft.ListListNumpy):
+        pass
+    else:
+        raise NotImplementedError(
+            "invalid watch callback parameter annotation %s found" % annotation
+        )
