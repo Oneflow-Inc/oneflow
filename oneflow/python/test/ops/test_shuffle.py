@@ -5,6 +5,8 @@ import numpy as np
 import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
+import oneflow.typing as oft
+
 
 def test_shuffle(_):
     arg_dict = OrderedDict()
@@ -25,7 +27,7 @@ def test_shuffle(_):
 
         @flow.global_function(flow.FunctionConfig())
         def TestJob(
-            x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
+            x: oft.Numpy.Placeholder(x_shape, dtype=type_name_to_flow_type[data_type])
         ):
             with flow.scope.placement(device_type, "0:0"):
                 return flow.random.shuffle(x)
@@ -45,7 +47,7 @@ def test_shuffle(_):
 
         @flow.global_function(flow.FunctionConfig())
         def TestJob1(
-            x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type])
+            x: oft.Numpy.Placeholder(x_shape, dtype=type_name_to_flow_type[data_type])
         ):
             with flow.scope.placement(device_type, "0:0"):
                 return flow.random.generate_random_batch_permutation_indices(x)

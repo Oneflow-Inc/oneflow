@@ -4,6 +4,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -24,7 +25,7 @@ def _run_test(
 
     @flow.global_function(func_config)
     def one_hot_job(
-        x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[dtype])
+        x: oft.Numpy.Placeholder(x_shape, dtype=type_name_to_flow_type[dtype])
     ):
         with flow.scope.placement(device_type, "0:0"):
             return flow.one_hot(

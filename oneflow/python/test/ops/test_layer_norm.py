@@ -6,6 +6,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -69,7 +70,7 @@ def test_layer_norm(_):
         func_config.train.model_update_conf(dict(naive_conf={}))
 
         @flow.global_function(func_config)
-        def test_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
+        def test_job(x: oft.Numpy.Placeholder(x_shape, dtype=dtype)):
             v = flow.get_variable(
                 "x",
                 shape=x_shape,

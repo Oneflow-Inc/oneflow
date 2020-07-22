@@ -1,5 +1,6 @@
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _test_user_op_attr_auto_type(input, attr1, attr2):
@@ -23,7 +24,7 @@ def test_user_op_attr_auto_type(test_case):
 
     @flow.global_function(function_config)
     def _test_user_op_attr_auto_type_job(
-        input=flow.FixedTensorDef((1,), dtype=flow.float)
+        input: oft.Numpy.Placeholder((1,), dtype=flow.float)
     ):
         attr1 = 1
         attr2 = 2
