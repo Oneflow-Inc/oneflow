@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 from contextlib import contextmanager
+from typing import Callable, Optional, Union
 
 import oneflow
 import oneflow.python.framework.watch_scope_context as watch_scope_context
@@ -39,7 +40,10 @@ class WatchScope(object):
 
 @oneflow_export("watch_scope")
 @contextmanager
-def watch_scope(blob_watcher=None, diff_blob_watcher=None):
+def watch_scope(
+    blob_watcher: Optional[Union[dict, Callable]] = None,
+    diff_blob_watcher: Optional[Union[dict, Callable]] = None,
+) -> None:
     watch_scope_context.WatchScopeStackPush(WatchScope(blob_watcher, diff_blob_watcher))
     yield
     watch_scope_context.WatchScopeStackPop()

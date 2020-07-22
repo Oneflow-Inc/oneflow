@@ -15,7 +15,7 @@ def make_job(shape, dtype=flow.float32):
         x=flow.FixedTensorDef(shape, dtype=dtype),
         dy=flow.FixedTensorDef(shape, dtype=dtype),
     ):
-        return flow.keras.activations.gelu_grad(x, dy)
+        return flow.math.gelu_grad(x, dy)
 
     return gelu_grad_job
 
@@ -29,7 +29,7 @@ def make_xla_job(shape, dtype=flow.float32):
         x=flow.FixedTensorDef(shape, dtype=dtype),
         dy=flow.FixedTensorDef(shape, dtype=dtype),
     ):
-        return flow.keras.activations.gelu_grad(x, dy)
+        return flow.math.gelu_grad(x, dy)
 
     return xla_gelu_grad_job
 
