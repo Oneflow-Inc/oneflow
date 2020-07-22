@@ -88,7 +88,7 @@ def CreateInitializer(std):
 
 
 def _Gelu(in_blob):
-    return flow.keras.activations.gelu(in_blob)
+    return flow.math.gelu(in_blob)
 
 
 def _TransformerModel(
@@ -389,10 +389,10 @@ def GetActivation(name):
     if name == "linear":
         return None
     elif name == "relu":
-        return flow.keras.activations.relu
+        return flow.math.relu
     elif name == "tanh":
-        return flow.keras.activations.tanh
+        return flow.math.tanh
     elif name == "gelu":
-        return flow.keras.activations.gelu
+        return flow.math.gelu
     else:
         raise Exception("unsupported activation")
