@@ -38,6 +38,10 @@ def format_file(path):
         txt = get_txt(path)
         new_content = txt + content
         w.write(new_content)
+    if content.startswith(txt):
+        return True
+    else:
+        return False
 
 
 def check_file(path):
@@ -52,6 +56,10 @@ def check_file(path):
 
 def do_check(x):
     return (x, check_file(x))
+
+
+def do_format(x):
+    return (x, format_file(x))
 
 
 def glob_files(path):
@@ -83,4 +91,6 @@ if __name__ == "__main__":
                 if is_formatted == False:
                     print("license absent:", p)
         if args.fix:
-            print(p.map(format_file, files))
+            for (p, is_formatted) in p.map(do_check, files):
+                if is_formatted == False:
+                    print("license added:", p)
