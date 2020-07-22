@@ -93,8 +93,8 @@ class ImageTargetResizeKernel final : public user_op::OpKernel {
     MultiThreadLoop(in_tensor->shape().elem_cnt(), [&](size_t i) {
       ImageTargetResize(in_img_buf[i], out_img_buf + i, target_size, max_size,
                         ctx->Attr<std::string>("interpolation"));
-      const int64_t org_h = out_img_buf[i].shape().At(0);
-      const int64_t org_w = out_img_buf[i].shape().At(1);
+      const int64_t org_h = in_img_buf[i].shape().At(0);
+      const int64_t org_w = in_img_buf[i].shape().At(1);
       const int64_t res_h = out_img_buf[i].shape().At(0);
       const int64_t res_w = out_img_buf[i].shape().At(1);
       if (size_ptr != nullptr) {
