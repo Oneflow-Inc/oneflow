@@ -65,8 +65,14 @@ class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 def FetchTensorBlobAsNumpyList(parallel_size, blob_object):
     def AsyncFetchBlobBody(Yield):
         fetcher = _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield)
-        vm_util.PhysicalRun(lambda builder: builder.FetchBlobBody(blob_object, fetcher))
-        python_callback.DeleteRegisteredCallback(fetcher)
+
+        def BuildFetchBlobBodyInstruction(builder):
+            builder.FetchBlobBody(blob_object, fetcher)
+            builder.InsertRemoveForeignCallbackInstruction(
+                blob_object.object_id, fetcher
+            )
+
+        vm_util.PhysicalRun(BuildFetchBlobBodyInstruction)
 
     return async_util.Await(parallel_size, AsyncFetchBlobBody)
 
@@ -84,10 +90,14 @@ def _GetPhysicalBlobBodyCache(blob_object):
 def _FetchBlobHeader(blob_object):
     def AsyncFetchBlobHeader(Yield):
         fetcher = _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield)
-        vm_util.PhysicalRun(
-            lambda builder: builder.FetchBlobHeader(blob_object, fetcher)
-        )
-        python_callback.DeleteRegisteredCallback(fetcher)
+
+        def BuildFetchBlobHeaderInstruction(builder):
+            builder.FetchBlobHeader(blob_object, fetcher)
+            builder.InsertRemoveForeignCallbackInstruction(
+                blob_object.object_id, fetcher
+            )
+
+        vm_util.PhysicalRun(BuildFetchBlobHeaderInstruction)
 
     return async_util.Await(1, AsyncFetchBlobHeader)[0]
 

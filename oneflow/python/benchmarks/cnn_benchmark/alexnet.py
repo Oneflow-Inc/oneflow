@@ -92,7 +92,7 @@ def _conv2d_layer(
 
     if activation is not None:
         if activation == "Relu":
-            output = flow.keras.activations.relu(output)
+            output = flow.math.relu(output)
         else:
             raise NotImplementedError
 
@@ -127,7 +127,7 @@ def alexnet(images, labels):
     fc1 = flow.layers.dense(
         inputs=pool5,
         units=4096,
-        activation=flow.keras.activations.relu,
+        activation=flow.math.relu,
         use_bias=False,
         kernel_initializer=flow.random_uniform_initializer(),
         bias_initializer=False,
@@ -140,7 +140,7 @@ def alexnet(images, labels):
     fc2 = flow.layers.dense(
         inputs=dropout1,
         units=4096,
-        activation=flow.keras.activations.relu,
+        activation=flow.math.relu,
         use_bias=False,
         kernel_initializer=flow.random_uniform_initializer(),
         bias_initializer=False,
