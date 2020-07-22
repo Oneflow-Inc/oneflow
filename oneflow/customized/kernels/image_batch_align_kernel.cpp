@@ -60,12 +60,17 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
     int32_t alignment = ctx->Attr<int32_t>("alignment");
     max_height = RoundUp(max_height, alignment);
     max_width = RoundUp(max_width, alignment);
+
+    const auto* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+    CHECK_EQ(out_tensor_desc->shape().NumAxes(), 4);
+    CHECK_LE(num_images, out_tensor_desc->shape().At(0));
+    CHECK_LE(max_height * max_width, out_tensor_desc->shape().Count(1, 3));
+    CHECK_EQ(channels, out_tensor_desc->shape().At(3));
     auto* mut_shape_view = out_tensor->mut_shape();
     mut_shape_view->Set(0, num_images);
     mut_shape_view->Set(1, max_height);
     mut_shape_view->Set(2, max_width);
-    // TODO(wenxiao): need to check static shape can hold dynamic shape
-    // Tensor should add Capacity method
+
     memset(out_tensor->mut_dptr(), 0,
            out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type()));
     MultiThreadLoop(num_images, [&](size_t i) {

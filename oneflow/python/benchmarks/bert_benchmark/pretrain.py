@@ -81,7 +81,7 @@ def PooledOutput(sequence_output, hidden_size, initializer_range):
             weight_initializer=bert_util.CreateInitializer(initializer_range),
             name="dense",
         )
-        pooled_output = flow.keras.activations.tanh(pooled_output)
+        pooled_output = flow.math.tanh(pooled_output)
     return pooled_output
 
 

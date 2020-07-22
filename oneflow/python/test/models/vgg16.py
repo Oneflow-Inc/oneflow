@@ -96,7 +96,7 @@ def _conv2d_layer(
         output = flow.nn.bias_add(output, bias, "NCHW")
     if activation is not None:
         if activation == op_conf_util.kRelu:
-            output = flow.keras.activations.relu(output)
+            output = flow.math.relu(output)
         else:
             raise NotImplementedError
 
@@ -177,7 +177,7 @@ def vgg(images, labels, trainable=True):
     fc6 = flow.layers.dense(
         inputs=pool5,
         units=4096,
-        activation=flow.keras.activations.relu,
+        activation=flow.math.relu,
         use_bias=True,
         kernel_initializer=_get_kernel_initializer(),
         bias_initializer=_get_bias_initializer(),
@@ -188,7 +188,7 @@ def vgg(images, labels, trainable=True):
     fc7 = flow.layers.dense(
         inputs=fc6,
         units=4096,
-        activation=flow.keras.activations.relu,
+        activation=flow.math.relu,
         use_bias=True,
         kernel_initializer=_get_kernel_initializer(),
         bias_initializer=_get_bias_initializer(),

@@ -101,9 +101,9 @@ def _conv2d_layer(
 
     if activation is not None:
         if activation == op_conf_util.kRelu:
-            output = flow.keras.activations.relu(output)
+            output = flow.math.relu(output)
         elif activation == op_conf_util.kSigmoid:
-            output = flow.keras.activations.sigmoid(output)
+            output = flow.math.sigmoid(output)
         else:
             raise NotImplementedError
 
