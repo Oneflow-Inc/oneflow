@@ -34,13 +34,13 @@ def get_txt(path: str):
 def format_file(path):
     with open(path, "r") as r:
         content = r.read()
-    with open(path, "w") as w:
-        txt = get_txt(path)
-        new_content = txt + content
-        w.write(new_content)
     if content.startswith(txt):
         return True
     else:
+        with open(path, "w") as w:
+            txt = get_txt(path)
+            new_content = txt + content
+            w.write(new_content)
         return False
 
 
