@@ -129,7 +129,7 @@ def image_resize(
             .Attr("interpolation_type", interpolation_type)
             .Build()
         )
-        res_image, scale, new_size = op.InferAndTryRun().RemoteBlobList()
+        res_image, new_size, scale = op.InferAndTryRun().RemoteBlobList()
 
     else:
         assert isinstance(target_size, (list, tuple))
@@ -168,7 +168,7 @@ def image_target_resize(
     if name is None:
         name = id_util.UniqueStr("ImageTargetResize_")
 
-    return image_resize(
+    res_image, scale, new_size = image_resize(
         images,
         target_size=target_size,
         min_size=min_size,
@@ -178,6 +178,7 @@ def image_target_resize(
         interpolation_type=interpolation_type,
         name=name,
     )
+    return res_image, new_size, scale
 
 
 @oneflow_export("image.CropMirrorNormalize", "image.crop_mirror_normalize")

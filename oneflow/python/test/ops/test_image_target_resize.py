@@ -157,5 +157,5 @@ def test_image_target_resize(test_case):
         ],
         800,
         1333,
-        True,
+        # True,
     )

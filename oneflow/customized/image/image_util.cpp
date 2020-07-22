@@ -74,17 +74,17 @@ cv::Mat GenCvMat4ImageTensor(const user_op::Tensor* image_tensor, int image_offs
   return cv::Mat();
 }
 
-int GetCvInterpolationFlag(const std::string& interpolation, int org_w, int org_h, int res_w,
+int GetCvInterpolationFlag(const std::string& interp_type, int org_w, int org_h, int res_w,
                            int res_h) {
-  if (interpolation == "bilinear") {
+  if (interp_type == "bilinear") {
     return cv::INTER_LINEAR;
-  } else if (interpolation == "nearest_neighbor" || interpolation == "nn") {
+  } else if (interp_type == "nearest_neighbor" || interp_type == "nn") {
     return cv::INTER_NEAREST;
-  } else if (interpolation == "bicubic") {
+  } else if (interp_type == "bicubic") {
     return cv::INTER_CUBIC;
-  } else if (interpolation == "area") {
+  } else if (interp_type == "area") {
     return cv::INTER_AREA;
-  } else if (interpolation == "auto") {
+  } else if (interp_type == "auto") {
     if (res_w * res_h >= org_w * org_h) {
       return cv::INTER_LINEAR;
     } else {
@@ -95,11 +95,12 @@ int GetCvInterpolationFlag(const std::string& interpolation, int org_w, int org_
   }
 }
 
-bool CheckInterpolationValid(const std::string& interpolation, std::ostringstream& err) {
-  if (interpolation != "bilinear" && interpolation != "nearest_neighbor" && interpolation != "nn"
-      && interpolation != "bicubic" && interpolation != "area" && interpolation != "auto") {
-    err << ", interpolation: " << interpolation
-        << " (interpolation must be one of bilinear, nearest_neighbor(nn), bicubic, area and auto)";
+bool CheckInterpolationValid(const std::string& interp_type, std::ostringstream& err) {
+  if (interp_type != "bilinear" && interp_type != "nearest_neighbor" && interp_type != "nn"
+      && interp_type != "bicubic" && interp_type != "area" && interp_type != "auto") {
+    err << ", interpolation_type: " << interp_type
+        << " (interpolation_type must be one of bilinear, nearest_neighbor(nn), bicubic, area and "
+           "auto)";
     return false;
   }
   return true;
