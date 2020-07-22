@@ -15,6 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _of_tensor_list_identity(test_case, verbose=False):
@@ -24,7 +25,7 @@ def _of_tensor_list_identity(test_case, verbose=False):
     func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
-    def job_fn(x_def=flow.MirroredTensorListDef(shape=(2, 5))):
+    def job_fn(x_def: oft.ListListNumpy.Placeholder(shape=(2, 5))):
         x = flow.identity(x_def)
         return x
 
@@ -50,7 +51,7 @@ def _of_tensor_list_to_tensor_buffer(test_case, verbose=False):
     func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
-    def job_fn(x_def=flow.MirroredTensorListDef(shape=(2, 5, 4), dtype=flow.float)):
+    def job_fn(x_def: oft.ListListNumpy.Placeholder(shape=(2, 5, 4), dtype=flow.float)):
         x = flow.tensor_list_to_tensor_buffer(x_def)
         return flow.tensor_buffer_to_tensor_list(x, shape=(5, 4), dtype=flow.float)
 

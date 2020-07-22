@@ -19,6 +19,7 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 from test_util import GenArgList
+import oneflow.typing as oft
 
 
 def _gen_test_data(params_shape, indices_shape, axis):
@@ -43,8 +44,8 @@ def _test_gather_model_parallel_fw(
 
     @flow.global_function(func_config)
     def gather_model_parallel_fw_job(
-        params=flow.FixedTensorDef(params_shape, dtype=flow.float),
-        indices=flow.FixedTensorDef(indices_shape, dtype=flow.int32),
+        params: oft.Numpy.Placeholder(params_shape, dtype=flow.float),
+        indices: oft.Numpy.Placeholder(indices_shape, dtype=flow.int32),
     ):
         with flow.scope.placement(device_type, "0:0-3"):
             params = params.with_distribute(flow.distribute.split(split_axis))

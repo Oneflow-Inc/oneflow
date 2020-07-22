@@ -15,6 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def test_1n1c(test_case):
@@ -39,7 +40,7 @@ def NaiveTest(test_case):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
-    def AddJob(a=flow.FixedTensorDef(shape), b=flow.FixedTensorDef(shape)):
+    def AddJob(a: oft.Numpy.Placeholder(shape), b: oft.Numpy.Placeholder(shape)):
         return a + b + b
 
     x = np.random.rand(*shape).astype(np.float32)

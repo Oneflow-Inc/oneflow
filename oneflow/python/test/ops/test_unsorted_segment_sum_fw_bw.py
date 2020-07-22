@@ -19,6 +19,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -66,8 +67,10 @@ def _make_unsorted_segment_sum_fn(
 
         @flow.global_function(func_config)
         def unsorted_segment_sum_fn(
-            data_def=flow.MirroredTensorDef(data.shape, dtype=flow.float),
-            segment_ids_def=flow.MirroredTensorDef(segment_ids.shape, dtype=flow.int32),
+            data_def: oft.ListNumpy.Placeholder(data.shape, dtype=flow.float),
+            segment_ids_def: oft.ListNumpy.Placeholder(
+                segment_ids.shape, dtype=flow.int32
+            ),
         ):
             return do_unsorted_segment_sum(data_def, segment_ids_def)
 
@@ -75,8 +78,8 @@ def _make_unsorted_segment_sum_fn(
 
         @flow.global_function(func_config)
         def unsorted_segment_sum_fn(
-            data_def=flow.FixedTensorDef(data.shape, dtype=flow.float),
-            segment_ids_def=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),
+            data_def: oft.Numpy.Placeholder(data.shape, dtype=flow.float),
+            segment_ids_def: oft.Numpy.Placeholder(segment_ids.shape, dtype=flow.int32),
         ):
             return do_unsorted_segment_sum(data_def, segment_ids_def)
 

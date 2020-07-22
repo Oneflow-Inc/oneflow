@@ -15,6 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -37,7 +38,7 @@ def _check_unique(test_case, x, y, idx, count, num_unique):
 
 def _run_test(test_case, x, dtype, device):
     @flow.global_function(func_config)
-    def UniqueWithCountsJob(x=flow.FixedTensorDef(x.shape, dtype=dtype)):
+    def UniqueWithCountsJob(x: oft.Numpy.Placeholder(x.shape, dtype=dtype)):
         with flow.scope.placement(device, "0:0"):
             return flow.experimental.unique_with_counts(x)
 

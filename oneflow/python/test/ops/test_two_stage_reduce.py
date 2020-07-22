@@ -15,6 +15,8 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
+
 from collections import OrderedDict
 
 from test_util import GenArgList
@@ -48,7 +50,7 @@ def _test_two_stage_reduce(
     func_config.use_boxing_v2(True)
 
     @flow.global_function(func_config)
-    def two_stage_reduce_job(x=flow.FixedTensorDef((4, 20, 20, 20))):
+    def two_stage_reduce_job(x: oft.Numpy.Placeholder((4, 20, 20, 20))):
         with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
                 name="v1",

@@ -20,6 +20,8 @@ from collections.abc import Iterable
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
+
 import tensorflow as tf
 import test_global_storage
 
@@ -59,7 +61,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(func_config)
-    def FlowJob(x=flow.FixedTensorDef(x.shape)):
+    def FlowJob(x: oft.Numpy.Placeholder(x.shape)):
         with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
                 name="v1",

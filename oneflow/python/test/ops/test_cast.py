@@ -21,6 +21,7 @@ import oneflow as flow
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+import oneflow.typing as oft
 
 
 def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dtype):
@@ -31,7 +32,7 @@ def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dt
 
     @flow.global_function(func_config)
     def cast_forward(
-        input_def=flow.FixedTensorDef(
+        input_def: oft.Numpy.Placeholder(
             shape=input_shape, dtype=type_name_to_flow_type[dtype]
         )
     ):

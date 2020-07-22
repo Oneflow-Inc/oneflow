@@ -15,6 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -22,7 +23,7 @@ func_config.default_data_type(flow.float)
 
 def test_naive(test_case):
     @flow.global_function(func_config)
-    def ModJob(a=flow.FixedTensorDef((5, 2)), b=flow.FixedTensorDef((5, 2))):
+    def ModJob(a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((5, 2))):
         return a % b
 
     x = np.random.rand(5, 2).astype(np.float32)
@@ -34,7 +35,7 @@ def test_naive(test_case):
 
 def test_broadcast(test_case):
     @flow.global_function(func_config)
-    def ModJob(a=flow.FixedTensorDef((5, 2)), b=flow.FixedTensorDef((1, 2))):
+    def ModJob(a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((1, 2))):
         return a % b
 
     x = np.random.rand(5, 2).astype(np.float32)
@@ -62,7 +63,7 @@ def test_xyz_mod_1y1(test_case):
 
 def GenerateTest(test_case, a_shape, b_shape):
     @flow.global_function(func_config)
-    def ModJob(a=flow.FixedTensorDef(a_shape), b=flow.FixedTensorDef(b_shape)):
+    def ModJob(a: oft.Numpy.Placeholder(a_shape), b: oft.Numpy.Placeholder(b_shape)):
         return a % b
 
     a = np.random.rand(*a_shape).astype(np.float32)

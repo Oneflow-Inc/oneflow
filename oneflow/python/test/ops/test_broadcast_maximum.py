@@ -15,6 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -27,8 +28,8 @@ def _check(test_case, a, b, out):
 def _run_test(test_case, a, b, dtype, device):
     @flow.global_function(func_config)
     def BroadcastMaximum(
-        a=flow.FixedTensorDef(a.shape, dtype=dtype),
-        b=flow.FixedTensorDef(b.shape, dtype=dtype),
+        a: oft.Numpy.Placeholder(a.shape, dtype=dtype),
+        b: oft.Numpy.Placeholder(b.shape, dtype=dtype),
     ):
         with flow.scope.placement(device, "0:0"):
             return flow.math.maximum(a, b)

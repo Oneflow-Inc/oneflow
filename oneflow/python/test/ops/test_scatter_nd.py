@@ -19,6 +19,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -86,8 +87,8 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
 
         @flow.global_function(func_config)
         def scatter_nd_fn(
-            indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
-            updates_def=flow.MirroredTensorDef(updates.shape, dtype=flow.float),
+            indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
+            updates_def: oft.ListNumpy.Placeholder(updates.shape, dtype=flow.float),
         ):
             return do_scatter_nd(indices_def, updates_def)
 
@@ -95,8 +96,8 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
 
         @flow.global_function(func_config)
         def scatter_nd_fn(
-            indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
-            updates_def=flow.FixedTensorDef(updates.shape, dtype=flow.float),
+            indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
+            updates_def: oft.Numpy.Placeholder(updates.shape, dtype=flow.float),
         ):
             return do_scatter_nd(indices_def, updates_def)
 
@@ -198,9 +199,9 @@ def _compare_scatter_nd_update_with_tf(
 
     @flow.global_function(func_config)
     def scatter_nd_update_grad_fn(
-        x_def=flow.FixedTensorDef(params.shape, dtype=flow.float),
-        indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
-        y_def=flow.FixedTensorDef(updates.shape, dtype=flow.float),
+        x_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float),
+        indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
+        y_def: oft.Numpy.Placeholder(updates.shape, dtype=flow.float),
     ):
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -282,9 +283,9 @@ def _of_tensor_scatter_nd_add(
 
         @flow.global_function(func_config)
         def tensor_scatter_nd_add_fn(
-            params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
-            indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
-            updates_def=flow.MirroredTensorDef(updates.shape, dtype=flow.float),
+            params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
+            indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
+            updates_def: oft.ListNumpy.Placeholder(updates.shape, dtype=flow.float),
         ):
             return do_tensor_scatter_nd_add(params_def, indices_def, updates_def)
 
@@ -301,9 +302,9 @@ def _of_tensor_scatter_nd_add(
 
         @flow.global_function(func_config)
         def tensor_scatter_nd_add_fn(
-            params_def=flow.FixedTensorDef(params.shape, dtype=flow.float),
-            indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
-            updates_def=flow.FixedTensorDef(updates.shape, dtype=flow.float),
+            params_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float),
+            indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
+            updates_def: oft.Numpy.Placeholder(updates.shape, dtype=flow.float),
         ):
             return do_tensor_scatter_nd_add(params_def, indices_def, updates_def)
 
@@ -370,8 +371,8 @@ def _of_scatter_nd_dynamic_indices(
 
     @flow.global_function(func_config)
     def scatter_nd_fn(
-        indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
-        updates_def=flow.MirroredTensorDef(updates_static_shape, dtype=flow.float),
+        indices_def: oft.ListNumpy.Placeholder(indices_static_shape, dtype=flow.int32),
+        updates_def: oft.ListNumpy.Placeholder(updates_static_shape, dtype=flow.float),
     ):
         with flow.scope.placement("gpu", "0:0"):
             return flow.scatter_nd(indices_def, updates_def, params_shape)
@@ -409,9 +410,9 @@ def _of_tensor_scatter_nd_update_dynamic_indices(
 
     @flow.global_function(func_config)
     def tensor_scatter_nd_update_fn(
-        params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
-        indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
-        updates_def=flow.MirroredTensorDef(updates_static_shape, dtype=flow.float),
+        params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
+        indices_def: oft.ListNumpy.Placeholder(indices_static_shape, dtype=flow.int32),
+        updates_def: oft.ListNumpy.Placeholder(updates_static_shape, dtype=flow.float),
     ):
         with flow.scope.placement("gpu", "0:0"):
             return flow.tensor_scatter_nd_update(params_def, indices_def, updates_def)
@@ -456,9 +457,9 @@ def _of_tensor_scatter_nd_add_dynamic_indices(
 
     @flow.global_function(func_config)
     def tensor_scatter_nd_add_fn(
-        params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
-        indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
-        updates_def=flow.MirroredTensorDef(updates_static_shape, dtype=flow.float),
+        params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
+        indices_def: oft.ListNumpy.Placeholder(indices_static_shape, dtype=flow.int32),
+        updates_def: oft.ListNumpy.Placeholder(updates_static_shape, dtype=flow.float),
     ):
         with flow.scope.placement("gpu", "0:0"):
             return flow.tensor_scatter_nd_add(params_def, indices_def, updates_def)

@@ -15,6 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 @flow.unittest.num_nodes_required(2)
@@ -27,7 +28,7 @@ def test_multi_node_dynamic_binary_split_concat_empty(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function(func_config)
-    def DynamicBinaryJob(x=flow.MirroredTensorDef((20,))):
+    def DynamicBinaryJob(x: oft.ListNumpy.Placeholder((20,))):
         print("in_shape: ", x.shape)
         with flow.scope.placement("cpu", "0:0"):
             out_list = flow.experimental.dynamic_binary_split(

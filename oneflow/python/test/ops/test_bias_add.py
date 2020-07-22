@@ -21,6 +21,7 @@ import oneflow as flow
 import tensorflow as tf
 import test_global_storage
 from test_util import Args, GenArgDict
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -36,7 +37,8 @@ def RunOneflowBiasAdd(device_type, value, bias, flow_args):
 
     @flow.global_function(func_config)
     def FlowJob(
-        value=flow.FixedTensorDef(value.shape), bias=flow.FixedTensorDef(bias.shape)
+        value: oft.Numpy.Placeholder(value.shape),
+        bias: oft.Numpy.Placeholder(bias.shape),
     ):
         with flow.scope.placement(device_type, "0:0"):
             value += flow.get_variable(

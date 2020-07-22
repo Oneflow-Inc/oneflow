@@ -21,6 +21,7 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type
+import oneflow.typing as oft
 
 
 def of_run(device_type, x_shape, rate, seed):
@@ -29,7 +30,7 @@ def of_run(device_type, x_shape, rate, seed):
     func_config = flow.FunctionConfig()
 
     @flow.global_function(func_config)
-    def RandomMaskLikeJob(x=flow.FixedTensorDef(x_shape)):
+    def RandomMaskLikeJob(x: oft.Numpy.Placeholder(x_shape)):
         with flow.scope.placement(device_type, "0:0"):
             mask = flow.nn.random_mask_like(x, rate=rate, seed=seed)
             return mask

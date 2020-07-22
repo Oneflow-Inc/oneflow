@@ -18,6 +18,7 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
@@ -92,10 +93,10 @@ def test_smooth_l1_loss(_):
 
         @flow.global_function(func_config)
         def TestJob(
-            prediction=flow.FixedTensorDef(
+            prediction: oft.Numpy.Placeholder(
                 prediction_shape, dtype=type_name_to_flow_type[data_type]
             ),
-            label=flow.FixedTensorDef(
+            label: oft.Numpy.Placeholder(
                 prediction_shape, dtype=type_name_to_flow_type[data_type]
             ),
         ):

@@ -15,6 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def MakeFuncConfig(enable_inplace):
@@ -48,7 +49,7 @@ def test_inplace_variable(test_case):
 
 def test_deadlock(test_case):
     @flow.global_function(MakeFuncConfig(True))
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
 
@@ -57,7 +58,7 @@ def test_deadlock(test_case):
 
 def test_nodeadlock_with_return(test_case):
     @flow.global_function(MakeFuncConfig(True))
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
         return y
@@ -67,7 +68,7 @@ def test_nodeadlock_with_return(test_case):
 
 def test_reentrant_lock_check_failed(test_case):
     @flow.global_function(MakeFuncConfig(True))
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
 
