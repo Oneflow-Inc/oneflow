@@ -3,6 +3,7 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 from test_util import GenArgDict
+import oneflow.typing as oft
 
 flow_to_np_dtype_dict = {
     flow.int32: np.int32,
@@ -30,7 +31,7 @@ def _of_assign_and_relu(value, dtype, device_type):
     func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
 
     @flow.global_function(func_config)
-    def assign_fn(value_def=flow.FixedTensorDef(value.shape, dtype=dtype)):
+    def assign_fn(value_def: oft.Numpy.Placeholder(value.shape, dtype=dtype)):
         var = flow.get_variable(
             name="var",
             shape=value.shape,

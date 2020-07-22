@@ -1,5 +1,6 @@
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def test_simple(test_case):
@@ -10,7 +11,7 @@ def test_simple(test_case):
         test_case.assertTrue(np.allclose(data, x.numpy()))
 
     @flow.global_function()
-    def ReluJob(x=flow.FixedTensorDef((10,))):
+    def ReluJob(x: oft.Numpy.Placeholder((10,))):
         flow.watch(x, EqOnes)
 
     ReluJob(data)
@@ -24,7 +25,7 @@ def test_two_device(test_case):
         test_case.assertTrue(np.allclose(data, x.numpy()))
 
     @flow.global_function()
-    def ReluJob(x=flow.FixedTensorDef((10,))):
+    def ReluJob(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.relu(x)
         flow.watch(y, EqOnes)
 

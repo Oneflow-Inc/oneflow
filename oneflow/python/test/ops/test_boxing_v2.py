@@ -3,6 +3,7 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 from test_util import GenArgList
+import oneflow.typing as oft
 
 
 def _test_split_to_split(
@@ -21,7 +22,7 @@ def _test_split_to_split(
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def split_to_split_job(x=flow.FixedTensorDef((96, 96))):
+    def split_to_split_job(x: oft.Numpy.Placeholder((96, 96))):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(x.with_distribute(flow.distribute.split(src_axis)))
         with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
@@ -60,7 +61,7 @@ def _test_split_to_broadcast(
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def split_to_broadcast_job(x=flow.FixedTensorDef((96, 96))):
+    def split_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96))):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(x.with_distribute(flow.distribute.split(src_axis)))
         with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
@@ -98,7 +99,7 @@ def _test_broadcast_to_split(
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def broadcast_to_split_job(x=flow.FixedTensorDef((96, 96))):
+    def broadcast_to_split_job(x: oft.Numpy.Placeholder((96, 96))):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(x.with_distribute(flow.distribute.broadcast()))
         with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
@@ -136,7 +137,7 @@ def _test_partial_sum_to_split(
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def partial_sum_to_split_job(x=flow.FixedTensorDef((96, 96, 96))):
+    def partial_sum_to_split_job(x: oft.Numpy.Placeholder((96, 96, 96))):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(x.with_distribute(flow.distribute.split(0)))
             src = flow.math.reduce_sum(src, axis=0)
@@ -170,7 +171,7 @@ def _test_partial_sum_to_broadcast(
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def partial_sum_to_broadcast_job(x=flow.FixedTensorDef((96, 96, 96))):
+    def partial_sum_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96, 96))):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(x.with_distribute(flow.distribute.split(0)))
             src = flow.math.reduce_sum(src, axis=0)
@@ -203,7 +204,7 @@ def _test_broadcast_to_broadcast(
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def broadcast_to_broadcast_job(x=flow.FixedTensorDef((96, 96, 96))):
+    def broadcast_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96, 96))):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(x.with_distribute(flow.distribute.broadcast()))
         with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
@@ -236,7 +237,7 @@ def _test_multi_lbi(
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def multi_lbi_job(x=flow.FixedTensorDef((96, 96, 96))):
+    def multi_lbi_job(x: oft.Numpy.Placeholder((96, 96, 96))):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src_s0 = flow.identity(x.with_distribute(flow.distribute.split(0)))
             src_s1 = flow.identity(x.with_distribute(flow.distribute.split(1)))
