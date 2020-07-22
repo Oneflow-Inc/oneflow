@@ -1,6 +1,5 @@
 #include "oneflow/customized/summary/histogram.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/customized/summary/summary.pb.h"
 #include <cfloat>
 #include <algorithm>
 

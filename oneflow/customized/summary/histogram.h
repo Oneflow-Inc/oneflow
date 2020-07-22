@@ -2,7 +2,7 @@
 #define ONEFLOW_CUSTOMIZED_SUMMARY_HISTOGRAM_H_
 
 #include <vector>
-#include "oneflow/customized/summary/summary.pb.h"
+#include "oneflow/core/summary/summary.pb.h"
 
 namespace oneflow {
 

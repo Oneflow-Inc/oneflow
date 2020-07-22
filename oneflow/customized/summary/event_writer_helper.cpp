@@ -3,8 +3,8 @@
 #include "oneflow/customized/summary/events_writer.h"
 #include "oneflow/customized/summary/histogram.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/customized/summary/summary.pb.h"
-#include "oneflow/customized/summary/event.pb.h"
+#include "oneflow/core/summary/summary.pb.h"
+#include "oneflow/core/summary/event.pb.h"
 
 #include <png.h>
 #include <zlib.h>
