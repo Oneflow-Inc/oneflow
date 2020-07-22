@@ -1,3 +1,4 @@
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -33,7 +34,7 @@ def tensor_list_to_tensor_buffer(
 def tensor_buffer_to_tensor_list(
     input: remote_blob_util.BlobDef,
     shape: Sequence[int],
-    dtype: int,
+    dtype: dtype_util.dtype,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     if name is None:

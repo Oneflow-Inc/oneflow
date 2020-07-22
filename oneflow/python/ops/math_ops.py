@@ -457,7 +457,7 @@ def unsorted_batch_segment_sum(
 
 @oneflow_export("cast")
 def cast(
-    x: remote_blob_util.BlobDef, dtype: int, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, dtype: dtype_util.dtype, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Return a `Blob` of given data type `dtype` and indentical shape to `x`
 

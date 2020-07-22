@@ -30,7 +30,7 @@ import os
 def api_get_variable(
     name: str,
     shape: Optional[Sequence[int]] = None,
-    dtype: Optional[int] = dtype_util.float32,
+    dtype: Optional[dtype_util.dtype] = dtype_util.float32,
     initializer: Optional[op_conf_util.InitializerConf] = None,
     regularizer: Optional[op_conf_util.RegularizerConf] = None,
     trainable: Optional[bool] = None,

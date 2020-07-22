@@ -12,7 +12,7 @@ from typing import Optional, Sequence
 
 @oneflow_export("constant_initializer")
 def constant_initializer(
-    value: float = 0, dtype: int = dtype_util.kFloat
+    value: float = 0, dtype: dtype_util.dtype = dtype_util.float
 ) -> op_conf_util.InitializerConf:
     r"""Initializer that generates blob with constant values.
     
@@ -39,18 +39,22 @@ def constant_initializer(
 
 
 @oneflow_export("zeros_initializer")
-def zeros_initializer(dtype: int = dtype_util.kFloat,) -> op_conf_util.InitializerConf:
+def zeros_initializer(
+    dtype: dtype_util.dtype = dtype_util.float,
+) -> op_conf_util.InitializerConf:
     return constant_initializer(0.0, dtype)
 
 
 @oneflow_export("ones_initializer")
-def ones_initializer(dtype: int = dtype_util.kFloat,) -> op_conf_util.InitializerConf:
+def ones_initializer(
+    dtype: dtype_util.dtype = dtype_util.float,
+) -> op_conf_util.InitializerConf:
     return constant_initializer(1.0, dtype)
 
 
 @oneflow_export("random_uniform_initializer")
 def random_uniform_initializer(
-    minval: float = 0, maxval: float = 1, dtype: int = dtype_util.kFloat
+    minval: float = 0, maxval: float = 1, dtype: dtype_util.dtype = dtype_util.float
 ) -> op_conf_util.InitializerConf:
     r"""Initializer that generates blob with a uniform distribution.
 
@@ -85,7 +89,7 @@ def random_normal_initializer(
     mean: float = 0.0,
     stddev: float = 1.0,
     seed: Optional[int] = None,
-    dtype: Optional[int] = None,
+    dtype: Optional[dtype_util.dtype] = None,
 ) -> op_conf_util.InitializerConf:
     r"""Initializer that generates blob with a normal distribution.
 

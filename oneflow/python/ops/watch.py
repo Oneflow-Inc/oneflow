@@ -72,7 +72,8 @@ def LazyWatch(blob_watched, handler_or_prompt=None):
 
 @oneflow_export("watch_diff")
 def WatchDiff(
-    blob_watched: remote_blob_util.BlobDef, handler_or_prompt: Optional[Callable] = None
+    blob_watched: remote_blob_util.BlobDef,
+    handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
     r"""Register callback for gradient of a blob. The callback will be called after the computation produce the gradient blob finishes.
 

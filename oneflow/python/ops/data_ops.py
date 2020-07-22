@@ -6,6 +6,7 @@ import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.record.image_pb2 as image_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -142,8 +143,8 @@ class BlobConf(object):
     def __init__(
         self,
         name: str,
-        shape: Union[List[int], Tuple[int]],
-        dtype: int,
+        shape: Sequence[int],
+        dtype: dtype_util.dtype,
         codec: Union[ImageCodec, RawCodec],
         preprocessors: Optional[
             Sequence[
@@ -285,8 +286,8 @@ def ofrecord_reader(
 
 @oneflow_export("data.decode_random")
 def decode_random(
-    shape: Union[list, tuple],
-    dtype: int,
+    shape: Sequence[int],
+    dtype: dtype_util.dtype,
     batch_size: int = 1,
     initializer: Optional[op_conf_util.InitializerConf] = None,
     tick: Optional[remote_blob_util.BlobDef] = None,
