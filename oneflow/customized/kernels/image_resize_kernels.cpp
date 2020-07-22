@@ -177,12 +177,12 @@ class ImageResizeKeepAspectRatioKernel final : public user_op::OpKernel {
 
     const bool resize_longer = ctx->Attr<bool>("resize_longer");
     const int32_t target_size = ctx->Attr<int32_t>("target_size");
-    const int32_t min_size = ctx->Attr<int32_t>("max_size");
+    const int32_t min_size = ctx->Attr<int32_t>("min_size");
     const int32_t max_size = ctx->Attr<int32_t>("max_size");
 
     MultiThreadLoop(in_tensor->shape().elem_cnt(), [&](size_t i) {
       ImageTargetResize(in_img_buf[i], out_img_buf + i, resize_longer, target_size, min_size,
-                        max_size, ctx->Attr<std::string>("interpolation"));
+                        max_size, ctx->Attr<std::string>("interpolation_type"));
       const int64_t org_h = in_img_buf[i].shape().At(0);
       const int64_t org_w = in_img_buf[i].shape().At(1);
       const int64_t res_h = out_img_buf[i].shape().At(0);

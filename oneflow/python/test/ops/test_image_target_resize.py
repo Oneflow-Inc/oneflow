@@ -19,7 +19,10 @@ def _of_image_target_resize(images, image_static_shape, target_size, max_size):
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
         resized_images_buffer, size, scale = flow.image_target_resize(
-            images_buffer, target_size, max_size
+            images_buffer,
+            target_size=target_size,
+            max_size=max_size,
+            resize_side="shorter",
         )
         resized_images = flow.tensor_buffer_to_tensor_list(
             resized_images_buffer,
@@ -154,5 +157,5 @@ def test_image_target_resize(test_case):
         ],
         800,
         1333,
-        # True,
+        True,
     )

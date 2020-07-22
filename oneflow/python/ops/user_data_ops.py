@@ -6,7 +6,7 @@ import oneflow.core.common.data_type_pb2 as data_type_util
 
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.remote_blob import BlobDef
-from typing import Sequence, Optional
+from typing import Sequence, Optional, Union
 
 
 @oneflow_export("data.OFRecordRawDecoder", "data.ofrecord_raw_decoder")
@@ -89,32 +89,95 @@ def OFRecordImageDecoder(input_blob, blob_name, color_space="BGR", name=None):
 @oneflow_export("image.Resize", "image.resize")
 def image_resize(
     image: BlobDef,
-    target_size: Sequence[int],
+    target_size: Union[int, Sequence[int]],
+    min_size: Optional[int] = None,
+    max_size: Optional[int] = None,
+    keep_aspect_ratio: bool = False,
+    resize_side: str = "shorter",
     channels: int = 3,
     dtype: int = data_type_util.kUInt8,
-    interpolation: str = "auto",
+    interpolation_type: str = "auto",
     name=None,
 ):
     if name is None:
         name = id_util.UniqueStr("ImageResize_")
 
-    assert len(target_size) == 2
-    target_w, target_h = target_size
+    if keep_aspect_ratio:
+        assert isinstance(target_size, int)
+        assert resize_side in (
+            "shorter",
+            "longer",
+        ), 'resize_side must be "shorter" or "longer"'
 
-    op = (
-        flow.user_op_builder(name)
-        .Op("image_resize")
-        .Input("in", [image])
-        .Output("out")
-        .Output("scale")
-        .Attr("target_width", target_w)
-        .Attr("target_height", target_h)
-        .Attr("channels", channels)
-        .Attr("data_type", dtype)
-        .Attr("interpolation", interpolation)
-        .Build()
+        if min_size is None:
+            min_size = 0
+
+        if max_size is None:
+            max_size = 0
+
+        op = (
+            flow.user_op_builder(name)
+            .Op("image_resize_keep_aspect_ratio")
+            .Input("in", [image])
+            .Output("out")
+            .Output("size")
+            .Output("scale")
+            .Attr("target_size", target_size)
+            .Attr("min_size", min_size)
+            .Attr("max_size", max_size)
+            .Attr("resize_longer", True if resize_side == "longer" else False)
+            .Attr("interpolation_type", interpolation_type)
+            .Build()
+        )
+        res_image, scale, new_size = op.InferAndTryRun().RemoteBlobList()
+
+    else:
+        assert isinstance(target_size, (list, tuple))
+        assert len(target_size) == 2
+        target_w, target_h = target_size
+
+        op = (
+            flow.user_op_builder(name)
+            .Op("image_resize_to_fixed")
+            .Input("in", [image])
+            .Output("out")
+            .Output("scale")
+            .Attr("target_width", target_w)
+            .Attr("target_height", target_h)
+            .Attr("channels", channels)
+            .Attr("data_type", dtype)
+            .Attr("interpolation_type", interpolation_type)
+            .Build()
+        )
+        res_image, scale = op.InferAndTryRun().RemoteBlobList()
+        new_size = None
+
+    return res_image, scale, new_size
+
+
+@oneflow_export("image.target_resize", "image_target_resize")
+def image_target_resize(
+    images: BlobDef,
+    target_size: int,
+    min_size: Optional[int] = None,
+    max_size: Optional[int] = None,
+    resize_side: str = "shorter",
+    interpolation_type: str = "auto",
+    name: Optional[str] = None,
+):
+    if name is None:
+        name = id_util.UniqueStr("ImageTargetResize_")
+
+    return image_resize(
+        images,
+        target_size=target_size,
+        min_size=min_size,
+        max_size=max_size,
+        keep_aspect_ratio=True,
+        resize_side=resize_side,
+        interpolation_type=interpolation_type,
+        name=name,
     )
-    return op.InferAndTryRun().RemoteBlobList()
 
 
 @oneflow_export("image.CropMirrorNormalize", "image.crop_mirror_normalize")
@@ -190,34 +253,6 @@ def image_decode(images_bytes_buffer, dtype=flow.uint8, color_space="BGR", name=
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
-
-
-@oneflow_export("image.target_resize", "image_target_resize")
-def image_target_resize(
-    images: BlobDef,
-    target_size: int,
-    max_size: Optional[int] = None,
-    name: Optional[str] = None,
-):
-    # TODO: check target_size and max_size valid
-    if name is None:
-        name = id_util.UniqueStr("ImageTargetResize_")
-
-    if max_size is None:
-        max_size = 0
-
-    op = (
-        flow.user_op_builder(name)
-        .Op("image_target_resize")
-        .Input("in", [images])
-        .Output("out")
-        .Output("size")
-        .Output("scale")
-        .Attr("target_size", target_size)
-        .Attr("max_size", max_size)
-        .Build()
-    )
-    return op.InferAndTryRun().RemoteBlobList()
 
 
 @oneflow_export("image.batch_align", "image_batch_align")

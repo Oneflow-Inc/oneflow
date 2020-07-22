@@ -33,8 +33,8 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_to_fixed")
         err << ", data_type: " << data_type << " (only support kUInt8 and kFloat for now)";
         check_failed = true;
       }
-      const std::string& interpolation = conf.attr<std::string>("interpolation");
-      if (!CheckInterpolationValid(interpolation, err)) { check_failed = true; }
+      const std::string& interp_type = conf.attr<std::string>("interpolation_type");
+      if (!CheckInterpolationValid(interp_type, err)) { check_failed = true; }
       if (check_failed) { return oneflow::Error::CheckFailed() << err.str(); }
       return Maybe<void>::Ok();
     })
@@ -79,7 +79,7 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
     .Attr<int32_t>("min_size", UserOpAttrType::kAtInt32, 0)
     .Attr<int32_t>("max_size", UserOpAttrType::kAtInt32, 0)
     .Attr<bool>("resize_longer", UserOpAttrType::kAtBool, false)
-    .Attr<std::string>("interpolation", UserOpAttrType::kAtString, "bilinear")
+    .Attr<std::string>("interpolation_type", UserOpAttrType::kAtString, "bilinear")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       bool check_failed = false;
@@ -96,8 +96,8 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
             << " (max_size must be greater than target_size or equal to 0)";
         check_failed = true;
       }
-      const std::string& interpolation = conf.attr<std::string>("interpolation");
-      if (!CheckInterpolationValid(interpolation, err)) { check_failed = true; }
+      const std::string& interp_type = conf.attr<std::string>("interpolation_type");
+      if (!CheckInterpolationValid(interp_type, err)) { check_failed = true; }
       if (check_failed) { return oneflow::Error::CheckFailed() << err.str(); }
       return Maybe<void>::Ok();
     })

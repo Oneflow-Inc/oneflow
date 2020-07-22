@@ -24,7 +24,13 @@ def DataLoaderJob():
     label = flow.data.OFRecordRawDecoder(
         ofrecord, "class/label", shape=(), dtype=flow.int32
     )
-    rsz, _ = flow.image.Resize(image, (224, 224), channels=3, interpolation="bilinear")
+    rsz, _, _ = flow.image.Resize(
+        image,
+        target_size=(224, 224),
+        keep_aspect_ratio=False,
+        channels=3,
+        interpolation_type="bilinear",
+    )
     print(rsz.shape)
     print(label.shape)
 
@@ -58,7 +64,9 @@ def DataLoaderEvalJob():
     label = flow.data.OFRecordRawDecoder(
         ofrecord, "class/label", shape=(), dtype=flow.int32
     )
-    rsz, _, _ = flow.image.target_resize(image, target_size=256)
+    rsz, _, _ = flow.image.Resize(
+        image, target_size=256, keep_aspect_ratio=True, resize_side="shorter"
+    )
 
     normal = flow.image.CropMirrorNormalize(
         rsz,
