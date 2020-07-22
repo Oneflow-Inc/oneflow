@@ -27,7 +27,7 @@ def test_naive(test_case):
     def AddJob(xs: Tuple[(oft.Numpy.Placeholder((5, 2)),) * 3]):
         return flow.math.add_n(xs)
 
-    inputs = [np.random.rand(5, 2).astype(np.float32) for i in range(3)]
+    inputs = tuple(np.random.rand(5, 2).astype(np.float32) for i in range(3))
     r = AddJob(inputs).get().numpy()
     test_case.assertTrue(np.allclose(r, sum(inputs)))
 
@@ -98,9 +98,9 @@ def test_100_inputs(test_case):
 
 def GenerateTest(test_case, shape, num_inputs):
     @flow.global_function(func_config)
-    def AddJob(xs=[flow.FixedTensorDef(shape)] * num_inputs):
+    def AddJob(xs: Tuple[(oft.Numpy.Placeholder(shape),) * num_inputs]):
         return flow.math.add_n(xs)
 
-    inputs = [np.random.rand(*shape).astype(np.float32) for i in range(num_inputs)]
+    inputs = tuple(np.random.rand(*shape).astype(np.float32) for i in range(num_inputs))
     r = AddJob(inputs).get().numpy()
     test_case.assertTrue(np.allclose(r, sum(inputs)))

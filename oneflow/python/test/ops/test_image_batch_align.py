@@ -16,6 +16,7 @@ limitations under the License.
 import cv2
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _of_image_batch_align(images, input_shape, output_shape, alignment):
@@ -26,7 +27,7 @@ def _of_image_batch_align(images, input_shape, output_shape, alignment):
 
     @flow.global_function(func_config)
     def image_batch_align_job(
-        images_def=flow.MirroredTensorListDef(shape=input_shape, dtype=flow.float)
+        images_def: oft.ListListNumpy.Placeholder(shape=input_shape, dtype=flow.float)
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
         image = flow.image_batch_align(

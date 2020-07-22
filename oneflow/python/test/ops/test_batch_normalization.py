@@ -21,6 +21,7 @@ import oneflow as flow
 import tensorflow as tf
 import test_global_storage
 from test_util import Args, GenArgDict, type_name_to_flow_type, type_name_to_np_type
+import oneflow.typing as oft
 
 
 def test_no_watch_scope_consistent(test_case):
@@ -29,7 +30,7 @@ def test_no_watch_scope_consistent(test_case):
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((2, 8, 32, 32))):
+    def Foo(x: oft.Numpy.Placeholder((2, 8, 32, 32))):
         return flow.layers.batch_normalization(x)
 
     Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
@@ -44,7 +45,7 @@ def test_train_consistent(test_case):
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((2, 8, 32, 32))):
+    def Foo(x: oft.Numpy.Placeholder((2, 8, 32, 32))):
         y = flow.layers.batch_normalization(x, axis=1)
         flow.losses.add_loss(flow.math.reduce_sum(y))
 
@@ -59,7 +60,7 @@ def TODO_test_train(test_case):
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((2, 8, 32, 32))):
+    def Foo(x: oft.Numpy.Placeholder((2, 8, 32, 32))):
         y = flow.layers.batch_normalization(x, axis=1)
         flow.losses.add_loss(flow.math.reduce_sum(y))
 
@@ -104,11 +105,11 @@ def CompareNnBnWithTensorFlow(
 
     @flow.global_function(func_config)
     def FlowNnBnJob(
-        x_full_precision=flow.FixedTensorDef(x.shape),
-        mean=flow.FixedTensorDef(mean.shape),
-        variance=flow.FixedTensorDef(variance.shape),
-        offset=flow.FixedTensorDef(offset.shape),
-        scale=flow.FixedTensorDef(scale.shape),
+        x_full_precision: oft.Numpy.Placeholder(x.shape),
+        mean: oft.Numpy.Placeholder(mean.shape),
+        variance: oft.Numpy.Placeholder(variance.shape),
+        offset: oft.Numpy.Placeholder(offset.shape),
+        scale: oft.Numpy.Placeholder(scale.shape),
     ):
         with flow.scope.placement("gpu", "0:0"):
             x_full_precision += flow.get_variable(
@@ -192,7 +193,7 @@ def RunOneflowLayerBn(
         func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(func_config)
-    def FlowJob(x_full_precision=flow.FixedTensorDef(x.shape, dtype=dtype)):
+    def FlowJob(x_full_precision: oft.Numpy.Placeholder(x.shape, dtype=dtype)):
         with flow.scope.placement(device_type, "0:0"):
             x_full_precision += flow.get_variable(
                 name="v1", shape=(1,), dtype=dtype, initializer=flow.zeros_initializer()

@@ -17,6 +17,7 @@ import cv2
 import numpy as np
 import oneflow as flow
 from PIL import Image
+import oneflow.typing as oft
 
 
 def _of_image_target_resize(images, image_static_shape, target_size, max_size):
@@ -27,7 +28,7 @@ def _of_image_target_resize(images, image_static_shape, target_size, max_size):
 
     @flow.global_function(func_config)
     def image_target_resize_job(
-        images_def=flow.MirroredTensorListDef(
+        images_def: oft.ListListNumpy.Placeholder(
             shape=image_static_shape, dtype=flow.float
         )
     ):

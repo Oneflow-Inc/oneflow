@@ -49,6 +49,7 @@ def add(
 
 
 def _recursive_build_add_n(inputs, name=None):
+    inputs = list(inputs)
     kernel_max_inputs = 8
     if len(inputs) == 1:
         return inputs[0]

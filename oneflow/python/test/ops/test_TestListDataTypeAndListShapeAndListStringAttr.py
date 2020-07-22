@@ -17,6 +17,8 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
+
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
@@ -46,7 +48,7 @@ def RunTest(out_shapes, out_types):
 
     @flow.global_function(func_config)
     def TestListDataTypeAndListShapeAndListStringAttrJob(
-        input=flow.FixedTensorDef((10, 10), dtype=flow.float)
+        input: oft.Numpy.Placeholder((10, 10), dtype=flow.float)
     ):
         return TestListDataTypeAndListShapeAndListStringAttr(
             input,

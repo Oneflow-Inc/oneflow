@@ -15,6 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def ccrelu(x, name):
@@ -33,7 +34,7 @@ def fixed_tensor_def_test(test_case, func_config):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
-    def ReluJob(a=flow.FixedTensorDef((5, 2))):
+    def ReluJob(a: oft.Numpy.Placeholder((5, 2))):
         return ccrelu(a, "my_cc_relu_op")
 
     x = np.random.rand(5, 2).astype(np.float32)
@@ -45,7 +46,7 @@ def mirrored_tensor_def_test(test_case, func_config):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
-    def ReluJob(a=flow.MirroredTensorDef((5, 2))):
+    def ReluJob(a: oft.ListNumpy.Placeholder((5, 2))):
         return ccrelu(a, "my_cc_relu_op")
 
     x = np.random.rand(3, 1).astype(np.float32)
@@ -70,7 +71,7 @@ def test_1n2c_mirror_dynamic_ccrelu(test_case):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
-    def ReluJob(a=flow.MirroredTensorDef((5, 2))):
+    def ReluJob(a: oft.ListNumpy.Placeholder((5, 2))):
         return ccrelu(a, "my_cc_relu_op")
 
     x1 = np.random.rand(3, 1).astype(np.float32)

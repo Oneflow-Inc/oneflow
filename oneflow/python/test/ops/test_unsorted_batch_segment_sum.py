@@ -17,6 +17,8 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
+
 import test_global_storage
 from test_util import GenArgList
 
@@ -66,8 +68,8 @@ def _make_unsoted_segment_sum_fn(device, data, segment_ids, num_segments):
 
     @flow.global_function(func_config)
     def unsorted_batch_segment_sum_job(
-        data=flow.FixedTensorDef(data.shape, dtype=flow.float),
-        segment_ids=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),
+        data: oft.Numpy.Placeholder(data.shape, dtype=flow.float),
+        segment_ids: oft.Numpy.Placeholder(segment_ids.shape, dtype=flow.int32),
     ):
         with flow.scope.placement(device, "0:0"):
             x = flow.get_variable(

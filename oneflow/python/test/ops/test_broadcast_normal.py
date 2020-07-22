@@ -26,6 +26,7 @@ from test_util import (
     type_name_to_flow_type,
     type_name_to_np_type,
 )
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -43,8 +44,8 @@ def RunOneflowOp(device_type, flow_op, x, y, data_type):
 
     @flow.global_function(func_config)
     def FlowJob(
-        x=flow.FixedTensorDef(x.shape, dtype=flow_type),
-        y=flow.FixedTensorDef(y.shape, dtype=flow_type),
+        x: oft.Numpy.Placeholder(x.shape, dtype=flow_type),
+        y: oft.Numpy.Placeholder(y.shape, dtype=flow_type),
     ):
         with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
@@ -148,8 +149,8 @@ def compare_with_tensorflow(
 
     @flow.global_function(func_config)
     def FlowJob(
-        x=flow.FixedTensorDef(x_shape, dtype=flow_type),
-        y=flow.FixedTensorDef(y_shape, dtype=flow_type),
+        x: oft.Numpy.Placeholder(x_shape, dtype=flow_type),
+        y: oft.Numpy.Placeholder(y_shape, dtype=flow_type),
     ):
         with flow.scope.placement(device_type, "0:0"):
             return flow_op(x, y)

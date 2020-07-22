@@ -17,6 +17,7 @@ import random
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _of_object_segm_poly_flip(poly_list, image_size, flip_code):
@@ -29,8 +30,12 @@ def _of_object_segm_poly_flip(poly_list, image_size, flip_code):
 
     @flow.global_function(func_config)
     def object_segm_poly_flip_job(
-        poly_def=flow.MirroredTensorListDef(shape=tuple(poly_shape), dtype=flow.float),
-        image_size_def=flow.MirroredTensorDef(shape=image_size.shape, dtype=flow.int32),
+        poly_def: oft.ListListNumpy.Placeholder(
+            shape=tuple(poly_shape), dtype=flow.float
+        ),
+        image_size_def: oft.ListNumpy.Placeholder(
+            shape=image_size.shape, dtype=flow.int32
+        ),
     ):
         poly_buffer = flow.tensor_list_to_tensor_buffer(poly_def)
         flip_poly = flow.object_segmentation_polygon_flip(

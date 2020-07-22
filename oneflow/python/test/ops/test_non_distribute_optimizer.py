@@ -15,6 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def test_non_distribute_optimizer(test_case):
@@ -27,7 +28,7 @@ def test_non_distribute_optimizer(test_case):
     func_config.enable_non_distributed_optimizer(True)
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((2, 10))):
+    def Foo(x: oft.Numpy.Placeholder((2, 10))):
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(100))
         flow.losses.add_loss(x + w)
 
@@ -52,7 +53,7 @@ def _test_two_job_non_distribute_optimizer(test_case):
     func_config.enable_non_distributed_optimizer(True)
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((2, 10))):
+    def Foo(x: oft.Numpy.Placeholder((2, 10))):
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(100))
         flow.losses.add_loss(x + w)
 

@@ -18,6 +18,7 @@ import numpy as np
 import tensorflow as tf
 import oneflow as flow
 from collections import OrderedDict
+import oneflow.typing as oft
 
 import test_global_storage
 from test_util import (
@@ -43,8 +44,8 @@ def RunOneflowBinaryOp(device_type, flow_op, x, y, data_type):
 
     @flow.global_function(func_config)
     def FlowJob(
-        x=flow.FixedTensorDef(x.shape, dtype=flow_type),
-        y=flow.FixedTensorDef(y.shape, dtype=flow_type),
+        x: oft.Numpy.Placeholder(x.shape, dtype=flow_type),
+        y: oft.Numpy.Placeholder(y.shape, dtype=flow_type),
     ):
         with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(

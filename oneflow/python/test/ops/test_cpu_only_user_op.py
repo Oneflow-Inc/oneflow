@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 import numpy as np
+import oneflow.typing as oft
 
 
 def _cpu_only_relu(x):
@@ -35,7 +36,7 @@ def _check_cpu_only_relu_device(test_case, verbose=False):
     func_config.default_placement_scope(flow.scope.placement("gpu", "0:0"))
 
     @flow.global_function(func_config)
-    def cpu_only_relu_job(x_def=flow.FixedTensorDef(shape=(2, 5), dtype=flow.float)):
+    def cpu_only_relu_job(x_def: oft.Numpy.Placeholder(shape=(2, 5), dtype=flow.float)):
         y = _cpu_only_relu(x_def)
         if verbose:
             print("cpu_only_relu output devices", y.parallel_conf.device_name)
@@ -53,7 +54,7 @@ def _check_non_cpu_only_relu_device(test_case):
     func_config.default_placement_scope(flow.scope.placement("gpu", "0:0"))
 
     @flow.global_function(func_config)
-    def relu_job(x_def=flow.FixedTensorDef(shape=(2, 5), dtype=flow.float)):
+    def relu_job(x_def: oft.Numpy.Placeholder(shape=(2, 5), dtype=flow.float)):
         with flow.scope.placement("gpu", "0:0"):
             y = flow.math.relu(x_def)
 

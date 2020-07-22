@@ -17,6 +17,7 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
@@ -39,8 +40,8 @@ def test_sync_dynamic_resize(_):
 
         @flow.global_function(func_config)
         def TestJob(
-            x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[data_type]),
-            size=flow.FixedTensorDef((1,), dtype=type_name_to_flow_type[size_type]),
+            x: oft.Numpy.Placeholder(x_shape, dtype=type_name_to_flow_type[data_type]),
+            size: oft.Numpy.Placeholder((1,), dtype=type_name_to_flow_type[size_type]),
         ):
             with flow.scope.placement(device_type, "0:0"):
                 return flow.sync_dynamic_resize(x, size)

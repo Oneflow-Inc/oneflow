@@ -15,6 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def test_bernoulli(test_case):
@@ -23,7 +24,7 @@ def test_bernoulli(test_case):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
-    def BernoulliJob(a=flow.FixedTensorDef((10, 10))):
+    def BernoulliJob(a: oft.Numpy.Placeholder((10, 10))):
         return flow.random.bernoulli(a)
 
     x = np.ones((10, 10), dtype=np.float32)
@@ -40,7 +41,7 @@ def test_bernoulli_mirrored(test_case):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
-    def BernoulliJob(a=flow.MirroredTensorDef((10, 10))):
+    def BernoulliJob(a: oft.ListNumpy.Placeholder((10, 10))):
         return flow.random.bernoulli(a)
 
     x = np.ones((10, 10), dtype=np.float32)

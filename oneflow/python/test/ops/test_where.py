@@ -19,6 +19,7 @@ import tensorflow as tf
 
 from collections import OrderedDict
 from test_util import GenArgDict
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -88,9 +89,9 @@ def _of_where(
 
         @flow.global_function(func_config)
         def where_fn(
-            condition_def=flow.MirroredTensorDef(condition.shape, dtype=flow.int32),
-            x_def=flow.MirroredTensorDef(x.shape, dtype=flow.float),
-            y_def=flow.MirroredTensorDef(y.shape, dtype=flow.float),
+            condition_def: oft.ListNumpy.Placeholder(condition.shape, dtype=flow.int32),
+            x_def: oft.ListNumpy.Placeholder(x.shape, dtype=flow.float),
+            y_def: oft.ListNumpy.Placeholder(y.shape, dtype=flow.float),
         ):
             return do_where(condition_def, x_def, y_def)
 
@@ -106,9 +107,9 @@ def _of_where(
 
         @flow.global_function(func_config)
         def where_fn(
-            condition_def=flow.FixedTensorDef(condition.shape, dtype=flow.int32),
-            x_def=flow.FixedTensorDef(x.shape, dtype=flow.float),
-            y_def=flow.FixedTensorDef(y.shape, dtype=flow.float),
+            condition_def: oft.Numpy.Placeholder(condition.shape, dtype=flow.int32),
+            x_def: oft.Numpy.Placeholder(x.shape, dtype=flow.float),
+            y_def: oft.Numpy.Placeholder(y.shape, dtype=flow.float),
         ):
             return do_where(condition_def, x_def, y_def)
 
@@ -199,14 +200,16 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
         func_config.default_distribute_strategy(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
-        def where_fn(input_def=flow.FixedTensorDef(input.shape, dtype=flow.float)):
+        def where_fn(input_def: oft.Numpy.Placeholder(input.shape, dtype=flow.float)):
             return flow.where(input_def)
 
     else:
         func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
-        def where_fn(input_def=flow.MirroredTensorDef(input_shape, dtype=flow.float)):
+        def where_fn(
+            input_def: oft.ListNumpy.Placeholder(input_shape, dtype=flow.float)
+        ):
             return flow.where(input_def)
 
     return where_fn([input]).get().numpy_list()[0]

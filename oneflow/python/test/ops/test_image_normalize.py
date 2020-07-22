@@ -16,6 +16,7 @@ limitations under the License.
 import cv2
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _of_image_normalize(images, image_shape, std, mean):
@@ -26,7 +27,7 @@ def _of_image_normalize(images, image_shape, std, mean):
 
     @flow.global_function(func_config)
     def image_normalize_job(
-        images_def=flow.MirroredTensorListDef(shape=image_shape, dtype=flow.float)
+        images_def: oft.ListListNumpy.Placeholder(shape=image_shape, dtype=flow.float)
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
         norm_images = flow.image_normalize(images_buffer, std, mean)

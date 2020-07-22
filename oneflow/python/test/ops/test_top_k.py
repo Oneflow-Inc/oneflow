@@ -19,6 +19,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -34,7 +35,7 @@ def compare_with_tensorflow(device_type, in_shape, k, data_type, sorted):
 
     @flow.global_function(func_config)
     def TopKJob(
-        input=flow.MirroredTensorDef(
+        input: oft.ListNumpy.Placeholder(
             tuple([dim + 10 for dim in in_shape]),
             dtype=type_name_to_flow_type[data_type],
         )

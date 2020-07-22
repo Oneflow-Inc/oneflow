@@ -18,6 +18,8 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
+
 from test_util import GenArgList
 
 
@@ -64,9 +66,9 @@ def _test_unsorted_segment_sum_model_parallel_fw(
 
     @flow.global_function(func_config)
     def unsorted_segment_sum_job(
-        data=flow.FixedTensorDef(data_arr.shape, dtype=flow.float),
-        segment_ids=flow.FixedTensorDef(segment_ids_arr.shape, dtype=flow.int32),
-        like=flow.FixedTensorDef(out_arr.shape, dtype=flow.float),
+        data: oft.Numpy.Placeholder(data_arr.shape, dtype=flow.float),
+        segment_ids: oft.Numpy.Placeholder(segment_ids_arr.shape, dtype=flow.int32),
+        like: oft.Numpy.Placeholder(out_arr.shape, dtype=flow.float),
     ):
         with flow.scope.placement(device_type, "0:0-3"):
             if split_axis < axis:

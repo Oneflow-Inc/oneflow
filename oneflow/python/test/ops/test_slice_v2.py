@@ -15,6 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=None):
@@ -35,7 +36,9 @@ def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=N
         func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
-        def slice(input_blob=flow.MirroredTensorDef(shape=input_shape, dtype=dtype)):
+        def slice(
+            input_blob: oft.ListNumpy.Placeholder(shape=input_shape, dtype=dtype)
+        ):
             return do_slice(input_blob, index_args)
 
         outputs = slice([input]).get()
@@ -45,7 +48,7 @@ def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=N
         func_config.default_distribute_strategy(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
-        def slice(input_blob=flow.FixedTensorDef(shape=input_shape, dtype=dtype)):
+        def slice(input_blob: oft.Numpy.Placeholder(shape=input_shape, dtype=dtype)):
             return do_slice(input_blob, index_args)
 
         outputs = slice(input).get()
@@ -188,7 +191,7 @@ def test_slice_grad(test_case):
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(func_config)
-    def slice(input_blob=flow.FixedTensorDef(shape=(2, 5, 4), dtype=flow.float)):
+    def slice(input_blob: oft.Numpy.Placeholder(shape=(2, 5, 4), dtype=flow.float)):
         x = flow.get_variable(
             shape=(2, 5, 4),
             dtype=flow.float,

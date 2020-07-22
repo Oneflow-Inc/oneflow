@@ -15,6 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _check(test_case, x, y, value, dtype=None):
@@ -28,7 +29,7 @@ def _run_test(test_case, x, value, dtype=None, device="gpu"):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def ConstantLikeJob(x=flow.FixedTensorDef(x.shape)):
+    def ConstantLikeJob(x: oft.Numpy.Placeholder(x.shape)):
         return flow.constant_like(x, value=value, dtype=dtype)
 
     y = ConstantLikeJob(x).get()
