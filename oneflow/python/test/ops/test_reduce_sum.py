@@ -5,6 +5,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -20,7 +21,7 @@ def compare_with_tensorflow(
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
-    def ReduceSumJob(x=flow.FixedTensorDef(input_shape)):
+    def ReduceSumJob(x: oft.Numpy.Placeholder(input_shape)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
 
@@ -87,7 +88,7 @@ def test_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.reduce_sum(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
