@@ -1,5 +1,4 @@
 import oneflow as flow
-import oneflow.python.onnx.constants as constants
 from util import convert_to_onnx_and_check
 
 
@@ -7,7 +6,7 @@ func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 
-def generate_binary_op_test(flow_op, *args, opset=constants.PREFERRED_OPSET, **kwargs):
+def generate_binary_op_test(flow_op, *args, opset=None, **kwargs):
     @flow.global_function(func_config)
     def job1():
         x = flow.get_variable(
@@ -28,7 +27,7 @@ def generate_binary_op_test(flow_op, *args, opset=constants.PREFERRED_OPSET, **k
 
 
 def generate_unary_op_test(
-    flow_op, *args, opset=constants.PREFERRED_OPSET, min_val=-10, max_val=10, **kwargs
+    flow_op, *args, opset=None, min_val=-10, max_val=10, **kwargs
 ):
     @flow.global_function(func_config)
     def job1():

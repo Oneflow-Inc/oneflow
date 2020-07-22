@@ -68,7 +68,7 @@ def conv2d_affine(input, name, filters, kernel_size, strides, activation=None):
     )
     output = _batch_norm(output, name + "_bn", trainable=g_trainable)
     if activation == "Relu":
-        output = flow.keras.activations.relu(output)
+        output = flow.math.relu(output)
 
     return output
 
@@ -99,7 +99,7 @@ def residual_block(input, block_name, filters, filters_inner, strides_init):
         input, block_name, filters, filters_inner, strides_init
     )
 
-    return flow.keras.activations.relu(bottleneck + shortcut)
+    return flow.math.relu(bottleneck + shortcut)
 
 
 def residual_stage(input, stage_name, counts, filters, filters_inner, stride_init=2):
@@ -130,7 +130,7 @@ def resnet_conv_x_body(input, on_stage_end=lambda x: x):
 def resnet_stem(input):
     conv1 = _conv2d("conv1", input, 1, 1, 2)
     tmp = _batch_norm(conv1, "conv1_bn", trainable=g_trainable)
-    conv1_bn = flow.keras.activations.relu(tmp)
+    conv1_bn = flow.math.relu(tmp)
     pool1 = flow.nn.max_pool2d(
         conv1_bn, ksize=3, strides=2, padding="VALID", data_format="NCHW", name="pool1",
     )

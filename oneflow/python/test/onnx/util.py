@@ -6,7 +6,6 @@ from collections import OrderedDict
 import tempfile
 import os
 import shutil
-import oneflow.python.onnx.constants as constants
 
 
 def convert_to_onnx_and_check(
@@ -15,7 +14,7 @@ def convert_to_onnx_and_check(
     explicit_init=True,
     external_data=False,
     ort_optimize=True,
-    opset=constants.PREFERRED_OPSET,
+    opset=None,
 ):
     check_point = flow.train.CheckPoint()
     if explicit_init:
@@ -63,7 +62,7 @@ def convert_to_onnx_and_check(
         ipt_dict[ipt.name] = ipt_data
 
     onnx_res = sess.run([], ipt_dict)[0]
-    oneflow_res = job_func(*ipt_dict.values()).get().ndarray()
+    oneflow_res = job_func(*ipt_dict.values()).get().numpy()
     if print_rel_diff:
         a = onnx_res.flatten()
         b = oneflow_res.flatten()
