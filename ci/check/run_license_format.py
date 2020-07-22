@@ -32,8 +32,12 @@ def get_txt(path: str):
 
 
 def format_file(path):
-    print(path)
-    pass
+    with open(path, "r") as r:
+        content = r.read()
+    with open(path, "w") as w:
+        txt = get_txt(path)
+        new_content = txt + content
+        w.write(new_content)
 
 
 def check_file(path):
