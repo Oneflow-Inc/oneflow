@@ -42,20 +42,6 @@ def normal_mode_cur_placement_scope():
     return device_scope_stack.CurrentPlacement()
 
 
-def api_fixed_placement(
-    device_tag: str, machine_device_ids: str
-) -> placement_ctx.FixedPlacementScope:
-    return enable_if.unique([GetFixedPlacementScope])(device_tag, machine_device_ids)
-
-
-@enable_if.condition(
-    hob.in_global_mode
-    | (hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized)
-)
-def GetFixedPlacementScope(device_tag, machine_device_ids):
-    return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
-
-
 @oneflow_export("device_prior_placement", "fixed_placement")
 def deprecated_placement(*args, **kwargs):
     print(
@@ -72,18 +58,16 @@ def deprecated_placement(*args, **kwargs):
 @oneflow_export("scope.placement")
 def api_placement(
     device_tag: str, machine_device_ids: str
-) -> placement_ctx.DevicePriorPlacementScope:
-    return enable_if.unique([GetDevicePriorPlacementScope])(
-        device_tag, machine_device_ids
-    )
+) -> placement_ctx.PlacementScope:
+    return enable_if.unique([GetPlacementScope])(device_tag, machine_device_ids)
 
 
 @enable_if.condition(
     hob.in_global_mode
     | (hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized)
 )
-def GetDevicePriorPlacementScope(device_tag, machine_device_ids):
-    return placement_ctx.DevicePriorPlacementScope(device_tag, machine_device_ids)
+def GetPlacementScope(device_tag, machine_device_ids):
+    return placement_ctx.PlacementScope(device_tag, machine_device_ids)
 
 
 def GetDefaultMachineDeviceIds(resource):

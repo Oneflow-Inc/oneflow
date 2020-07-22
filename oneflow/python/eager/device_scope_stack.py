@@ -24,9 +24,9 @@ import re
 import oneflow
 
 
-class PhysicalPlacementScope(placement_ctx.FixedPlacementScope):
+class PhysicalPlacementScope(placement_ctx.PlacementScope):
     def __init__(self, device_tag, machine_device_ids):
-        placement_ctx.FixedPlacementScope.__init__(self, device_tag, machine_device_ids)
+        placement_ctx.PlacementScope.__init__(self, device_tag, machine_device_ids)
         self.physical_symbol_id_ = c_api_util.NewPhysicalSymbolId()
 
     @property
@@ -66,7 +66,7 @@ def api_device(device_tag_and_id):
 )
 def EagerPlacementScope(device_tag, machine_device_ids):
     def EagerPlacementScope():
-        return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
+        return placement_ctx.PlacementScope(device_tag, machine_device_ids)
 
     global device_scope_stack
     return device_scope_stack.NewScope(lazy.Lazy(EagerPlacementScope))

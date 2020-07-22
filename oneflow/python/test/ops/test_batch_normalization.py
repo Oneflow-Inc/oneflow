@@ -361,7 +361,7 @@ def test_nn_batchnorm(test_case):
     arg_dict["input_shape"] = [(2, 4, 3, 5)]
     arg_dict["data_type"] = ["float32"]
     arg_dict["axis"] = [1, -1]
-    arg_dict["epsilon"] = [1e-5, 1e-4]
+    arg_dict["epsilon"] = [1.001e-5, 1e-4]
     for arg in GenArgDict(arg_dict):
         CompareNnBnWithTensorFlow(**arg)
 
