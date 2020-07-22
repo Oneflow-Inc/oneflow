@@ -34,6 +34,7 @@ class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
+    CHECK_NOTNULL(in_tensor);
     const int64_t batch_size = in_tensor->shape().elem_cnt();
     CHECK_GT(batch_size, 0);
 
@@ -44,6 +45,11 @@ class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
     int64_t res_w = out_tensor->shape().At(2);
     int64_t channels = out_tensor->shape().At(3);
     int interpolaion_flag = GetCvInterpolationFlag(ctx->Attr<std::string>("interpolation"));
+
+    user_op::Tensor* scale_tensor = ctx->Tensor4ArgNameAndIndex("scale", 0);
+    CHECK_EQ(out_tensor->shape().NumAxes(), 2);
+    CHECK_EQ(out_tensor->shape().At(0), batch_size);
+    CHECK_EQ(out_tensor->shape().At(1), 2);
 
     MultiThreadLoop(batch_size, [&](size_t i) {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
@@ -57,6 +63,15 @@ class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
       cv::Mat res_img_mat = GenCvMat4ImageTensor(out_tensor, i);
       cv::resize(in_img_mat, res_img_mat, cv::Size(res_w, res_h), 0, 0, interpolaion_flag);
       CHECK_EQ(res_img_mat.ptr(), out_tensor->mut_dptr());
+      CHECK_EQ(res_img_mat.cols, res_w);
+      CHECK_EQ(res_img_mat.rows, res_h);
+      CHECK_EQ(res_img_mat.channels(), channels);
+
+      if (scale_tensor) {
+        float* scale_dptr = scale_tensor->mut_dptr<float>() + i * 2;
+        scale_dptr[0] = static_cast<float>(res_w) / static_cast<float>(origin_width);
+        scale_dptr[1] = static_cast<float>(res_h) / static_cast<float>(origin_height);
+      }
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -67,58 +82,6 @@ REGISTER_USER_KERNEL("image_resize")
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("out", 0) == user_op::HobAttr<DataType>("data_type")));
-
-class ResizeShorterToTensorBufferKernel final : public user_op::OpKernel {
- public:
-  ResizeShorterToTensorBufferKernel() = default;
-  ~ResizeShorterToTensorBufferKernel() override = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t record_num = in_blob->shape().At(0);
-    CHECK_GT(record_num, 0);
-
-    const TensorBuffer* in_buffers = in_blob->dptr<TensorBuffer>();
-    TensorBuffer* out_buffers = out_blob->mut_dptr<TensorBuffer>();
-    int64_t resize_shorter = ctx->Attr<int64_t>("resize_shorter");
-
-    MultiThreadLoop(record_num, [&](size_t i) {
-      const TensorBuffer* in_buffer = in_buffers + i;
-      TensorBuffer* out_buffer = out_buffers + i;
-      const Shape& in_shape = in_buffer->shape();
-      CHECK_EQ(in_shape.NumAxes(), 3);  // {H, W, C}
-      int64_t H = in_shape.At(0);
-      int64_t W = in_shape.At(1);
-      int64_t C = in_shape.At(2);
-      CHECK(C == 3 || C == 1);
-      int64_t rsz_h = resize_shorter;
-      int64_t rsz_w = resize_shorter;
-      if (H < W) {
-        rsz_w = resize_shorter * (static_cast<float>(W) / static_cast<float>(H));
-      } else {
-        rsz_h = resize_shorter * (static_cast<float>(H) / static_cast<float>(W));
-      }
-      Shape out_shape({rsz_h, rsz_w, C});
-      out_buffer->Resize(out_shape, DataType::kUInt8);
-      int channel_flag = C == 3 ? CV_8UC3 : CV_8UC1;
-      const std::string& interp_type = ctx->Attr<std::string>("interp_type");
-      int opencv_inter_type = GetOpencvInterp(interp_type);
-
-      const cv::Mat image = CreateMatWithPtr(H, W, channel_flag, in_buffer->data<uint8_t>());
-      cv::Mat rsz_image = CreateMatWithPtr(rsz_h, rsz_w, channel_flag, out_buffer->data<uint8_t>());
-      cv::resize(image, rsz_image, cv::Size(rsz_w, rsz_h), 0, 0, opencv_inter_type);
-    });
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("image_resize")
-    .SetCreateFn<ResizeShorterToTensorBufferKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 namespace {
 
