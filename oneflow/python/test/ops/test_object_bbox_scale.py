@@ -102,7 +102,7 @@ def _of_target_resize_bbox_scale(images, bbox_list, target_size, max_size):
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(image_def)
         resized_images_buffer, new_size, scale = flow.image_target_resize(
-            images_buffer, target_size, max_size
+            images_buffer, target_size=target_size, max_size=max_size
         )
         bbox_buffer = flow.tensor_list_to_tensor_buffer(bbox_def)
         scaled_bbox = flow.object_bbox_scale(bbox_buffer, scale)

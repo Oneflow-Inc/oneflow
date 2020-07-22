@@ -171,7 +171,7 @@ def _of_poly_to_mask_pipline(
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(image_def)
         resized_images_buffer, new_size, scale = flow.image_target_resize(
-            images_buffer, target_size, max_size
+            images_buffer, target_size=target_size, max_size=max_size
         )
         poly_buffer = flow.tensor_list_to_tensor_buffer(poly_def)
         poly_index_buffer = flow.tensor_list_to_tensor_buffer(poly_index_def)
