@@ -25,7 +25,9 @@ cv::Mat GenCvMat4ImageBuffer(const TensorBuffer& image_buffer);
 
 cv::Mat GenCvMat4ImageTensor(const user_op::Tensor* image_tensor, int image_offset);
 
-int GetCvInterpolationFlag(const std::string& inter_type);
+int GetCvInterpolationFlag(const std::string& inter_type, int org_w, int org_h, int res_w,
+                           int res_h);
+bool CheckInterpolationValid(const std::string& interpolation, std::ostringstream& ss);
 
 }  // namespace oneflow
 

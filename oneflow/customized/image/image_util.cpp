@@ -74,6 +74,35 @@ cv::Mat GenCvMat4ImageTensor(const user_op::Tensor* image_tensor, int image_offs
   return cv::Mat();
 }
 
-int GetCvInterpolationFlag(const std::string& inter_type) { TODO(); }
+int GetCvInterpolationFlag(const std::string& interpolation, int org_w, int org_h, int res_w,
+                           int res_h) {
+  if (interpolation == "bilinear") {
+    return cv::INTER_LINEAR;
+  } else if (interpolation == "nearest_neighbor" || interpolation == "nn") {
+    return cv::INTER_NEAREST;
+  } else if (interpolation == "bicubic") {
+    return cv::INTER_CUBIC;
+  } else if (interpolation == "area") {
+    return cv::INTER_AREA;
+  } else if (interpolation == "auto") {
+    if (res_w * res_h >= org_w * org_h) {
+      return cv::INTER_LINEAR;
+    } else {
+      return cv::INTER_AREA;
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+bool CheckInterpolationValid(const std::string& interpolation, std::ostringstream& err) {
+  if (interpolation != "bilinear" && interpolation != "nearest_neighbor" && interpolation != "nn"
+      && interpolation != "bicubic" && interpolation != "area" && interpolation != "auto") {
+    err << ", interpolation: " << interpolation
+        << " (interpolation must be one of bilinear, nearest_neighbor(nn), bicubic, area and auto)";
+    return false;
+  }
+  return true;
+}
 
 }  // namespace oneflow

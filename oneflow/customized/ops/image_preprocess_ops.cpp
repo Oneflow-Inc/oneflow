@@ -16,7 +16,7 @@ REGISTER_CPU_ONLY_USER_OP("image_resize")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       bool check_failed = false;
-      std::stringstream err;
+      std::ostringstream err;
       err << "Illegal attr value for " << conf.op_type_name() << " op, op_name: " << conf.op_name();
       int64_t target_width = conf.attr<int64_t>("target_width");
       int64_t target_height = conf.attr<int64_t>("target_height");
@@ -35,10 +35,7 @@ REGISTER_CPU_ONLY_USER_OP("image_resize")
         check_failed = true;
       }
       const std::string& interpolation = conf.attr<std::string>("interpolation");
-      if (interpolation != "bilinear") {
-        err << ", interpolation: " << interpolation << " (must be one of )";
-        check_failed = true;
-      }
+      if (!CheckInterpolationValid(interpolation, err)) { check_failed = true; }
       if (check_failed) { return oneflow::Error::CheckFailed() << err.str(); }
       return Maybe<void>::Ok();
     })

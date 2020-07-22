@@ -9,23 +9,6 @@
 
 namespace oneflow {
 
-namespace {
-
-int GetOpencvInterp(const std::string& interp_type) {
-  if (interp_type == "Linear") {
-    return cv::INTER_LINEAR;
-  } else if (interp_type == "NN") {
-    return cv::INTER_NEAREST;
-  } else if (interp_type == "Cubic") {
-    return cv::INTER_CUBIC;
-  } else {
-    UNIMPLEMENTED();
-    return -1;
-  }
-}
-
-}  // namespace
-
 class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
  public:
   ImageResizeToFixedSizeKernel() = default;
@@ -44,7 +27,6 @@ class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
     int64_t res_h = out_tensor->shape().At(1);
     int64_t res_w = out_tensor->shape().At(2);
     int64_t channels = out_tensor->shape().At(3);
-    int interpolaion_flag = GetCvInterpolationFlag(ctx->Attr<std::string>("interpolation"));
 
     user_op::Tensor* scale_tensor = ctx->Tensor4ArgNameAndIndex("scale", 0);
     CHECK_EQ(out_tensor->shape().NumAxes(), 2);
@@ -61,6 +43,8 @@ class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
 
       const cv::Mat in_img_mat = GenCvMat4ImageBuffer(in_buffer);
       cv::Mat res_img_mat = GenCvMat4ImageTensor(out_tensor, i);
+      int interpolaion_flag = GetCvInterpolationFlag(ctx->Attr<std::string>("interpolation"),
+                                                     origin_width, origin_height, res_w, res_h);
       cv::resize(in_img_mat, res_img_mat, cv::Size(res_w, res_h), 0, 0, interpolaion_flag);
       CHECK_EQ(res_img_mat.ptr(), out_tensor->mut_dptr());
       CHECK_EQ(res_img_mat.cols, res_w);
