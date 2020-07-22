@@ -2,64 +2,64 @@ from __future__ import absolute_import
 
 import numpy as np
 import oneflow.core.common.data_type_pb2 as data_type_pb2
+from oneflow.python.oneflow_export import oneflow_export
 
 
 class dtype(object):
-    oneflow_dtype = data_type_pb2.kInvalidDataType
-    numpy_dtype = data_type_pb2.kInvalidDataType
+    oneflow_proto_dtype = data_type_pb2.kInvalidDataType
 
 
+@oneflow_export("char")
 class char(dtype):
-    oneflow_dtype = data_type_pb2.kChar
-    numpy_dtype = np.byte
+    oneflow_proto_dtype = data_type_pb2.kChar
 
 
+@oneflow_export("float")
 class float(dtype):
-    oneflow_dtype = data_type_pb2.kFloat
-    numpy_dtype = np.float
+    oneflow_proto_dtype = data_type_pb2.kFloat
 
 
+@oneflow_export("float16")
 class float16(dtype):
-    oneflow_dtype = data_type_pb2.kFloat16
-    numpy_dtype = np.float16
+    oneflow_proto_dtype = data_type_pb2.kFloat16
 
 
+@oneflow_export("float32")
 class float32(dtype):
-    oneflow_dtype = data_type_pb2.kFloat
-    numpy_dtype = np.float32
+    oneflow_proto_dtype = data_type_pb2.kFloat
 
 
+@oneflow_export("float64")
 class float64(dtype):
-    oneflow_dtype = data_type_pb2.kDouble
-    numpy_dtype = np.double
+    oneflow_proto_dtype = data_type_pb2.kDouble
 
 
+@oneflow_export("double")
 class double(dtype):
-    oneflow_dtype = data_type_pb2.kDouble
-    numpy_dtype = np.double
+    oneflow_proto_dtype = data_type_pb2.kDouble
 
 
+@oneflow_export("int8")
 class int8(dtype):
-    oneflow_dtype = data_type_pb2.kInt8
-    numpy_dtype = np.int8
+    oneflow_proto_dtype = data_type_pb2.kInt8
 
 
+@oneflow_export("int32")
 class int32(dtype):
-    oneflow_dtype = data_type_pb2.kInt32
-    numpy_dtype = np.int32
+    oneflow_proto_dtype = data_type_pb2.kInt32
 
 
+@oneflow_export("int64")
 class int64(dtype):
-    oneflow_dtype = data_type_pb2.kInt64
-    numpy_dtype = np.int64
+    oneflow_proto_dtype = data_type_pb2.kInt64
 
 
+@oneflow_export("uint8")
 class uint8(dtype):
-    oneflow_dtype = data_type_pb2.kUInt8
-    numpy_dtype = np.uint8
+    oneflow_proto_dtype = data_type_pb2.kUInt8
 
 
-dtypes = [
+_dtypes = [
     char,
     float,
     float32,
@@ -72,7 +72,13 @@ dtypes = [
     uint8,
 ]
 
-_OF_BLOB_DTYPE2ONEFLOW_DTYPE_CLASS = {
+
+@oneflow_export("dtypes")
+def dtypes():
+    return _dtypes
+
+
+_PROTO_DTYPE2ONEFLOW_DTYPE = {
     data_type_pb2.kInt8: int8,
     data_type_pb2.kInt32: int32,
     data_type_pb2.kInt64: int64,
@@ -80,17 +86,37 @@ _OF_BLOB_DTYPE2ONEFLOW_DTYPE_CLASS = {
     data_type_pb2.kFloat: float32,
     data_type_pb2.kDouble: double,
     data_type_pb2.kFloat16: float16,
-    # could be np.ubyte on some platform
     data_type_pb2.kChar: char,
 }
 
 
-def convert_of_dtype_to_oneflow_dtype_class(dtype):
-    if dtype not in _OF_BLOB_DTYPE2ONEFLOW_DTYPE_CLASS:
+def convert_proto_dtype_to_oneflow_dtype(proto_dtype):
+    if proto_dtype not in _PROTO_DTYPE2ONEFLOW_DTYPE:
         raise NotImplementedError
-    return _OF_BLOB_DTYPE2ONEFLOW_DTYPE_CLASS[dtype]
+    return _PROTO_DTYPE2ONEFLOW_DTYPE[proto_dtype]
 
 
-del absolute_import
+_ONEFLOW_DTYPE_TO_NUMPY_DTYPE = {
+    # could be np.ubyte on some platform
+    char: np.byte,
+    float: np.float,
+    float16: np.float16,
+    float32: np.float32,
+    float64: np.double,
+    double: np.double,
+    int8: np.int8,
+    int32: np.int32,
+    int64: np.int64,
+    uint8: np.uint8,
+}
+
+
+@oneflow_export("convert_oneflow_dtype_to_numpy_dtype")
+def convert_oneflow_dtype_to_numpy_dtype(oneflow_dtype: dtype):
+    if oneflow_dtype not in _ONEFLOW_DTYPE_TO_NUMPY_DTYPE:
+        raise NotImplementedError
+    return _ONEFLOW_DTYPE_TO_NUMPY_DTYPE[oneflow_dtype]
+
+
 del data_type_pb2
 del np

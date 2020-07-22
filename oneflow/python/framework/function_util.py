@@ -187,7 +187,7 @@ def _RunLazyJob(session, job_func, *args, **kwargs):
 
 @oneflow_function_config("default_data_type")
 def set_default_data_type(func_desc, value):
-    func_desc.job_config_proto.default_data_type = value.oneflow_dtype
+    func_desc.job_config_proto.default_data_type = value.oneflow_proto_dtype
 
 
 @oneflow_function_config("default_initializer_conf")

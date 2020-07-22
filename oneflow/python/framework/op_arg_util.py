@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow.core.job.mirrored_parallel_pb2 as mirrored_parallel_pb
-from oneflow.python.framework.dtype import convert_of_dtype_to_oneflow_dtype_class
+from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 
 
 class OpArgBlobAttribute(object):
@@ -28,7 +28,7 @@ class OpArgBlobAttribute(object):
 
     @property
     def dtype(self):
-        return convert_of_dtype_to_oneflow_dtype_class(self.blob_desc_.body.data_type)
+        return convert_proto_dtype_to_oneflow_dtype(self.blob_desc_.body.data_type)
 
     @property
     def batch_axis(self):

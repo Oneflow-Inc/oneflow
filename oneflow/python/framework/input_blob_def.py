@@ -95,7 +95,7 @@ class ArgBlobDef(blob_desc.BlobDesc):
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
-        interface_blob_conf.data_type = self.dtype_.oneflow_dtype
+        interface_blob_conf.data_type = self.dtype_.oneflow_proto_dtype
         interface_blob_conf.is_dynamic = self.is_dynamic
         interface_blob_conf.is_tensor_list = self.is_tensor_list
         self.SetBatchAxisAndSplitAxis(interface_blob_conf)

@@ -173,7 +173,7 @@ class BlobConf(object):
         blob_conf = op_conf_util.BlobConf()
         blob_conf.name = self.name
         blob_conf.shape.dim.extend(self.shape)
-        blob_conf.data_type = self.dtype.oneflow_dtype
+        blob_conf.data_type = self.dtype.oneflow_proto_dtype
         self.codec.to_proto(blob_conf.encode_case)
         blob_conf.preprocess.extend([p.to_proto() for p in self.preprocessors])
         return blob_conf
@@ -304,7 +304,7 @@ def decode_random(
     op_conf.decode_random_conf.shape.dim.extend(shape)
 
     assert dtype is not None
-    setattr(op_conf.decode_random_conf, "data_type", dtype.oneflow_dtype)
+    setattr(op_conf.decode_random_conf, "data_type", dtype.oneflow_proto_dtype)
 
     op_conf.decode_random_conf.batch_size = batch_size
 

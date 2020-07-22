@@ -181,7 +181,7 @@ def _GenerateVariableOpConf(
     op_conf.variable_conf.shape.dim.extend(shape)
 
     assert dtype is not None
-    op_conf.variable_conf.data_type = dtype.oneflow_dtype
+    op_conf.variable_conf.data_type = dtype.oneflow_proto_dtype
 
     root_path = (
         compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path

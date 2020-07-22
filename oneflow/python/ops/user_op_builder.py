@@ -273,10 +273,10 @@ For instance:
             attribute.at_shape.dim[:] = list(attr_value)
         elif attr_type == user_op_attr_util.kAtDataType:
             assert (
-                isinstance(attr_value.oneflow_dtype, int)
+                isinstance(attr_value.oneflow_proto_dtype, int)
                 and attr_value in oneflow.dtypes
             )
-            attribute.at_data_type = attr_value.oneflow_dtype
+            attribute.at_data_type = attr_value.oneflow_proto_dtype
         elif attr_type == user_op_attr_util.kAtListInt32:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
@@ -292,11 +292,11 @@ For instance:
         elif attr_type == user_op_attr_util.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
             assert all(
-                isinstance(x.oneflow_dtype, int) and x in oneflow.dtypes
+                isinstance(x.oneflow_proto_dtype, int) and x in oneflow.dtypes
                 for x in attr_value
             )
             attribute.at_list_data_type.val[:] = list(
-                [x.oneflow_dtype for x in attr_value]
+                [x.oneflow_proto_dtype for x in attr_value]
             )
         elif attr_type == user_op_attr_util.kAtListShape:
             assert isinstance(attr_value, (tuple, list))

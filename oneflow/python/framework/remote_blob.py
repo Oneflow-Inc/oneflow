@@ -6,7 +6,7 @@ import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.blob_trait as blob_trait
-from oneflow.python.framework.dtype import convert_of_dtype_to_oneflow_dtype_class
+from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 import oneflow.python.eager.eager_blob_util as eager_blob_util
@@ -104,7 +104,7 @@ class LazyConsistentBlob(ConsistentBlob):
 
     @property
     def dtype(self):
-        return convert_of_dtype_to_oneflow_dtype_class(
+        return convert_proto_dtype_to_oneflow_dtype(
             c_api_util.JobBuildAndInferCtx_GetDataType(self.job_name_, self.lbn_)
         )
 
@@ -183,7 +183,7 @@ class LazyMirroredBlob(MirroredBlob):
 
     @property
     def dtype(self):
-        return convert_of_dtype_to_oneflow_dtype_class(
+        return convert_proto_dtype_to_oneflow_dtype(
             c_api_util.JobBuildAndInferCtx_MirroredBlobGetDataType(
                 self.job_name_, self.lbn_
             )
@@ -265,8 +265,8 @@ class EagerBlobTrait(object):
 
     @property
     def dtype(self):
-        return convert_of_dtype_to_oneflow_dtype_class(
-            convert_of_dtype_to_oneflow_dtype_class
+        return convert_proto_dtype_to_oneflow_dtype(
+            self.blob_object.op_arg_blob_attr.dtype
         )
 
     @property

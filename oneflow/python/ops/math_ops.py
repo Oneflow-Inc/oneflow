@@ -568,7 +568,7 @@ def elem_cnt(
         assert isinstance(axis, (tuple, list))
         op_conf.shape_elem_cnt_conf.include_axis_conf.axis.extend(axis)
     if dtype is not None:
-        op_conf.shape_elem_cnt_conf.data_type = dtype.oneflow_dtype
+        op_conf.shape_elem_cnt_conf.data_type = dtype.oneflow_proto_dtype
     op_conf.shape_elem_cnt_conf.y = "y"
     interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()

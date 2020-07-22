@@ -43,11 +43,13 @@ class TestCast(unittest.TestCase):
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, dtype=flow.float32, target_dtype=flow.float32):
-        x = np.ones(shape, dtype=dtype.numpy_dtype)
+        np_dtype = flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+        x = np.ones(shape, dtype=np_dtype)
         self._test_body(x, dtype=dtype, target_dtype=target_dtype)
 
     def _test_random_body(self, shape, dtype=flow.float32, target_dtype=flow.float32):
-        x = (1000 * np.random.random(shape)).astype(dtype.numpy_dtype)
+        np_dtype = flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+        x = (1000 * np.random.random(shape)).astype(np_dtype)
         self._test_body(x, dtype=dtype, target_dtype=target_dtype)
 
     def test_ones_input(self):
