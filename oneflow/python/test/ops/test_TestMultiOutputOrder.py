@@ -1,5 +1,6 @@
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def TestMultiOutputOrder(x, name):
@@ -21,7 +22,7 @@ def GenerateTest(test_case, shape):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def TestMultiOutputOrderJob(x=flow.FixedTensorDef(shape)):
+    def TestMultiOutputOrderJob(x: oft.Numpy.Placeholder(shape)):
         return TestMultiOutputOrder(x, "my_2_output_op")
 
     x = np.random.rand(*shape).astype(np.float32)

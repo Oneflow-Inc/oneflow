@@ -2,6 +2,8 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
+
 from test_util import GenArgList
 
 func_config = flow.FunctionConfig()
@@ -48,8 +50,8 @@ def _run_test(test_case, device, out_shape, axis, segment_ids_shape):
 
     @flow.global_function(func_config)
     def unsorted_segment_sum_job(
-        data=flow.FixedTensorDef(data.shape, dtype=flow.float),
-        segment_ids=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),
+        data: oft.Numpy.Placeholder(data.shape, dtype=flow.float),
+        segment_ids: oft.Numpy.Placeholder(segment_ids.shape, dtype=flow.int32),
     ):
         with flow.scope.placement(device, "0:0"):
             return flow.math.unsorted_segment_sum(
@@ -61,9 +63,9 @@ def _run_test(test_case, device, out_shape, axis, segment_ids_shape):
 
     @flow.global_function(func_config)
     def unsorted_segment_sum_like_job(
-        data=flow.FixedTensorDef(data.shape, dtype=flow.float),
-        segment_ids=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),
-        like=flow.FixedTensorDef(out_shape, dtype=flow.float32),
+        data: oft.Numpy.Placeholder(data.shape, dtype=flow.float),
+        segment_ids: oft.Numpy.Placeholder(segment_ids.shape, dtype=flow.int32),
+        like: oft.Numpy.Placeholder(out_shape, dtype=flow.float32),
     ):
         with flow.scope.placement(device, "0:0"):
             return flow.math.unsorted_segment_sum_like(

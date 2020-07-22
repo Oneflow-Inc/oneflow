@@ -1,6 +1,7 @@
 import numpy as np
 import oneflow as flow
 from PIL import Image
+import oneflow.typing as oft
 
 
 def _of_image_decode(images):
@@ -17,7 +18,7 @@ def _of_image_decode(images):
 
     @flow.global_function(func_config)
     def image_decode_job(
-        images_def=flow.MirroredTensorListDef(shape=static_shape, dtype=flow.int8)
+        images_def: oft.ListListNumpy.Placeholder(shape=static_shape, dtype=flow.int8)
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
         decoded_images_buffer = flow.image_decode(images_buffer)
