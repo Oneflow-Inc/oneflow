@@ -17,13 +17,13 @@ class LazyReferenceInstructionType : public vm::InstructionType {
   FLAT_MSG_VIEW_END(LazyReferenceInstruction);
   // clang-format on
 
-  void Infer(vm::Instruction* instruction) const override { CHECK_OK(MaybeRun(instruction)); };
+  void Infer(vm::Instruction* instruction) const override { CHECK_OK(Run(instruction)); };
   void Compute(vm::Instruction* instruction) const override{
       // do nothing
   };
 
  private:
-  Maybe<void> MaybeRun(vm::Instruction* instruction) const;
+  Maybe<void> Run(vm::Instruction* instruction) const;
 };
 
 }  // namespace eager

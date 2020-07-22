@@ -74,7 +74,7 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
 COMMAND(
     vm::RegisterInstructionType<CudaHostUnregisterBlobInstructionType>("CudaHostUnregisterBlob"));
 
-Maybe<void> LazyReferenceInstructionType::MaybeRun(vm::Instruction* instruction) const {
+Maybe<void> LazyReferenceInstructionType::Run(vm::Instruction* instruction) const {
   FlatMsgView<LazyReferenceInstruction> args(instruction->instr_msg().operand());
   vm::RwMutexedObject* eager_blob_rw = instruction->mut_operand_type(args->eager_blob());
   const auto* lbn_operand = instruction->operand_type(args->lbn_sym_id());
