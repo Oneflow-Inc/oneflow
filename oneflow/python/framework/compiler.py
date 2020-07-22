@@ -15,6 +15,7 @@ import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.typing as oft
+import oneflow.python.framework.typing_checker as oft_checker
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
@@ -86,6 +87,8 @@ def _CompileJob(function_desc):
         )
     inputs = _RecursiveMakeInputBlobs(func.__oneflow_input_blob_defs__)
     ret = func(*inputs)
+    return_annotation = func.__oneflow_function_signature__.return_annotation
+    oft_checker.CheckReturnByAnnotation(func.__name__, ret, return_annotation)
     func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(
         ret, allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
     )
@@ -108,6 +111,8 @@ def _InterpretGlobalFunction(function_desc, args):
         )
     inputs = push_util.MakeEagerInputBlobs(func.__oneflow_input_blob_defs__, args)
     ret = func(*inputs)
+    return_annotation = func.__oneflow_function_signature__.return_annotation
+    oft_checker.CheckReturnByAnnotation(func.__name__, ret, return_annotation)
     return _RecursiveMakeRetRemoteBlobs(
         ret, allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
     )
@@ -155,7 +160,6 @@ def _RecursiveMakeInputBlobs(input_blob_def):
 
 def _MakeInputBlobDefFromParameterSignature(parameters):
     def CheckAndRecusiveMake(p):
-        assert p.kind == inspect._ParameterKind.POSITIONAL_OR_KEYWORD
         return _RecusiveMakeInputBlobDef(p.annotation)
 
     return tuple(CheckAndRecusiveMake(p) for _, p in parameters.items())
