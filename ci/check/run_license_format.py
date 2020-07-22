@@ -91,6 +91,6 @@ if __name__ == "__main__":
                 if is_formatted == False:
                     print("license absent:", p)
         if args.fix:
-            for (p, is_formatted) in p.map(do_check, files):
+            for (p, is_formatted) in p.map(do_format, files):
                 if is_formatted == False:
                     print("license added:", p)
