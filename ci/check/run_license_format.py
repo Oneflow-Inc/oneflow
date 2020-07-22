@@ -30,12 +30,21 @@ def get_txt(path: str):
     else:
         return None
 
+def check_file(path):
+    with open(path) as f:
+        content = f.read()
+        txt = get_txt(path)
+        if content.startswith(txt) or (not content):
+            return (True, content)
+        else:
+            return (False, content)
 
 def format_file(path):
     txt = get_txt(path)
     with open(path, "r") as r:
         content = r.read()
-    if content.startswith(txt) or (not content):
+    is_formatted, content = check_file(x)
+    if is_formatted:
         return True
     else:
         with open(path, "w") as w:
@@ -44,18 +53,9 @@ def format_file(path):
         return False
 
 
-def check_file(path):
-    with open(path) as f:
-        content = f.read()
-        txt = get_txt(path)
-        if content.startswith(txt):
-            return True
-        else:
-            return False
-
-
 def do_check(x):
-    return (x, check_file(x))
+    is_formatted, _ = check_file(x)
+    return (x, is_formatted)
 
 
 def do_format(x):
