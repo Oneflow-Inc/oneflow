@@ -1,5 +1,6 @@
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def test_dynamic_reshape(test_case):
@@ -13,7 +14,7 @@ def test_dynamic_reshape(test_case):
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(func_config)
-    def DynamicReshapeJob(x=flow.MirroredTensorDef(data_shape)):
+    def DynamicReshapeJob(x: oft.ListNumpy.Placeholder(data_shape)):
         reshape_out1 = flow.reshape(x, (-1, 20))
         my_model = flow.get_variable(
             "my_model",

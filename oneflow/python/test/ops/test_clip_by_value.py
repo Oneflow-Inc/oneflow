@@ -4,6 +4,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -54,7 +55,9 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
         func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
-        def clip_fn(values_def=flow.MirroredTensorDef(values.shape, dtype=data_type)):
+        def clip_fn(
+            values_def: oft.ListNumpy.Placeholder(values.shape, dtype=data_type)
+        ):
             return clip(values_def)
 
         check_point = flow.train.CheckPoint()
@@ -65,7 +68,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
         func_config.default_distribute_strategy(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
-        def clip_fn(values_def=flow.FixedTensorDef(values.shape, dtype=data_type)):
+        def clip_fn(values_def: oft.Numpy.Placeholder(values.shape, dtype=data_type)):
             return clip(values_def)
 
         check_point = flow.train.CheckPoint()

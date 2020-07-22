@@ -3,6 +3,7 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type
+import oneflow.typing as oft
 
 
 def test_naive(test_case):
@@ -10,7 +11,7 @@ def test_naive(test_case):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
-    def ModJob(a=flow.FixedTensorDef((5, 2)), b=flow.FixedTensorDef((5, 2))):
+    def ModJob(a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((5, 2))):
         return a == b
 
     x = np.random.rand(5, 2).astype(np.float32)
@@ -26,7 +27,7 @@ def test_broadcast(test_case):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
-    def ModJob(a=flow.FixedTensorDef((5, 2)), b=flow.FixedTensorDef((1, 2))):
+    def ModJob(a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((1, 2))):
         return a == b
 
     x = np.random.rand(5, 2).astype(np.float32)
@@ -87,14 +88,14 @@ def GenerateTest(
     func_config.default_data_type(dtype)
 
     @flow.global_function(func_config)
-    def ModJob1(a=flow.FixedTensorDef(a_shape, dtype=dtype)):
+    def ModJob1(a: oft.Numpy.Placeholder(a_shape, dtype=dtype)):
         with flow.scope.placement(device_type, "0:0"):
             return func(a, a)
 
     @flow.global_function(func_config)
     def ModJob2(
-        a=flow.FixedTensorDef(a_shape, dtype=dtype),
-        b=flow.FixedTensorDef(b_shape, dtype=dtype),
+        a: oft.Numpy.Placeholder(a_shape, dtype=dtype),
+        b: oft.Numpy.Placeholder(b_shape, dtype=dtype),
     ):
         with flow.scope.placement(device_type, "0:0"):
             return func(a, b)
