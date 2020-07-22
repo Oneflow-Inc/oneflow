@@ -9,13 +9,13 @@ import inspect
 import sys
 
 
-@oneflow_export("Numpy")
+@oneflow_export("typing.Numpy")
 class Numpy:
     """`Numpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
         @oneflow.global_function()
-        def foo() -> oneflow.Numpy:
+        def foo() -> oneflow.typing.Numpy:
             loss = ... # your network
             return loss
         
@@ -23,16 +23,16 @@ class Numpy:
         print(loss)
     """
 
-    def Def(
+    def Placeholder(
         shape: Sequence[int], dtype=dtype_util.float, batch_axis: Optional[int] = 0
     ):
-        """`Numpy.Def` is a typing function for numpy input of a OneFlow global function. 
-        A `numpy.ndarray` takes a `Numpy.Def`'s place must have a identical shape.
+        """`Numpy.Placeholder` is a typing function for numpy input of a OneFlow global function. 
+        A `numpy.ndarray` takes a `Numpy.Placeholder`'s place must have a identical shape.
         For instance::
             
             @oneflow.global_function()
             def foo(
-                image_blob: oneflow.Numpy.Def(
+                image_blob: oneflow.typing.Numpy.Placeholder(
                     (2, 255, 255, 3), dtype=flow.float32
                 )
             ):
@@ -43,19 +43,19 @@ class Numpy:
         """
         assert type(shape) is tuple, "shape should be a tuple. %s found" % shape
         return type(
-            "Numpy.Def",
+            "Numpy.Placeholder",
             (NumpyDef,),
             dict(shape=shape, dtype=dtype, batch_axis=batch_axis),
         )
 
 
-@oneflow_export("List.Numpy")
+@oneflow_export("typing.ListNumpy")
 class ListOfNumpy:
-    """`List.Numpy` is a type hint for numpy output of a OneFlow global function
+    """`ListNumpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
         @oneflow.global_function()
-        def foo() -> oneflow.List.Numpy:
+        def foo() -> oneflow.typing.ListNumpy:
             mirrored_tensors = ... # your network
             return mirrored_tensors
         
@@ -64,16 +64,16 @@ class ListOfNumpy:
             print(mirrored_tensors)
     """
 
-    def Def(
+    def Placeholder(
         shape: Sequence[int], dtype=dtype_util.float, batch_axis: Optional[int] = 0
     ):
-        """`List.Numpy.Def` is a typing function for numpy input of a OneFlow global function. 
-        A `list` of `numpy.ndarray` takes a `List.Numpy.Def`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
+        """`ListNumpy.Placeholder` is a typing function for numpy input of a OneFlow global function. 
+        A `list` of `numpy.ndarray` takes a `ListNumpy.Placeholder`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
         For instance::
             
             @oneflow.global_function()
             def foo(
-                image_blob: oneflow.List.Numpy.Def(
+                image_blob: oneflow.typing.ListNumpy.Placeholder(
                     (2, 255, 255, 3), dtype=flow.float32
                 )
             ):
@@ -87,19 +87,19 @@ class ListOfNumpy:
         """
         assert type(shape) is tuple, "shape should be a tuple. %s found" % shape
         return type(
-            "List.Numpy.Def",
+            "ListNumpy.Placeholder",
             (ListOfNumpyDef,),
             dict(shape=shape, dtype=dtype, batch_axis=batch_axis),
         )
 
 
-@oneflow_export("List.List.Numpy")
+@oneflow_export("typing.ListListNumpy")
 class ListOfListOfNumpy:
-    """`List.List.Numpy` is a type hint for numpy output of a OneFlow global function
+    """`ListListNumpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
         @oneflow.global_function()
-        def foo() -> oneflow.List.List.Numpy:
+        def foo() -> oneflow.typing.ListListNumpy:
             mirrored_tensor_lists = ... # your network
             return mirrored_tensor_lists
         
@@ -109,16 +109,16 @@ class ListOfListOfNumpy:
                 print(mirrored_tensors)
     """
 
-    def Def(
+    def Placeholder(
         shape: Sequence[int], dtype=dtype_util.float, batch_axis: Optional[int] = 0
     ):
-        """`List.List.Numpy.Def` is a typing function for numpy input of a OneFlow global function. 
-        A `list` of `list` of `numpy.ndarray` takes a `List.List.Numpy.Def`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
+        """`ListListNumpy.Placeholder` is a typing function for numpy input of a OneFlow global function. 
+        A `list` of `list` of `numpy.ndarray` takes a `ListListNumpy.Placeholder`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
         For instance::
             
             @oneflow.global_function()
             def foo(
-                image_blob: oneflow.List.List.Numpy.Def(
+                image_blob: oneflow.typing.ListListNumpy.Placeholder(
                     (2, 255, 255, 3), dtype=flow.float32
                 )
             ):
@@ -132,7 +132,7 @@ class ListOfListOfNumpy:
         """
         assert type(shape) is tuple, "shape should be a tuple. %s found" % shape
         return type(
-            "List.List.Numpy.Def",
+            "ListListNumpy.Placeholder",
             (ListOfListOfNumpyDef,),
             dict(shape=shape, dtype=dtype, batch_axis=batch_axis),
         )

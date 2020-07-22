@@ -170,8 +170,8 @@ def _RecusiveMakeInputBlobDef(cls):
         raise NotImplementedError(
             ("\nannotation %s" % cls)
             + "not supported"
-            + "\nonly support oneflow.Numpy.Def(), "
-            "oneflow.List.Numpy.Def and oneflow.List.List.Numpy.Def()"
+            + "\nonly support oneflow.typing.Numpy.Placeholder, "
+            "oneflow.typing.ListNumpy.Placeholder and oneflow.typing.ListListNumpy.Placeholder"
         )
 
 
