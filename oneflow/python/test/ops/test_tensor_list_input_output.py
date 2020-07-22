@@ -1,5 +1,6 @@
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def test_eager_tensor_list_input(test_case):
@@ -11,7 +12,7 @@ def test_eager_tensor_list_input(test_case):
 
     @flow.global_function()
     def foo_job(
-        input_def=flow.MirroredTensorListDef(shape=(2, 5, 4), dtype=flow.float)
+        input_def: oft.ListListNumpy.Placeholder(shape=(2, 5, 4), dtype=flow.float)
     ):
         output_0, output_1 = flow.tensor_list_split(input_def)
         test_case.assertTrue(np.array_equal(output_0.numpy(), input_0.squeeze()))
@@ -28,7 +29,7 @@ def test_tensor_list_input_output(test_case):
 
     @flow.global_function()
     def foo_job(
-        input_def=flow.MirroredTensorListDef(shape=(2, 5, 4), dtype=flow.float)
+        input_def: oft.ListListNumpy.Placeholder(shape=(2, 5, 4), dtype=flow.float)
     ):
         tensor_buffer = flow.tensor_list_to_tensor_buffer(input_def)
         return flow.tensor_buffer_to_tensor_list(
