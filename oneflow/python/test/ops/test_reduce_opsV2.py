@@ -6,6 +6,7 @@ import oneflow as flow
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList
+import oneflow.typing as oft
 
 
 def compare_reduce_sum_with_tensorflow(
@@ -100,7 +101,7 @@ def test_reduce_sum_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.reduce_sum(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)

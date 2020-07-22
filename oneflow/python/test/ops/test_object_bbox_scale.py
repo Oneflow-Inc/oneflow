@@ -4,6 +4,7 @@ import random
 import cv2
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _random_sample_images(anno_file, image_dir, batch_size):
@@ -91,10 +92,12 @@ def _of_target_resize_bbox_scale(images, bbox_list, target_size, max_size):
 
     @flow.global_function(func_config)
     def target_resize_bbox_scale_job(
-        image_def=flow.MirroredTensorListDef(
+        image_def: oft.ListListNumpy.Placeholder(
             shape=tuple(image_shape), dtype=flow.float
         ),
-        bbox_def=flow.MirroredTensorListDef(shape=tuple(bbox_shape), dtype=flow.float),
+        bbox_def: oft.ListListNumpy.Placeholder(
+            shape=tuple(bbox_shape), dtype=flow.float
+        ),
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(image_def)
         resized_images_buffer, new_size, scale = flow.image_target_resize(

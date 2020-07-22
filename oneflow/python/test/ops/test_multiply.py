@@ -11,6 +11,7 @@ from test_util import (
     type_name_to_flow_type,
     type_name_to_np_type,
 )
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -45,8 +46,8 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
 
     @flow.global_function(func_config)
     def test_element_wise_mul_job(
-        x=flow.FixedTensorDef(shape, dtype=flow.float),
-        y=flow.FixedTensorDef(shape, dtype=flow.float),
+        x: oft.Numpy.Placeholder(shape, dtype=flow.float),
+        y: oft.Numpy.Placeholder(shape, dtype=flow.float),
     ):
         with flow.scope.placement(device, "0:0"):
             x += flow.get_variable(

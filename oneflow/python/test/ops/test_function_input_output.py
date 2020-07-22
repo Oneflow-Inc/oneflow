@@ -18,7 +18,7 @@ def test_FixedTensorDef(test_case):
 
 def test_FixedTensorDef_batch_axis(test_case):
     @flow.global_function()
-    def Foo(x=flow.FixedTensorDef((2, 5), batch_axis=1)):
+    def Foo(x: oft.Numpy.Placeholder((2, 5), batch_axis=1)):
         test_case.assertEqual(x.batch_axis, 1)
         return x
 
@@ -28,7 +28,7 @@ def test_FixedTensorDef_batch_axis(test_case):
 
 def test_FixedTensorDef_no_batch_axis(test_case):
     @flow.global_function()
-    def Foo(x=flow.FixedTensorDef((2, 5), batch_axis=None)):
+    def Foo(x: oft.Numpy.Placeholder((2, 5), batch_axis=None)):
         test_case.assertTrue(x.batch_axis is None)
         return x
 
@@ -40,7 +40,7 @@ def test_FixedTensorDef_2_device(test_case):
     flow.config.gpu_device_num(2)
 
     @flow.global_function()
-    def Foo(x=flow.FixedTensorDef((2, 5))):
+    def Foo(x: oft.Numpy.Placeholder((2, 5))):
         return x
 
     data = np.ones((2, 5), dtype=np.float32)
@@ -52,7 +52,7 @@ def test_FixedTensorDef_2_device(test_case):
 
 def test_MirroredTensorDef(test_case):
     @flow.global_function()
-    def Foo(x=flow.MirroredTensorDef((2, 5))):
+    def Foo(x: oft.ListNumpy.Placeholder((2, 5))):
         return x
 
     data = np.ones((1, 5), dtype=np.float32)
@@ -94,7 +94,7 @@ def test_MirroredTensorDef_4_device(test_case):
     ]
     images = ndarray_lst(image_shape)
     labels = ndarray_lst(label_shape)
-    inputs = [images, labels]
+    inputs = (images, labels)
 
     outputs = [output.numpy_list() for output in Foo(inputs).get()]
     test_case.assertEqual(len(outputs), len(inputs))
