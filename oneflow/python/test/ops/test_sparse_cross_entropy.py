@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
@@ -24,7 +25,7 @@ def compare_with_tensorflow(
 
     @flow.global_function(func_config)
     def SparseSoftmaxCrossEntropyWithLogitsJob(
-        labels=flow.FixedTensorDef(
+        labels: oft.Numpy.Placeholder(
             (batch_size,), dtype=type_name_to_flow_type[label_type]
         )
     ):

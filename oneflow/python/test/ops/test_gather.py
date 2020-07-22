@@ -4,6 +4,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -49,8 +50,8 @@ def _make_gather_fn(
 
         @flow.global_function(func_config)
         def gather_fn(
-            params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
-            indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
+            params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
+            indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
         ):
             return do_gather(params_def, indices_def)
 
@@ -58,8 +59,8 @@ def _make_gather_fn(
 
         @flow.global_function(func_config)
         def gather_fn(
-            params_def=flow.FixedTensorDef(params.shape, dtype=flow.float),
-            indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
+            params_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float),
+            indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
         ):
             return do_gather(params_def, indices_def)
 
