@@ -19,7 +19,7 @@ limitations under the License.
 """
 
 CPP_TXT = "/*\n{}*/\n".format(LICENSE_TXT)
-PY_TXT = "\"\"\"\n{}\"\"\"\n".format(LICENSE_TXT)
+PY_TXT = '"""\n{}"""\n'.format(LICENSE_TXT)
 
 
 def get_txt(path: str):
@@ -30,6 +30,7 @@ def get_txt(path: str):
     else:
         return None
 
+
 def check_file(path):
     with open(path) as f:
         content = f.read()
@@ -38,6 +39,7 @@ def check_file(path):
             return (True, content)
         else:
             return (False, content)
+
 
 def format_file(path):
     txt = get_txt(path)
@@ -92,7 +94,8 @@ if __name__ == "__main__":
                 if is_formatted == False:
                     print("license absent:", p)
                     any_absence = True
-            exit(1)
+            if any_absence:
+                exit(1)
         if args.fix:
             for (p, is_formatted) in p.map(do_format, files):
                 if is_formatted == False:
