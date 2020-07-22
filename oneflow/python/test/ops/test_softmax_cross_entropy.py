@@ -2,6 +2,7 @@ import os
 import numpy as np
 import tensorflow as tf
 import oneflow as flow
+import oneflow.typing as oft
 from collections import OrderedDict
 
 from test_util import GenArgList
@@ -27,7 +28,7 @@ def compare_with_tensorflow(device_type, data_type, shape):
 
     @flow.global_function(func_config)
     def SoftmaxCrossEntropyWithLogitsJob(
-        labels=flow.FixedTensorDef(shape, dtype=type_name_to_flow_type[data_type])
+        labels: oft.Numpy.Placeholder(shape, dtype=type_name_to_flow_type[data_type])
     ):
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
