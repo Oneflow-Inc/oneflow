@@ -1,5 +1,6 @@
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _check(test_case, x, y, out, case):
@@ -25,8 +26,8 @@ def _run_test(test_case, x, y, case, dtype=None, device="gpu"):
 
     @flow.global_function(func_config)
     def ScalarByTensorJob(
-        x=flow.FixedTensorDef(x.shape, dtype=dtype),
-        y=flow.FixedTensorDef(y.shape, dtype=dtype),
+        x: oft.Numpy.Placeholder(x.shape, dtype=dtype),
+        y: oft.Numpy.Placeholder(y.shape, dtype=dtype),
     ):
         if case == "add":
             return flow.math.add(x, y)

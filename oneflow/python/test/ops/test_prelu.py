@@ -5,6 +5,7 @@ import numpy as np
 import oneflow as flow
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+import oneflow.typing as oft
 
 
 def _check(test_case, x, y, shared_axes):
@@ -36,7 +37,9 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(func_config)
-    def PreluJob(x=flow.FixedTensorDef(x_shape, dtype=type_name_to_flow_type[dtype])):
+    def PreluJob(
+        x: oft.Numpy.Placeholder(x_shape, dtype=type_name_to_flow_type[dtype])
+    ):
         with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
                 name="v1",
