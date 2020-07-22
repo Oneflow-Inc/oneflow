@@ -43,7 +43,7 @@ def format_file(path):
     txt = get_txt(path)
     with open(path, "r") as r:
         content = r.read()
-    is_formatted, content = check_file(x)
+    is_formatted, content = check_file(path)
     if is_formatted:
         return True
     else:
