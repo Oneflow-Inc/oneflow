@@ -16,7 +16,6 @@ REGISTER_CPU_ONLY_USER_OP("image_resize")
     .Attr<int64_t>("resize_shorter", UserOpAttrType::kAtInt64, 0)
     .Attr<int64_t>("resize_x", UserOpAttrType::kAtInt64, 0)
     .Attr<int64_t>("resize_y", UserOpAttrType::kAtInt64, 0)
-    .SetOutputBufferNum(2)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -67,7 +66,6 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize")
     .Attr<float>("crop_pos_y", UserOpAttrType::kAtFloat, 0.5)
     .Attr<bool>("pad_output", UserOpAttrType::kAtBool, false)
     .Attr<int32_t>("output_dtype", UserOpAttrType::kAtInt32, static_cast<int32_t>(DataType::kFloat))
-    .SetOutputBufferNum(2)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* mirror_tensor = ctx->TensorDesc4ArgNameAndIndex("mirror", 0);
@@ -131,7 +129,6 @@ REGISTER_CPU_ONLY_USER_OP("coin_flip")
     .Attr("batch_size", UserOpAttrType::kAtInt64)
     .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
     .Attr<bool>("has_seed", UserOpAttrType::kAtBool, false)
-    .SetOutputBufferNum(2)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
