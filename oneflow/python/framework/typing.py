@@ -9,8 +9,12 @@ import inspect
 import sys
 
 
+class PyStructCompatibleToBlob(object):
+    pass
+
+
 @oneflow_export("typing.Numpy")
-class Numpy:
+class Numpy(PyStructCompatibleToBlob):
     """`Numpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
@@ -50,7 +54,7 @@ class Numpy:
 
 
 @oneflow_export("typing.ListNumpy")
-class ListOfNumpy:
+class ListNumpy(PyStructCompatibleToBlob):
     """`ListNumpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
@@ -94,7 +98,7 @@ class ListOfNumpy:
 
 
 @oneflow_export("typing.ListListNumpy")
-class ListOfListOfNumpy:
+class ListListNumpy(PyStructCompatibleToBlob):
     """`ListListNumpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
@@ -168,6 +172,56 @@ class ListOfListOfNumpyDef(OneflowNumpyDef):
         )
 
 
+def CheckGlobalFunctionAnnotation(signature):
+    parameters = signature.parameters
+    if all(p.annotation is not inspect._empty for _, p in parameters.items()):
+        for _, p in parameters.items():
+            CheckGlobalFunctionParamAnnotation(p.annotation)
+    return_annotation = signature.return_annotation
+    if return_annotation is not inspect._empty:
+        CheckGlobalFunctionReturnAnnotation(return_annotation)
+
+
+def CheckGlobalFunctionParamAnnotation(cls):
+    if OriginFrom(cls, typing.Tuple):
+        assert cls.__args__ is not None, "T in typing.Tuple[T, ...] cannot be omitted"
+        assert len(cls.__args__) > 0
+        for cls_arg in cls.__args__:
+            CheckGlobalFunctionParamAnnotation(cls_arg)
+    elif OriginFrom(cls, OneflowNumpyDef):
+        pass
+    else:
+        raise NotImplementedError("invalid parameter annotation %s found" % cls)
+
+
+def CheckGlobalFunctionReturnAnnotation(cls):
+    if OriginFrom(cls, Callback):
+        assert (
+            cls.__args__ is not None
+        ), "T in oneflow.typing.Callback[T] cannot be omitted"
+        assert len(cls.__args__) == 1
+        _CheckGlobalFunctionReturnAnnotation(cls.__args__[0])
+    else:
+        _CheckGlobalFunctionReturnAnnotation(cls)
+
+
+def _CheckGlobalFunctionReturnAnnotation(cls):
+    if OriginFrom(cls, typing.Tuple):
+        assert cls.__args__ is not None, "T in typing.Tuple[T, ...] cannot be omitted"
+        assert len(cls.__args__) > 0
+        for cls_arg in cls.__args__:
+            _CheckGlobalFunctionReturnAnnotation(cls_arg)
+    elif OriginFrom(cls, PyStructCompatibleToBlob):
+        pass
+    else:
+        raise NotImplementedError("invalid return annotation %s found" % cls)
+
+
+@oneflow_export("typing.Callback")
+class Callback(typing.Generic[typing.TypeVar("T")]):
+    pass
+
+
 def OriginFrom(parameterised, generic):
     if inspect.isclass(parameterised) and inspect.isclass(generic):
         return issubclass(parameterised, generic)
@@ -186,4 +240,7 @@ def OriginFrom(parameterised, generic):
                 type(parameterised) is type(typing.List[int])
                 and parameterised.__origin__ is list
             )
+        if generic == Callback:
+            return parameterised.__origin__ is Callback
+
     raise NotImplementedError("python typing is a monster torturing everyone.")
