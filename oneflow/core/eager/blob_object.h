@@ -14,7 +14,7 @@ class BlobObject : public vm::Object {
   BlobObject(const BlobObject&) = delete;
   BlobObject(BlobObject&&) = delete;
   BlobObject(const std::shared_ptr<MemoryCase>& mem_case, DataType data_type)
-      : mem_case_(mem_case), blob_desc_(data_type), blob_body_bytes_(0) {}
+      : mem_case_(mem_case), blob_body_bytes_(0), blob_desc_(data_type) {}
   virtual ~BlobObject() override = default;
 
   const BlobDesc& blob_desc() const { return blob_desc_; }
