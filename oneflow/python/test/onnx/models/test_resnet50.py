@@ -143,7 +143,7 @@ def resnet50(images, trainable=True, need_transpose=False):
     if need_transpose:
         images = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
 
-    with flow.deprecated.variable_scope("Resnet"):
+    with flow.scope.namespace("Resnet"):
         stem = resnet_stem(images)
         body = resnet_conv_x_body(stem, lambda x: x)
         pool5 = flow.nn.avg_pool2d(
