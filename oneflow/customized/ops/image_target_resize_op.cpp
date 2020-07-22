@@ -1,4 +1,5 @@
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/customized/image/image_util.h"
 
 namespace oneflow {
 
@@ -8,11 +9,12 @@ REGISTER_CPU_ONLY_USER_OP("image_target_resize")
     .Output("size")
     .Output("scale")
     .Attr("target_size", UserOpAttrType::kAtInt32)
-    .Attr("max_size", UserOpAttrType::kAtInt32)
+    .Attr<int32_t>("max_size", UserOpAttrType::kAtInt32, 0)
+    .Attr<std::string>("interpolation", UserOpAttrType::kAtString, "bilinear")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       bool check_failed = false;
-      std::stringstream err;
+      std::ostringstream err;
       err << "Illegal attr value for " << conf.op_type_name() << " op, op_name: " << conf.op_name();
       const int32_t target_size = conf.attr<int32_t>("target_size");
       const int32_t max_size = conf.attr<int32_t>("max_size");
@@ -20,10 +22,13 @@ REGISTER_CPU_ONLY_USER_OP("image_target_resize")
         err << ", target_size: " << target_size << " (target_size must be greater than 0)";
         check_failed = true;
       }
-      if (max_size < target_size) {
-        err << ", max_size: " << max_size << " (max_size must be greater than 0)";
+      if (max_size < target_size && max_size > 0) {
+        err << ", max_size: " << max_size
+            << " (max_size must be greater than target_size or equal to 0)";
         check_failed = true;
       }
+      const std::string& interpolation = conf.attr<std::string>("interpolation");
+      if (!CheckInterpolationValid(interpolation, err)) { check_failed = true; }
       if (check_failed) { return oneflow::Error::CheckFailed() << err.str(); }
       return Maybe<void>::Ok();
     })

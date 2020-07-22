@@ -23,38 +23,41 @@ std::pair<T, T> GetTargetResizedSize4ImageBuffer(const TensorBuffer& image_buffe
   double origin_max_size = std::max<double>(origin_height, origin_width);
   double resized_min_size = static_cast<double>(target_size);
   double resized_max_size = std::nearbyint((origin_max_size / origin_min_size) * resized_min_size);
-  if (resized_max_size > max_size) {
+  if (max_size > 0 && resized_max_size > max_size) {
     resized_max_size = static_cast<double>(max_size);
     resized_min_size = std::nearbyint(resized_max_size * origin_min_size / origin_max_size);
   }
 
-  std::pair<T, T> height_and_width;
+  std::pair<T, T> width_and_height;
   if (origin_width < origin_height) {
-    height_and_width.second = resized_min_size;
-    height_and_width.first = resized_max_size;
+    width_and_height.first = resized_min_size;
+    width_and_height.second = resized_max_size;
   } else {
-    height_and_width.first = resized_min_size;
-    height_and_width.second = resized_max_size;
+    width_and_height.first = resized_max_size;
+    width_and_height.second = resized_min_size;
   }
   std::fesetround(origin_round_way);
-  return height_and_width;
+  return width_and_height;
 }
 
 void ImageTargetResize(const TensorBuffer& image_buffer, TensorBuffer* resized_image_buffer,
-                       const int32_t target_size, const int32_t max_size) {
+                       const int32_t target_size, const int32_t max_size,
+                       const std::string& interpolation) {
   CHECK_EQ(image_buffer.shape().NumAxes(), 3);
   CHECK_GT(target_size, 0);
-  CHECK_GE(max_size, target_size);
+  CHECK(max_size >= target_size || max_size == 0);
 
-  cv::Mat image_mat = GenCvMat4ImageBuffer(image_buffer);
-  int64_t res_h = 0;
+  const cv::Mat image_mat = GenCvMat4ImageBuffer(image_buffer);
   int64_t res_w = 0;
+  int64_t res_h = 0;
   int64_t channels = image_mat.channels();
-  std::tie(res_h, res_w) =
+  std::tie(res_w, res_h) =
       GetTargetResizedSize4ImageBuffer<int64_t>(image_buffer, target_size, max_size);
   resized_image_buffer->Resize(Shape({res_h, res_w, channels}), image_buffer.data_type());
   cv::Mat res_image_mat = GenCvMat4ImageBuffer(*resized_image_buffer);
-  cv::resize(image_mat, res_image_mat, cv::Size(res_w, res_h), 0, 0, cv::INTER_LINEAR);
+  int interpolaion_flag =
+      GetCvInterpolationFlag(interpolation, image_mat.cols, image_mat.rows, res_w, res_h);
+  cv::resize(image_mat, res_image_mat, cv::Size(res_w, res_h), 0, 0, interpolaion_flag);
 
   CHECK_EQ(res_image_mat.ptr(), resized_image_buffer->data());
   CHECK_LE(std::max(res_image_mat.rows, res_image_mat.cols), max_size);
@@ -88,16 +91,19 @@ class ImageTargetResizeKernel final : public user_op::OpKernel {
     const int32_t max_size = ctx->Attr<int32_t>("max_size");
 
     MultiThreadLoop(in_tensor->shape().elem_cnt(), [&](size_t i) {
-      ImageTargetResize(in_img_buf[i], out_img_buf + i, target_size, max_size);
+      ImageTargetResize(in_img_buf[i], out_img_buf + i, target_size, max_size,
+                        ctx->Attr<std::string>("interpolation"));
+      const int64_t org_h = out_img_buf[i].shape().At(0);
+      const int64_t org_w = out_img_buf[i].shape().At(1);
+      const int64_t res_h = out_img_buf[i].shape().At(0);
+      const int64_t res_w = out_img_buf[i].shape().At(1);
       if (size_ptr != nullptr) {
-        size_ptr[i * 2 + 0] = out_img_buf[i].shape().At(0);
-        size_ptr[i * 2 + 1] = out_img_buf[i].shape().At(1);
+        size_ptr[i * 2 + 0] = static_cast<int32_t>(res_w);
+        size_ptr[i * 2 + 1] = static_cast<int32_t>(res_h);
       }
       if (scale_ptr != nullptr) {
-        scale_ptr[i * 2 + 0] = static_cast<float>(out_img_buf[i].shape().At(0))
-                               / static_cast<float>(in_img_buf[i].shape().At(0));
-        scale_ptr[i * 2 + 1] = static_cast<float>(out_img_buf[i].shape().At(1))
-                               / static_cast<float>(in_img_buf[i].shape().At(1));
+        scale_ptr[i * 2 + 0] = static_cast<float>(res_w) / static_cast<float>(org_w);
+        scale_ptr[i * 2 + 1] = static_cast<float>(res_h) / static_cast<float>(org_h);
       }
     });
   }
