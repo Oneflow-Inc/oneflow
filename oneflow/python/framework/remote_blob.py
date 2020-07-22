@@ -5,7 +5,6 @@ import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.watch_scope_util as watch_scope_util
 import oneflow.python.framework.blob_trait as blob_trait
 from oneflow.python.framework.dtype import convert_of_dtype_to_oneflow_dtype_class
 import oneflow.python.lib.core.enable_if as enable_if
@@ -95,11 +94,9 @@ class ConsistentBlob(BlobDef):
 
 
 class LazyConsistentBlob(ConsistentBlob):
-    def __init__(self, lbi, auto_watched_within_scope=True, **kw):
+    def __init__(self, lbi, **kw):
         ConsistentBlob.__init__(self, lbi, **kw)
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-        if auto_watched_within_scope:
-            watch_scope_util.TryWatchOnce(self)
 
     @property
     def shape(self):
@@ -171,11 +168,8 @@ class LazyMirroredBlob(MirroredBlob):
             sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(
                 self.job_name_, lbn, i
             )
-            consistent_blob = LazyConsistentBlob(
-                sub_lbi, auto_watched_within_scope=False
-            )
+            consistent_blob = LazyConsistentBlob(sub_lbi)
             self.sub_consistent_blob_list_.append(consistent_blob)
-        watch_scope_util.TryWatchOnce(self)
 
     @property
     def sub_consistent_blob_list(self):

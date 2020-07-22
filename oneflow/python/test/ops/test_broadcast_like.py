@@ -5,6 +5,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList
+import oneflow.typing as oft
 
 
 def compare_broadcast_like_with_tf(
@@ -17,8 +18,8 @@ def compare_broadcast_like_with_tf(
 
     @flow.global_function(func_config)
     def broadcast_like_forward(
-        x=flow.FixedTensorDef(shape=input_shape, dtype=flow.float),
-        y=flow.FixedTensorDef(shape=like_shape, dtype=flow.float),
+        x: oft.Numpy.Placeholder(shape=input_shape, dtype=flow.float),
+        y: oft.Numpy.Placeholder(shape=like_shape, dtype=flow.float),
     ):
         with flow.scope.placement(device_type, "0:0"):
             return flow.broadcast_like(x, y, broadcast_axes=broadcast_axes)

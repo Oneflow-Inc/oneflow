@@ -5,6 +5,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList
+import oneflow.typing as oft
 
 
 def compare_reduce_any_with_tensorflow(
@@ -16,7 +17,7 @@ def compare_reduce_any_with_tensorflow(
     func_config.default_data_type(flow.int8)
 
     @flow.global_function(func_config)
-    def ReduceAnyJob(x=flow.FixedTensorDef(input_shape, dtype=flow.int8)):
+    def ReduceAnyJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.int8)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_any(x, axis=axis, keepdims=keepdims)
 
@@ -84,7 +85,7 @@ def test_reduce_any_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((10,), dtype=flow.int8)):
+    def Foo(x: oft.Numpy.Placeholder((10,), dtype=flow.int8)):
         y = flow.math.reduce_any(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
@@ -101,7 +102,7 @@ def compare_reduce_prod_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceProdJob(x=flow.FixedTensorDef(input_shape, dtype=flow.float)):
+    def ReduceProdJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float32)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_prod(x, axis=axis, keepdims=keepdims)
 
@@ -169,7 +170,7 @@ def test_reduce_prod_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.reduce_prod(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
@@ -186,7 +187,7 @@ def compare_reduce_min_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceMinJob(x=flow.FixedTensorDef(input_shape, dtype=flow.float)):
+    def ReduceMinJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_min(x, axis=axis, keepdims=keepdims)
 
@@ -254,7 +255,7 @@ def test_reduce_min_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.reduce_min(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
@@ -271,7 +272,7 @@ def compare_reduce_all_with_tensorflow(
     func_config.default_data_type(flow.int8)
 
     @flow.global_function(func_config)
-    def ReduceAllJob(x=flow.FixedTensorDef(input_shape, dtype=flow.int8)):
+    def ReduceAllJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.int8)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_all(x, axis=axis, keepdims=keepdims)
 
@@ -339,7 +340,7 @@ def test_reduce_all_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((10,), dtype=flow.int8)):
+    def Foo(x: oft.Numpy.Placeholder((10,), dtype=flow.int8)):
         y = flow.math.reduce_all(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
@@ -356,7 +357,7 @@ def compare_reduce_sum_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceSumJob(x=flow.FixedTensorDef(input_shape, dtype=flow.float)):
+    def ReduceSumJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
 
@@ -424,7 +425,7 @@ def test_reduce_sum_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.reduce_sum(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
@@ -441,7 +442,7 @@ def compare_reduce_euclidean_norm_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceEuclideanNormJob(x=flow.FixedTensorDef(input_shape, dtype=flow.float)):
+    def ReduceEuclideanNormJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_euclidean_norm(x, axis=axis, keepdims=keepdims)
 
@@ -509,7 +510,7 @@ def test_reduce_euclidean_norm_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.reduce_euclidean_norm(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
@@ -526,7 +527,7 @@ def compare_reduce_logsumexp_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceLogSumExpJob(x=flow.FixedTensorDef(input_shape, dtype=flow.float)):
+    def ReduceLogSumExpJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_logsumexp(x, axis=axis, keepdims=keepdims)
 
@@ -594,7 +595,7 @@ def test_reduce_logsumexp_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.reduce_logsumexp(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
@@ -611,7 +612,7 @@ def compare_reduce_std_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceStdJob(x=flow.FixedTensorDef(input_shape, dtype=flow.float)):
+    def ReduceStdJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_std(x, axis=axis, keepdims=keepdims)
 
@@ -679,7 +680,7 @@ def test_reduce_std_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.reduce_std(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
@@ -696,7 +697,7 @@ def compare_reduce_variance_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceVarianceJob(x=flow.FixedTensorDef(input_shape, dtype=flow.float)):
+    def ReduceVarianceJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_variance(x, axis=axis, keepdims=keepdims)
 
@@ -764,7 +765,7 @@ def test_reduce_variance_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.reduce_variance(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
@@ -781,7 +782,7 @@ def compare_reduce_max_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceMaxJob(x=flow.FixedTensorDef(input_shape, dtype=flow.float)):
+    def ReduceMaxJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_max(x, axis=axis, keepdims=keepdims)
 
@@ -849,7 +850,7 @@ def test_reduce_max_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.reduce_max(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)

@@ -6,6 +6,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -173,12 +174,12 @@ def test_pool(_):
 
         tensor_def = None
         if is_dynamic:
-            tensor_def = flow.MirroredTensorDef
+            tensor_def = oft.ListNumpy.Placeholder
         else:
-            tensor_def = flow.FixedTensorDef
+            tensor_def = oft.Numpy.Placeholder
 
         @flow.global_function(func_config)
-        def pooling_job(x=tensor_def(x_shape, dtype=dtype)):
+        def pooling_job(x: tensor_def(x_shape, dtype=dtype)):
             v = flow.get_variable(
                 "x",
                 shape=x_shape,
