@@ -51,10 +51,13 @@ REGISTER_CPU_ONLY_USER_OP("image_resize")
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_tensor->mut_data_type() = ctx->Attr<DataType>("data_type");
       *out_tensor->mut_shape() = Shape({batch_size, target_height, target_width, channels});
+      out_tensor->set_is_dynamic(in_tensor->is_dynamic());
 
       user_op::TensorDesc* scale_tensor = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
       *scale_tensor->mut_data_type() = DataType::kFloat;
       *scale_tensor->mut_shape() = Shape({batch_size, 2});
+      scale_tensor->set_is_dynamic(in_tensor->is_dynamic());
+
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

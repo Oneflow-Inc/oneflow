@@ -59,10 +59,16 @@ void ImageTargetResize(const TensorBuffer& image_buffer, TensorBuffer* resized_i
       GetCvInterpolationFlag(interpolation, image_mat.cols, image_mat.rows, res_w, res_h);
   cv::resize(image_mat, res_image_mat, cv::Size(res_w, res_h), 0, 0, interpolaion_flag);
 
-  CHECK_EQ(res_image_mat.ptr(), resized_image_buffer->data());
-  CHECK_LE(std::max(res_image_mat.rows, res_image_mat.cols), max_size);
-  CHECK(std::max(res_image_mat.rows, res_image_mat.cols) == max_size
-        || std::min(res_image_mat.rows, res_image_mat.cols) == target_size);
+  CHECK_EQ(res_image_mat.ptr<void>(), resized_image_buffer->data());
+  int min_mat_size = std::min(res_image_mat.rows, res_image_mat.cols);
+  int max_mat_size = std::max(res_image_mat.rows, res_image_mat.cols);
+  if (max_size > 0) {
+    CHECK_LE(min_mat_size, target_size);
+    CHECK_LE(max_mat_size, max_size);
+    CHECK(min_mat_size == target_size || max_mat_size == max_size);
+  } else {
+    CHECK_EQ(min_mat_size, target_size);
+  }
 }
 
 }  // namespace

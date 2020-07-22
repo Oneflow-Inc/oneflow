@@ -9,6 +9,7 @@
 
 namespace oneflow {
 
+template<typename T>
 class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
  public:
   ImageResizeToFixedSizeKernel() = default;
@@ -27,11 +28,12 @@ class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
     int64_t res_h = out_tensor->shape().At(1);
     int64_t res_w = out_tensor->shape().At(2);
     int64_t channels = out_tensor->shape().At(3);
+    int64_t elem_cnt_per_img = res_h * res_w * channels;
 
     user_op::Tensor* scale_tensor = ctx->Tensor4ArgNameAndIndex("scale", 0);
-    CHECK_EQ(out_tensor->shape().NumAxes(), 2);
-    CHECK_EQ(out_tensor->shape().At(0), batch_size);
-    CHECK_EQ(out_tensor->shape().At(1), 2);
+    CHECK_EQ(scale_tensor->shape().NumAxes(), 2);
+    CHECK_EQ(scale_tensor->shape().At(0), batch_size);
+    CHECK_EQ(scale_tensor->shape().At(1), 2);
 
     MultiThreadLoop(batch_size, [&](size_t i) {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
@@ -46,7 +48,9 @@ class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
       int interpolaion_flag = GetCvInterpolationFlag(ctx->Attr<std::string>("interpolation"),
                                                      origin_width, origin_height, res_w, res_h);
       cv::resize(in_img_mat, res_img_mat, cv::Size(res_w, res_h), 0, 0, interpolaion_flag);
-      CHECK_EQ(res_img_mat.ptr(), out_tensor->mut_dptr());
+      T* out_dptr = out_tensor->mut_dptr<T>() + i * elem_cnt_per_img;
+      CHECK(res_img_mat.isContinuous());
+      CHECK_EQ(res_img_mat.ptr<void>(), static_cast<void*>(out_dptr));
       CHECK_EQ(res_img_mat.cols, res_w);
       CHECK_EQ(res_img_mat.rows, res_h);
       CHECK_EQ(res_img_mat.channels(), channels);
@@ -61,11 +65,16 @@ class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("image_resize")
-    .SetCreateFn<ImageResizeToFixedSizeKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("out", 0) == user_op::HobAttr<DataType>("data_type")));
+#define REGISTER_IMAGE_RESIZE_KERNEL(dtype)                                            \
+  REGISTER_USER_KERNEL("image_resize")                                                 \
+      .SetCreateFn<ImageResizeToFixedSizeKernel<dtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)    \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value) \
+                       & (user_op::HobAttr<DataType>("data_type") == GetDataType<dtype>::value));
+
+REGISTER_IMAGE_RESIZE_KERNEL(float)
+REGISTER_IMAGE_RESIZE_KERNEL(uint8_t)
 
 namespace {
 
