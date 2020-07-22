@@ -135,11 +135,11 @@ def TransposeMirrorNormalizeGPU(
         op = op.Input("mirror", [mirror_blob])
     return (
         op.Output("out")
-        .Attr("color_space", color_space, "AttrTypeString")
-        .Attr("output_layout", output_layout, "AttrTypeString")
-        .Attr("mean", mean, "AttrTypeListFloat")
-        .Attr("std", std, "AttrTypeListFloat")
-        .Attr("output_dtype", output_dtype, "AttrTypeDataType")
+        .Attr("color_space", color_space)
+        .Attr("output_layout", output_layout)
+        .Attr("mean", mean)
+        .Attr("std", std)
+        .Attr("output_dtype", output_dtype)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -166,23 +166,22 @@ def CropMirrorNormalize(
         run_gpu
         and input_blob.dtype is flow.uint8
         and len(input_blob.shape) == 4
-        and output_layout == "NCHW"
-    ):
-        if (
+        and (
             crop_h == 0
             or crop_w == 0
             or (crop_h == input_blob.shape[1] and crop_w == input_blob.shape[2])
-        ):
-            return TransposeMirrorNormalizeGPU(
-                input_blob,
-                mirror_blob,
-                color_space,
-                output_layout,
-                mean,
-                std,
-                output_dtype,
-                name,
-            )
+        )
+    ):
+        return TransposeMirrorNormalizeGPU(
+            input_blob,
+            mirror_blob,
+            color_space,
+            output_layout,
+            mean,
+            std,
+            output_dtype,
+            name,
+        )
     if name is None:
         name = id_util.UniqueStr("CropMirrorNormalize_")
     op = (

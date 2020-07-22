@@ -9,6 +9,11 @@ struct NormalizeVal {
   float val[3];
 };
 
+enum TensorLayout {
+  kNCHW = 0,
+  kNHWC = 1,
+};
+
 class NormalizeAttr final : public user_op::OpKernelState {
  public:
   NormalizeAttr(user_op::KernelInitContext* ctx) {
@@ -40,20 +45,37 @@ class NormalizeAttr final : public user_op::OpKernelState {
   NormalizeVal inv_std_;
 };
 
+template<TensorLayout layout>
+__device__ __forceinline__ int32_t GetOffset(int32_t n, int32_t h, int32_t w, int32_t c, int32_t H,
+                                             int32_t W, int32_t C);
+
+template<>
+__device__ __forceinline__ int32_t GetOffset<TensorLayout::kNCHW>(int32_t n, int32_t h, int32_t w,
+                                                                  int32_t c, int32_t H, int32_t W,
+                                                                  int32_t C) {
+  return n * C * H * W + c * H * W + h * W + w;  //  n,c,h,w
+}
+
+template<>
+__device__ __forceinline__ int32_t GetOffset<TensorLayout::kNHWC>(int32_t n, int32_t h, int32_t w,
+                                                                  int32_t c, int32_t H, int32_t W,
+                                                                  int32_t C) {
+  return n * H * W * C + h * W * C + w * C + c;  //  n,h,w,c
+}
+
+template<TensorLayout layout>
 __global__ void TransposeMirrorNormalizeGpuImpl(int32_t elem_cnt, const uint8_t* x_dptr,
                                                 float* y_dptr, int32_t N, int32_t H, int32_t W,
                                                 int32_t C, const int8_t* mirror,
                                                 const NormalizeVal mean,
                                                 const NormalizeVal inv_std) {
-  int32_t stride_n = H * W * C;
+  int32_t x_stride_n = H * W * C;
   int32_t x_stride_h = W * C;
   int32_t x_stride_w = C;
-  int32_t y_stride_c = H * W;
-  int32_t y_stride_h = W;
   CUDA_1D_KERNEL_LOOP(x_idx, elem_cnt) {
     int32_t x = x_idx;
-    int32_t n = x / stride_n;
-    x %= stride_n;
+    int32_t n = x / x_stride_n;
+    x %= x_stride_n;
     int32_t h = x / x_stride_h;
     x %= x_stride_h;
     int32_t w = x / x_stride_w;
@@ -65,8 +87,8 @@ __global__ void TransposeMirrorNormalizeGpuImpl(int32_t elem_cnt, const uint8_t*
     if (mirror && mirror[n]) { w = W - 1 - w; }
     float mean_val = mean.val[c];
     float inv_std_val = inv_std.val[c];
-    int32_t y = n * stride_n + c * y_stride_c + h * y_stride_h + w;
-    y_dptr[y] = (static_cast<float>(x_dptr[x_idx]) - mean_val) * inv_std_val;
+    int32_t y_idx = GetOffset<layout>(n, h, w, c, H, W, C);
+    y_dptr[y_idx] = (static_cast<float>(x_dptr[x_idx]) - mean_val) * inv_std_val;
   }
 }
 
@@ -106,11 +128,15 @@ class TransposeMirrorNormalizeGpuKernel final : public user_op::OpKernel {
     if (mirror_blob) { mirror_dptr = mirror_blob->dptr<int8_t>(); }
 
     if (output_layout == "NCHW") {
-      TransposeMirrorNormalizeGpuImpl<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                        ctx->device_ctx()->cuda_stream()>>>(
-          elem_cnt, in_dptr, out_dptr, N, H, W, C, mirror_dptr, mean, inv_std);
+      TransposeMirrorNormalizeGpuImpl<TensorLayout::kNCHW>
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+             ctx->device_ctx()->cuda_stream()>>>(elem_cnt, in_dptr, out_dptr, N, H, W, C,
+                                                 mirror_dptr, mean, inv_std);
     } else if (output_layout == "NHWC") {
-      TODO();
+      TransposeMirrorNormalizeGpuImpl<TensorLayout::kNHWC>
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+             ctx->device_ctx()->cuda_stream()>>>(elem_cnt, in_dptr, out_dptr, N, H, W, C,
+                                                 mirror_dptr, mean, inv_std);
     } else {
       UNIMPLEMENTED();
     }
