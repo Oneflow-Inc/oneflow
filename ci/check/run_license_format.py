@@ -23,7 +23,7 @@ PY_TXT = "\"\"\"\n{}\"\"\"\n".format(LICENSE_TXT)
 
 
 def get_txt(path: str):
-    if path.endswith((".cpp", ".h", ".cu", ".cuh")):
+    if path.endswith((".cpp", ".h", ".hpp", ".cu", ".cuh")):
         return CPP_TXT
     elif path.endswith((".py")):
         return PY_TXT
@@ -64,7 +64,7 @@ def do_format(x):
 
 def glob_files(path):
     files = []
-    for ext in ("**/*.cpp", "**/*.h", "**/*.cu", "**/*.cuh", "**/*.py"):
+    for ext in ("**/*.cpp", "**/*.h", "**/*.hpp", "**/*.cu", "**/*.cuh", "**/*.py"):
         joined = os.path.join(path, ext)
         files.extend(glob.glob(joined, recursive=True))
     return files
