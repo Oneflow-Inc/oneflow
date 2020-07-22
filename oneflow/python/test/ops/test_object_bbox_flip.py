@@ -2,6 +2,7 @@ import random
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _of_object_bbox_flip(bbox_list, image_size, flip_code):
@@ -14,8 +15,12 @@ def _of_object_bbox_flip(bbox_list, image_size, flip_code):
 
     @flow.global_function(func_config)
     def object_bbox_flip_job(
-        bbox_def=flow.MirroredTensorListDef(shape=tuple(bbox_shape), dtype=flow.float),
-        image_size_def=flow.MirroredTensorDef(shape=image_size.shape, dtype=flow.int32),
+        bbox_def: oft.ListListNumpy.Placeholder(
+            shape=tuple(bbox_shape), dtype=flow.float
+        ),
+        image_size_def: oft.ListNumpy.Placeholder(
+            shape=image_size.shape, dtype=flow.int32
+        ),
     ):
         bbox_buffer = flow.tensor_list_to_tensor_buffer(bbox_def)
         flip_bbox = flow.object_bbox_flip(bbox_buffer, image_size_def, flip_code)

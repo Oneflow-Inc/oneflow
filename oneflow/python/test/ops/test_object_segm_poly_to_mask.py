@@ -4,6 +4,7 @@ import random
 import cv2
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 coco_dict = dict()
 
@@ -158,11 +159,13 @@ def _of_poly_to_mask_pipline(
 
     @flow.global_function(func_config)
     def poly_to_mask_job(
-        image_def=flow.MirroredTensorListDef(
+        image_def: oft.ListListNumpy.Placeholder(
             shape=tuple(image_shape), dtype=flow.float
         ),
-        poly_def=flow.MirroredTensorListDef(shape=tuple(poly_shape), dtype=flow.float),
-        poly_index_def=flow.MirroredTensorListDef(
+        poly_def: oft.ListListNumpy.Placeholder(
+            shape=tuple(poly_shape), dtype=flow.float
+        ),
+        poly_index_def: oft.ListListNumpy.Placeholder(
             shape=tuple(poly_index_shape), dtype=flow.int32
         ),
     ):

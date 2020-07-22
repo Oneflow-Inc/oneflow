@@ -1,5 +1,6 @@
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -26,8 +27,8 @@ def _check(test_case, x_indices, x_values, y_indices, y_values, num_unique):
 def _run_test(test_case, indices, values, indices_dtype, values_dtype, device):
     @flow.global_function(func_config)
     def TestJob(
-        indices=flow.FixedTensorDef(indices.shape, dtype=indices_dtype),
-        values=flow.FixedTensorDef(values.shape, dtype=values_dtype),
+        indices: oft.Numpy.Placeholder(indices.shape, dtype=indices_dtype),
+        values: oft.Numpy.Placeholder(values.shape, dtype=values_dtype),
     ):
         with flow.scope.placement(device, "0:0"):
             return flow.experimental.indexed_slices_reduce_sum(indices, values)
