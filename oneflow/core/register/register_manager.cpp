@@ -61,7 +61,7 @@ RegstMgr::RegstMgr(const Plan& plan) {
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != this_machine_id) { continue; }
     for (const auto& pair : task.produced_regst_desc()) {
-      const RegstDescProto &regst_desc = pair.second;
+      const RegstDescProto& regst_desc = pair.second;
       CHECK(
           regst_desc_id2rt_regst_desc_
               .emplace(regst_desc.regst_desc_id(), std::make_unique<const RtRegstDesc>(regst_desc))
