@@ -60,9 +60,6 @@ void GetConvOutAndPad(const ShapeView& in_blob_shape, const user_op::UserOpConfW
                       DimVector* out, std::vector<int32_t>* pad_small_side,
                       std::vector<int32_t>* pad_large_side);
 
-void GetConvOut(const ShapeView& in_blob_shape, const user_op::UserOpConfWrapper& conv_conf,
-                DimVector* out);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_UTIL_H_

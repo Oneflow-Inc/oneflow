@@ -238,20 +238,4 @@ void GetConvOutAndPad(const ShapeView& in_blob_shape, const user_op::UserOpConfW
   }
 }
 
-void GetConvOut(const ShapeView& in_blob_shape, const user_op::UserOpConfWrapper& conv_conf,
-                DimVector* out) {
-  int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
-  if (out) { out->assign(opkernel_dim, 0); }
-  const auto& data_format = conv_conf.attr<std::string>("data_format");
-  const auto& pads = conv_conf.attr<std::vector<int32_t>>("pads");
-  const auto& strides = conv_conf.attr<std::vector<int32_t>>("strides");
-  const auto& dilation_rate = conv_conf.attr<std::vector<int32_t>>("dilation_rate");
-  const auto& kernel_size = conv_conf.attr<std::vector<int32_t>>("kernel_size");
-  FOR_RANGE(int32_t, i, 0, opkernel_dim) {
-    GetWindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.at(i),
-                          dilation_rate.at(i), strides.at(i), pads.at(DhwOffset(data_format) + i),
-                          out ? &(out->at(i)) : nullptr);
-  }
-}
-
 }  // namespace oneflow
