@@ -13,16 +13,19 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
     const std::string data_format = ctx->Attr<std::string>("data_format");
-    const std::string padding = ctx->Attr<std::string>("padding");
+    const auto& pads_before = ctx->Attr<std::vector<int32_t>>("pads_before");
+    const auto& pads_after = ctx->Attr<std::vector<int32_t>>("pads_after");
     const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
     const std::vector<int32_t> strides = ctx->Attr<std::vector<int32_t>>("strides");
+    const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
 
     CHECK_EQ_OR_RETURN(pool_size.size(), dim);
     for (int32_t pool_dim : pool_size) { CHECK_GT_OR_RETURN(pool_dim, 0); }
     CHECK_EQ_OR_RETURN(strides.size(), dim);
     for (int32_t stride_dim : strides) { CHECK_GT_OR_RETURN(stride_dim, 0); }
 
-    const Params3D params_3d(dim, *x_shape, data_format, padding, pool_size, strides);
+    const Params3D params_3d(dim, *x_shape, data_format, pads_before, pads_after, pool_size,
+                             strides, ceil_mode);
     user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
     *y_desc = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
@@ -77,9 +80,11 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32
               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
               .Output("dx")
               .Attr("data_format", op.attr<std::string>("data_format"))
-              .Attr("padding", op.attr<std::string>("padding"))
+              .Attr("pads_before", op.attr<std::vector<int32_t>>("pads_before"))
+              .Attr("pads_after", op.attr<std::vector<int32_t>>("pads_after"))
               .Attr("pool_size", op.attr<std::vector<int32_t>>("pool_size"))
               .Attr("strides", op.attr<std::vector<int32_t>>("strides"))
+              .Attr("ceil_mode", op.attr<bool>("ceil_mode"))
               .Build();
       op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
       AddOp(grad_op);
@@ -92,10 +97,12 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32
 REGISTER_USER_OP("avg_pool_1d")
     .Input("x")
     .Output("y")
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("pads_before", UserOpAttrType::kAtListInt32)
+    .Attr("pads_after", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("pool_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("ceil_mode", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn);
@@ -105,10 +112,12 @@ REGISTER_USER_OP("avg_pool_1d_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("pads_before", UserOpAttrType::kAtListInt32)
+    .Attr("pads_after", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("pool_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("ceil_mode", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
@@ -118,10 +127,12 @@ REGISTER_USER_OP_GRAD("avg_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpCon
 REGISTER_USER_OP("avg_pool_2d")
     .Input("x")
     .Output("y")
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("pads_before", UserOpAttrType::kAtListInt32)
+    .Attr("pads_after", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("pool_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("ceil_mode", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn);
@@ -131,10 +142,12 @@ REGISTER_USER_OP("avg_pool_2d_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("pads_before", UserOpAttrType::kAtListInt32)
+    .Attr("pads_after", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("pool_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("ceil_mode", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
@@ -144,10 +157,12 @@ REGISTER_USER_OP_GRAD("avg_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpCon
 REGISTER_USER_OP("avg_pool_3d")
     .Input("x")
     .Output("y")
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("pads_before", UserOpAttrType::kAtListInt32)
+    .Attr("pads_after", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("pool_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("ceil_mode", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn);
@@ -157,10 +172,12 @@ REGISTER_USER_OP("avg_pool_3d_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("pads_before", UserOpAttrType::kAtListInt32)
+    .Attr("pads_after", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("pool_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("ceil_mode", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
@@ -170,10 +187,12 @@ REGISTER_USER_OP_GRAD("avg_pool_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpCon
 REGISTER_USER_OP("max_pool_1d")
     .Input("x")
     .Output("y")
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("pads_before", UserOpAttrType::kAtListInt32)
+    .Attr("pads_after", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("pool_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("ceil_mode", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn);
@@ -183,10 +202,12 @@ REGISTER_USER_OP("max_pool_1d_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("pads_before", UserOpAttrType::kAtListInt32)
+    .Attr("pads_after", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("pool_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("ceil_mode", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
@@ -196,10 +217,12 @@ REGISTER_USER_OP_GRAD("max_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpCon
 REGISTER_USER_OP("max_pool_2d")
     .Input("x")
     .Output("y")
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("pads_before", UserOpAttrType::kAtListInt32)
+    .Attr("pads_after", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("pool_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("ceil_mode", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn);
@@ -209,10 +232,12 @@ REGISTER_USER_OP("max_pool_2d_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("pads_before", UserOpAttrType::kAtListInt32)
+    .Attr("pads_after", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("pool_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("ceil_mode", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
@@ -222,10 +247,12 @@ REGISTER_USER_OP_GRAD("max_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpCon
 REGISTER_USER_OP("max_pool_3d")
     .Input("x")
     .Output("y")
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("pads_before", UserOpAttrType::kAtListInt32)
+    .Attr("pads_after", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("pool_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("ceil_mode", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn);
@@ -235,10 +262,12 @@ REGISTER_USER_OP("max_pool_3d_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("pads_before", UserOpAttrType::kAtListInt32)
+    .Attr("pads_after", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("pool_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
+    .Attr("ceil_mode", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);

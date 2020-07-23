@@ -336,12 +336,15 @@ std::shared_ptr<user_op::OpKernelState> CreateConvOpKernelState(user_op::KernelI
   state->strides_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("strides"));
   state->dilation_rate_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("dilation_rate"));
 
-  state->padding_before_3d_.resize(3);
-  const auto& padding = ctx->Attr<std::string>("padding");
-  for (int i = 0; i < 3; ++i) {
-    CalcOutAndPadding(state->in_5d_shape_.At(i), state->weight_5d_shape_.At(i),
-                      state->dilation_rate_3d_.at(i), state->strides_3d_.at(i), padding, nullptr,
-                      &(state->padding_before_3d_.at(i)), nullptr);
+  // state->padding_before_3d_.resize(3);
+  const auto& pads = ctx->Attr<std::vector<int32_t>>("pads");
+  FOR_RANGE(uint8_t, dim, 0, 3) {
+    int64_t index = static_cast<int64_t>(dim) - (5 - pads.size());
+    if (index < 0) {
+      state->padding_before_3d_.push_back(0);
+    } else {
+      state->padding_before_3d_.push_back(pads[state->idx_offset_ + index]);
+    }
   }
 
   return std::move(state);

@@ -152,23 +152,23 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob
                              const user_op::UserOpConfWrapper& conv_conf) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
-  std::vector<int32_t> pad_large_side;
-  GetConvOutAndPad(in_blob_shape, conv_conf, nullptr, nullptr, &pad_large_side);
+  const auto& pads = conv_conf.attr<std::vector<int32_t>>("pads");
   const auto& strides = conv_conf.attr<std::vector<int32_t>>("strides");
   const auto& dilation_rate = conv_conf.attr<std::vector<int32_t>>("dilation_rate");
+  const std::string data_format = conv_conf.attr<std::string>("data_format");
   if (opkernel_dim == 2) {
-    CudaCheck(cudnnSetConvolution2dDescriptor(val_, pad_large_side[0], pad_large_side[1],
-                                              strides.at(0), strides.at(1), dilation_rate.at(0),
-                                              dilation_rate.at(1), CUDNN_CROSS_CORRELATION,
-                                              GetCudnnDataType(data_type)));
+    CudaCheck(cudnnSetConvolution2dDescriptor(
+        val_, pads.at(DhwOffset(data_format) + 0), pads.at(DhwOffset(data_format) + 1),
+        strides.at(0), strides.at(1), dilation_rate.at(0), dilation_rate.at(1),
+        CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
   } else if (opkernel_dim == 1) {
-    CudaCheck(cudnnSetConvolution2dDescriptor(val_, pad_large_side[0], 0, strides.at(0), 1,
-                                              dilation_rate.at(0), 1, CUDNN_CROSS_CORRELATION,
-                                              GetCudnnDataType(data_type)));
+    CudaCheck(cudnnSetConvolution2dDescriptor(
+        val_, pads.at(DhwOffset(data_format) + 0), 0, strides.at(0), 1, dilation_rate.at(0), 1,
+        CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
   } else {
     CudaCheck(cudnnSetConvolutionNdDescriptor(
-        val_, opkernel_dim, pad_large_side.data(), strides.data(), dilation_rate.data(),
-        CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
+        val_, opkernel_dim, pads.data() + DhwOffset(data_format), strides.data(),
+        dilation_rate.data(), CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
   }
   const int32_t groups = conv_conf.attr<int32_t>("groups");
   if (groups != 1) { CudaCheck(cudnnSetConvolutionGroupCount(val_, groups)); }

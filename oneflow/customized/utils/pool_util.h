@@ -14,6 +14,10 @@ class Params3D {
   Params3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
            const std::string& padding, const std::vector<int32_t>& pool_size,
            const std::vector<int32_t>& strides);
+  Params3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
+           const std::vector<int32_t>& pads_before, const std::vector<int32_t>& pads_after,
+           const std::vector<int32_t>& pool_size, const std::vector<int32_t>& strides,
+           const bool ceil_mode);
   ~Params3D() = default;
 
   Shape GetYShape() const;

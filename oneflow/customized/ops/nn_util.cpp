@@ -29,6 +29,33 @@ void CalcOutAndPadding(int64_t input_size, int32_t filter_size, int32_t dilation
   if (output_size) { CHECK_GE((*output_size), 0); }
 }
 
+void CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate, int32_t stride,
+                     const std::string& padding_type, int32_t* padding_small,
+                     int32_t* padding_large) {
+  CHECK_GT(stride, 0);
+  CHECK_GE(dilation_rate, 1);
+
+  int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
+  int64_t tmp_output_size = (input_size + stride - 1) / stride;
+  const int32_t padding_needed = std::max(
+      0, static_cast<int32_t>((tmp_output_size - 1) * stride + effective_filter_size - input_size));
+  if (padding_small) { *padding_small = padding_needed / 2; }
+  if (padding_large) { *padding_large = padding_needed - padding_needed / 2; }
+}
+
+void CalcConvOut(int64_t input_size, int32_t filter_size, int32_t dilation_rate, int32_t stride,
+                 int32_t pad, int64_t* output_size) {
+  CHECK_GT(stride, 0);
+  CHECK_GE(dilation_rate, 1);
+
+  int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
+  if (output_size) {
+    *output_size = (input_size + 2 * pad - effective_filter_size + stride) / stride;
+    CHECK_GE((*output_size), 0);
+  }
+  if (output_size) { CHECK_GE((*output_size), 0); }
+}
+
 const size_t IdxOffset(const std::string& data_format) {
   if (data_format == "channels_first") {
     return 2;
