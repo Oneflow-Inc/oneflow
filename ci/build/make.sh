@@ -13,11 +13,19 @@ docker build -f $src_dir/docker/package/manylinux/Dockerfile \
 
 set +e
 cd $src_dir
-docker run --rm -it -v $src_dir:/oneflow-src "$docker_tag" --python3.6
+
+function build() {
+    set -x
+    docker run --rm -it -v $src_dir:/oneflow-src "$docker_tag" /oneflow-src/docker/package/manylinux/build_wheel.sh --python3.6
+}
+
+build
 
 cached_build_ret=$?
+
 set -e
 if [ $cached_build_ret -ne 0 ]; then
-    rm -rf $src_dir/manylinux2014-build-cache
-    docker run --rm -it -v $src_dir:/oneflow-src "$docker_tag" --python3.6
+    echo "retry after cleaning build dir"
+    docker run --rm -it-v $src_dir:/oneflow-src busybox rm -rf /oneflow-src/manylinux2014-build-cache
+    build
 fi
