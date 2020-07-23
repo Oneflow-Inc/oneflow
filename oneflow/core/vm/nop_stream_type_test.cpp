@@ -79,7 +79,7 @@ void TestNopStreamTypeOneArgument(
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto vm = NewVirtualMachine(vm_desc.Get());
   InstructionMsgList list;
-  int64_t object_id = TestUtil::NewObject(&list, "0:cpu:0");
+  int64_t object_id = TestUtil::NewObject(&list, "cpu", "0:0");
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop0_instr_msg.Mutable());
@@ -107,7 +107,7 @@ TEST(NopStreamType, one_argument_triger_next_instruction) {
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto vm = NaiveNewVirtualMachine(vm_desc.Get());
   InstructionMsgList list;
-  int64_t object_id = TestUtil::NewObject(&list, "0:cpu:0");
+  int64_t object_id = TestUtil::NewObject(&list, "cpu", "0:0");
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop0_instr_msg.Mutable());
@@ -126,7 +126,7 @@ TEST(NopStreamType, one_argument_triger_all_instructions) {
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto vm = NaiveNewVirtualMachine(vm_desc.Get());
   InstructionMsgList list;
-  int64_t object_id = TestUtil::NewObject(&list, "0:cpu:0");
+  int64_t object_id = TestUtil::NewObject(&list, "cpu", "0:0");
   auto nop0_instr_msg = NewInstruction("Nop");
   nop0_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop0_instr_msg.Mutable());
