@@ -24,8 +24,8 @@ namespace oneflow {
 // clang-format off
 OBJECT_MSG_BEGIN(CallbackMsg);
   // methods
-  PUBLIC void __Init__() {}
-  PUBLIC void __Init__(const std::function<void()>& callback) { *mut_callback() = callback; }
+  OF_PUBLIC void __Init__() {}
+  OF_PUBLIC void __Init__(const std::function<void()>& callback) { *mut_callback() = callback; }
 
   // fields
   OBJECT_MSG_DEFINE_STRUCT(std::function<void()>, callback);
