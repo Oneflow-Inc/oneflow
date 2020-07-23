@@ -150,7 +150,7 @@ def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, str
                 )
                 assert len(ndim_pads_list) == ndims
     elif isinstance(padding, (list, tuple)):
-        assert len(padding) == len(input_shape)
+        assert len(padding) == ndims + 2
         ndim_pads_list = get_ndim_pads_list(padding, dhw_offset, ndims)
         assert len(ndim_pads_list) == ndims
     else:
