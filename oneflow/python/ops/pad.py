@@ -73,7 +73,6 @@ def pad_grad(x, paddings, constant_value=0, name=None):
 def same_padding(
     x,
     padding,
-    num_spatial_dims,
     data_format,
     kernel_size,
     strides,
@@ -92,13 +91,10 @@ def same_padding(
         .Input("x", [x])
         .Output("y")
         .Attr("padding", padding.upper())
-        .Attr("num_spatial_dims", num_spatial_dims)
         .Attr("data_format", channel_pos)
         .Attr("kernel_size", kernel_size)
         .Attr("strides", strides)
         .Attr("dilation_rate", dilation_rate)
-        .Attr("floating_constant_value", float(constant_value))
-        .Attr("integral_constant_value", int(constant_value))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

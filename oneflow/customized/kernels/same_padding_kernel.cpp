@@ -9,37 +9,9 @@ namespace {
 
 void GetDimVectorInBytes(const ShapeView& tensor_shape, const int64_t size_of_data_type,
                          DimVector& shape_vec) {
-  int64_t ndims = tensor_shape.NumAxes();
-  for (int64_t i = 0; i < ndims; ++i) { shape_vec[i] = tensor_shape.At(i); }
-  shape_vec[ndims - 1] = shape_vec[ndims - 1] * size_of_data_type;
-}
-
-template<typename T>
-T GetDtypeMatchedValue(double floating, int64_t integral);
-
-template<>
-float GetDtypeMatchedValue(double floating, int64_t integral) {
-  return static_cast<float>(floating);
-}
-
-template<>
-double GetDtypeMatchedValue(double floating, int64_t integral) {
-  return floating;
-}
-
-template<>
-int8_t GetDtypeMatchedValue(double floating, int64_t integral) {
-  return static_cast<int8_t>(integral);
-}
-
-template<>
-int32_t GetDtypeMatchedValue(double floating, int64_t integral) {
-  return static_cast<int32_t>(integral);
-}
-
-template<>
-int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
-  return integral;
+  int64_t num_axes = tensor_shape.NumAxes();
+  for (int64_t i = 0; i < num_axes; ++i) { shape_vec[i] = tensor_shape.At(i); }
+  shape_vec[num_axes - 1] = shape_vec[num_axes - 1] * size_of_data_type;
 }
 
 }  // namespace
@@ -54,17 +26,15 @@ class SamePaddingKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const T constant_value = GetDtypeMatchedValue<T>(ctx->Attr<double>("floating_constant_value"),
-                                                     ctx->Attr<int64_t>("integral_constant_value"));
-    const int64_t ndims = x->shape().NumAxes();
+    const int64_t num_axes = x->shape().NumAxes();
     const std::string padding = ctx->Attr<std::string>("padding");
     const std::string data_format = ctx->Attr<std::string>("data_format");
     const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     const std::vector<int32_t> strides = ctx->Attr<std::vector<int32_t>>("strides");
     const std::vector<int32_t> dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-    std::vector<int64_t> padding_before(ndims, 0);
+    std::vector<int64_t> padding_before(num_axes, 0);
     const size_t idx_offset = IdxOffset(data_format);
-    const int32_t num_spatial_dims = ctx->Attr<int32_t>("num_spatial_dims");
+    const int32_t num_spatial_dims = x->shape().NumAxes() - 2;
     for (int32_t i = 0; i < num_spatial_dims; ++i) {
       int32_t padding_small = 0;
       int32_t padding_large = 0;
@@ -79,21 +49,20 @@ class SamePaddingKernel final : public user_op::OpKernel {
                x->shape().At(idx_offset + i) + padding_small + padding_large);
     }
     const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
-    CHECK_EQ(padding_before.size(), ndims);
-    NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(), constant_value,
-                                     y->mut_dptr<T>());
+    CHECK_EQ(padding_before.size(), num_axes);
+    NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(), 0, y->mut_dptr<T>());
     MemoryCopyNdDesc memory_copy_nd_desc;
 
-    DimVector src_shape_vec(ndims);
-    DimVector dst_shape_vec(ndims);
+    DimVector src_shape_vec(num_axes);
+    DimVector dst_shape_vec(num_axes);
     GetDimVectorInBytes(x->shape(), size_of_data_type, src_shape_vec);
     GetDimVectorInBytes(y->shape(), size_of_data_type, dst_shape_vec);
     memory_copy_nd_desc.src_shape = Shape(src_shape_vec);
     memory_copy_nd_desc.dst_shape = Shape(dst_shape_vec);
 
-    DimVector src_pos_vec(ndims, 0);
+    DimVector src_pos_vec(num_axes, 0);
     DimVector dst_pos_vec(padding_before.cbegin(), padding_before.cend());
-    dst_pos_vec[ndims - 1] *= size_of_data_type;
+    dst_pos_vec[num_axes - 1] *= size_of_data_type;
 
     memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
     memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
@@ -134,15 +103,15 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int64_t ndims = dy->shape().NumAxes();
+    const int64_t num_axes = dy->shape().NumAxes();
     const std::string padding = ctx->Attr<std::string>("padding");
     const std::string data_format = ctx->Attr<std::string>("data_format");
     const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     const std::vector<int32_t> strides = ctx->Attr<std::vector<int32_t>>("strides");
     const std::vector<int32_t> dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-    std::vector<int64_t> padding_before(ndims, 0);
+    std::vector<int64_t> padding_before(num_axes, 0);
     const size_t idx_offset = IdxOffset(data_format);
-    const int32_t num_spatial_dims = ctx->Attr<int32_t>("num_spatial_dims");
+    const int32_t num_spatial_dims = dy->shape().NumAxes() - 2;
     for (int32_t i = 0; i < num_spatial_dims; ++i) {
       int32_t padding_small = 0;
       int32_t padding_large = 0;
@@ -161,16 +130,16 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
 
     MemoryCopyNdDesc memory_copy_nd_desc;
 
-    DimVector src_shape_vec(ndims);
-    DimVector dst_shape_vec(ndims);
+    DimVector src_shape_vec(num_axes);
+    DimVector dst_shape_vec(num_axes);
     GetDimVectorInBytes(dy->shape(), size_of_data_type, src_shape_vec);
     GetDimVectorInBytes(dx->shape(), size_of_data_type, dst_shape_vec);
     memory_copy_nd_desc.src_shape = Shape(src_shape_vec);
     memory_copy_nd_desc.dst_shape = Shape(dst_shape_vec);
 
-    DimVector dst_pos_vec(ndims, 0);
+    DimVector dst_pos_vec(num_axes, 0);
     DimVector src_pos_vec(padding_before.cbegin(), padding_before.cend());
-    src_pos_vec[ndims - 1] *= size_of_data_type;
+    src_pos_vec[num_axes - 1] *= size_of_data_type;
 
     memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
     memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
