@@ -1,5 +1,5 @@
 #!/bin/bash
 set -xe
 
-chmod +x ./ci_tmp/oneflow_testexe
-./ci_tmp/oneflow_testexe
+chmod +x ./manylinux2014-build-cache/build-oneflow/bin/oneflow_testexe/oneflow_testexe
+./manylinux2014-build-cache/build-oneflow/bin/oneflow_testexe/oneflow_testexe
