@@ -7,7 +7,7 @@ from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
 def TestDataTypeAttr(input, output_type):
-    assert output_type in flow.dtypes
+    assert output_type in flow.dtypes()
     return (
         flow.user_op_builder("TestDataTypeAttr")
         .Op("TestDataTypeAttr")

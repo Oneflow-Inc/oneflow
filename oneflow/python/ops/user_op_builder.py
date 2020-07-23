@@ -274,7 +274,7 @@ For instance:
         elif attr_type == user_op_attr_util.kAtDataType:
             assert (
                 isinstance(attr_value.oneflow_proto_dtype, int)
-                and attr_value in oneflow.dtypes
+                and attr_value in oneflow.dtypes()
             )
             attribute.at_data_type = attr_value.oneflow_proto_dtype
         elif attr_type == user_op_attr_util.kAtListInt32:
@@ -292,7 +292,7 @@ For instance:
         elif attr_type == user_op_attr_util.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
             assert all(
-                isinstance(x.oneflow_proto_dtype, int) and x in oneflow.dtypes
+                isinstance(x.oneflow_proto_dtype, int) and x in oneflow.dtypes()
                 for x in attr_value
             )
             attribute.at_list_data_type.val[:] = list(
