@@ -447,8 +447,7 @@ Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction
 void CallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
   FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   CHECK_OK(MaybeInfer(instruction, args.Get()))
-      << "\ndevice_tag: " << device_tag()
-      << "\nmachine_id: " << instruction->stream().machine_id()
+      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
       << "\ndevice_id: " << instruction->stream().device_id()
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString();
@@ -464,8 +463,7 @@ Maybe<void> CallOpKernelInstructionType::MaybeCompute(vm::Instruction* instructi
 void CallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   CHECK_OK(MaybeCompute(instruction, args.Get()))
-      << "\ndevice_tag: " << device_tag()
-      << "\nmachine_id: " << instruction->stream().machine_id()
+      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
       << "\ndevice_id: " << instruction->stream().device_id()
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString();

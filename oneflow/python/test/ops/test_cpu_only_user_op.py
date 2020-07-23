@@ -56,9 +56,9 @@ def _check_non_cpu_only_relu_device(test_case):
     def relu_job(x_def: oft.Numpy.Placeholder(shape=(2, 5), dtype=flow.float)):
         with flow.scope.placement("gpu", "0:0"):
             y = flow.math.relu(x_def)
-        
+
         test_case.assertTrue("gpu" in y.parallel_conf.device_tag)
-        
+
         return y
 
     relu_job(np.random.rand(2, 5).astype(np.single)).get()

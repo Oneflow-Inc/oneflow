@@ -33,8 +33,7 @@ class CallOpKernelInstructionType : public vm::InstructionType {
   virtual ~CallOpKernelInstructionType() = default;
 
  private:
-  Maybe<void> MaybeInfer(vm::Instruction* instruction,
-                         const CallOpKernelInstrOperand& args) const;
+  Maybe<void> MaybeInfer(vm::Instruction* instruction, const CallOpKernelInstrOperand& args) const;
   Maybe<void> MaybeCompute(vm::Instruction* instruction,
                            const CallOpKernelInstrOperand& args) const;
   virtual const char* device_tag() const = 0;

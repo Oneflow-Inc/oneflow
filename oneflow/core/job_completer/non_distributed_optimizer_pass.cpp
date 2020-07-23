@@ -42,7 +42,7 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
     parallel_conf.set_device_tag("cpu");
   } else {
     UNIMPLEMENTED();
-  } 
+  }
   return parallel_conf;
 }
 
