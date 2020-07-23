@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import uuid
@@ -12,6 +27,8 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.watcher as watcher_util
+import oneflow.python.framework.typing as oft
+import oneflow.python.framework.typing_util as oft_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
@@ -19,6 +36,7 @@ from oneflow.python.framework.remote_blob import ConsistentBlob, MirroredBlob
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager as eager_util
 import oneflow
+import inspect
 
 
 @oneflow_export("watch")
@@ -38,41 +56,46 @@ def Watch(
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def EagerWatch(blob_watched, handler_or_prompt=None):
-    handler = _MakeHandler(handler_or_prompt)
+    handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     local_blob = local_blob_util.MakeLocalBlob4EagerBlob(blob_watched)
-    handler(local_blob)
+    handler(oft_util.TransformWatchedBlob(local_blob, handler))
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def LazyWatch(blob_watched, handler_or_prompt=None):
-    handler = _MakeHandler(handler_or_prompt)
+    handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     if isinstance(blob_watched, ConsistentBlob):
-        handler_uuid = str(uuid.uuid1())
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = id_util.UniqueStr("ForeignWatch_")
-        setattr(op_conf.foreign_watch_conf, "in", blob_watched.unique_name)
-        op_conf.foreign_watch_conf.handler_uuid = handler_uuid
-        device_name = blob_watched.parallel_conf.device_name[0]
-        tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
-            blob_watched.parallel_conf
-        )
-        with oneflow.scope.placement(*tag_and_dev_ids):
-            compile_context.CurJobAddOp(op_conf)
-        watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
+        LazyConsistentWatch(blob_watched, handler)
     elif isinstance(blob_watched, MirroredBlob):
         handlers = _MakeSubConsistentBlobHandlers(blob_watched, handler)
         for consistent_blob, sub_handler in zip(
             blob_watched.sub_consistent_blob_list, handlers
         ):
             assert isinstance(consistent_blob, ConsistentBlob)
-            LazyWatch(consistent_blob, sub_handler)
+            LazyConsistentWatch(consistent_blob, sub_handler)
     else:
         raise NotImplementedError
 
 
+def LazyConsistentWatch(blob_watched, handler):
+    handler_uuid = str(uuid.uuid1())
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = id_util.UniqueStr("ForeignWatch_")
+    setattr(op_conf.foreign_watch_conf, "in", blob_watched.unique_name)
+    op_conf.foreign_watch_conf.handler_uuid = handler_uuid
+    device_name = blob_watched.parallel_conf.device_name[0]
+    tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
+        blob_watched.parallel_conf
+    )
+    with oneflow.scope.placement(*tag_and_dev_ids):
+        compile_context.CurJobAddOp(op_conf)
+    watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
+
+
 @oneflow_export("watch_diff")
 def WatchDiff(
-    blob_watched: remote_blob_util.BlobDef, handler_or_prompt: Optional[Callable] = None
+    blob_watched: remote_blob_util.BlobDef,
+    handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
     r"""Register callback for gradient of a blob. The callback will be called after the computation produce the gradient blob finishes.
 
@@ -86,7 +109,7 @@ def WatchDiff(
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def EagerWatchDiff(blob_watched, handler_or_prompt=None):
-    handler = _MakeHandler(handler_or_prompt)
+    handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     handler_uuid = str(uuid.uuid1())
     lbi_and_uuid = LbiAndDiffWatcherUuidPair()
     lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
@@ -98,31 +121,39 @@ def EagerWatchDiff(blob_watched, handler_or_prompt=None):
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def LazyWatchDiff(blob_watched, handler_or_prompt=None):
-    handler = _MakeHandler(handler_or_prompt)
+    handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     if isinstance(blob_watched, ConsistentBlob):
-        handler_uuid = str(uuid.uuid1())
-        lbi_and_uuid = LbiAndDiffWatcherUuidPair()
-        lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
-        lbi_and_uuid.watcher_uuid = handler_uuid
-        c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
-        watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
+        LazyConsistentWatchDiff(blob_watched, handler)
     elif isinstance(blob_watched, MirroredBlob):
         handlers = _MakeSubConsistentBlobHandlers(blob_watched, handler)
         for consistent_blob, sub_handler in zip(
             blob_watched.sub_consistent_blob_list, handlers
         ):
             assert isinstance(consistent_blob, ConsistentBlob)
-            LazyWatchDiff(consistent_blob, sub_handler)
+            LazyConsistentWatchDiff(consistent_blob, sub_handler)
     else:
         raise NotImplementedError
 
 
-def _MakeHandler(handler_or_prompt):
+def LazyConsistentWatchDiff(blob_watched, handler):
+    handler_uuid = str(uuid.uuid1())
+    lbi_and_uuid = LbiAndDiffWatcherUuidPair()
+    lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
+    lbi_and_uuid.watcher_uuid = handler_uuid
+    c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
+    watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
+
+
+def _CheckOrMakeHandler(blob_watched, handler_or_prompt):
     if callable(handler_or_prompt):
+        parameters = inspect.signature(handler_or_prompt).parameters
+        oft_util.CheckWatchCallbackParameterAnnotation(parameters)
+        annotation = parameters[list(parameters.keys())[0]].annotation
+        oft_util.CheckWatchedBlobByAnnotation(blob_watched, annotation)
         return handler_or_prompt
     prompt = handler_or_prompt
 
-    def Handler(x):
+    def Handler(x: GetTypeAnnotation(blob_watched)):
         if prompt is not None:
             print(str(prompt))
         print(x)
@@ -162,6 +193,16 @@ def _MakeHandler4ParallelIdAndLocalBlob(blob_watched, handler):
             parallel_id2consistent_local_blob[parallel_id]
             for i in range(len_sub_remote_blobs)
         ]
-        handler(local_blob_util.MergeLocalBlobs(local_blob_list, blob_watched))
+        local_blob = local_blob_util.MergeLocalBlobs(local_blob_list, blob_watched)
+        handler(oft_util.TransformWatchedBlob(local_blob, handler))
 
     return HandlerParallelIdAndLocalBlob
+
+
+def GetTypeAnnotation(blob_watched):
+    if not blob_watched.is_dynamic:
+        return oft.Numpy
+    elif not blob_watched.is_tensor:
+        return oft.ListNumpy
+    else:
+        return oft.ListListNumpy

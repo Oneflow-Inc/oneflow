@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 from typing import Sequence, Optional
@@ -9,8 +24,12 @@ import inspect
 import sys
 
 
+class PyStructCompatibleToBlob(object):
+    pass
+
+
 @oneflow_export("typing.Numpy")
-class Numpy:
+class Numpy(PyStructCompatibleToBlob):
     """`Numpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
@@ -50,7 +69,7 @@ class Numpy:
 
 
 @oneflow_export("typing.ListNumpy")
-class ListOfNumpy:
+class ListNumpy(PyStructCompatibleToBlob):
     """`ListNumpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
@@ -94,7 +113,7 @@ class ListOfNumpy:
 
 
 @oneflow_export("typing.ListListNumpy")
-class ListOfListOfNumpy:
+class ListListNumpy(PyStructCompatibleToBlob):
     """`ListListNumpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
@@ -168,6 +187,11 @@ class ListOfListOfNumpyDef(OneflowNumpyDef):
         )
 
 
+@oneflow_export("typing.Callback")
+class Callback(typing.Generic[typing.TypeVar("T")]):
+    pass
+
+
 def OriginFrom(parameterised, generic):
     if inspect.isclass(parameterised) and inspect.isclass(generic):
         return issubclass(parameterised, generic)
@@ -186,4 +210,7 @@ def OriginFrom(parameterised, generic):
                 type(parameterised) is type(typing.List[int])
                 and parameterised.__origin__ is list
             )
+        if generic == Callback:
+            return parameterised.__origin__ is Callback
+
     raise NotImplementedError("python typing is a monster torturing everyone.")

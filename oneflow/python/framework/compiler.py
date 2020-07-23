@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 from contextlib import contextmanager
@@ -15,6 +30,7 @@ import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.typing as oft
+import oneflow.python.framework.typing_util as oft_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
@@ -45,7 +61,7 @@ def InterpretScope(session, function_desc, config_proto):
         tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(
             oneflow.env.current_resource()
         )
-        placement_scope = placement_util.GetDevicePriorPlacementScope(*tag_and_dev_ids)
+        placement_scope = placement_util.GetPlacementScope(*tag_and_dev_ids)
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:
         distribute_strategy = distribute_util.DistributeMirroredStrategy()
@@ -86,6 +102,8 @@ def _CompileJob(function_desc):
         )
     inputs = _RecursiveMakeInputBlobs(func.__oneflow_input_blob_defs__)
     ret = func(*inputs)
+    return_annotation = func.__oneflow_function_signature__.return_annotation
+    oft_util.CheckReturnByAnnotation(func.__name__, ret, return_annotation)
     func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(
         ret, allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
     )
@@ -108,6 +126,8 @@ def _InterpretGlobalFunction(function_desc, args):
         )
     inputs = push_util.MakeEagerInputBlobs(func.__oneflow_input_blob_defs__, args)
     ret = func(*inputs)
+    return_annotation = func.__oneflow_function_signature__.return_annotation
+    oft_util.CheckReturnByAnnotation(func.__name__, ret, return_annotation)
     return _RecursiveMakeRetRemoteBlobs(
         ret, allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
     )
@@ -155,7 +175,6 @@ def _RecursiveMakeInputBlobs(input_blob_def):
 
 def _MakeInputBlobDefFromParameterSignature(parameters):
     def CheckAndRecusiveMake(p):
-        assert p.kind == inspect._ParameterKind.POSITIONAL_OR_KEYWORD
         return _RecusiveMakeInputBlobDef(p.annotation)
 
     return tuple(CheckAndRecusiveMake(p) for _, p in parameters.items())
