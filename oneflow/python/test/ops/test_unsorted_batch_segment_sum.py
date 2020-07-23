@@ -1,7 +1,24 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
+
 import test_global_storage
 from test_util import GenArgList
 
@@ -51,8 +68,8 @@ def _make_unsoted_segment_sum_fn(device, data, segment_ids, num_segments):
 
     @flow.global_function(func_config)
     def unsorted_batch_segment_sum_job(
-        data=flow.FixedTensorDef(data.shape, dtype=flow.float),
-        segment_ids=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),
+        data: oft.Numpy.Placeholder(data.shape, dtype=flow.float),
+        segment_ids: oft.Numpy.Placeholder(segment_ids.shape, dtype=flow.int32),
     ):
         with flow.scope.placement(device, "0:0"):
             x = flow.get_variable(

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
@@ -311,6 +326,11 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   }
   ~UserKernelComputeContext() = default;
 
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
+    return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_.end()) { return nullptr; }
@@ -417,6 +437,19 @@ class UserKernel final : public Kernel {
       CHECK_NOTNULL(op_infer_ctx);
       op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob);
       kernel_->InferShape(infer_ctx_.get());
+      for (const auto& out_arg_pair : infer_ctx_->outputs()) {
+        const Shape& static_shape =
+            infer_ctx_->TensorDesc4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second)
+                ->shape();
+        const ShapeView& shape_view =
+            infer_ctx_->ShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
+        CHECK_LE(shape_view.elem_cnt(), static_shape.elem_cnt())
+            << "InferShape of OpKernel (op_type_name: " << op_conf().user_conf().op_type_name()
+            << ", op_name: " << op_conf().name()
+            << ") raise error, output arg's (name: " << out_arg_pair.first
+            << ", index: " << out_arg_pair.second << ") runtime shape " << shape_view.ToString()
+            << " surpass the limit of static shape " << static_shape.ToString();
+      }
       infer_cache_->UpdateCacheValue(infer_ctx_.get());
     } else {
       std::shared_ptr<const OpInferCacheValue> cache_value_ptr = infer_cache_->GetCacheValue();

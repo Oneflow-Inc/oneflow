@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import os
@@ -34,6 +49,7 @@ def add(
 
 
 def _recursive_build_add_n(inputs, name=None):
+    inputs = list(inputs)
     kernel_max_inputs = 8
     if len(inputs) == 1:
         return inputs[0]
@@ -292,7 +308,7 @@ def broadcast_floor_mod(x, y, name=None):
     return build_broadcast_binary_op("broadcast_floor_mod", x, y, name)
 
 
-@oneflow_export("math.tanh", "keras.activations.tanh")
+@oneflow_export("math.tanh")
 def tanh(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
@@ -315,7 +331,7 @@ def tanh(
     )
 
 
-@oneflow_export("math.gelu", "keras.activations.gelu")
+@oneflow_export("math.gelu")
 def gelu(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
@@ -720,3 +736,43 @@ def squared_difference(
         name_subtract = name + "_subtract"
         name_square = name + "_square"
     return flow.math.square(flow.math.subtract(x, y, name_subtract), name_square)
+
+
+@oneflow_export("math.gelu_grad")
+def gelu_grad(
+    x: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("GeluGrad_")
+        )
+        .Op("gelu_grad")
+        .Input("x", [x])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("math.tanh_grad")
+def tanh_grad(
+    y: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("TanhGrad_")
+        )
+        .Op("tanh_grad")
+        .Input("y", [y])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

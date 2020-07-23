@@ -1,5 +1,21 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 @flow.unittest.num_nodes_required(2)
@@ -12,7 +28,7 @@ def test_multi_node_dynamic_binary_split_concat_empty(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function(func_config)
-    def DynamicBinaryJob(x=flow.MirroredTensorDef((20,))):
+    def DynamicBinaryJob(x: oft.ListNumpy.Placeholder((20,))):
         print("in_shape: ", x.shape)
         with flow.scope.placement("cpu", "0:0"):
             out_list = flow.experimental.dynamic_binary_split(

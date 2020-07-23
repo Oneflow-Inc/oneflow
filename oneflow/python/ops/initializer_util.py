@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import functools
@@ -7,10 +22,13 @@ import oneflow as flow
 import oneflow.core.common.data_type_pb2 as data_type_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Optional, Sequence
 
 
 @oneflow_export("constant_initializer")
-def constant_initializer(value=0, dtype=data_type_conf_util.kFloat):
+def constant_initializer(
+    value: float = 0, dtype: int = data_type_conf_util.kFloat
+) -> op_conf_util.InitializerConf:
     r"""Initializer that generates blob with constant values.
     
     Args:
@@ -36,17 +54,23 @@ def constant_initializer(value=0, dtype=data_type_conf_util.kFloat):
 
 
 @oneflow_export("zeros_initializer")
-def zeros_initializer(dtype=data_type_conf_util.kFloat):
+def zeros_initializer(
+    dtype: int = data_type_conf_util.kFloat,
+) -> op_conf_util.InitializerConf:
     return constant_initializer(0.0, dtype)
 
 
 @oneflow_export("ones_initializer")
-def ones_initializer(dtype=data_type_conf_util.kFloat):
+def ones_initializer(
+    dtype: int = data_type_conf_util.kFloat,
+) -> op_conf_util.InitializerConf:
     return constant_initializer(1.0, dtype)
 
 
 @oneflow_export("random_uniform_initializer")
-def random_uniform_initializer(minval=0, maxval=1, dtype=data_type_conf_util.kFloat):
+def random_uniform_initializer(
+    minval: float = 0, maxval: float = 1, dtype: int = data_type_conf_util.kFloat
+) -> op_conf_util.InitializerConf:
     r"""Initializer that generates blob with a uniform distribution.
 
     Args:
@@ -76,7 +100,12 @@ def random_uniform_initializer(minval=0, maxval=1, dtype=data_type_conf_util.kFl
 
 
 @oneflow_export("random_normal_initializer")
-def random_normal_initializer(mean=0.0, stddev=1.0, seed=None, dtype=None):
+def random_normal_initializer(
+    mean: float = 0.0,
+    stddev: float = 1.0,
+    seed: Optional[int] = None,
+    dtype: Optional[int] = None,
+) -> op_conf_util.InitializerConf:
     r"""Initializer that generates blob with a normal distribution.
 
     Args:
@@ -97,7 +126,9 @@ def random_normal_initializer(mean=0.0, stddev=1.0, seed=None, dtype=None):
 
 
 @oneflow_export("truncated_normal_initializer")
-def truncated_normal_initializer(mean=0.0, stddev=1.0):
+def truncated_normal_initializer(
+    mean: float = 0.0, stddev: float = 1.0
+) -> op_conf_util.InitializerConf:
     r"""Initializer that generates a truncated normal distribution.
 
     Args:
@@ -111,19 +142,22 @@ def truncated_normal_initializer(mean=0.0, stddev=1.0):
 
 
 @oneflow_export("glorot_uniform_initializer", "xavier_uniform_initializer")
-def glorot_uniform_initializer(data_format=""):
+def glorot_uniform_initializer(data_format: str = "") -> op_conf_util.InitializerConf:
     return variance_scaling_initializer(1.0, "fan_avg", "random_uniform", data_format)
 
 
 @oneflow_export("glorot_normal_initializer", "xavier_normal_initializer")
-def glorot_normal_initializer(data_format=""):
+def glorot_normal_initializer(data_format: str = "") -> op_conf_util.InitializerConf:
     return variance_scaling_initializer(1.0, "fan_avg", "random_normal", data_format)
 
 
 @oneflow_export("variance_scaling_initializer")
 def variance_scaling_initializer(
-    scale=1.0, mode="fan_in", distribution="truncated_normal", data_format=""
-):
+    scale: float = 1.0,
+    mode: str = "fan_in",
+    distribution: str = "truncated_normal",
+    data_format: str = "",
+) -> op_conf_util.InitializerConf:
     r"""Initializer that generates a truncated normal distribution
     or a random normal distribution or a random uniform distribution
     with a scale adapting to it.
@@ -153,13 +187,13 @@ def variance_scaling_initializer(
 
 @oneflow_export("kaiming_initializer")
 def kaiming_initializer(
-    shape,
-    distribution="random_normal",
-    mode="fan_in",
-    nonlinearity="leaky_relu",
-    negative_slope=0.0,
-    data_format="NCHW",
-):
+    shape: Sequence[int],
+    distribution: str = "random_normal",
+    mode: str = "fan_in",
+    nonlinearity: str = "leaky_relu",
+    negative_slope: float = 0.0,
+    data_format: str = "NCHW",
+) -> None:
     r"""Initialize weight according to the method described in `Delving deep into
     rectifiers: Surpassing human-level performance on ImageNet classification`
     - He, K. et al. (2015), using a normal or uniform distribution.

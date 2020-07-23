@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import oneflow.python.framework.session_context as session_ctx
@@ -20,6 +35,7 @@ import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Union, Optional, Sequence
 import oneflow
 
 import os
@@ -27,16 +43,16 @@ import os
 
 @oneflow_export("get_variable")
 def api_get_variable(
-    name,
-    shape=None,
-    dtype=dtype_util.float32,
-    initializer=None,
-    regularizer=None,
-    trainable=None,
-    model_name=None,
-    random_seed=None,
-    distribute=distribute_util.broadcast(),
-):
+    name: str,
+    shape: Optional[Sequence[int]] = None,
+    dtype: Optional[int] = dtype_util.float32,
+    initializer: Optional[op_conf_util.InitializerConf] = None,
+    regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    trainable: Optional[bool] = None,
+    model_name: Optional[str] = None,
+    random_seed: Optional[int] = None,
+    distribute: distribute_util.Distribute = distribute_util.broadcast(),
+) -> remote_blob_util.BlobDef:
     r"""Create a variable or retrieve an existing one.
 
     Args:

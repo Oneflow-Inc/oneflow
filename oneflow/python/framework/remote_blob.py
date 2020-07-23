@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import oneflow
@@ -5,7 +20,6 @@ import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.watch_scope_util as watch_scope_util
 import oneflow.python.framework.blob_trait as blob_trait
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
@@ -94,11 +108,9 @@ class ConsistentBlob(BlobDef):
 
 
 class LazyConsistentBlob(ConsistentBlob):
-    def __init__(self, lbi, auto_watched_within_scope=True, **kw):
+    def __init__(self, lbi, **kw):
         ConsistentBlob.__init__(self, lbi, **kw)
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-        if auto_watched_within_scope:
-            watch_scope_util.TryWatchOnce(self)
 
     @property
     def shape(self):
@@ -168,11 +180,8 @@ class LazyMirroredBlob(MirroredBlob):
             sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(
                 self.job_name_, lbn, i
             )
-            consistent_blob = LazyConsistentBlob(
-                sub_lbi, auto_watched_within_scope=False
-            )
+            consistent_blob = LazyConsistentBlob(sub_lbi)
             self.sub_consistent_blob_list_.append(consistent_blob)
-        watch_scope_util.TryWatchOnce(self)
 
     @property
     def sub_consistent_blob_list(self):

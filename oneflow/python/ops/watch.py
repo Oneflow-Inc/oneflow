@@ -1,6 +1,22 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import uuid
+from typing import Callable, Optional, Union
 
 import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -9,6 +25,7 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.local_blob as local_blob_util
+import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.watcher as watcher_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
@@ -20,7 +37,10 @@ import oneflow
 
 
 @oneflow_export("watch")
-def Watch(blob_watched, handler_or_prompt=None):
+def Watch(
+    blob_watched: remote_blob_util.BlobDef,
+    handler_or_prompt: Optional[Union[Callable, str]] = None,
+) -> None:
     r"""Register callback for a blob. The callback will be called after the computation produce the blob finishes.
 
     Args:
@@ -66,7 +86,9 @@ def LazyWatch(blob_watched, handler_or_prompt=None):
 
 
 @oneflow_export("watch_diff")
-def WatchDiff(blob_watched, handler_or_prompt=None):
+def WatchDiff(
+    blob_watched: remote_blob_util.BlobDef, handler_or_prompt: Optional[Callable] = None
+) -> None:
     r"""Register callback for gradient of a blob. The callback will be called after the computation produce the gradient blob finishes.
 
     Args:
