@@ -37,8 +37,8 @@ FLAT_MSG_END(TransportDataToken);
 
 FLAT_MSG_BEGIN(TransportKey);
   // methods
-  PUBLIC void __Init__() {}
-  PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
+  OF_PUBLIC void __Init__() {}
+  OF_PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(TransportDataToken, data_token);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, data_offset);
@@ -51,7 +51,7 @@ FLAT_MSG_BEGIN(TransportSize);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, current_valid_size);
 
   // methods
-  PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
+  OF_PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
 FLAT_MSG_END(TransportSize);
 
 FLAT_MSG_BEGIN(TransportHeader);
