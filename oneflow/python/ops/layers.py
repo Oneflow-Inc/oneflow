@@ -41,9 +41,28 @@ def dense(
     name: Optional[str] = None,
     model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.keras.layers.Dense <https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense>`_
+    r"""Analogous to `tf.keras.layers.Dense <https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense>`_
 
+    Args:
+        inputs (remote_blob_util.BlobDef): A 2D input `Blob`.
+        units (int): A positive integer for the dimensionality of the output space.
+        activation (Optional[remote_blob_util.BlobDef], optional):  Activation function. Defaults to None.
+        use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
+        kernel_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
+        bias_initializer (Optional[op_conf_util.InitializerConf], optional): [description]. Defaults to None.
+        kernel_regularizer (Optional[op_conf_util.RegularizerConf], optional): [description]. Defaults to None.
+        bias_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the bias vector. Defaults to None.
+        trainable (bool, optional): A boolean specifies whether to train the variables. Defaults to True.
+        name (Optional[str], optional): This layer's name. Defaults to None.
+        model_distribute (distribute_util.Distribute, optional): Define the way to ditribute the model. Defaults to distribute_util.broadcast().
+
+    Returns:
+        remote_blob_util.BlobDef:  A N-D `Blob` with the shape of (batch_size, units).  
+
+    Raises:
+        ValueError: The dimension of input `Blob` must be less than 2.
+        VauleError: Model distribute must be in auto, broadcast, split.
+        ValueError: The input must be a 2D `Blob` when the model distribute is split.
     """
     in_shape = inputs.shape
     in_num_axes = len(in_shape)
@@ -130,6 +149,41 @@ def conv2d(
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""2D convolution layer.
+
+    Args:
+        inputs (remote_blob_util.BlobDef): A 4D input `Blob`.
+        filters (int): An integer specifies the dimensionality of the output space. 
+        kernel_size (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the height and width of the convolution window. 
+                        When it is an integer, a square window is applied to the input. Defaults to 1.
+        strides (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the strides of the convolution window along the height and width. 
+                        When it is an integer, the same value for the all spatial dimesions is applied. Defaults to 1.
+        padding (str, optional): "VALID" or "SAME". Defaults to "VALID".
+        data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCHW" or "NHWC" (default: "NCHW"). "NCHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, height, width). 
+                        "NHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, height, width, channels).. Defaults to "NCHW".
+        dilation_rate (int, optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
+        groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
+        activation (Optional[ Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef] ], optional): Activation function. Defaults to None.
+        use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
+        kernel_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
+        bias_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
+        kernel_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the kernel weights matrix. Defaults to None.
+        bias_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the bias vector . Defaults to None.
+        trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
+        name (Optional[str], optional): This layer's name. Defaults to None.
+        weight_name (Optional[str], optional): This weight's name. Defaults to None.
+        bias_name (Optional[str], optional):  This bias's name. Defaults to None.
+
+    Raises:
+        ValueError: If the type of kernel_size is not one of integer, list, tuple. 
+        ValueError: The number of groups must be positive and number of filters must be divisible by it. 
+        ValueError: If data_format is not one of 'NCHW', 'NHWC'. 
+        ValueError: If number of input channels is not divisible by number of groups or less than number of groups.
+        ValueError: Number of group must be one when data_format is 'NHWC'.
+
+    Returns:
+        remote_blob_util.BlobDef: A 4D `Blob` with the shape of (batch_size, filters, new_height, new_width).  
+    """
     name_prefix = name if name is not None else id_util.UniqueStr("Conv2D_")
     if isinstance(kernel_size, int):
         kernel_size = (kernel_size, kernel_size)
@@ -212,9 +266,20 @@ def layer_norm(
     epsilon: float = 1e-5,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
+    r"""Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
 
+    Args:
+        inputs (remote_blob_util.BlobDef): Input `Blob`.
+        center (bool, optional): A boolean specifies whether to shift input `Blob`. Defaults to True.
+        scale (bool, optional): A boolean specifies whether to scaleinput `Blob`. Defaults to True.
+        trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
+        begin_norm_axis (int, optional): An integer specifies which axis to normalize at first. Defaults to 1.
+        begin_params_axis (int, optional):  An integer specifies which axis params at . Defaults to -1.
+        epsilon (float, optional): A small float is added to avoid division by zero. Defaults to 1e-5.
+        name (Optional[str], optional):  This layer's name. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A normalized `Blob` with same shape of input. 
     """
     name = name if name is not None else id_util.UniqueStr("LayerNorm_")
     op = (
@@ -268,6 +333,19 @@ def layer_norm_grad(
     begin_norm_axis: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """Layer normalization
+
+    Args:
+        dy (remote_blob_util.BlobDef): Upstream derivstives.
+        x (remote_blob_util.BlobDef): Input `Blob`.
+        mean (remote_blob_util.BlobDef): Mean over neurons.
+        inv_variance (remote_blob_util.BlobDef): Variance over neurons.
+        begin_norm_axis (int, optional): An integer specifies which axis to normalize at first. Defaults to 1.
+        name (Optional[str], optional): This layer's name. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: Gradient with respect to input `Blob`. 
+    """
     name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
     op = (
         flow.user_op_builder(name)
@@ -291,6 +369,21 @@ def layer_norm_param_grad(
     begin_params_axis: int = -1,
     name: Optional[str] = None,
 ) -> Tuple[remote_blob_util.BlobDef]:
+    r"""Backward pass for layer normalization
+
+    Args:
+        dy (remote_blob_util.BlobDef): Upstream derivstives.
+        norm (remote_blob_util.BlobDef): Normalized output. 
+        gamma (remote_blob_util.BlobDef): Scale parameter.  
+        begin_params_axis (int, optional): From which parameters to begin with. Defaults to -1.
+        name (Optional[str], optional): This layer's name. Defaults to None.
+
+    Returns:
+        Tuple[remote_blob_util.BlobDef]: 
+                normalized_diff: Gradient with respect to input `Blob`.
+                beta_diff: Gradient with respect to shift parameter beta.
+                gamma_diff: Gradient with respect to scale parameter gamma.
+    """
     name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
     normalized_diff, beta_diff, gamma_diff, reduce_buf = (
         flow.user_op_builder(name)
@@ -328,9 +421,30 @@ def batch_normalization(
     training: bool = True,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.keras.layers.BatchNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization>`_
+    r"""Analogous to `tf.keras.layers.BatchNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization>`_
 
+    Args:
+        inputs (remote_blob_util.BlobDef): Input `Blob`.
+        axis (int, optional): An int specifies the aixs that should be normalized . Default is -1, which normalizes the last axis.
+        momentum (float, optional):  A float specifies the momontum for the moving average. Defaults to 0.99.
+        epsilon (float, optional): A small float added to avoid division by zero. Defaults to 0.001.
+        center (bool, optional): A boolean specifies whether to add offset to normalized `Blob`. Defaults to True.
+        scale (bool, optional): A boolean specifies whether to multiply normalized `Blob` by gamma. Defaults to True.
+        beta_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for beta. Defaults to None.
+        gamma_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for gamma. Defaults to None.
+        beta_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for beta. Defaults to None.
+        gamma_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for gamma. Defaults to None.
+        moving_mean_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for moving mean. Defaults to None.
+        moving_variance_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for moving variance. Defaults to None.
+        trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
+        training (bool, optional): A boolean specifies whether now is training the model. Defaults to True.
+        name (Optional[str], optional): This layer's name. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef:  A `Blob` with same shape of input. 
+
+    Raises:
+        ValueError: If axis is out of dimension of input.
     """
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
     if axis < 0:
