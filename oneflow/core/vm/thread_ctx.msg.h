@@ -25,10 +25,10 @@ namespace vm {
 // clang-format off
 OBJECT_MSG_BEGIN(ThreadCtx);
   // methods
-  PUBLIC void __Init__(const StreamRtDesc& stream_rt_desc) {
+  OF_PUBLIC void __Init__(const StreamRtDesc& stream_rt_desc) {
     set_stream_rt_desc(&stream_rt_desc);
   }
-  PUBLIC void LoopRun();
+  OF_PUBLIC void LoopRun();
   // fields
   OBJECT_MSG_DEFINE_PTR(const StreamRtDesc, stream_rt_desc); 
 
@@ -38,8 +38,8 @@ OBJECT_MSG_BEGIN(ThreadCtx);
   OBJECT_MSG_DEFINE_CONDITION_LIST_HEAD(Instruction, pending_instruction_link,
                                         pending_instruction_list);
 
-  PRIVATE ObjectMsgConditionListStatus ReceiveAndRun();
-  PRIVATE ObjectMsgConditionListStatus TryReceiveAndRun();
+  OF_PRIVATE ObjectMsgConditionListStatus ReceiveAndRun();
+  OF_PUBLIC ObjectMsgConditionListStatus TryReceiveAndRun();
 OBJECT_MSG_END(ThreadCtx);
 // clang-format on
 

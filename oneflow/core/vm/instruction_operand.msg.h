@@ -39,10 +39,10 @@ enum OperandMemZoneModifier {
 // clang-format off
 template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
 FLAT_MSG_BEGIN(ModifiedOperand);
-  PUBLIC static const OperandAccessModifier operand_access_modifier = access_modifier;
-  PUBLIC static const OperandMemZoneModifier operand_mem_zone_modifier = mem_zone_modifier;
+  OF_PUBLIC static const OperandAccessModifier operand_access_modifier = access_modifier;
+  OF_PUBLIC static const OperandMemZoneModifier operand_mem_zone_modifier = mem_zone_modifier;
   // methods
-  PUBLIC int64_t logical_object_id() const { return operand().logical_object_id(); }
+  OF_PUBLIC int64_t logical_object_id() const { return operand().logical_object_id(); }
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(Operand, operand);
 FLAT_MSG_END(ModifiedOperand);
@@ -61,7 +61,7 @@ class InstructionOperandProto;
 
 FLAT_MSG_BEGIN(InstructionOperand);
   // methods
-  PUBLIC void __Init__(const InstructionOperandProto& proto);
+  OF_PUBLIC void __Init__(const InstructionOperandProto& proto);
   // fields
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
     FLAT_MSG_ONEOF_FIELD(ConstOperand, const_operand)
