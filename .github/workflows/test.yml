@@ -29,7 +29,7 @@ jobs:
     - name: Setup environment
       run: |
         echo $HOSTNAME
-        docker run --rm -it-v $pwd:/oneflow-src busybox rm -rf /oneflow-src/wheelhouse
+        docker run --rm -it -v $pwd:/oneflow-src busybox rm -rf /oneflow-src/wheelhouse
         rm -rf build/third_party
         bash ci/setup_submodule.sh
     - name: Checkout submodules
