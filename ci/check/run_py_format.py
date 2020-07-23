@@ -1,9 +1,15 @@
 import argparse
 import sys
+import platform;
 from subprocess import Popen
 
 if __name__ == "__main__":
 
+    major = platform.sys.version_info.major
+    minor = platform.sys.version_info.minor
+    if major == 3 and minor < 6:
+        print("WARNING: python >= 3.6 required, python source format won't run")
+        exit(0)
     parser = argparse.ArgumentParser(
         description="Runs py-format on all of the source files."
         "If --fix is specified enforce format by modifying in place."
