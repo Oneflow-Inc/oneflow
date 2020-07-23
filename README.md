@@ -4,7 +4,7 @@
 
   #### System Requirements
 
-  - Nvidia Linux x86_64 Driver Version >= 440.33
+  - Nvidia Linux x86_64 driver version >= 440.33
 
   #### Install Pip package
 
