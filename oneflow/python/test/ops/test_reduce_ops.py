@@ -1,9 +1,23 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-import oneflow.core.common.data_type_pb2 as data_type_util
 import tensorflow as tf
 from test_util import GenArgList
 import oneflow.typing as oft
@@ -18,7 +32,7 @@ def compare_reduce_any_with_tensorflow(
     func_config.default_data_type(flow.int8)
 
     @flow.global_function(func_config)
-    def ReduceAnyJob(x: oft.Numpy.Placeholder(input_shape, dtype=data_type_util.kInt8)):
+    def ReduceAnyJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.int8)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_any(x, axis=axis, keepdims=keepdims)
 
@@ -86,7 +100,7 @@ def test_reduce_any_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x: oft.Numpy.Placeholder((10,), dtype=data_type_util.kInt8)):
+    def Foo(x: oft.Numpy.Placeholder((10,), dtype=flow.int8)):
         y = flow.math.reduce_any(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
@@ -103,9 +117,7 @@ def compare_reduce_prod_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceProdJob(
-        x: oft.Numpy.Placeholder(input_shape, dtype=data_type_util.kFloat)
-    ):
+    def ReduceProdJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float32)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_prod(x, axis=axis, keepdims=keepdims)
 
@@ -190,9 +202,7 @@ def compare_reduce_min_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceMinJob(
-        x: oft.Numpy.Placeholder(input_shape, dtype=data_type_util.kFloat)
-    ):
+    def ReduceMinJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_min(x, axis=axis, keepdims=keepdims)
 
@@ -277,7 +287,7 @@ def compare_reduce_all_with_tensorflow(
     func_config.default_data_type(flow.int8)
 
     @flow.global_function(func_config)
-    def ReduceAllJob(x: oft.Numpy.Placeholder(input_shape, dtype=data_type_util.kInt8)):
+    def ReduceAllJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.int8)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_all(x, axis=axis, keepdims=keepdims)
 
@@ -345,7 +355,7 @@ def test_reduce_all_batch_axis_reduced(test_case):
     func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x: oft.Numpy.Placeholder((10,), dtype=data_type_util.kInt8)):
+    def Foo(x: oft.Numpy.Placeholder((10,), dtype=flow.int8)):
         y = flow.math.reduce_all(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)
@@ -362,9 +372,7 @@ def compare_reduce_sum_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceSumJob(
-        x: oft.Numpy.Placeholder(input_shape, dtype=data_type_util.kFloat)
-    ):
+    def ReduceSumJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
 
@@ -449,9 +457,7 @@ def compare_reduce_euclidean_norm_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceEuclideanNormJob(
-        x: oft.Numpy.Placeholder(input_shape, dtype=data_type_util.kFloat)
-    ):
+    def ReduceEuclideanNormJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_euclidean_norm(x, axis=axis, keepdims=keepdims)
 
@@ -536,9 +542,7 @@ def compare_reduce_logsumexp_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceLogSumExpJob(
-        x: oft.Numpy.Placeholder(input_shape, dtype=data_type_util.kFloat)
-    ):
+    def ReduceLogSumExpJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_logsumexp(x, axis=axis, keepdims=keepdims)
 
@@ -623,9 +627,7 @@ def compare_reduce_std_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceStdJob(
-        x: oft.Numpy.Placeholder(input_shape, dtype=data_type_util.kFloat)
-    ):
+    def ReduceStdJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_std(x, axis=axis, keepdims=keepdims)
 
@@ -710,9 +712,7 @@ def compare_reduce_variance_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceVarianceJob(
-        x: oft.Numpy.Placeholder(input_shape, dtype=data_type_util.kFloat)
-    ):
+    def ReduceVarianceJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_variance(x, axis=axis, keepdims=keepdims)
 
@@ -797,9 +797,7 @@ def compare_reduce_max_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(func_config)
-    def ReduceMaxJob(
-        x: oft.Numpy.Placeholder(input_shape, dtype=data_type_util.kFloat)
-    ):
+    def ReduceMaxJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_max(x, axis=axis, keepdims=keepdims)
 
