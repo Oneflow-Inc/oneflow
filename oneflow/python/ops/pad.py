@@ -67,3 +67,39 @@ def pad_grad(x, paddings, constant_value=0, name=None):
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("same_padding")
+def same_padding(
+    x,
+    padding,
+    num_spatial_dims,
+    data_format,
+    kernel_size,
+    strides,
+    dilation_rate,
+    constant_value=0,
+    name=None,
+):
+    assert isinstance(padding, str) and (
+        padding.upper() == "SAME_LOWER" or padding.upper() == "SAME_UPPER"
+    ), 'padding must be "SAME_LOWER" or "SAME_UPPER".'
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
+
+    return (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Pad_"))
+        .Op("same_padding")
+        .Input("x", [x])
+        .Output("y")
+        .Attr("padding", padding.upper())
+        .Attr("num_spatial_dims", num_spatial_dims)
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilation_rate)
+        .Attr("floating_constant_value", float(constant_value))
+        .Attr("integral_constant_value", int(constant_value))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
