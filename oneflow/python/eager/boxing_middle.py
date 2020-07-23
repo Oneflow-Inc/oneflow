@@ -123,8 +123,8 @@ def TryReplaceDeviceTag(builder, parallel_desc_symbol, device_tag):
 def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
     assert parallel_desc_symbol.device_tag != device_tag
     parallel_conf = placement_pb.ParallelConf()
+    parallel_conf.device_tag = device_tag
     for device_name in parallel_desc_symbol.parallel_conf.device_name:
-        parallel_conf.device_tag = device_tag
         parallel_conf.device_name.append(device_name)
     if builder is None:
         return symbol_util.ParallelDescSymbol(

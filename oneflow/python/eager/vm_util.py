@@ -278,8 +278,9 @@ class InstructionsBuilder(object):
 
         def AppendPhyParallelDescSymbol(machine_id, device_id):
             parallel_conf = placement_pb_util.ParallelConf()
+            parallel_conf.device_tag = device_tag
             parallel_conf.device_name.append(
-                "%d:%s:%d" % (machine_id, device_tag, device_id)
+                "%d:%d" % (machine_id, device_id)
             )
             phy_parallel_desc_symbols.append(self.GetParallelDescSymbol(parallel_conf))
 
