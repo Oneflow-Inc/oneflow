@@ -13,12 +13,183 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
+def calc_same_padding(input_size, filter_size, dilation_rate, stride):
+    effective_filter_size = (filter_size - 1) * dilation_rate + 1
+    output_size = (input_size + stride - 1) // stride
+    padding_needed = max(
+        0, int((output_size - 1) * stride + effective_filter_size - input_size)
+    )
+    return padding_needed
+
+
+def get_dhw_offset(channel_pos):
+    if channel_pos == "channels_first":
+        return 2
+    else:
+        return 1
+
+
+def check_conv_cudnn_padding_support(
+    input_size, pad, filter_size, dilation_rate, stride, is_dynamic
+):
+    assert len(pad) == 2
+    if pad[0] == pad[1]:
+        return True
+    elif is_dynamic or pad[0] < pad[1] or pad[0] - pad[1] > 1:
+        return False
+    else:
+        effective_filter_size = (filter_size - 1) * dilation_rate + 1
+        cudnn_output_size = (
+            input_size + 2 * pad[0] - effective_filter_size + stride
+        ) // stride
+        output_size = (
+            input_size + pad[0] + pad[1] - effective_filter_size + stride
+        ) // stride
+        print("input_size", input_size, "pad", pad[0])
+        print("cudnn_output_size", cudnn_output_size)
+        print("output_size", output_size)
+        return cudnn_output_size == output_size
+
+
+def check_ndim_conv_cudnn_padding_support(
+    inputs_shape,
+    ndim_pads_list,
+    kernel_sizes,
+    dilations,
+    strides,
+    dhw_offset,
+    is_dynamic,
+):
+    print("check_ndim_conv_cudnn_padding_support", ndim_pads_list)
+    ndims = len(ndim_pads_list)
+    for i in range(ndims):
+        cudnn_support = check_conv_cudnn_padding_support(
+            inputs_shape[dhw_offset + i],
+            ndim_pads_list[i],
+            kernel_sizes[i],
+            dilations[i],
+            strides[i],
+            is_dynamic,
+        )
+        if not cudnn_support:
+            print("check_conv_cudnn_padding_support False")
+            return False
+    print("check_conv_cudnn_padding_support True")
+    return True
+
+
+def get_ndim_pads_list(padding, dhw_offset, ndims):
+    pads_list = []
+    for i in range(len(padding)):
+        pad = padding[i]
+        if isinstance(pad, int):
+            pad = [pad, pad]
+        elif isinstance(pad, (list, tuple)):
+            assert len(pad) == 2
+            pad = [pad[0], pad[1]]
+        else:
+            raise ValueError("padding must be list tuple or int")
+        if i in range(dhw_offset, dhw_offset + ndims):
+            pads_list.append(pad)
+        else:
+            assert pad == [0, 0]
+    return pads_list
+
+
+def calc_ndim_same_padding(
+    input_shape, padding, kernel_sizes, dilations, strides, dhw_offset
+):
+    ndim_padding_needed = []
+    ndims = len(kernel_sizes)
+    for i in range(ndims):
+        ndim_padding_needed.append(
+            calc_same_padding(
+                input_shape[dhw_offset + i], kernel_sizes[i], dilations[i], strides[i],
+            )
+        )
+    pads_small = [padding_needed // 2 for padding_needed in ndim_padding_needed]
+    pads_large = [ndim_padding_needed[i] - pads_small[i] for i in range(ndims)]
+    if padding.upper() == "SAME_LOWER":
+        return [[pads_large[i], pads_small[i]] for i in range(ndims)]
+    else:  # SAME_UPPER
+        return [[pads_small[i], pads_large[i]] for i in range(ndims)]
+
+
+def calc_padding(
+    op_type, inputs, padding, data_format, kernel_sizes, dilations, strides
+):
+    ndims = len(inputs.shape) - 2
+    assert len(kernel_sizes) == ndims
+    assert len(dilations) == ndims
+    assert len(strides) == ndims
+    is_dynamic = inputs.is_dynamic
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
+    dhw_offset = get_dhw_offset(channel_pos)
+    ndim_pads_list = []
+    if isinstance(padding, str):
+        padding = "SAME_LOWER" if padding.upper() == "SAME" else padding
+        assert padding.upper() in ["VALID", "SAME_LOWER", "SAME_UPPER"]
+
+        if padding.upper() == "VALID":
+            return_pads_list = [[0, 0]] * (ndims + 2)
+            return inputs, return_pads_list
+        else:
+            if is_dynamic:
+                return_pads_list = [[0, 0]] * (ndims + 2)
+                inputs = flow.same_padding(
+                    inputs,
+                    padding.upper(),
+                    num_spatial_dims=ndims,
+                    data_format=data_format,
+                    kernel_size=kernel_sizes,
+                    strides=strides,
+                    dilation_rate=dilations,
+                    constant_value=0,
+                )
+                return inputs, return_pads_list
+            else:
+                ndim_pads_list = calc_ndim_same_padding(
+                    inputs.shape, padding, kernel_sizes, dilations, strides, dhw_offset
+                )
+                assert len(ndim_pads_list) == ndims
+    else:  # pads list
+        assert len(padding) == len(input_shape)
+        ndim_pads_list = get_ndim_pads_list(padding, dhw_offset, ndims)
+        assert len(ndim_pads_list) == ndims
+
+    if op_type == "conv":
+        cudnn_padding_support = check_ndim_conv_cudnn_padding_support(
+            inputs.shape,
+            ndim_pads_list,
+            kernel_sizes,
+            dilations,
+            strides,
+            dhw_offset,
+            is_dynamic,
+        )
+    elif op_type == "pool":
+        cudnn_padding_support = True
+
+    return_pads_list = [[0, 0]] * (ndims + 2)
+    for i in range(ndims):
+        return_pads_list[dhw_offset + i] = ndim_pads_list[i]
+
+    if cudnn_padding_support:
+        print("using cudnn", inputs.shape, return_pads_list)
+        return inputs, return_pads_list
+    else:
+        print("using pad op", inputs.shape, return_pads_list)
+        inputs = flow.pad(inputs, paddings=return_pads_list)
+        return_pads_list = [[0, 0]] * (ndims + 2)
+    return inputs, return_pads_list
+
+
 @oneflow_export("nn.conv2d")
 def conv2d(
     input: remote_blob_util.BlobDef,
     filters: remote_blob_util.BlobDef,
     strides: Union[int, Sequence[int]],
-    padding: str,
+    padding: Union[str, Sequence[Sequence[int]]],
     data_format: str = "NHWC",
     dilations: Optional[Union[int, Sequence[int]]] = None,
     groups: int = 1,
@@ -31,6 +202,7 @@ def conv2d(
     """
     assert len(input.shape) == 4
     assert len(filters.shape) == 4
+    print("nn2d padding", padding)
 
     if isinstance(strides, (list, tuple)):
         assert len(strides) == 2, ValueError(
@@ -40,9 +212,6 @@ def conv2d(
         strides = [strides, strides]
     else:
         raise ValueError("strides must be an int or a list.")
-
-    if padding.upper() != "SAME" and padding.upper() != "VALID":
-        raise ValueError('padding must be "SAME" or "VALID".')
 
     if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
         raise ValueError('data_format must be "NHWC" or "NCHW".')
@@ -81,14 +250,40 @@ def conv2d(
             raise ValueError("data_format NHWC not support groups > 1")
         else:
             raise ValueError("invalid data_format")
+    print(
+        "input.shape",
+        input.shape,
+        "padding",
+        padding,
+        "kernel_size_list",
+        kernel_size_list,
+        "dilations",
+        dilations,
+        "strides",
+        strides,
+    )
+    inputs, pads_list = calc_padding(
+        "conv",
+        input,
+        padding,
+        data_format.upper(),
+        kernel_size_list,
+        dilations,
+        strides,
+    )
+    assert len(pads_list) == len(inputs.shape)
+    print("inputs.shape", inputs.shape)
+    print("pads", pads_list)
+    pads = [pad[0] for pad in pads_list]
+
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
         .Op("conv2d")
-        .Input("in", [input])
+        .Input("in", [inputs])
         .Input("weight", [filters])
         .Output("out")
         .Attr("filters", filters.shape[0])
-        .Attr("padding", padding.lower())
+        .Attr("pads", pads)
         .Attr("data_format", channel_pos)
         .Attr("kernel_size", kernel_size_list)
         .Attr("strides", strides)
@@ -326,6 +521,7 @@ def max_pool2d(
     strides: Union[int, Sequence[int]],
     padding: str,
     data_format: str = "NHWC",
+    ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""
@@ -337,18 +533,30 @@ def max_pool2d(
             name if name is not None else id_util.UniqueStr("MaxPool2D_")
         )
         .Op("max_pool_2d")
-        .Input("x", [input])
         .Output("y")
     )
-    assert padding in ["VALID", "SAME"]
-    op.Attr("padding", padding.lower())
+    # assert padding in ["VALID", "SAME"]
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
-    data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-    op.Attr("data_format", data_format)
+    channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+    op.Attr("data_format", channel_pos)
     pool_size = _GetSequence(ksize, 2, "ksize")
     op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 2, "strides")
     op.Attr("strides", strides)
+    inputs, pads_list = calc_padding(
+        "pool", input, padding, data_format, pool_size, [1, 1], strides
+    )
+    assert len(pads_list) == len(inputs.shape)
+    print("inputs.shape", inputs.shape)
+    print("pads", pads_list)
+    padding_before = [pad[0] for pad in pads_list]
+    padding_after = [pad[1] for pad in pads_list]
+    op.Input("x", [inputs])
+    print("padding_before", padding_before)
+    print("padding_after", padding_after)
+    op.Attr("pads_before", padding_before)
+    op.Attr("pads_after", padding_after)
+    op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
@@ -359,6 +567,7 @@ def avg_pool2d(
     strides: Union[int, Sequence[int]],
     padding: str,
     data_format: str = "NHWC",
+    ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""
@@ -370,18 +579,31 @@ def avg_pool2d(
             name if name is not None else id_util.UniqueStr("AvgPool2D_")
         )
         .Op("avg_pool_2d")
-        .Input("x", [input])
         .Output("y")
     )
-    assert padding in ["VALID", "SAME"]
-    op.Attr("padding", padding.lower())
+    # assert padding in ["VALID", "SAME"]
+    # op.Attr("padding", padding.lower())
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
-    data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-    op.Attr("data_format", data_format)
+    channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+    op.Attr("data_format", channel_pos)
     pool_size = _GetSequence(ksize, 2, "ksize")
     op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 2, "strides")
     op.Attr("strides", strides)
+    inputs, pads_list = calc_padding(
+        "pool", input, padding, data_format, pool_size, [1, 1], strides
+    )
+    assert len(pads_list) == len(inputs.shape)
+    print("inputs.shape", inputs.shape)
+    print("pads", pads_list)
+    padding_before = [pad[0] for pad in pads_list]
+    padding_after = [pad[1] for pad in pads_list]
+    op.Input("x", [inputs])
+    print("padding_before", padding_before)
+    print("padding_after", padding_after)
+    op.Attr("pads_before", padding_before)
+    op.Attr("pads_after", padding_after)
+    op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
@@ -392,6 +614,7 @@ def max_pool3d(
     strides: Union[int, Sequence[int]],
     padding: str,
     data_format: str = "NDHWC",
+    ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""
@@ -406,15 +629,29 @@ def max_pool3d(
         .Input("x", [input])
         .Output("y")
     )
-    assert padding in ["VALID", "SAME"]
-    op.Attr("padding", padding.lower())
+    # assert padding in ["VALID", "SAME"]
+    # op.Attr("padding", padding.lower())
     assert data_format in ["NDHWC", "NCDHW"]
-    data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-    op.Attr("data_format", data_format)
+    channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+    op.Attr("data_format", channel_pos)
     pool_size = _GetSequence(ksize, 3, "ksize")
     op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 3, "strides")
     op.Attr("strides", strides)
+    inputs, pads_list = calc_padding(
+        "pool", input, padding, data_format, pool_size, [1, 1, 1], strides
+    )
+    assert len(pads_list) == len(inputs.shape)
+    print("inputs.shape", inputs.shape)
+    print("pads", pads_list)
+    padding_before = [pad[0] for pad in pads_list]
+    padding_after = [pad[1] for pad in pads_list]
+    op.Input("x", [inputs])
+    print("padding_before", padding_before)
+    print("padding_after", padding_after)
+    op.Attr("pads_before", padding_before)
+    op.Attr("pads_after", padding_after)
+    op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
@@ -425,6 +662,7 @@ def avg_pool3d(
     strides: Union[int, Sequence[int]],
     padding: str,
     data_format: str = "NDHWC",
+    ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""
@@ -439,15 +677,26 @@ def avg_pool3d(
         .Input("x", [input])
         .Output("y")
     )
-    assert padding in ["VALID", "SAME"]
-    op.Attr("padding", padding.lower())
+    # assert padding in ["VALID", "SAME"]
+    # op.Attr("padding", padding.lower())
     assert data_format in ["NDHWC", "NCDHW"]
-    data_format = "channels_last" if data_format == "NHWC" else "channels_first"
-    op.Attr("data_format", data_format)
+    channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+    op.Attr("data_format", channel_pos)
     pool_size = _GetSequence(ksize, 3, "ksize")
     op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 3, "strides")
     op.Attr("strides", strides)
+    inputs, pads_list = calc_padding(
+        "pool", input, padding, data_format, pool_size, [1, 1, 1], strides
+    )
+    assert len(pads_list) == len(inputs.shape)
+    print("inputs.shape", inputs.shape)
+    print("pads", pads_list)
+    padding_before = [pad[0] for pad in pads_list]
+    padding_after = [pad[1] for pad in pads_list]
+    op.Attr("pads_before", padding_before)
+    op.Attr("pads_after", padding_after)
+    op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
