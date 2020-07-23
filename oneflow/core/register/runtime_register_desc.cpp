@@ -10,7 +10,6 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   register_num_ = proto.register_num();
   mem_case_ = proto.mem_case();
   regst_desc_type_ = proto.regst_desc_type();
-  parallel_ctx_ = proto.parallel_ctx();
   if (proto.regst_desc_type().has_data_regst_desc()) {
     const DataRegstDesc& data_regst_desc = proto.regst_desc_type().data_regst_desc();
     for (const LbiBlobDescPair& pair : data_regst_desc.lbi2blob_desc()) {

@@ -62,10 +62,11 @@ RegstMgr::RegstMgr(const Plan& plan) {
     if (task.machine_id() != this_machine_id) { continue; }
     for (const auto& pair : task.produced_regst_desc()) {
       const RegstDescProto& regst_desc = pair.second;
-      CHECK(
-          regst_desc_id2rt_regst_desc_
-              .emplace(regst_desc.regst_desc_id(), std::make_unique<const RtRegstDesc>(regst_desc))
-              .second);
+      const int64_t regst_desc_id = regst_desc.regst_desc_id();
+      CHECK(regst_desc_id2rt_regst_desc_
+                .emplace(regst_desc_id, std::make_unique<const RtRegstDesc>(regst_desc))
+                .second);
+      CHECK(regst_desc_id2parallel_ctx_.emplace(regst_desc_id, task.parallel_ctx()).second);
     }
   }
 }
@@ -178,7 +179,9 @@ Blob* RegstMgr::Blob4LbnAndParallelId(const std::string& lbn, const int64_t para
       for (const auto& z : y.second->lbi2blob()) {
         const auto& lbi = z.first;
         if (lbi.op_name() + "/" + lbi.blob_name() == lbn) {
-          const auto& parallel_ctx = RegstDesc4RegstDescId(x.first).parallel_ctx();
+          const auto parallel_ctx_it = regst_desc_id2parallel_ctx_.find(x.first);
+          CHECK(parallel_ctx_it != regst_desc_id2parallel_ctx_.end());
+          const auto& parallel_ctx = parallel_ctx_it->second;
           if (parallel_ctx.has_parallel_id() && parallel_ctx.parallel_id() == parallel_id) {
             CHECK(x.second.size() == 1)
                 << "Only the blobs in regst_desc where regst_num == 1 is supported";

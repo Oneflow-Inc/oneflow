@@ -29,6 +29,7 @@ class RegstMgr final {
   HashMap<int64_t, std::unique_ptr<const RtRegstDesc>> regst_desc_id2rt_regst_desc_;
   HashMap<int64_t, HashMap<int64_t, Regst*>> regst_desc_id2regst_id2regst_;
   HashMap<int64_t, char*> mem_block_id2ptr_;
+  HashMap<int64_t, ParallelContext> regst_desc_id2parallel_ctx_;
 };
 
 }  // namespace oneflow

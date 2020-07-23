@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_REGISTER_REGISTER_DESC_H_
 #define ONEFLOW_CORE_REGISTER_REGISTER_DESC_H_
 
-#include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/register_desc.pb.h"
 
@@ -76,15 +75,6 @@ class RegstDesc final {
   }
   RegstDescTypeProto* mut_regst_desc_type() { return &regst_desc_type_; }
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
-  ParallelContext* mut_parallel_ctx() {
-    if (!has_parallel_ctx()) { parallel_ctx_.reset(new ParallelContext()); }
-    return parallel_ctx_.get();
-  }
-  const ParallelContext& parallel_ctx() const {
-    CHECK(has_parallel_ctx());
-    return *parallel_ctx_;
-  }
-  bool has_parallel_ctx() const { return parallel_ctx_ != nullptr; }
   bool HasSameMemSize(const RegstDesc*);
 
   // util
@@ -106,7 +96,6 @@ class RegstDesc final {
 
   MemoryCase mem_case_;
   RegstDescTypeProto regst_desc_type_;
-  std::unique_ptr<ParallelContext> parallel_ctx_;
   bool enable_reuse_mem_;
   int32_t mem_block_id_;
   int64_t mem_block_offset_;
