@@ -30,6 +30,7 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.typing_util as oft_util
 import oneflow.python.lib.core.pb_util as pb_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
@@ -103,6 +104,7 @@ def eager_oneflow_function(function_config=FunctionConfig()):
     def Decorator(job_func):
         if not hasattr(job_func, "__oneflow_function_signature__"):
             job_func.__oneflow_function_signature__ = inspect.signature(job_func)
+        oft_util.CheckGlobalFunctionAnnotation(job_func.__oneflow_function_signature__)
         sess = session_ctx.GetDefaultSession()
         function_desc = _CloneFunctionDesc(function_config.function_desc, job_func)
 
@@ -127,6 +129,7 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
     def Decorator(job_func):
         if not hasattr(job_func, "__oneflow_function_signature__"):
             job_func.__oneflow_function_signature__ = inspect.signature(job_func)
+        oft_util.CheckGlobalFunctionAnnotation(job_func.__oneflow_function_signature__)
         sess = session_ctx.GetDefaultSession()
 
         @functools.wraps(job_func)
