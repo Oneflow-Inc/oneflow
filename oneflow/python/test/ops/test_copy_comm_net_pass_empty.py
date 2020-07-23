@@ -1,5 +1,21 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def ccrelu(x, name):
@@ -22,7 +38,7 @@ def test_multi_node_comm_net(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function(func_config)
-    def ReluJob(x=flow.FixedTensorDef((10, 2))):
+    def ReluJob(x: oft.Numpy.Placeholder((10, 2))):
         with flow.scope.placement("gpu", "0:0"):
             out0 = ccrelu(x, "my_op_0_0")
         with flow.scope.placement("gpu", "1:0"):
@@ -58,7 +74,7 @@ def test_multi_node_comm_net_dynamic(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function(func_config)
-    def ReluJob(x=flow.MirroredTensorDef((10, 2))):
+    def ReluJob(x: oft.ListNumpy.Placeholder((10, 2))):
         with flow.scope.placement("gpu", "0:0"):
             out0 = flow.math.relu(x)
         with flow.scope.placement("gpu", "1:0"):
@@ -94,7 +110,7 @@ def test_multi_node_comm_net_dynamic_empty(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function(func_config)
-    def ReluJob(x=flow.MirroredTensorDef((10, 2))):
+    def ReluJob(x: oft.ListNumpy.Placeholder((10, 2))):
         with flow.scope.placement("cpu", "0:0"):
             out0 = flow.math.relu(x)
         with flow.scope.placement("cpu", "1:0"):

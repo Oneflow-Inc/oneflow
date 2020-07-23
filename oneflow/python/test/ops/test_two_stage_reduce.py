@@ -1,5 +1,22 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
+
 from collections import OrderedDict
 
 from test_util import GenArgList
@@ -33,7 +50,7 @@ def _test_two_stage_reduce(
     func_config.use_boxing_v2(True)
 
     @flow.global_function(func_config)
-    def two_stage_reduce_job(x=flow.FixedTensorDef((4, 20, 20, 20))):
+    def two_stage_reduce_job(x: oft.Numpy.Placeholder((4, 20, 20, 20))):
         with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
                 name="v1",
