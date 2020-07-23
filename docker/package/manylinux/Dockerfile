@@ -11,7 +11,6 @@ ENV PATH $PATH:/usr/local/bin
 ENV LD_LIBRARY_PATH /usr/local/lib64:/usr/local/lib
 ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
 
-
 # use tuna mirror
 COPY docker/package/manylinux/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo
 RUN yum makecache
@@ -22,13 +21,15 @@ RUN yum -y install unzip && curl -L -o manylinux.zip https://github.com/pypa/man
 ENV SSL_CERT_FILE=/opt/_internal/certs.pem
 # manylinux2014 end
 
+ENV http_proxy="" 
+ENV https_proxy=""
+RUN echo "nameserver 114.114.114.114" >> /etc/resolv.conf
 RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
-    rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+    rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
+    yum update -y && yum install -y epel-release && \
+    yum -y install intel-mkl-2020.0-088 nasm swig
 
 ENV TUNA_INDEX="-i https://pypi.tuna.tsinghua.edu.cn/simple"
-
-RUN yum -y install intel-mkl-2020.0-088 
-RUN yum -y install nasm swig
 RUN /opt/python/cp35-cp35m/bin/pip install $TUNA_INDEX -U cmake && ln -s /opt/_internal/cpython-3.5.9/bin/cmake /usr/bin/cmake
 
 # overwrite patchelf to fix "maximum size exceed" problem
