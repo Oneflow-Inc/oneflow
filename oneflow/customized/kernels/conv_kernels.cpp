@@ -339,11 +339,11 @@ std::shared_ptr<user_op::OpKernelState> CreateConvOpKernelState(user_op::KernelI
   // state->padding_before_3d_.resize(3);
   const auto& pads = ctx->Attr<std::vector<int32_t>>("pads");
   FOR_RANGE(uint8_t, dim, 0, 3) {
-    int64_t index = static_cast<int64_t>(dim) - (5 - pads.size());
+    int64_t index = static_cast<int64_t>(dim) - (3 - pads.size());
     if (index < 0) {
       state->padding_before_3d_.push_back(0);
     } else {
-      state->padding_before_3d_.push_back(pads[state->idx_offset_ + index]);
+      state->padding_before_3d_.push_back(pads[index]);
     }
   }
 

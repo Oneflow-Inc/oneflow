@@ -131,15 +131,14 @@ def calc_padding(
         assert padding.upper() in ["VALID", "SAME_LOWER", "SAME_UPPER"]
 
         if padding.upper() == "VALID":
-            return_pads_list = [[0, 0]] * (ndims + 2)
+            return_pads_list = [[0, 0]] * ndims
             return inputs, return_pads_list
         else:
             if is_dynamic:
-                return_pads_list = [[0, 0]] * (ndims + 2)
+                return_pads_list = [[0, 0]] * ndims
                 inputs = flow.same_padding(
                     inputs,
                     padding.upper(),
-                    num_spatial_dims=ndims,
                     data_format=data_format,
                     kernel_size=kernel_sizes,
                     strides=strides,
@@ -170,18 +169,17 @@ def calc_padding(
     elif op_type == "pool":
         cudnn_padding_support = True
 
-    return_pads_list = [[0, 0]] * (ndims + 2)
-    for i in range(ndims):
-        return_pads_list[dhw_offset + i] = ndim_pads_list[i]
-
     if cudnn_padding_support:
-        print("using cudnn", inputs.shape, return_pads_list)
-        return inputs, return_pads_list
+        print("using cudnn", inputs.shape, ndim_pads_list)
+        return inputs, ndim_pads_list
     else:
-        print("using pad op", inputs.shape, return_pads_list)
-        inputs = flow.pad(inputs, paddings=return_pads_list)
-        return_pads_list = [[0, 0]] * (ndims + 2)
-    return inputs, return_pads_list
+        pad_op_list = [[0, 0]] * (ndims + 2)
+        for i in range(ndims):
+            pad_op_list[dhw_offset + i] = ndim_pads_list[i]
+        print("using pad op", inputs.shape, pad_op_list)
+        inputs = flow.pad(inputs, paddings=pad_op_list)
+        return_pads_list = [[0, 0]] * ndims
+        return inputs, return_pads_list
 
 
 @oneflow_export("nn.conv2d")
@@ -271,7 +269,7 @@ def conv2d(
         dilations,
         strides,
     )
-    assert len(pads_list) == len(inputs.shape)
+    assert len(pads_list) == len(inputs.shape) - 2
     print("inputs.shape", inputs.shape)
     print("pads", pads_list)
     pads = [pad[0] for pad in pads_list]
@@ -546,7 +544,7 @@ def max_pool2d(
     inputs, pads_list = calc_padding(
         "pool", input, padding, data_format, pool_size, [1, 1], strides
     )
-    assert len(pads_list) == len(inputs.shape)
+    assert len(pads_list) == len(inputs.shape) - 2
     print("inputs.shape", inputs.shape)
     print("pads", pads_list)
     padding_before = [pad[0] for pad in pads_list]
@@ -593,7 +591,7 @@ def avg_pool2d(
     inputs, pads_list = calc_padding(
         "pool", input, padding, data_format, pool_size, [1, 1], strides
     )
-    assert len(pads_list) == len(inputs.shape)
+    assert len(pads_list) == len(inputs.shape) - 2
     print("inputs.shape", inputs.shape)
     print("pads", pads_list)
     padding_before = [pad[0] for pad in pads_list]
@@ -641,7 +639,7 @@ def max_pool3d(
     inputs, pads_list = calc_padding(
         "pool", input, padding, data_format, pool_size, [1, 1, 1], strides
     )
-    assert len(pads_list) == len(inputs.shape)
+    assert len(pads_list) == len(inputs.shape) - 2
     print("inputs.shape", inputs.shape)
     print("pads", pads_list)
     padding_before = [pad[0] for pad in pads_list]
@@ -689,7 +687,7 @@ def avg_pool3d(
     inputs, pads_list = calc_padding(
         "pool", input, padding, data_format, pool_size, [1, 1, 1], strides
     )
-    assert len(pads_list) == len(inputs.shape)
+    assert len(pads_list) == len(inputs.shape) - 2
     print("inputs.shape", inputs.shape)
     print("pads", pads_list)
     padding_before = [pad[0] for pad in pads_list]

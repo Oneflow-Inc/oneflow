@@ -26,6 +26,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     auto strides = ctx->Attr<std::vector<int32_t>>("strides");
     CHECK_EQ_OR_RETURN(NDims, dilation_rate.size());
     CHECK_EQ_OR_RETURN(NDims, strides.size());
+    CHECK_EQ_OR_RETURN(NDims, pads.size());
 
     user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
     DimVector out_shape(NDims + 2);
@@ -34,7 +35,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     out_shape.at(c_dim) = filters;
     for (int32_t i = 0; i < NDims; ++i) {
       CalcConvOut(in->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                  strides.at(i), pads.at(idx_offset + i), &out_shape.at(idx_offset + i));
+                  strides.at(i), pads.at(i), &out_shape.at(idx_offset + i));
     }
     *out = *in;
     *out->mut_shape() = Shape(out_shape);
@@ -118,7 +119,7 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
 
   if (NDims != 0) {
     const auto& pads = conf.attr<std::vector<int32_t>>("pads");
-    if (pads.size() != NDims + 2) {
+    if (pads.size() != NDims) {
       err << " pads: number of element is " << pads.size();
       is_checked = false;
     }
