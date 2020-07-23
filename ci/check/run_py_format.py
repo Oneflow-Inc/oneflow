@@ -12,7 +12,7 @@ if __name__ == "__main__":
         "--source_dir", required=True, help="Root directory of the source code"
     )
     parser.add_argument(
-        "--python_bin", default="python3", help="Directory of python3 binary program"
+        "--python_bin", default="python3", help="Path to python3 binary"
     )
     parser.add_argument(
         "--fix",
