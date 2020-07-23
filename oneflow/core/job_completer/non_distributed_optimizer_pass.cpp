@@ -32,6 +32,7 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
                                                    const int64_t parallel_id) {
   std::string device_name;
   device_name += std::to_string(pd.MachineIdForParallelId(parallel_id));
+  device_name += ":";
   device_name += std::to_string(pd.DeviceIdForParallelId(parallel_id));
   ParallelConf parallel_conf;
   *parallel_conf.mutable_device_name()->Add() = device_name;
