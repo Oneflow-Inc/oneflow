@@ -273,7 +273,7 @@ def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):
 
         def FeedBlob(ofblob):
             ndarray = feed_ctx.GetFixedTensor(blob_def.shape)
-            dtype = dtype_util.convert_of_dtype_to_numpy_dtype(ofblob.dtype)
+            dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(ofblob.dtype)
             assert ndarray.dtype == dtype, "%s v.s. %s" % (ndarray.dtype, dtype)
             assert ndarray.shape == ofblob.static_shape, "%s v.s. %s" % (
                 ndarray.shape,
@@ -287,7 +287,7 @@ def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):
         def FeedBlob(ofblob):
             ndarray = feed_ctx.GetMirroredTensor(ofblob.static_shape)
             assert isinstance(ndarray, numpy.ndarray)
-            dtype = dtype_util.convert_of_dtype_to_numpy_dtype(ofblob.dtype)
+            dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(ofblob.dtype)
             assert ndarray.dtype == dtype, "%s v.s. %s" % (ndarray.dtype, dtype)
             if ofblob.CopyFromNdarray(ndarray) is False:
                 raise ValueError
@@ -299,7 +299,7 @@ def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):
             ndarray_list = feed_ctx.GetMirroredTensorList(ofblob.static_shape)
             assert isinstance(ndarray_list, (list, tuple))
             assert all(isinstance(ndarray, numpy.ndarray) for ndarray in ndarray_list)
-            dtype = dtype_util.convert_of_dtype_to_numpy_dtype(ofblob.dtype)
+            dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(ofblob.dtype)
             assert all(ndarray.dtype == dtype for ndarray in ndarray_list)
             if ofblob.CopyFromNdarrayList(ndarray_list) is False:
                 raise ValueError

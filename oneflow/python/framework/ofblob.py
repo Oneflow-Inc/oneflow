@@ -19,10 +19,10 @@ import collections
 from functools import reduce
 
 import numpy as np
-import oneflow.core.common.data_type_pb2 as dtype_util
+import oneflow as flow
 import oneflow.oneflow_internal as oneflow_api
 from google.protobuf import text_format
-from oneflow.python.framework.dtype import convert_of_dtype_to_numpy_dtype
+from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 from oneflow.python.lib.core.box import Box
 
 
@@ -32,7 +32,9 @@ class OfBlob(object):
 
     @property
     def dtype(self):
-        return oneflow_api.Ofblob_GetDataType(self.of_blob_ptr_)
+        return convert_proto_dtype_to_oneflow_dtype(
+            oneflow_api.Ofblob_GetDataType(self.of_blob_ptr_)
+        )
 
     @property
     def static_shape(self):
@@ -125,7 +127,7 @@ class OfBlob(object):
     def _CopyToNdarrayListAndIsNewSliceStartMask(self):
         # get tensor list
         method_name = oneflow_api.Dtype_GetOfBlobCurTensorCopyToBufferFuncName(
-            self.dtype
+            self.dtype.oneflow_proto_dtype
         )
         copy_method = getattr(oneflow_api, method_name)
         tensor_list = []
@@ -134,7 +136,9 @@ class OfBlob(object):
             shape_tensor = np.zeros(self.num_axes, dtype=np.int64)
             oneflow_api.OfBlob_CurTensorCopyShapeTo(self.of_blob_ptr_, shape_tensor)
             shape = tuple(shape_tensor.tolist())
-            tensor = np.zeros(shape, dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
+            tensor = np.zeros(
+                shape, dtype=flow.convert_oneflow_dtype_to_numpy_dtype(self.dtype)
+            )
             copy_method(self.of_blob_ptr_, tensor)
             tensor_list.append(tensor)
             oneflow_api.OfBlob_IncTensorIterator(self.of_blob_ptr_)
@@ -172,7 +176,7 @@ class OfBlob(object):
     ):
         assert len(tensor_list) == len(is_new_slice_start_mask)
         method_name = oneflow_api.Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName(
-            self.dtype
+            self.dtype.oneflow_proto_dtype
         )
         copy_method = getattr(oneflow_api, method_name)
         oneflow_api.OfBlob_ClearTensorLists(self.of_blob_ptr_)
