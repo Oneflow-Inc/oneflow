@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -48,7 +49,7 @@ def tensor_list_to_tensor_buffer(
 def tensor_buffer_to_tensor_list(
     input: remote_blob_util.BlobDef,
     shape: Sequence[int],
-    dtype: int,
+    dtype: dtype_util.dtype,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     if name is None:
@@ -59,7 +60,11 @@ def tensor_buffer_to_tensor_list(
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "in", input.unique_name)
     setattr(op_conf.tensor_buffer_to_tensor_list_conf, "out", "out")
     op_conf.tensor_buffer_to_tensor_list_conf.shape.dim[:] = list(shape)
-    setattr(op_conf.tensor_buffer_to_tensor_list_conf, "data_type", dtype)
+    setattr(
+        op_conf.tensor_buffer_to_tensor_list_conf,
+        "data_type",
+        dtype.oneflow_proto_dtype,
+    )
     interpret_util.Forward(op_conf)
 
     lbi = logical_blob_id_util.LogicalBlobId()
