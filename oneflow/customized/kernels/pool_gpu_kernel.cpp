@@ -40,13 +40,14 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
     if (this->is_dynamic_) {
       const ShapeView& x_shape = ctx->Tensor4ArgNameAndIndex("x", 0)->shape();
       const std::string& data_format = ctx->Attr<std::string>("data_format");
+      const std::string padding = ctx->Attr<std::string>("padding");
       const auto& pads_before = ctx->Attr<std::vector<int32_t>>("pads_before");
       const auto& pads_after = ctx->Attr<std::vector<int32_t>>("pads_after");
       const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
       const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
       const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
-      const Params3D params_3d(dim_, x_shape, data_format, pads_before, pads_after, pool_size,
-                               strides, ceil_mode);
+      const Params3D params_3d(dim_, x_shape, data_format, padding, pads_before, pads_after,
+                               pool_size, strides, ceil_mode);
       const ShapeView& y_shape = ctx->Tensor4ArgNameAndIndex("y", 0)->shape();
       const DataType dtype = ctx->Tensor4ArgNameAndIndex("x", 0)->data_type();
       Reset(dim_, pooling_type_, x_shape, y_shape, data_format, dtype, params_3d);
@@ -90,13 +91,14 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
     } else {
       const Shape& x_shape = x_desc->shape();
       const std::string& data_format = ctx->Attr<std::string>("data_format");
+      const std::string padding = ctx->Attr<std::string>("padding");
       const auto& pads_before = ctx->Attr<std::vector<int32_t>>("pads_before");
       const auto& pads_after = ctx->Attr<std::vector<int32_t>>("pads_after");
       const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
       const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
       const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
-      const Params3D params_3d(dim, x_shape, data_format, pads_before, pads_after, pool_size,
-                               strides, ceil_mode);
+      const Params3D params_3d(dim, x_shape, data_format, padding, pads_before, pads_after,
+                               pool_size, strides, ceil_mode);
       const Shape y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
       const DataType dtype = x_desc->data_type();
       state.reset(new GPUPoolOpKernelState(dim, pooling_type, x_shape, y_shape, data_format, dtype,

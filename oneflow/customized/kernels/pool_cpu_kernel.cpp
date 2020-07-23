@@ -321,13 +321,14 @@ std::shared_ptr<user_op::OpKernelState> DoCreateOpKernelState(user_op::KernelIni
                                                               const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const std::string& data_format = ctx->Attr<std::string>("data_format");
+  const std::string padding = ctx->Attr<std::string>("padding");
   const auto& pads_before = ctx->Attr<std::vector<int32_t>>("pads_before");
   const auto& pads_after = ctx->Attr<std::vector<int32_t>>("pads_after");
   const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
   const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
   const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
   return std::make_shared<OpKernelStateWrapper<Params3D>>(
-      dim, x_shape, data_format, pads_before, pads_after, pool_size, strides, ceil_mode);
+      dim, x_shape, data_format, padding, pads_before, pads_after, pool_size, strides, ceil_mode);
 }
 
 }  // namespace
