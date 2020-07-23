@@ -86,6 +86,9 @@ jobs:
     - name: Integration test
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test bash ci/test/1node_model_test.sh
+    - name: ONNX export test
+      run: |
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test bash ci/test/onnx_export_model_test.sh
     - name: Benchmark
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test bash ci/test/1node_benchmark_test.sh
