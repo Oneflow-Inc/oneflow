@@ -18,7 +18,6 @@ from __future__ import absolute_import
 import oneflow as flow
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.core.common.data_type_pb2 as data_type_pb2
 
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.remote_blob import BlobDef
@@ -180,7 +179,7 @@ def CropMirrorNormalize(
 ):
     if (
         run_gpu
-        and input_blob.dtype is flow.uint8
+        and input_blob.dtype is dtype_util.uint8
         and len(input_blob.shape) == 4
         and (
             crop_h == 0
