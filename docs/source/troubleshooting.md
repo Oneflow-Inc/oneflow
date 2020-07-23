@@ -6,6 +6,7 @@
         F0723 19:05:56.194067 40970 cuda_util.cpp:82] Check failed: error == CUDNN_STATUS_SUCCESS (1 vs. 0) CUDNN_STATUS_NOT_INITIALIZED
         ```
     - Please upgrade to Nvidia Linux x86_64 Driver Version >= 440.33
+    - For more information, please refer to [cuda compatibility docs](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
 - Failed to compile `.cu` files
     1. Please refer to [CUDA System Requirements](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#system-requirements) . Make sure your linux distribution and libraries shipped with it meet the requirements.
