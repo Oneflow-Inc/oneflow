@@ -188,12 +188,11 @@ const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const 
   return *it->second;
 }
 
-Blob* RegstMgr::Blob4LbnAndParallelId(const std::string& lbn, const int64_t parallel_id) {
+Blob* RegstMgr::Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id) {
   for (const auto& x : regst_desc_id2regst_id2regst_) {
     for (const auto& y : x.second) {
       for (const auto& z : y.second->lbi2blob()) {
-        const auto& lbi = z.first;
-        if (lbi.op_name() + "/" + lbi.blob_name() == lbn) {
+        if (z.first == lbi) {
           const auto parallel_ctx_it = regst_desc_id2parallel_ctx_.find(x.first);
           CHECK(parallel_ctx_it != regst_desc_id2parallel_ctx_.end());
           const auto& parallel_ctx = parallel_ctx_it->second;

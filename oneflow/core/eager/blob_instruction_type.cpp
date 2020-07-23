@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/eager/lazy_ref_blob_object.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 namespace eager {
@@ -97,7 +98,8 @@ Maybe<void> LazyReferenceInstructionType::Run(vm::Instruction* instruction) cons
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  Blob* blob = Global<RegstMgr>::Get()->Blob4LbnAndParallelId(lbn, parallel_ctx.parallel_id());
+  Blob* blob = Global<RegstMgr>::Get()->Blob4LbiAndParallelId(GenLogicalBlobId(lbn),
+                                                              parallel_ctx.parallel_id());
   eager_blob_rw->Init<eager::LazyRefBlobObject>(blob);
   return Maybe<void>::Ok();
 }
