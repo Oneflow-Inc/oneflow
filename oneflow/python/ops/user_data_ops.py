@@ -115,6 +115,13 @@ def image_resize(
         if max_size is None:
             max_size = 0
 
+        if resize_side == "shorter":
+            resize_longer = False
+        elif resize_side == "longer":
+            resize_longer = True
+        else:
+            raise ValueError
+
         op = (
             flow.user_op_builder(name)
             .Op("image_resize_keep_aspect_ratio")
@@ -125,7 +132,7 @@ def image_resize(
             .Attr("target_size", target_size)
             .Attr("min_size", min_size)
             .Attr("max_size", max_size)
-            .Attr("resize_longer", True if resize_side == "longer" else False)
+            .Attr("resize_longer", resize_longer)
             .Attr("interpolation_type", interpolation_type)
             .Build()
         )
