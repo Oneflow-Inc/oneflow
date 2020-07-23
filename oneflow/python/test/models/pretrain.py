@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import bert as bert_util
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -65,13 +80,13 @@ def PreTrain(
         hidden_size=hidden_size,
         initializer_range=initializer_range,
     )
-    with flow.deprecated.variable_scope("cls-loss"):
+    with flow.scope.namespace("cls-loss"):
         total_loss = lm_loss + ns_loss
     return total_loss
 
 
 def PooledOutput(sequence_output, hidden_size, initializer_range):
-    with flow.deprecated.variable_scope("bert-pooler"):
+    with flow.scope.namespace("bert-pooler"):
         first_token_tensor = flow.slice(sequence_output, [None, 0, 0], [None, 1, -1])
         first_token_tensor = flow.reshape(first_token_tensor, [-1, hidden_size])
         pooled_output = bert_util._FullyConnected(
@@ -99,15 +114,15 @@ def _AddMaskedLanguageModelLoss(
     initializer_range,
 ):
 
-    with flow.deprecated.variable_scope("other"):
+    with flow.scope.namespace("other"):
         sum_label_weight_blob = flow.math.reduce_sum(label_weight_blob, axis=[-1])
         ones = sum_label_weight_blob * 0.0 + 1.0
         sum_label_weight_blob = flow.math.reduce_sum(sum_label_weight_blob)
         batch_size = flow.math.reduce_sum(ones)
         sum_label_weight_blob = sum_label_weight_blob / batch_size
-    with flow.deprecated.variable_scope("cls-predictions"):
+    with flow.scope.namespace("cls-predictions"):
         input_blob = _GatherIndexes(input_blob, positions_blob, seq_length, hidden_size)
-        with flow.deprecated.variable_scope("transform"):
+        with flow.scope.namespace("transform"):
             if callable(hidden_act):
                 act_fn = op_conf_util.kNone
             else:
@@ -137,7 +152,7 @@ def _AddMaskedLanguageModelLoss(
         )
         pre_example_loss = flow.reshape(pre_example_loss, [-1, max_predictions_per_seq])
         numerator = pre_example_loss * label_weight_blob
-        with flow.deprecated.variable_scope("loss"):
+        with flow.scope.namespace("loss"):
             numerator = flow.math.reduce_sum(numerator, axis=[-1])
             denominator = sum_label_weight_blob + 1e-5
             loss = numerator / denominator
@@ -153,7 +168,7 @@ def _GatherIndexes(sequence_blob, positions_blob, seq_length, hidden_size):
 
 
 def _AddNextSentenceOutput(input_blob, label_blob, hidden_size, initializer_range):
-    with flow.deprecated.variable_scope("cls-seq_relationship"):
+    with flow.scope.namespace("cls-seq_relationship"):
         output_weight_blob = flow.get_variable(
             name="output_weights",
             shape=[2, hidden_size],
