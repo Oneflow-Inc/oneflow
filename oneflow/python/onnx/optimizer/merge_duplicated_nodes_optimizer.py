@@ -1,11 +1,25 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT license.
 
-"""Merge Duplicated Nodes Optimizer.
-   Remove duplicate nodes except identity nodes which should be handled by identity optimizer.
-   for example, node a is input of node b and node c, and computation of node b, c are same such as "abs" op.
-   then b and c can be merged into one node to avoid duplicated computation
-"""
+# Merge Duplicated Nodes Optimizer.
+# duplicate nodes except identity nodes which should be handled by identity optimizer.
+# example, node a is input of node b and node c, and computation of node b, c are same such as "abs" op.
+# b and c can be merged into one node to avoid duplicated computation
 
 from collections import defaultdict, namedtuple
 
