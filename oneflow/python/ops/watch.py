@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import uuid
@@ -72,7 +87,8 @@ def LazyWatch(blob_watched, handler_or_prompt=None):
 
 @oneflow_export("watch_diff")
 def WatchDiff(
-    blob_watched: remote_blob_util.BlobDef, handler_or_prompt: Optional[Callable] = None
+    blob_watched: remote_blob_util.BlobDef,
+    handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
     r"""Register callback for gradient of a blob. The callback will be called after the computation produce the gradient blob finishes.
 
