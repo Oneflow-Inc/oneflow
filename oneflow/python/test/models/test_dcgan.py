@@ -83,7 +83,7 @@ class DCGAN:
         tf_g_loss = np.load(os.path.join(result_dir, "g_loss.npy"))
         tf_d_loss = np.load(os.path.join(result_dir, "d_loss.npy"))
 
-        if gpu_num > 1:  # multi gpu result is different
+        if gpu_num == 1:  # multi gpu result is different
             assert np.allclose(
                 g_loss.numpy(), tf_g_loss, rtol=1e-2, atol=1e-1
             ), "{}-{}".format(g_loss.ndarray().mean(), tf_g_loss.mean())
