@@ -18,14 +18,14 @@ std::vector<int32_t> Get3DVec(const std::vector<int32_t>& original_vec, int32_t 
   return vec;
 }
 
-std::vector<int32_t> Get3DPadVec(const int32_t* original_vec, int32_t NDims) {
+std::vector<int32_t> Get3DPadVec(const std::vector<int32_t>& original_vec, int32_t NDims) {
   std::vector<int32_t> vec;
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
     if (index < 0) {
       vec.push_back(0);
     } else {
-      vec.push_back(original_vec[index]);
+      vec.push_back(original_vec.at(index));
     }
   }
   return vec;
@@ -61,9 +61,9 @@ Params3D::Params3D(const int32_t dim, const ShapeView& x_shape, const std::strin
     : dim_(dim),
       pool_size_3d_(Get3DVec(pool_size, dim)),
       strides_3d_(Get3DVec(strides, dim)),
-      data_format_(data_format),
-      padding_before_3d_(Get3DPadVec(pads_before.data() + DhwOffset(data_format), dim)),
-      padding_after_3d_(Get3DPadVec(pads_after.data() + DhwOffset(data_format), dim)) {
+      padding_before_3d_(Get3DPadVec(pads_before, dim)),
+      padding_after_3d_(Get3DPadVec(pads_after, dim)),
+      data_format_(data_format) {
   x_3d_ = {GetInDim(x_shape, data_format, 0, dim), GetInDim(x_shape, data_format, 1, dim),
            GetInDim(x_shape, data_format, 2, dim)};
   Get3DOutputSize(x_3d_, pool_size_3d_, strides_3d_, padding_before_3d_, padding_after_3d_,
