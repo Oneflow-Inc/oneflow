@@ -1,5 +1,20 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job_completer/autograd.h"
-#include "oneflow/core/framework/grad_registration.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
@@ -12,7 +27,8 @@ Maybe<void> GenerateBackwardOpConf(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   CHECK(op.op_conf().has_user_conf());
   const UserOpConf& user_conf = op.op_conf().user_conf();
-  const user_op::GradRegistrationVal* val = user_op::LookUpInGradRegistry(user_conf.op_type_name());
+  const user_op::OpGradRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpGradRegistryResult(user_conf.op_type_name());
   if (val == nullptr) {
     return Error::GradientFunctionNotFound() << PbMessage2TxtString(op.op_conf());
   }

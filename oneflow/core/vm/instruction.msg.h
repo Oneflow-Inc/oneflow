@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_VM_VPU_INSTRUCTION_MSG_H_
 #define ONEFLOW_CORE_VM_VPU_INSTRUCTION_MSG_H_
 
@@ -25,37 +40,37 @@ OBJECT_MSG_END(InstructionOperandList);
 
 OBJECT_MSG_BEGIN(InstructionMsg);
   // methods
-  PUBLIC void __Init__() { mutable_operand_list(); }
-  PUBLIC void __Init__(const std::string& instr_type_name);
-  PUBLIC void __Init__(const InstructionProto& proto);
-  PUBLIC void __Init__(const InstructionMsg& instr_msg);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_parallel_desc(int64_t symbol_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_double_operand(double double_operand);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_int64_operand(int64_t int64_operand);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_operand);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_bool_operand(bool bool_operand);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_separator();
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const AllMirroredObject&);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_symbol_operand(ObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const AllMirroredObject&);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_init_symbol_operand(ObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
-  PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
-  PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
+  OF_PUBLIC void __Init__() { mutable_operand_list(); }
+  OF_PUBLIC void __Init__(const std::string& instr_type_name);
+  OF_PUBLIC void __Init__(const InstructionProto& proto);
+  OF_PUBLIC void __Init__(const InstructionMsg& instr_msg);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_parallel_desc(int64_t symbol_id);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_double_operand(double double_operand);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_int64_operand(int64_t int64_operand);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_uint64_operand(uint64_t uint64_operand);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_bool_operand(bool bool_operand);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_separator();
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_const_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_symbol_operand(ObjectId logical_object_id);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_init_symbol_operand(ObjectId logical_object_id);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  OF_PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
   }
-  PUBLIC std::vector<FlatMsg<InstructionOperand>>* mut_operand() {
+  OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mut_operand() {
     return mut_operand_list()->mut_operand();
   }
-  PUBLIC std::vector<FlatMsg<InstructionOperand>>* mutable_operand() {
+  OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mutable_operand() {
     return mutable_operand_list()->mut_operand();
   }
-  PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;
 
   // fields
   OBJECT_MSG_DEFINE_STRUCT(InstrTypeId, instr_type_id);
@@ -66,7 +81,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OBJECT_MSG_DEFINE_LIST_LINK(instr_msg_link);
 
   // private methods
-  PRIVATE InstructionOperand* add_instr_operand();
+  OF_PRIVATE InstructionOperand* add_instr_operand();
 OBJECT_MSG_END(InstructionMsg);
 // clang-format on
 
@@ -84,7 +99,7 @@ class Instruction;
 // clang-format off
 OBJECT_MSG_BEGIN(InstructionEdge);
   // methods
-  PUBLIC void __Init__(Instruction* src_instruction, Instruction* dst_instruction) {
+  OF_PUBLIC void __Init__(Instruction* src_instruction, Instruction* dst_instruction) {
     set_src_instruction(src_instruction);
     set_dst_instruction(dst_instruction);
   }
@@ -98,88 +113,88 @@ class Stream;
 // clang-format off
 OBJECT_MSG_BEGIN(Instruction);
   // methods
-  PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<ParallelDesc>& parallel_desc);
-  PUBLIC void __Delete__();
-  PUBLIC bool Done() const;
-  PUBLIC const StreamType& stream_type() const;
+  OF_PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<ParallelDesc>& parallel_desc);
+  OF_PUBLIC void __Delete__();
+  OF_PUBLIC bool Done() const;
+  OF_PUBLIC const StreamType& stream_type() const;
 
-  PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
+  OF_PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       const RwMutexedObject* operand_type(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);
     return operand_type(operand, GetOperandDefaultGlobalDeviceId());
   }
-  PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
+  OF_PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       const RwMutexedObject* operand_value(const Operand& operand) const {
     CheckOperand<mem_zone_modifier>(operand);
     return operand_value(operand, GetOperandDefaultGlobalDeviceId());
   }
-  PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
+  OF_PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       RwMutexedObject* mut_operand_type(const Operand& operand) {
     CheckOperand<mem_zone_modifier>(operand);
     return mut_operand_type(operand, GetOperandDefaultGlobalDeviceId());
   }
-  PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
+  OF_PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
       RwMutexedObject* mut_operand_value(const Operand& operand) {
     CheckOperand<mem_zone_modifier>(operand);
     return mut_operand_value(operand, GetOperandDefaultGlobalDeviceId());
   }
 
-  PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
+  OF_PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
   const RwMutexedObject* operand_type(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) const {
     return operand_type<mem_zone_modifier>(operand.operand());
   }
-  PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
+  OF_PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
   const RwMutexedObject* operand_value(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) const {
     return operand_value<mem_zone_modifier>(operand.operand());
   }
-  PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
+  OF_PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
   RwMutexedObject* mut_operand_type(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) {
     return mut_operand_type<mem_zone_modifier>(operand.operand());
   }
-  PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
+  OF_PUBLIC template<OperandAccessModifier access_modifier, OperandMemZoneModifier mem_zone_modifier>
   RwMutexedObject* mut_operand_value(
       const ModifiedOperand<access_modifier, mem_zone_modifier>& operand) {
     return mut_operand_value<mem_zone_modifier>(operand.operand());
   }
 
-  PUBLIC template<InterpretType interpret_type>
+  OF_PUBLIC template<InterpretType interpret_type>
          MirroredObject* MutMirroredObject(const MutOperand& mut_operand) {
     return MirroredObjectUtil<interpret_type>::Mut(this, mut_operand);
   }
 
-  PUBLIC template<InterpretType interpret_type>
+  OF_PUBLIC template<InterpretType interpret_type>
          const MirroredObject* GetMirroredObject(const ConstOperand& const_operand) const {
     return MirroredObjectUtil<interpret_type>::Get(*this, const_operand);
   }
 
-  PUBLIC MirroredObject* mut_type_mirrored_object(const MutOperand& mut_operand);
-  PUBLIC MirroredObject* mut_value_mirrored_object(const MutOperand& mut_operand);
+  OF_PUBLIC MirroredObject* mut_type_mirrored_object(const MutOperand& mut_operand);
+  OF_PUBLIC MirroredObject* mut_value_mirrored_object(const MutOperand& mut_operand);
 
   // private methods
-  PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
+  OF_PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
           MirroredObject* MutMirroredObject(const Operand& operand,
                                             int64_t default_global_device_id);
-  PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
+  OF_PRIVATE template<int64_t(*TransformLogicalObjectId)(int64_t)>
           const MirroredObject* GetMirroredObject(const Operand& operand,
                                                   int64_t default_global_device_id) const;
-  PRIVATE const RwMutexedObject* operand_type(const Operand& operand,
+  OF_PRIVATE const RwMutexedObject* operand_type(const Operand& operand,
                                               int64_t default_global_device_id) const;
-  PRIVATE const RwMutexedObject* operand_value(const Operand& operand,
+  OF_PRIVATE const RwMutexedObject* operand_value(const Operand& operand,
                                                int64_t default_global_device_id) const;
-  PRIVATE RwMutexedObject* mut_operand_type(const Operand& operand,
+  OF_PRIVATE RwMutexedObject* mut_operand_type(const Operand& operand,
                                             int64_t default_global_device_id);
-  PRIVATE RwMutexedObject* mut_operand_value(const Operand& operand,  
+  OF_PRIVATE RwMutexedObject* mut_operand_value(const Operand& operand,  
                                              int64_t default_global_device_id);
 
-  PRIVATE MirroredObject* MutMirroredObject(const Operand& operand,
+  OF_PRIVATE MirroredObject* MutMirroredObject(const Operand& operand,
                                                      int64_t default_global_device_id) {
     return MutMirroredObject<&IdUtil::GetValueId>(operand, default_global_device_id);
   }
 
-  PRIVATE int64_t GetOperandDefaultGlobalDeviceId() const;
+  OF_PRIVATE int64_t GetOperandDefaultGlobalDeviceId() const;
 
   template<InterpretType interpret_type>
   struct MirroredObjectUtil {

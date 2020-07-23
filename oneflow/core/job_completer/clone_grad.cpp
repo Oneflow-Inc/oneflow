@@ -1,4 +1,20 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job_completer/clone_grad.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
@@ -24,27 +40,27 @@ void GenerateCloneGradOpIfNeed(const OpNode& op_node, JobBuilder* job_builder,
   for (const auto& obn : op_node.op().output_bns()) {
     const OpBlobArg& oba = GenOpBlobArg(op_node.op().op_name(), obn);
     const LogicalBlobId& lbi = op_node.op().BnInOp2Lbi(obn);
-    LogicalBlobId diff_lbi;
-    const auto& in_diff_lbis = out_oba2in_diff_lbis[oba];
-    if (in_diff_lbis.empty()) { continue; }
-    if (in_diff_lbis.size() == 1) {
-      diff_lbi = in_diff_lbis.at(0);
-    } else if (in_diff_lbis.size() > 1) {
-      OperatorConf add_op;
-      add_op.set_name(op_node.op().op_name() + "_clone_grad_" + NewUniqueId());
-      AddOpConf* add_op_conf = add_op.mutable_add_conf();
-      add_op_conf->set_out("out");
-      for (const auto& in_diff_lbi : in_diff_lbis) {
-        add_op_conf->add_in(GenLogicalBlobName(in_diff_lbi));
+    std::vector<LogicalBlobId> lbis_to_add = std::move(out_oba2in_diff_lbis[oba]);
+    if (lbis_to_add.empty()) { continue; }
+    bool need_add = lbis_to_add.size() > 1;
+    while (lbis_to_add.size() != 1) {
+      const size_t add_n_op_max_input_num = 8;
+      user_op::UserOpConfWrapperBuilder add_op_builder(op_node.op().op_name() + "_clone_grad_"
+                                                       + NewUniqueId());
+      add_op_builder.Op("add_n");
+      const size_t start = lbis_to_add.size() >= add_n_op_max_input_num
+                               ? lbis_to_add.size() - add_n_op_max_input_num
+                               : 0;
+      for (size_t i = start; i < lbis_to_add.size(); ++i) {
+        add_op_builder.Input("in", GenLogicalBlobName(lbis_to_add.at(i)));
       }
-      job_builder->AddOps(job_builder->ParallelConf4Lbi(lbi), {add_op});
-      diff_lbi.set_op_name(add_op.name());
-      diff_lbi.set_blob_name("out");
-      CHECK(out_oba2clone_bw_add_out_lbi->emplace(oba, diff_lbi).second);
-    } else {
-      UNIMPLEMENTED();
+      lbis_to_add.resize(start);
+      const auto add_op = add_op_builder.Output("out").Build();
+      job_builder->AddOps(job_builder->ParallelConf4Lbi(lbi), {add_op.op_conf()});
+      lbis_to_add.push_back(GenLogicalBlobId(add_op.output("out", 0)));
     }
-    out_oba2out_diff_lbi->emplace(oba, diff_lbi);
+    if (need_add) { CHECK(out_oba2clone_bw_add_out_lbi->emplace(oba, lbis_to_add.front()).second); }
+    out_oba2out_diff_lbi->emplace(oba, lbis_to_add.front());
   }
 }
 

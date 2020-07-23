@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import collections
@@ -369,7 +384,6 @@ def tf_conv2d(
         else:
             raise ValueError("dilations must be an int or a list.")
 
-    assert os.getenv("ENABLE_USER_OP") != "False"
     if channel_pos == "channels_first":
         input_size = input.shape[2:4]
         kernel_size_list = filters.shape[2:4]
@@ -857,31 +871,28 @@ def sparse_softmax_cross_entropy_with_logits(
     assert labels is not None
     assert logits is not None
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        if len(labels.shape) == len(logits.shape):
-            assert labels.shape[-1] == 1
-            labels = flow.squeeze(labels, axis=[-1])
-        else:
-            assert len(labels.shape) == len(logits.shape) - 1
-
-        prob, out = (
-            flow.user_op_builder(
-                name
-                if name is not None
-                else id_util.UniqueStr("SparseSoftmaxCrossEntropy_")
-            )
-            .Op("sparse_softmax_cross_entropy")
-            .Input("prediction", [logits])
-            .Input("label", [labels])
-            .Output("prob")
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()
-        )
-        return out
+    if len(labels.shape) == len(logits.shape):
+        assert labels.shape[-1] == 1
+        labels = flow.squeeze(labels, axis=[-1])
     else:
-        return sparse_cross_entropy(labels=labels, prediction=softmax(logits))
+        assert len(labels.shape) == len(logits.shape) - 1
+
+    prob, out = (
+        flow.user_op_builder(
+            name
+            if name is not None
+            else id_util.UniqueStr("SparseSoftmaxCrossEntropy_")
+        )
+        .Op("sparse_softmax_cross_entropy")
+        .Input("prediction", [logits])
+        .Input("label", [labels])
+        .Output("prob")
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    return out
 
 
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")

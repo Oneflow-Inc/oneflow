@@ -1,5 +1,21 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def TestReshape(x, shape, name):
@@ -19,7 +35,7 @@ def fixed_tensor_def_test(test_case, func_config):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
-    def ReshapeJob(x=flow.FixedTensorDef((10, 2))):
+    def ReshapeJob(x: oft.Numpy.Placeholder((10, 2))):
         return TestReshape(x, [5, 4], "xx_test_reshape")
 
     x = np.random.rand(10, 2).astype(np.float32)
@@ -33,7 +49,7 @@ def mirrored_tensor_def_test(test_case, func_config):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
-    def ReshapeJob(x=flow.MirroredTensorDef((10, 2))):
+    def ReshapeJob(x: oft.ListNumpy.Placeholder((10, 2))):
         return TestReshape(x, [5, 4], "xx_test_reshape")
 
     x = np.random.rand(8, 2).astype(np.float32)
@@ -60,7 +76,7 @@ def test_mirrored_TestReshape_1n2c(test_case):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
-    def ReshapeJob(x=flow.MirroredTensorDef((10, 2))):
+    def ReshapeJob(x: oft.ListNumpy.Placeholder((10, 2))):
         return TestReshape(x, [5, 4], "xx_test_reshape")
 
     x1 = np.random.rand(10, 1).astype(np.float32)

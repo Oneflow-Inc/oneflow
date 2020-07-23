@@ -1,8 +1,24 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import copy
 import functools
 import re
+import inspect
 from typing import Any, Callable, Optional, Union
 
 import oneflow.python.framework.session_context as session_ctx
@@ -14,6 +30,7 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.typing_util as oft_util
 import oneflow.python.lib.core.pb_util as pb_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
@@ -62,11 +79,32 @@ class FunctionConfig(object):
         return FunctionConfigSetter
 
 
+@oneflow_export("global_function")
+def api_oneflow_function(
+    function_config: FunctionConfig = FunctionConfig(),
+) -> Callable[[Callable], Callable]:
+    r"""Creates a callable OneFlow global function from a Python function.
+    For instance::
+        @oneflow.global_function(flow.FunctionConfig())
+        def train():
+            # your model
+    Args:
+        function_config: a `FunctionConfig` object
+    Returns:
+        a callable which is called to execute the compiled function
+    """
+    api = enable_if.unique([eager_oneflow_function, lazy_oneflow_function])
+    return api(function_config)
+
+
 @enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
 def eager_oneflow_function(function_config=FunctionConfig()):
     assert isinstance(function_config, FunctionConfig)
 
     def Decorator(job_func):
+        if not hasattr(job_func, "__oneflow_function_signature__"):
+            job_func.__oneflow_function_signature__ = inspect.signature(job_func)
+        oft_util.CheckGlobalFunctionAnnotation(job_func.__oneflow_function_signature__)
         sess = session_ctx.GetDefaultSession()
         function_desc = _CloneFunctionDesc(function_config.function_desc, job_func)
 
@@ -89,6 +127,9 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
     assert isinstance(function_config, FunctionConfig)
 
     def Decorator(job_func):
+        if not hasattr(job_func, "__oneflow_function_signature__"):
+            job_func.__oneflow_function_signature__ = inspect.signature(job_func)
+        oft_util.CheckGlobalFunctionAnnotation(job_func.__oneflow_function_signature__)
         sess = session_ctx.GetDefaultSession()
 
         @functools.wraps(job_func)
@@ -102,24 +143,6 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
         return Func
 
     return Decorator
-
-
-@oneflow_export("global_function")
-def api_oneflow_function(
-    function_config: FunctionConfig = FunctionConfig(),
-) -> Callable[[Callable], Callable]:
-    r"""Creates a callable OneFlow global function from a Python function.
-    For instance::
-        @oneflow.global_function(flow.FunctionConfig())
-        def train():
-            # your model
-    Args:
-        function_config: a `FunctionConfig` object
-    Returns:
-        a callable which is called to execute the compiled function
-    """
-    api = enable_if.unique([lazy_oneflow_function, eager_oneflow_function])
-    return api(function_config)
 
 
 def _CloneFunctionDesc(func_desc, job_func):
@@ -182,7 +205,7 @@ def _RunLazyJob(session, job_func, *args, **kwargs):
 
 @oneflow_function_config("default_data_type")
 def set_default_data_type(func_desc, value):
-    func_desc.job_config_proto.default_data_type = value
+    func_desc.job_config_proto.default_data_type = value.oneflow_proto_dtype
 
 
 @oneflow_function_config("default_initializer_conf")

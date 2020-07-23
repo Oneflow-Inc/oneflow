@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job_completer/clone_grad.h"
@@ -406,9 +421,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   }
   ParallelConf global_norm_parallel_conf =
       all_same_parallel_desc ? parallel_desc->parallel_conf() : GenParallelConfOfCpuZeroOnMaster();
-  OperatorConf global_norm_add_op_conf{};
-  global_norm_add_op_conf.set_name("System-ClipGradient-GlobalNorm-Add-" + NewUniqueId());
-  AddOpConf* global_norm_add_conf = global_norm_add_op_conf.mutable_add_conf();
+  std::vector<std::string> lbns_to_add;
   for (const auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& diff_lbi = pair.second;
     OperatorConf square_sum_op_conf{};
@@ -417,16 +430,28 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
     square_sum_conf->set_x(GenLogicalBlobName(diff_lbi));
     square_sum_conf->set_y("y");
     job_builder->AddOps(lbi2parallel_desc.at(pair.first)->parallel_conf(), {square_sum_op_conf});
-    *global_norm_add_conf->mutable_in()->Add() =
-        GenLogicalBlobName(square_sum_op_conf.name(), square_sum_conf->y());
+    lbns_to_add.push_back(GenLogicalBlobName(square_sum_op_conf.name(), square_sum_conf->y()));
   }
-  global_norm_add_conf->set_out("out");
-  job_builder->AddOps(global_norm_parallel_conf, {global_norm_add_op_conf});
+  while (lbns_to_add.size() != 1) {
+    const size_t add_n_op_max_input_num = 8;
+    user_op::UserOpConfWrapperBuilder add_op_builder("System-ClipGradient-GlobalNorm-Add-"
+                                                     + NewUniqueId());
+    add_op_builder.Op("add_n");
+    const size_t start = lbns_to_add.size() >= add_n_op_max_input_num
+                             ? lbns_to_add.size() - add_n_op_max_input_num
+                             : 0;
+    for (size_t i = start; i < lbns_to_add.size(); ++i) {
+      add_op_builder.Input("in", lbns_to_add.at(i));
+    }
+    lbns_to_add.resize(start);
+    const auto add_op = add_op_builder.Output("out").Build();
+    job_builder->AddOps(global_norm_parallel_conf, {add_op.op_conf()});
+    lbns_to_add.push_back(add_op.output("out", 0));
+  }
   auto inv_global_norm_op = user_op::UserOpConfWrapperBuilder(
                                 "System-ClipGradient-GlobalNorm-InvGlobalNorm-" + NewUniqueId())
                                 .Op("rsqrt")
-                                .Input("x", GenLogicalBlobName(global_norm_add_op_conf.name(),
-                                                               global_norm_add_conf->out()))
+                                .Input("x", lbns_to_add.front())
                                 .Output("y")
                                 .Build();
   job_builder->AddOps(global_norm_parallel_conf, {inv_global_norm_op.op_conf()});

@@ -2,6 +2,12 @@
 
 ### Install OneFlow
 
+  #### System Requirements
+
+  - Nvidia Linux x86_64 driver version >= 440.33
+
+  #### Install Pip package
+
   - To install latest release of OneFlow:
 
     ```
@@ -53,14 +59,7 @@
     git clone https://github.com/Oneflow-Inc/oneflow --recursive
     ```
 
-3. #### Install Python Dev Requirements
-
-    To install development dependencies and linter tools, run:
-    ```
-    python3 -m pip install -r dev-requirements.txt --user
-    ```
-
-4. #### Build and Install OneFlow
+3. #### Build and Install OneFlow
 
     ```
     cd build

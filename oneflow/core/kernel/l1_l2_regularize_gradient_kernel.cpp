@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/l1_l2_regularize_gradient_kernel_util.h"
 
@@ -23,10 +38,9 @@ void L1L2RegularizeGradientKernel<device_type, T>::ForwardDataContent(
   const Blob* model = BnInOp2Blob("model");
   const Blob* model_diff = BnInOp2Blob("model_diff");
   Blob* out = BnInOp2Blob("out");
-  out->CopyDataContentFrom(ctx.device_ctx, model_diff);
   L1L2RegularizeGradientKernelUtil<device_type, T>::RegularizeGradient(
-      ctx.device_ctx, out->shape().elem_cnt(), model->dptr<T>(), out->dptr<T>(), out->mut_dptr<T>(),
-      conf.l1(), conf.l2());
+      ctx.device_ctx, out->shape().elem_cnt(), model->dptr<T>(), model_diff->dptr<T>(),
+      out->mut_dptr<T>(), conf.l1(), conf.l2());
 }
 
 template<DeviceType device_type, typename T>

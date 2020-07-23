@@ -1,9 +1,26 @@
-#include <algorithm>
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job_completer/auto_mixed_precision_lists.h"
-#include "oneflow/core/job_completer/op_graph_pass.h"
-#include "oneflow/core/job/job_desc.h"
+
+#include <algorithm>
+
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job_completer/op_graph_pass.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -40,7 +57,7 @@ std::string Container2Str(const ContainerT& container,
 
 void VerifyAMPList(const AMPList& amp_list) {
   for (const auto& op_type : amp_list) {
-    CHECK(user_op::LookUpInOpRegistry(op_type) != nullptr)
+    CHECK(user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type) != nullptr)
         << "Cannot find " << op_type << " of AutoMixedPrecision list in OpRegistry.";
   }
 }

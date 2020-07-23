@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import argparse
 import os
 from datetime import datetime
@@ -138,9 +153,6 @@ def conv2d_affine(
     # input data_format must be NCHW, cannot check now
     padding = "SAME" if strides > 1 or kernel_size > 1 else "VALID"
     output = _conv2d(name, input, filters, kernel_size, strides, padding)
-    # output = _batch_norm(output, name + "_bn")
-    # if activation != op_conf_util.kNone:
-    #     output = flow.keras.activations.relu(output)
 
     return output
 
@@ -181,7 +193,7 @@ def residual_block(input, block_name, filters, filters_inner, strides_init):
         input, block_name, filters, filters_inner, strides_init
     )
 
-    return flow.keras.activations.relu(shortcut + bottleneck)
+    return flow.math.relu(shortcut + bottleneck)
 
 
 def residual_stage(input, stage_name, counts, filters, filters_inner, stride_init=2):
@@ -216,7 +228,6 @@ def resnet_stem(input):
     g_output_key.append("conv1")
     g_output.append(conv1)
 
-    # conv1_bn = flow.keras.activations.relu(_batch_norm(conv1, "conv1_bn"))
     # for test
     conv1_bn = conv1
 
@@ -235,7 +246,7 @@ def resnet50(args, data_dir):
     g_output_key.append("input_img")
     g_output.append(images)
 
-    with flow.deprecated.variable_scope("Resnet"):
+    with flow.scope.namespace("Resnet"):
         stem = resnet_stem(images)
         body = resnet_conv_x_body(stem, lambda x: x)
         pool5 = flow.nn.avg_pool2d(

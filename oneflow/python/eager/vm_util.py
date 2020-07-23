@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import re
@@ -219,6 +234,14 @@ class InstructionsBuilder(object):
     def DeleteBlob(self, blob_object):
         self._TryClearObject(blob_object)
         self._DeleteObject(blob_object)
+
+    def InsertRemoveForeignCallbackInstruction(self, object_id, callback):
+        unique_callback_id = python_callback.GetIdForRegisteredCallback(callback)
+        instruction = instr_util.InstructionProto()
+        instruction.instr_type_name = "RemoveForeignCallback"
+        instruction.operand.append(_DelObjectOperand(object_id))
+        instruction.operand.append(_Int64Operand(unique_callback_id))
+        self.instruction_list_.instruction.append(instruction)
 
     def FetchBlobHeader(self, blob_object, callback):
         return self._FetchBlob("FetchBlobHeader", blob_object, callback)
