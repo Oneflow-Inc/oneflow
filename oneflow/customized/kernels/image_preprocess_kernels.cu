@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include <iostream>
+#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
 
@@ -61,49 +61,36 @@ class NormalizeAttr final : public user_op::OpKernelState {
 };
 
 template<TensorLayout layout>
-__device__ __forceinline__ int32_t GetOffset(int32_t n, int32_t h, int32_t w, int32_t c, int32_t H,
-                                             int32_t W, int32_t C);
+__device__ __forceinline__ int32_t GetYOffset(const int32_t* x_idx,
+                                              const NdIndexOffsetHelper<int32_t, 4> y_helper);
 
 template<>
-__device__ __forceinline__ int32_t GetOffset<TensorLayout::kNCHW>(int32_t n, int32_t h, int32_t w,
-                                                                  int32_t c, int32_t H, int32_t W,
-                                                                  int32_t C) {
-  return n * C * H * W + c * H * W + h * W + w;  //  n,c,h,w
+__device__ __forceinline__ int32_t GetYOffset<TensorLayout::kNCHW>(
+    const int32_t* x_idx, const NdIndexOffsetHelper<int32_t, 4> y_helper) {
+  return y_helper.NdIndexToOffset(*x_idx, *(x_idx + 3), *(x_idx + 1), *(x_idx + 2));
 }
 
 template<>
-__device__ __forceinline__ int32_t GetOffset<TensorLayout::kNHWC>(int32_t n, int32_t h, int32_t w,
-                                                                  int32_t c, int32_t H, int32_t W,
-                                                                  int32_t C) {
-  return n * H * W * C + h * W * C + w * C + c;  //  n,h,w,c
+__device__ __forceinline__ int32_t GetYOffset<TensorLayout::kNHWC>(
+    const int32_t* x_idx, const NdIndexOffsetHelper<int32_t, 4> y_helper) {
+  return y_helper.NdIndexToOffset(x_idx);
 }
 
 template<TensorLayout layout>
 __global__ void TransposeMirrorNormalizeGpuImpl(int32_t elem_cnt, const uint8_t* x_dptr,
-                                                float* y_dptr, int32_t N, int32_t H, int32_t W,
-                                                int32_t C, const int8_t* mirror,
+                                                float* y_dptr, const int8_t* mirror_dptr, int32_t W,
+                                                const NdIndexOffsetHelper<int32_t, 4> x_helper,
+                                                const NdIndexOffsetHelper<int32_t, 4> y_helper,
                                                 const NormalizeVal mean,
                                                 const NormalizeVal inv_std) {
-  int32_t x_stride_n = H * W * C;
-  int32_t x_stride_h = W * C;
-  int32_t x_stride_w = C;
-  CUDA_1D_KERNEL_LOOP(x_idx, elem_cnt) {
-    int32_t x = x_idx;
-    int32_t n = x / x_stride_n;
-    x %= x_stride_n;
-    int32_t h = x / x_stride_h;
-    x %= x_stride_h;
-    int32_t w = x / x_stride_w;
-    int32_t c = x % x_stride_w;
-    assert(n >= 0 && n < N);
-    assert(h >= 0 && h < H);
-    assert(w >= 0 && w < W);
-    assert(c >= 0 && c < C);
-    if (mirror && mirror[n]) { w = W - 1 - w; }
-    float mean_val = mean.val[c];
-    float inv_std_val = inv_std.val[c];
-    int32_t y_idx = GetOffset<layout>(n, h, w, c, H, W, C);
-    y_dptr[y_idx] = (static_cast<float>(x_dptr[x_idx]) - mean_val) * inv_std_val;
+  CUDA_1D_KERNEL_LOOP(x_offset, elem_cnt) {
+    int32_t x_idx[4];
+    x_helper.OffsetToNdIndex(x_offset, x_idx);
+    if (mirror_dptr && mirror_dptr[x_idx[0]]) { x_idx[2] = W - 1 - x_idx[2]; }
+    float mean_val = mean.val[x_idx[3]];
+    float inv_std_val = inv_std.val[x_idx[3]];
+    int32_t y_offset = GetYOffset<layout>(x_idx, y_helper);
+    y_dptr[y_offset] = (static_cast<float>(x_dptr[x_offset]) - mean_val) * inv_std_val;
   }
 }
 
@@ -134,24 +121,28 @@ class TransposeMirrorNormalizeGpuKernel final : public user_op::OpKernel {
     CHECK_EQ(in_shape.NumAxes(), 4);
     int32_t elem_cnt = in_shape.elem_cnt();
     CHECK_LE(elem_cnt, GetMaxVal<int32_t>());
+
     int32_t N = in_shape.At(0);
     int32_t H = in_shape.At(1);
     int32_t W = in_shape.At(2);
     int32_t C = in_shape.At(3);
+    const NdIndexOffsetHelper<int32_t, 4> x_helper(N, H, W, C);
     const int8_t* mirror_dptr = nullptr;
     user_op::Tensor* mirror_blob = ctx->Tensor4ArgNameAndIndex("mirror", 0);
     if (mirror_blob) { mirror_dptr = mirror_blob->dptr<int8_t>(); }
 
     if (output_layout == "NCHW") {
+      const NdIndexOffsetHelper<int32_t, 4> y_helper(N, C, H, W);
       TransposeMirrorNormalizeGpuImpl<TensorLayout::kNCHW>
           <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-             ctx->device_ctx()->cuda_stream()>>>(elem_cnt, in_dptr, out_dptr, N, H, W, C,
-                                                 mirror_dptr, mean, inv_std);
+             ctx->device_ctx()->cuda_stream()>>>(elem_cnt, in_dptr, out_dptr, mirror_dptr, W,
+                                                 x_helper, y_helper, mean, inv_std);
     } else if (output_layout == "NHWC") {
+      const NdIndexOffsetHelper<int32_t, 4> y_helper(N, H, W, C);
       TransposeMirrorNormalizeGpuImpl<TensorLayout::kNHWC>
           <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-             ctx->device_ctx()->cuda_stream()>>>(elem_cnt, in_dptr, out_dptr, N, H, W, C,
-                                                 mirror_dptr, mean, inv_std);
+             ctx->device_ctx()->cuda_stream()>>>(elem_cnt, in_dptr, out_dptr, mirror_dptr, W,
+                                                 x_helper, y_helper, mean, inv_std);
     } else {
       UNIMPLEMENTED();
     }
