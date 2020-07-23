@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from typing import Optional, Sequence, Union
 
 import oneflow as flow
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
@@ -27,7 +28,7 @@ from oneflow.python.oneflow_export import oneflow_export
 def Bernoulli(
     x: remote_blob_util.BlobDef,
     seed: Optional[int] = None,
-    dtype: Optional[int] = None,
+    dtype: Optional[dtype_util.dtype] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     if name is None:

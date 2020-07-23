@@ -21,12 +21,6 @@ from oneflow.core.job.job_conf_pb2 import JobConfigProto
 import oneflow.python.framework.session_util as session_util
 del session_util
 
-import oneflow.python.framework.dtype as dtype
-for x in dir(dtype):
-    if x.startswith('_') == False: locals()[x] = getattr(dtype, x)
-del x
-del dtype
-
 import oneflow.python.framework.register_python_callback
 
 import oneflow.python.__export_symbols__

@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow as flow
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 
 from oneflow.python.oneflow_export import oneflow_export
@@ -139,7 +140,7 @@ def CropMirrorNormalize(
     crop_pos_x=0.5,
     mean=[0.0],
     std=[1.0],
-    output_dtype=flow.float,
+    output_dtype=dtype_util.float,
     name=None,
 ):
     if name is None:
@@ -185,7 +186,9 @@ def CoinFlip(batch_size=1, seed=None, probability=0.5, name=None):
 
 
 @oneflow_export("image.decode", "image_decode")
-def image_decode(images_bytes_buffer, dtype=flow.uint8, color_space="BGR", name=None):
+def image_decode(
+    images_bytes_buffer, dtype=dtype_util.uint8, color_space="BGR", name=None
+):
     # TODO: check color_space valiad
     if name is None:
         name = id_util.UniqueStr("ImageDecode_")
