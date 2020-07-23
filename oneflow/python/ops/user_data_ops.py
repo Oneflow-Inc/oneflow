@@ -18,7 +18,6 @@ from __future__ import absolute_import
 import oneflow as flow
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.core.common.data_type_pb2 as data_type_util
 
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.remote_blob import BlobDef
@@ -111,7 +110,7 @@ def image_resize(
     keep_aspect_ratio: bool = False,
     resize_side: str = "shorter",
     channels: int = 3,
-    dtype: int = data_type_util.kUInt8,
+    dtype: dtype_util.dtype = dtype_util.float,
     interpolation_type: str = "auto",
     name=None,
 ):

@@ -1,10 +1,24 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import cv2
 import numpy as np
 import random
 import os
 import oneflow as flow
 import oneflow.typing as oft
-import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.python.framework.local_blob as local_blob_util
 
 global_coco_dict = dict()
@@ -14,7 +28,7 @@ default_coco_image_dir = "/dataset/mscoco_2017/val2017"
 
 def _of_image_resize(
     image_list,
-    dtype=flow.float,
+    dtype=flow.float32,
     target_size=None,
     min_size=None,
     max_size=None,
@@ -51,7 +65,7 @@ def _of_image_resize(
             interpolation_type=interpolation_type,
         )
 
-        if res_image.dtype == data_type_util.kTensorBuffer:
+        if keep_aspect_ratio:
             out_shape = _infer_resize_static_shape(
                 min_max_size,
                 target_size,
@@ -59,11 +73,12 @@ def _of_image_resize(
                 resize_side,
                 image_static_shape[3],
             )
+
             if print_debug_info:
                 print("resized image_static_shape: {}".format(out_shape))
 
             res_image = flow.tensor_buffer_to_tensor_list(
-                res_image, shape=out_shape, dtype=flow.float,
+                res_image, shape=out_shape, dtype=dtype,
             )
 
         if new_size is None:
@@ -200,7 +215,7 @@ def _infer_images_static_shape(images):
 
 
 def _cv_read_images_from_files(image_files, dtype):
-    np_dtype = flow.convert_of_dtype_to_numpy_dtype(dtype)
+    np_dtype = flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
     images = [cv2.imread(image_file).astype(np_dtype) for image_file in image_files]
     assert all(isinstance(image, np.ndarray) for image in images)
     assert all(image.ndim == 3 for image in images)
@@ -283,7 +298,7 @@ def _test_image_resize_with_cv(
     max_size=None,
     keep_aspect_ratio=True,
     resize_side="shorter",
-    dtype=flow.float,
+    dtype=flow.float32,
     print_debug_info=False,
 ):
     image_list = _cv_read_images_from_files(image_files, dtype)
