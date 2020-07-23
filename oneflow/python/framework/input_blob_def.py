@@ -17,12 +17,11 @@ from __future__ import absolute_import
 
 import sys
 from functools import reduce
-from typing import Any, Optional, Sequence, Union, Tuple
+from typing import Any, Optional, Sequence, Union
 
 import numpy as np
 
 import oneflow
-import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as lbi_util
 import oneflow.python.framework.blob_desc as blob_desc
@@ -32,6 +31,7 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
 from functools import reduce
 import traceback
@@ -111,7 +111,7 @@ class ArgBlobDef(blob_desc.BlobDesc):
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
-        interface_blob_conf.data_type = self.dtype_
+        interface_blob_conf.data_type = self.dtype_.oneflow_proto_dtype
         interface_blob_conf.is_dynamic = self.is_dynamic
         interface_blob_conf.is_tensor_list = self.is_tensor_list
         self.SetBatchAxisAndSplitAxis(interface_blob_conf)
@@ -121,8 +121,8 @@ class ArgBlobDef(blob_desc.BlobDesc):
 class FixedTensorDef(ArgBlobDef):
     def __init__(
         self,
-        shape: Tuple[int],
-        dtype: int = data_type_util.kFloat,
+        shape: Sequence[int],
+        dtype: dtype_util.dtype = dtype_util.float,
         batch_axis: int = 0,
         name: Optional[str] = None,
     ) -> None:
@@ -185,8 +185,8 @@ class FixedTensorDef(ArgBlobDef):
 class MirroredTensorDef(ArgBlobDef):
     def __init__(
         self,
-        shape: Tuple[int],
-        dtype: int = data_type_util.kFloat,
+        shape: Sequence[int],
+        dtype: dtype_util.dtype = dtype_util.float,
         batch_axis: int = 0,
         name: Optional[str] = None,
     ) -> None:
@@ -247,8 +247,8 @@ class MirroredTensorDef(ArgBlobDef):
 class MirroredTensorListDef(ArgBlobDef):
     def __init__(
         self,
-        shape: Tuple[int],
-        dtype: int = data_type_util.kFloat,
+        shape: Sequence[int],
+        dtype: dtype_util.dtype = dtype_util.float,
         batch_axis: int = 0,
         name: Optional[str] = None,
     ) -> None:

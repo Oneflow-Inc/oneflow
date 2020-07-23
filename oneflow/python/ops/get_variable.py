@@ -45,7 +45,7 @@ import os
 def api_get_variable(
     name: str,
     shape: Optional[Sequence[int]] = None,
-    dtype: Optional[int] = dtype_util.float32,
+    dtype: Optional[dtype_util.dtype] = dtype_util.float32,
     initializer: Optional[op_conf_util.InitializerConf] = None,
     regularizer: Optional[op_conf_util.RegularizerConf] = None,
     trainable: Optional[bool] = None,
@@ -196,7 +196,7 @@ def _GenerateVariableOpConf(
     op_conf.variable_conf.shape.dim.extend(shape)
 
     assert dtype is not None
-    op_conf.variable_conf.data_type = dtype
+    op_conf.variable_conf.data_type = dtype.oneflow_proto_dtype
 
     root_path = (
         compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
