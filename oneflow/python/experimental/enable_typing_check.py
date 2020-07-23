@@ -13,24 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# __init__.py, rename to avoid being added to PYTHONPATH
 from __future__ import absolute_import
 
-from oneflow.core.job.job_set_pb2 import ConfigProto
-from oneflow.core.job.job_conf_pb2 import JobConfigProto
-import oneflow.python.framework.session_util as session_util
-del session_util
+from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.hob as hob
+import oneflow.python.lib.core.enable_if as enable_if
 
-import oneflow.python.framework.register_python_callback
 
-import oneflow.python.__export_symbols__
+@oneflow_export("experimental.enable_typing_check")
+def api_enable_typing_check(val: bool = True) -> None:
+    """ enable typing check for global_function """
+    return enable_if.unique([enable_typing_check])(val)
 
-import atexit
-import oneflow.python.framework.c_api_util
-atexit.register(oneflow.python.framework.c_api_util.DestroyEnv)
-atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
-del atexit
 
-del absolute_import
-del oneflow
-del python
+@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
+def enable_typing_check(val):
+    global typing_check_enabled
+    typing_check_enabled = val
+
+
+typing_check_enabled = False
