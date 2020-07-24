@@ -16,12 +16,12 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow
-import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.blob_trait as blob_trait
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 import oneflow.python.eager.eager_blob_util as eager_blob_util
@@ -280,9 +280,9 @@ class EagerBlobTrait(object):
 
     @property
     def dtype(self):
-        return convert_proto_dtype_to_oneflow_dtype(
-            self.blob_object.op_arg_blob_attr.dtype
-        )
+        ret = self.blob_object.op_arg_blob_attr.dtype
+        assert issubclass(ret, dtype_util.dtype)
+        return ret
 
     @property
     def batch_axis(self):
