@@ -100,6 +100,7 @@ struct PoolCpuKernelUtil {
     const T* output_diff = out_diff_blob->dptr<T>();
     const T* output = out_blob->dptr<T>();
     const T* input = in_blob->dptr<T>();
+    std::memset(in_diff_blob->mut_dptr<T>(), T(0), in.elem_cnt() * sizeof(T));
     T* input_diff = in_diff_blob->mut_dptr<T>();
     FOR_RANGE(int64_t, n, 0, in.At(0)) {
       FOR_RANGE(int64_t, c, 0, in.At(1)) {
@@ -194,6 +195,7 @@ struct PoolCpuKernelUtil {
     ConstEigenArrayMap<T> in_mat(in_blob->dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
     ConstEigenArrayMap<T> out_diff_mat(out_diff_blob->dptr<T>(), out.At(1),
                                        out.elem_cnt() / out.At(1));
+    std::memset(in_diff_blob->mut_dptr<T>(), T(0), in.elem_cnt() * sizeof(T));
     EigenArrayMap<T> in_diff_mat(in_diff_blob->mut_dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
     FOR_RANGE(int64_t, n, 0, in.At(0)) {
       FOR_RANGE(int64_t, pd, 0, out.At(2)) {
