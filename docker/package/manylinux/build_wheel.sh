@@ -59,6 +59,12 @@ then
 fi
 
 ONEFLOW_BUILD_DIR=$CACHE_DIR/build-oneflow
+
+function cleanup {
+  echo "Removing /tmp/tmp_wheel"
+  rm  -r /tmp/tmp_wheel
+}
+
 for PY_VER in ${PY_VERS[@]}
 do
     mkdir -p $ONEFLOW_BUILD_DIR
@@ -78,7 +84,7 @@ do
         $ONEFLOW_SRC_DIR
     cmake --build . -j `nproc`
     popd
-    $PY_BIN setup.py bdist_wheel -d tmp_wheel --build_dir $ONEFLOW_BUILD_DIR
-    auditwheel repair tmp_wheel/*.whl $AUDITWHEEL_ARG
-    rm -rf tmp_wheel
+    trap cleanup EXIT
+    $PY_BIN setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir $ONEFLOW_BUILD_DIR
+    auditwheel repair /tmp/tmp_wheel/*.whl $AUDITWHEEL_ARG
 done
