@@ -160,7 +160,7 @@ def conv2d(
                         When it is an integer, the same value for the all spatial dimesions is applied. Defaults to 1.
         padding (str, optional): "VALID" or "SAME". Defaults to "VALID".
         data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCHW" or "NHWC" (default: "NCHW"). "NCHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, height, width). 
-                        "NHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, height, width, channels).. Defaults to "NCHW".
+                        "NHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, height, width, channels). Defaults to "NCHW".
         dilation_rate (int, optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
         groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
         activation (Optional[ Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef] ], optional): Activation function. Defaults to None.
@@ -524,6 +524,23 @@ def batch_normalization(
 
 @oneflow_export("layers.upsample_2d")
 def upsample(x, size=(2, 2), data_format="NCHW", interpolation="nearest", name=None):
+    r"""Upsample Operation
+
+    Args:
+        x ([type]): Input `Blob`.
+        size (tuple, optional): (height_scale,width_scale)  Defaults to (2, 2).
+        data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCHW" or "NHWC" (default: "NCHW"). "NCHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, height, width). 
+                        "NHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, height, width, channels).. Defaults to "NCHW".
+        interpolation (str, optional): Image interpolation algorithm to enlarge the image size. Defaults to "nearest".
+        name ([type], optional): This layer's name. Defaults to None.
+
+    Raises:
+        ValueError: interpolation must be "nearest" or "bilinear".
+        ValueError: data_format must be "NHWC" or "NCHW"
+
+    Returns:
+        [type]: remote_blob_util.BlobDef:  A `Blob` with new shape of input. if  input size is(2,2),then the  new shape is [N, C, 2H, 2W].
+    """
     if name is None:
         name = id_util.UniqueStr("Upsample2D_")
 
