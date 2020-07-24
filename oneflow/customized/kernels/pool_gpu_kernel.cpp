@@ -56,12 +56,12 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
       const ShapeView& x_shape = ctx->Tensor4ArgNameAndIndex("x", 0)->shape();
       const std::string& data_format = ctx->Attr<std::string>("data_format");
       const std::string padding = ctx->Attr<std::string>("padding");
-      const auto& pads_before = ctx->Attr<std::vector<int32_t>>("pads_before");
-      const auto& pads_after = ctx->Attr<std::vector<int32_t>>("pads_after");
+      const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
+      const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
       const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
       const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
       const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
-      const Params3D params_3d(dim_, x_shape, data_format, padding, pads_before, pads_after,
+      const Params3D params_3d(dim_, x_shape, data_format, padding, padding_before, padding_after,
                                pool_size, strides, ceil_mode);
       const ShapeView& y_shape = ctx->Tensor4ArgNameAndIndex("y", 0)->shape();
       const DataType dtype = ctx->Tensor4ArgNameAndIndex("x", 0)->data_type();
@@ -107,12 +107,12 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
       const Shape& x_shape = x_desc->shape();
       const std::string& data_format = ctx->Attr<std::string>("data_format");
       const std::string padding = ctx->Attr<std::string>("padding");
-      const auto& pads_before = ctx->Attr<std::vector<int32_t>>("pads_before");
-      const auto& pads_after = ctx->Attr<std::vector<int32_t>>("pads_after");
+      const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
+      const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
       const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
       const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
       const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
-      const Params3D params_3d(dim, x_shape, data_format, padding, pads_before, pads_after,
+      const Params3D params_3d(dim, x_shape, data_format, padding, padding_before, padding_after,
                                pool_size, strides, ceil_mode);
       const Shape y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
       const DataType dtype = x_desc->data_type();

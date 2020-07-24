@@ -569,8 +569,8 @@ def max_pool2d(
     print("padding_before", padding_before)
     print("padding_after", padding_after)
     op.Attr("padding", padding_type)
-    op.Attr("pads_before", padding_before)
-    op.Attr("pads_after", padding_after)
+    op.Attr("padding_before", padding_before)
+    op.Attr("padding_after", padding_after)
     op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
@@ -615,8 +615,8 @@ def avg_pool2d(
     print("padding_before", padding_before)
     print("padding_after", padding_after)
     op.Attr("padding", padding_type)
-    op.Attr("pads_before", padding_before)
-    op.Attr("pads_after", padding_after)
+    op.Attr("padding_before", padding_before)
+    op.Attr("padding_after", padding_after)
     op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
@@ -661,8 +661,8 @@ def max_pool3d(
     print("padding_before", padding_before)
     print("padding_after", padding_after)
     op.Attr("padding", padding_type)
-    op.Attr("pads_before", padding_before)
-    op.Attr("pads_after", padding_after)
+    op.Attr("padding_before", padding_before)
+    op.Attr("padding_after", padding_after)
     op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
@@ -705,8 +705,8 @@ def avg_pool3d(
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
     op.Attr("padding", padding_type)
-    op.Attr("pads_before", padding_before)
-    op.Attr("pads_after", padding_after)
+    op.Attr("padding_before", padding_before)
+    op.Attr("padding_after", padding_after)
     op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
