@@ -14,13 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from __future__ import absolute_import
-from typing import Callable, Optional, Union, Tuple, List, Sequence
+from typing import Callable, Optional, Union, Tuple, Sequence
 from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.distribute as distribute_util
-import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 
 
@@ -108,8 +107,8 @@ def dense(
 def conv2d(
     inputs: remote_blob_util.BlobDef,
     filters: int,
-    kernel_size: Union[int, List[int], Tuple[int]] = 1,
-    strides: Union[int, List[int], Tuple[int]] = 1,
+    kernel_size: Union[int, Sequence[int]] = 1,
+    strides: Union[int, Sequence[int]] = 1,
     padding: str = "VALID",
     data_format: str = "NCHW",
     dilation_rate: int = 1,
@@ -299,7 +298,9 @@ def layer_norm_param_grad(
     gamma: remote_blob_util.BlobDef,
     begin_params_axis: int = -1,
     name: str = "LayerNormParamGrad",
-) -> Tuple[remote_blob_util.BlobDef]:
+) -> Tuple[
+    remote_blob_util.BlobDef, remote_blob_util.BlobDef, remote_blob_util.BlobDef
+]:
     op = (
         flow.user_op_builder(name)
         .Op("layer_norm_param_grad")
