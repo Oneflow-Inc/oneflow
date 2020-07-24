@@ -55,7 +55,7 @@ if [[ $SKIP_THIRD_PARTY != 1 ]]; then
 fi
 
 AUDITWHEEL_ARG=""
-if [[ ! -v HOUSE_DIR ]]
+if [[ -v HOUSE_DIR ]]
 then
     AUDITWHEEL_ARG+="--wheel-dir $HOUSE_DIR"
 fi
