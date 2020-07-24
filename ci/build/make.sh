@@ -1,8 +1,8 @@
 set -ex
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
-cache_dir=${ONEFLOW_BUILD_DIR:-"$src_dir/manylinux2014-build-cache"}
-house_dir=${ONEFLOW_HOUSE_DIR:-"$src_dir/wheelhouse"}
+tmp_dir=${ONEFLOW_CI_TMP_DIR:-"$HOME/ci-tmp"}
+mkdir -p $tmp_dir
 docker_tag=${ONEFLOW_CI_DOCKER_TAG:-"oneflow:ci-manylinux2014-cuda10.2"}
 
 docker_proxy_build_args=""
@@ -18,15 +18,17 @@ cd $src_dir
 docker build -f $src_dir/docker/package/manylinux/Dockerfile \
     $docker_proxy_build_args -t $docker_tag .
 
+cd -
 # build function
 function build() {
     set -x
     docker run \
-        --rm $docker_it -v $src_dir:/oneflow-src "$docker_tag" \
-        /oneflow-src/docker/package/manylinux/build_wheel.sh \
-            --python3.6 \
-            --cache-dir $cache_dir \
-            --house-dir $house_dir
+        --rm $docker_it \
+        -v $src_dir:/oneflow-src \
+        -v $tmp_dir:/ci-tmp \
+        -w /ci-tmp \
+        "$docker_tag" \
+        /oneflow-src/docker/package/manylinux/build_wheel.sh --python3.6
 }
 
 set +e
@@ -38,6 +40,6 @@ cached_build_ret=$?
 set -e
 if [ $cached_build_ret -ne 0 ] && [[ ! -t 1 ]]; then
     echo "retry after cleaning build dir"
-    docker run --rm -v $src_dir:/oneflow-src busybox rm -rf $cache_dir
+    docker run --rm -v $tmp_dir:/ci-tmp busybox rm -rf /ci-tmp/*
     build
 fi

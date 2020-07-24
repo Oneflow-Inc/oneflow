@@ -7,7 +7,7 @@ export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD
 
 ONEFLOW_SRC_DIR=`cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd`
 ONEFLOW_SRC_DIR=$ONEFLOW_SRC_DIR/../../..
-cd $ONEFLOW_SRC_DIR
+
 
 EXTRA_ONEFLOW_CMAKE_ARGS=""
 PY_VERS=()
@@ -28,13 +28,15 @@ done
 
 if [[ ! -v CACHE_DIR ]]
 then
-    CACHE_DIR=$ONEFLOW_SRC_DIR/manylinux2014-build-cache
+    CACHE_DIR=$PWD/manylinux2014-build-cache
 fi
 
 if [[ ${#PY_VERS[@]} -eq 0 ]]
 then
     PY_VERS=( 35 36 37 38 )
 fi
+
+cd $ONEFLOW_SRC_DIR
 
 THIRD_PARTY_BUILD_DIR=$CACHE_DIR/build-third-party
 THIRD_PARTY_INSTALL_DIR=$CACHE_DIR/build-third-party-install
