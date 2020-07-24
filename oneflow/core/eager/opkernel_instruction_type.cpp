@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
 namespace eager {
@@ -306,6 +307,42 @@ void ResetTmpBufferBlobObject(OpKernelObject* opkernel_obj, DeviceType device_ty
 }
 
 template<typename T>
+Maybe<void> CheckBlobParallel(vm::Instruction* instruction, const T& args,
+                              const OpParallelAttribute* op_parallel_attribute) {
+  const auto& bn_in_op2parallel_desc_symbol_id =
+      op_parallel_attribute->parallel_signature().bn_in_op2parallel_desc_symbol_id();
+
+  const auto& ParallelDesc4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const ParallelDesc*> {
+    const auto& iter = bn_in_op2parallel_desc_symbol_id.find(bn_in_op);
+    // TODO(Liang Depeng): should not tolerate nullptr.
+    if (iter == bn_in_op2parallel_desc_symbol_id.end()) { return nullptr; }
+    int64_t symbol_id = iter->second;
+    const vm::SymbolStorage<ParallelDesc>* symbol_storage_ptr =
+        Global<vm::SymbolStorage<ParallelDesc>>::Get();
+    CHECK_OR_RETURN(symbol_storage_ptr->Has(symbol_id));
+    return symbol_storage_ptr->GetPtr(symbol_id).get();
+  };
+
+  JUST(ForEachObnAndBlobObject(
+      instruction, args, [&](const std::string& bn_in_op, BlobObject* blob_object) -> Maybe<void> {
+        const auto* parallel_desc = JUST(ParallelDesc4BnInOp(bn_in_op));
+        if (parallel_desc == nullptr) { return Maybe<void>::Ok(); }
+        JUST(blob_object->CheckMemCase(*parallel_desc, instruction->stream().machine_id()));
+        return Maybe<void>::Ok();
+      }));
+
+  JUST(ForEachIbnAndBlobObject(
+      instruction, args,
+      [&](const std::string& bn_in_op, const BlobObject& blob_object) -> Maybe<void> {
+        const auto* parallel_desc = JUST(ParallelDesc4BnInOp(bn_in_op));
+        if (parallel_desc == nullptr) { return Maybe<void>::Ok(); }
+        JUST(blob_object.CheckMemCase(*parallel_desc, instruction->stream().machine_id()));
+        return Maybe<void>::Ok();
+      }));
+  return Maybe<void>::Ok();
+}
+
+template<typename T>
 Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruction, const T& args,
                           const std::shared_ptr<MemoryCase>& mem_case, DeviceType device_type) {
   {
@@ -329,6 +366,7 @@ Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruc
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
   opkernel_obj->ResetOpAndKernel(&(op_parallel_attribute->sbp_signature()), &parallel_ctx,
                                  BlobDesc4BnInOp);
+  JUST(CheckBlobParallel(instruction, args, op_parallel_attribute));
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
                                  return blob_object->TryInitBlob();
@@ -364,6 +402,7 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
   opkernel_obj->ResetKernel(&(op_parallel_attribute->sbp_signature()), &parallel_ctx,
                             BlobDesc4BnInOp);
+  JUST(CheckBlobParallel(instruction, args, op_parallel_attribute));
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
                                  return blob_object->TryInitBlob();
