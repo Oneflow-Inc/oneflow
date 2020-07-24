@@ -29,14 +29,14 @@ blob_register = blob_register_util.GetDefaultBlobRegister()
 
 def Forward(op_conf, scope_symbol=None):
     if scope_symbol is None:
-        scope_symbol = oneflow.scope.current_scope()
+        scope_symbol = oneflow.current_scope()
     func = enable_if.unique([LazyInfer, EagerInferAndRun])
     return func(compile_ctx.CurJobAddOp, op_conf, scope_symbol)
 
 
 def ConsistentForward(op_conf, scope_symbol=None):
     if scope_symbol is None:
-        scope_symbol = oneflow.scope.current_scope()
+        scope_symbol = oneflow.current_scope()
     func = enable_if.unique([LazyInfer, EagerInferAndRun])
     return func(compile_ctx.CurJobAddConsistentOp, op_conf, scope_symbol)
 

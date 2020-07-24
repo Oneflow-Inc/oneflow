@@ -140,7 +140,7 @@ def _MakeInputBlobObject(arg_blob_def):
 
     def BuildInputInstruction(builder):
         op_attribute = arg_blob_def.EagerAddAndInferOp(input_op_conf)
-        scope = oneflow.scope.current_scope()
+        scope = oneflow.current_scope()
         parallel_conf = scope.device_parallel_desc_symbol.parallel_conf
         builder.StatelessCall(
             op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object

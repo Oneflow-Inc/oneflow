@@ -120,7 +120,7 @@ class Session(object):
 
     def MakeScope(self, build_func):
         scope = None
-        old_scope = oneflow.scope.current_scope()
+        old_scope = oneflow.current_scope()
         assert old_scope is not None
 
         def BuildScope(builder):

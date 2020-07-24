@@ -151,7 +151,7 @@ def _ModelInit(var_op_conf):
     def BuildModeInitInstruction(builder):
         upstream_signature = op_attribute_pb.UpstreamSignature()
         parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-        op_conf.scope_symbol_id = oneflow.scope.current_scope().symbol_id
+        op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
         op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
         builder.StatelessCall(
             op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
