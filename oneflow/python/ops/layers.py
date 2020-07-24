@@ -72,6 +72,7 @@ def dense(
             trainable=trainable,
             model_name="weight",
             distribute=model_distribute,
+            reuse=False,
         )
         weight = weight.with_distribute(model_distribute)
 
@@ -90,6 +91,7 @@ def dense(
                 trainable=trainable,
                 model_name="bias",
                 distribute=model_distribute,
+                reuse=False,
             )
             bias = bias.with_distribute(model_distribute)
             out = flow.nn.bias_add(out, bias, name="bias_add")
@@ -167,6 +169,7 @@ def conv2d(
             regularizer=kernel_regularizer,
             trainable=trainable,
             model_name="weight",
+            reuse=False,
         )
         output = flow.nn.conv2d(
             inputs,
@@ -191,6 +194,7 @@ def conv2d(
                 regularizer=bias_regularizer,
                 trainable=trainable,
                 model_name="bias",
+                reuse=False,
             )
             output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
 
@@ -238,6 +242,7 @@ def layer_norm(
                 trainable=trainable,
                 model_name="beta",
                 distribute=distribute_util.broadcast(),
+                reuse=False,
             )
 
         op.Input("beta", [beta])
@@ -252,6 +257,7 @@ def layer_norm(
                 trainable=trainable,
                 model_name="gamma",
                 distribute=distribute_util.broadcast(),
+                reuse=False,
             )
 
         op.Input("gamma", [gamma])
@@ -368,6 +374,7 @@ def batch_normalization(
                 regularizer=beta_regularizer,
                 trainable=trainable,
                 distribute=distribute_util.broadcast(),
+                reuse=False,
             )
         else:
             beta = flow.constant(0, dtype=params_dtype, shape=params_shape, name="beta")
@@ -381,6 +388,7 @@ def batch_normalization(
                 regularizer=gamma_regularizer,
                 trainable=trainable,
                 distribute=distribute_util.broadcast(),
+                reuse=False,
             )
         else:
             gamma = flow.constant(
@@ -394,6 +402,7 @@ def batch_normalization(
             initializer=moving_mean_initializer or flow.zeros_initializer(),
             trainable=False,
             distribute=distribute_util.broadcast(),
+            reuse=False,
         )
 
         moving_variance = flow.get_variable(
@@ -403,6 +412,7 @@ def batch_normalization(
             initializer=moving_variance_initializer or flow.ones_initializer(),
             trainable=False,
             distribute=distribute_util.broadcast(),
+            reuse=False,
         )
 
     builder = (
