@@ -1,6 +1,8 @@
 set -ex
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
+cache_dir=${ONEFLOW_BUILD_DIR:-"$src_dir/manylinux2014-build-cache"}
+house_dir=${ONEFLOW_HOUSE_DIR:-"$src_dir/wheelhouse"}
 docker_tag=${ONEFLOW_CI_DOCKER_TAG:-"oneflow:ci-manylinux2014-cuda10.2"}
 
 docker_proxy_build_args=""
@@ -21,7 +23,10 @@ function build() {
     set -x
     docker run \
         --rm $docker_it -v $src_dir:/oneflow-src "$docker_tag" \
-        /oneflow-src/docker/package/manylinux/build_wheel.sh --python3.6
+        /oneflow-src/docker/package/manylinux/build_wheel.sh \
+            --python3.6 \
+            --cache-dir $cache_dir \
+            --house-dir $house_dir
 }
 
 set +e
