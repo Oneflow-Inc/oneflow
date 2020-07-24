@@ -30,17 +30,17 @@ namespace oneflow {
     using self_type = struct_name;                         \
     using self_value_type = struct_name;                   \
     static const bool __is_flat_message_type__ = true;     \
-    PRIVATE DEFINE_STATIC_COUNTER(field_counter);          \
+    OF_PUBLIC DEFINE_STATIC_COUNTER(field_counter);        \
     DSS_BEGIN(STATIC_COUNTER(field_counter), struct_name); \
     FLAT_MSG_DEFINE_BASIC_METHODS(struct_name);            \
     FLAT_MSG_DEFINE_DEFAULT(struct_name);
 
-#define FLAT_MSG_END(struct_name)                                               \
-  static_assert(__is_flat_message_type__, "this struct is not a flat message"); \
-  PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);   \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                               \
-  DSS_END(STATIC_COUNTER(field_counter), "flat message", struct_name);          \
-  }                                                                             \
+#define FLAT_MSG_END(struct_name)                                                \
+  static_assert(__is_flat_message_type__, "this struct is not a flat message");  \
+  OF_PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter); \
+  OF_PUBLIC INCREASE_STATIC_COUNTER(field_counter);                              \
+  DSS_END(STATIC_COUNTER(field_counter), "flat message", struct_name);           \
+  }                                                                              \
   ;
 
 #define FLAT_MSG_DEFINE_OPTIONAL(field_type, field_name)                        \
@@ -59,14 +59,14 @@ namespace oneflow {
   FLAT_MSG_DEFINE_ONEOF_ENUM_TYPE(oneof_name, type_and_field_name_seq);                            \
   FLAT_MSG_DEFINE_ONEOF_UNION(define_field_value4field_type, oneof_name, type_and_field_name_seq); \
   FLAT_MSG_DEFINE_ONEOF_ACCESSOR(oneof_name, type_and_field_name_seq)                              \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                                  \
+  OF_PUBLIC INCREASE_STATIC_COUNTER(field_counter);                                                \
   FLAT_MSG_DSS_DEFINE_UION_FIELD(STATIC_COUNTER(field_counter), oneof_name,                        \
                                  type_and_field_name_seq);
 
 #define FLAT_MSG_DEFINE_REPEATED(field_type, field_name, max_size)                        \
   static_assert(__is_flat_message_type__, "this struct is not a flat message");           \
   _FLAT_MSG_DEFINE_REPEATED_FIELD(FLAT_MSG_TYPE_CHECK(field_type), field_name, max_size); \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                         \
+  OF_PUBLIC INCREASE_STATIC_COUNTER(field_counter);                                       \
   DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "flat message",                         \
                    OF_PP_CAT(field_name, _RepeatedField), OF_PP_CAT(field_name, _));
 
