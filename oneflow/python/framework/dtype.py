@@ -121,7 +121,7 @@ _PROTO_DTYPE2ONEFLOW_DTYPE = {
 
 def convert_proto_dtype_to_oneflow_dtype(proto_dtype):
     if proto_dtype not in _PROTO_DTYPE2ONEFLOW_DTYPE:
-        raise NotImplementedError
+        raise NotImplementedError("proto_dtype %s not found in dict" % proto_dtype)
     return _PROTO_DTYPE2ONEFLOW_DTYPE[proto_dtype]
 
 
