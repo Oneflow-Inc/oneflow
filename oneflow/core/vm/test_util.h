@@ -49,8 +49,8 @@ struct TestUtil {
   static ObjectMsgPtr<VmResourceDesc> NewVmResourceDesc(int64_t device_num, int64_t machine_num);
 
   // return logical_object_id
-  static int64_t NewObject(InstructionMsgList* list, const std::string& device_name,
-                           const std::string& device_tag) {
+  static int64_t NewObject(InstructionMsgList* list, const std::string& device_tag,
+                           const std::string& device_name) {
     int64_t parallel_desc_symbol_id = 0;
     return NewObject(list, device_tag, device_name, &parallel_desc_symbol_id);
   }
