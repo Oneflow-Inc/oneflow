@@ -291,7 +291,6 @@ add_custom_target(of_pyscript_copy ALL
         "${PROJECT_SOURCE_DIR}/oneflow/init.py" "${of_pyscript_dir}/oneflow/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/customized" "${of_pyscript_dir}/oneflow/customized"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/customized/__init__.py"
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"

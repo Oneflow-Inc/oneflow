@@ -1010,9 +1010,9 @@ std::string OpConf2ClassName(const OperatorConf& op_conf) {
     return "variable";
   } else if (op_conf.has_decode_ofrecord_conf()) {
     return "decode_ofrecord";
-  } else if (op_conf.has_input_conf()) {
+  } else if (op_conf.has_input_conf() && op_conf.has_return_conf()) {
     return "input";
-  } else if (op_conf.has_output_conf()) {
+  } else if (op_conf.has_output_conf() && op_conf.has_return_conf()) {
     return "output";
   } else {
     return "system_op";
@@ -1100,8 +1100,12 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
       }
     }
 
-    if (op->op_conf().has_input_conf()) { input_op_names.insert(op_name); }
-    if (op->op_conf().has_output_conf()) { output_op_names.insert(op_name); }
+    if (op->op_conf().has_input_conf() && op->op_conf().has_return_conf()) {
+      input_op_names.insert(op_name);
+    }
+    if (op->op_conf().has_output_conf() && op->op_conf().has_return_conf()) {
+      output_op_names.insert(op_name);
+    }
     json_layers_pair["name"] = op_name;
 
     std::string class_name = OpConf2ClassName(op->op_conf());
