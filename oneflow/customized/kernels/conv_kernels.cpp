@@ -352,13 +352,13 @@ std::shared_ptr<user_op::OpKernelState> CreateConvOpKernelState(user_op::KernelI
   state->dilation_rate_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("dilation_rate"));
 
   // state->padding_before_3d_.resize(3);
-  const auto& pads = ctx->Attr<std::vector<int32_t>>("pads");
+  const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
   FOR_RANGE(uint8_t, dim, 0, 3) {
-    int64_t index = static_cast<int64_t>(dim) - (3 - pads.size());
+    int64_t index = static_cast<int64_t>(dim) - (3 - padding_before.size());
     if (index < 0) {
       state->padding_before_3d_.push_back(0);
     } else {
-      state->padding_before_3d_.push_back(pads[index]);
+      state->padding_before_3d_.push_back(padding_before.at(index));
     }
   }
 

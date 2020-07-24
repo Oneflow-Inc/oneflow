@@ -278,7 +278,7 @@ def conv2d(
     assert len(pads_list) == len(inputs.shape) - 2
     print("inputs.shape", inputs.shape)
     print("pads", pads_list)
-    pads = [pad[0] for pad in pads_list]
+    padding_before = [pad[0] for pad in pads_list]
 
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
@@ -287,7 +287,7 @@ def conv2d(
         .Input("weight", [filters])
         .Output("out")
         .Attr("filters", filters.shape[0])
-        .Attr("pads", pads)
+        .Attr("padding_before", padding_before)
         .Attr("data_format", channel_pos)
         .Attr("kernel_size", kernel_size_list)
         .Attr("strides", strides)
