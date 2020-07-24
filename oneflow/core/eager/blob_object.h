@@ -22,6 +22,9 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
+
+class ParallelDesc;
+
 namespace eager {
 
 class BlobObject : public vm::Object {
@@ -38,6 +41,8 @@ class BlobObject : public vm::Object {
   const Blob& blob() const { return *blob_; }
   Blob* mut_blob() { return blob_.get(); }
   Maybe<void> TryInitBlob();
+
+  Maybe<void> CheckMemCase(const ParallelDesc& parallel_desc, int64_t machine_id) const;
 
   void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx);
 
