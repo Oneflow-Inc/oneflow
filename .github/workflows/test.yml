@@ -46,26 +46,35 @@ jobs:
       run: |
         docker run --shm-size=8g --rm \
           -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          -w $PWD/manylinux2014-build-cache/build-oneflow/bin/ \
+          -w $HOME/ci-tmp/manylinux2014-build-cache/build-oneflow/bin/ \
           oneflow-test oneflow_testexe
     - name: Unit test
       run: |
         docker run --shm-size=8g --rm \
           -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test \
+          --env ONEFLOW_WHEEL_PATH=$HOME/wheelhouse \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
     - name: Integration test
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test \
+        docker run --shm-size=8g --rm \
+          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test \
+          --env ONEFLOW_WHEEL_PATH=$HOME/wheelhouse \
           bash -c "bash ci/test/try_install.sh && ci/test/1node_model_test.sh"
     - name: Benchmark
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test \
+        docker run --shm-size=8g --rm \
+          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test \
+          --env ONEFLOW_WHEEL_PATH=$HOME/wheelhouse \
           bash -c "bash ci/test/try_install.sh && ci/test/1node_benchmark_test.sh"
     - name: Benchmark FP16
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test \
+        docker run --shm-size=8g --rm \
+          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test \
+          --env ONEFLOW_WHEEL_PATH=$HOME/wheelhouse \
           bash -c "bash ci/test/try_install.sh && ci/test/1node_benchmark_test_fp16.sh"
     - name: Build documentation
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD oneflow-test \
+        docker run --shm-size=8g --rm \
+          -w $PWD -v $PWD:$PWD oneflow-test \
+          --env ONEFLOW_WHEEL_PATH=$HOME/wheelhouse \
           bash -c "bash ci/test/try_install.sh && ci/test/build_docs.sh"
