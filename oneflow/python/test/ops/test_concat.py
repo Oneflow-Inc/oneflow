@@ -1,5 +1,21 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 import tensorflow as tf
 import test_global_storage
 import random
@@ -100,8 +116,12 @@ def _of_dynamic_concat(
 
     @flow.global_function(func_config)
     def dynamic_concat_job(
-        input_0_def=flow.MirroredTensorDef(shape=input_static_shape, dtype=flow.float),
-        input_1_def=flow.MirroredTensorDef(shape=input_static_shape, dtype=flow.float),
+        input_0_def: oft.ListNumpy.Placeholder(
+            shape=input_static_shape, dtype=flow.float
+        ),
+        input_1_def: oft.ListNumpy.Placeholder(
+            shape=input_static_shape, dtype=flow.float
+        ),
     ):
         var_0 = flow.get_variable(
             "Var0",
@@ -243,8 +263,8 @@ def _test_static_concat(test_case, shape, axis):
 
     @flow.global_function(func_config)
     def static_concat_job(
-        input_0_def=flow.FixedTensorDef(shape=shape, dtype=flow.float),
-        input_1_def=flow.FixedTensorDef(shape=shape, dtype=flow.float),
+        input_0_def: oft.Numpy.Placeholder(shape=shape, dtype=flow.float),
+        input_1_def: oft.Numpy.Placeholder(shape=shape, dtype=flow.float),
     ):
         var = flow.get_variable(
             "var",
@@ -300,8 +320,8 @@ def _test_hybrid_concat(
 
     @flow.global_function(func_config)
     def hybrid_concat_job(
-        input_0_def=flow.MirroredTensorDef(shape=static_shape, dtype=flow.float),
-        input_1_def=flow.MirroredTensorDef(shape=static_shape, dtype=flow.float),
+        input_0_def: oft.ListNumpy.Placeholder(shape=static_shape, dtype=flow.float),
+        input_1_def: oft.ListNumpy.Placeholder(shape=static_shape, dtype=flow.float),
     ):
         var = flow.get_variable(
             "var",

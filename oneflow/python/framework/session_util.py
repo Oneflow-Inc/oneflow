@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import threading
@@ -9,6 +24,7 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.env_util as env_util
+import oneflow.python.framework.typing_util as oft_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.job_instance as job_instance_util
 import oneflow.python.framework.push_util as push_util
@@ -24,9 +40,9 @@ from oneflow.python.framework.pull_util import (
 from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
-from oneflow.python.eager.blob_register import BlobRegister
+import oneflow.python.eager.blob_register as blob_register_util
 from contextlib import contextmanager
-
+import inspect
 import oneflow
 
 
@@ -50,7 +66,7 @@ class Session(object):
         self._UpdateFunctionFlagName2DefaultVal()
         self.instruction_list_ = instr_util.InstructionListProto()
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
-        self.backward_blob_register_ = BlobRegister()
+        self.backward_blob_register_ = blob_register_util.BlobRegister()
 
     @property
     def status(self):
@@ -181,6 +197,7 @@ class Session(object):
 
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
+        self.ForceReleaseEagerBlobs()
         self.Sync()
         assert len(self.job_name2var_name2var_blob_) == 0
         del self.var_name2var_blob_
@@ -201,12 +218,18 @@ class Session(object):
         assert self.running_job_cnt_ == 0
         self.cond_var_.release()
 
+    def ForceReleaseEagerBlobs(self):
+        blob_register_util.GetDefaultBlobRegister().ForceReleaseAll()
+        self.backward_blob_register_.ForceReleaseAll()
+
     def LazyRun(self, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING
         remote_blobs = self.LaunchUserJob(job_func, *arg)
         if remote_blobs is None:
             return
-        return LazyFutureRemoteBlobs(self).SetResult(remote_blobs).Inited()
+        future_blob = LazyFutureRemoteBlobs(self).SetResult(remote_blobs).Inited()
+        annotation = inspect.signature(job_func).return_annotation
+        return oft_util.TransformGlobalFunctionResult(future_blob, annotation)
 
     def EagerRun(self, function_desc, *arg):
         with self._EagerGlobalFunctionDescScope(function_desc):
@@ -215,7 +238,9 @@ class Session(object):
             )
             if remote_blobs is None:
                 return
-            return EagerFutureRemoteBlobs().SetResult(remote_blobs).Inited()
+            future_blob = EagerFutureRemoteBlobs().SetResult(remote_blobs).Inited()
+        annotation = inspect.signature(function_desc.job_func).return_annotation
+        return oft_util.TransformGlobalFunctionResult(future_blob, annotation)
 
     def LaunchUserJob(self, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING

@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.c_api_util as c_api_util
@@ -272,8 +287,11 @@ For instance:
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_shape.dim[:] = list(attr_value)
         elif attr_type == user_op_attr_util.kAtDataType:
-            assert isinstance(attr_value, int) and attr_value in oneflow.dtypes
-            attribute.at_data_type = attr_value
+            assert (
+                isinstance(attr_value.oneflow_proto_dtype, int)
+                and attr_value in oneflow.dtypes()
+            )
+            attribute.at_data_type = attr_value.oneflow_proto_dtype
         elif attr_type == user_op_attr_util.kAtListInt32:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
@@ -288,8 +306,13 @@ For instance:
             attribute.at_list_float.val[:] = list(attr_value)
         elif attr_type == user_op_attr_util.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, int) and x in oneflow.dtypes for x in attr_value)
-            attribute.at_list_data_type.val[:] = list(attr_value)
+            assert all(
+                isinstance(x.oneflow_proto_dtype, int) and x in oneflow.dtypes()
+                for x in attr_value
+            )
+            attribute.at_list_data_type.val[:] = list(
+                [x.oneflow_proto_dtype for x in attr_value]
+            )
         elif attr_type == user_op_attr_util.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)

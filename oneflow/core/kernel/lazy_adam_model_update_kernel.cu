@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/lazy_adam_model_update_kernel.h"
 
@@ -8,7 +23,7 @@ namespace {
 template<typename T>
 __global__ void UpdateModelGpu(int64_t n, const float* learning_rate, T weight_decay, T beta1,
                                T beta2, T epsilon, const T* beta1_t, const T* beta2_t,
-                               T* model_diff, T* model, T* m, T* v) {
+                               const T* model_diff, T* model, T* m, T* v) {
   const float local_learning_rate = *learning_rate * sqrt(1 - (*beta2_t)) / (1 - (*beta1_t));
   CUDA_1D_KERNEL_LOOP(i, n) {
     T model_diff_val = model_diff[i];
@@ -33,7 +48,7 @@ class LazyAdamMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
   static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T weight_decay,
                           T beta1, T beta2, T epsilon, const int64_t* train_step, T* beta1_t,
-                          T* beta2_t, T* model_diff, T* model, T* m, T* v) {
+                          T* beta2_t, const T* model_diff, T* model, T* m, T* v) {
     UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         n, learning_rate, weight_decay, beta1, beta2, epsilon, beta1_t, beta2_t, model_diff, model,
         m, v);

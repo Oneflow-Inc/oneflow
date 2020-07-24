@@ -15,7 +15,7 @@ def glob_by_pattern(pattern):
     for x in glob.glob(os.path.join(args.src_path, pattern), recursive=True):
         result.append(os.path.relpath(x, args.src_path))
     return result
-headers = glob_by_pattern('**/*.h') + glob_by_pattern('**/*.hpp') + glob_by_pattern('**/*.cuh')
+headers = glob_by_pattern('**/*.h') + glob_by_pattern('**/*.hpp') + glob_by_pattern('**/*.cuh') + glob_by_pattern('**/*.proto')
 with open(args.dst_file, 'w') as f:
     for item in headers:
         f.write("{}\n".format(item))
