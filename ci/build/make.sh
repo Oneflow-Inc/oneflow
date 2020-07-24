@@ -19,7 +19,9 @@ docker build -f $src_dir/docker/package/manylinux/Dockerfile \
 # build function
 function build() {
     set -x
-    docker run --rm $docker_it -v $src_dir:/oneflow-src "$docker_tag" /oneflow-src/docker/package/manylinux/build_wheel.sh --python3.6
+    docker run \
+        --rm $docker_it -v $src_dir:/oneflow-src "$docker_tag" \
+        /oneflow-src/docker/package/manylinux/build_wheel.sh --python3.6
 }
 
 set +e

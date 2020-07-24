@@ -10,6 +10,7 @@ import glob
 from setuptools import find_packages
 from setuptools import setup
 from setuptools.dist import Distribution
+from setuptools.command.build_py import build_py
 from setuptools.command.install import install
 
 
@@ -20,6 +21,10 @@ class InstallPlatlib(install):
         if self.distribution.has_ext_modules():
             self.install_lib = self.install_platlib
 
+class BuildPyWithCustomBuildLib(build_py):
+    def finalize_options(self):
+        build_py.finalize_options(self)
+        self.build_lib = os.path.join(args.build_dir, 'temp_lib')
 
 parser = argparse.ArgumentParser()
 parser.register("type", "bool", lambda v: v.lower() == "true")
@@ -80,5 +85,6 @@ setup(
     package_data=package_data,
     zip_safe=False,
     distclass=BinaryDistribution,
-    cmdclass={'install': InstallPlatlib},
+    cmdclass={'install': InstallPlatlib
+        'build_py': BuildPyWithCustomBuildLib},
 )
