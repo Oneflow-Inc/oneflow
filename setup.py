@@ -12,7 +12,8 @@ from setuptools import setup
 from setuptools.dist import Distribution
 from setuptools.command.build_py import build_py
 from setuptools.command.install import install
-
+from setuptools.command.install_lib import install_lib
+from setuptools.command.install_scripts import install_scripts
 
 # https://github.com/google/or-tools/issues/616
 class InstallPlatlib(install):
@@ -20,6 +21,13 @@ class InstallPlatlib(install):
         install.finalize_options(self)
         if self.distribution.has_ext_modules():
             self.install_lib = self.install_platlib
+
+
+class InstallLibWithCustomBuildLib(install_lib):
+    def finalize_options(self):
+        install_lib.finalize_options(self)
+        self.build_dir = os.path.join(args.build_dir, "temp_lib")
+        self.install_dir = args.build_dir
 
 
 class BuildPyWithCustomBuildLib(build_py):
@@ -97,5 +105,9 @@ setup(
     package_data=package_data,
     zip_safe=False,
     distclass=BinaryDistribution,
-    cmdclass={"install": InstallPlatlib, "build_py": BuildPyWithCustomBuildLib},
+    cmdclass={
+        "install": InstallPlatlib,
+        "build_py": BuildPyWithCustomBuildLib,
+        "install_lib": InstallLibWithCustomBuildLib,
+    },
 )
