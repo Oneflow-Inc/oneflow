@@ -38,6 +38,6 @@ cached_build_ret=$?
 set -e
 if [ $cached_build_ret -ne 0 ] && [[ ! -t 1 ]]; then
     echo "retry after cleaning build dir"
-    docker run --rm -v $src_dir:/oneflow-src busybox rm -rf /oneflow-src/manylinux2014-build-cache
+    docker run --rm -v $src_dir:/oneflow-src busybox rm -rf $cache_dir
     build
 fi
