@@ -21,8 +21,6 @@ RUN yum -y install unzip && curl -L -o manylinux.zip https://github.com/pypa/man
 ENV SSL_CERT_FILE=/opt/_internal/certs.pem
 # manylinux2014 end
 
-ENV http_proxy="" 
-ENV https_proxy=""
 RUN echo "nameserver 114.114.114.114" >> /etc/resolv.conf
 RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
     rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
