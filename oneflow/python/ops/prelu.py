@@ -51,6 +51,7 @@ def prelu(
             regularizer=alpha_regularizer,
             trainable=trainable,
             distribute=model_distribute,
+            reuse=False,
         )
 
     op = (
