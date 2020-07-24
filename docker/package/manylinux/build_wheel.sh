@@ -5,10 +5,6 @@ set -e
 
 export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 
-ONEFLOW_SRC_DIR=`cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd`
-ONEFLOW_SRC_DIR=$ONEFLOW_SRC_DIR/../../..
-
-
 EXTRA_ONEFLOW_CMAKE_ARGS=""
 PY_VERS=()
 
@@ -26,10 +22,19 @@ while [[ "$#" > 0 ]]; do
     shift;
 done
 
+AUDITWHEEL_ARG=""
+if [[ -v HOUSE_DIR ]]
+then
+    AUDITWHEEL_ARG+="--wheel-dir $HOUSE_DIR"
+fi
+
 if [[ ! -v CACHE_DIR ]]
 then
     CACHE_DIR=$PWD/manylinux2014-build-cache
 fi
+
+ONEFLOW_SRC_DIR=`cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd`
+ONEFLOW_SRC_DIR=$ONEFLOW_SRC_DIR/../../..
 
 if [[ ${#PY_VERS[@]} -eq 0 ]]
 then
@@ -52,12 +57,6 @@ if [[ $SKIP_THIRD_PARTY != 1 ]]; then
     make -j`nproc` prepare_oneflow_third_party
 
     popd
-fi
-
-AUDITWHEEL_ARG=""
-if [[ -v HOUSE_DIR ]]
-then
-    AUDITWHEEL_ARG+="--wheel-dir $HOUSE_DIR"
 fi
 
 ONEFLOW_BUILD_DIR=$CACHE_DIR/build-oneflow
