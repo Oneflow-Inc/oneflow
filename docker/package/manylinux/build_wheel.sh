@@ -16,6 +16,7 @@ while [[ "$#" > 0 ]]; do
     case $1 in
         --skip-third-party) SKIP_THIRD_PARTY=1; ;;
         --cache-dir) CACHE_DIR=$2; shift ;;
+        --house-dir) HOUSE_DIR=$2; shift ;;
         --python3.5) PY_VERS+=( "35" ) ;;
         --python3.6) PY_VERS+=( "36" ) ;;
         --python3.7) PY_VERS+=( "37" ) ;;
@@ -51,6 +52,12 @@ if [[ $SKIP_THIRD_PARTY != 1 ]]; then
     popd
 fi
 
+AUDITWHEEL_ARG=""
+if [[ ! -v HOUSE_DIR ]]
+then
+    AUDITWHEEL_ARG+="--wheel-dir $HOUSE_DIR"
+fi
+
 ONEFLOW_BUILD_DIR=$CACHE_DIR/build-oneflow
 for PY_VER in ${PY_VERS[@]}
 do
@@ -72,6 +79,6 @@ do
     cmake --build . -j `nproc`
     popd
     $PY_BIN setup.py bdist_wheel -d tmp_wheel --build_dir $ONEFLOW_BUILD_DIR
-    auditwheel repair tmp_wheel/*.whl
+    auditwheel repair tmp_wheel/*.whl $AUDITWHEEL_ARG
     rm -rf tmp_wheel
 done
