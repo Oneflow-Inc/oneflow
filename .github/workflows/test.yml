@@ -29,7 +29,6 @@ jobs:
     - name: Setup environment
       run: |
         echo $HOSTNAME
-        docker run --rm -v $PWD:/oneflow-src busybox rm -rf /oneflow-src/wheelhouse
         rm -rf build/third_party
         bash ci/setup_submodule.sh
     - name: Checkout submodules
@@ -70,3 +69,9 @@ jobs:
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD oneflow-test \
           bash -c "bash ci/test/try_install.sh && ci/test/build_docs.sh"
+    - name: Cleanup files created by root
+      if: ${{ always() }}
+      run: |
+        docker run --rm -v $PWD:/oneflow-src busybox rm -rf /oneflow-src/wheelhouse
+        docker run --rm -v $PWD:/oneflow-src busybox rm -rf /oneflow-src/manylinux2014-build-cache
+        docker run --rm -v $PWD:/oneflow-src busybox rm -rf /oneflow-src/build/lib
