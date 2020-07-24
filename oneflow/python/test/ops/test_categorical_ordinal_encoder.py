@@ -19,14 +19,11 @@ import oneflow as flow
 import oneflow.typing as oft
 import typing
 
-func_config = flow.FunctionConfig()
-func_config.default_data_type(flow.float)
-func_config.default_distribute_strategy(flow.scope.consistent_view())
-
 
 def _test_categorical_ordinal_encoder(
     test_case, device_tag, dtype, size, capacity, num_tokens, num_iters
 ):
+    flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_distribute_strategy(flow.scope.consistent_view())
