@@ -101,10 +101,9 @@ class BlobRegister(object):
             self.ClearObject4BlobName(blob_name)
 
     def ForceReleaseAll(self):
-        keys = list(self.blob_name2object.keys())
-        for blob_name in keys:
+        for blob_name, blob_object in self.blob_name2object.items():
             print("Forcely release blob %s." % blob_name)
-            self.blob_name2object[blob_name].__del__()
+            blob_object.__del__()
 
     @contextmanager
     def BnInOp2BlobObjectScope(self, op_attribute):
