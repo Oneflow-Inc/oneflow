@@ -22,15 +22,14 @@ while [[ "$#" > 0 ]]; do
     shift;
 done
 
-AUDITWHEEL_ARG=""
-if [[ -v HOUSE_DIR ]]
-then
-    AUDITWHEEL_ARG+="--wheel-dir $HOUSE_DIR"
-fi
-
 if [[ ! -v CACHE_DIR ]]
 then
     CACHE_DIR=$PWD/manylinux2014-build-cache
+fi
+
+if [[ ! -v HOUSE_DIR ]]
+then
+    HOUSE_DIR=$PWD/wheelhouse
 fi
 
 ONEFLOW_SRC_DIR=`cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd`
@@ -87,5 +86,5 @@ do
     popd
     trap cleanup EXIT
     $PY_BIN setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir $ONEFLOW_BUILD_DIR
-    auditwheel repair /tmp/tmp_wheel/*.whl $AUDITWHEEL_ARG
+    auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir $HOUSE_DIR
 done
