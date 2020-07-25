@@ -206,7 +206,7 @@ def test_annotation_Callback_Tuple_Numpy(test_case):
     foo(data)(Test)
 
 
-def test_annotation_Callback_ListNumpy(test_case):
+def test_annotation_Callback_Tuple_ListNumpy(test_case):
     data = np.ones((10,), dtype=np.float32)
 
     def Test(x: Tuple[oft.ListNumpy]):
@@ -221,7 +221,7 @@ def test_annotation_Callback_ListNumpy(test_case):
     foo([data])(Test)
 
 
-def test_annotation_Callback_ListListNumpy(test_case):
+def test_annotation_Callback_Tuple_ListListNumpy(test_case):
     data = np.ones((10,), dtype=np.float32)
 
     def Test(x: Tuple[oft.ListListNumpy]):

@@ -4,3 +4,4 @@ protobuf
 wheel
 tqdm
 requests
+onnx

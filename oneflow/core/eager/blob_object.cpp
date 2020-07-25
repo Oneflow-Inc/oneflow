@@ -84,6 +84,7 @@ void BlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     allocator->Allocate(&dptr, required_body_bytes);
     blob_dptr_ = std::unique_ptr<char, std::function<void(char*)>>(dptr, Free);
     blob->reset_dptr(dptr);
+    InitNonPODTypeBlobIfNeed(&non_pod_initer_, blob_.get());
   }
   blob_body_bytes_ = required_body_bytes;
 }
