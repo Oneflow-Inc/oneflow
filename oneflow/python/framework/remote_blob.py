@@ -155,7 +155,6 @@ class LazyConsistentBlob(ConsistentBlob):
         return (
             self.unique_name == rhs.unique_name
             and self.shape == rhs.shape
-            and self.shape == rhs.shape
             and self.batch_axis == rhs.batch_axis
             and self.split_axis == rhs.split_axis
             and self.is_dynamic == rhs.is_dynamic
