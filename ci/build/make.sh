@@ -8,7 +8,7 @@ docker_tag=${ONEFLOW_CI_DOCKER_TAG:-"oneflow:ci-manylinux2014-cuda10.2"}
 docker_proxy_build_args=""
 docker_proxy_build_args+="--build-arg http_proxy=${ONEFLOW_CI_HTTP_PROXY} --build-arg https_proxy=${ONEFLOW_CI_HTTPS_PROXY}"
 docker_proxy_run_args=""
-docker_proxy_run_args+="--env http_proxy=${ONEFLOW_CI_HTTP_PROXY} --env https_proxy=${ONEFLOW_CI_HTTP_PROXY}"
+docker_proxy_run_args+="--env http_proxy=${ONEFLOW_CI_HTTP_PROXY} --env https_proxy=${ONEFLOW_CI_HTTPS_PROXY}"
 
 docker_it=""
 if [[ -t 1 ]]; then
