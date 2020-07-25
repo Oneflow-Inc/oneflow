@@ -25,7 +25,6 @@ std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> CollectiveBoxingDeviceCtx::
 }
 
 void CollectiveBoxingDeviceCtx::AddCallBack(std::function<void()> callback) const {
-  CHECK(current_checkpoint_);
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Get()->Enqueue(current_checkpoint_,
                                                                               callback);
 }
