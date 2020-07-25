@@ -115,6 +115,11 @@ class LazyConsistentBlob(ConsistentBlob):
 
     @property
     def shape(self):
+        if oneflow.scope.mirrored_view_enabled():
+            print(
+                "WARNING:",
+                "You access a consistent blob Shape in mirrored view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+            )
         return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.lbn_)
 
     @property
@@ -192,6 +197,11 @@ class LazyMirroredBlob(MirroredBlob):
 
     @property
     def shape(self):
+        if oneflow.scope.consistent_view_enabled():
+            print(
+                "WARNING:",
+                "You access a mirrored blob Shape in consistent view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+            )
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
             self.job_name_, self.lbn_
         )

@@ -44,7 +44,10 @@ def test_annotation_Numpy(test_case):
 def test_annotation_ListNumpy(test_case):
     flow.config.gpu_device_num(1)
 
-    @flow.global_function()
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+
+    @flow.global_function(func_config)
     def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.ListNumpy:
         return x
 
@@ -55,7 +58,10 @@ def test_annotation_ListNumpy(test_case):
 def test_annotation_ListListNumpy(test_case):
     flow.config.gpu_device_num(1)
 
-    @flow.global_function()
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+
+    @flow.global_function(func_config)
     def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.ListListNumpy:
         return x
 
@@ -87,7 +93,10 @@ def test_annotation_watch_ListNumpy(test_case):
 
     flow.config.gpu_device_num(1)
 
-    @flow.global_function()
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+
+    @flow.global_function(func_config)
     def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.ListNumpy:
         flow.watch(x, Watch)
         return x
@@ -104,8 +113,10 @@ def test_annotation_watch_ListListNumpy(test_case):
         test_case.assertTrue(np.array_equal(x[0][0], data))
 
     flow.config.gpu_device_num(1)
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
-    @flow.global_function()
+    @flow.global_function(func_config)
     def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.ListListNumpy:
         flow.watch(x, Watch)
         return x
@@ -127,7 +138,10 @@ def test_annotation_Tuple_Numpy(test_case):
 def test_annotation_Tuple_ListNumpy(test_case):
     flow.config.gpu_device_num(1)
 
-    @flow.global_function()
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+
+    @flow.global_function(func_config)
     def foo(x: Tuple[oft.ListNumpy.Placeholder((10,))]) -> Tuple[oft.ListNumpy]:
         return x
 
@@ -137,8 +151,10 @@ def test_annotation_Tuple_ListNumpy(test_case):
 
 def test_annotation_Tuple_ListListNumpy(test_case):
     flow.config.gpu_device_num(1)
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
-    @flow.global_function()
+    @flow.global_function(func_config)
     def foo(x: Tuple[oft.ListListNumpy.Placeholder((10,))]) -> Tuple[oft.ListListNumpy]:
         return x
 
@@ -169,7 +185,10 @@ def test_annotation_Callback_ListNumpy(test_case):
 
     flow.config.gpu_device_num(1)
 
-    @flow.global_function()
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+
+    @flow.global_function(func_config)
     def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Callback[oft.ListNumpy]:
         return x
 
@@ -183,8 +202,10 @@ def test_annotation_Callback_ListListNumpy(test_case):
         test_case.assertTrue(np.array_equal(x[0][0], data))
 
     flow.config.gpu_device_num(1)
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
-    @flow.global_function()
+    @flow.global_function(func_config)
     def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.Callback[oft.ListListNumpy]:
         return x
 
@@ -198,30 +219,34 @@ def test_annotation_Callback_Tuple_Numpy(test_case):
         test_case.assertTrue(np.array_equal(x[0], data))
 
     flow.config.gpu_device_num(1)
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
-    @flow.global_function()
+    @flow.global_function(func_config)
     def foo(x: oft.Numpy.Placeholder((10,))) -> oft.Callback[Tuple[oft.Numpy]]:
         return (x,)
 
     foo(data)(Test)
 
 
-def test_annotation_Callback_ListNumpy(test_case):
+def test_annotation_Callback_Tuple_ListNumpy(test_case):
     data = np.ones((10,), dtype=np.float32)
 
     def Test(x: Tuple[oft.ListNumpy]):
         test_case.assertTrue(np.array_equal(x[0][0], data))
 
     flow.config.gpu_device_num(1)
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
-    @flow.global_function()
+    @flow.global_function(func_config)
     def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Callback[Tuple[oft.ListNumpy]]:
         return (x,)
 
     foo([data])(Test)
 
 
-def test_annotation_Callback_ListListNumpy(test_case):
+def test_annotation_Callback_Tuple_ListListNumpy(test_case):
     data = np.ones((10,), dtype=np.float32)
 
     def Test(x: Tuple[oft.ListListNumpy]):
@@ -229,7 +254,10 @@ def test_annotation_Callback_ListListNumpy(test_case):
 
     flow.config.gpu_device_num(1)
 
-    @flow.global_function()
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+
+    @flow.global_function(func_config)
     def foo(
         x: oft.ListListNumpy.Placeholder((10,))
     ) -> oft.Callback[Tuple[oft.ListListNumpy]]:
