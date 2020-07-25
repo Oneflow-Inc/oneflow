@@ -908,7 +908,7 @@ def sigmoid_cross_entropy_with_logits(
     op_conf.sigmoid_cross_entropy_conf.prediction = logits.unique_name
     op_conf.sigmoid_cross_entropy_conf.label = labels.unique_name
     op_conf.sigmoid_cross_entropy_conf.loss = "loss"
-    op_conf.sigmoid_cross_entropy_conf.label_type = labels.dtype
+    op_conf.sigmoid_cross_entropy_conf.label_type = labels.dtype.oneflow_proto_dtype
     interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
