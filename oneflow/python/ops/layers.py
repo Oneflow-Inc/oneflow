@@ -248,7 +248,7 @@ def layer_norm(
     Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
 
     """
-    op = (
+    op_builder = (
         flow.user_op_builder(name)
         .Op("layer_norm")
         .Input("x", [inputs])
@@ -274,7 +274,7 @@ def layer_norm(
                 reuse=False,
             )
 
-        op.Input("beta", [beta])
+        op_builder.Input("beta", [beta])
 
     if scale:
         with flow.scope.namespace(name):
@@ -289,17 +289,16 @@ def layer_norm(
                 reuse=False,
             )
 
-        op.Input("gamma", [gamma])
-        op.Output("normalized")
+        op_builder.Input("gamma", [gamma])
+        op_builder.Output("normalized")
 
-    op.Attr("center", center)
-    op.Attr("scale", scale)
-    op.Attr("begin_norm_axis", begin_norm_axis)
-    op.Attr("begin_params_axis", begin_params_axis)
-    op.Attr("epsilon", epsilon)
-    op.Build()
+    op_builder.Attr("center", center)
+    op_builder.Attr("scale", scale)
+    op_builder.Attr("begin_norm_axis", begin_norm_axis)
+    op_builder.Attr("begin_params_axis", begin_params_axis)
+    op_builder.Attr("epsilon", epsilon)
 
-    return op.InferAndTryRun().SoleOutputBlob()
+    return op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("layers.layer_norm_grad")
@@ -461,7 +460,7 @@ def batch_normalization(
     if trainable and training:
         builder = builder.Output("mean").Output("inv_variance")
 
-    return builder.Build().InferAndTryRun().SoleOutputBlob()
+    return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("layers.upsample_2d")
