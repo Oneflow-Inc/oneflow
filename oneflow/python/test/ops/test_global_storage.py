@@ -20,6 +20,10 @@ def Get(name):
     return global_storage.get(name).numpy()
 
 
+def GetDynamic(name):
+    return global_storage.get(name).numpy_list()[0]
+
+
 def Setter(name):
     global global_storage
 

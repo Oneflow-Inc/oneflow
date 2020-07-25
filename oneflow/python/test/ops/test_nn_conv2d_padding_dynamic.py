@@ -21,6 +21,7 @@ import oneflow as flow
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -37,7 +38,6 @@ def compare_with_tensorflow(
     tf_padding="SAME",
     stride=1,
     data_format="NCHW",
-    is_dynamic=False,
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -45,7 +45,7 @@ def compare_with_tensorflow(
     func_config.default_data_type(flow.float)
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     if data_format == "NCHW":
         xy_data_transpose = (0, 2, 3, 1)
@@ -55,19 +55,18 @@ def compare_with_tensorflow(
         weight_data_transpose = (1, 2, 3, 0)
 
     @flow.global_function(func_config)
-    def ConvJob():
+    def DynamicConvJob(x: oft.ListNumpy.Placeholder((10, 3, 100, 100))):
         with flow.scope.placement(device_type, "0:0"):
-            x = flow.get_variable(
-                "x",
-                shape=x_shape,
+            x += flow.get_variable(
+                name="v1",
+                shape=(1,),
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
-                trainable=True,
+                initializer=flow.zeros_initializer(),
             )
             if data_format == "NCHW":
-                weight_shape = (filters, x.shape[1] // groups, kernel_size, kernel_size)
+                weight_shape = (filters, x_shape[1] // groups, kernel_size, kernel_size)
             else:
-                weight_shape = (filters, kernel_size, kernel_size, x.shape[3] // groups)
+                weight_shape = (filters, kernel_size, kernel_size, x_shape[3] // groups)
             weight = flow.get_variable(
                 "conv-weight",
                 shape=weight_shape,
@@ -97,10 +96,11 @@ def compare_with_tensorflow(
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    of_out = ConvJob().get()
+    data = [np.random.rand(*x_shape).astype(np.float32)]
+    of_out = DynamicConvJob(data).get().numpy_list()[0]
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(test_global_storage.Get("x").transpose(xy_data_transpose))
+        x = tf.Variable(data[0].transpose(xy_data_transpose))
         assert groups > 0
         assert x_shape[1] % groups == 0
         assert filters % groups == 0
@@ -116,36 +116,33 @@ def compare_with_tensorflow(
             data_format="NHWC",
         )
 
-    loss_diff = test_global_storage.Get("loss_diff").transpose(xy_data_transpose)
-    tf_x_diff = tape.gradient(tf_out, x, loss_diff)
-    tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
-    print("of_out", of_out.numpy().transpose(xy_data_transpose).flatten()[0:20])
+    print("of_out", of_out.shape)
+    print("tf_out", tf_out.shape)
+    print("of_out", of_out.transpose(xy_data_transpose).flatten()[0:20])
     print("tf_out", tf_out.numpy().flatten()[0:20])
-    print("of_out", of_out.numpy().transpose(xy_data_transpose).flatten()[-20:-1])
+    print("of_out", of_out.transpose(xy_data_transpose).flatten()[-20:-1])
     print("tf_out", tf_out.numpy().flatten()[-20:-1])
-    idx = np.where(
-        np.abs(of_out.numpy().transpose(xy_data_transpose) - tf_out.numpy()) > 5e-4
-    )
-    print("of", of_out.numpy().transpose(xy_data_transpose)[idx])
+    idx = np.where(np.abs(of_out.transpose(xy_data_transpose) - tf_out.numpy()) > 5e-4)
+    print("of", of_out.transpose(xy_data_transpose)[idx])
     print("tf", tf_out.numpy()[idx])
-    max_diff = np.max(
-        np.absolute(of_out.numpy().transpose(xy_data_transpose) - tf_out.numpy())
-    )
+    max_diff = np.max(np.absolute(of_out.transpose(xy_data_transpose) - tf_out.numpy()))
     assert np.allclose(
-        of_out.numpy().transpose(xy_data_transpose),
-        tf_out.numpy(),
-        rtol=1e-5,
-        atol=1e-5,
+        of_out.transpose(xy_data_transpose), tf_out.numpy(), rtol=1e-5, atol=1e-5,
     ), max_diff
 
+    loss_diff = test_global_storage.GetDynamic("loss_diff").transpose(xy_data_transpose)
+    tf_x_diff = tape.gradient(tf_out, x, loss_diff)
+    tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
     print(
         "of_x_diff",
-        test_global_storage.Get("x_diff").transpose(xy_data_transpose).flatten()[0:20],
+        test_global_storage.GetDynamic("x_diff")
+        .transpose(xy_data_transpose)
+        .flatten()[0:20],
     )
     print("tf_x_diff", tf_x_diff.numpy().flatten()[0:20])
     print(
         "of_x_diff",
-        test_global_storage.Get("x_diff")
+        test_global_storage.GetDynamic("x_diff")
         .transpose(xy_data_transpose)
         .flatten()[-20:-1],
     )
@@ -153,13 +150,12 @@ def compare_with_tensorflow(
     print(
         "max",
         np.abs(
-            test_global_storage.Get("x_diff").transpose(xy_data_transpose)
+            test_global_storage.GetDynamic("x_diff").transpose(xy_data_transpose)
             - tf_x_diff.numpy()
         ).max(),
     )
-
     assert np.allclose(
-        test_global_storage.Get("x_diff").transpose(xy_data_transpose),
+        test_global_storage.GetDynamic("x_diff").transpose(xy_data_transpose),
         tf_x_diff.numpy(),
         rtol=1e-4,
         atol=1e-4,
@@ -174,16 +170,15 @@ def compare_with_tensorflow(
 
 def test_padding_valid(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 32, 10, 10), (10, 32, 11, 11)]
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
     arg_dict["groups"] = [1]
     arg_dict["of_padding"] = ["VALID"]
     arg_dict["tf_padding"] = ["VALID"]
     arg_dict["stride"] = [1, 2]
-    arg_dict["data_format"] = ["NCHW", "NHWC"]
-    arg_dict["is_dynamic"] = [False]
+    arg_dict["data_format"] = ["NCHW"]
     for arg in GenArgList(arg_dict):
         print(*arg)
         compare_with_tensorflow(*arg)
@@ -191,16 +186,15 @@ def test_padding_valid(test_case):
 
 def test_padding_same(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 32, 10, 10), (10, 32, 11, 11)]
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
     arg_dict["groups"] = [1]
     arg_dict["of_padding"] = ["SAME_UPPER"]
     arg_dict["tf_padding"] = ["SAME"]
     arg_dict["stride"] = [1, 2]
-    arg_dict["data_format"] = ["NCHW", "NHWC"]
-    arg_dict["is_dynamic"] = [False]
+    arg_dict["data_format"] = ["NCHW"]
     for arg in GenArgList(arg_dict):
         print(*arg)
         compare_with_tensorflow(*arg)
@@ -208,8 +202,8 @@ def test_padding_same(test_case):
 
 def test_pad_list1(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 32, 10, 10), (10, 32, 11, 11)]
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
     arg_dict["groups"] = [1]
@@ -217,7 +211,6 @@ def test_pad_list1(test_case):
     arg_dict["tf_padding"] = [[[0, 0], [0, 1], [1, 0], [0, 0]]]
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
-    arg_dict["is_dynamic"] = [False]
     for arg in GenArgList(arg_dict):
         print(*arg)
         compare_with_tensorflow(*arg)
@@ -225,8 +218,8 @@ def test_pad_list1(test_case):
 
 def test_pad_list2(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 32, 10, 10), (10, 32, 11, 11)]
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
     arg_dict["groups"] = [1]
@@ -234,7 +227,6 @@ def test_pad_list2(test_case):
     arg_dict["tf_padding"] = [[[0, 0], [1, 1], [1, 1], [0, 0]]]
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
-    arg_dict["is_dynamic"] = [False]
     for arg in GenArgList(arg_dict):
         print(*arg)
         compare_with_tensorflow(*arg)
@@ -242,8 +234,8 @@ def test_pad_list2(test_case):
 
 def test_pad_list3(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 32, 10, 10), (10, 32, 11, 11)]
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
     arg_dict["groups"] = [1]
@@ -251,7 +243,6 @@ def test_pad_list3(test_case):
     arg_dict["tf_padding"] = [[[0, 0], [1, 0], [1, 0], [0, 0]]]
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
-    arg_dict["is_dynamic"] = [False]
     for arg in GenArgList(arg_dict):
         print(*arg)
         compare_with_tensorflow(*arg)
@@ -259,8 +250,8 @@ def test_pad_list3(test_case):
 
 def test_pad_list4(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 32, 10, 10), (10, 32, 11, 11)]
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
     arg_dict["groups"] = [1]
@@ -268,7 +259,6 @@ def test_pad_list4(test_case):
     arg_dict["tf_padding"] = [[[0, 0], [10, 2], [10, 2], [0, 0]]]
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
-    arg_dict["is_dynamic"] = [False]
     for arg in GenArgList(arg_dict):
         print(*arg)
         compare_with_tensorflow(*arg)
