@@ -39,7 +39,10 @@ def test_two_device(test_case):
     def EqOnes(x):
         test_case.assertTrue(np.allclose(data, x.numpy()))
 
-    @flow.global_function()
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+
+    @flow.global_function(func_config)
     def ReluJob(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.relu(x)
         flow.watch(y, EqOnes)
