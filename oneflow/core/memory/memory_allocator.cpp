@@ -18,6 +18,9 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/register/blob.h"
+#include "oneflow/core/common/tensor_buffer.h"
+#include "oneflow/core/record/record.pb.h"
 
 namespace oneflow {
 
@@ -87,6 +90,22 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
 
 void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
   MemoryAllocatorImpl::Deallocate(static_cast<void*>(dptr), mem_case);
+}
+
+void InitNonPODTypeBlobIfNeed(MemoryAllocator* allocator, Blob* blob_ptr) {
+  const RtBlobDesc& blob_desc = blob_ptr->blob_desc();
+  if (blob_desc.data_type() == kOFRecord) {
+    int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
+    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
+      allocator->PlacementNew(&blob_ptr->mut_dptr<OFRecord>()[idx]);
+    }
+  }
+  if (blob_desc.data_type() == kTensorBuffer) {
+    int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
+    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
+      allocator->PlacementNew(&blob_ptr->mut_dptr<TensorBuffer>()[idx]);
+    }
+  }
 }
 
 }  // namespace oneflow
