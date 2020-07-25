@@ -21,6 +21,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -83,34 +84,34 @@ pool_confs = [
         "padding": "SAME",
         "data_format": "NHWC",
     },
-    # {
-    #    "x_shape": (1, 1, 9, 9, 9),
-    #    "ksize": 2,
-    #    "strides": 2,
-    #    "padding": "VALID",
-    #    "data_format": "NCDHW",
-    # },
-    # {
-    #    "x_shape": (1, 7, 5, 5, 5),
-    #    "ksize": 3,
-    #    "strides": 2,
-    #    "padding": "SAME",
-    #    "data_format": "NCDHW",
-    # },
-    # {
-    #    "x_shape": (1, 5, 5, 5, 7),
-    #    "ksize": 3,
-    #    "strides": 2,
-    #    "padding": "VALID",
-    #    "data_format": "NDHWC",
-    # },
-    # {
-    #    "x_shape": (1, 3, 3, 3, 3),
-    #    "ksize": 1,
-    #    "strides": 1,
-    #    "padding": "VALID",
-    #    "data_format": "NCDHW",
-    # },
+    {
+        "x_shape": (1, 1, 10, 10, 10),
+        "ksize": 2,
+        "strides": 2,
+        "padding": "VALID",
+        "data_format": "NCDHW",
+    },
+    {
+        "x_shape": (1, 7, 5, 5, 5),
+        "ksize": 3,
+        "strides": 1,
+        "padding": "SAME",
+        "data_format": "NCDHW",
+    },
+    {
+        "x_shape": (1, 5, 5, 5, 7),
+        "ksize": 3,
+        "strides": 2,
+        "padding": "VALID",
+        "data_format": "NDHWC",
+    },
+    {
+        "x_shape": (1, 3, 3, 3, 3),
+        "ksize": 2,
+        "strides": 1,
+        "padding": "SAME",
+        "data_format": "NCDHW",
+    },
 ]
 
 
@@ -142,7 +143,7 @@ def test_pool(_):
     arg_dict["pool_conf"] = pool_confs
     arg_dict["data_type"] = ["float32"]
     arg_dict["pooling_type"] = ["AVG", "MAX"]
-    arg_dict["is_dynamic"] = [False]
+    arg_dict["is_dynamic"] = [True, False]
 
     for case in GenArgList(arg_dict):
         print(case)
@@ -195,12 +196,12 @@ def test_pool(_):
 
         tensor_def = None
         if is_dynamic:
-            tensor_def = flow.MirroredTensorDef
+            tensor_def = oft.ListNumpy.Placeholder
         else:
-            tensor_def = flow.FixedTensorDef
+            tensor_def = oft.Numpy.Placeholder
 
         @flow.global_function(func_config)
-        def pooling_job(x=tensor_def(x_shape, dtype=dtype)):
+        def pooling_job(x: tensor_def(x_shape, dtype=dtype)):
             v = flow.get_variable(
                 "x",
                 shape=x_shape,

@@ -276,8 +276,6 @@ def conv2d(
         input, padding, data_format.upper(), kernel_size_list, dilations, strides,
     )
     assert len(pads_list) == len(inputs.shape) - 2
-    print("inputs.shape", inputs.shape)
-    print("pads", pads_list)
     padding_before = [pad[0] for pad in pads_list]
 
     return (
@@ -608,8 +606,6 @@ def avg_pool2d(
     op.Attr("strides", strides)
     padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
     assert len(pads_list) == len(input.shape) - 2
-    print("inputs.shape", input.shape)
-    print("pads", pads_list)
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
     print("padding_before", padding_before)
@@ -652,10 +648,8 @@ def max_pool3d(
     op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 3, "strides")
     op.Attr("strides", strides)
-    padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
+    padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 3)
     assert len(pads_list) == len(input.shape) - 2
-    print("inputs.shape", input.shape)
-    print("pads", pads_list)
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
     print("padding_before", padding_before)
@@ -698,10 +692,8 @@ def avg_pool3d(
     op.Attr("pool_size", pool_size)
     strides = _GetSequence(strides, 3, "strides")
     op.Attr("strides", strides)
-    padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
+    padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 3)
     assert len(pads_list) == len(input.shape) - 2
-    print("inputs.shape", input.shape)
-    print("pads", pads_list)
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
     op.Attr("padding", padding_type)
