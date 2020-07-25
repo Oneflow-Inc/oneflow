@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
 
@@ -56,6 +57,7 @@ class BlobObject : public vm::Object {
   std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
   std::size_t blob_body_bytes_;
+  MemoryAllocator non_pod_initer_;
 };
 
 }  // namespace eager
