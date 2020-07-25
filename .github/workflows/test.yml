@@ -103,7 +103,7 @@ jobs:
           --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
-    - name: Cleanup files created by root
+    - name: Clean up files created by root
       if: ${{ always() }}
       run: |
         bash ci/build/clean.sh
