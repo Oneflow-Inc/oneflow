@@ -160,9 +160,21 @@ def conv2d(
     if kernel_initializer is None:
         kernel_initializer = flow.constant_initializer(0)
 
-    with flow.scope.namespace(name):
+    if weight_name is None:
+        with flow.scope.namespace(name):
+            weight = flow.get_variable(
+                name="weight",
+                shape=weight_shape,
+                dtype=inputs.dtype,
+                initializer=kernel_initializer,
+                regularizer=kernel_regularizer,
+                trainable=trainable,
+                model_name="weight",
+                reuse=False,
+            )
+    else:
         weight = flow.get_variable(
-            name="weight",
+            name=weight_name,
             shape=weight_shape,
             dtype=inputs.dtype,
             initializer=kernel_initializer,
@@ -171,23 +183,37 @@ def conv2d(
             model_name="weight",
             reuse=False,
         )
-        output = flow.nn.conv2d(
-            inputs,
-            weight,
-            strides,
-            padding,
-            data_format,
-            dilation_rate,
-            groups=groups,
-            name=name,
-        )
 
-        if use_bias:
-            if bias_initializer is None:
-                bias_initializer = flow.constant_initializer(0)
+    output = flow.nn.conv2d(
+        inputs,
+        weight,
+        strides,
+        padding,
+        data_format,
+        dilation_rate,
+        groups=groups,
+        name=name,
+    )
 
+    if use_bias:
+        if bias_initializer is None:
+            bias_initializer = flow.constant_initializer(0)
+
+        if bias_name is None:
+            with flow.scope.namespace(name):
+                bias = flow.get_variable(
+                    name="bias",
+                    shape=(filters,),
+                    dtype=inputs.dtype,
+                    initializer=bias_initializer,
+                    regularizer=bias_regularizer,
+                    trainable=trainable,
+                    model_name="bias",
+                    reuse=False,
+                )
+        else:
             bias = flow.get_variable(
-                name="bias",
+                name=bias_name,
                 shape=(filters,),
                 dtype=inputs.dtype,
                 initializer=bias_initializer,
@@ -196,9 +222,12 @@ def conv2d(
                 model_name="bias",
                 reuse=False,
             )
+
+        with flow.scope.namespace(name):
             output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
 
-        if callable(activation):
+    if callable(activation):
+        with flow.scope.namespace(name):
             output = activation(output, name="activation")
 
     return output
