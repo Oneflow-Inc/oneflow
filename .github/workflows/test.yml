@@ -21,7 +21,6 @@ jobs:
       uses: rust-lang/simpleinfra/github-actions/cancel-outdated-builds@master
       with:
         github_token: "${{ secrets.github_token }}"
-      if: "success() && !env.SKIP_JOB && github.ref != 'refs/heads/try'"
     - name: Check license
       run: |
         python3 ci/check/run_license_format.py -i oneflow -c
