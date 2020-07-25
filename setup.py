@@ -39,6 +39,7 @@ REQUIRED_PACKAGES = [
     'protobuf',
     'tqdm',
     'requests',
+    'onnx',
 ]
 
 
