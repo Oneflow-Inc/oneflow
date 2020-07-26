@@ -16,22 +16,24 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow as flow
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.remote_blob import BlobDef
+from typing import Optional, Sequence, Union
 
 
 @oneflow_export("data.OFRecordRawDecoder", "data.ofrecord_raw_decoder")
 def OFRecordRawDecoder(
-    input_blob,
-    blob_name,
-    shape,
-    dtype,
-    dim1_varying_length=False,
-    auto_zero_padding=False,
-    name=None,
-):
+    input_blob: BlobDef,
+    blob_name: str,
+    shape: Sequence[int],
+    dtype: dtype_util.dtype,
+    dim1_varying_length: bool = False,
+    auto_zero_padding: bool = False,
+    name: Optional[str] = None,
+) -> BlobDef:
     if name is None:
         name = id_util.UniqueStr("OFRecordRawDecoder_")
     return (
@@ -54,15 +56,15 @@ def OFRecordRawDecoder(
     "data.OFRecordImageDecoderRandomCrop", "data.ofrecord_image_decoder_random_crop"
 )
 def OFRecordImageDecoderRandomCrop(
-    input_blob,
-    blob_name,
-    color_space="BGR",
-    num_attempts=10,
-    seed=None,
-    random_area=[0.08, 1.0],
-    random_aspect_ratio=[0.75, 1.333333],
-    name=None,
-):
+    input_blob: BlobDef,
+    blob_name: str,
+    color_space: str = "BGR",
+    num_attempts: int = 10,
+    seed: Optional[int] = None,
+    random_area: Sequence[float] = [0.08, 1.0],
+    random_aspect_ratio: Sequence[float] = [0.75, 1.333333],
+    name: Optional[str] = None,
+) -> BlobDef:
     if name is None:
         name = id_util.UniqueStr("OFRecordImageDecoderRandomCrop_")
     return (
@@ -83,7 +85,12 @@ def OFRecordImageDecoderRandomCrop(
 
 
 @oneflow_export("data.OFRecordImageDecoder", "data.ofrecord_image_decoder")
-def OFRecordImageDecoder(input_blob, blob_name, color_space="BGR", name=None):
+def OFRecordImageDecoder(
+    input_blob: BlobDef,
+    blob_name: str,
+    color_space: str = "BGR",
+    name: Optional[str] = None,
+) -> BlobDef:
     if name is None:
         name = id_util.UniqueStr("OFRecordImageDecoder_")
     return (
@@ -101,14 +108,14 @@ def OFRecordImageDecoder(input_blob, blob_name, color_space="BGR", name=None):
 
 @oneflow_export("image.Resize", "image.resize")
 def Resize(
-    input_blob,
-    color_space="BGR",
-    interp_type="Linear",
-    resize_shorter=0,
-    resize_x=0,
-    resize_y=0,
-    name=None,
-):
+    input_blob: BlobDef,
+    color_space: str = "BGR",
+    interp_type: str = "Linear",
+    resize_shorter: int = 0,
+    resize_x: int = 0,
+    resize_y: int = 0,
+    name: Optional[str] = None,
+) -> BlobDef:
     if name is None:
         name = id_util.UniqueStr("ImageResize_")
     return (
@@ -129,18 +136,18 @@ def Resize(
 
 @oneflow_export("image.CropMirrorNormalize", "image.crop_mirror_normalize")
 def CropMirrorNormalize(
-    input_blob,
-    mirror_blob=None,
-    color_space="BGR",
-    output_layout="NCHW",
-    crop_h=0,
-    crop_w=0,
-    crop_pos_y=0.5,
-    crop_pos_x=0.5,
-    mean=[0.0],
-    std=[1.0],
-    output_dtype=flow.float,
-    name=None,
+    input_blob: BlobDef,
+    mirror_blob: Optional[BlobDef] = None,
+    color_space: str = "BGR",
+    output_layout: str = "NCHW",
+    crop_h: int = 0,
+    crop_w: int = 0,
+    crop_pos_y: float = 0.5,
+    crop_pos_x: float = 0.5,
+    mean: Sequence[float] = [0.0],
+    std: Sequence[float] = [1.0],
+    output_dtype: dtype_util.dtype = dtype_util.float,
+    name: Optional[str] = None,
 ):
     if name is None:
         name = id_util.UniqueStr("CropMirrorNormalize_")
@@ -167,7 +174,12 @@ def CropMirrorNormalize(
 
 
 @oneflow_export("random.CoinFlip", "random.coin_flip")
-def CoinFlip(batch_size=1, seed=None, probability=0.5, name=None):
+def CoinFlip(
+    batch_size: int = 1,
+    seed: Optional[int] = None,
+    probability: float = 0.5,
+    name: Optional[str] = None,
+) -> BlobDef:
     if name is None:
         name = id_util.UniqueStr("CoinFlip_")
 
@@ -185,7 +197,12 @@ def CoinFlip(batch_size=1, seed=None, probability=0.5, name=None):
 
 
 @oneflow_export("image.decode", "image_decode")
-def image_decode(images_bytes_buffer, dtype=flow.uint8, color_space="BGR", name=None):
+def image_decode(
+    images_bytes_buffer: BlobDef,
+    dtype: dtype_util.dtype = dtype_util.uint8,
+    color_space: str = "BGR",
+    name: Optional[str] = None,
+) -> BlobDef:
     # TODO: check color_space valiad
     if name is None:
         name = id_util.UniqueStr("ImageDecode_")
@@ -203,7 +220,9 @@ def image_decode(images_bytes_buffer, dtype=flow.uint8, color_space="BGR", name=
 
 
 @oneflow_export("image.target_resize", "image_target_resize")
-def image_target_resize(images, target_size, max_size, name=None):
+def image_target_resize(
+    images: BlobDef, target_size: int, max_size: int, name: Optional[str] = None
+) -> Sequence[BlobDef]:
     # TODO: check target_size and max_size valid
     if name is None:
         name = id_util.UniqueStr("ImageTargetResize_")
@@ -223,7 +242,13 @@ def image_target_resize(images, target_size, max_size, name=None):
 
 
 @oneflow_export("image.batch_align", "image_batch_align")
-def image_batch_align(images, shape, dtype, alignment, name=None):
+def image_batch_align(
+    images: BlobDef,
+    shape: Sequence[int],
+    dtype: dtype_util.dtype,
+    alignment: int,
+    name: Optional[str] = None,
+) -> BlobDef:
     if name is None:
         name = id_util.UniqueStr("ImageBatchAlign_")
 
@@ -241,7 +266,12 @@ def image_batch_align(images, shape, dtype, alignment, name=None):
 
 
 @oneflow_export("image.normalize", "image_normalize")
-def image_normalize(image, std, mean, name=None):
+def image_normalize(
+    image: BlobDef,
+    std: Sequence[float],
+    mean: Sequence[float],
+    name: Optional[str] = None,
+) -> BlobDef:
     if name is None:
         name = id_util.UniqueStr("ImageNormalize_")
 
@@ -261,7 +291,9 @@ def image_normalize(image, std, mean, name=None):
 
 
 @oneflow_export("image.flip", "image_flip")
-def image_flip(image, flip_code, name=None):
+def image_flip(
+    image: BlobDef, flip_code: Union[int, BlobDef], name: Optional[str] = None
+) -> BlobDef:
     assert isinstance(image, BlobDef)
 
     if name is None:
@@ -290,7 +322,12 @@ def image_flip(image, flip_code, name=None):
 
 
 @oneflow_export("detection.object_bbox_flip", "object_bbox_flip")
-def object_bbox_flip(bbox, image_size, flip_code, name=None):
+def object_bbox_flip(
+    bbox: BlobDef,
+    image_size: BlobDef,
+    flip_code: Union[int, BlobDef],
+    name: Optional[str] = None,
+) -> BlobDef:
     assert isinstance(bbox, BlobDef)
     assert isinstance(image_size, BlobDef)
     assert bbox.shape[0] == image_size.shape[0]
@@ -322,7 +359,9 @@ def object_bbox_flip(bbox, image_size, flip_code, name=None):
 
 
 @oneflow_export("detection.object_bbox_scale", "object_bbox_scale")
-def object_bbox_scale(bbox, scale, name=None):
+def object_bbox_scale(
+    bbox: BlobDef, scale: BlobDef, name: Optional[str] = None
+) -> BlobDef:
     assert isinstance(bbox, BlobDef)
     assert isinstance(scale, BlobDef)
     assert bbox.shape[0] == scale.shape[0]
@@ -344,7 +383,12 @@ def object_bbox_scale(bbox, scale, name=None):
 @oneflow_export(
     "detection.object_segmentation_polygon_flip", "object_segmentation_polygon_flip"
 )
-def object_segm_poly_flip(poly, image_size, flip_code, name=None):
+def object_segm_poly_flip(
+    poly: BlobDef,
+    image_size: BlobDef,
+    flip_code: Union[int, BlobDef],
+    name: Optional[str] = None,
+) -> BlobDef:
     assert isinstance(poly, BlobDef)
     assert isinstance(image_size, BlobDef)
     assert poly.shape[0] == image_size.shape[0]
@@ -378,7 +422,9 @@ def object_segm_poly_flip(poly, image_size, flip_code, name=None):
 @oneflow_export(
     "detection.object_segmentation_polygon_scale", "object_segmentation_polygon_scale"
 )
-def object_segm_poly_scale(poly, scale, name=None):
+def object_segm_poly_scale(
+    poly: BlobDef, scale: BlobDef, name: Optional[str] = None
+) -> BlobDef:
     assert isinstance(poly, BlobDef)
     assert isinstance(scale, BlobDef)
     assert poly.shape[0] == scale.shape[0]
@@ -401,7 +447,9 @@ def object_segm_poly_scale(poly, scale, name=None):
     "detection.object_segmentation_polygon_to_mask",
     "object_segmentation_polygon_to_mask",
 )
-def object_segm_poly_to_mask(poly, poly_index, image_size, name=None):
+def object_segm_poly_to_mask(
+    poly: BlobDef, poly_index: BlobDef, image_size: BlobDef, name: Optional[str] = None
+) -> BlobDef:
     assert isinstance(poly, BlobDef)
     assert isinstance(poly_index, BlobDef)
     assert isinstance(image_size, BlobDef)
@@ -425,15 +473,15 @@ def object_segm_poly_to_mask(poly, poly_index, image_size, name=None):
 
 @oneflow_export("data.coco_reader")
 def api_coco_reader(
-    annotation_file,
-    image_dir,
-    batch_size,
-    shuffle=True,
-    random_seed=None,
-    group_by_aspect_ratio=True,
-    stride_partition=True,
-    name=None,
-):
+    annotation_file: str,
+    image_dir: str,
+    batch_size: int,
+    shuffle: bool = True,
+    random_seed: Optional[int] = None,
+    group_by_aspect_ratio: bool = True,
+    stride_partition: bool = True,
+    name: Optional[str] = None,
+) -> BlobDef:
     import random
     import sys
 

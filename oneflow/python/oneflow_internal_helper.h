@@ -259,6 +259,14 @@ Maybe<std::string> InferOpConf(const std::string& op_conf_str,
   return PbMessage2TxtString(*op_attribute);
 }
 
+Maybe<long> GetOpParallelSymbolId(const std::string& op_conf_str) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
+  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
+  const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
+  return JUST(scope.GetParallelDescSymbolId(op_conf));
+}
+
 Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";

@@ -41,7 +41,6 @@ Maybe<void> Run(const std::string& instruction_list_str) {
 }
 
 Maybe<void> Run(const InstructionListProto& instruction_list_proto) {
-  if (JUST(GlobalMaybe<ResourceDesc, ForSession>())->TotalMachineNum() > 1) { OF_TODO(); }
   InstructionMsgList instr_msg_list;
   for (const auto& instr_proto : instruction_list_proto.instruction()) {
     auto instr_msg = ObjectMsgPtr<InstructionMsg>::New(instr_proto);

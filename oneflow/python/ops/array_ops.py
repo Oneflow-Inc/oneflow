@@ -25,6 +25,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
@@ -123,6 +124,7 @@ def reshape(
     Returns:
         A `Blob`, has the same type as `x`.
     """
+    x = flow.cast_to_current_logical_view(x)
     assert isinstance(shape, tuple) or isinstance(shape, list)
     shape = list(shape)
     assert all(dim == -1 or dim > 0 for dim in shape)
@@ -532,7 +534,7 @@ def tensor_scatter_nd_add(
 @oneflow_export("argwhere")
 def argwhere(
     condition: remote_blob_util.BlobDef,
-    dtype: Optional[int] = None,
+    dtype: Optional[dtype_util.dtype] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     if name is None:
@@ -544,7 +546,7 @@ def argwhere(
     setattr(op_conf.arg_where_conf, "out", "out")
     setattr(op_conf.arg_where_conf, "out_size", "out_size")
     if dtype is not None:
-        setattr(op_conf.arg_where_conf, "data_type", dtype)
+        setattr(op_conf.arg_where_conf, "data_type", dtype.oneflow_proto_dtype)
     interpret_util.Forward(op_conf)
 
     arg_where_out_lbi = logical_blob_id_util.LogicalBlobId()
@@ -613,7 +615,7 @@ def where(
 @oneflow_export("elem_cnt")
 def elem_cnt(
     inputs: remote_blob_util.BlobDef,
-    dtype: Optional[int] = None,
+    dtype: Optional[dtype_util.dtype] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
@@ -624,7 +626,7 @@ def elem_cnt(
 
     op_conf.shape_elem_cnt_conf.exclude_axis_conf.SetInParent()
     if dtype is not None:
-        op_conf.shape_elem_cnt_conf.data_type = dtype
+        op_conf.shape_elem_cnt_conf.data_type = dtype.oneflow_proto_dtype
     op_conf.shape_elem_cnt_conf.y = "y"
     interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()

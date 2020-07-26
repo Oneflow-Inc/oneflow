@@ -169,6 +169,7 @@ def _of_poly_to_mask_pipline(
 
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
