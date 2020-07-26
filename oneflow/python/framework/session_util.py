@@ -33,6 +33,7 @@ import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.vm_util as vm_util
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.framework.function_desc import FunctionDesc
+import oneflow.python.framework.module as module_util
 from oneflow.python.framework.pull_util import (
     LazyFutureRemoteBlobs,
     EagerFutureRemoteBlobs,
@@ -355,7 +356,9 @@ def find_or_create_module(module_name, create, reuse=False):
         sess.job_name2module_name2module_[job_name] = {}
     module_name2module = sess.job_name2module_name2module_[job_name]
     if module_name not in module_name2module:
-        module_name2module[module_name] = create()
+        module = create()
+        assert isinstance(module, module_util.Module)
+        module_name2module[module_name] = module
     else:
         if not reuse:
             assert module_name not in sess.existed_module_names_, (

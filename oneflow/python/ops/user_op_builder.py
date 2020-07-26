@@ -234,12 +234,15 @@ class UserOpConfBuilder(object):
         name_scope_prefix = name_scope.GetJobNameScopePrefix(job_name)
         self.user_op_ = user_op_class(name_scope_prefix + op_name)
 
-    def Build(self):
+    def CheckAndComplete(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name != ""
         self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(
             self.user_op_.op_conf_
         )
-        return self.user_op_
+        return self
+
+    def Build(self):
+        return self.CheckAndComplete().user_op_
 
     def OpName(self, op_name):
         self.user_op_.op_conf_.name = op_name
