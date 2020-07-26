@@ -138,11 +138,9 @@ def TryReplaceDeviceTag(builder, parallel_desc_symbol, device_tag):
 def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
     assert parallel_desc_symbol.device_tag != device_tag
     parallel_conf = placement_pb.ParallelConf()
+    parallel_conf.device_tag = device_tag
     for device_name in parallel_desc_symbol.parallel_conf.device_name:
-        triple = device_name.split(":")
-        parallel_conf.device_name.append(
-            "%s:%s:%s" % (triple[0], device_tag, triple[2])
-        )
+        parallel_conf.device_name.append(device_name)
     if builder is None:
         return symbol_util.ParallelDescSymbol(
             parallel_desc_symbol.symbol_id, parallel_conf, device_tag
@@ -153,14 +151,13 @@ def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
 
 def RandomParallelIdPerMachine(parallel_desc_symbol, device_tag=None, builder=None):
     if device_tag is None:
-        for device_name in parallel_desc_symbol.parallel_conf.device_name:
-            _, device_tag, _ = device_name.split(":")
-            break
+        device_tag = parallel_desc_symbol.parallel_conf.device_tag
     assert device_tag is not None
     parallel_conf = placement_pb.ParallelConf()
+    parallel_conf.device_tag = device_tag
     for machine_id, dev_ids in parallel_desc_symbol.machine_id2device_id_list.items():
         dev_id = dev_ids[random.randint(0, len(dev_ids) - 1)]
-        parallel_conf.device_name.append("%s:%s:%s" % (machine_id, device_tag, dev_id))
+        parallel_conf.device_name.append("%s:%s" % (machine_id, dev_id))
     if builder is None:
         return symbol_util.ParallelDescSymbol(
             parallel_desc_symbol.symbol_id, parallel_conf, device_tag

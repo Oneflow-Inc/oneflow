@@ -43,7 +43,7 @@ TEST(DeviceHelperStreamType, basic) {
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject", "CudaMalloc"});
   auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
-  int64_t object_id = TestUtil::NewObject(&list, "0:gpu:0");
+  int64_t object_id = TestUtil::NewObject(&list, "gpu", "0:0");
   list.EmplaceBack(
       NewInstruction("CudaMalloc")->add_mut_operand(object_id)->add_int64_operand(1024));
   list.EmplaceBack(NewInstruction("CudaFree")->add_mut_operand(object_id));

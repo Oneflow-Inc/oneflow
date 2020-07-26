@@ -88,7 +88,7 @@ int64_t InitOpKernelObject(InstructionMsgList* list,
   int64_t job_desc_id = NewJobDescSymbol(list, job_conf);
   int64_t op_conf_id = NewOpConfSymbol(list, op_conf);
   int64_t parallel_desc_id = 0;
-  int64_t opkernel_id = vm::TestUtil::NewObject(list, "0:gpu:0", &parallel_desc_id);
+  int64_t opkernel_id = vm::TestUtil::NewObject(list, "gpu", "0:0", &parallel_desc_id);
   list->EmplaceBack(vm::NewInstruction("InitOpKernelObject")
                         ->add_parallel_desc(parallel_desc_id)
                         ->add_symbol_operand(job_desc_id)
@@ -153,7 +153,7 @@ TEST(OpkernelInstructionType, call_opkernel) {
   }
   int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
   int64_t parallel_desc_id = 0;
-  int64_t output_blob_id = vm::TestUtil::NewObject(&list, "0:gpu:0", &parallel_desc_id);
+  int64_t output_blob_id = vm::TestUtil::NewObject(&list, "gpu", "0:0", &parallel_desc_id);
   int64_t op_parallel_attribute_id =
       NewOpParallelAttribute(&list, {}, {}, {"out_0"}, {parallel_desc_id});
   list.EmplaceBack(vm::NewInstruction("gpu.CallOpKernel")
@@ -194,7 +194,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   int64_t x = 0;
   int64_t x_parallel_desc_id = 0;
   {
-    x = vm::TestUtil::NewObject(&list, "0:gpu:0", &x_parallel_desc_id);
+    x = vm::TestUtil::NewObject(&list, "gpu", "0:0", &x_parallel_desc_id);
     int64_t op_parallel_attribute_id =
         NewOpParallelAttribute(&list, {}, {}, {"out_0"}, {x_parallel_desc_id});
     list.EmplaceBack(vm::NewInstruction("gpu.CallOpKernel")
@@ -220,7 +220,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   int64_t y = 0;
   {
     int64_t y_parallel_desc_id = 0;
-    y = vm::TestUtil::NewObject(&list, "0:gpu:0", &y_parallel_desc_id);
+    y = vm::TestUtil::NewObject(&list, "gpu", "0:0", &y_parallel_desc_id);
     int64_t op_parallel_attribute_id = NewOpParallelAttribute(&list, {"in_0"}, {x_parallel_desc_id},
                                                               {"out_0"}, {y_parallel_desc_id});
     list.EmplaceBack(vm::NewInstruction("gpu.CallOpKernel")
@@ -252,7 +252,7 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   InstructionMsgList list;
   int64_t job_desc_id = NewJobDescSymbol(&list, std::make_shared<JobConfigProto>());
   int64_t parallel_desc_id = 0;
-  int64_t opkernel_id = vm::TestUtil::NewObject(&list, "0:gpu:0", &parallel_desc_id);
+  int64_t opkernel_id = vm::TestUtil::NewObject(&list, "gpu", "0:0", &parallel_desc_id);
   int64_t op_conf_id = 0;
   {
     auto op_conf = std::make_shared<OperatorConf>();
@@ -265,7 +265,7 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   int64_t op_parallel_attribute_id =
       NewOpParallelAttribute(&list, {}, {}, {"out_0"}, {parallel_desc_id});
   int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
-  int64_t output_blob_id = vm::TestUtil::NewObject(&list, "0:gpu:0");
+  int64_t output_blob_id = vm::TestUtil::NewObject(&list, "gpu", "0:0");
   list.EmplaceBack(vm::NewInstruction("gpu.compute.UserStatelessCallOpKernel")
                        ->add_parallel_desc(parallel_desc_id)
                        ->add_symbol_operand(job_desc_id)
@@ -294,7 +294,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   InstructionMsgList list;
   int64_t job_desc_id = NewJobDescSymbol(&list, std::make_shared<JobConfigProto>());
   int64_t parallel_desc_id = 0;
-  int64_t opkernel_id = vm::TestUtil::NewObject(&list, "0:gpu:0", &parallel_desc_id);
+  int64_t opkernel_id = vm::TestUtil::NewObject(&list, "gpu", "0:0", &parallel_desc_id);
   int64_t out_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
   int64_t test_source_id = 0;
   {
@@ -305,7 +305,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
     (*user_conf->mutable_output())["out"].add_s("test_source_op_name/out_0");
     test_source_id = NewOpConfSymbol(&list, op_conf);
   }
-  int64_t x = vm::TestUtil::NewObject(&list, "0:gpu:0");
+  int64_t x = vm::TestUtil::NewObject(&list, "gpu", "0:0");
   int64_t op_parallel_attribute_id =
       NewOpParallelAttribute(&list, {}, {}, {"out_0"}, {parallel_desc_id});
   list.EmplaceBack(vm::NewInstruction("gpu.compute.UserStatelessCallOpKernel")
@@ -331,7 +331,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
     ccrelu_id = NewOpConfSymbol(&list, op_conf);
   }
   int64_t y_parallel_desc_id = 0;
-  int64_t y = vm::TestUtil::NewObject(&list, "0:gpu:0", &y_parallel_desc_id);
+  int64_t y = vm::TestUtil::NewObject(&list, "gpu", "0:0", &y_parallel_desc_id);
   op_parallel_attribute_id =
       NewOpParallelAttribute(&list, {"in_0"}, {parallel_desc_id}, {"out_0"}, {y_parallel_desc_id});
   list.EmplaceBack(vm::NewInstruction("gpu.compute.UserStatelessCallOpKernel")
