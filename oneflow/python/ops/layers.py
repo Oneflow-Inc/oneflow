@@ -14,31 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from __future__ import absolute_import
+from typing import Callable, Optional, Union, Tuple, Sequence
+from oneflow.python.oneflow_export import oneflow_export
 
-import os
-from typing import Callable, Optional, Union, Tuple, List
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.distribute as distribute_util
-import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("layers.dense")
 def dense(
     inputs: remote_blob_util.BlobDef,
     units: int,
-    activation: Optional[remote_blob_util.BlobDef] = None,
+    activation: Optional[
+        Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef]
+    ] = None,
     use_bias: bool = True,
     kernel_initializer: Optional[op_conf_util.InitializerConf] = None,
     bias_initializer: Optional[op_conf_util.InitializerConf] = None,
     kernel_regularizer: Optional[op_conf_util.RegularizerConf] = None,
     bias_regularizer: Optional[op_conf_util.RegularizerConf] = None,
     trainable: bool = True,
-    name: Optional[str] = None,
+    name: str = "Dense",
     model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
 ) -> remote_blob_util.BlobDef:
     r"""Analogous to `tf.keras.layers.Dense <https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense>`_
@@ -68,9 +66,6 @@ def dense(
     in_num_axes = len(in_shape)
     assert in_num_axes >= 2
 
-    name_prefix = name if name is not None else id_util.UniqueStr("Dense_")
-    inputs = flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
-
     assert (
         model_distribute is distribute_util.auto()
         or model_distribute is distribute_util.broadcast()
@@ -80,48 +75,51 @@ def dense(
     if model_distribute is distribute_util.split(0):
         assert in_num_axes == 2  # model distribute is hard for reshape split dim 1
 
-    weight = flow.get_variable(
-        name="{}-weight".format(name_prefix),
-        shape=(units, inputs.shape[1]),
-        dtype=inputs.dtype,
-        initializer=(
-            kernel_initializer
-            if kernel_initializer is not None
-            else flow.constant_initializer(0)
-        ),
-        regularizer=kernel_regularizer,
-        trainable=trainable,
-        model_name="weight",
-        distribute=model_distribute,
-    )
-    weight = weight.with_distribute(model_distribute)
+    if in_num_axes > 2:
+        inputs = flow.reshape(inputs, (-1, in_shape[-1]))
 
-    out = flow.matmul(
-        a=inputs, b=weight, transpose_b=True, name="{}_matmul".format(name_prefix),
-    )
-    if use_bias:
-        bias = flow.get_variable(
-            name="{}-bias".format(name_prefix),
-            shape=(units,),
+    with flow.scope.namespace(name):
+        if kernel_initializer is None:
+            kernel_initializer = flow.constant_initializer(0)
+
+        weight = flow.get_variable(
+            name="weight",
+            shape=(units, inputs.shape[1]),
             dtype=inputs.dtype,
-            initializer=(
-                bias_initializer
-                if bias_initializer is not None
-                else flow.constant_initializer(0)
-            ),
-            regularizer=bias_regularizer,
+            initializer=kernel_initializer,
+            regularizer=kernel_regularizer,
             trainable=trainable,
-            model_name="bias",
+            model_name="weight",
             distribute=model_distribute,
+            reuse=False,
         )
-        bias = bias.with_distribute(model_distribute)
-        out = flow.nn.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
-    out = (
-        activation(out, name="{}_activation".format(name_prefix))
-        if activation is not None
-        else out
-    )
-    out = flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
+        weight = weight.with_distribute(model_distribute)
+
+        out = flow.matmul(a=inputs, b=weight, transpose_b=True, name="matmul")
+
+        if use_bias:
+            if bias_initializer is None:
+                bias_initializer = flow.constant_initializer(0)
+
+            bias = flow.get_variable(
+                name="bias",
+                shape=(units,),
+                dtype=inputs.dtype,
+                initializer=bias_initializer,
+                regularizer=bias_regularizer,
+                trainable=trainable,
+                model_name="bias",
+                distribute=model_distribute,
+                reuse=False,
+            )
+            bias = bias.with_distribute(model_distribute)
+            out = flow.nn.bias_add(out, bias, name="bias_add")
+
+        if callable(activation):
+            out = activation(out, name="activation")
+
+    if in_num_axes > 2:
+        out = flow.reshape(out, in_shape[:-1] + (units,))
 
     return out
 
@@ -130,8 +128,8 @@ def dense(
 def conv2d(
     inputs: remote_blob_util.BlobDef,
     filters: int,
-    kernel_size: Union[int, List[int], Tuple[int]] = 1,
-    strides: Union[int, List[int], Tuple[int]] = 1,
+    kernel_size: Union[int, Sequence[int]] = 1,
+    strides: Union[int, Sequence[int]] = 1,
     padding: str = "VALID",
     data_format: str = "NCHW",
     dilation_rate: int = 1,
@@ -145,7 +143,7 @@ def conv2d(
     kernel_regularizer: Optional[op_conf_util.RegularizerConf] = None,
     bias_regularizer: Optional[op_conf_util.RegularizerConf] = None,
     trainable: bool = True,
-    name: Optional[str] = None,
+    name: str = "Conv2d",
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -184,17 +182,19 @@ def conv2d(
     Returns:
         remote_blob_util.BlobDef: A 4D `Blob` with the shape of (batch_size, filters, new_height, new_width).  
     """
-    name_prefix = name if name is not None else id_util.UniqueStr("Conv2D_")
+
     if isinstance(kernel_size, int):
         kernel_size = (kernel_size, kernel_size)
     else:
         assert isinstance(kernel_size, (list, tuple))
+        assert len(kernel_size) == 2
         kernel_size = tuple(kernel_size)
 
     assert isinstance(groups, int)
     assert groups > 0
     assert groups <= filters
     assert filters % groups == 0
+
     if data_format.upper() == "NCHW":
         assert groups <= inputs.shape[1]
         assert inputs.shape[1] % groups == 0
@@ -212,17 +212,32 @@ def conv2d(
     else:
         raise ValueError("data_format must be in NCHW or NHWC")
 
-    weight = flow.get_variable(
-        weight_name if weight_name else name_prefix + "-weight",
-        shape=weight_shape,
-        dtype=inputs.dtype,
-        initializer=kernel_initializer
-        if kernel_initializer is not None
-        else flow.constant_initializer(0),
-        regularizer=kernel_regularizer,
-        trainable=trainable,
-        model_name="weight",
-    )
+    if kernel_initializer is None:
+        kernel_initializer = flow.constant_initializer(0)
+
+    if weight_name is None:
+        with flow.scope.namespace(name):
+            weight = flow.get_variable(
+                name="weight",
+                shape=weight_shape,
+                dtype=inputs.dtype,
+                initializer=kernel_initializer,
+                regularizer=kernel_regularizer,
+                trainable=trainable,
+                model_name="weight",
+                reuse=False,
+            )
+    else:
+        weight = flow.get_variable(
+            name=weight_name,
+            shape=weight_shape,
+            dtype=inputs.dtype,
+            initializer=kernel_initializer,
+            regularizer=kernel_regularizer,
+            trainable=trainable,
+            model_name="weight",
+            reuse=False,
+        )
 
     output = flow.nn.conv2d(
         inputs,
@@ -234,23 +249,41 @@ def conv2d(
         groups=groups,
         name=name,
     )
+
     if use_bias:
-        bias = flow.get_variable(
-            bias_name if bias_name else name_prefix + "-bias",
-            shape=(filters,),
-            dtype=inputs.dtype,
-            initializer=bias_initializer
-            if bias_initializer is not None
-            else flow.constant_initializer(0),
-            regularizer=bias_regularizer,
-            trainable=trainable,
-            model_name="bias",
-        )
-        output = flow.nn.bias_add(
-            output, bias, data_format, name=name_prefix + "-bias_add"
-        )
-    if activation is not None:
-        output = activation(output, name=name_prefix + "-activation")
+        if bias_initializer is None:
+            bias_initializer = flow.constant_initializer(0)
+
+        if bias_name is None:
+            with flow.scope.namespace(name):
+                bias = flow.get_variable(
+                    name="bias",
+                    shape=(filters,),
+                    dtype=inputs.dtype,
+                    initializer=bias_initializer,
+                    regularizer=bias_regularizer,
+                    trainable=trainable,
+                    model_name="bias",
+                    reuse=False,
+                )
+        else:
+            bias = flow.get_variable(
+                name=bias_name,
+                shape=(filters,),
+                dtype=inputs.dtype,
+                initializer=bias_initializer,
+                regularizer=bias_regularizer,
+                trainable=trainable,
+                model_name="bias",
+                reuse=False,
+            )
+
+        with flow.scope.namespace(name):
+            output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
+
+    if callable(activation):
+        with flow.scope.namespace(name):
+            output = activation(output, name="activation")
 
     return output
 
@@ -264,7 +297,7 @@ def layer_norm(
     begin_norm_axis: int = 1,
     begin_params_axis: int = -1,
     epsilon: float = 1e-5,
-    name: Optional[str] = None,
+    name: str = "LayerNorm",
 ) -> remote_blob_util.BlobDef:
     r"""Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
 
@@ -281,8 +314,7 @@ def layer_norm(
     Returns:
         remote_blob_util.BlobDef: A normalized `Blob` with same shape of input. 
     """
-    name = name if name is not None else id_util.UniqueStr("LayerNorm_")
-    op = (
+    op_builder = (
         flow.user_op_builder(name)
         .Op("layer_norm")
         .Input("x", [inputs])
@@ -290,38 +322,49 @@ def layer_norm(
         .Output("mean")
         .Output("inv_variance")
     )
-    if center == False and scale == False:
+
+    if center is False and scale is False:
         trainable = False
+
     param_shape = inputs.shape[begin_params_axis:]
     if center:
-        beta = flow.get_variable(
-            name="{}-beta".format(name),
-            shape=param_shape,
-            dtype=inputs.dtype,
-            initializer=flow.constant_initializer(0.0),
-            trainable=trainable,
-            model_name="beta",
-            distribute=distribute_util.broadcast(),
-        )
-        op.Input("beta", [beta])
+        with flow.scope.namespace(name):
+            beta = flow.get_variable(
+                name="beta",
+                shape=param_shape,
+                dtype=inputs.dtype,
+                initializer=flow.constant_initializer(0.0),
+                trainable=trainable,
+                model_name="beta",
+                distribute=distribute_util.broadcast(),
+                reuse=False,
+            )
+
+        op_builder.Input("beta", [beta])
+
     if scale:
-        gamma = flow.get_variable(
-            name="{}-gamma".format(name),
-            shape=param_shape,
-            dtype=inputs.dtype,
-            initializer=flow.constant_initializer(1.0),
-            trainable=trainable,
-            model_name="gamma",
-            distribute=distribute_util.broadcast(),
-        )
-        op.Input("gamma", [gamma])
-        op.Output("normalized")
-    op.Attr("center", center)
-    op.Attr("scale", scale)
-    op.Attr("begin_norm_axis", begin_norm_axis)
-    op.Attr("begin_params_axis", begin_params_axis)
-    op.Attr("epsilon", epsilon)
-    return op.Build().InferAndTryRun().RemoteBlobList()[0]
+        with flow.scope.namespace(name):
+            gamma = flow.get_variable(
+                name="gamma",
+                shape=param_shape,
+                dtype=inputs.dtype,
+                initializer=flow.constant_initializer(1.0),
+                trainable=trainable,
+                model_name="gamma",
+                distribute=distribute_util.broadcast(),
+                reuse=False,
+            )
+
+        op_builder.Input("gamma", [gamma])
+        op_builder.Output("normalized")
+
+    op_builder.Attr("center", center)
+    op_builder.Attr("scale", scale)
+    op_builder.Attr("begin_norm_axis", begin_norm_axis)
+    op_builder.Attr("begin_params_axis", begin_params_axis)
+    op_builder.Attr("epsilon", epsilon)
+
+    return op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("layers.layer_norm_grad")
@@ -331,7 +374,7 @@ def layer_norm_grad(
     mean: remote_blob_util.BlobDef,
     inv_variance: remote_blob_util.BlobDef,
     begin_norm_axis: int = 1,
-    name: Optional[str] = None,
+    name: str = "LayerNormGrad",
 ) -> remote_blob_util.BlobDef:
     """Layer normalization
 
@@ -346,7 +389,6 @@ def layer_norm_grad(
     Returns:
         remote_blob_util.BlobDef: Gradient with respect to input `Blob`. 
     """
-    name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
     op = (
         flow.user_op_builder(name)
         .Op("layer_norm_grad")
@@ -357,8 +399,9 @@ def layer_norm_grad(
         .Output("dx")
         .Attr("begin_norm_axis", begin_norm_axis)
         .Attr("epsilon", 1e-5)
+        .Build()
     )
-    return op.Build().InferAndTryRun().RemoteBlobList()[0]
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("layers.layer_norm_param_grad")
@@ -384,8 +427,12 @@ def layer_norm_param_grad(
                 beta_diff: Gradient with respect to shift parameter beta.
                 gamma_diff: Gradient with respect to scale parameter gamma.
     """
-    name = name if name is not None else id_util.UniqueStr("LayerNormGrad_")
-    normalized_diff, beta_diff, gamma_diff, reduce_buf = (
+
+    name: str = "LayerNormParamGrad",
+) -> Tuple[
+    remote_blob_util.BlobDef, remote_blob_util.BlobDef, remote_blob_util.BlobDef
+]:
+    op = (
         flow.user_op_builder(name)
         .Op("layer_norm_param_grad")
         .Input("dy", [dy])
@@ -397,9 +444,15 @@ def layer_norm_param_grad(
         .Output("reduce_buf")
         .Attr("begin_params_axis", begin_params_axis)
         .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()
     )
+
+    (
+        normalized_diff,
+        beta_diff,
+        gamma_diff,
+        reduce_buf,
+    ) = op.InferAndTryRun().RemoteBlobList()
+
     return normalized_diff, beta_diff, gamma_diff
 
 
@@ -419,7 +472,7 @@ def batch_normalization(
     moving_variance_initializer: Optional[op_conf_util.InitializerConf] = None,
     trainable: bool = True,
     training: bool = True,
-    name: Optional[str] = None,
+    name: str = "BatchNorm",
 ) -> remote_blob_util.BlobDef:
     r"""Analogous to `tf.keras.layers.BatchNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization>`_
 
@@ -446,9 +499,10 @@ def batch_normalization(
     Raises:
         ValueError: If axis is out of dimension of input.
     """
-    assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
     if axis < 0:
         axis += len(inputs.shape)
+    assert axis >= 0 and axis < len(inputs.shape)
+
     params_shape = [inputs.shape[axis]]
     # Float32 required to avoid precision-loss when using fp16 input/output
     params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
@@ -456,52 +510,56 @@ def batch_normalization(
     if not flow.current_global_function_desc().IsTrainable() or not trainable:
         training = False
 
-    if name is None:
-        name = id_util.UniqueStr("BatchNorm_")
+    with flow.scope.namespace(name):
+        if center:
+            beta = flow.get_variable(
+                name="beta",
+                shape=params_shape,
+                dtype=params_dtype,
+                initializer=beta_initializer or flow.zeros_initializer(),
+                regularizer=beta_regularizer,
+                trainable=trainable,
+                distribute=distribute_util.broadcast(),
+                reuse=False,
+            )
+        else:
+            beta = flow.constant(0, dtype=params_dtype, shape=params_shape, name="beta")
 
-    if center:
-        beta = flow.get_variable(
-            name=name + "-beta",
+        if scale:
+            gamma = flow.get_variable(
+                name="gamma",
+                shape=params_shape,
+                dtype=params_dtype,
+                initializer=gamma_initializer or flow.ones_initializer(),
+                regularizer=gamma_regularizer,
+                trainable=trainable,
+                distribute=distribute_util.broadcast(),
+                reuse=False,
+            )
+        else:
+            gamma = flow.constant(
+                1, dtype=params_dtype, shape=params_shape, name="gamma"
+            )
+
+        moving_mean = flow.get_variable(
+            name="moving_mean",
             shape=params_shape,
             dtype=params_dtype,
-            initializer=beta_initializer or flow.zeros_initializer(),
-            regularizer=beta_regularizer,
-            trainable=trainable,
+            initializer=moving_mean_initializer or flow.zeros_initializer(),
+            trainable=False,
             distribute=distribute_util.broadcast(),
+            reuse=False,
         )
-    else:
-        beta = flow.constant(0, dtype=params_dtype, shape=params_shape)
 
-    if scale:
-        gamma = flow.get_variable(
-            name=name + "-gamma",
+        moving_variance = flow.get_variable(
+            name="moving_variance",
             shape=params_shape,
             dtype=params_dtype,
-            initializer=gamma_initializer or flow.ones_initializer(),
-            regularizer=gamma_regularizer,
-            trainable=trainable,
+            initializer=moving_variance_initializer or flow.ones_initializer(),
+            trainable=False,
             distribute=distribute_util.broadcast(),
+            reuse=False,
         )
-    else:
-        gamma = flow.constant(1, dtype=params_dtype, shape=params_shape)
-
-    moving_mean = flow.get_variable(
-        name=name + "-moving_mean",
-        shape=params_shape,
-        dtype=params_dtype,
-        initializer=moving_mean_initializer or flow.zeros_initializer(),
-        trainable=False,
-        distribute=distribute_util.broadcast(),
-    )
-
-    moving_variance = flow.get_variable(
-        name=name + "-moving_variance",
-        shape=params_shape,
-        dtype=params_dtype,
-        initializer=moving_variance_initializer or flow.ones_initializer(),
-        trainable=False,
-        distribute=distribute_util.broadcast(),
-    )
 
     builder = (
         flow.user_op_builder(name)
@@ -519,12 +577,20 @@ def batch_normalization(
     )
     if trainable and training:
         builder = builder.Output("mean").Output("inv_variance")
+
     return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("layers.upsample_2d")
-def upsample(x, size=(2, 2), data_format="NCHW", interpolation="nearest", name=None):
-    r"""Upsample Operation
+
+def upsample(
+    x: remote_blob_util.BlobDef,
+    size: Sequence[int] = (2, 2),
+    data_format: str = "NCHW",
+    interpolation: str = "nearest",
+    name: str = "Upsample2D",
+):
+     r"""Upsample Operation
 
     Args:
         x ([type]): Input `Blob`.
@@ -541,9 +607,6 @@ def upsample(x, size=(2, 2), data_format="NCHW", interpolation="nearest", name=N
     Returns:
         [type]: remote_blob_util.BlobDef:  A `Blob` with new shape of input. if  input size is(2,2),then the  new shape is [N, C, 2H, 2W].
     """
-    if name is None:
-        name = id_util.UniqueStr("Upsample2D_")
-
     if isinstance(size, int):
         height_scale = size
         width_scale = size
@@ -566,7 +629,7 @@ def upsample(x, size=(2, 2), data_format="NCHW", interpolation="nearest", name=N
     if need_transpose:
         x = flow.transpose(x, perm=[0, 3, 1, 2])
 
-    y = (
+    op = (
         flow.user_op_builder(name)
         .Op("upsample")
         .Input("x", [x])
@@ -576,10 +639,10 @@ def upsample(x, size=(2, 2), data_format="NCHW", interpolation="nearest", name=N
         .Attr("data_format", "channels_first")
         .Attr("interpolation", interpolation)
         .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
     )
+    output = op.InferAndTryRun().SoleOutputBlob()
 
     if need_transpose:
-        y = flow.transpose(y, perm=[0, 2, 3, 1])
-    return y
+        output = flow.transpose(output, perm=[0, 2, 3, 1])
+
+    return output

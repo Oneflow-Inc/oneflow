@@ -170,6 +170,21 @@ def distribute_map(xs, f, axis=0):
     return tuple(result)
 
 
+@oneflow_export("cast_to_current_logical_view")
+def cast_to_current_logical_view(
+    x: remote_blob_util.BlobDef,
+) -> remote_blob_util.BlobDef:
+    if (
+        isinstance(x, remote_blob_util.ConsistentBlob)
+        and oneflow.scope.mirrored_view_enabled()
+    ) or (
+        isinstance(x, remote_blob_util.MirroredBlob)
+        and oneflow.scope.consistent_view_enabled()
+    ):
+        x = oneflow.identity(x)
+    return x
+
+
 def _SoleConsistentLbn(blob):
     assert blob.parallel_size == 1
     if isinstance(blob, remote_blob_util.ConsistentBlob):

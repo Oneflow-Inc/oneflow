@@ -45,9 +45,9 @@ def TryCloseDefaultSession():
 
 def try_init_default_session(func):
     @functools.wraps(func)
-    def Func(*args):
+    def Func(*args, **kwargs):
         GetDefaultSession().TryInit()
-        return func(*args)
+        return func(*args, **kwargs)
 
     return Func
 

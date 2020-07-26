@@ -16,12 +16,12 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow
-import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.blob_trait as blob_trait
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 import oneflow.python.eager.eager_blob_util as eager_blob_util
@@ -115,6 +115,11 @@ class LazyConsistentBlob(ConsistentBlob):
 
     @property
     def shape(self):
+        if oneflow.scope.mirrored_view_enabled():
+            print(
+                "WARNING:",
+                "You access a consistent blob shape in mirrored view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+            )
         return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.lbn_)
 
     @property
@@ -155,7 +160,6 @@ class LazyConsistentBlob(ConsistentBlob):
         return (
             self.unique_name == rhs.unique_name
             and self.shape == rhs.shape
-            and self.shape == rhs.shape
             and self.batch_axis == rhs.batch_axis
             and self.split_axis == rhs.split_axis
             and self.is_dynamic == rhs.is_dynamic
@@ -192,6 +196,11 @@ class LazyMirroredBlob(MirroredBlob):
 
     @property
     def shape(self):
+        if oneflow.scope.consistent_view_enabled():
+            print(
+                "WARNING:",
+                "You access a mirrored blob shape in consistent view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+            )
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
             self.job_name_, self.lbn_
         )
@@ -280,9 +289,9 @@ class EagerBlobTrait(object):
 
     @property
     def dtype(self):
-        return convert_proto_dtype_to_oneflow_dtype(
-            self.blob_object.op_arg_blob_attr.dtype
-        )
+        ret = self.blob_object.op_arg_blob_attr.dtype
+        assert issubclass(ret, dtype_util.dtype)
+        return ret
 
     @property
     def batch_axis(self):
@@ -347,9 +356,8 @@ class EagerBlobTrait(object):
 
             def BoxingToSingleDevice(builder):
                 parallel_conf = placement_pb.ParallelConf()
-                parallel_conf.device_name.append(
-                    "{}:{}:{}".format(0, blob_object.parallel_desc_symbol.device_tag, 0)
-                )
+                parallel_conf.device_tag = blob_object.parallel_desc_symbol.device_tag
+                parallel_conf.device_name.append("{}:{}".format(0, 0))
                 tmp_parallel_desc_symbol = builder.GetParallelDescSymbol(parallel_conf)
                 tmp_op_arg_parallel_attr = op_arg_util.OpArgParallelAttribute(
                     tmp_parallel_desc_symbol,

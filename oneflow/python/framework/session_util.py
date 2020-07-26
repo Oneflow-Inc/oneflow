@@ -197,10 +197,10 @@ class Session(object):
 
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
-        self.ForceReleaseEagerBlobs()
         self.Sync()
         assert len(self.job_name2var_name2var_blob_) == 0
         del self.var_name2var_blob_
+        self.ForceReleaseEagerBlobs()
         c_api_util.StopGlobalSession()
         c_api_util.DestroyGlobalSession()
         self.status_ = SessionStatus.CLOSED

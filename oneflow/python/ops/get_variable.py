@@ -14,30 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from __future__ import absolute_import
+from typing import Optional, Sequence
+from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
-import oneflow.python.framework.device_util as device_util
-import oneflow.python.framework.op_arg_util as op_arg_util
-import oneflow.python.framework.id_util as id_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.dtype as dtype_util
-import oneflow.python.ops.user_op_builder as user_op_builder_util
 import oneflow.python.eager.vm_util as vm_util
-import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.lib.core.enable_if as enable_if
-from oneflow.python.oneflow_export import oneflow_export
-from typing import Union, Optional, Sequence
 import oneflow
-
 import os
 
 
@@ -52,6 +46,7 @@ def api_get_variable(
     model_name: Optional[str] = None,
     random_seed: Optional[int] = None,
     distribute: distribute_util.Distribute = distribute_util.broadcast(),
+    reuse: bool = True,
 ) -> remote_blob_util.BlobDef:
     r"""Create a variable or retrieve an existing one.
 
@@ -63,7 +58,6 @@ def api_get_variable(
         trainable: A `bool` to indicate if this variable is trainable. `True` by defauilt
         model_name: A `string`. `'weight'` or `'bias'`. `None` by defauilt
         random_seed: Random seed for random initializers. `None` by defauilt
-
     """
     api = enable_if.unique([get_lazy_variable, get_eager_variable])
     return api(
@@ -76,6 +70,7 @@ def api_get_variable(
         model_name=model_name,
         random_seed=random_seed,
         distribute=distribute,
+        reuse=reuse,
     )
 
 
@@ -90,6 +85,7 @@ def get_eager_variable(
     model_name=None,
     random_seed=None,
     distribute=distribute_util.broadcast(),
+    reuse=True,
 ):
     assert isinstance(name, str)
     assert isinstance(
@@ -100,6 +96,13 @@ def get_eager_variable(
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_ctx.GetDefaultSession()
     var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
+
+    if reuse is False:
+        assert job_var_blob is None, (
+            "varaible '{}' already exists, "
+            "getting the same variable is not allowed "
+            "when reuse is False".format(name)
+        )
 
     if job_var_blob is None:
         op_conf = _GenerateVariableOpConf(
@@ -143,6 +146,7 @@ def get_lazy_variable(
     model_name=None,
     random_seed=None,
     distribute=distribute_util.broadcast(),
+    reuse=True,
 ):
     assert isinstance(name, str)
     assert isinstance(
@@ -153,6 +157,13 @@ def get_lazy_variable(
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_ctx.GetDefaultSession()
     var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
+
+    if reuse is False:
+        assert job_var_blob is None, (
+            "varaible '{}' already exists, "
+            "getting the same variable is not allowed "
+            "when param reuse is False".format(name)
+        )
 
     if job_var_blob is None:
         op_conf = _GenerateVariableOpConf(
