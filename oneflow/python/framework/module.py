@@ -16,12 +16,36 @@ limitations under the License.
 
 from __future__ import absolute_import
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.id_util as id_util
 
 
 @oneflow_export("nn.Module")
 class Module(object):
-    def __init__(self):
-        pass
+    def __init__(self, name=None):
+        if name is None:
+            name = id_util.UniqueStr("Module_")
+        self.module_name_ = name
+        self.call_seq_no_ = 0
+
+    @property
+    def module_name(self):
+        return self.module_name_
+
+    @property
+    def call_seq_no(self):
+        return self.call_seq_no_
+
+    # only for overriding
+    # do not call module.foward(*args) directly
+    def forward(self, *args):
+        raise NotImplementedError()
 
     def __call__(self, *args):
-        raise NotImplementedError()
+        ret = self.forward(*args)
+        self.call_seq_no_ = self.call_seq_no_ + 1
+        return ret
+
+    def __del__(self):
+        assert (
+            getattr(type(self), "__call__") is Module.__call__
+        ), "do not override __call__"
