@@ -1,4 +1,6 @@
 import oneflow as flow
+import oneflow.python.framework.distribute as distribute_util
+
 import numpy as np
 import os
 
@@ -83,7 +85,7 @@ class DCGAN:
         tf_g_loss = np.load(os.path.join(result_dir, "g_loss.npy"))
         tf_d_loss = np.load(os.path.join(result_dir, "d_loss.npy"))
 
-        if gpu_num == 1:  # multi gpu result is different
+        if gpu_num == 1:  # multi-gpu result can not pass
             assert np.allclose(
                 g_loss.numpy(), tf_g_loss, rtol=1e-2, atol=1e-1
             ), "{}-{}".format(g_loss.ndarray().mean(), tf_g_loss.mean())
@@ -133,7 +135,7 @@ class DCGAN:
             const_init=const_init,
             trainable=trainable,
         )
-        out = flow.keras.activations.tanh(out)
+        out = flow.math.tanh(out)
         return out
 
     def discriminator(self, img, const_init=False, trainable=True, reuse=False):
@@ -202,6 +204,7 @@ class layers:
             if not const_init
             else flow.constant_initializer(0.002),
             trainable=trainable,
+            reuse=reuse,
         )
 
         output = flow.nn.conv2d_transpose(
@@ -221,6 +224,7 @@ class layers:
                 dtype=input.dtype,
                 initializer=flow.constant_initializer(0.0),
                 trainable=trainable,
+                reuse=reuse,
             )
 
             output = flow.nn.bias_add(output, bias, "NCHW")
@@ -252,6 +256,7 @@ class layers:
             if not const_init
             else flow.constant_initializer(0.002),
             trainable=trainable,
+            reuse=reuse,
         )
 
         output = flow.nn.compat_conv2d(
@@ -270,6 +275,7 @@ class layers:
                 dtype=input.dtype,
                 initializer=flow.constant_initializer(0.0),
                 trainable=trainable,
+                reuse=reuse,
             )
 
             output = flow.nn.bias_add(output, bias, "NCHW")
@@ -303,6 +309,7 @@ class layers:
             else flow.constant_initializer(0.002),
             trainable=trainable,
             model_name="weight",
+            reuse=reuse,
         )
 
         out = flow.matmul(a=inputs, b=weight, transpose_b=True, name=name_ + "matmul",)
@@ -317,6 +324,7 @@ class layers:
                 else flow.constant_initializer(0.002),
                 trainable=trainable,
                 model_name="bias",
+                reuse=reuse,
             )
             out = flow.nn.bias_add(out, bias, name=name_ + "_bias_add")
 
@@ -326,3 +334,104 @@ class layers:
     @classmethod
     def batchnorm(cls, input, name, axis=1, reuse=False):
         return flow.layers.batch_normalization(input, axis=axis)
+
+    @classmethod
+    def batchnorm(
+        cls,
+        inputs,
+        axis=1,
+        momentum: float = 0.99,
+        epsilon: float = 0.001,
+        center: bool = True,
+        scale: bool = True,
+        beta_initializer = None,
+        gamma_initializer = None,
+        beta_regularizer = None,
+        gamma_regularizer = None,
+        moving_mean_initializer = None,
+        moving_variance_initializer = None,
+        trainable = True,
+        training = True,
+        name: str = "BatchNorm",
+        reuse = False,
+    ):
+        name_ = name if reuse == False else name + "_reuse"
+        if axis < 0:
+            axis += len(inputs.shape)
+        assert axis >= 0 and axis < len(inputs.shape)
+
+        params_shape = [inputs.shape[axis]]
+        # Float32 required to avoid precision-loss when using fp16 input/output
+        params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
+
+        if not flow.current_global_function_desc().IsTrainable() or not trainable:
+            training = False
+
+        if center:
+            beta = flow.get_variable(
+                name=name + "beta",
+                shape=params_shape,
+                dtype=params_dtype,
+                initializer=beta_initializer or flow.zeros_initializer(),
+                regularizer=beta_regularizer,
+                trainable=trainable,
+                distribute=distribute_util.broadcast(),
+                reuse=reuse,
+            )
+        else:
+            beta = flow.constant(0, dtype=params_dtype, shape=params_shape, name="beta")
+
+        if scale:
+            gamma = flow.get_variable(
+                name=name + "gamma",
+                shape=params_shape,
+                dtype=params_dtype,
+                initializer=gamma_initializer or flow.ones_initializer(),
+                regularizer=gamma_regularizer,
+                trainable=trainable,
+                distribute=distribute_util.broadcast(),
+                reuse=reuse,
+            )
+        else:
+            gamma = flow.constant(
+                1, dtype=params_dtype, shape=params_shape, name="gamma"
+            )
+
+        moving_mean = flow.get_variable(
+            name=name + "moving_mean",
+            shape=params_shape,
+            dtype=params_dtype,
+            initializer=moving_mean_initializer or flow.zeros_initializer(),
+            trainable=False,
+            distribute=distribute_util.broadcast(),
+            reuse=reuse,
+        )
+
+        moving_variance = flow.get_variable(
+            name=name + "moving_variance",
+            shape=params_shape,
+            dtype=params_dtype,
+            initializer=moving_variance_initializer or flow.ones_initializer(),
+            trainable=False,
+            distribute=distribute_util.broadcast(),
+            reuse=reuse,
+        )
+
+        builder = (
+            flow.user_op_builder(name_)
+            .Op("normalization")
+            .Input("x", [inputs])
+            .Input("moving_mean", [moving_mean])
+            .Input("moving_variance", [moving_variance])
+            .Input("gamma", [gamma])
+            .Input("beta", [beta])
+            .Output("y")
+            .Attr("axis", axis)
+            .Attr("epsilon", epsilon)
+            .Attr("training", training)
+            .Attr("momentum", momentum)
+        )
+        if trainable and training:
+            builder = builder.Output("mean").Output("inv_variance")
+
+        return builder.Build().InferAndTryRun().RemoteBlobList()[0]
