@@ -392,9 +392,7 @@ def api_user_op_module_builder(op_type_name):
 class UserOpModuleBuilder(UserOpConfBuilder):
     def __init__(self, *args, **kwargs):
         UserOpConfBuilder.__init__(self, *args, **kwargs)
-        self.user_op_module.op_conf.scope_symbol_id = (
-            flow.current_scope().symbol_id
-        )
+        self.user_op_module.op_conf.scope_symbol_id = flow.current_scope().symbol_id
 
     @property
     def user_op_module(self):
