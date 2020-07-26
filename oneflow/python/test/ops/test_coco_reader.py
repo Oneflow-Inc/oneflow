@@ -67,6 +67,7 @@ def _make_coco_data_load_fn(
                 batch_size=batch_size,
                 shuffle=shuffle_after_epoch,
                 stride_partition=stride_partition,
+                name="COCOReader",
             )
 
             if ret_image_id_only:
