@@ -76,6 +76,12 @@ Maybe<void> CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_
   return JUST(GetCurInferCtx())->SetJobConf(job_conf);
 }
 
+Maybe<void> CurJobBuildAndInferCtx_SetTrainConf(const std::string& train_conf_str) {
+  TrainConf train_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(train_conf_str, &train_conf)) << "operator conf parse failed";
+  return JUST(GetCurInferCtx())->SetTrainConf(train_conf);
+}
+
 Maybe<void> CurJobBuildAndInferCtx_Complete() { return JUST(GetCurInferCtx())->Complete(); }
 
 Maybe<bool> CurJobBuildAndInferCtx_HasJobConf() { return JUST(GetCurInferCtx())->HasJobConf(); }

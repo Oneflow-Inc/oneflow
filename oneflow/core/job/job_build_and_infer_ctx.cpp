@@ -577,6 +577,14 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
 
 bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
 
+Maybe<void> JobBuildAndInferCtx::SetTrainConf(const TrainConf& train_conf) {
+  CHECK_OR_RETURN(!job_->job_conf().has_train_conf())
+      << JobBuildAndInferError::kUnknownJobBuildAndInferError
+      << "job has an existing TrainConf when setting TrainConf";
+  *job_->mutable_job_conf()->mutable_train_conf() = train_conf;
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) {
   if (IsMirroredBlob(lbn)) { return AddLossMirroredBlobName(lbn); }
   return AddLossConsistentBlobName(lbn);
