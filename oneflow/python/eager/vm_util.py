@@ -254,7 +254,7 @@ class InstructionsBuilder(object):
     ):
         parallel_desc_symbol = op_arg_parallel_attr.parallel_desc_symbol
         machine_id2device_ids = parallel_desc_symbol.machine_id2device_id_list
-        _, device_tag, _ = parallel_desc_symbol.parallel_conf.device_name[0].split(":")
+        device_tag = parallel_desc_symbol.parallel_conf.device_tag
         machine_device_ids = set()
         for physical_blob_object in physical_blob_objects:
             phy_paralle_desc_sym = physical_blob_object.parallel_desc_symbol
@@ -288,14 +288,13 @@ class InstructionsBuilder(object):
 
     def GetPhysicalParallelDescSymbols(self, parallel_desc_symbol):
         machine_id2device_ids = parallel_desc_symbol.machine_id2device_id_list
-        _, device_tag, _ = parallel_desc_symbol.parallel_conf.device_name[0].split(":")
+        device_tag = parallel_desc_symbol.parallel_conf.device_tag
         phy_parallel_desc_symbols = []
 
         def AppendPhyParallelDescSymbol(machine_id, device_id):
             parallel_conf = placement_pb_util.ParallelConf()
-            parallel_conf.device_name.append(
-                "%d:%s:%d" % (machine_id, device_tag, device_id)
-            )
+            parallel_conf.device_tag = device_tag
+            parallel_conf.device_name.append("%d:%d" % (machine_id, device_id))
             phy_parallel_desc_symbols.append(self.GetParallelDescSymbol(parallel_conf))
 
         for machine_id, device_ids in machine_id2device_ids.items():
@@ -353,7 +352,7 @@ class InstructionsBuilder(object):
         return symbol
 
     def GetParallelDescSymbol(self, parallel_conf):
-        _, device_tag, _ = parallel_conf.device_name[0].split(":")
+        device_tag = parallel_conf.device_tag
         serialized_parallel_conf = parallel_conf.SerializeToString()
         if symbol_storage.HasSymbol4SerializedParallelConf(serialized_parallel_conf):
             return symbol_storage.GetSymbol4SerializedParallelConf(

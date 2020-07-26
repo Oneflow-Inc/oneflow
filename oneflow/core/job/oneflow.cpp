@@ -658,7 +658,8 @@ void MakeMainJob(Job* main_job, std::vector<std::string>* identity_tick_op_names
   critical_section_sink_lbi->set_blob_name("out");
 
   ParallelConf parallel_conf;
-  parallel_conf.add_device_name("0:cpu:0");
+  parallel_conf.set_device_tag("cpu");
+  parallel_conf.add_device_name("0:0");
   JobBuilder(main_job).AddOps(parallel_conf, op_confs);
   auto* job_conf = main_job->mutable_job_conf();
   job_conf->set_job_name("MainJob-unamed");
@@ -831,7 +832,8 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     foreign_output_conf->set_in(input_op_conf.name() + "/out");
     foreign_output_conf->set_ofblob_buffer_name(GetForeignOutputBufferName(job_name));
     ParallelConf parallel_conf;
-    parallel_conf.add_device_name("0:cpu:0");
+    parallel_conf.set_device_tag("cpu");
+    parallel_conf.add_device_name("0:0");
     job_builder.AddOps(parallel_conf, {foreign_output_op_conf});
   }
   auto* job_conf = job->mutable_job_conf();
@@ -861,7 +863,8 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
     data_type = blob_conf->data_type();
     ParallelConf parallel_conf;
-    parallel_conf.add_device_name("0:cpu:0");
+    parallel_conf.set_device_tag("cpu");
+    parallel_conf.add_device_name("0:0");
     job_builder.AddOps(parallel_conf, {foreign_input_op_conf});
   }
   OperatorConf output_op_conf;

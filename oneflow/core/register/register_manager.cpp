@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
 
@@ -30,22 +31,6 @@ void CheckBlobInRegstNotDisabled(const RegstDescProto& regst_desc) {
   CHECK(regst_desc.regst_desc_type().has_data_regst_desc());
   CHECK(regst_desc.regst_desc_type().data_regst_desc().packed_blob_desc().is_body_disabled()
         == false);
-}
-
-void InitNonPODTypeBlobIfNeed(Blob* blob_ptr) {
-  const RtBlobDesc& blob_desc = blob_ptr->blob_desc();
-  if (blob_desc.data_type() == kOFRecord) {
-    int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
-    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
-      Global<MemoryAllocator>::Get()->PlacementNew(&blob_ptr->mut_dptr<OFRecord>()[idx]);
-    }
-  }
-  if (blob_desc.data_type() == kTensorBuffer) {
-    int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
-    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
-      Global<MemoryAllocator>::Get()->PlacementNew(&blob_ptr->mut_dptr<TensorBuffer>()[idx]);
-    }
-  }
 }
 
 }  // namespace
@@ -174,7 +159,7 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
           blob_ptr = std::move(std::make_unique<Blob>(regst->regst_desc()->mem_case(), blob_desc,
                                                       cur_header_pointer + header_offset,
                                                       cur_body_pointer + body_offset));
-          InitNonPODTypeBlobIfNeed(blob_ptr.get());
+          InitNonPODTypeBlobIfNeed(Global<MemoryAllocator>::Get(), blob_ptr.get());
         }
         CHECK(regst->lbi2blob_.emplace(lbi.lbi(), std::move(blob_ptr)).second);
       });
