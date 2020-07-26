@@ -80,7 +80,7 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize")
     .Attr<float>("crop_pos_x", UserOpAttrType::kAtFloat, 0.5)
     .Attr<float>("crop_pos_y", UserOpAttrType::kAtFloat, 0.5)
     .Attr<bool>("pad_output", UserOpAttrType::kAtBool, false)
-    .Attr<int32_t>("output_dtype", UserOpAttrType::kAtInt32, static_cast<int32_t>(DataType::kFloat))
+    .Attr<DataType>("output_dtype", UserOpAttrType::kAtDataType, DataType::kFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* mirror_tensor = ctx->TensorDesc4ArgNameAndIndex("mirror", 0);
@@ -118,7 +118,7 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize")
       } else {
         return Error::CheckFailed() << "output_layout: " << output_layout << " is not supported";
       }
-      DataType output_dtype = static_cast<DataType>(ctx->Attr<int32_t>("output_dtype"));
+      DataType output_dtype = ctx->Attr<DataType>("output_dtype");
       CHECK_EQ_OR_RETURN(output_dtype,
                          DataType::kFloat);  // only support float now; for float16 in future
       *out_tensor->mut_data_type() = output_dtype;
