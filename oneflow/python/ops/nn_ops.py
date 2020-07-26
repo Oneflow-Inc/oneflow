@@ -60,9 +60,6 @@ def check_conv_cudnn_padding_support(
         output_size = (
             input_size + pad[0] + pad[1] - effective_filter_size + stride
         ) // stride
-        print("input_size", input_size, "pad", pad[0])
-        print("cudnn_output_size", cudnn_output_size)
-        print("output_size", output_size)
         return cudnn_output_size == output_size
 
 
@@ -75,7 +72,6 @@ def check_ndim_conv_cudnn_padding_support(
     dhw_offset,
     is_dynamic,
 ):
-    print("check_ndim_conv_cudnn_padding_support", ndim_pads_list)
     ndims = len(ndim_pads_list)
     for i in range(ndims):
         cudnn_support = check_conv_cudnn_padding_support(
@@ -87,9 +83,7 @@ def check_ndim_conv_cudnn_padding_support(
             is_dynamic,
         )
         if not cudnn_support:
-            print("check_conv_cudnn_padding_support False")
             return False
-    print("check_conv_cudnn_padding_support True")
     return True
 
 
@@ -126,8 +120,10 @@ def calc_ndim_same_padding(
     pads_large = [ndim_padding_needed[i] - pads_small[i] for i in range(ndims)]
     if padding.upper() == "SAME_LOWER":
         return [[pads_large[i], pads_small[i]] for i in range(ndims)]
-    else:  # SAME_UPPER
+    elif padding.upper() == "SAME_UPPER":
         return [[pads_small[i], pads_large[i]] for i in range(ndims)]
+    else:
+        raise NotImplementedError
 
 
 def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, strides):
@@ -156,7 +152,6 @@ def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, str
                     kernel_size=kernel_sizes,
                     strides=strides,
                     dilation_rate=dilations,
-                    constant_value=0,
                 )
                 return inputs, return_pads_list
             else:
@@ -182,13 +177,11 @@ def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, str
     )
 
     if cudnn_padding_support:
-        print("using cudnn", inputs.shape, ndim_pads_list)
         return inputs, ndim_pads_list
     else:
         pad_op_list = [[0, 0]] * (ndims + 2)
         for i in range(ndims):
             pad_op_list[dhw_offset + i] = ndim_pads_list[i]
-        print("using pad op", inputs.shape, pad_op_list)
         inputs = flow.pad(inputs, paddings=pad_op_list)
         return_pads_list = [[0, 0]] * ndims
         return inputs, return_pads_list
@@ -212,7 +205,6 @@ def conv2d(
     """
     assert len(input.shape) == 4
     assert len(filters.shape) == 4
-    print("nn2d padding", padding)
 
     if isinstance(strides, (list, tuple)):
         assert len(strides) == 2, ValueError(
@@ -226,7 +218,7 @@ def conv2d(
     if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
         raise ValueError('data_format must be "NHWC" or "NCHW".')
 
-    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
+    channel_pos = "channels_first" if data_format == "NCHW" else "channels_last"
 
     if dilations is None:
         dilations = [1, 1]
@@ -260,18 +252,6 @@ def conv2d(
             raise ValueError("data_format NHWC not support groups > 1")
         else:
             raise ValueError("invalid data_format")
-    print(
-        "input.shape",
-        input.shape,
-        "padding",
-        padding,
-        "kernel_size_list",
-        kernel_size_list,
-        "dilations",
-        dilations,
-        "strides",
-        strides,
-    )
     inputs, pads_list = calc_conv_padding(
         input, padding, data_format.upper(), kernel_size_list, dilations, strides,
     )
@@ -551,7 +531,6 @@ def max_pool2d(
         .Input("x", [input])
         .Output("y")
     )
-    # assert padding in ["VALID", "SAME"]
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
     channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
     op.Attr("data_format", channel_pos)
@@ -563,9 +542,6 @@ def max_pool2d(
     assert len(pads_list) == len(input.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
-    print("padding_type", padding_type)
-    print("padding_before", padding_before)
-    print("padding_after", padding_after)
     op.Attr("padding", padding_type)
     op.Attr("padding_before", padding_before)
     op.Attr("padding_after", padding_after)
@@ -595,8 +571,6 @@ def avg_pool2d(
         .Input("x", [input])
         .Output("y")
     )
-    # assert padding in ["VALID", "SAME"]
-    # op.Attr("padding", padding.lower())
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
     channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
     op.Attr("data_format", channel_pos)
@@ -608,8 +582,6 @@ def avg_pool2d(
     assert len(pads_list) == len(input.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
-    print("padding_before", padding_before)
-    print("padding_after", padding_after)
     op.Attr("padding", padding_type)
     op.Attr("padding_before", padding_before)
     op.Attr("padding_after", padding_after)
@@ -639,10 +611,8 @@ def max_pool3d(
         .Input("x", [input])
         .Output("y")
     )
-    # assert padding in ["VALID", "SAME"]
-    # op.Attr("padding", padding.lower())
     assert data_format in ["NDHWC", "NCDHW"]
-    channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+    channel_pos = "channels_last" if data_format == "NDHWC" else "channels_first"
     op.Attr("data_format", channel_pos)
     pool_size = _GetSequence(ksize, 3, "ksize")
     op.Attr("pool_size", pool_size)
@@ -652,8 +622,6 @@ def max_pool3d(
     assert len(pads_list) == len(input.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
-    print("padding_before", padding_before)
-    print("padding_after", padding_after)
     op.Attr("padding", padding_type)
     op.Attr("padding_before", padding_before)
     op.Attr("padding_after", padding_after)
@@ -683,10 +651,8 @@ def avg_pool3d(
         .Input("x", [input])
         .Output("y")
     )
-    # assert padding in ["VALID", "SAME"]
-    # op.Attr("padding", padding.lower())
     assert data_format in ["NDHWC", "NCDHW"]
-    channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+    channel_pos = "channels_last" if data_format == "NDHWC" else "channels_first"
     op.Attr("data_format", channel_pos)
     pool_size = _GetSequence(ksize, 3, "ksize")
     op.Attr("pool_size", pool_size)

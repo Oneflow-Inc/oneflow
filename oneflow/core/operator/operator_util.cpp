@@ -98,11 +98,14 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dila
         static_cast<int32_t>((tmp_output_size - 1) * stride + effective_filter_size - input_size));
     const int32_t padding_small = padding_needed / 2;
     const int32_t padding_large = padding_needed - padding_needed / 2;
-    if (padding_before) {
-      *padding_before = padding_type == "same_upper" ? padding_small : padding_large;
-    }
-    if (padding_after) {
-      *padding_after = padding_type == "same_upper" ? padding_large : padding_small;
+    if (padding_type == "same_upper") {
+      if (padding_before) { *padding_before = padding_small; }
+      if (padding_after) { *padding_after = padding_large; }
+    } else if (padding_type == "same_lower") {
+      if (padding_before) { *padding_before = padding_large; }
+      if (padding_after) { *padding_after = padding_small; }
+    } else {
+      LOG(FATAL) << "invalid padding_type " << padding_type;
     }
   }
   if (output_size) { CHECK_GE((*output_size), 0); }

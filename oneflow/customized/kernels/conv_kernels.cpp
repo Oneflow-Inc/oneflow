@@ -351,7 +351,6 @@ std::shared_ptr<user_op::OpKernelState> CreateConvOpKernelState(user_op::KernelI
   state->strides_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("strides"));
   state->dilation_rate_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("dilation_rate"));
 
-  // state->padding_before_3d_.resize(3);
   const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - padding_before.size());

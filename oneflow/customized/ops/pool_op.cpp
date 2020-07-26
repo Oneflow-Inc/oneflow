@@ -27,8 +27,8 @@ typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn Ad
 TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-    const std::string data_format = ctx->Attr<std::string>("data_format");
-    const std::string padding = ctx->Attr<std::string>("padding");
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
+    const std::string& padding = ctx->Attr<std::string>("padding");
     const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
     const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
     const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");

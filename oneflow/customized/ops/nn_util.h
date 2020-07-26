@@ -32,6 +32,7 @@ void CalcConvOut(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
                  int32_t padding_before, int64_t* output_size);
 
 const size_t IdxOffset(const std::string& data_format);
+const int32_t ChannelIdx(const std::string& data_format, int32_t num_axes);
 
 }  // namespace oneflow
 

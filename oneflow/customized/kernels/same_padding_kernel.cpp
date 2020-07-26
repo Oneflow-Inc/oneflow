@@ -42,8 +42,8 @@ class SamePaddingKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t num_axes = x->shape().NumAxes();
-    const std::string padding = ctx->Attr<std::string>("padding");
-    const std::string data_format = ctx->Attr<std::string>("data_format");
+    const std::string& padding = ctx->Attr<std::string>("padding");
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     const std::vector<int32_t> strides = ctx->Attr<std::vector<int32_t>>("strides");
     const std::vector<int32_t> dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
@@ -55,10 +55,12 @@ class SamePaddingKernel final : public user_op::OpKernel {
       int32_t padding_large = 0;
       CalcSamePadding(x->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
                       strides.at(i), padding, &padding_small, &padding_large);
-      if (padding == "SAME_LOWER") {
+      if (padding == "same_lower") {
         padding_before[idx_offset + i] = padding_large;
-      } else {  //"SAME_UPPER"
+      } else if (padding == "same_upper") {
         padding_before[idx_offset + i] = padding_small;
+      } else {
+        LOG(FATAL) << "padding must be same_lower or same_upper but get " << padding;
       }
       CHECK_EQ(y->shape().At(idx_offset + i),
                x->shape().At(idx_offset + i) + padding_small + padding_large);
@@ -119,8 +121,8 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int64_t num_axes = dy->shape().NumAxes();
-    const std::string padding = ctx->Attr<std::string>("padding");
-    const std::string data_format = ctx->Attr<std::string>("data_format");
+    const std::string& padding = ctx->Attr<std::string>("padding");
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     const std::vector<int32_t> strides = ctx->Attr<std::vector<int32_t>>("strides");
     const std::vector<int32_t> dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");

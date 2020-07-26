@@ -55,7 +55,7 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
     if (this->is_dynamic_) {
       const ShapeView& x_shape = ctx->Tensor4ArgNameAndIndex("x", 0)->shape();
       const std::string& data_format = ctx->Attr<std::string>("data_format");
-      const std::string padding = ctx->Attr<std::string>("padding");
+      const std::string& padding = ctx->Attr<std::string>("padding");
       const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
       const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
       const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
@@ -106,7 +106,7 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
     } else {
       const Shape& x_shape = x_desc->shape();
       const std::string& data_format = ctx->Attr<std::string>("data_format");
-      const std::string padding = ctx->Attr<std::string>("padding");
+      const std::string& padding = ctx->Attr<std::string>("padding");
       const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
       const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
       const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");

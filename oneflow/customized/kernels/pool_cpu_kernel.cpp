@@ -338,7 +338,7 @@ std::shared_ptr<user_op::OpKernelState> DoCreateOpKernelState(user_op::KernelIni
                                                               const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const std::string& data_format = ctx->Attr<std::string>("data_format");
-  const std::string padding = ctx->Attr<std::string>("padding");
+  const std::string& padding = ctx->Attr<std::string>("padding");
   const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
   const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
   const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");

@@ -32,11 +32,11 @@ REGISTER_USER_OP("same_padding")
       const TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
       *y_desc = *x_desc;
-      const std::string padding = ctx->Attr<std::string>("padding");
-      const std::string data_format = ctx->Attr<std::string>("data_format");
-      const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-      const std::vector<int32_t> strides = ctx->Attr<std::vector<int32_t>>("strides");
-      const std::vector<int32_t> dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+      const std::string& padding = ctx->Attr<std::string>("padding");
+      const std::string& data_format = ctx->Attr<std::string>("data_format");
+      const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+      const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
+      const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
       const size_t idx_offset = IdxOffset(data_format);
       const int32_t num_spatial_dims = x_desc->shape().NumAxes() - 2;
       CHECK_EQ_OR_RETURN(num_spatial_dims, kernel_size.size());
@@ -55,7 +55,19 @@ REGISTER_USER_OP("same_padding")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const int32_t num_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("x_like", 0).shape().NumAxes();
+      const std::string& data_format = ctx->Attr<std::string>("data_format");
       ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0).Split(user_op::OpArg("y", 0), 0).Build();
+      const int32_t channel_idx = ChannelIdx(data_format, num_axes);
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), channel_idx)
+          .Split(user_op::OpArg("y", 0), channel_idx)
+          .Build();
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("x", 0))
+          .PartialSum(user_op::OpArg("y", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -73,10 +85,29 @@ REGISTER_USER_OP("same_padding_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const int32_t num_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("x_like", 0).shape().NumAxes();
+      const std::string& data_format = ctx->Attr<std::string>("data_format");
       ctx->NewBuilder()
           .Split(user_op::OpArg("x_like", 0), 0)
           .Split(user_op::OpArg("dy", 0), 0)
           .Split(user_op::OpArg("dx", 0), 0)
+          .Build();
+      const int32_t channel_idx = ChannelIdx(data_format, num_axes);
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x_like", 0), channel_idx)
+          .Split(user_op::OpArg("dy", 0), channel_idx)
+          .Split(user_op::OpArg("dx", 0), channel_idx)
+          .Build();
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("x_like", 0))
+          .PartialSum(user_op::OpArg("dy", 0))
+          .PartialSum(user_op::OpArg("dx", 0))
+          .Build();
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("x_like", 0))
+          .PartialSum(user_op::OpArg("dy", 0))
+          .PartialSum(user_op::OpArg("dx", 0))
           .Build();
       return Maybe<void>::Ok();
     });
@@ -84,12 +115,11 @@ REGISTER_USER_OP("same_padding_grad")
 REGISTER_USER_OP_GRAD("same_padding")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        const std::string padding = op.attr<std::string>("padding");
-        const std::string data_format = op.attr<std::string>("data_format");
-        const std::vector<int32_t> kernel_size = op.attr<std::vector<int32_t>>("kernel_size");
-        const std::vector<int32_t> strides = op.attr<std::vector<int32_t>>("strides");
-        const std::vector<int32_t> dilation_rate = op.attr<std::vector<int32_t>>("dilation_rate");
-
+        const std::string& padding = op.attr<std::string>("padding");
+        const std::string& data_format = op.attr<std::string>("data_format");
+        const auto& kernel_size = op.attr<std::vector<int32_t>>("kernel_size");
+        const auto& strides = op.attr<std::vector<int32_t>>("strides");
+        const auto& dilation_rate = op.attr<std::vector<int32_t>>("dilation_rate");
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
             builder.Op("same_padding_grad")
