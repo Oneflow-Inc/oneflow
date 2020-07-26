@@ -48,6 +48,7 @@ def test_scalar_div_by_2(test_case):
 
 def test_scalar_div_2_mirrored(test_case):
     func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
@@ -61,6 +62,7 @@ def test_scalar_div_2_mirrored(test_case):
 
 def test_scalar_div_by_2_mirrored(test_case):
     func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)

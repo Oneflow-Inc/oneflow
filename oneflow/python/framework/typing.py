@@ -195,6 +195,9 @@ class Callback(typing.Generic[typing.TypeVar("T")]):
 def OriginFrom(parameterised, generic):
     if inspect.isclass(parameterised) and inspect.isclass(generic):
         return issubclass(parameterised, generic)
+    if generic == OneflowNumpyDef:
+        assert not inspect.isclass(parameterised)
+        return False
     if (sys.version_info.major, sys.version_info.minor) >= (3, 7):
         if not hasattr(parameterised, "__origin__"):
             return False
