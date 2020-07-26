@@ -1,17 +1,10 @@
 name: Build and Test CI
 
-on: 
-  pull_request:
-    types: [synchronize, opened, reopened, ready_for_review]
-    branches:
-      - develop
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
+on:
   workflow_dispatch:
     inputs:
       placeholder:
-        description: 'placeholder, no effect'     
+        description: 'placeholder, no effect'
         required: false
 jobs:
 
