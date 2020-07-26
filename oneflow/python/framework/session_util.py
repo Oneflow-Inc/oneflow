@@ -44,6 +44,7 @@ import oneflow.python.eager.blob_register as blob_register_util
 from contextlib import contextmanager
 import inspect
 import oneflow
+import traceback
 
 
 class Session(object):
@@ -120,7 +121,7 @@ class Session(object):
 
     def MakeScope(self, build_func):
         scope = None
-        old_scope = oneflow.scope.current_scope()
+        old_scope = oneflow.current_scope()
         assert old_scope is not None
 
         def BuildScope(builder):
@@ -346,7 +347,7 @@ def clear_default_session() -> None:
     session_ctx.OpenDefaultSession(Session())
 
 
-@oneflow_export("scope.current_scope")
+@oneflow_export("current_scope")
 def current_scope():
     r""" Return current scope
     """
@@ -377,3 +378,17 @@ def _GetDefaultConfigProto():
 
 
 session_ctx.OpenDefaultSession(Session())
+
+
+@oneflow_export("scope.current_scope")
+def deprecated_current_scope(*args, **kwargs):
+    print(
+        "WARNING:",
+        "oneflow.scope.current_scope",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.current_scope"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+
+    return current_scope(*args, **kwargs)
