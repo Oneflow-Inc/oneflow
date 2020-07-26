@@ -48,6 +48,18 @@ def Interpret(op_attribute, parallel_conf, blob_register):
     return _NaiveInterpret(op_attribute, parallel_conf, blob_register)
 
 
+def OpKernelCall(opkernel_object, op_attribute, blob_register):
+    def BuildInstruction(builder):
+        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+            builder.StatefulCall(
+                op_attribute,
+                opkernel_object=opkernel_object,
+                bn_in_op2blob_object=bn_in_op2blob_object,
+            )
+
+    vm_util.LogicalRun(BuildInstruction)
+
+
 def MirroredCast(op_attribute, blob_register):
     def BuildInstruction(builder):
         with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:

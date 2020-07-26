@@ -16,7 +16,6 @@ message OpAttribute {
   repeated string output_bns = 2;
   repeated string tmp_bns = 3;
   repeated string const_buf_bns = 4;
-  optional int64 parallel_desc_symbol_id = 5;
 
   required OperatorConf op_conf = 50;
 

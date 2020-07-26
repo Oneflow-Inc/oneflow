@@ -2,7 +2,7 @@
 set -xe
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
-wheel_path=${ONEFLOW_WHEEL_PATH:-"$PWD/ci_tmp"}
+wheel_path=${ONEFLOW_WHEEL_PATH:-"$PWD/wheelhouse"}
 
 if [ -d "$wheel_path" ]; then
     ls -la $wheel_path

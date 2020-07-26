@@ -32,16 +32,17 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
                                                    const int64_t parallel_id) {
   std::string device_name;
   device_name += std::to_string(pd.MachineIdForParallelId(parallel_id));
-  if (pd.device_type() == DeviceType::kGPU) {
-    device_name += ":gpu:";
-  } else if (pd.device_type() == DeviceType::kCPU) {
-    device_name += ":cpu:";
-  } else {
-    UNIMPLEMENTED();
-  }
+  device_name += ":";
   device_name += std::to_string(pd.DeviceIdForParallelId(parallel_id));
   ParallelConf parallel_conf;
   *parallel_conf.mutable_device_name()->Add() = device_name;
+  if (pd.device_type() == DeviceType::kGPU) {
+    parallel_conf.set_device_tag("gpu");
+  } else if (pd.device_type() == DeviceType::kCPU) {
+    parallel_conf.set_device_tag("cpu");
+  } else {
+    UNIMPLEMENTED();
+  }
   return parallel_conf;
 }
 
