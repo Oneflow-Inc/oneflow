@@ -58,7 +58,8 @@ void BuildSourceTickOpAndParallelConf(OperatorConf* src_tick_op, JobBuilder* job
   src_tick_op->set_name("System-AutoTick-SourceTick_" + NewUniqueId());
   src_tick_op->mutable_source_tick_conf()->set_out("out");
   ParallelConf parallel_conf;
-  parallel_conf.add_device_name("0:cpu:0");
+  parallel_conf.set_device_tag("cpu");
+  parallel_conf.add_device_name("0:0");
   job_builder->AddOps(parallel_conf, {*src_tick_op});
 }
 
@@ -66,7 +67,8 @@ void BuildSinkTickOpAndParallelConf(OperatorConf* sink_tick_op, JobBuilder* job_
   sink_tick_op->set_name("System-AutoTick-SinkTick_" + NewUniqueId());
   sink_tick_op->mutable_sink_tick_conf()->set_out("out");
   ParallelConf parallel_conf;
-  parallel_conf.add_device_name("0:cpu:0");
+  parallel_conf.set_device_tag("cpu");
+  parallel_conf.add_device_name("0:0");
   job_builder->AddOps(parallel_conf, {*sink_tick_op});
 }
 

@@ -535,8 +535,9 @@ def GetConcatSplitBoxingParallelDescSymbol(
 ):
     random_rank_id = random.randint(0, max_parallel_num - 1)
     parallel_conf = placement_pb.ParallelConf()
+    parallel_conf.device_tag = "cpu"
     for machine_id, _ in blob_parallel_desc_symbol.machine_id2device_id_list.items():
-        parallel_conf.device_name.append("%s:cpu:%s" % (machine_id, random_rank_id))
+        parallel_conf.device_name.append("%s:%s" % (machine_id, random_rank_id))
     return builder.GetParallelDescSymbol(parallel_conf)
 
 
@@ -799,7 +800,7 @@ conditional_function_table = [
         OptionalBoxing(CopyH2D),
     ),
     # P -> B
-    NcclAllReduce,  # e.g. 0:gpu:0-3 -> 0:gpu:0-3
+    NcclAllReduce,  # e.g. gpu, 0:0-3 -> gpu, 0:0-3
     Sequential(
         boxing_middle.BoxingToMiddle(
             OptionalBoxing(CopyD2H),

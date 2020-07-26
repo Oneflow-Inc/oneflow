@@ -108,7 +108,7 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
       << JobBuildAndInferError::kJobNameNotEqual << "job name you set: " << job_conf.job_name()
       << " not equal to origin job name: " << job_->job_conf().job_name();
   job_->mutable_job_conf()->CopyFrom(job_conf);
-  CHECK_ISNULL(Global<JobDesc>::Get());
+  CHECK_ISNULL_OR_RETURN(Global<JobDesc>::Get());
   Global<JobDesc>::New(job_conf, job_id_);
   return Maybe<void>::Ok();
 }
