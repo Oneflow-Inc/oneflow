@@ -37,6 +37,11 @@ class ScopeSymbol(Symbol):
         self.host_parallel_desc_symbol_ = symbol_storage.GetSymbol4Id(
             scope_proto.host_parallel_desc_symbol_id
         )
+        self.auto_increment_id_ = 0
+
+    def auto_increment_id(self):
+        self.auto_increment_id_ = self.auto_increment_id_ + 1
+        return self.auto_increment_id_
 
     @property
     def job_desc_symbol(self):

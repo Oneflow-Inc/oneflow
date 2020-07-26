@@ -58,8 +58,9 @@ class OpKernelObject : public vm::Object {
     opkernel_state_ = opkernel_state;
   }
 
-  void ResetOpAndKernel(const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
-                        const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
+  Maybe<void> ResetOpAndKernel(const SbpSignature* sbp_signature,
+                               const ParallelContext* parallel_ctx,
+                               const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
 
   const BlobObject& tmp_buffer_blob_object() const { return *tmp_buffer_blob_object_; }
   BlobObject* mut_tmp_buffer_blob_object() { return tmp_buffer_blob_object_.get(); }
@@ -69,10 +70,10 @@ class OpKernelObject : public vm::Object {
   }
 
  private:
-  void InferBlobDescs(const Operator& op,
-                      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-                      const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
-                      std::unique_ptr<OpContext>* op_ctx);
+  Maybe<void> InferBlobDescs(const Operator& op,
+                             const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+                             const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
+                             std::unique_ptr<OpContext>* op_ctx);
   void NewPartialInitializedKernel(
       const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, OpContext* op_ctx);
@@ -101,14 +102,14 @@ class SystemOpKernelObject : public vm::Object {
 
   const Kernel& kernel() const { return *kernel_; }
 
-  void ResetKernel(const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
-                   const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
+  Maybe<void> ResetKernel(const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
+                          const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
 
  private:
-  void InferBlobDescs(const Operator& op,
-                      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-                      const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
-                      std::unique_ptr<OpContext>* op_ctx);
+  Maybe<void> InferBlobDescs(const Operator& op,
+                             const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+                             const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
+                             std::unique_ptr<OpContext>* op_ctx);
   void ResetKernel(const Operator& op,
                    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
                    const ParallelContext* parallel_ctx, OpContext* op_ctx);
