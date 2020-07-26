@@ -356,9 +356,8 @@ class EagerBlobTrait(object):
 
             def BoxingToSingleDevice(builder):
                 parallel_conf = placement_pb.ParallelConf()
-                parallel_conf.device_name.append(
-                    "{}:{}:{}".format(0, blob_object.parallel_desc_symbol.device_tag, 0)
-                )
+                parallel_conf.device_tag = blob_object.parallel_desc_symbol.device_tag
+                parallel_conf.device_name.append("{}:{}".format(0, 0))
                 tmp_parallel_desc_symbol = builder.GetParallelDescSymbol(parallel_conf)
                 tmp_op_arg_parallel_attr = op_arg_util.OpArgParallelAttribute(
                     tmp_parallel_desc_symbol,
