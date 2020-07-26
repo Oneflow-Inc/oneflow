@@ -203,6 +203,7 @@ def test_deconv2d_NCHW_1n4c(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
+
 def test_deconv2d_NHWC_1n4c(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
