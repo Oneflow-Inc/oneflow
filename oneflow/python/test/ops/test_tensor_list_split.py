@@ -36,6 +36,7 @@ def _of_tensor_list_split(input_tensor_list, input_static_shape, device_tag="gpu
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.default_placement_scope(flow.scope.placement(device_tag, "0:0"))
 
     @flow.global_function(func_config)
