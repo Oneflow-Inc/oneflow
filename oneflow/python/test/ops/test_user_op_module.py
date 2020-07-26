@@ -54,7 +54,7 @@ class Add(flow.nn.Module):
         self.module_builder_.user_op_module.InitOpKernel()
 
     def forward(self, x, y):
-        unique_id = flow.scope.current_scope().auto_increment_id()
+        unique_id = flow.current_scope().auto_increment_id()
         return (
             self.module_builder_.OpName("add_n_%s" % unique_id)
             .Input("in", [x, y])

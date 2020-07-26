@@ -160,7 +160,7 @@ class EagerPhysicalUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        self.op_conf_.scope_symbol_id = oneflow.scope.current_scope().symbol_id
+        self.op_conf_.scope_symbol_id = oneflow.current_scope().symbol_id
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
 
         def BuildInstruction(builder):
@@ -209,7 +209,7 @@ class NonTraceableEagerLogicalUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        self.op_conf_.scope_symbol_id = oneflow.scope.current_scope().symbol_id
+        self.op_conf_.scope_symbol_id = oneflow.current_scope().symbol_id
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
 
         def BuildInstruction(builder):
@@ -395,9 +395,7 @@ def api_user_op_module_builder(op_type_name):
 class UserOpModuleBuilder(UserOpConfBuilder):
     def __init__(self, *args, **kwargs):
         UserOpConfBuilder.__init__(self, *args, **kwargs)
-        self.user_op_module.op_conf.scope_symbol_id = (
-            flow.scope.current_scope().symbol_id
-        )
+        self.user_op_module.op_conf.scope_symbol_id = flow.current_scope().symbol_id
 
     @property
     def user_op_module(self):
