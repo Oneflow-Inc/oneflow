@@ -22,7 +22,7 @@ from typing import Tuple
 def test_Add(test_case):
     @flow.global_function()
     def AddJob(xs: Tuple[(oft.Numpy.Placeholder((5, 2)),) * 2]):
-        adder = Add()
+        adder = flow.find_or_create_module("Add", Add)
         x = adder(*xs)
         y = adder(*xs)
         return adder(x, y)
@@ -30,6 +30,20 @@ def test_Add(test_case):
     inputs = tuple(np.random.rand(5, 2).astype(np.float32) for i in range(2))
     r = AddJob(inputs).get().numpy()
     test_case.assertTrue(np.allclose(r, sum(inputs) * 2))
+    r = AddJob(inputs).get().numpy()
+    test_case.assertTrue(np.allclose(r, sum(inputs) * 2))
+
+
+def test_find_or_create_module_reuse(test_case):
+    @flow.global_function()
+    def AddJob(xs: Tuple[(oft.Numpy.Placeholder((5, 2)),) * 2]):
+        adder = flow.find_or_create_module("Add", Add, reuse=True)
+        adder = flow.find_or_create_module("Add", Add, reuse=True)
+        x = adder(*xs)
+        return adder(x, x)
+
+    inputs = tuple(np.random.rand(5, 2).astype(np.float32) for i in range(2))
+    r = AddJob(inputs).get().numpy()
 
 
 class Add(flow.nn.Module):
