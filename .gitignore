@@ -13,7 +13,7 @@ core.*
 *.ipynb
 /.vscode
 /.idea
-manylinux*
+/manylinux*
 wheelhouse/
 .DS_Store
 /tmp_wheel
