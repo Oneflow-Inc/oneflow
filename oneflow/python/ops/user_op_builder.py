@@ -39,16 +39,23 @@ import oneflow.python.lib.core.enable_if as enable_if
 import random
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.blob_register as blob_register_util
+import oneflow as flow
 import traceback
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
 class UserOp(object):
-    def __init__(self, op_name):
+    def __init__(self, op_name, op_type_name=None):
         self.op_conf_ = op_conf_util.OperatorConf()
         self.op_conf_.name = op_name
+        if op_type_name is not None:
+            self.op_conf_.user_conf.op_type_name = op_type_name
         self.output_arg_key_list_ = []
+
+    @property
+    def op_conf(self):
+        return self.op_conf_
 
     def InferAndTryRun(self):
         raise NotImplementedError
@@ -82,14 +89,23 @@ class UserOp(object):
         return blobs[0]
 
 
+class UserOpModule(object):
+    @property
+    def opkernel_object(self):
+        return self.opkernel_object_
+
+    def set_opkernel_object(self, opkernel_object):
+        assert not hasattr(self, "opkernel_object_")
+        self.opkernel_object_ = opkernel_object
+
+    def InitOpKernel(self):
+        raise NotImplementedError
+
+
 @oneflow_export("user_op_builder")
 def api_user_op_builder(op_name):
     api = enable_if.unique(
-        [
-            lazy_user_op_builder,
-            eager_logical_user_op_builder,
-            eager_physical_user_op_builder,
-        ]
+        [lazy_user_op_builder, eager_user_op_builder, eager_physical_user_op_builder,]
     )
     return api(op_name)
 
@@ -113,12 +129,12 @@ class LazyUserOp(UserOp):
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
-def eager_logical_user_op_builder(op_name):
+def eager_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpConfBuilder(job_name, op_name, EagerLogicalUserOp)
+    return UserOpConfBuilder(job_name, op_name, EagerUserOp)
 
 
-class EagerLogicalUserOp(UserOp):
+class EagerUserOp(UserOp):
     def __init__(self, op_name):
         UserOp.__init__(self, op_name)
 
@@ -144,7 +160,7 @@ class EagerPhysicalUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        self.op_conf_.scope_symbol_id = oneflow.scope.current_scope().symbol_id
+        self.op_conf_.scope_symbol_id = oneflow.current_scope().symbol_id
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
 
         def BuildInstruction(builder):
@@ -193,7 +209,7 @@ class NonTraceableEagerLogicalUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        self.op_conf_.scope_symbol_id = oneflow.scope.current_scope().symbol_id
+        self.op_conf_.scope_symbol_id = oneflow.current_scope().symbol_id
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
 
         def BuildInstruction(builder):
@@ -218,12 +234,26 @@ class UserOpConfBuilder(object):
         name_scope_prefix = name_scope.GetJobNameScopePrefix(job_name)
         self.user_op_ = user_op_class(name_scope_prefix + op_name)
 
-    def Build(self):
+    def CheckAndComplete(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name != ""
         self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(
             self.user_op_.op_conf_
         )
-        return self.user_op_
+        return self
+
+    def Build(self):
+        return self.CheckAndComplete().user_op_
+
+    def OpName(self, op_name):
+        self.user_op_.op_conf_.name = op_name
+        user_conf = self.user_op_.op_conf_.user_conf
+
+        def GetLbn(output_name, i):
+            return "{}/{}_{}".format(op_name, output_name, i)
+
+        for output_name, output in user_conf.output.items():
+            output.s[:] = [GetLbn(output_name, i) for i in range(len(output.s))]
+        return self
 
     def Op(self, op_type_name):
         self.user_op_.op_conf_.user_conf.op_type_name = op_type_name
@@ -231,11 +261,20 @@ class UserOpConfBuilder(object):
 
     def Input(self, input_name, input_blob_list):
         assert isinstance(input_blob_list, (tuple, list))
+        input_conf = self.user_op_.op_conf_.user_conf.input
+        input_conf[input_name].ClearField("s")
         for input_blob in input_blob_list:
             # assert type(input_blob) is blob_desc.BlobDesc
-            self.user_op_.op_conf_.user_conf.input[input_name].s.append(
-                input_blob.unique_name
-            )
+            input_conf[input_name].s.append(input_blob.unique_name)
+        return self
+
+    def InputSize(self, input_name, input_blob_size):
+        input_conf = self.user_op_.op_conf_.user_conf.input
+        assert input_blob_size >= 0
+        assert input_name not in input_conf
+        for i in range(input_blob_size):
+            unique_name = "%s/%s_%s" % (self.user_op_.op_conf_.name, input_name, i)
+            input_conf[input_name].s.append(unique_name)
         return self
 
     def Output(self, output_name, num=1):
@@ -343,3 +382,126 @@ For instance:
             )
 
         return self.Attr("has_seed", (seed is not None)).Attr("seed", seed)
+
+
+@oneflow_export("user_op_module_builder")
+def api_user_op_module_builder(op_type_name):
+    api = enable_if.unique(
+        [lazy_user_op_module_builder, eager_logical_user_op_module_builder]
+    )
+    return api(op_type_name)
+
+
+class UserOpModuleBuilder(UserOpConfBuilder):
+    def __init__(self, *args, **kwargs):
+        UserOpConfBuilder.__init__(self, *args, **kwargs)
+        self.user_op_module.op_conf.scope_symbol_id = flow.current_scope().symbol_id
+
+    @property
+    def user_op_module(self):
+        return self.user_op_
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def lazy_user_op_module_builder(op_type_name):
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    return UserOpModuleBuilder(job_name, op_type_name, LazyUserOpModule)
+
+
+@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+def eager_logical_user_op_module_builder(op_type_name):
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    return UserOpModuleBuilder(job_name, op_type_name, EagerLogicalUserOpModule)
+
+
+class LazyUserOpModule(UserOpModule, UserOp):
+    def __init__(self, op_type_name):
+        UserOp.__init__(self, op_type_name, op_type_name)
+
+    def InitOpKernel(self):
+        self.set_opkernel_object(None)
+
+    def InferAndTryRun(self):
+        assert hob.in_global_mode(None)
+        compile_context.CurJobAddOp(self.op_conf_)
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        return remote_blob_util.RemoteBlob(lbi)
+
+
+class EagerLogicalUserOpModule(UserOpModule, UserOp):
+    def __init__(self, op_type_name):
+        UserOp.__init__(self, op_type_name, op_type_name)
+
+    def InitOpKernel(self):
+        def BuildInstruction(builder):
+            self.set_opkernel_object(builder.NewOpKernelObject(self.op_conf))
+
+        vm_util.LogicalRun(BuildInstruction)
+
+    def InferAndTryRun(self):
+        assert hob.in_global_mode(None)
+        interpret_util.OpKernelForward(self.op_conf, self.opkernel_object)
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        return remote_blob_util.EagerLogicalBlob(lbi)
+
+
+@oneflow_export("consistent_user_op_module_builder")
+def api_consistent_user_op_module_builder(op_type_name):
+    api = enable_if.unique(
+        [
+            lazy_consistent_user_op_module_builder,
+            eager_consistent_user_op_module_builder,
+        ]
+    )
+    return api(op_type_name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def lazy_consistent_user_op_module_builder(op_type_name):
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    return UserOpModuleBuilder(job_name, op_type_name, LazyConsistentUserOpModule)
+
+
+@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+def eager_consistent_user_op_module_builder(op_type_name):
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    return UserOpModuleBuilder(job_name, op_type_name, EagerConsistentUserOpModule)
+
+
+class LazyConsistentUserOpModule(UserOpModule, UserOp):
+    def __init__(self, op_type_name):
+        UserOp.__init__(self, op_type_name, op_type_name)
+
+    def InitOpKernel(self):
+        self.set_opkernel_object(None)
+
+    def InferAndTryRun(self):
+        assert hob.in_global_mode(None)
+        compile_context.CurJobAddConsistentOp(self.op_conf_)
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        return remote_blob_util.RemoteBlob(lbi)
+
+
+class EagerConsistentUserOpModule(UserOpModule, UserOp):
+    def __init__(self, op_type_name):
+        UserOp.__init__(self, op_type_name, op_type_name)
+
+    def InitOpKernel(self):
+        def BuildInstruction(builder):
+            self.set_opkernel_object(builder.NewOpKernelObject(self.op_conf))
+
+        vm_util.LogicalRun(BuildInstruction)
+
+    def InferAndTryRun(self):
+        assert hob.in_global_mode(None)
+        interpret_util.OpKernelConsistentForward(self.op_conf, self.opkernel_object)
+        return self
+
+    def MakeRemoteBlob(self, lbi):
+        return remote_blob_util.EagerLogicalBlob(lbi)

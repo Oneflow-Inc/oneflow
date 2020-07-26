@@ -165,7 +165,7 @@ class FixedTensorDef(ArgBlobDef):
         return compile_context.CurJobAddConsistentOp(op_conf)
 
     def EagerAddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
-        parallel_symbol = oneflow.scope.current_scope().device_parallel_desc_symbol
+        parallel_symbol = oneflow.current_scope().device_parallel_desc_symbol
         if (
             parallel_symbol.device_tag == "gpu"
             and list(parallel_symbol.machine_id2device_id_list.keys()) == [0]
