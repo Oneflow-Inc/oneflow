@@ -376,7 +376,7 @@ def layer_norm_grad(
     begin_norm_axis: int = 1,
     name: str = "LayerNormGrad",
 ) -> remote_blob_util.BlobDef:
-    """Layer normalization
+    r"""Layer normalization
 
     Args:
         dy (remote_blob_util.BlobDef): Upstream derivstives.
@@ -410,8 +410,10 @@ def layer_norm_param_grad(
     norm: remote_blob_util.BlobDef,
     gamma: remote_blob_util.BlobDef,
     begin_params_axis: int = -1,
-    name: Optional[str] = None,
-) -> Tuple[remote_blob_util.BlobDef]:
+    name: str = "LayerNormParamGrad",
+) -> Tuple[
+    remote_blob_util.BlobDef, remote_blob_util.BlobDef, remote_blob_util.BlobDef
+]:
     r"""Backward pass for layer normalization
 
     Args:
@@ -419,7 +421,7 @@ def layer_norm_param_grad(
         norm (remote_blob_util.BlobDef): Normalized output. 
         gamma (remote_blob_util.BlobDef): Scale parameter.  
         begin_params_axis (int, optional): From which parameters to begin with. Defaults to -1.
-        name (Optional[str], optional): This layer's name. Defaults to None.
+        name (Optional[str], optional): This layer's name. Defaults to 'LayerNormParamGrad'.
 
     Returns:
         Tuple[remote_blob_util.BlobDef]: 
@@ -427,11 +429,6 @@ def layer_norm_param_grad(
                 beta_diff: Gradient with respect to shift parameter beta.
                 gamma_diff: Gradient with respect to scale parameter gamma.
     """
-
-    name: str = "LayerNormParamGrad",
-) -> Tuple[
-    remote_blob_util.BlobDef, remote_blob_util.BlobDef, remote_blob_util.BlobDef
-]:
     op = (
         flow.user_op_builder(name)
         .Op("layer_norm_param_grad")
@@ -582,7 +579,6 @@ def batch_normalization(
 
 
 @oneflow_export("layers.upsample_2d")
-
 def upsample(
     x: remote_blob_util.BlobDef,
     size: Sequence[int] = (2, 2),
@@ -590,7 +586,7 @@ def upsample(
     interpolation: str = "nearest",
     name: str = "Upsample2D",
 ):
-     r"""Upsample Operation
+    r"""Upsample Operation
 
     Args:
         x ([type]): Input `Blob`.
