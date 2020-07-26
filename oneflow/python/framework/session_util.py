@@ -390,6 +390,7 @@ def _GetDefaultConfigProto():
 
 session_ctx.OpenDefaultSession(Session())
 
+
 @oneflow_export("scope.current_scope")
 def deprecated_current_scope(*args, **kwargs):
     print(
@@ -402,4 +403,3 @@ def deprecated_current_scope(*args, **kwargs):
     print(traceback.format_stack()[-2])
 
     return current_scope(*args, **kwargs)
-
