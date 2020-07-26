@@ -22,12 +22,15 @@ REGISTER_USER_OP("add_n")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto* in_0 = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      CHECK_NOTNULL_OR_RETURN(in_0);
+      CHECK_NOTNULL_OR_RETURN(out);
       for (const auto& pair : ctx->inputs()) {
         const auto* cur_in = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
         CHECK_EQ_OR_RETURN(in_0->shape(), cur_in->shape());
         CHECK_EQ_OR_RETURN(in_0->data_type(), cur_in->data_type());
       }
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *in_0;
+      *out = *in_0;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {

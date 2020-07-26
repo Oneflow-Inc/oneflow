@@ -18,21 +18,23 @@ limitations under the License.
 namespace oneflow {
 namespace eager {
 
-void OpKernelObject::ResetOpAndKernel(
+Maybe<void> OpKernelObject::ResetOpAndKernel(
     const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   auto op = ConstructOp(op_conf_, device_type_, job_desc_.get());
   std::unique_ptr<OpContext> op_ctx;
-  InferBlobDescs(*op, BlobDesc4BnInOp, sbp_signature, parallel_ctx, &op_ctx);
+  JUST(InferBlobDescs(*op, BlobDesc4BnInOp, sbp_signature, parallel_ctx, &op_ctx));
   NewPartialInitializedKernel(*op, BlobDesc4BnInOp, parallel_ctx, op_ctx.get());
+  return Maybe<void>::Ok();
 }
 
-void OpKernelObject::InferBlobDescs(
+Maybe<void> OpKernelObject::InferBlobDescs(
     const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
     std::unique_ptr<OpContext>* op_ctx) {
-  CHECK_JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx, sbp_signature,
-                                 [op_ctx](OpContext* ctx) { op_ctx->reset(ctx); }));
+  JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx, sbp_signature,
+                           [op_ctx](OpContext* ctx) { op_ctx->reset(ctx); }));
+  return Maybe<void>::Ok();
 }
 
 void OpKernelObject::NewPartialInitializedKernel(
@@ -46,21 +48,23 @@ void OpKernelObject::NewPartialInitializedKernel(
   kernel_.reset(new EagerKernel(job_desc_.get(), kernel_conf));
 }
 
-void SystemOpKernelObject::ResetKernel(
+Maybe<void> SystemOpKernelObject::ResetKernel(
     const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   auto op = ConstructOp(op_conf_, device_type_, job_desc_.get());
   std::unique_ptr<OpContext> op_ctx;
-  InferBlobDescs(*op, BlobDesc4BnInOp, sbp_signature, parallel_ctx, &op_ctx);
+  JUST(InferBlobDescs(*op, BlobDesc4BnInOp, sbp_signature, parallel_ctx, &op_ctx));
   ResetKernel(*op, BlobDesc4BnInOp, parallel_ctx, op_ctx.get());
+  return Maybe<void>::Ok();
 }
 
-void SystemOpKernelObject::InferBlobDescs(
+Maybe<void> SystemOpKernelObject::InferBlobDescs(
     const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
     std::unique_ptr<OpContext>* op_ctx) {
-  CHECK_JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx, sbp_signature,
-                                 [op_ctx](OpContext* ctx) { op_ctx->reset(ctx); }));
+  JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx, sbp_signature,
+                           [op_ctx](OpContext* ctx) { op_ctx->reset(ctx); }));
+  return Maybe<void>::Ok();
 }
 
 void SystemOpKernelObject::ResetKernel(
