@@ -23,11 +23,11 @@ import hashlib
 import json
 import time
 
-import oneflow.customized.summary.plugin_data_pb2 as plugin_data_pb2
-import oneflow.customized.summary.summary_pb2 as summary_pb2
-import oneflow.customized.summary.event_pb2 as event_pb2
-import oneflow.customized.summary.tensor_pb2 as tensor_pb2
-import oneflow.customized.summary.projector_pb2 as projector_pb2
+import oneflow.core.summary.plugin_data_pb2 as plugin_data_pb2
+import oneflow.core.summary.summary_pb2 as summary_pb2
+import oneflow.core.summary.event_pb2 as event_pb2
+import oneflow.core.summary.tensor_pb2 as tensor_pb2
+import oneflow.core.summary.projector_pb2 as projector_pb2
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -40,7 +40,7 @@ def text(text, tag=None):
 
     Args:
         text: A str list
-        tag: The tag of summary 
+        tag: The tag of summary
 
     Returns:
         A protobuf message [Summary]
@@ -91,7 +91,7 @@ def hparams(hparams):
         hparams: A dict of Hparams
 
     Raises:
-        TypeError: If the type of hparam not in (str, int, float, bool) 
+        TypeError: If the type of hparam not in (str, int, float, bool)
         TypeError: If the type of metric not in (float, int)
 
     Returns:
@@ -177,7 +177,7 @@ class HParam(object):
         r"""Create a Hparam object
 
         Args:
-            name: Hparam name 
+            name: Hparam name
             dtype: Hparam type
 
         Raises:
@@ -211,7 +211,7 @@ class IntegerRange(object):
         r"""Create an 'IntegerRange' object
 
         Args:
-            min_value: The min value of the range 
+            min_value: The min value of the range
             max_value: The max value of the range
 
         Raises:
@@ -249,7 +249,7 @@ class RealRange(object):
         r"""Create a 'RealRange' object
 
         Args:
-            min_value: The min value of the range 
+            min_value: The min value of the range
             max_value: The max value of the range
 
         Raises:
@@ -292,7 +292,7 @@ class ValueSet(object):
 
         Raises:
             ValueError: If the value type not in (int, float, bool, str)
-            TypeError: If the value in the list is not same 
+            TypeError: If the value in the list is not same
         """
         self.values_ = list(values)
         if dtype is None:
@@ -329,10 +329,10 @@ class Metric(object):
     """
 
     def __init__(self, name, dtype=None):
-        r"""Create a Metric object 
+        r"""Create a Metric object
 
         Args:
-            name: Metric name 
+            name: Metric name
             dtype: Value type
 
         Raises:
