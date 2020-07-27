@@ -228,6 +228,11 @@ class UserOpConfBuilder(object):
         self.user_op_ = user_op_class(name_scope_prefix + op_name)
 
     def Build(self):
+        """Build op when in/output and other attribute set up.
+
+        Returns:
+            self
+        """
         assert self.user_op_.op_conf_.user_conf.op_type_name != ""
         self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(
             self.user_op_.op_conf_
@@ -235,10 +240,27 @@ class UserOpConfBuilder(object):
         return self.user_op_
 
     def Op(self, op_type_name):
+        """set typename of op
+
+        Args:
+            op_type_name (string): op type name
+
+        Returns:
+            self
+        """
         self.user_op_.op_conf_.user_conf.op_type_name = op_type_name
         return self
 
     def Input(self, input_name, input_blob_list):
+        """Set input blob of op
+
+        Args:
+            input_name (str): input name of blob
+            input_blob_list : list of blobs
+
+        Returns:
+            self
+        """
         assert isinstance(input_blob_list, (tuple, list))
         for input_blob in input_blob_list:
             # assert type(input_blob) is blob_desc.BlobDesc
@@ -248,6 +270,15 @@ class UserOpConfBuilder(object):
         return self
 
     def Output(self, output_name, num=1):
+        """Set output blob of op
+
+        Args:
+            output_name (str): name of output blob
+            num (int, optional):  Defaults to 1.
+
+        Returns:
+            self
+        """
         assert isinstance(num, int) and num >= 1
         out_lbns = []
         for i in range(num):
@@ -258,14 +289,27 @@ class UserOpConfBuilder(object):
         return self
 
     def Attr(self, attr_name, attr_value, attr_type_name=None):
+        """Set value of op's attribute.
+
+        Args:
+            attr_name (str): attribute name of op
+            attr_value (Any): attribute value of op
+
+        Raises:
+            ValueError: raised when value is not idential to op's attribute type.
+
+        Returns:
+            [type]: [description]
+        """
+        
         if attr_type_name != None:
             print(
-                """WARNING: Argument 'attr_type_name' of UserOpConfBuilder.Attr has been deprecated. Please remove it.
-For instance:
-        -     .Attr("out_num", out_num, "AttrTypeInt64")
-        +     .Attr("out_num", out_num)
-                """
-            )
+                        """WARNING: Argument 'attr_type_name' of UserOpConfBuilder.Attr has been deprecated. Please remove it.
+            For instance:
+                -     .Attr("out_num", out_num, "AttrTypeInt64")
+                +     .Attr("out_num", out_num)
+                        """
+                    )
             print(traceback.format_stack()[-2])
 
         attribute = user_op_attr_util.UserOpAttrVal()
