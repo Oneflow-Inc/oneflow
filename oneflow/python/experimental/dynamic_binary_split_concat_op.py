@@ -80,7 +80,9 @@ def dynamic_binary_concat(
     getattr(op_conf.dynamic_binary_concat_conf, "in").extend(in_lbns)
     # op_conf.dynamic_binary_concat_conf.in[:] = in_lbns
     op_conf.dynamic_binary_concat_conf.out = "out"
-    op_conf.dynamic_binary_concat_conf.out_data_type = source_blob.dtype
+    op_conf.dynamic_binary_concat_conf.out_data_type = (
+        source_blob.dtype.oneflow_proto_dtype
+    )
     op_conf.dynamic_binary_concat_conf.out_shape.dim.extend(list(source_blob.shape))
     if source_blob.batch_axis is not None:
         op_conf.dynamic_binary_concat_conf.out_batch_axis.value = source_blob.batch_axis

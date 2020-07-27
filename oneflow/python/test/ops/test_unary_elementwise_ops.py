@@ -36,6 +36,7 @@ def test_abs(test_case):
 def test_1n2c_mirror_dynamic_abs(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
@@ -110,6 +111,7 @@ def test_acos_double(test_case):
 def test_1n2c_mirror_dynamic_acos(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)

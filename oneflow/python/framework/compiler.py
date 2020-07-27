@@ -64,7 +64,7 @@ def InterpretScope(session, function_desc, config_proto):
         placement_scope = placement_util.GetPlacementScope(*tag_and_dev_ids)
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:
-        distribute_strategy = distribute_util.DistributeMirroredStrategy()
+        distribute_strategy = distribute_util.DistributeConsistentStrategy()
     is_mirrored = isinstance(
         distribute_strategy, distribute_util.DistributeMirroredStrategy
     )

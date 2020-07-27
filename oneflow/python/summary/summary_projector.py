@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
-import oneflow.customized.summary.projector_pb2 as projector_pb2
+import oneflow.core.summary.projector_pb2 as projector_pb2
 from oneflow.python.oneflow_export import oneflow_export
 import time
 

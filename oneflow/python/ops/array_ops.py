@@ -124,6 +124,7 @@ def reshape(
     Returns:
         A `Blob`, has the same type as `x`.
     """
+    x = flow.cast_to_current_logical_view(x)
     assert isinstance(shape, tuple) or isinstance(shape, list)
     shape = list(shape)
     assert all(dim == -1 or dim > 0 for dim in shape)

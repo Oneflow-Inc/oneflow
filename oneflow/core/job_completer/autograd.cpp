@@ -240,7 +240,8 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     total_loss_instance_num_conf->set_out("out");
 
     ParallelConf parallel_conf;
-    parallel_conf.add_device_name("0:cpu:0");
+    parallel_conf.set_device_tag("cpu");
+    parallel_conf.add_device_name("0:0");
     job_builder->AddOps(parallel_conf, {op_conf});
 
     total_loss_instance_num_lbi.set_op_name(op_conf.name());

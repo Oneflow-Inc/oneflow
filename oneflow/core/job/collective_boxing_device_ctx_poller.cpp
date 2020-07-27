@@ -69,7 +69,7 @@ CollectiveBoxingDeviceCtxPoller::CreateCheckpoint() {
 void CollectiveBoxingDeviceCtxPoller::Enqueue(
     const std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint>& checkpoint,
     const std::function<void()>& callback) {
-  {
+  if (checkpoint) {
     std::lock_guard<std::mutex> lock(*mutex_);
     auto it = checkpoint2callbacks_->find(checkpoint.get());
     if (it != checkpoint2callbacks_->end()) {
