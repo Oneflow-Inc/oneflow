@@ -32,7 +32,7 @@ def _read_images_by_cv(image_files):
     return [cv2.resize(image, (512, 512)) for image in images]
 
 
-def test():
+def test_summary(test_case):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
