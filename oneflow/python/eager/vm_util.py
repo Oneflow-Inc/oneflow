@@ -696,7 +696,7 @@ class InstructionsBuilder(object):
 
     def _NewSymbolId4OpNodeSignature(self, op_node_signature):
         symbol_id = self._NewSymbolId()
-        self._InitOpNodeSignatureSymbol(symbol_id, op_node_signature)
+        self._InitOpNodeSignatureDescSymbol(symbol_id, op_node_signature)
         return symbol_id
 
     def _NewSharedOpKernelObjectId4ParallelConfSymbolId(self, parallel_desc_sym):
@@ -853,9 +853,9 @@ class InstructionsBuilder(object):
         eager_symbol.op_conf_symbol.CopyFrom(op_conf)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
-    def _InitOpNodeSignatureSymbol(self, symbol_id, op_node_signature):
+    def _InitOpNodeSignatureDescSymbol(self, symbol_id, op_node_signature):
         instruction = instr_util.InstructionProto()
-        instruction.instr_type_name = "InitOpNodeSignatureSymbol"
+        instruction.instr_type_name = "InitOpNodeSignatureDescSymbol"
         instruction.operand.append(_InitSymbolOperand(symbol_id))
         self.instruction_list_.instruction.append(instruction)
         eager_symbol = eager_symbol_util.EagerSymbol()

@@ -74,8 +74,9 @@ int64_t NewOpNodeSignature(InstructionMsgList* list, const std::vector<std::stri
     (*bn_in_op2parallel_desc_symbol_id)[obns[i]] = parallel_desc_symbol_ids_4_obns[i];
   }
   int64_t op_node_signature_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::SymbolStorage<OpNodeSignature>>::Get()->Add(op_node_signature_id, op_node_signature);
-  list->EmplaceBack(vm::NewInstruction("InitOpNodeSignatureSymbol")
+  Global<vm::SymbolStorage<OpNodeSignatureDesc>>::Get()->Add(op_node_signature_id,
+                                                             op_node_signature);
+  list->EmplaceBack(vm::NewInstruction("InitOpNodeSignatureDescSymbol")
                         ->add_init_symbol_operand(op_node_signature_id));
   return op_node_signature_id;
 }

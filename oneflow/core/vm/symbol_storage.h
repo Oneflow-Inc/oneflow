@@ -24,6 +24,9 @@ namespace oneflow {
 class ParallelDesc;
 class ParallelConf;
 
+class OpNodeSignatureDesc;
+class OpNodeSignature;
+
 namespace vm {
 
 template<typename T>
@@ -32,8 +35,8 @@ struct ConstructArgType4Symbol final {
 };
 
 template<>
-struct ConstructArgType4Symbol<ParallelDesc> final {
-  using type = ParallelConf;
+struct ConstructArgType4Symbol<OpNodeSignatureDesc> final {
+  using type = OpNodeSignature;
 };
 
 template<typename T>
