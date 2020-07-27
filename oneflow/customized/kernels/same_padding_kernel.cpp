@@ -20,17 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-void GetDimVectorInBytes(const ShapeView& tensor_shape, const int64_t size_of_data_type,
-                         DimVector& shape_vec) {
-  int64_t num_axes = tensor_shape.NumAxes();
-  for (int64_t i = 0; i < num_axes; ++i) { shape_vec[i] = tensor_shape.At(i); }
-  shape_vec[num_axes - 1] = shape_vec[num_axes - 1] * size_of_data_type;
-}
-
-}  // namespace
-
 template<DeviceType device_type, typename T>
 class SamePaddingKernel final : public user_op::OpKernel {
  public:
@@ -60,26 +49,23 @@ class SamePaddingKernel final : public user_op::OpKernel {
       } else if (padding == "same_upper") {
         padding_before[idx_offset + i] = padding_small;
       } else {
-        LOG(FATAL) << "padding must be same_lower or same_upper but get " << padding;
+        UNIMPLEMENTED();
       }
       CHECK_EQ(y->shape().At(idx_offset + i),
                x->shape().At(idx_offset + i) + padding_small + padding_large);
     }
-    const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
     CHECK_EQ(padding_before.size(), num_axes);
     NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(), 0, y->mut_dptr<T>());
     MemoryCopyNdDesc memory_copy_nd_desc;
-
-    DimVector src_shape_vec(num_axes);
-    DimVector dst_shape_vec(num_axes);
-    GetDimVectorInBytes(x->shape(), size_of_data_type, src_shape_vec);
-    GetDimVectorInBytes(y->shape(), size_of_data_type, dst_shape_vec);
-    memory_copy_nd_desc.src_shape = Shape(src_shape_vec);
-    memory_copy_nd_desc.dst_shape = Shape(dst_shape_vec);
+    Shape x_shape;
+    x->shape().ToShape(&x_shape);
+    memory_copy_nd_desc.src_shape = Shape(x_shape);
+    Shape y_shape;
+    y->shape().ToShape(&y_shape);
+    memory_copy_nd_desc.dst_shape = Shape(y_shape);
 
     DimVector src_pos_vec(num_axes, 0);
     DimVector dst_pos_vec(padding_before.cbegin(), padding_before.cend());
-    dst_pos_vec[num_axes - 1] *= size_of_data_type;
 
     memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
     memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
@@ -87,8 +73,8 @@ class SamePaddingKernel final : public user_op::OpKernel {
     MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
 
     std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
-    device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
-                               reduced_memory_copy_nd_desc);
+    device_memory_copier->CopyElem<T>(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
+                                      reduced_memory_copy_nd_desc);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -134,29 +120,27 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
       int32_t padding_large = 0;
       CalcSamePadding(dx->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
                       strides.at(i), padding, &padding_small, &padding_large);
-      if (padding == "SAME_LOWER") {
+      if (padding == "same_lower") {
         padding_before[idx_offset + i] = padding_large;
-      } else {  //"SAME_UPPER"
+      } else if (padding == "same_upper") {
         padding_before[idx_offset + i] = padding_small;
+      } else {
+        UNIMPLEMENTED();
       }
       CHECK_EQ(dy->shape().At(idx_offset + i),
                dx->shape().At(idx_offset + i) + padding_small + padding_large);
     }
 
-    const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(dy->data_type()));
-
     MemoryCopyNdDesc memory_copy_nd_desc;
-
-    DimVector src_shape_vec(num_axes);
-    DimVector dst_shape_vec(num_axes);
-    GetDimVectorInBytes(dy->shape(), size_of_data_type, src_shape_vec);
-    GetDimVectorInBytes(dx->shape(), size_of_data_type, dst_shape_vec);
-    memory_copy_nd_desc.src_shape = Shape(src_shape_vec);
-    memory_copy_nd_desc.dst_shape = Shape(dst_shape_vec);
+    Shape dy_shape;
+    dy->shape().ToShape(&dy_shape);
+    memory_copy_nd_desc.src_shape = Shape(dy_shape);
+    Shape dx_shape;
+    dx->shape().ToShape(&dx_shape);
+    memory_copy_nd_desc.dst_shape = Shape(dx_shape);
 
     DimVector dst_pos_vec(num_axes, 0);
     DimVector src_pos_vec(padding_before.cbegin(), padding_before.cend());
-    src_pos_vec[num_axes - 1] *= size_of_data_type;
 
     memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
     memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
@@ -164,8 +148,8 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
     MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
 
     std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
-    device_memory_copier->Copy(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
-                               reduced_memory_copy_nd_desc);
+    device_memory_copier->CopyElem<T>(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
+                                      reduced_memory_copy_nd_desc);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
