@@ -53,22 +53,45 @@ def _blob_conf(name, shape, dtype=flow.int32):
 def BertDecoder(
     data_dir, batch_size=1, data_part_num=1, seq_length=128, max_predictions_per_seq=20
 ):
-    blob_confs = []
-    blob_confs.append(_blob_conf("input_ids", [seq_length]))
-    blob_confs.append(_blob_conf("next_sentence_labels", [1]))
-    blob_confs.append(_blob_conf("input_mask", [seq_length]))
-    blob_confs.append(_blob_conf("segment_ids", [seq_length]))
-    blob_confs.append(_blob_conf("masked_lm_ids", [max_predictions_per_seq]))
-    blob_confs.append(_blob_conf("masked_lm_positions", [max_predictions_per_seq]))
-    blob_confs.append(
-        _blob_conf("masked_lm_weights", [max_predictions_per_seq], flow.float)
+    ofrecord = flow.data.ofrecord_reader(
+        data_dir, batch_size=batch_size, data_part_num=data_part_num, name="decode",
     )
-    return flow.data.decode_ofrecord(
-        data_dir,
-        blob_confs,
-        batch_size=batch_size,
-        name="decode",
-        data_part_num=data_part_num,
+    input_ids = flow.data.ofrecord_raw_decoder(
+        ofrecord, "input_ids", shape=(seq_length,), dtype=flow.int32
+    )
+    next_sentence_labels = flow.data.ofrecord_raw_decoder(
+        ofrecord, "next_sentence_labels", shape=(1,), dtype=flow.int32
+    )
+    input_mask = flow.data.ofrecord_raw_decoder(
+        ofrecord, "input_mask", shape=(seq_length,), dtype=flow.int32
+    )
+    segment_ids = flow.data.ofrecord_raw_decoder(
+        ofrecord, "segment_ids", shape=(seq_length,), dtype=flow.int32
+    )
+    masked_lm_ids = flow.data.ofrecord_raw_decoder(
+        ofrecord, "masked_lm_ids", shape=(max_predictions_per_seq,), dtype=flow.int32
+    )
+    masked_lm_positions = flow.data.ofrecord_raw_decoder(
+        ofrecord,
+        "masked_lm_positions",
+        shape=(max_predictions_per_seq,),
+        dtype=flow.int32,
+    )
+    masked_lm_weights = flow.data.ofrecord_raw_decoder(
+        ofrecord,
+        "masked_lm_weights",
+        shape=(max_predictions_per_seq,),
+        dtype=flow.float,
+    )
+
+    return (
+        input_ids,
+        next_sentence_labels,
+        input_mask,
+        segment_ids,
+        masked_lm_ids,
+        masked_lm_positions,
+        masked_lm_weights,
     )
 
 

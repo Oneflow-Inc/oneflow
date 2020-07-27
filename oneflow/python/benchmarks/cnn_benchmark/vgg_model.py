@@ -38,9 +38,7 @@ def _conv_block(in_blob, index, filters, conv_times):
 
 
 def vgg16(images, trainable=True):
-
-    transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
-    conv1 = _conv_block(transposed, 0, 64, 2)
+    conv1 = _conv_block(images, 0, 64, 2)
     pool1 = flow.nn.max_pool2d(conv1[-1], 2, 2, "VALID", "NCHW", name="pool1")
 
     conv2 = _conv_block(pool1, 2, 128, 2)
