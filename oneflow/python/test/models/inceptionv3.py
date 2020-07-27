@@ -147,7 +147,7 @@ def _data_load_layer(args, data_dir):
         mean=rgb_mean,
         output_dtype=flow.float,
     )
-    return label, normal
+    return normal, label
 
 
 def InceptionA(in_blob, index):

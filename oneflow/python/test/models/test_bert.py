@@ -56,28 +56,28 @@ def BertDecoder(
     ofrecord = flow.data.ofrecord_reader(
         data_dir, batch_size=batch_size, data_part_num=data_part_num, name="decode",
     )
-    input_ids = flow.data.OFRecordRawDecoder(
+    input_ids = flow.data.ofrecord_raw_decoder(
         ofrecord, "input_ids", shape=(seq_length,), dtype=flow.int32
     )
-    next_sentence_labels = flow.data.OFRecordRawDecoder(
+    next_sentence_labels = flow.data.ofrecord_raw_decoder(
         ofrecord, "next_sentence_labels", shape=(1,), dtype=flow.int32
     )
-    input_mask = flow.data.OFRecordRawDecoder(
+    input_mask = flow.data.ofrecord_raw_decoder(
         ofrecord, "input_mask", shape=(seq_length,), dtype=flow.int32
     )
-    segment_ids = flow.data.OFRecordRawDecoder(
-        ofrecord, "segment_ids", shape=(length,), dtype=flow.int32
+    segment_ids = flow.data.ofrecord_raw_decoder(
+        ofrecord, "segment_ids", shape=(seq_length,), dtype=flow.int32
     )
-    masked_lm_ids = flow.data.OFRecordRawDecoder(
+    masked_lm_ids = flow.data.ofrecord_raw_decoder(
         ofrecord, "masked_lm_ids", shape=(max_predictions_per_seq,), dtype=flow.int32
     )
-    masked_lm_positions = flow.data.OFRecordRawDecoder(
+    masked_lm_positions = flow.data.ofrecord_raw_decoder(
         ofrecord,
         "masked_lm_positions",
         shape=(max_predictions_per_seq,),
         dtype=flow.int32,
     )
-    masked_lm_weights = flow.data.OFRecordRawDecoder(
+    masked_lm_weights = flow.data.ofrecord_raw_decoder(
         ofrecord,
         "masked_lm_weights",
         shape=(max_predictions_per_seq,),
