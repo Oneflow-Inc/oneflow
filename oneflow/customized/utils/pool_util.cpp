@@ -49,16 +49,21 @@ std::vector<int32_t> Get3DPadVec(const std::vector<int32_t>& original_vec, int32
 }  // namespace
 
 Params3D::Params3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
-                   const std::string& padding, const std::vector<int32_t>& pool_size,
-                   const std::vector<int32_t>& strides)
+                   const std::string& padding, const std::vector<int32_t>& padding_before,
+                   const std::vector<int32_t>& padding_after, const std::vector<int32_t>& pool_size,
+                   const std::vector<int32_t>& strides, const bool ceil_mode)
     : dim_(dim),
       pool_size_3d_(Get3DVec(pool_size, dim)),
       strides_3d_(Get3DVec(strides, dim)),
-      data_format_(data_format) {
+      padding_before_3d_(Get3DPadVec(padding_before, dim)),
+      padding_after_3d_(Get3DPadVec(padding_after, dim)),
+      data_format_(data_format),
+      padding_(padding),
+      ceil_mode_(ceil_mode) {
   x_3d_ = {GetInDim(x_shape, data_format, 0, dim), GetInDim(x_shape, data_format, 1, dim),
            GetInDim(x_shape, data_format, 2, dim)};
-  Get3DOutputSize(x_3d_, pool_size_3d_, strides_3d_, padding, &y_3d_, &padding_before_3d_,
-                  &padding_after_3d_);
+  Get3DOutputSize(x_3d_, pool_size_3d_, strides_3d_, padding_, ceil_mode_, nullptr, &y_3d_,
+                  &padding_before_3d_, &padding_after_3d_);
   if (data_format == "channels_first") {
     channel_num_ = x_shape.At(1);
   } else {
@@ -69,28 +74,11 @@ Params3D::Params3D(const int32_t dim, const ShapeView& x_shape, const std::strin
   batch_num_ = x_shape.At(0);
 }
 
-Params3D::Params3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
-                   const std::string& padding, const std::vector<int32_t>& padding_before,
-                   const std::vector<int32_t>& padding_after, const std::vector<int32_t>& pool_size,
-                   const std::vector<int32_t>& strides, const bool ceil_mode)
-    : dim_(dim),
-      pool_size_3d_(Get3DVec(pool_size, dim)),
-      strides_3d_(Get3DVec(strides, dim)),
-      padding_before_3d_(Get3DPadVec(padding_before, dim)),
-      padding_after_3d_(Get3DPadVec(padding_after, dim)),
-      data_format_(data_format) {
-  x_3d_ = {GetInDim(x_shape, data_format, 0, dim), GetInDim(x_shape, data_format, 1, dim),
-           GetInDim(x_shape, data_format, 2, dim)};
-  Get3DOutputSize(x_3d_, pool_size_3d_, strides_3d_, padding, ceil_mode, nullptr, &y_3d_,
+void Params3D::ResetIfDynamic(const ShapeView& x_shape) {
+  x_3d_ = {GetInDim(x_shape, data_format_, 0, dim_), GetInDim(x_shape, data_format_, 1, dim_),
+           GetInDim(x_shape, data_format_, 2, dim_)};
+  Get3DOutputSize(x_3d_, pool_size_3d_, strides_3d_, padding_, ceil_mode_, nullptr, &y_3d_,
                   &padding_before_3d_, &padding_after_3d_);
-  if (data_format == "channels_first") {
-    channel_num_ = x_shape.At(1);
-  } else {
-    CHECK_EQ(data_format_, "channels_last")
-        << "data_format must be 'channels_first' or 'channels_last'";
-    channel_num_ = x_shape.At(x_shape.NumAxes() - 1);
-  }
-  batch_num_ = x_shape.At(0);
 }
 
 Shape Params3D::GetYShape() const {
