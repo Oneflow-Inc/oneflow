@@ -412,7 +412,7 @@ REGISTER_USER_OP_GRAD("normalization")
                                    } else
                                      (return ctx->fw_op.output_grad("y", 0))
                                  },
-                                 mul_op_name);
+                                 mul_gamma_name);
 
       const auto mul_inv_var_name = "out_grad_mul_inv_var";
       const auto dy_mul_inv_var_op_name = "System-AutoGrad-" + mul_inv_var_name + "-BroadcastMul";
