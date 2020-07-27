@@ -133,31 +133,31 @@ def _blob_conf(name, shape, dtype=flow.int32, codec=flow.data.RawCodec()):
 
 
 def decoder(data_dir, length, batch_size=1, data_part_num=1):
-    blob_confs = []
-    blob_confs.append(_blob_conf("int32", [length], dtype=flow.int32))
-    blob_confs.append(_blob_conf("int64", [length], dtype=flow.int64))
-    blob_confs.append(_blob_conf("float", [length], dtype=flow.float))
-    blob_confs.append(_blob_conf("double", [length], dtype=flow.double))
-    blob_confs.append(
-        _blob_conf(
-            "bytes", [1, length], dtype=flow.int8, codec=flow.data.BytesListCodec()
-        )
+    ofrecord = flow.data.ofrecord_reader(
+        data_dir, batch_size=batch_size, data_part_num=data_part_num
     )
-
-    blobs = flow.data.decode_ofrecord(
-        data_dir,
-        blob_confs,
-        batch_size=batch_size,
-        name="decode",
-        data_part_num=data_part_num,
+    blob_int32 = flow.data.ofrecord_raw_decoder(
+        ofrecord, "int32", shape=(length,), dtype=flow.int32
+    )
+    blob_int64 = flow.data.ofrecord_raw_decoder(
+        ofrecord, "int64", shape=(length,), dtype=flow.int64
+    )
+    blob_float = flow.data.ofrecord_raw_decoder(
+        ofrecord, "float", shape=(length,), dtype=flow.float
+    )
+    blob_double = flow.data.ofrecord_raw_decoder(
+        ofrecord, "double", shape=(length,), dtype=flow.double
+    )
+    blob_bytes = flow.data.ofrecord_raw_decoder(
+        ofrecord, "bytes", shape=(1, length,), dtype=flow.int8
     )
 
     return {
-        "int32": blobs[0],
-        "int64": blobs[1],
-        "float": blobs[2],
-        "double": blobs[3],
-        "bytes": blobs[4],
+        "int32": blob_int32,
+        "int64": blob_int64,
+        "float": blob_float,
+        "double": blob_double,
+        "bytes": blob_bytes,
     }
 
 

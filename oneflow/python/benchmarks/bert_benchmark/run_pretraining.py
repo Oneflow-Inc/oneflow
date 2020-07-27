@@ -146,23 +146,17 @@ def BertDecoder(
     config_ordered_dict["masked_lm_positions"] = max_predictions_per_seq
     config_ordered_dict["masked_lm_weights"] = max_predictions_per_seq
 
-    blob_confs = []
-    for k, v in config_ordered_dict.items():
-        blob_confs.append(
-            _blob_conf(k, [v], flow.float if k == "masked_lm_weights" else flow.int32)
-        )
-
-    decoders = flow.data.decode_ofrecord(
-        data_dir,
-        blob_confs,
-        batch_size=batch_size,
-        name="decode",
-        data_part_num=data_part_num,
+    ofrecord = flow.data.ofrecord_reader(
+        data_dir, batch_size=batch_size, data_part_num=data_part_num, name="decode",
     )
-
     ret = {}
-    for i, k in enumerate(config_ordered_dict):
-        ret[k] = decoders[i]
+    for k, v in config_ordered_dict.items():
+        ret[k] = flow.data.ofrecord_raw_decoder(
+            ofrecord,
+            k,
+            shape=(v,),
+            dtype=flow.float if k == "masked_lm_weights" else flow.int32,
+        )
     return ret
 
 

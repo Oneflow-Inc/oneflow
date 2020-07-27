@@ -21,6 +21,7 @@ from contextlib import closing
 import oneflow.core.job.env_pb2 as env_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
@@ -58,8 +59,7 @@ def env_init():
     assert len(default_env_proto.machine) > 0
     CompleteEnvProto(default_env_proto)
     c_api_util.InitEnv(default_env_proto)
-    global env_proto_mutable
-    env_proto_mutable = False
+    session_ctx.GetDefaultSession().InitNormalModeScope()
     return True
 
 
@@ -282,4 +282,3 @@ def GetEnvDefaultParallelConf(device_tag):
 device_tag2default_parallel_conf = {}
 
 default_env_proto = _DefaultEnvProto()
-env_proto_mutable = True

@@ -453,8 +453,7 @@ void ReplaceInputLbnInOpCustomizedConf(PbMessage* msg, const std::string& fd_nam
 bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
 
 Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
-                                    const UpstreamSignature& upstream_signature,
-                                    const Scope& scope);
+                                    const OpNodeSignature& upstream_signature, const Scope& scope);
 
 }  // namespace oneflow
 
