@@ -25,12 +25,19 @@ from oneflow.python.oneflow_export import oneflow_export
 from typing import Any, Dict, Callable
 
 
+class _ClearDefaultSession(object):
+    def setUp(self):
+        oneflow.clear_default_session()
+        oneflow.enable_eager_execution(False)
+
+
 @oneflow_export("unittest.register_test_cases")
 def register_test_cases(
     scope: Dict[str, Any],
     directory: str,
     filter_by_num_nodes: Callable[[bool], int],
     base_class: unittest.TestCase = unittest.TestCase,
+    test_case_mixin=_ClearDefaultSession,
 ) -> None:
     def FilterTestPyFile(f):
         return (
@@ -67,11 +74,6 @@ def num_nodes_required(num_nodes: int) -> Callable[[Callable], Callable]:
         return f
 
     return Decorator
-
-
-class _ClearDefaultSession(object):
-    def setUp(self):
-        oneflow.clear_default_session()
 
 
 def _GetNumOfNodes(func):

@@ -404,7 +404,6 @@ def clear_default_session() -> None:
     """
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
-    c_api_util.EnableEagerSession(False)
 
 
 @oneflow_export("current_scope")
