@@ -249,9 +249,9 @@ Maybe<std::string> InferOpConf(const std::string& op_conf_str,
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
-  UpstreamSignature upstream_signature;
+  OpNodeSignature upstream_signature;
   CHECK_OR_RETURN(TxtString2PbMessage(upstream_signature_str, &upstream_signature))
-      << "UpstreamSignature parse failed";
+      << "OpNodeSignature parse failed";
   const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
   const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
   const auto& op = JUST(ConstructAndInferOp(op_conf, upstream_signature, scope));

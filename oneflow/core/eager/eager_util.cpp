@@ -43,9 +43,9 @@ void StorageAdd(const EagerSymbol& symbol) {
     Global<vm::SymbolStorage<ParallelDesc>>::Get()->Add(symbol_id, symbol.parallel_conf_symbol());
   } else if (symbol.has_op_conf_symbol()) {
     Global<vm::SymbolStorage<OperatorConf>>::Get()->Add(symbol_id, symbol.op_conf_symbol());
-  } else if (symbol.has_op_parallel_attribute_symbol()) {
-    Global<vm::SymbolStorage<OpParallelAttribute>>::Get()->Add(
-        symbol_id, symbol.op_parallel_attribute_symbol());
+  } else if (symbol.has_op_node_signature_symbol()) {
+    Global<vm::SymbolStorage<OpNodeSignature>>::Get()->Add(symbol_id,
+                                                           symbol.op_node_signature_symbol());
   } else {
     UNIMPLEMENTED();
   }

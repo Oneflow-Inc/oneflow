@@ -308,9 +308,9 @@ void ResetTmpBufferBlobObject(OpKernelObject* opkernel_obj, DeviceType device_ty
 
 template<typename T>
 Maybe<void> CheckBlobParallel(vm::Instruction* instruction, const T& args,
-                              const OpParallelAttribute* op_parallel_attribute) {
+                              const OpNodeSignature* op_node_signature) {
   const auto& bn_in_op2parallel_desc_symbol_id =
-      op_parallel_attribute->parallel_signature().bn_in_op2parallel_desc_symbol_id();
+      op_node_signature->parallel_signature().bn_in_op2parallel_desc_symbol_id();
 
   const auto& ParallelDesc4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const ParallelDesc*> {
     const auto& iter = bn_in_op2parallel_desc_symbol_id.find(bn_in_op);
@@ -354,19 +354,19 @@ Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruc
   }
   std::function<BlobDesc*(const std::string&)> BlobDesc4BnInOp;
   JUST(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj, &BlobDesc4BnInOp));
-  const OpParallelAttribute* op_parallel_attribute = nullptr;
+  const OpNodeSignature* op_node_signature = nullptr;
   {
-    const auto* operand = instruction->operand_type(args.op_parallel_attribute());
-    const auto* op_parallel_attribute_object =
-        JUST(operand->template Get<vm::ObjectWrapper<OpParallelAttribute>>());
-    op_parallel_attribute = &op_parallel_attribute_object->Get();
+    const auto* operand = instruction->operand_type(args.op_node_signature());
+    const auto* op_node_signature_object =
+        JUST(operand->template Get<vm::ObjectWrapper<OpNodeSignature>>());
+    op_node_signature = &op_node_signature_object->Get();
   }
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  JUST(opkernel_obj->ResetOpAndKernel(&(op_parallel_attribute->sbp_signature()), &parallel_ctx,
+  JUST(opkernel_obj->ResetOpAndKernel(&(op_node_signature->sbp_signature()), &parallel_ctx,
                                       BlobDesc4BnInOp));
-  JUST(CheckBlobParallel(instruction, args, op_parallel_attribute));
+  JUST(CheckBlobParallel(instruction, args, op_node_signature));
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
                                  return blob_object->TryInitBlob();
@@ -390,19 +390,19 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
   }
   std::function<BlobDesc*(const std::string&)> BlobDesc4BnInOp;
   JUST(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj, &BlobDesc4BnInOp));
-  const OpParallelAttribute* op_parallel_attribute = nullptr;
+  const OpNodeSignature* op_node_signature = nullptr;
   {
-    const auto* operand = instruction->operand_type(args.op_parallel_attribute());
-    const auto* op_parallel_attribute_object =
-        JUST(operand->template Get<vm::ObjectWrapper<OpParallelAttribute>>());
-    op_parallel_attribute = &op_parallel_attribute_object->Get();
+    const auto* operand = instruction->operand_type(args.op_node_signature());
+    const auto* op_node_signature_object =
+        JUST(operand->template Get<vm::ObjectWrapper<OpNodeSignature>>());
+    op_node_signature = &op_node_signature_object->Get();
   }
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  JUST(opkernel_obj->ResetKernel(&(op_parallel_attribute->sbp_signature()), &parallel_ctx,
+  JUST(opkernel_obj->ResetKernel(&(op_node_signature->sbp_signature()), &parallel_ctx,
                                  BlobDesc4BnInOp));
-  JUST(CheckBlobParallel(instruction, args, op_parallel_attribute));
+  JUST(CheckBlobParallel(instruction, args, op_node_signature));
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
                                  return blob_object->TryInitBlob();

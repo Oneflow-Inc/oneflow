@@ -829,7 +829,7 @@ Maybe<void> InferOpOutBlobDescs(
 }
 
 Maybe<void> InferOpOutSbpParallel(
-    Operator* op, const UpstreamSignature& upstream_signature,
+    Operator* op, const OpNodeSignature& upstream_signature,
     const std::function<const BlobDesc&(const std::string&)>& ConstBlobDesc4Ibn,
     const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc) {
   const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const OptInt64*> {
@@ -852,7 +852,7 @@ Maybe<void> InferOpOutSbpParallel(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferMirroredSignature(Operator* op, const UpstreamSignature& upstream_signature,
+Maybe<void> InferMirroredSignature(Operator* op, const OpNodeSignature& upstream_signature,
                                    bool is_mirrored, const ParallelDesc& parallel_desc) {
   HashMap<std::string, MirroredSigInferHint> ibn2mirrored_sig_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
@@ -872,7 +872,7 @@ Maybe<void> InferMirroredSignature(Operator* op, const UpstreamSignature& upstre
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CheckOpInputSignature(const Operator& op, const UpstreamSignature& upstream_signature) {
+Maybe<void> CheckOpInputSignature(const Operator& op, const OpNodeSignature& upstream_signature) {
   for (const auto& ibn : op.input_bns()) {
     {
       CHECK_OR_RETURN(upstream_signature.has_logical_blob_desc_signature());
@@ -901,8 +901,7 @@ Maybe<void> CheckOpInputSignature(const Operator& op, const UpstreamSignature& u
 }  // namespace
 
 Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
-                                    const UpstreamSignature& upstream_signature,
-                                    const Scope& scope) {
+                                    const OpNodeSignature& upstream_signature, const Scope& scope) {
   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
   bool is_mirrored = scope.opt_mirrored_parallel_conf().has_mirrored_parallel();
   const auto& op = ConstructOp(op_conf, JUST(scope.job_desc()));
