@@ -385,31 +385,6 @@ def find_or_create_module(module_name, create, reuse=False):
     return module_name2module[module_name]
 
 
-@enable_if.condition(hob.in_global_mode)
-def find_or_create_module(module_name, create, reuse=False):
-    assert callable(create)
-    sess = session_ctx.GetDefaultSession()
-    job_name = oneflow.current_global_function_desc().job_config_proto.job_name
-    if job_name not in sess.job_name2module_name2module_:
-        sess.job_name2module_name2module_[job_name] = {}
-    module_name2module = sess.job_name2module_name2module_[job_name]
-    if module_name not in module_name2module:
-        module = create()
-        assert isinstance(module, module_util.Module)
-        module_name2module[module_name] = module
-    else:
-        if not reuse:
-            assert module_name not in sess.existed_module_names_, (
-                "duplicated module_name `%s' in global_function `%s'"
-                % (module_name, job_name)
-            )
-        else:
-            # do nothing
-            pass
-    sess.existed_module_names_.add(module_name)
-    return module_name2module[module_name]
-
-
 @oneflow_export("eager_execution_enabled")
 def api_eager_execution_enabled() -> bool:
     return c_api_util.EagerExecutionEnabled()
