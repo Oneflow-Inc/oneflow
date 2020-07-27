@@ -373,21 +373,6 @@ def find_or_create_module(module_name, create, reuse=False):
     return module_name2module[module_name]
 
 
-@oneflow_export("enable_eager_execution")
-def api_enable_eager_execution(val: bool = True) -> None:
-    """Whether or not enable eager mode for  job execution.
-
-    Args:
-        val (bool, optional): [description]. Defaults to True.
-    """
-    return enable_if.unique([enable_eager_execution])(val=val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
-def enable_eager_execution(val=True):
-    return c_api_util.EnableEagerSession(val)
-
-
 @oneflow_export("eager_execution_enabled")
 def api_eager_execution_enabled() -> bool:
     """Get current setting of the job, if enable eager execution mode ,then return True
