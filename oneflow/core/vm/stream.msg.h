@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_VM_STREAM_H_
 #define ONEFLOW_CORE_VM_STREAM_H_
 
@@ -13,14 +28,14 @@ class ThreadCtx;
 // clang-format off
 OBJECT_MSG_BEGIN(Stream);
   // methods
-  PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id);
-  PUBLIC ObjectMsgPtr<Instruction> NewInstruction(InstructionMsg* instr_msg, const std::shared_ptr<ParallelDesc>& parallel_desc);
-  PUBLIC void DeleteInstruction(ObjectMsgPtr<Instruction>&&);
-  PUBLIC int64_t global_device_id() const { return stream_id().global_device_id(); }
-  PUBLIC int64_t machine_id() const;
-  PUBLIC int64_t device_id() const;
-  PUBLIC const StreamType& stream_type() const;
-  PUBLIC const StreamTypeId& stream_type_id() const;
+  OF_PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id);
+  OF_PUBLIC ObjectMsgPtr<Instruction> NewInstruction(InstructionMsg* instr_msg, const std::shared_ptr<ParallelDesc>& parallel_desc);
+  OF_PUBLIC void DeleteInstruction(ObjectMsgPtr<Instruction>&&);
+  OF_PUBLIC int64_t global_device_id() const { return stream_id().global_device_id(); }
+  OF_PUBLIC int64_t machine_id() const;
+  OF_PUBLIC int64_t device_id() const;
+  OF_PUBLIC const StreamType& stream_type() const;
+  OF_PUBLIC const StreamTypeId& stream_type_id() const;
 
   // fields
   OBJECT_MSG_DEFINE_PTR(ThreadCtx, thread_ctx); 

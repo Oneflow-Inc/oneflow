@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 from contextlib import contextmanager
@@ -44,7 +59,7 @@ def CurJobAddOp(op_conf, scope_symbol=None):
 
 def CurJobAddConsistentOp(op_conf, scope_symbol=None):
     if scope_symbol is None:
-        scope_symbol = oneflow.scope.current_scope()
+        scope_symbol = oneflow.current_scope()
     op_conf.scope_symbol_id = scope_symbol.symbol_id
     if not op_conf.HasField("device_type"):
         device_tag = scope_symbol.device_parallel_desc_symbol.device_tag
@@ -55,7 +70,7 @@ def CurJobAddConsistentOp(op_conf, scope_symbol=None):
 def CurJobAddMirroredOp(op_conf, scope_symbol=None):
     assert not hob.consistent_view_enabled(None)
     if scope_symbol is None:
-        scope_symbol = oneflow.scope.current_scope()
+        scope_symbol = oneflow.current_scope()
     op_conf.scope_symbol_id = scope_symbol.symbol_id
     if not op_conf.HasField("device_type"):
         device_tag = scope_symbol.device_parallel_desc_symbol.device_tag

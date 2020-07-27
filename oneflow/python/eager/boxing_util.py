@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import oneflow.python.eager.symbol as symbol_util
@@ -520,8 +535,9 @@ def GetConcatSplitBoxingParallelDescSymbol(
 ):
     random_rank_id = random.randint(0, max_parallel_num - 1)
     parallel_conf = placement_pb.ParallelConf()
+    parallel_conf.device_tag = "cpu"
     for machine_id, _ in blob_parallel_desc_symbol.machine_id2device_id_list.items():
-        parallel_conf.device_name.append("%s:cpu:%s" % (machine_id, random_rank_id))
+        parallel_conf.device_name.append("%s:%s" % (machine_id, random_rank_id))
     return builder.GetParallelDescSymbol(parallel_conf)
 
 
@@ -784,7 +800,7 @@ conditional_function_table = [
         OptionalBoxing(CopyH2D),
     ),
     # P -> B
-    NcclAllReduce,  # e.g. 0:gpu:0-3 -> 0:gpu:0-3
+    NcclAllReduce,  # e.g. gpu, 0:0-3 -> gpu, 0:0-3
     Sequential(
         boxing_middle.BoxingToMiddle(
             OptionalBoxing(CopyD2H),

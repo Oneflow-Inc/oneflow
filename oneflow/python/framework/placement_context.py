@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import collections
@@ -66,7 +81,7 @@ class PlacementScope(object):
         return device_util.DeviceType4DeviceTag(self.GetDeviceTag4OpConf(op_conf))
 
     def GetDeviceTag4OpConf(self, op_conf):
-        raise NotImplementedError
+        return self.default_device_tag
 
     def __enter__(self):
         PlacementScopeStackPush(self)
@@ -77,36 +92,6 @@ class PlacementScope(object):
         assert self == PlacementScopeStackPop()
         if self.scope_context_ is not None:
             self.scope_context_.__exit__(*args)
-
-
-class FixedPlacementScope(PlacementScope):
-    r"""Class for fixed placement scope.
-
-    This class along with `oneflow.scope.placement` allows to define PlacementScope
-    with fixed parallel configuration.
-    """
-
-    def __init__(self, device_tag, machine_device_ids):
-        PlacementScope.__init__(self, device_tag, machine_device_ids)
-
-    def GetDeviceTag4OpConf(self, op_conf):
-        return self.default_device_tag
-
-
-class DevicePriorPlacementScope(PlacementScope):
-    r"""Class for device prior placement scope.
-
-    This class along with `oneflow.scope.placement` allows to define PlacementScope
-    with device prior parallel configuration.
-    """
-
-    def __init__(self, device_tag, machine_device_ids):
-        PlacementScope.__init__(self, device_tag, machine_device_ids)
-
-    def GetDeviceTag4OpConf(self, op_conf):
-        if op_util.IsOpConfOnlyCpuSupported(op_conf):
-            return "cpu"
-        return self.default_device_tag
 
 
 def PlacementScopeStackPush(placement_policy):
@@ -165,9 +150,10 @@ def MakeParallelConf(device_tag, machine_device_ids):
             "machine_device_id: %s is not valid" % machine_device_id
         )
         pair = machine_device_id.split(":")
-        device_names.append("%s:%s:%s" % (pair[0], device_tag, pair[1]))
+        device_names.append("%s:%s" % (pair[0], pair[1]))
 
     parallel_conf = placement_pb.ParallelConf()
+    parallel_conf.device_tag = device_tag
     parallel_conf.device_name.extend(device_names)
     return parallel_conf
 

@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
@@ -31,6 +46,18 @@ def Interpret(op_attribute, parallel_conf, blob_register):
     if op_attribute.op_conf.HasField("foreign_watch_conf"):
         return _Watch(op_attribute, parallel_conf, blob_register)
     return _NaiveInterpret(op_attribute, parallel_conf, blob_register)
+
+
+def OpKernelCall(opkernel_object, op_attribute, blob_register):
+    def BuildInstruction(builder):
+        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+            builder.StatefulCall(
+                op_attribute,
+                opkernel_object=opkernel_object,
+                bn_in_op2blob_object=bn_in_op2blob_object,
+            )
+
+    vm_util.LogicalRun(BuildInstruction)
 
 
 def MirroredCast(op_attribute, blob_register):
@@ -136,7 +163,7 @@ def _ModelInit(var_op_conf):
     def BuildModeInitInstruction(builder):
         upstream_signature = op_attribute_pb.UpstreamSignature()
         parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-        op_conf.scope_symbol_id = oneflow.scope.current_scope().symbol_id
+        op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
         op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
         builder.StatelessCall(
             op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
