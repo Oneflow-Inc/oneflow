@@ -1059,7 +1059,7 @@ static inline ncclResult_t wrap_ibv_poll_cq(struct ibv_cq *cq, int num_entries, 
       cq, num_entries,
       wc); /*returns the number of wcs or 0 on success, a negative number otherwise*/
   if (done < 0) {
-    LOG(WARNING) << "Call to ibv_poll_cq() returned %d", done;
+    LOG(WARNING) << "Call to ibv_poll_cq() returned " << done;
     return ncclSystemError;
   }
   *num_done = done;
@@ -1080,7 +1080,7 @@ static inline ncclResult_t wrap_ibv_post_send(struct ibv_qp *qp, struct ibv_send
                                                            errno on failure (which indicates the
                                                            failure reason)*/
   if (ret != IBV_SUCCESS) {
-    LOG(WARNING) << "ibv_post_send() failed with error %s", strerror(ret);
+    LOG(WARNING) << "ibv_post_send() failed with error " << strerror(ret);
     return ncclSystemError;
   }
   return ncclSuccess;
@@ -1092,7 +1092,7 @@ static inline ncclResult_t wrap_ibv_post_recv(struct ibv_qp *qp, struct ibv_recv
                                                            errno on failure (which indicates the
                                                            failure reason)*/
   if (ret != IBV_SUCCESS) {
-    LOG(WARNING) << "ibv_post_recv() failed with error %s", strerror(ret);
+    LOG(WARNING) << "ibv_post_recv() failed with error " << strerror(ret);
     return ncclSystemError;
   }
   return ncclSuccess;

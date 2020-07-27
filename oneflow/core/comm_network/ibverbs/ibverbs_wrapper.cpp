@@ -86,15 +86,16 @@ ncclResult_t wrap_ibv_symbols(void) {
     }
   }
 
-#define LOAD_SYM(handle, symbol, funcptr)                                                        \
-  do {                                                                                           \
-    cast = (void **)&funcptr;                                                                    \
-    tmp = dlvsym(handle, symbol, IBVERBS_VERSION);                                               \
-    if (tmp == NULL) {                                                                           \
-      LOG(WARNING) << "dlvsym failed on %s - %s version %s", symbol, dlerror(), IBVERBS_VERSION; \
-      goto teardown;                                                                             \
-    }                                                                                            \
-    *cast = tmp;                                                                                 \
+#define LOAD_SYM(handle, symbol, funcptr)                                                \
+  do {                                                                                   \
+    cast = (void **)&funcptr;                                                            \
+    tmp = dlvsym(handle, symbol, IBVERBS_VERSION);                                       \
+    if (tmp == NULL) {                                                                   \
+      LOG(WARNING) << "dlvsym failed on " << symbol << " - " << dlerror() << " version " \
+                   << IBVERBS_VERSION;                                                   \
+      goto teardown;                                                                     \
+    }                                                                                    \
+    *cast = tmp;                                                                         \
   } while (0)
 
   LOAD_SYM(ibvhandle, "ibv_get_device_list", ibv_internal_get_device_list);
@@ -159,7 +160,7 @@ teardown:
   }                                                                           \
   retval = call;                                                              \
   if (retval == error_retval) {                                               \
-    LOG(WARNING) << "Call to " name " failed with error %s", strerror(errno); \
+    LOG(WARNING) << "Call to " name " failed with error " << strerror(errno); \
     return ncclSystemError;                                                   \
   }                                                                           \
   return ncclSuccess;
@@ -183,7 +184,7 @@ teardown:
   }                                                                         \
   int ret = call;                                                           \
   if (ret != success_retval) {                                              \
-    LOG(WARNING) << "Call to " name " failed with error %s", strerror(ret); \
+    LOG(WARNING) << "Call to " name " failed with error " << strerror(ret); \
     return ncclSystemError;                                                 \
   }                                                                         \
   return ncclSuccess;
