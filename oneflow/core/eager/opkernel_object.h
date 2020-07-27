@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/eager/blob_object.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/operator/op_node_signature_desc.h"
 
 namespace oneflow {
 
@@ -58,7 +58,7 @@ class OpKernelObject : public vm::Object {
     opkernel_state_ = opkernel_state;
   }
 
-  Maybe<void> ResetOpAndKernel(const SbpSignature* sbp_signature,
+  Maybe<void> ResetOpAndKernel(const OpNodeSignatureDesc& op_node_signature,
                                const ParallelContext* parallel_ctx,
                                const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
 
@@ -76,7 +76,8 @@ class OpKernelObject : public vm::Object {
                              std::unique_ptr<OpContext>* op_ctx);
   void NewPartialInitializedKernel(
       const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, OpContext* op_ctx);
+      const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
+      OpContext* op_ctx);
 
   OperatorConf op_conf_;
   std::shared_ptr<const JobDesc> job_desc_;
@@ -102,7 +103,8 @@ class SystemOpKernelObject : public vm::Object {
 
   const Kernel& kernel() const { return *kernel_; }
 
-  Maybe<void> ResetKernel(const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
+  Maybe<void> ResetKernel(const OpNodeSignatureDesc& op_node_signature,
+                          const ParallelContext* parallel_ctx,
                           const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
 
  private:
@@ -112,6 +114,7 @@ class SystemOpKernelObject : public vm::Object {
                              std::unique_ptr<OpContext>* op_ctx);
   void ResetKernel(const Operator& op,
                    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+                   const OpNodeSignatureDesc& op_node_signature,
                    const ParallelContext* parallel_ctx, OpContext* op_ctx);
 
   OperatorConf op_conf_;
