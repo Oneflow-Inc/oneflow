@@ -170,7 +170,7 @@ def compare_with_tensorflow(
 
 def test_padding_valid(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
@@ -186,7 +186,7 @@ def test_padding_valid(test_case):
 
 def test_padding_same(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
@@ -202,7 +202,7 @@ def test_padding_same(test_case):
 
 def test_pad_list1(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
@@ -218,7 +218,7 @@ def test_pad_list1(test_case):
 
 def test_pad_list2(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
@@ -234,7 +234,7 @@ def test_pad_list2(test_case):
 
 def test_pad_list3(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
@@ -250,7 +250,7 @@ def test_pad_list3(test_case):
 
 def test_pad_list4(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
