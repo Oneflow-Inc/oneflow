@@ -105,7 +105,7 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dila
       if (padding_before) { *padding_before = padding_large; }
       if (padding_after) { *padding_after = padding_small; }
     } else {
-      LOG(FATAL) << "invalid padding_type " << padding_type;
+      UNIMPLEMENTED();
     }
   }
   if (output_size) { CHECK_GE((*output_size), 0); }

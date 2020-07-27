@@ -23,13 +23,13 @@ namespace oneflow {
 namespace {
 
 struct PoolOpKernelState final : public user_op::OpKernelState {
-  Params3D params_3d_;
-  bool is_dynamic_;
+  Params3D params_3d;
+  bool is_dynamic;
   PoolOpKernelState(Params3D params_3d, bool is_dynamic)
-      : params_3d_(params_3d), is_dynamic_(is_dynamic) {}
-  const Params3D& GetParams3D() { return params_3d_; }
+      : params_3d(params_3d), is_dynamic(is_dynamic) {}
+  const Params3D& GetParams3D() { return params_3d; }
   void Update(const ShapeView& x_shape) {
-    if (is_dynamic_) { params_3d_.ResetIfDynamic(x_shape); }
+    if (is_dynamic) { params_3d.ResetIfDynamic(x_shape); }
   }
 };
 

@@ -56,10 +56,6 @@ void CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dilation_r
       0, static_cast<int32_t>((tmp_output_size - 1) * stride + effective_filter_size - input_size));
   if (padding_small) { *padding_small = padding_needed / 2; }
   if (padding_large) { *padding_large = padding_needed - padding_needed / 2; }
-  LOG(ERROR) << "same padding"
-             << " input_size " << input_size << " filter_size " << filter_size << " dilation_rate "
-             << dilation_rate << " stride " << stride << " padding_type " << padding_type
-             << " padding_small " << *padding_small << " padding_large " << *padding_large;
 }
 
 void CalcConvOut(int64_t input_size, int32_t filter_size, int32_t dilation_rate, int32_t stride,

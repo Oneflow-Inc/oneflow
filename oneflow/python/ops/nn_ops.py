@@ -147,7 +147,7 @@ def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, str
                 return_pads_list = [[0, 0]] * ndims
                 inputs = flow.same_padding(
                     inputs,
-                    padding.upper(),
+                    padding.lower(),
                     data_format=data_format,
                     kernel_size=kernel_sizes,
                     strides=strides,
