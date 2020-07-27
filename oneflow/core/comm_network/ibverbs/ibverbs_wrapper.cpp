@@ -22,7 +22,6 @@ Copyright (c) 2015-2019, NVIDIA CORPORATION. All rights reserved.
 #include <unistd.h>
 
 #include <dlfcn.h>
-#include "core.h"
 
 namespace oneflow {
 
@@ -82,20 +81,20 @@ ncclResult_t wrap_ibv_symbols(void) {
   if (!ibvhandle) {
     ibvhandle = dlopen("libibverbs.so.1", RTLD_NOW);
     if (!ibvhandle) {
-      WARN("Failed to open libibverbs.so[.1]");
+      LOG(WARNING) << "Failed to open libibverbs.so[.1]";
       goto teardown;
     }
   }
 
-#define LOAD_SYM(handle, symbol, funcptr)                                              \
-  do {                                                                                 \
-    cast = (void **)&funcptr;                                                          \
-    tmp = dlvsym(handle, symbol, IBVERBS_VERSION);                                     \
-    if (tmp == NULL) {                                                                 \
-      WARN("dlvsym failed on %s - %s version %s", symbol, dlerror(), IBVERBS_VERSION); \
-      goto teardown;                                                                   \
-    }                                                                                  \
-    *cast = tmp;                                                                       \
+#define LOAD_SYM(handle, symbol, funcptr)                                                        \
+  do {                                                                                           \
+    cast = (void **)&funcptr;                                                                    \
+    tmp = dlvsym(handle, symbol, IBVERBS_VERSION);                                               \
+    if (tmp == NULL) {                                                                           \
+      LOG(WARNING) << "dlvsym failed on %s - %s version %s", symbol, dlerror(), IBVERBS_VERSION; \
+      goto teardown;                                                                             \
+    }                                                                                            \
+    *cast = tmp;                                                                                 \
   } while (0)
 
   LOAD_SYM(ibvhandle, "ibv_get_device_list", ibv_internal_get_device_list);
@@ -153,60 +152,60 @@ teardown:
   return ncclSystemError;
 }
 
-#define IBV_PTR_CHECK_ERRNO(name_internal, call, retval, error_retval, name) \
-  if (name_internal == NULL) {                                               \
-    WARN("lib wrapper not initialized.");                                    \
-    return ncclInternalError;                                                \
-  }                                                                          \
-  retval = call;                                                             \
-  if (retval == error_retval) {                                              \
-    WARN("Call to " name " failed with error %s", strerror(errno));          \
-    return ncclSystemError;                                                  \
-  }                                                                          \
+#define IBV_PTR_CHECK_ERRNO(name_internal, call, retval, error_retval, name)  \
+  if (name_internal == NULL) {                                                \
+    LOG(WARNING) << "lib wrapper not initialized.";                           \
+    return ncclInternalError;                                                 \
+  }                                                                           \
+  retval = call;                                                              \
+  if (retval == error_retval) {                                               \
+    LOG(WARNING) << "Call to " name " failed with error %s", strerror(errno); \
+    return ncclSystemError;                                                   \
+  }                                                                           \
   return ncclSuccess;
 
 #define IBV_PTR_CHECK(name_internal, call, retval, error_retval, name) \
   if (name_internal == NULL) {                                         \
-    WARN("lib wrapper not initialized.");                              \
+    LOG(WARNING) << "lib wrapper not initialized.";                    \
     return ncclInternalError;                                          \
   }                                                                    \
   retval = call;                                                       \
   if (retval == error_retval) {                                        \
-    WARN("Call to " name " failed");                                   \
+    LOG(WARNING) << "Call to " name " failed";                         \
     return ncclSystemError;                                            \
   }                                                                    \
   return ncclSuccess;
 
-#define IBV_INT_CHECK_RET_ERRNO(name_internal, call, success_retval, name) \
-  if (name_internal == NULL) {                                             \
-    WARN("lib wrapper not initialized.");                                  \
-    return ncclInternalError;                                              \
-  }                                                                        \
-  int ret = call;                                                          \
-  if (ret != success_retval) {                                             \
-    WARN("Call to " name " failed with error %s", strerror(ret));          \
-    return ncclSystemError;                                                \
-  }                                                                        \
+#define IBV_INT_CHECK_RET_ERRNO(name_internal, call, success_retval, name)  \
+  if (name_internal == NULL) {                                              \
+    LOG(WARNING) << "lib wrapper not initialized.";                         \
+    return ncclInternalError;                                               \
+  }                                                                         \
+  int ret = call;                                                           \
+  if (ret != success_retval) {                                              \
+    LOG(WARNING) << "Call to " name " failed with error %s", strerror(ret); \
+    return ncclSystemError;                                                 \
+  }                                                                         \
   return ncclSuccess;
 
 #define IBV_INT_CHECK(name_internal, call, error_retval, name) \
   if (name_internal == NULL) {                                 \
-    WARN("lib wrapper not initialized.");                      \
+    LOG(WARNING) << "lib wrapper not initialized.";            \
     return ncclInternalError;                                  \
   }                                                            \
   int ret = call;                                              \
   if (ret == error_retval) {                                   \
-    WARN("Call to " name " failed");                           \
+    LOG(WARNING) << "Call to " name " failed";                 \
     return ncclSystemError;                                    \
   }                                                            \
   return ncclSuccess;
 
-#define IBV_PASSTHRU(name_internal, call) \
-  if (name_internal == NULL) {            \
-    WARN("lib wrapper not initialized."); \
-    return ncclInternalError;             \
-  }                                       \
-  call;                                   \
+#define IBV_PASSTHRU(name_internal, call)           \
+  if (name_internal == NULL) {                      \
+    LOG(WARNING) << "lib wrapper not initialized."; \
+    return ncclInternalError;                       \
+  }                                                 \
+  call;                                             \
   return ncclSuccess;
 
 ncclResult_t wrap_ibv_fork_init() {
@@ -225,7 +224,7 @@ ncclResult_t wrap_ibv_free_device_list(struct ibv_device **list) {
 
 const char *wrap_ibv_get_device_name(struct ibv_device *device) {
   if (ibv_internal_get_device_name == NULL) {
-    WARN("lib wrapper not initialized.");
+    LOG(WARNING) << "lib wrapper not initialized.";
     exit(-1);
   }
   return ibv_internal_get_device_name(device);
@@ -304,7 +303,7 @@ ncclResult_t wrap_ibv_reg_mr(struct ibv_mr **ret, struct ibv_pd *pd, void *addr,
 
 struct ibv_mr *wrap_direct_ibv_reg_mr(struct ibv_pd *pd, void *addr, size_t length, int access) {
   if (ibv_internal_reg_mr == NULL) {
-    WARN("lib wrapper not initialized.");
+    LOG(WARNING) << "lib wrapper not initialized.";
     return NULL;
   }
   return ibv_internal_reg_mr(pd, addr, length, access);
