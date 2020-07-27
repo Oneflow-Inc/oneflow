@@ -56,6 +56,7 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
       if (model_update_conf.has_learning_rate_decay()) {
         *schedule_conf->mutable_learning_rate_decay() = model_update_conf.learning_rate_decay();
       }
+      schedule_op_conf.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
       job_builder.AddOps(parallel_conf, {schedule_op_conf});
       return GenLogicalBlobName(op_name, schedule_conf->out());
     } else {
@@ -68,7 +69,9 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
                                    .Attr<Shape>("shape", Shape({1}))
                                    .Output("out")
                                    .Build();
-      job_builder.AddOps(parallel_conf, {constant_op.op_conf()});
+      OperatorConf op_conf(constant_op.op_conf());
+      op_conf.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
+      job_builder.AddOps(parallel_conf, {op_conf});
       return constant_op.output("out", 0);
     }
   };

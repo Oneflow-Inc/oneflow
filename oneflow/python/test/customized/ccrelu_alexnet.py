@@ -120,27 +120,25 @@ def _conv2d_layer(
 
 
 def _data_load_layer(args, data_dir):
-    image_blob_conf = flow.data.BlobConf(
-        "encoded",
-        shape=(227, 227, 3),
-        dtype=flow.float,
-        codec=flow.data.ImageCodec([flow.data.ImagePreprocessor("bgr2rgb")]),
-        preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
-    )
-
-    label_blob_conf = flow.data.BlobConf(
-        "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
-    )
-
     node_num = args.num_nodes
     total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
-    return flow.data.decode_ofrecord(
-        data_dir,
-        (label_blob_conf, image_blob_conf),
-        batch_size=total_batch_size,
-        data_part_num=args.data_part_num,
-        name="decode",
+    rgb_mean = [123.68, 116.78, 103.94]
+    ofrecord = flow.data.ofrecord_reader(
+        data_dir, batch_size=total_batch_size, data_part_num=args.data_part_num
     )
+    image = flow.data.OFRecordImageDecoder(ofrecord, "encoded", color_space="RGB")
+    label = flow.data.OFRecordRawDecoder(
+        ofrecord, "class/label", shape=(), dtype=flow.int32
+    )
+    rsz = flow.image.Resize(image, resize_x=227, resize_y=227, color_space="RGB")
+    normal = flow.image.CropMirrorNormalize(
+        rsz,
+        color_space="RGB",
+        output_layout="NCHW",
+        mean=rgb_mean,
+        output_dtype=flow.float,
+    )
+    return label, normal
 
 
 def ccrelu(x, name):
@@ -156,15 +154,8 @@ def ccrelu(x, name):
 
 
 def alexnet(args, images, labels, trainable=True):
-    transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
     conv1 = _conv2d_layer(
-        args,
-        "conv1",
-        transposed,
-        filters=64,
-        kernel_size=11,
-        strides=4,
-        padding="VALID",
+        args, "conv1", images, filters=64, kernel_size=11, strides=4, padding="VALID",
     )
 
     pool1 = flow.nn.avg_pool2d(conv1, 3, 2, "VALID", "NCHW", name="pool1")
