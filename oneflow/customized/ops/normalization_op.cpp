@@ -409,8 +409,9 @@ REGISTER_USER_OP_GRAD("normalization")
                                  [&]() {
                                    if (is_fp16) {
                                      return ctx->GetOp(dy_h2f_cast_op_name).output("out", 0);
-                                   } else
-                                     (return ctx->fw_op.output_grad("y", 0))
+                                   } else {
+                                     return ctx->fw_op.output_grad("y", 0);
+                                   }
                                  },
                                  mul_gamma_name);
 
@@ -459,10 +460,10 @@ REGISTER_USER_OP_GRAD("normalization")
         }
       });
 
-      ctx->fw_op.InputGradBind(OpArg("gamma", 0),
-                               []() { ctx->GetOp(gamma_identity_op_name).output("out", 0); });
-      ctx->fw_op.InputGradBind(OpArg("beta", 0),
-                               []() { ctx->GetOp(beta_identity_op_name).output("out", 0); });
+      ctx->fw_op.InputGradBind(
+          OpArg("gamma", 0), [&]() { return ctx->GetOp(gamma_identity_op_name).output("out", 0); });
+      ctx->fw_op.InputGradBind(
+          OpArg("beta", 0), [&]() { return ctx->GetOp(beta_identity_op_name).output("out", 0); });
     });
 
 }  // namespace oneflow
