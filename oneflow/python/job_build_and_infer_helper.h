@@ -24,10 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-bool EagerExecutionEnabled() {
-  return *Global<bool, EagerExecution<ForEnv>>::Get()
-         || *Global<bool, EagerExecution<ForSession>>::Get();
-}
+bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
 
 namespace {
 

@@ -34,6 +34,8 @@ import oneflow.python.framework.typing_util as oft_util
 import oneflow.python.lib.core.pb_util as pb_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
+import traceback
+import sys
 
 
 @oneflow_export("FunctionConfig", "function_config")
@@ -514,7 +516,7 @@ def set_tensorrt_int8_calibration(func_desc, value):
     func_desc.job_config_proto.xrt_config.tensorrt_config.int8_calibration = value
 
 
-@oneflow_function_config("default_distribute_strategy")
+@oneflow_function_config("default_logical_view")
 def set_default_distribute_strategy(func_desc, value):
     assert isinstance(value, distribute_ctx.DistributeStrategy)
     func_desc.function_attribute.default_distribute_strategy = value
@@ -523,3 +525,16 @@ def set_default_distribute_strategy(func_desc, value):
 @oneflow_function_config("allow_cpu_return_op")
 def allow_cpu_return_op(func_desc, value):
     func_desc.function_attribute.allow_cpu_return_op = value
+
+
+@oneflow_function_config("default_distribute_strategy")
+def deprecated_set_default_distribute_strategy(*args, **kwargs):
+    print(
+        "WARNING:",
+        "oneflow.default_distribute_strategy",
+        "has been deprecated. Please use {} instead.".format(
+            "oneflow.default_logical_view"
+        ),
+    )
+    print(traceback.format_stack()[-3], file=sys.stderr)
+    set_default_distribute_strategy(*args, **kwargs)
