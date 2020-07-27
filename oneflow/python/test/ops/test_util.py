@@ -58,7 +58,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.global_function("train", func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def FlowJob(x: oft.Numpy.Placeholder(x.shape)):
         with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
@@ -68,7 +68,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
                 initializer=flow.zeros_initializer(),
             )
             loss = flow_op(x, *flow_args)
-            flow.optimizer.Sgd(flow.optimizer.CosineScheduler(10000, 0.001)).minimize(
+            flow.optimizer.SGD(flow.optimizer.CosineScheduler(10000, 0.001)).minimize(
                 loss
             )
 
