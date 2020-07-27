@@ -438,8 +438,6 @@ def InceptionE(in_blob, index):
 
 
 def inceptionv3(images, labels, trainable=True):
-    images = flow.transpose(images, perm=[0, 3, 1, 2])
-
     conv0 = _conv2d_layer(
         "conv0", images, filters=32, kernel_size=3, strides=2, padding="VALID"
     )
