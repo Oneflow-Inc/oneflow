@@ -62,16 +62,23 @@ int64_t NewOpNodeSignature(InstructionMsgList* list, const std::vector<std::stri
                            const std::vector<std::string>& obns,
                            const std::vector<int64_t>& parallel_desc_symbol_ids_4_obns) {
   OpNodeSignature op_node_signature;
+  const auto& SetFakeLogicalBlobDesc = [&](const std::string& bn_in_op) {
+    auto* blob_sig = op_node_signature.mutable_logical_blob_desc_signature();
+    auto* map = blob_sig->mutable_bn_in_op2blob_desc();
+    BlobDesc(Shape({10LL}), DataType::kFloat).ToProto(&(*map)[bn_in_op]);
+  };
   auto* bn_in_op2parallel_desc_symbol_id =
       op_node_signature.mutable_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
   auto* map = op_node_signature.mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
   for (int i = 0; i < ibns.size(); ++i) {
     (*map)[ibns[i]].mutable_broadcast_parallel();
     (*bn_in_op2parallel_desc_symbol_id)[ibns[i]] = parallel_desc_symbol_ids_4_ibns[i];
+    SetFakeLogicalBlobDesc(ibns[i]);
   }
   for (int i = 0; i < obns.size(); ++i) {
     (*map)[obns[i]].mutable_broadcast_parallel();
     (*bn_in_op2parallel_desc_symbol_id)[obns[i]] = parallel_desc_symbol_ids_4_obns[i];
+    SetFakeLogicalBlobDesc(obns[i]);
   }
   int64_t op_node_signature_id = vm::TestUtil::NewSymbol(list);
   Global<vm::SymbolStorage<OpNodeSignatureDesc>>::Get()->Add(op_node_signature_id,
