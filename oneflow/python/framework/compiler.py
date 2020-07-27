@@ -102,6 +102,7 @@ def _CompileJob(function_desc):
         )
     inputs = _RecursiveMakeInputBlobs(func.__oneflow_input_blob_defs__)
     ret = func(*inputs)
+    # TODO(daquexian): check the existence of model_update_conf and primary_lr
     return_annotation = func.__oneflow_function_signature__.return_annotation
     oft_util.CheckReturnByAnnotation(func.__name__, ret, return_annotation)
     func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(

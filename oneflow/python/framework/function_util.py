@@ -107,8 +107,6 @@ def api_oneflow_function(
             function_config = FunctionConfig()
         if type == "train":
             function_config.function_desc.job_config_proto.train_conf.SetInParent()
-            function_config.function_desc.job_config_proto.train_conf.model_update_conf.naive_conf.SetInParent()
-            function_config.function_desc.job_config_proto.train_conf.primary_lr = 0
         else:
             function_config.function_desc.job_config_proto.predict_conf.SetInParent()
     api = enable_if.unique([eager_oneflow_function, lazy_oneflow_function])
