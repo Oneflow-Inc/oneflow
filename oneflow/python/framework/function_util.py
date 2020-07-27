@@ -19,6 +19,7 @@ import copy
 import functools
 import re
 import inspect
+import traceback
 from typing import Any, Callable, Optional, Union
 
 import oneflow.python.framework.session_context as session_ctx
@@ -81,7 +82,7 @@ class FunctionConfig(object):
 
 @oneflow_export("global_function")
 def api_oneflow_function(
-    function_config: FunctionConfig = FunctionConfig(),
+    type, function_config: FunctionConfig = FunctionConfig(),
 ) -> Callable[[Callable], Callable]:
     r"""Creates a callable OneFlow global function from a Python function.
     For instance::
@@ -93,6 +94,13 @@ def api_oneflow_function(
     Returns:
         a callable which is called to execute the compiled function
     """
+    assert type in ["train", "predict"]
+    if type == "train":
+        function_config.function_desc.job_config_proto.train_conf.SetInParent()
+        function_config.function_desc.job_config_proto.train_conf.model_update_conf.naive_conf.SetInParent()
+        function_config.function_desc.job_config_proto.train_conf.primary_lr = 0
+    else:
+        function_config.function_desc.job_config_proto.predict_conf.SetInParent()
     api = enable_if.unique([eager_oneflow_function, lazy_oneflow_function])
     return api(function_config)
 
@@ -154,6 +162,8 @@ def _CloneFunctionDesc(func_desc, job_func):
 
 
 def _TryCompleteDefaultJobConfigProto(job_conf):
+    # TODO(daquexian): remove this function
+    return
     if job_conf.WhichOneof("job_type") is None:
         job_conf.predict_conf.SetInParent()
 
@@ -453,6 +463,11 @@ def set_concurrency_width(func_desc, value):
 
 @oneflow_function_config("train.model_update_conf")
 def set_model_update_conf(func_desc, value):
+    print(
+        """WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.
+        """
+    )
+    print(traceback.format_stack()[-2])
     assert type(value) is dict
     pb_msg = func_desc.job_config_proto.train_conf.model_update_conf
     pb_util.PythonDict2PbMessage(value, pb_msg)
@@ -467,16 +482,31 @@ def set_indexed_slices_optimizer_conf(func_desc, value):
 
 @oneflow_function_config("train.loss_scale_factor")
 def set_loss_scale_factor(func_desc, value):
+    print(
+        """WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.
+        """
+    )
+    print(traceback.format_stack()[-2])
     func_desc.job_config_proto.train_conf.loss_scale_factor = value
 
 
 @oneflow_function_config("train.primary_lr")
 def set_primary_lr(func_desc, value):
+    print(
+        """WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.
+        """
+    )
+    print(traceback.format_stack()[-2])
     func_desc.job_config_proto.train_conf.primary_lr = value
 
 
 @oneflow_function_config("train.secondary_lr")
 def set_secondary_lr(func_desc, value):
+    print(
+        """WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.
+        """
+    )
+    print(traceback.format_stack()[-2])
     func_desc.job_config_proto.train_conf.secondary_lr = value
 
 

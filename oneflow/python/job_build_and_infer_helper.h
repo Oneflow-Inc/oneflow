@@ -78,7 +78,7 @@ Maybe<void> CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_
 
 Maybe<void> CurJobBuildAndInferCtx_SetTrainConf(const std::string& train_conf_str) {
   TrainConf train_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(train_conf_str, &train_conf)) << "operator conf parse failed";
+  CHECK_OR_RETURN(TxtString2PbMessage(train_conf_str, &train_conf)) << "train conf parse failed";
   return JUST(GetCurInferCtx())->SetTrainConf(train_conf);
 }
 
