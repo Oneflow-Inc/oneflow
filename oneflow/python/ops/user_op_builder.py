@@ -160,7 +160,7 @@ class EagerPhysicalUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        self.op_conf_.scope_symbol_id = oneflow.scope.current_scope().symbol_id
+        self.op_conf_.scope_symbol_id = oneflow.current_scope().symbol_id
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
 
         def BuildInstruction(builder):
@@ -209,7 +209,7 @@ class NonTraceableEagerLogicalUserOp(UserOp):
         UserOp.__init__(self, op_name)
 
     def InferAndTryRun(self):
-        self.op_conf_.scope_symbol_id = oneflow.scope.current_scope().symbol_id
+        self.op_conf_.scope_symbol_id = oneflow.current_scope().symbol_id
         op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
 
         def BuildInstruction(builder):
@@ -234,12 +234,15 @@ class UserOpConfBuilder(object):
         name_scope_prefix = name_scope.GetJobNameScopePrefix(job_name)
         self.user_op_ = user_op_class(name_scope_prefix + op_name)
 
-    def Build(self):
+    def CheckAndComplete(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name != ""
         self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(
             self.user_op_.op_conf_
         )
-        return self.user_op_
+        return self
+
+    def Build(self):
+        return self.CheckAndComplete().user_op_
 
     def OpName(self, op_name):
         self.user_op_.op_conf_.name = op_name
@@ -392,9 +395,7 @@ def api_user_op_module_builder(op_type_name):
 class UserOpModuleBuilder(UserOpConfBuilder):
     def __init__(self, *args, **kwargs):
         UserOpConfBuilder.__init__(self, *args, **kwargs)
-        self.user_op_module.op_conf.scope_symbol_id = (
-            flow.scope.current_scope().symbol_id
-        )
+        self.user_op_module.op_conf.scope_symbol_id = flow.current_scope().symbol_id
 
     @property
     def user_op_module(self):

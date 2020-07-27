@@ -33,6 +33,7 @@ import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.vm_util as vm_util
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.framework.function_desc import FunctionDesc
+import oneflow.python.framework.module as module_util
 from oneflow.python.framework.pull_util import (
     LazyFutureRemoteBlobs,
     EagerFutureRemoteBlobs,
@@ -42,8 +43,10 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
 import oneflow.python.eager.blob_register as blob_register_util
 from contextlib import contextmanager
+from typing import Callable
 import inspect
 import oneflow
+import traceback
 
 
 class Session(object):
@@ -59,6 +62,8 @@ class Session(object):
         self.is_mirrored_strategy_enabled_stack_ = []
         self.function_flag_name2default_val_ = {}
         self.job_name2var_name2var_blob_ = {}
+        self.job_name2module_name2module_ = {}
+        self.existed_module_names_ = set()
         self.var_name2var_blob_ = {}
         self.job_name2name_scope_stack_ = {}
         self.job_name2current_scope_ = {}
@@ -120,7 +125,7 @@ class Session(object):
 
     def MakeScope(self, build_func):
         scope = None
-        old_scope = oneflow.scope.current_scope()
+        old_scope = oneflow.current_scope()
         assert old_scope is not None
 
         def BuildScope(builder):
@@ -185,6 +190,7 @@ class Session(object):
         if not c_api_util.EagerExecutionEnabled():
             for job_name, func_desc in self.job_name2function_desc_.items():
                 compiler.Compile(self, func_desc, self.config_proto)
+                self.existed_module_names_ = set()
             self.job_name2var_name2var_blob_ = dict()
             assert len(self.job_name2function_desc_.items()) > 0
             c_api_util.StartGlobalSession()
@@ -200,6 +206,7 @@ class Session(object):
         self.Sync()
         assert len(self.job_name2var_name2var_blob_) == 0
         del self.var_name2var_blob_
+        del self.job_name2module_name2module_
         self.ForceReleaseEagerBlobs()
         c_api_util.StopGlobalSession()
         c_api_util.DestroyGlobalSession()
@@ -313,6 +320,7 @@ class Session(object):
         try:
             yield
         finally:
+            self.existed_module_names_ = set()
             self.job_name2var_name2var_blob_ = dict()
             self.eager_global_function_desc_stack_.pop(0)
             keys = list(self.backward_blob_register.blob_name2object.keys())
@@ -332,14 +340,37 @@ class Session(object):
         self.cond_var_.release()
 
 
-@oneflow_export("enable_eager_execution")
-def api_enable_eager_execution(val: bool = True) -> None:
-    return enable_if.unique([enable_eager_execution])(val=val)
+@oneflow_export("find_or_create_module")
+def api_find_or_create_module(
+    module_name: str, create: Callable[[], None], reuse: bool = False
+):
+    func = enable_if.unique([find_or_create_module])
+    return func(module_name, create, reuse)
 
 
-@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
-def enable_eager_execution(val=True):
-    return c_api_util.EnableEagerSession(val)
+@enable_if.condition(hob.in_global_mode)
+def find_or_create_module(module_name, create, reuse=False):
+    assert callable(create)
+    sess = session_ctx.GetDefaultSession()
+    job_name = oneflow.current_global_function_desc().job_config_proto.job_name
+    if job_name not in sess.job_name2module_name2module_:
+        sess.job_name2module_name2module_[job_name] = {}
+    module_name2module = sess.job_name2module_name2module_[job_name]
+    if module_name not in module_name2module:
+        module = create()
+        assert isinstance(module, module_util.Module)
+        module_name2module[module_name] = module
+    else:
+        if not reuse:
+            assert module_name not in sess.existed_module_names_, (
+                "duplicated module_name `%s' in global_function `%s'"
+                % (module_name, job_name)
+            )
+        else:
+            # do nothing
+            pass
+    sess.existed_module_names_.add(module_name)
+    return module_name2module[module_name]
 
 
 @oneflow_export("eager_execution_enabled")
@@ -354,10 +385,9 @@ def clear_default_session() -> None:
     """
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
-    c_api_util.EnableEagerSession(False)
 
 
-@oneflow_export("scope.current_scope")
+@oneflow_export("current_scope")
 def current_scope():
     r""" Return current scope
     """
@@ -388,3 +418,17 @@ def _GetDefaultConfigProto():
 
 
 session_ctx.OpenDefaultSession(Session())
+
+
+@oneflow_export("scope.current_scope")
+def deprecated_current_scope(*args, **kwargs):
+    print(
+        "WARNING:",
+        "oneflow.scope.current_scope",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.current_scope"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+
+    return current_scope(*args, **kwargs)
