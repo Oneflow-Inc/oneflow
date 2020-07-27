@@ -61,6 +61,14 @@ class OpArgBlobAttribute(object):
     def logical_blob_name(self):
         return self.logical_blob_name_
 
+    def DumpToOpNodeSignature(self, bn_in_op, op_node_signature):
+        blob_sig = op_node_signature.logical_blob_desc_signature.bn_in_op2blob_desc
+        assert bn_in_op not in blob_sig
+        blob_sig[bn_in_op].CopyFrom(self.blob_desc_)
+        batch_axis_sig = op_node_signature.batch_axis_signature.bn_in_op2batch_axis
+        assert bn_in_op not in batch_axis_sig
+        batch_axis_sig[bn_in_op].CopyFrom(self.batch_axis_)
+
 
 class OpArgParallelAttribute(object):
     def __init__(self, parallel_desc_symbol, sbp_parallel, opt_mirrored_parallel):
@@ -88,6 +96,21 @@ class OpArgParallelAttribute(object):
         self.__init__(
             other.parallel_desc_symbol, other.sbp_parallel, other.opt_mirrored_parallel
         )
+
+    def DumpToOpNodeSignature(self, bn_in_op, op_node_signature):
+        sbp_sig = op_node_signature.sbp_signature.bn_in_op2sbp_parallel
+        assert bn_in_op not in sbp_sig
+        sbp_sig[bn_in_op].CopyFrom(self.sbp_parallel)
+        mirrored_sig = (
+            op_node_signature.mirrored_signature.bn_in_op2opt_mirrored_parallel
+        )
+        assert bn_in_op not in mirrored_sig
+        mirrored_sig[bn_in_op].CopyFrom(self.opt_mirrored_parallel)
+        parallel_sig = (
+            op_node_signature.parallel_signature.bn_in_op2parallel_desc_symbol_id
+        )
+        assert bn_in_op not in parallel_sig
+        parallel_sig[bn_in_op] = self.parallel_desc_symbol.symbol_id
 
     def __hash__(self):
         return self.hash_
