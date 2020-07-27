@@ -18,10 +18,13 @@ from __future__ import absolute_import
 import oneflow as flow
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.module as module_util
 
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.remote_blob import BlobDef
 from typing import Optional, Sequence, Union
+import random
+import sys
 
 
 @oneflow_export("data.OFRecordRawDecoder", "data.ofrecord_raw_decoder")
@@ -480,34 +483,69 @@ def api_coco_reader(
     random_seed: Optional[int] = None,
     group_by_aspect_ratio: bool = True,
     stride_partition: bool = True,
-    name: Optional[str] = None,
+    name: str = None,
 ) -> BlobDef:
-    import random
-    import sys
-
-    if name is None:
-        name = id_util.UniqueStr("COCOReader_")
-
-    if random_seed is None:
-        random_seed = random.randrange(sys.maxsize)
-
-    op = (
-        flow.consistent_user_op_builder(name)
-        .Op("COCOReader")
-        .Output("image")
-        .Output("image_id")
-        .Output("image_size")
-        .Output("gt_bbox")
-        .Output("gt_label")
-        .Output("gt_segm")
-        .Output("gt_segm_index")
-        .Attr("annotation_file", annotation_file)
-        .Attr("image_dir", image_dir)
-        .Attr("batch_size", batch_size)
-        .Attr("shuffle_after_epoch", shuffle)
-        .Attr("random_seed", random_seed)
-        .Attr("group_by_ratio", group_by_aspect_ratio)
-        .Attr("stride_partition", stride_partition)
-        .Build()
+    assert name is not None
+    module = flow.find_or_create_module(
+        name,
+        lambda: COCOReader(
+            annotation_file=annotation_file,
+            image_dir=image_dir,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            random_seed=random_seed,
+            group_by_aspect_ratio=group_by_aspect_ratio,
+            stride_partition=stride_partition,
+            name=name,
+        ),
     )
-    return op.InferAndTryRun().RemoteBlobList()
+    return module()
+
+
+class COCOReader(module_util.Module):
+    def __init__(
+        self,
+        annotation_file: str,
+        image_dir: str,
+        batch_size: int,
+        shuffle: bool = True,
+        random_seed: Optional[int] = None,
+        group_by_aspect_ratio: bool = True,
+        stride_partition: bool = True,
+        name: str = None,
+    ):
+        assert name is not None
+        if random_seed is None:
+            random_seed = random.randrange(sys.maxsize)
+        module_util.Module.__init__(self, name)
+        self.op_module_builder = (
+            flow.consistent_user_op_module_builder("COCOReader")
+            .Output("image")
+            .Output("image_id")
+            .Output("image_size")
+            .Output("gt_bbox")
+            .Output("gt_label")
+            .Output("gt_segm")
+            .Output("gt_segm_index")
+            .Attr("annotation_file", annotation_file)
+            .Attr("image_dir", image_dir)
+            .Attr("batch_size", batch_size)
+            .Attr("shuffle_after_epoch", shuffle)
+            .Attr("random_seed", random_seed)
+            .Attr("group_by_ratio", group_by_aspect_ratio)
+            .Attr("stride_partition", stride_partition)
+            .CheckAndComplete()
+        )
+        self.op_module_builder.user_op_module.InitOpKernel()
+
+    def forward(self):
+        if self.call_seq_no == 0:
+            name = self.module_name
+        else:
+            name = id_util.UniqueStr("COCOReader")
+        return (
+            self.op_module_builder.OpName(name)
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()
+        )
