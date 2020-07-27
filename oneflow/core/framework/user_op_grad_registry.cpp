@@ -31,9 +31,14 @@ OpGradRegistry& OpGradRegistry::SetGenBackwardOpConfFn(GenBackwardOpConfFn fn) {
   return *this;
 }
 
+OpGradRegistry& OpGradRegistry::SetBackwardOpConfGenFn(BackwardOpConfGenFn fn) {
+  result_.bw_gen_fn = std::move(fn);
+  return *this;
+}
+
 OpGradRegistry& OpGradRegistry::Finish() {
-  CHECK(result_.gen_bw_fn != nullptr)
-      << "No GenBackwardOpConf function for " << result_.op_type_name;
+  CHECK((result_.gen_bw_fn != nullptr) || (result_.bw_gen_fn != nullptr))
+      << "No BackwardOpConf generate function for " << result_.op_type_name;
   return *this;
 }
 

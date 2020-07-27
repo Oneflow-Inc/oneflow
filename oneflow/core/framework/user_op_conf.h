@@ -121,12 +121,15 @@ class UserOpConfWrapperBuilder final {
   }
   UserOpConfWrapperBuilder& Input(const std::string& arg_name,
                                   const std::string& logical_blob_name);
+  UserOpConfWrapperBuilder& InputBind(const std::string& arg_name,
+                                      const std::string& logical_blob_name);
   UserOpConfWrapperBuilder& Output(const std::string& arg_name, int32_t num);
   UserOpConfWrapperBuilder& Output(const std::string& arg_name);
   template<typename T>
   UserOpConfWrapperBuilder& Attr(const std::string& attr_name, const T& val);
 
   UserOpConfWrapper Build();
+  UserOpConfWrapper Finish();
 
  private:
   UserOpConfWrapper wrapper_;
@@ -147,6 +150,25 @@ class OpArg final {
  private:
   std::string name_;
   int32_t index_;
+};
+
+using UserOpConfWrapperBuilderFn =
+    std::function<UserOpConfWrapper(user_op::UserOpConfWrapperBuilder&)>;
+class BackwardOpConfContext final {
+ public:
+  BackwardOpConfContext(const UserOpWrapper& fw_op_wp, std::vector<OperatorConf>* bw_op_confs)
+      : fw_op_wp_(fw_op_wp), bw_op_confs_(bw_op_confs) {}
+
+ public:
+  UserOpWrapper& FwOp() { return fw_op_wp_; }
+  void DefineOp(const std::string& op_name, const UserOpConfWrapperBuilderFn& fn);
+  UserOpConfWrapper& GetOp(const std::string& op_name);
+
+ private:
+  UserOpWrapper fw_op_wp_;
+  HashMap<std::string, UserOpConfWrapperBuilderFn> op_builder_fns_;
+  HashMap<std::string, UserOpConfWrapper> op_builder_results_;
+  std::std::vector<OperatorConf>* bw_op_confs_;
 };
 
 }  // namespace user_op

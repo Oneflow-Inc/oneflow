@@ -105,30 +105,30 @@ REGISTER_USER_OP_GRAD("where").SetGenBackwardOpConfFn([](const user_op::UserOpWr
 }  // namespace oneflow
 
 REGISTER_USER_OP_GRAD("where").SetGenBackwardOpConfFn([](user_op::BackwardOpConfContext* ctx) {
-  ctx->DefineOp(ctx->fw_op.name() + "_zero_grad", [&](OpBuilder* builder) {
+  ctx->DefineOp(ctx->FwOp().name() + "_zero_grad", [&](OpBuilder* builder) {
     return ctx->OpTypeName("zero_like")
-        .InputBind("like", ctx->fw_op.input("x", 0)))
+        .InputBind("like", ctx->FwOp().input("x", 0)))
         .Output("out")
         .Build();
   });
-  ctx->DefineOp(ctx->fw_op.name() + "_x_grad", [&](OpBuilder* builder) {
+  ctx->DefineOp(ctx->FwOp().name() + "_x_grad", [&](OpBuilder* builder) {
     return ctx->OpTypeName("where")
-        .InputBind("condition", ctx->fw_op.input("condition", 0))
-        .InputBind("x", ctx->fw_op.output_grad("out", 0)))
-        .InputBind("y", ctx->GetOp(ctx->fw_op.name() + "_zero_grad").output("out", 0))
+        .InputBind("condition", ctx->FwOp().input("condition", 0))
+        .InputBind("x", ctx->FwOp().output_grad("out", 0)))
+        .InputBind("y", ctx->GetOp(ctx->FwOp().name() + "_zero_grad").output("out", 0))
         .Output("out")
         .Build();
   });
-  ctx->DefineOp(ctx->fw_op.name() + "_y_grad", [&](OpBuilder* builder) {
+  ctx->DefineOp(ctx->FwOp().name() + "_y_grad", [&](OpBuilder* builder) {
     return builder->OpTypeName("where")
-        .InputBind("condition", ctx->fw_op.input("condition", 0))
-        .InputBind("x", ctx->GetOp(ctx->fw_op.name() + "_zero_grad").output("out", 0))
-        .InputBind("y", ctx->fw_op.output_grad("out", 0)))
+        .InputBind("condition", ctx->FwOp().input("condition", 0))
+        .InputBind("x", ctx->GetOp(ctx->FwOp().name() + "_zero_grad").output("out", 0))
+        .InputBind("y", ctx->FwOp().output_grad("out", 0)))
         .Output("out")
         .Build();
   });
-  ctx->fw_op.InputGradBind(
-      OpArg("x", 0), []() { return ctx->GetOp(ctx->fw_op.name() + "_x_grad").output("out", 0); });
-  ctx->fw_op.InputGradBind(
-      OpArg("y", 0), []() { return ctx->GetOp(ctx->fw_op.name() + "_y_grad").output("out", 0); });
+  ctx->FwOp().InputGradBind(
+      OpArg("x", 0), []() { return ctx->GetOp(ctx->FwOp().name() + "_x_grad").output("out", 0); });
+  ctx->FwOp().InputGradBind(
+      OpArg("y", 0), []() { return ctx->GetOp(ctx->FwOp().name() + "_y_grad").output("out", 0); });
 })

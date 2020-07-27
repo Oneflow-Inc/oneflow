@@ -173,10 +173,15 @@ const TensorDesc& UserOpWrapper::TensorDesc4ArgNameAndIndex(const std::string& a
   return bn2tensor_desc_.at(bn);
 }
 
-UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Input(const std::string& arg_name,
-                                                          const std::string& logical_blob_name) {
+UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::InputBind(
+    const std::string& arg_name, const std::string& logical_blob_name) {
   input_[arg_name].push_back(logical_blob_name);
   return *this;
+}
+
+UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Input(const std::string& arg_name,
+                                                          const std::string& logical_blob_name) {
+  reurn InputBind(arg_name, logical_blob_name);
 }
 
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& arg_name) {
@@ -212,7 +217,49 @@ UserOpConfWrapper UserOpConfWrapperBuilder::Build() {
   return wrapper_;
 }
 
+UserOpConfWrapper UserOpConfWrapperBuilder::Finish() {
+  OperatorConf op_conf;
+  op_conf.set_name(op_name_);
+  UserOpConf* user_conf = op_conf.mutable_user_conf();
+  user_conf->set_op_type_name(op_type_name_);
+  auto GenArgs = [&](const HashMap<std::string, std::vector<std::string>>& src,
+                     PbMap<std::string, UserOpConf_ListString>* arg_name2lbns) {
+    for (const auto& pair : src) {
+      *(*arg_name2lbns)[pair.first].mutable_s() = StdVec2PbRpf<std::string>(pair.second);
+    }
+  };
+  GenArgs(input_, user_conf->mutable_input());
+  GenArgs(output_, user_conf->mutable_output());
+  for (const auto& pair : attr_) { (*user_conf->mutable_attr())[pair.first] = pair.second; }
+  wrapper_ = UserOpConfWrapper(*CHECK_JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
+  return wrapper_;
+}
+
+void BackwardOpConfContext::DefineOp(const std::string& op_name,
+                                     const UserOpConfWrapperBuilderFn& fn) {
+  auto it = op_builder_fns_.find(op_name);
+  CHECK(it == op_builder_fns_.end()) << " op_name " << op_name << " has been defined.";
+  op_builder_fns[op_name] = fn;
+}
+
+UserOpConfWrapper& BackwardOpConfContext::GetOp(const std::string& op_name) {
+  auto it = op_builder_results_.find(op_name);
+  if (it == op_builder_results_.end()) {
+    auto fn_it = op_builder_fns_.find(op_name);
+    CHECK(fn_it != op_builder_fns_.end()) << " op_name " << op_name << " has no builder function.";
+    CHECK(fn_it->second != nullptr) << " op_name " << op_name << " builder function is null.";
+    UserOpConfWrapperBuilder builder(op_name);
+    auto ret = op_builder_results_.emplace(std::make_pair(op_name, std::move(fn_it->second(builder));
+    CHECK(ret.second == true) << " op_name " << op_name << " build result insert failed.";
+    return ret.first->second;
+  } else {
+    return it->second;
+  }
+}
+
 }  // namespace user_op
+
+}  // namespace oneflow
 
 namespace {
 
