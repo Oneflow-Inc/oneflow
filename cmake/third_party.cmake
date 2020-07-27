@@ -125,6 +125,7 @@ set(oneflow_third_party_dependencies
   grpc_copy_headers_to_destination
   grpc_copy_libs_to_destination
   opencv_copy_headers_to_destination
+  libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
   eigen
   cocoapi_copy_headers_to_destination
