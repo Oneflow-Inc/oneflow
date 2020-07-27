@@ -95,8 +95,9 @@ Maybe<const std::string*> Operator::obn4lbi(const LogicalBlobId& lbi) const {
 Maybe<void> Operator::InferParallelSignatureIf() { return InferParallelSignature(); }
 
 Maybe<void> Operator::InferParallelSignature() {
-  if (!op_conf().has_scope_symbol_id()) { return Maybe<void>::Ok(); }
-  const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf().scope_symbol_id());
+  if (op_conf().scope_symbol_id() == 0) { return Maybe<void>::Ok(); }
+  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope = *JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
   int64_t parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
   auto* parallel_signature = op_attribute_.mutable_parallel_signature();
   parallel_signature->set_op_parallel_desc_symbol_id(parallel_desc_symbol_id);

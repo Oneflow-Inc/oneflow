@@ -25,7 +25,6 @@ import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.vm.instruction_pb2 as instr_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
-import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_storage as object_storage
 import oneflow.python.eager.symbol as symbol_util
@@ -430,8 +429,11 @@ class InstructionsBuilder(object):
                 bn_in_op2blob_object[ibn], op_arg_parallel_attr
             )
 
-        job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
-        op_conf_sym = self._GetOpConfSymbol(op_attribute.op_conf)
+        op_conf = op_attribute.op_conf
+        assert op_conf.HasField("scope_symbol_id"), op_conf
+        scope_symbol = symbol_storage.GetSymbol4Id(op_conf.scope_symbol_id)
+        job_desc_sym = scope_symbol.job_desc_symbol
+        op_conf_sym = self._GetOpConfSymbol(op_conf)
         op_node_signature_sym = self._GetOpNodeSignatureSymbol(op_attribute)
         opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(
             op_parallel_desc_sym
@@ -454,7 +456,7 @@ class InstructionsBuilder(object):
         self._StatelessCallOpKernel(
             "%s.%sStatelessCallOpKernel" % (stream_tag, instruction_prefix),
             op_parallel_desc_sym,
-            job_conf_sym,
+            job_desc_sym,
             op_conf_sym,
             op_node_signature_sym,
             opkernel_obj,
@@ -706,7 +708,7 @@ class InstructionsBuilder(object):
         self,
         instr_name,
         parallel_desc_sym,
-        job_conf_sym,
+        job_desc_sym,
         op_conf_sym,
         op_node_signature_sym,
         shared_opkernel_obj,
@@ -720,7 +722,7 @@ class InstructionsBuilder(object):
             instr_name,
         )
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
-        instruction.operand.append(_SymbolOperand(job_conf_sym.symbol_id))
+        instruction.operand.append(_SymbolOperand(job_desc_sym.symbol_id))
         instruction.operand.append(_SymbolOperand(op_conf_sym.symbol_id))
         instruction.operand.append(_SymbolOperand(op_node_signature_sym.symbol_id))
         instruction.operand.append(_MutOperand(shared_opkernel_obj.object_id))

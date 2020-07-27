@@ -137,11 +137,6 @@ long GetOpParallelSymbolId(const std::string& serialized_op_conf, std::string* e
       .GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
-std::string GetOpAttribute4OpConf(const std::string& serialized_op_conf, std::string* error_str) {
-  return oneflow::GetOpAttribute4OpConf(serialized_op_conf)
-      .GetDataAndSerializedErrorProto(error_str, std::string(""));
-}
-
 std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
                                        std::string* error_str) {
   return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf)

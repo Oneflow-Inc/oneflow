@@ -267,29 +267,6 @@ Maybe<long> GetOpParallelSymbolId(const std::string& op_conf_str) {
   return JUST(scope.GetParallelDescSymbolId(op_conf));
 }
 
-Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {
-  OperatorConf op_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
-  const JobDesc* job_desc = nullptr;
-  if (op_conf.has_scope_symbol_id()) {
-    const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
-    const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
-    job_desc = JUST(scope.job_desc());
-  }
-  std::shared_ptr<Operator> op = ConstructOp(op_conf, job_desc);
-  std::shared_ptr<OpAttribute> op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
-  auto* mirrored_map =
-      op_attribute->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel();
-  auto* sbp_map = op_attribute->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
-  const auto SetSignature = [&](const std::string& bn_in_op) {
-    (*mirrored_map)[bn_in_op].mutable_mirrored_parallel();
-    (*sbp_map)[bn_in_op] = SbpParallel();  // nothing set
-  };
-  for (const auto& ibn : op_attribute->input_bns()) { SetSignature(ibn); }
-  for (const auto& obn : op_attribute->output_bns()) { SetSignature(obn); }
-  return PbMessage2TxtString(*op_attribute);
-}
-
 Maybe<void> RunLogicalInstruction(const std::string& instruction_list_str,
                                   const std::string& eager_symbol_list_str) {
   return eager::RunLogicalInstruction(instruction_list_str, eager_symbol_list_str);

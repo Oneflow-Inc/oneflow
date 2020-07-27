@@ -35,7 +35,7 @@ class OpNodeSignatureDesc final {
     return op_node_signature_.parallel_signature();
   }
 
-  const BlobDesc& LogicalBlobDesc4BnInOp(const std::string& bn_in_op);
+  Maybe<const BlobDesc*> LogicalBlobDesc4BnInOp(const std::string& bn_in_op) const;
 
  private:
   OpNodeSignature op_node_signature_;

@@ -20,6 +20,7 @@ from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.vm.instruction_pb2 as instr_util
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.job_set_pb2 as job_set_util
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.config_util as config_util
@@ -72,6 +73,7 @@ class Session(object):
         self.instruction_list_ = instr_util.InstructionListProto()
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
         self.backward_blob_register_ = blob_register_util.BlobRegister()
+        self.InitNormalModeNoneScope()
 
     @property
     def status(self):
@@ -123,6 +125,13 @@ class Session(object):
     def backward_blob_register(self):
         return self.backward_blob_register_
 
+    def InitNormalModeScope(self):
+        job_conf = job_conf_pb.JobConfigProto()
+        job_conf.predict_conf.SetInParent()
+        job_conf.job_name = ""
+        scope = compiler.MakeInitialScope(job_conf, "cpu", ["0:0"], is_mirrored=False)
+        self.job_name2current_scope_[""] = scope
+
     def MakeScope(self, build_func):
         scope = None
         old_scope = oneflow.current_scope()
@@ -146,6 +155,9 @@ class Session(object):
         finally:
             assert self.GetCurrentScope(job_name) is scope
             self.job_name2current_scope_[job_name] = old_scope
+
+    def InitNormalModeNoneScope(self):
+        self.InitNoneScope("")
 
     def InitNoneScope(self, job_name):
         if job_name not in self.job_name2current_scope_:
@@ -396,14 +408,26 @@ def clear_default_session() -> None:
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
     c_api_util.EnableEagerSession(False)
+    session_ctx.GetDefaultSession().InitNormalModeScope()
 
 
 @oneflow_export("current_scope")
-def current_scope():
+def api_current_scope():
     r""" Return current scope
     """
+    api = enable_if.unique([global_mode_current_scope, normal_mode_current_scope])
+    return api()
+
+
+@enable_if.condition(hob.in_global_mode)
+def global_mode_current_scope():
     job_name = oneflow.current_global_function_desc().job_config_proto.job_name
     return session_ctx.GetDefaultSession().GetCurrentScope(job_name)
+
+
+@enable_if.condition(hob.in_normal_mode)
+def normal_mode_current_scope():
+    return session_ctx.GetDefaultSession().GetCurrentScope("")
 
 
 @oneflow_export("sync_default_session")
