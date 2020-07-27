@@ -36,7 +36,7 @@ def test_summary(test_case):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-
+    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
     logdir = "~/oneflow/log"
 
     @flow.global_function(func_config)
