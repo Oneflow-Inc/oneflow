@@ -111,7 +111,7 @@ def conv2d(
     filters: int,
     kernel_size: Union[int, Sequence[int]] = 1,
     strides: Union[int, Sequence[int]] = 1,
-    padding: str = "VALID",
+    padding: Union[str, Sequence[Sequence[int]]] = "VALID",
     data_format: str = "NCHW",
     dilation_rate: int = 1,
     groups: int = 1,
