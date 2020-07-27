@@ -169,7 +169,7 @@ def summary_image():
     ):
         flow.summary.image(value, step=step, tag=tag)
 
-    image1_path = "~/oneflow/image1"  
+    image1_path = "~/oneflow/image1"
     image2_path = "~/oneflow/image2"
 
     image_files = [
