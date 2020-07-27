@@ -56,6 +56,7 @@ class SamePaddingKernel final : public user_op::OpKernel {
     }
     CHECK_EQ(padding_before.size(), num_axes);
     NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(), 0, y->mut_dptr<T>());
+
     MemoryCopyNdDesc memory_copy_nd_desc;
     Shape x_shape;
     x->shape().ToShape(&x_shape);
@@ -87,6 +88,7 @@ class SamePaddingKernel final : public user_op::OpKernel {
 
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, double)
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, float)
+REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, float16)
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, int32_t)
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, int64_t)
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, int8_t)
@@ -162,6 +164,7 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
 
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, double)
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, float)
+REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, float16)
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, int32_t)
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, int64_t)
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, int8_t)

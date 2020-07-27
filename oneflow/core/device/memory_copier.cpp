@@ -225,6 +225,7 @@ MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type) {
 #define SPECIALIZE_COPY_ELEM(dtype)                                                        \
   template void MemoryCopier::CopyElem<dtype>(DeviceCtx * ctx, void* dst, const void* src, \
                                               const MemoryCopyNdDesc& desc) const;
+SPECIALIZE_COPY_ELEM(float16)
 SPECIALIZE_COPY_ELEM(float)
 SPECIALIZE_COPY_ELEM(double)
 SPECIALIZE_COPY_ELEM(int32_t)

@@ -39,9 +39,9 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
 
 const AMPList& AutoMixedPrecisionLists::ClearList() {
   // TODO(niuchong): identity, tuple_identity, keep_header_only?
-  static AMPList clear_list = {"gather",      "max_pool_1d",      "max_pool_2d",
-                               "max_pool_3d", "reshape",          "relu",
-                               "transpose",   "random_mask_like", "concat"};
+  static AMPList clear_list = {"gather",  "max_pool_1d", "max_pool_2d", "max_pool_3d",
+                               "reshape", "relu",        "transpose",   "random_mask_like",
+                               "concat",  "pad",         "same_padding"};
 
   return clear_list;
 }
