@@ -34,9 +34,9 @@ class Symbol(object):
 
 
 class ParallelDescSymbol(Symbol):
-    def __init__(self, symbol_id, parallel_conf, device_tag):
+    def __init__(self, symbol_id, parallel_conf):
         Symbol.__init__(self, symbol_id, parallel_conf)
-        self.device_tag_ = device_tag
+        self.device_tag_ = parallel_conf.device_tag
         self.machine_id2device_id_list_ = MakeMachineId2DeviceIdList(parallel_conf)
         sub_parallel_nums = [len(v) for k, v in self.machine_id2device_id_list_.items()]
         self.parallel_num_ = functools.reduce(lambda a, b: a + b, sub_parallel_nums, 0)
