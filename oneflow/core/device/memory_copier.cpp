@@ -42,6 +42,38 @@ void CheckMemoryCopyNdDesc(const MemoryCopyNdDesc& desc) {
   CheckPosExtent(num_axes, desc.src_shape, desc.src_pos, desc.extent);
 }
 
+template<typename T>
+MemoryCopyNdDesc GetDescInBytes(const MemoryCopyNdDesc& desc) {
+  MemoryCopyNdDesc desc_in_bytes;
+  DimVector dst_shape_vec;
+  DimVector src_shape_vec;
+  DimVector dst_pos_vec;
+  DimVector src_pos_vec;
+  DimVector extent_vec;
+  FOR_RANGE(int64_t, i, 0, MemoryCopyNdDescGetNumAxes(desc)) {
+    if (i == (MemoryCopyNdDescGetNumAxes(desc) - 1)) {
+      const int64_t size_of_data_type = sizeof(T);
+      dst_shape_vec.push_back(desc.dst_shape.At(i) * size_of_data_type);
+      src_shape_vec.push_back(desc.src_shape.At(i) * size_of_data_type);
+      dst_pos_vec.push_back(desc.dst_pos.At(i) * size_of_data_type);
+      src_pos_vec.push_back(desc.src_pos.At(i) * size_of_data_type);
+      extent_vec.push_back(desc.extent.At(i) * size_of_data_type);
+    } else {
+      dst_shape_vec.push_back(desc.dst_shape.At(i));
+      src_shape_vec.push_back(desc.src_shape.At(i));
+      dst_pos_vec.push_back(desc.dst_pos.At(i));
+      src_pos_vec.push_back(desc.src_pos.At(i));
+      extent_vec.push_back(desc.extent.At(i));
+    }
+  }
+  desc_in_bytes.dst_shape = Shape(dst_shape_vec);
+  desc_in_bytes.src_shape = Shape(src_shape_vec);
+  desc_in_bytes.dst_pos = NdIndex(dst_pos_vec);
+  desc_in_bytes.src_pos = NdIndex(src_pos_vec);
+  desc_in_bytes.extent = Shape(extent_vec);
+  return desc_in_bytes;
+}
+
 }  // namespace
 
 MemoryCopyNdDesc MemoryCopyNdDesc::CreateDimReducedDesc() const {
@@ -96,6 +128,13 @@ void MemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
   } else {
     CopyND(ctx, dst, src, desc);
   }
+}
+
+template<typename T>
+void MemoryCopier::CopyElem(DeviceCtx* ctx, void* dst, const void* src,
+                            const MemoryCopyNdDesc& desc) const {
+  MemoryCopyNdDesc desc_in_bytes = GetDescInBytes<T>(desc);
+  Copy(ctx, dst, src, desc_in_bytes);
 }
 
 void MemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
@@ -182,5 +221,14 @@ MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type) {
 }
 
 #endif
+
+#define SPECIALIZE_COPY_ELEM(dtype)                                                        \
+  template void MemoryCopier::CopyElem<dtype>(DeviceCtx * ctx, void* dst, const void* src, \
+                                              const MemoryCopyNdDesc& desc) const;
+SPECIALIZE_COPY_ELEM(float)
+SPECIALIZE_COPY_ELEM(double)
+SPECIALIZE_COPY_ELEM(int32_t)
+SPECIALIZE_COPY_ELEM(int64_t)
+SPECIALIZE_COPY_ELEM(int8_t)
 
 }  // namespace oneflow
