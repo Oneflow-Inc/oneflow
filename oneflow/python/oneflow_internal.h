@@ -46,7 +46,7 @@ std::string EnvResource(std::string* error_str) {
 
 void EnableEagerEnvironment(bool enable_eager_execution) {
   using namespace oneflow;
-  *Global<bool, EagerExecution<ForEnv>>::Get() = enable_eager_execution;
+  *Global<bool, EagerExecution>::Get() = enable_eager_execution;
 }
 
 bool EagerExecutionEnabled() { return oneflow::EagerExecutionEnabled(); }
