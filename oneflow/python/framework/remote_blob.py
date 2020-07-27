@@ -1,12 +1,27 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import oneflow
-import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.watch_scope_util as watch_scope_util
 import oneflow.python.framework.blob_trait as blob_trait
+from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 import oneflow.python.eager.eager_blob_util as eager_blob_util
@@ -94,19 +109,24 @@ class ConsistentBlob(BlobDef):
 
 
 class LazyConsistentBlob(ConsistentBlob):
-    def __init__(self, lbi, auto_watched_within_scope=True, **kw):
+    def __init__(self, lbi, **kw):
         ConsistentBlob.__init__(self, lbi, **kw)
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-        if auto_watched_within_scope:
-            watch_scope_util.TryWatchOnce(self)
 
     @property
     def shape(self):
+        if oneflow.scope.mirrored_view_enabled():
+            print(
+                "WARNING:",
+                "You access a consistent blob shape in mirrored view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+            )
         return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.lbn_)
 
     @property
     def dtype(self):
-        return c_api_util.JobBuildAndInferCtx_GetDataType(self.job_name_, self.lbn_)
+        return convert_proto_dtype_to_oneflow_dtype(
+            c_api_util.JobBuildAndInferCtx_GetDataType(self.job_name_, self.lbn_)
+        )
 
     @property
     def batch_axis(self):
@@ -140,7 +160,6 @@ class LazyConsistentBlob(ConsistentBlob):
         return (
             self.unique_name == rhs.unique_name
             and self.shape == rhs.shape
-            and self.shape == rhs.shape
             and self.batch_axis == rhs.batch_axis
             and self.split_axis == rhs.split_axis
             and self.is_dynamic == rhs.is_dynamic
@@ -168,11 +187,8 @@ class LazyMirroredBlob(MirroredBlob):
             sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(
                 self.job_name_, lbn, i
             )
-            consistent_blob = LazyConsistentBlob(
-                sub_lbi, auto_watched_within_scope=False
-            )
+            consistent_blob = LazyConsistentBlob(sub_lbi)
             self.sub_consistent_blob_list_.append(consistent_blob)
-        watch_scope_util.TryWatchOnce(self)
 
     @property
     def sub_consistent_blob_list(self):
@@ -180,14 +196,21 @@ class LazyMirroredBlob(MirroredBlob):
 
     @property
     def shape(self):
+        if oneflow.scope.consistent_view_enabled():
+            print(
+                "WARNING:",
+                "You access a mirrored blob shape in consistent view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+            )
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
             self.job_name_, self.lbn_
         )
 
     @property
     def dtype(self):
-        return c_api_util.JobBuildAndInferCtx_MirroredBlobGetDataType(
-            self.job_name_, self.lbn_
+        return convert_proto_dtype_to_oneflow_dtype(
+            c_api_util.JobBuildAndInferCtx_MirroredBlobGetDataType(
+                self.job_name_, self.lbn_
+            )
         )
 
     @property
@@ -266,7 +289,9 @@ class EagerBlobTrait(object):
 
     @property
     def dtype(self):
-        return self.blob_object.op_arg_blob_attr.dtype
+        ret = self.blob_object.op_arg_blob_attr.dtype
+        assert issubclass(ret, dtype_util.dtype)
+        return ret
 
     @property
     def batch_axis(self):
@@ -331,9 +356,8 @@ class EagerBlobTrait(object):
 
             def BoxingToSingleDevice(builder):
                 parallel_conf = placement_pb.ParallelConf()
-                parallel_conf.device_name.append(
-                    "{}:{}:{}".format(0, blob_object.parallel_desc_symbol.device_tag, 0)
-                )
+                parallel_conf.device_tag = blob_object.parallel_desc_symbol.device_tag
+                parallel_conf.device_name.append("{}:{}".format(0, 0))
                 tmp_parallel_desc_symbol = builder.GetParallelDescSymbol(parallel_conf)
                 tmp_op_arg_parallel_attr = op_arg_util.OpArgParallelAttribute(
                     tmp_parallel_desc_symbol,

@@ -1,31 +1,30 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
-namespace {
-
-void ResetDeviceTag(std::string* device_name, const std::string& device_tag) {
-  int64_t mchn_id = 0;
-  std::string _ = "";
-  std::string device_id_str = "";
-  CHECK_JUST(ParseDeviceNameConf(*device_name, &mchn_id, &_, &device_id_str));
-  *device_name = std::to_string(mchn_id) + ":" + device_tag + ":" + device_id_str;
-}
-
-}  // namespace
-
 Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
-                                std::string* device_tag, std::string* device_id_str) {
-  size_t second_delimiter_pos = device_name.rfind(":");
-  CHECK_NE_OR_RETURN(second_delimiter_pos, std::string::npos);
-  size_t first_delimiter_pos = device_name.rfind(":", second_delimiter_pos - 1);
-  CHECK_NE_OR_RETURN(first_delimiter_pos, std::string::npos);
-  *mchn_id = oneflow_cast<int64_t>(device_name.substr(0, first_delimiter_pos));
-  *device_tag =
-      device_name.substr(first_delimiter_pos + 1, second_delimiter_pos - first_delimiter_pos - 1);
-  *device_id_str = device_name.substr(second_delimiter_pos + 1);
+                                std::string* device_id_str) {
+  size_t delimiter_pos = device_name.rfind(":");
+  CHECK_NE_OR_RETURN(delimiter_pos, std::string::npos);
+  *mchn_id = oneflow_cast<int64_t>(device_name.substr(0, delimiter_pos));
+  *device_id_str = device_name.substr(delimiter_pos + 1);
   return Maybe<void>::Ok();
 }
 
@@ -52,15 +51,15 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   parallel_conf_ = user_conf;
   HashSet<int64_t> machine_id_set;
   device_type_ = DeviceType::kInvalidDevice;
+  const std::string& device_tag = parallel_conf_.device_tag();
+  DeviceType device_type = JUST(DeviceType4DeviceTag(device_tag));
+  CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice || device_type_ == device_type);
+  device_type_ = device_type;
   for (const std::string& device_name : parallel_conf_.device_name()) {
     int64_t mchn_id;
-    std::string device_tag;
     std::string device_id_str;
-    JUST(ParseDeviceNameConf(device_name, &mchn_id, &device_tag, &device_id_str));
+    JUST(ParseDeviceNameConf(device_name, &mchn_id, &device_id_str));
     machine_id_set.insert(mchn_id);
-    DeviceType device_type = JUST(DeviceType4DeviceTag(device_tag));
-    CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice || device_type_ == device_type);
-    device_type_ = device_type;
     if (machine_id_set.find(mchn_id) == machine_id_set.end()) {
       sorted_machine_ids_.push_back(mchn_id);
     }
@@ -129,9 +128,7 @@ void ParallelDesc::set_device_type(DeviceType device_type) {
   if (device_type == device_type_) { return; }
   device_type_ = device_type;
   const char* tag = CHECK_JUST(DeviceTag4DeviceType(device_type));
-  FOR_RANGE(int64_t, i, 0, parallel_conf_.device_name_size()) {
-    ResetDeviceTag(parallel_conf_.mutable_device_name(i), tag);
-  }
+  parallel_conf_.set_device_tag(tag);
 }
 
 Maybe<void> ParallelDesc::SanityCheck() {
@@ -162,7 +159,8 @@ ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) co
   const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(device_type()));
   std::string machine_id = std::to_string(MachineIdForParallelId(parallel_id));
   std::string device_id = std::to_string(DeviceIdForParallelId(parallel_id));
-  parallel_conf.add_device_name(machine_id + ":" + device_tag + ":" + device_id);
+  parallel_conf.set_device_tag(device_tag);
+  parallel_conf.add_device_name(machine_id + ":" + device_id);
   return parallel_conf;
 }
 
@@ -188,14 +186,16 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
 
 ParallelConf GenParallelConfOfCpuZeroOnMaster() {
   ParallelConf parallel_conf;
-  parallel_conf.add_device_name("0:cpu:0");
+  parallel_conf.set_device_tag("cpu");
+  parallel_conf.add_device_name("0:0");
   return parallel_conf;
 }
 
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   ParallelConf parallel_conf;
+  parallel_conf.set_device_tag("cpu");
   FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())) {
-    parallel_conf.add_device_name(std::to_string(i) + ":cpu:0");
+    parallel_conf.add_device_name(std::to_string(i) + ":0");
   }
   return parallel_conf;
 }

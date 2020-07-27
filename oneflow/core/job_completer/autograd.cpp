@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job_completer/clone_grad.h"
@@ -225,7 +240,8 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     total_loss_instance_num_conf->set_out("out");
 
     ParallelConf parallel_conf;
-    parallel_conf.add_device_name("0:cpu:0");
+    parallel_conf.set_device_tag("cpu");
+    parallel_conf.add_device_name("0:0");
     job_builder->AddOps(parallel_conf, {op_conf});
 
     total_loss_instance_num_lbi.set_op_name(op_conf.name());

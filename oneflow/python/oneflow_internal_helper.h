@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include <iostream>
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/buffer_manager.h"
@@ -242,6 +257,14 @@ Maybe<std::string> InferOpConf(const std::string& op_conf_str,
   const auto& op = JUST(ConstructAndInferOp(op_conf, upstream_signature, scope));
   const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
   return PbMessage2TxtString(*op_attribute);
+}
+
+Maybe<long> GetOpParallelSymbolId(const std::string& op_conf_str) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
+  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
+  const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
+  return JUST(scope.GetParallelDescSymbolId(op_conf));
 }
 
 Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {

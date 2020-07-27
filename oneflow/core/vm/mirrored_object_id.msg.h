@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID_MSG_H_
 #define ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID_MSG_H_
 
@@ -21,13 +36,13 @@ FLAT_MSG_END(AllMirroredObject);
 FLAT_MSG_BEGIN(Operand);
   // methods
   // init current_global_device_id
-  PUBLIC void __Init__(const ObjectId& logical_object_id);
+  OF_PUBLIC void __Init__(const ObjectId& logical_object_id);
   // init sole_mirrored_object
-  PUBLIC void __Init__(const ObjectId& logical_object_id, const SoleMirroredObject&);
+  OF_PUBLIC void __Init__(const ObjectId& logical_object_id, const SoleMirroredObject&);
   // init all_mirrored_object
-  PUBLIC void __Init__(const ObjectId& logical_object_id, const AllMirroredObject&);
-  PUBLIC void __Init__(const OperandProto& proto);
-  PUBLIC int64_t GetGlobalDeviceId(int64_t default_global_device_id) const;
+  OF_PUBLIC void __Init__(const ObjectId& logical_object_id, const AllMirroredObject&);
+  OF_PUBLIC void __Init__(const OperandProto& proto);
+  OF_PUBLIC int64_t GetGlobalDeviceId(int64_t default_global_device_id) const;
 
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(ObjectId, logical_object_id);
@@ -41,17 +56,17 @@ FLAT_MSG_END(Operand);
 // clang-format off
 FLAT_MSG_BEGIN(MirroredObjectId);
   // methods
-  PUBLIC void __Init__() {}
-  PUBLIC void __Init__(int64_t logical_object_id_value, int64_t global_device_id);
-  PUBLIC template<int64_t(*TransformLogicalObjectId)(int64_t)>
+  OF_PUBLIC void __Init__() {}
+  OF_PUBLIC void __Init__(int64_t logical_object_id_value, int64_t global_device_id);
+  OF_PUBLIC template<int64_t(*TransformLogicalObjectId)(int64_t)>
          void __Init__(const Operand& operand, int64_t global_device_id) {
     __Init__(TransformLogicalObjectId(operand.logical_object_id()),
              operand.GetGlobalDeviceId(global_device_id));
   }
-  PUBLIC void __Init__(const Operand& operand, int64_t global_device_id) {
+  OF_PUBLIC void __Init__(const Operand& operand, int64_t global_device_id) {
     __Init__(operand.logical_object_id(), operand.GetGlobalDeviceId(global_device_id));
   }
-  PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
+  OF_PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
 
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, logical_object_id_value);

@@ -1,5 +1,21 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def test_get_variable_with_same_name(test_case):
@@ -51,7 +67,7 @@ def test_get_job_shared_variable(test_case):
     train_func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(train_func_config)
-    def train(x_def=flow.FixedTensorDef(shape=(2, 5), dtype=flow.float)):
+    def train(x_def: oft.Numpy.Placeholder(shape=(2, 5), dtype=flow.float)):
         var = get_var("var", trainable=True)
         loss = var + x_def
         flow.losses.add_loss(loss)
@@ -101,7 +117,7 @@ def test_get_job_inter_and_intra_shared_variable(test_case):
     train_func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(train_func_config)
-    def train(x_def=flow.FixedTensorDef(shape=variable_shape, dtype=flow.float)):
+    def train(x_def: oft.Numpy.Placeholder(shape=variable_shape, dtype=flow.float)):
         var = get_var("var", trainable=True)
         loss = var + x_def
         flow.losses.add_loss(loss)

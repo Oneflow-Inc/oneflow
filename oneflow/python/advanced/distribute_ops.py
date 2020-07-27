@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import oneflow
@@ -153,6 +168,21 @@ def distribute_map(xs, f, axis=0):
     if output_is_not_container:
         return result[0]
     return tuple(result)
+
+
+@oneflow_export("cast_to_current_logical_view")
+def cast_to_current_logical_view(
+    x: remote_blob_util.BlobDef,
+) -> remote_blob_util.BlobDef:
+    if (
+        isinstance(x, remote_blob_util.ConsistentBlob)
+        and oneflow.scope.mirrored_view_enabled()
+    ) or (
+        isinstance(x, remote_blob_util.MirroredBlob)
+        and oneflow.scope.consistent_view_enabled()
+    ):
+        x = oneflow.identity(x)
+    return x
 
 
 def _SoleConsistentLbn(blob):

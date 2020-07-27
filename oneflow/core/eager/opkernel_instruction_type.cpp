@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/job_desc.h"
@@ -19,6 +34,7 @@
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
 namespace eager {
@@ -291,6 +307,42 @@ void ResetTmpBufferBlobObject(OpKernelObject* opkernel_obj, DeviceType device_ty
 }
 
 template<typename T>
+Maybe<void> CheckBlobParallel(vm::Instruction* instruction, const T& args,
+                              const OpParallelAttribute* op_parallel_attribute) {
+  const auto& bn_in_op2parallel_desc_symbol_id =
+      op_parallel_attribute->parallel_signature().bn_in_op2parallel_desc_symbol_id();
+
+  const auto& ParallelDesc4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const ParallelDesc*> {
+    const auto& iter = bn_in_op2parallel_desc_symbol_id.find(bn_in_op);
+    // TODO(Liang Depeng): should not tolerate nullptr.
+    if (iter == bn_in_op2parallel_desc_symbol_id.end()) { return nullptr; }
+    int64_t symbol_id = iter->second;
+    const vm::SymbolStorage<ParallelDesc>* symbol_storage_ptr =
+        Global<vm::SymbolStorage<ParallelDesc>>::Get();
+    CHECK_OR_RETURN(symbol_storage_ptr->Has(symbol_id));
+    return symbol_storage_ptr->GetPtr(symbol_id).get();
+  };
+
+  JUST(ForEachObnAndBlobObject(
+      instruction, args, [&](const std::string& bn_in_op, BlobObject* blob_object) -> Maybe<void> {
+        const auto* parallel_desc = JUST(ParallelDesc4BnInOp(bn_in_op));
+        if (parallel_desc == nullptr) { return Maybe<void>::Ok(); }
+        JUST(blob_object->CheckMemCase(*parallel_desc, instruction->stream().machine_id()));
+        return Maybe<void>::Ok();
+      }));
+
+  JUST(ForEachIbnAndBlobObject(
+      instruction, args,
+      [&](const std::string& bn_in_op, const BlobObject& blob_object) -> Maybe<void> {
+        const auto* parallel_desc = JUST(ParallelDesc4BnInOp(bn_in_op));
+        if (parallel_desc == nullptr) { return Maybe<void>::Ok(); }
+        JUST(blob_object.CheckMemCase(*parallel_desc, instruction->stream().machine_id()));
+        return Maybe<void>::Ok();
+      }));
+  return Maybe<void>::Ok();
+}
+
+template<typename T>
 Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruction, const T& args,
                           const std::shared_ptr<MemoryCase>& mem_case, DeviceType device_type) {
   {
@@ -312,8 +364,9 @@ Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruc
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  opkernel_obj->ResetOpAndKernel(&(op_parallel_attribute->sbp_signature()), &parallel_ctx,
-                                 BlobDesc4BnInOp);
+  JUST(opkernel_obj->ResetOpAndKernel(&(op_parallel_attribute->sbp_signature()), &parallel_ctx,
+                                      BlobDesc4BnInOp));
+  JUST(CheckBlobParallel(instruction, args, op_parallel_attribute));
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
                                  return blob_object->TryInitBlob();
@@ -347,8 +400,9 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  opkernel_obj->ResetKernel(&(op_parallel_attribute->sbp_signature()), &parallel_ctx,
-                            BlobDesc4BnInOp);
+  JUST(opkernel_obj->ResetKernel(&(op_parallel_attribute->sbp_signature()), &parallel_ctx,
+                                 BlobDesc4BnInOp));
+  JUST(CheckBlobParallel(instruction, args, op_parallel_attribute));
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
                                  return blob_object->TryInitBlob();
@@ -419,34 +473,38 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 
 }  // namespace
 
-Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction) const {
-  FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
-  auto* opkernel_obj = instruction->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
+Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction,
+                                                    const CallOpKernelInstrOperand& args) const {
+  auto* opkernel_obj = instruction->mut_operand_type(args.opkernel())->Mut<OpKernelObject>();
   DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
   int64_t device_id = instruction->stream().device_id();
   const auto& mem_case = MakeMemCase(device_type, device_id);
-  JUST(OpKernelInfer(opkernel_obj, instruction, args.Get(), mem_case, device_type));
+  JUST(OpKernelInfer(opkernel_obj, instruction, args, mem_case, device_type));
   return Maybe<void>::Ok();
 }
 
 void CallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
-  CHECK_OK(MaybeInfer(instruction))
+  FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
+  CHECK_OK(MaybeInfer(instruction, args.Get()))
       << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
-      << "\ndevice_id: " << instruction->stream().device_id() << "\nparallel_conf:\n"
+      << "\ndevice_id: " << instruction->stream().device_id()
+      << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString();
 }
 
-Maybe<void> CallOpKernelInstructionType::MaybeCompute(vm::Instruction* instruction) const {
-  FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
-  auto* opkernel_obj = instruction->mut_operand_type(args->opkernel())->Mut<OpKernelObject>();
-  JUST(OpKernelCompute(opkernel_obj, instruction, args.Get()));
+Maybe<void> CallOpKernelInstructionType::MaybeCompute(vm::Instruction* instruction,
+                                                      const CallOpKernelInstrOperand& args) const {
+  auto* opkernel_obj = instruction->mut_operand_type(args.opkernel())->Mut<OpKernelObject>();
+  JUST(OpKernelCompute(opkernel_obj, instruction, args));
   return Maybe<void>::Ok();
 }
 
 void CallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
-  CHECK_OK(MaybeCompute(instruction))
+  FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
+  CHECK_OK(MaybeCompute(instruction, args.Get()))
       << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
-      << "\ndevice_id: " << instruction->stream().device_id() << "\nparallel_conf:\n"
+      << "\ndevice_id: " << instruction->stream().device_id()
+      << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString();
 }
 

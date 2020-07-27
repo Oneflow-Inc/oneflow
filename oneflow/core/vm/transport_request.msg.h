@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_VM_TRANSPORT_REQUEST_H_
 #define ONEFLOW_CORE_VM_TRANSPORT_REQUEST_H_
 
@@ -22,8 +37,8 @@ FLAT_MSG_END(TransportDataToken);
 
 FLAT_MSG_BEGIN(TransportKey);
   // methods
-  PUBLIC void __Init__() {}
-  PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
+  OF_PUBLIC void __Init__() {}
+  OF_PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(TransportDataToken, data_token);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, data_offset);
@@ -36,7 +51,7 @@ FLAT_MSG_BEGIN(TransportSize);
   FLAT_MSG_DEFINE_OPTIONAL(int64_t, current_valid_size);
 
   // methods
-  PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
+  OF_PUBLIC FLAT_MSG_DEFINE_COMPARE_OPERATORS_BY_MEMCMP();
 FLAT_MSG_END(TransportSize);
 
 FLAT_MSG_BEGIN(TransportHeader);
