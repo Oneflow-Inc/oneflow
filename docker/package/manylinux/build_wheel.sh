@@ -5,10 +5,6 @@ set -e
 
 export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 
-ONEFLOW_SRC_DIR=`cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd`
-ONEFLOW_SRC_DIR=$ONEFLOW_SRC_DIR/../../..
-cd $ONEFLOW_SRC_DIR
-
 EXTRA_ONEFLOW_CMAKE_ARGS=""
 PY_VERS=()
 
@@ -16,6 +12,7 @@ while [[ "$#" > 0 ]]; do
     case $1 in
         --skip-third-party) SKIP_THIRD_PARTY=1; ;;
         --cache-dir) CACHE_DIR=$2; shift ;;
+        --house-dir) HOUSE_DIR=$2; shift ;;
         --python3.5) PY_VERS+=( "35" ) ;;
         --python3.6) PY_VERS+=( "36" ) ;;
         --python3.7) PY_VERS+=( "37" ) ;;
@@ -27,13 +24,23 @@ done
 
 if [[ ! -v CACHE_DIR ]]
 then
-    CACHE_DIR=$ONEFLOW_SRC_DIR/manylinux2014-build-cache
+    CACHE_DIR=$PWD/manylinux2014-build-cache
 fi
+
+if [[ ! -v HOUSE_DIR ]]
+then
+    HOUSE_DIR=$PWD/wheelhouse
+fi
+
+ONEFLOW_SRC_DIR=`cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd`
+ONEFLOW_SRC_DIR=$ONEFLOW_SRC_DIR/../../..
 
 if [[ ${#PY_VERS[@]} -eq 0 ]]
 then
     PY_VERS=( 35 36 37 38 )
 fi
+
+cd $ONEFLOW_SRC_DIR
 
 THIRD_PARTY_BUILD_DIR=$CACHE_DIR/build-third-party
 THIRD_PARTY_INSTALL_DIR=$CACHE_DIR/build-third-party-install
@@ -52,6 +59,12 @@ if [[ $SKIP_THIRD_PARTY != 1 ]]; then
 fi
 
 ONEFLOW_BUILD_DIR=$CACHE_DIR/build-oneflow
+
+function cleanup {
+  set -x
+  rm  -r tmp_wheel
+}
+
 for PY_VER in ${PY_VERS[@]}
 do
     mkdir -p $ONEFLOW_BUILD_DIR
@@ -71,7 +84,7 @@ do
         $ONEFLOW_SRC_DIR
     cmake --build . -j `nproc`
     popd
+    trap cleanup EXIT
     $PY_BIN setup.py bdist_wheel -d tmp_wheel --build_dir $ONEFLOW_BUILD_DIR
-    auditwheel repair tmp_wheel/*.whl
-    rm -rf tmp_wheel
+    auditwheel repair tmp_wheel/*.whl --wheel-dir $HOUSE_DIR
 done

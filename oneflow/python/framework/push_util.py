@@ -95,22 +95,11 @@ def _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_value):
             for ndarray in ndarray_list:
                 assert isinstance(ndarray, numpy.ndarray)
                 assert len(ndarray.shape) == len(arg_blob_def.shape)
-                assert (
-                    numpy.prod(ndarray.shape)
-                    <= numpy.prod(arg_blob_def.shape) / arg_blob_def.shape[0]
-                )
+                assert numpy.prod(ndarray.shape) <= numpy.prod(
+                    arg_blob_def.shape
+                ), "%s v.s. %s" % (ndarray.shape, arg_blob_def.shape)
     else:
         raise NotImplementedError
-
-
-def _MakeReleaser4InputBlobObject(lbi, rank):
-    blob_register = blob_register_util.GetDefaultBlobRegister()
-    lbn = "{}/{}/{}".format(lbi.op_name, lbi.blob_name, rank)
-
-    def ReleaseInputBlobObject(*args):
-        blob_register.ClearObject4BlobName(lbn)
-
-    return ReleaseInputBlobObject
 
 
 def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
@@ -119,7 +108,6 @@ def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
     physical_blob_objects = _GetPhysicalBlobObjects(arg_blob_object, lbi)
     feed_ctx = FeedContext(arg_blob_object.op_arg_parallel_attr, arg_ndarray)
     for i, physical_blob_object in enumerate(physical_blob_objects):
-        arg_blob_object.add_releaser(_MakeReleaser4InputBlobObject(lbi, i))
         feed_ctx.set_rank(i)
         _FeedValueToInputPhysicalBlob(feed_ctx, arg_blob_def, physical_blob_object)
     blob_class = None
@@ -140,7 +128,7 @@ def _MakeInputBlobObject(arg_blob_def):
 
     def BuildInputInstruction(builder):
         op_attribute = arg_blob_def.EagerAddAndInferOp(input_op_conf)
-        scope = oneflow.scope.current_scope()
+        scope = oneflow.current_scope()
         parallel_conf = scope.device_parallel_desc_symbol.parallel_conf
         builder.StatelessCall(
             op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
@@ -152,20 +140,16 @@ def _MakeInputBlobObject(arg_blob_def):
 
 def _GetPhysicalBlobObjects(logical_blob_object, lbi):
     blob_register = blob_register_util.GetDefaultBlobRegister()
-    physical_blob_names = []
+    physical_blob_objects = None
 
     def BuildLogical2PhysicalInstruction(builder):
+        nonlocal physical_blob_objects
         physical_blob_objects = builder.UnpackLogicalBlobToPhysicalBlobs(
             logical_blob_object
         )
-        for i, physical_blob_object in enumerate(physical_blob_objects):
-            blob_name = "{}/{}/{}".format(lbi.op_name, lbi.blob_name, i)
-            physical_blob_names.append(blob_name)
-            if not blob_register.HasObject4BlobName(blob_name):
-                blob_register.SetObject4BlobName(blob_name, physical_blob_object)
 
     vm_util.LogicalRun(BuildLogical2PhysicalInstruction)
-    return [blob_register.GetObject4BlobName(name) for name in physical_blob_names]
+    return physical_blob_objects
 
 
 def _MakeInputOpConfAndRetLbi(arg_blob_def):
@@ -239,7 +223,7 @@ class FeedContext(object):
         assert all(isinstance(a, (list, tuple)) for a in self.arg_ndarray_)
         ndarray_list = self.arg_ndarray_[self.rank_]
         assert all(isinstance(arr, numpy.ndarray) for arr in ndarray_list)
-        capacity = numpy.prod(static_shape) / static_shape[0]
+        capacity = numpy.prod(static_shape)
         assert all(numpy.prod(arr.shape) <= capacity for arr in ndarray_list)
         return self._AsContiguousNdArray(ndarray_list)
 
