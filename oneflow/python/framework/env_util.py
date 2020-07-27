@@ -27,7 +27,7 @@ import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export("env.enable_eager_environment")
+@oneflow_export("enable_eager_execution")
 def api_enable_eager_execution(val: bool = True) -> None:
     return enable_if.unique([enable_eager_environment])(val)
 
