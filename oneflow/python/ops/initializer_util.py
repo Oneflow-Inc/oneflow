@@ -103,6 +103,7 @@ def random_uniform_initializer(
     Returns:
         op_conf_util.InitializerConf:  Initial configuration
     """
+    assert minval <= maxval
     initializer = op_conf_util.InitializerConf()
     if dtype in [dtype_util.float, dtype_util.double]:
         setattr(initializer.random_uniform_conf, "min", float(minval))
