@@ -51,7 +51,7 @@ IBVerbsMemDesc::IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size) {
 }
 
 IBVerbsMemDesc::~IBVerbsMemDesc() {
-  for (ibv_mr* mr : mr_vec_) { CHECK_EQ(ibv_dereg_mr(mr), 0); }
+  for (ibv_mr* mr : mr_vec_) { CHECK_EQ(wrap_ibv_dereg_mr(mr), 0); }
 }
 
 IBVerbsMemDescProto IBVerbsMemDesc::ToProto() {
