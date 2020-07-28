@@ -365,9 +365,6 @@ class Optimizer:
     ):
         self.lr_scheduler = lr_scheduler
         self.loss_scale_factor = loss_scale_factor
-        self.weight_decay = weight_decay
-        self.weight_decay_includes = weight_decay_includes
-        self.weight_decay_excludes = weight_decay_excludes
         self.grad_clipping = grad_clipping
         self.train_step_lbn = train_step_lbn
 
