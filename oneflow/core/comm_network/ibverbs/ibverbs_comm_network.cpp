@@ -33,6 +33,7 @@ std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
 }
 
 void IBVForkInit() {
+  if (wrap_ibv_symbols() != 0) { LOG(ERROR) << "wrap_ibv_symbols failed"; }
   if (wrap_ibv_fork_init() != 0) { LOG(ERROR) << "ibv_fork_init failed"; }
 }
 
