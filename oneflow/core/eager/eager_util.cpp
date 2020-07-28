@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 
@@ -43,9 +44,9 @@ void StorageAdd(const EagerSymbol& symbol) {
     Global<vm::SymbolStorage<ParallelDesc>>::Get()->Add(symbol_id, symbol.parallel_conf_symbol());
   } else if (symbol.has_op_conf_symbol()) {
     Global<vm::SymbolStorage<OperatorConf>>::Get()->Add(symbol_id, symbol.op_conf_symbol());
-  } else if (symbol.has_op_parallel_attribute_symbol()) {
-    Global<vm::SymbolStorage<OpParallelAttribute>>::Get()->Add(
-        symbol_id, symbol.op_parallel_attribute_symbol());
+  } else if (symbol.has_op_node_signature_symbol()) {
+    Global<vm::SymbolStorage<OpNodeSignatureDesc>>::Get()->Add(symbol_id,
+                                                               symbol.op_node_signature_symbol());
   } else {
     UNIMPLEMENTED();
   }

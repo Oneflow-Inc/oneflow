@@ -41,10 +41,13 @@ Maybe<void> AddLbiDiffWatcherOpConfs::Apply(Job* job) const {
   const auto& pair_list = map.at(GlobalJobDesc().job_name()).lbi_and_uuid_pair();
   for (const LbiAndDiffWatcherUuidPair& pair : pair_list) {
     if (lbi2diff_lbi.find(pair.lbi()) == lbi2diff_lbi.end()) { continue; }
+    const auto& diff_lbi = lbi2diff_lbi.at(pair.lbi());
+    const auto& diff_lbi_op_conf = job_builder.OpConf4OpName(diff_lbi.op_name());
     OperatorConf foreign_watcher_op;
     foreign_watcher_op.set_name("System-LbiDiffWatcher-ForeignWatcher-" + NewUniqueId());
+    foreign_watcher_op.set_scope_symbol_id(diff_lbi_op_conf.scope_symbol_id());
     auto* foreign_watcher_conf = foreign_watcher_op.mutable_foreign_watch_conf();
-    foreign_watcher_conf->set_in(GenLogicalBlobName(lbi2diff_lbi.at(pair.lbi())));
+    foreign_watcher_conf->set_in(GenLogicalBlobName(diff_lbi));
     foreign_watcher_conf->set_handler_uuid(pair.watcher_uuid());
     job_builder.AddOps(job_builder.ParallelConf4Lbi(pair.lbi()), {foreign_watcher_op});
   }
