@@ -63,14 +63,14 @@ union ibv_gid {
  * @member:     the name of the member within the struct.
  *
  */
-#define container_of(ptr, type, member) ((type *)((std::uint8_t *)(ptr)-offsetof(type, member)))
+#define container_of(ptr, type, member) ((type *)((uint8_t *)(ptr)-offsetof(type, member)))
 #endif
 
 #define vext_field_avail(type, fld, sz) (offsetof(type, fld) < (sz))
 
 /*XXX:__VERBS_ABI_IS_EXTENDED produces warning "integer operation result is out of range" with
  * g++ 4.8.2*/
-// static void *__VERBS_ABI_IS_EXTENDED = ((std::uint8_t *)NULL) - 1;
+// static void *__VERBS_ABI_IS_EXTENDED = ((uint8_t *)NULL) - 1;
 
 enum ibv_node_type {
   IBV_NODE_UNKNOWN = -1,
@@ -159,8 +159,8 @@ struct ibv_device_attr {
   int max_srq_wr;
   int max_srq_sge;
   uint16_t max_pkeys;
-  std::uint8_t local_ca_ack_delay;
-  std::uint8_t phys_port_cnt;
+  uint8_t local_ca_ack_delay;
+  uint8_t phys_port_cnt;
 };
 
 enum ibv_mtu {
@@ -226,16 +226,16 @@ struct ibv_port_attr {
   uint16_t pkey_tbl_len;
   uint16_t lid;
   uint16_t sm_lid;
-  std::uint8_t lmc;
-  std::uint8_t max_vl_num;
-  std::uint8_t sm_sl;
-  std::uint8_t subnet_timeout;
-  std::uint8_t init_type_reply;
-  std::uint8_t active_width;
-  std::uint8_t active_speed;
-  std::uint8_t phys_state;
-  std::uint8_t link_layer;
-  std::uint8_t reserved;
+  uint8_t lmc;
+  uint8_t max_vl_num;
+  uint8_t sm_sl;
+  uint8_t subnet_timeout;
+  uint8_t init_type_reply;
+  uint8_t active_width;
+  uint8_t active_speed;
+  uint8_t phys_state;
+  uint8_t link_layer;
+  uint8_t reserved;
 };
 
 enum ibv_event_type {
@@ -335,8 +335,8 @@ struct ibv_wc {
   int wc_flags;
   uint16_t pkey_index;
   uint16_t slid;
-  std::uint8_t sl;
-  std::uint8_t dlid_path_bits;
+  uint8_t sl;
+  uint8_t dlid_path_bits;
 };
 
 enum ibv_access_flags {
@@ -396,16 +396,16 @@ struct ibv_mw {
 struct ibv_global_route {
   union ibv_gid dgid;
   uint32_t flow_label;
-  std::uint8_t sgid_index;
-  std::uint8_t hop_limit;
-  std::uint8_t traffic_class;
+  uint8_t sgid_index;
+  uint8_t hop_limit;
+  uint8_t traffic_class;
 };
 
 struct ibv_grh {
   uint32_t version_tclass_flow;
   uint16_t paylen;
-  std::uint8_t next_hdr;
-  std::uint8_t hop_limit;
+  uint8_t next_hdr;
+  uint8_t hop_limit;
   union ibv_gid sgid;
   union ibv_gid dgid;
 };
@@ -461,11 +461,11 @@ enum ibv_rate mbps_to_ibv_rate(int mbps) __attribute_const;
 struct ibv_ah_attr {
   struct ibv_global_route grh;
   uint16_t dlid;
-  std::uint8_t sl;
-  std::uint8_t src_path_bits;
-  std::uint8_t static_rate;
-  std::uint8_t is_global;
-  std::uint8_t port_num;
+  uint8_t sl;
+  uint8_t src_path_bits;
+  uint8_t static_rate;
+  uint8_t is_global;
+  uint8_t port_num;
 };
 
 enum ibv_srq_attr_mask { IBV_SRQ_MAX_WR = 1 << 0, IBV_SRQ_LIMIT = 1 << 1 };
@@ -628,17 +628,17 @@ struct ibv_qp_attr {
   struct ibv_ah_attr alt_ah_attr;
   uint16_t pkey_index;
   uint16_t alt_pkey_index;
-  std::uint8_t en_sqd_async_notify;
-  std::uint8_t sq_draining;
-  std::uint8_t max_rd_atomic;
-  std::uint8_t max_dest_rd_atomic;
-  std::uint8_t min_rnr_timer;
-  std::uint8_t port_num;
-  std::uint8_t timeout;
-  std::uint8_t retry_cnt;
-  std::uint8_t rnr_retry;
-  std::uint8_t alt_port_num;
-  std::uint8_t alt_timeout;
+  uint8_t en_sqd_async_notify;
+  uint8_t sq_draining;
+  uint8_t max_rd_atomic;
+  uint8_t max_dest_rd_atomic;
+  uint8_t min_rnr_timer;
+  uint8_t port_num;
+  uint8_t timeout;
+  uint8_t retry_cnt;
+  uint8_t rnr_retry;
+  uint8_t alt_port_num;
+  uint8_t alt_timeout;
 };
 
 enum ibv_wr_opcode {
@@ -813,8 +813,8 @@ enum ibv_flow_spec_type {
 };
 
 struct ibv_flow_eth_filter {
-  std::uint8_t dst_mac[6];
-  std::uint8_t src_mac[6];
+  uint8_t dst_mac[6];
+  uint8_t src_mac[6];
   uint16_t ether_type;
   /*
    * same layout as 802.1q: prio 3, cfi 1, vlan id 12
@@ -870,8 +870,8 @@ struct ibv_flow_attr {
   enum ibv_flow_attr_type type;
   uint16_t size;
   uint16_t priority;
-  std::uint8_t num_of_specs;
-  std::uint8_t port;
+  uint8_t num_of_specs;
+  uint8_t port;
   uint32_t flags;
   /* Following are the optional layers according to user request
    * struct ibv_flow_spec_xxx [L2]
@@ -920,8 +920,7 @@ struct verbs_device {
 
 struct ibv_context_ops {
   int (*query_device)(struct ibv_context *context, struct ibv_device_attr *device_attr);
-  int (*query_port)(struct ibv_context *context, std::uint8_t port_num,
-                    struct ibv_port_attr *port_attr);
+  int (*query_port)(struct ibv_context *context, uint8_t port_num, struct ibv_port_attr *port_attr);
   struct ibv_pd *(*alloc_pd)(struct ibv_context *context);
   int (*dealloc_pd)(struct ibv_pd *pd);
   struct ibv_mr *(*reg_mr)(struct ibv_pd *pd, void *addr, size_t length, int access);
@@ -1034,9 +1033,9 @@ ncclResult_t wrap_ibv_get_async_event(struct ibv_context *context, struct ibv_as
 ncclResult_t wrap_ibv_ack_async_event(struct ibv_async_event *event);
 ncclResult_t wrap_ibv_query_device(struct ibv_context *context,
                                    struct ibv_device_attr *device_attr);
-ncclResult_t wrap_ibv_query_port(struct ibv_context *context, std::uint8_t port_num,
+ncclResult_t wrap_ibv_query_port(struct ibv_context *context, uint8_t port_num,
                                  struct ibv_port_attr *port_attr);
-ncclResult_t wrap_ibv_query_gid(struct ibv_context *context, std::uint8_t port_num, int index,
+ncclResult_t wrap_ibv_query_gid(struct ibv_context *context, uint8_t port_num, int index,
                                 union ibv_gid *gid);
 ncclResult_t wrap_ibv_query_qp(struct ibv_qp *qp, struct ibv_qp_attr *attr, int attr_mask,
                                struct ibv_qp_init_attr *init_attr);
