@@ -381,32 +381,32 @@ REGISTER_USER_OP_GRAD("normalization")
       const auto BroadcastMulAtAxisOpDefine =
           [&ctx, &axis](std::function<std::string()> scale_bn_func,
                         std::function<std::string()> input_bn_func, const std::string& name) {
-            DimVector broadcast_dim_vec;
-            const auto& in_shape = ctx->FwOp().arg_tensor_desc("x", 0).shape();
-            FOR_RANGE(size_t, i, 0, in_shape.NumAxes()) {
-              if (i != axis) {
-                broadcast_dim_vec.push_back(1);
-              } else {
-                broadcast_dim_vec.push_back(in_shape.At(axis));
-              }
-            }
-            const Shape broadcast_shape(broadcast_dim_vec);
-
+            // local variable(scale_bn_func) need to be captured by value
             const auto reshape_op_name = "System-AutoGrad-" + name + "-Reshape";
-            // note problem
-            ctx->DefineOp(reshape_op_name, [&scale_bn_func, &broadcast_shape](
-                                               user_op::UserOpConfWrapperBuilder& builder) {
-              return builder.OpTypeName("reshape")
-                  .InputBind("in", scale_bn_func())
-                  .Attr("shape", broadcast_shape)
-                  .Output("out")
-                  .Build();
-            });
+            ctx->DefineOp(reshape_op_name,
+                          [&ctx, &axis, scale_bn_func](user_op::UserOpConfWrapperBuilder& builder) {
+                            DimVector broadcast_dim_vec;
+                            const auto& in_shape = ctx->FwOp().arg_tensor_desc("x", 0).shape();
+                            FOR_RANGE(size_t, i, 0, in_shape.NumAxes()) {
+                              if (i != axis) {
+                                broadcast_dim_vec.push_back(1);
+                              } else {
+                                broadcast_dim_vec.push_back(in_shape.At(axis));
+                              }
+                            }
+                            const Shape broadcast_shape(broadcast_dim_vec);
 
+                            return builder.OpTypeName("reshape")
+                                .InputBind("in", scale_bn_func())
+                                .Attr("shape", broadcast_shape)
+                                .Output("out")
+                                .Build();
+                          });
+
+            // local variable(reshape_op_name/input_bn_func) need to be captured by value
             const auto mul_op_name = "System-AutoGrad-" + name + "-BroadcastMul";
-            // note problem
-            ctx->DefineOp(mul_op_name, [&ctx, &reshape_op_name, &input_bn_func](
-                                           user_op::UserOpConfWrapperBuilder& builder) {
+            ctx->DefineOp(mul_op_name, [&ctx, reshape_op_name,
+                                        input_bn_func](user_op::UserOpConfWrapperBuilder& builder) {
               return builder.OpTypeName("broadcast_mul")
                   .InputBind("x", ctx->GetOp(reshape_op_name).output("out", 0))
                   .InputBind("y", input_bn_func())
