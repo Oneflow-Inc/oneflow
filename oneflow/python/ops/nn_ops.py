@@ -1049,37 +1049,43 @@ def deconv2d(
     else:
         raise ValueError("strides must be an int or a list.")
 
-    # check padding needed
+    # output_padding and padding_needed
+    output_padding = [0] * NDims
+    padding_needed = [0] * NDims
     if padding.upper() == "VALID":
         for i in range(NDims):
             effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
             assert (output_shape[i] + strides[i] - effective_filter_size) // strides[
                 i
             ] == input_shape[i]
+            tmp_output_shape = (input_shape[i] - 1) * strides[i] + effective_filter_size
+            output_padding[i] = output_shape[i] - tmp_output_shape
     elif padding.upper() == "SAME":
         padding_left = [0] * NDims
         padding_right = [0] * NDims
         for i in range(NDims):
             assert (output_shape[i] + strides[i] - 1) // strides[i] == input_shape[i]
             effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
-            padding_needed = max(
+            padding_needed[i] = max(
                 0,
                 (input_shape[i] - 1) * strides[i]
                 + effective_filter_size
                 - output_shape[i],
             )
-            padding_left[i] = padding_needed // 2
-            padding_right[i] = padding_needed - padding_needed // 2
+            tmp_output_shape = (
+                (input_shape[i] - 1) * strides[i]
+                + effective_filter_size
+                - padding_needed[i]
+            )
+            output_padding[i] = output_shape[i] - tmp_output_shape
+            padding_left[i] = padding_needed[i] // 2
+            padding_right[i] = padding_needed[i] - padding_needed[i] // 2
     else:
         raise ValueError('padding must be "SAME" or "VALID".')
     # add pad op if needs odd padding
     if padding.upper() == "SAME" and padding_left != padding_right:
         assert data_format.upper() == "NCHW"
-        padded_output_shape = [0] * NDims
-        for i in range(NDims):
-            padded_output_shape[i] = (
-                output_shape[i] + padding_left[i] + padding_right[i]
-            )
+        padding_before = [0] * NDims
         input = (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("Conv2d_")
@@ -1089,12 +1095,12 @@ def deconv2d(
             .Input("weight", [filters])
             .Output("out")
             .Attr("filters", channels)
-            .Attr("padding", "valid")
+            .Attr("padding_before", padding_before)
             .Attr("data_format", channel_pos)
             .Attr("kernel_size", kernel_size)
             .Attr("strides", strides)
             .Attr("dilation_rate", dilations)
-            .Attr("output_shape", padded_output_shape)
+            .Attr("output_padding", output_padding)
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]
@@ -1109,6 +1115,104 @@ def deconv2d(
             ],
             name=name + "_pad_grad" if name is not None else None,
         )
+    assert len(padding_needed) == len(input.shape) - 2
+    padding_before = []
+    for pad in padding_needed:
+        assert pad % 2 == 0
+        padding_before.append(pad // 2)
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
+        .Op("deconv2d")
+        .Input("in", [input])
+        .Input("weight", [filters])
+        .Output("out")
+        .Attr("filters", channels)
+        .Attr("padding_before", padding_before)
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilations)
+        .Attr("output_padding", output_padding)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("nn.torch_conv2d_transpose")
+def deconv2d_torch(
+    value=None,
+    filter=None,
+    output_padding=None,
+    strides=None,
+    padding_needed=None,
+    data_format="NHWC",
+    name=None,
+    input=None,
+    filters=None,
+    dilations=None,
+):
+
+    assert (value is not None) ^ (
+        input is not None
+    ), "only one of `input` and `value` could be not None"
+
+    assert (filter is not None) ^ (
+        filters is not None
+    ), "only one of `filter` and `filters` could be not None"
+    filters = filters or filter
+    input = input or value
+
+    NDims = 2
+    assert len(input.shape) == 2 + NDims
+    assert len(filters.shape) == 2 + NDims
+
+    # dilations
+    if dilations is None:
+        dilations = [1, 1]
+    else:
+        if isinstance(dilations, (list, tuple)):
+            assert len(dilations) == 2, ValueError(
+                "dilations length must be 2 when passed as a list."
+            )
+        elif isinstance(dilations, int):
+            dilations = [dilations, dilations]
+        else:
+            raise ValueError("dilations must be an int or a list.")
+
+    # data format
+    if data_format.upper() == "NCHW":
+        input_shape = input.shape[2:]
+        kernel_size = filters.shape[2:4]
+        channels = filters.shape[1]
+    elif data_format.upper() == "NHWC":
+        input_shape = input.shape[1:3]
+        kernel_size = filters.shape[-3:-1]
+        channels = filters.shape[3]
+        assert dilations == [1, 1], ValueError(
+            "dialtions must be 1 when data format is NHWC "
+        )
+    else:
+        raise ValueError('data_format must be "NHWC" or "NCHW".')
+
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
+
+    # strides
+    if isinstance(strides, (list, tuple)):
+        assert len(strides) == NDims, ValueError(
+            "strides length must be 2 when passed as a list."
+        )
+    elif isinstance(strides, int):
+        strides = [strides, strides]
+    else:
+        raise ValueError("strides must be an int or a list.")
+
+    # output_padding and padding_needed
+    assert len(padding_needed) == len(input.shape) - 2
+    padding_before = []
+    for pad in padding_needed:
+        assert pad % 2 == 0
+        padding_before.append(pad // 2)
 
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
@@ -1117,12 +1221,12 @@ def deconv2d(
         .Input("weight", [filters])
         .Output("out")
         .Attr("filters", channels)
-        .Attr("padding", padding.lower())
+        .Attr("padding_before", padding_before)
         .Attr("data_format", channel_pos)
         .Attr("kernel_size", kernel_size)
         .Attr("strides", strides)
         .Attr("dilation_rate", dilations)
-        .Attr("output_shape", output_shape)
+        .Attr("output_padding", output_padding)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
