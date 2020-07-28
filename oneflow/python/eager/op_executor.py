@@ -161,7 +161,7 @@ def _ModelInit(var_op_conf):
         return old_scope.BuildWithNewIsMirrored(builder, False)
 
     def BuildModeInitInstruction(builder):
-        upstream_signature = op_attribute_pb.UpstreamSignature()
+        upstream_signature = op_attribute_pb.OpNodeSignature()
         parallel_conf = oneflow.placement.current_scope().default_parallel_conf
         op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
         op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
