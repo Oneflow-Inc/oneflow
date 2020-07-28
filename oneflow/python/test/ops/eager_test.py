@@ -23,8 +23,8 @@ from absl.testing import absltest
 
 class _ClearDefaultSession(object):
     def setUp(self):
-        oneflow.clear_default_session()
-        oneflow.enable_eager_execution(True)
+        flow.clear_default_session()
+        flow.enable_eager_execution(True)
 
 
 flow.unittest.register_test_cases(
