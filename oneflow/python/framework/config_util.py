@@ -26,7 +26,7 @@ def api_load_library(val: str) -> None:
     r"""Load necessary library for job
 
     Args:
-        val (str): [description]
+        val (str): path to shared object file
     """
     return enable_if.unique([load_library, do_nothing])(val)
 
