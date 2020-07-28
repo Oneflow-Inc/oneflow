@@ -33,7 +33,6 @@ import oneflow.core.vm.instruction_pb2 as instr_util
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.python.vm.id_util as id_util
 import oneflow.python.eager.vm_util as vm_util
-import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import random
@@ -104,9 +103,7 @@ class UserOpModule(object):
 
 @oneflow_export("user_op_builder")
 def api_user_op_builder(op_name):
-    api = enable_if.unique(
-        [lazy_user_op_builder, eager_user_op_builder, eager_physical_user_op_builder,]
-    )
+    api = enable_if.unique([lazy_user_op_builder, eager_user_op_builder])
     return api(op_name)
 
 
@@ -149,38 +146,6 @@ class EagerUserOp(UserOp):
 in_physical_placement = hob.env_initialized & hob.is_current_placement_physical
 
 
-@enable_if.condition(hob.in_normal_mode & in_physical_placement)
-def eager_physical_user_op_builder(op_name):
-    job_name = job_conf_ctx.CurrentJobConf().job_name
-    return UserOpConfBuilder(job_name, op_name, EagerPhysicalUserOp)
-
-
-class EagerPhysicalUserOp(UserOp):
-    def __init__(self, op_name):
-        UserOp.__init__(self, op_name)
-
-    def InferAndTryRun(self):
-        self.op_conf_.scope_symbol_id = oneflow.scope.current_scope().symbol_id
-        op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
-
-        def BuildInstruction(builder):
-            with blob_register.BnInOp2BlobObjectScope(
-                op_attribute
-            ) as bn_in_op2blob_object:
-                parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-                builder.StatelessCall(
-                    op_attribute,
-                    parallel_conf,
-                    bn_in_op2blob_object=bn_in_op2blob_object,
-                )
-
-        vm_util.PhysicalRun(BuildInstruction)
-        return self
-
-    def MakeRemoteBlob(self, lbi):
-        return eager_blob_util.EagerPhysicalBlob("%s/%s" % (lbi.op_name, lbi.blob_name))
-
-
 @oneflow_export("consistent_user_op_builder")
 def consistent_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
@@ -199,47 +164,20 @@ class ConsistentUserOp(UserOp):
         return remote_blob_util.RemoteBlob(lbi)
 
 
-def NonTraceableEagerLogicalUserOpBuilder(op_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpConfBuilder(job_name, op_name, NonTraceableEagerLogicalUserOp)
-
-
-class NonTraceableEagerLogicalUserOp(UserOp):
-    def __init__(self, op_name):
-        UserOp.__init__(self, op_name)
-
-    def InferAndTryRun(self):
-        self.op_conf_.scope_symbol_id = oneflow.scope.current_scope().symbol_id
-        op_attribute = c_api_util.GetOpAttribute4OpConf(self.op_conf_)
-
-        def BuildInstruction(builder):
-            get_scope = blob_register.BnInOp2BlobObjectScope
-            with get_scope(op_attribute) as bn_in_op2blob_object:
-                parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-                builder.StatelessCall(
-                    op_attribute,
-                    parallel_conf,
-                    bn_in_op2blob_object=bn_in_op2blob_object,
-                )
-
-        vm_util.LogicalRun(BuildInstruction)
-        return self
-
-    def MakeRemoteBlob(self, lbi):
-        return remote_blob_util.EagerLogicalBlob(lbi)
-
-
 class UserOpConfBuilder(object):
     def __init__(self, job_name, op_name, user_op_class):
         name_scope_prefix = name_scope.GetJobNameScopePrefix(job_name)
         self.user_op_ = user_op_class(name_scope_prefix + op_name)
 
-    def Build(self):
+    def CheckAndComplete(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name != ""
         self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(
             self.user_op_.op_conf_
         )
-        return self.user_op_
+        return self
+
+    def Build(self):
+        return self.CheckAndComplete().user_op_
 
     def OpName(self, op_name):
         self.user_op_.op_conf_.name = op_name
@@ -392,9 +330,7 @@ def api_user_op_module_builder(op_type_name):
 class UserOpModuleBuilder(UserOpConfBuilder):
     def __init__(self, *args, **kwargs):
         UserOpConfBuilder.__init__(self, *args, **kwargs)
-        self.user_op_module.op_conf.scope_symbol_id = (
-            flow.scope.current_scope().symbol_id
-        )
+        self.user_op_module.op_conf.scope_symbol_id = flow.current_scope().symbol_id
 
     @property
     def user_op_module(self):

@@ -71,7 +71,7 @@ def InterpretScope(session, function_desc, config_proto):
     tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
         placement_scope.default_parallel_conf
     )
-    scope = _MakeInitialScope(job_conf, *tag_and_dev_ids, is_mirrored)
+    scope = MakeInitialScope(job_conf, *tag_and_dev_ids, is_mirrored)
     with _JobBuildAndInferCtx(job_conf.job_name), placement_scope, distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
@@ -213,7 +213,7 @@ def _RecursiveMakeRetRemoteBlobs(remote_blobs, **kwarg):
     )
 
 
-def _MakeInitialScope(job_conf, device_tag, machine_device_ids, is_mirrored):
+def MakeInitialScope(job_conf, device_tag, machine_device_ids, is_mirrored):
     scope = None
 
     def BuildInitialScope(builder):

@@ -27,6 +27,7 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
   *(momentum_var.mutable_variable_conf()->mutable_initializer()) = constant_initializer;
   momentum_var.set_name(op.op_name() + "-momentum");
   momentum_var.mutable_variable_conf()->set_out("out");
+  momentum_var.set_scope_symbol_id(op.op_conf().scope_symbol_id());
   job_builder->AddOps(parallel_conf, {momentum_var});
 
   OperatorConf mdupdt_op;
@@ -34,6 +35,7 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
   auto* mdupdt_op_conf = mdupdt_op.mutable_lars_model_update_conf();
   ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, job_builder, mdupdt_op_conf);
   mdupdt_op_conf->set_momentum(momentum_var.name() + "/out");
+  mdupdt_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
   job_builder->AddOps(parallel_conf, {mdupdt_op});
 }
 
