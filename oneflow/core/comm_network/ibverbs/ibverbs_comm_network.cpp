@@ -78,7 +78,8 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
     : CommNetIf(plan),
       token2mem_desc_(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum()),
       poll_exit_flag_(ATOMIC_FLAG_INIT) {
-  ibv_device** device_list = ibv_get_device_list(nullptr);
+  ibv_device** device_list;
+  wrap_ibv_get_device_list(&device_list, nullptr);
   PCHECK(device_list);
   ibv_device* device = device_list[0];
   context_ = ibv_open_device(device);
