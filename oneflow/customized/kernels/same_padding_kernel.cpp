@@ -55,7 +55,8 @@ class SamePaddingKernel final : public user_op::OpKernel {
                x->shape().At(idx_offset + i) + padding_small + padding_large);
     }
     CHECK_EQ(padding_before.size(), num_axes);
-    NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(), 0, y->mut_dptr<T>());
+    NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(), static_cast<T>(0),
+                                     y->mut_dptr<T>());
 
     MemoryCopyNdDesc memory_copy_nd_desc;
     Shape x_shape;
