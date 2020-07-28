@@ -55,6 +55,7 @@ def _make_gather_fn(
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(0),
             )
+            x = flow.cast_to_current_logical_view(x)
             x = x + x_blob
             y = flow.gather(x, i_blob, axis=axis, batch_dims=batch_dims)
             flow.losses.add_loss(y)

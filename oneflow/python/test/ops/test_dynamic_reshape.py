@@ -38,6 +38,7 @@ def test_dynamic_reshape(test_case):
             initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
             trainable=True,
         )
+        my_model = flow.cast_to_current_logical_view(my_model)
         mm_out = flow.matmul(reshape_out1, my_model)
         reshape_out2 = flow.reshape(mm_out, (-1, 8, 4))
         flow.losses.add_loss(reshape_out2)
