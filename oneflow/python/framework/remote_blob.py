@@ -316,6 +316,8 @@ class EagerBlobTrait(object):
             return sbp_parallel.split_parallel.axis
         elif sbp_parallel.HasField("broadcast_parallel"):
             return None
+        elif sbp_parallel.HasField("partial_sum_parallel"):
+            return None
         else:
             raise NotImplementedError
 

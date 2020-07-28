@@ -387,13 +387,17 @@ def find_or_create_module(module_name, create, reuse=False):
 
 @oneflow_export("eager_execution_enabled")
 def api_eager_execution_enabled() -> bool:
+    """Get current setting of the job, if enable eager execution mode ,then return True
+
+    Returns:
+        bool: [description]
+    """
     return c_api_util.EagerExecutionEnabled()
 
 
 @oneflow_export("clear_default_session")
 def clear_default_session() -> None:
     r"""Clear the default session. All compiled OneFlow functions will be deleted.
-
     """
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
@@ -422,7 +426,6 @@ def normal_mode_current_scope():
 @oneflow_export("sync_default_session")
 def sync_default_session() -> None:
     r"""Synchronize the default session. Block until every synchronous OneFlow function and its callback finishes running.
-
     """
     session_ctx.GetDefaultSession().Sync()
 
