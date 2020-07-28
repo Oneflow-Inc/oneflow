@@ -19,13 +19,22 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 import tensorflow as tf
-import test_global_storage
 from test_util import GenArgList
 import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
+
+global_storage = {}
+
+def global_storage_setter(name):
+    global global_storage
+
+    def _set(x):
+        global_storage[name] = x
+    
+    return _set
 
 
 def compare_with_tensorflow(
@@ -84,12 +93,12 @@ def compare_with_tensorflow(
             )
             flow.losses.add_loss(loss)
 
-            flow.watch(x, test_global_storage.Setter("x"))
-            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
-            flow.watch(weight, test_global_storage.Setter("weight"))
-            flow.watch_diff(weight, test_global_storage.Setter("weight_diff"))
-            flow.watch(loss, test_global_storage.Setter("loss"))
-            flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
+            flow.watch(x, global_storage_setter("x"))
+            flow.watch_diff(x, global_storage_setter("x_diff"))
+            flow.watch(weight, global_storage_setter("weight"))
+            flow.watch_diff(weight, global_storage_setter("weight_diff"))
+            flow.watch(loss, global_storage_setter("loss"))
+            flow.watch_diff(loss, global_storage_setter("loss_diff"))
 
             return loss
 
@@ -105,7 +114,7 @@ def compare_with_tensorflow(
         assert x_shape[1] % groups == 0
         assert filters % groups == 0
         weight = tf.Variable(
-            test_global_storage.Get("weight").transpose(weight_data_transpose)
+            global_storage["weight"].numpy().transpose(weight_data_transpose)
         )
 
         tf_out = tf.nn.conv2d(
@@ -116,52 +125,23 @@ def compare_with_tensorflow(
             data_format="NHWC",
         )
 
-    print("of_out", of_out.shape)
-    print("tf_out", tf_out.shape)
-    print("of_out", of_out.transpose(xy_data_transpose).flatten()[0:20])
-    print("tf_out", tf_out.numpy().flatten()[0:20])
-    print("of_out", of_out.transpose(xy_data_transpose).flatten()[-20:-1])
-    print("tf_out", tf_out.numpy().flatten()[-20:-1])
     idx = np.where(np.abs(of_out.transpose(xy_data_transpose) - tf_out.numpy()) > 5e-4)
-    print("of", of_out.transpose(xy_data_transpose)[idx])
-    print("tf", tf_out.numpy()[idx])
     max_diff = np.max(np.absolute(of_out.transpose(xy_data_transpose) - tf_out.numpy()))
     assert np.allclose(
         of_out.transpose(xy_data_transpose), tf_out.numpy(), rtol=1e-5, atol=1e-5,
     ), max_diff
 
-    loss_diff = test_global_storage.GetDynamic("loss_diff").transpose(xy_data_transpose)
+    loss_diff = global_storage["loss_diff"].numpy_list()[0].transpose(xy_data_transpose)
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
-    print(
-        "of_x_diff",
-        test_global_storage.GetDynamic("x_diff")
-        .transpose(xy_data_transpose)
-        .flatten()[0:20],
-    )
-    print("tf_x_diff", tf_x_diff.numpy().flatten()[0:20])
-    print(
-        "of_x_diff",
-        test_global_storage.GetDynamic("x_diff")
-        .transpose(xy_data_transpose)
-        .flatten()[-20:-1],
-    )
-    print("tf_x_diff", tf_x_diff.numpy().flatten()[-20:-1])
-    print(
-        "max",
-        np.abs(
-            test_global_storage.GetDynamic("x_diff").transpose(xy_data_transpose)
-            - tf_x_diff.numpy()
-        ).max(),
-    )
     assert np.allclose(
-        test_global_storage.GetDynamic("x_diff").transpose(xy_data_transpose),
+        global_storage["x_diff"].numpy_list()[0].transpose(xy_data_transpose),
         tf_x_diff.numpy(),
         rtol=1e-4,
         atol=1e-4,
     )
     assert np.allclose(
-        test_global_storage.Get("weight_diff").transpose(weight_data_transpose),
+        global_storage["weight_diff"].numpy().transpose(weight_data_transpose),
         tf_weight_diff.numpy(),
         rtol=1e-5,
         atol=1e-5,
@@ -180,7 +160,6 @@ def test_padding_valid(test_case):
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
     for arg in GenArgList(arg_dict):
-        print(*arg)
         compare_with_tensorflow(*arg)
 
 
@@ -196,7 +175,6 @@ def test_padding_same(test_case):
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
     for arg in GenArgList(arg_dict):
-        print(*arg)
         compare_with_tensorflow(*arg)
 
 
@@ -212,7 +190,6 @@ def test_pad_list1(test_case):
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
     for arg in GenArgList(arg_dict):
-        print(*arg)
         compare_with_tensorflow(*arg)
 
 
@@ -228,7 +205,6 @@ def test_pad_list2(test_case):
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
     for arg in GenArgList(arg_dict):
-        print(*arg)
         compare_with_tensorflow(*arg)
 
 
@@ -244,7 +220,6 @@ def test_pad_list3(test_case):
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
     for arg in GenArgList(arg_dict):
-        print(*arg)
         compare_with_tensorflow(*arg)
 
 
@@ -260,5 +235,4 @@ def test_pad_list4(test_case):
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
     for arg in GenArgList(arg_dict):
-        print(*arg)
         compare_with_tensorflow(*arg)

@@ -37,7 +37,6 @@ def compare_with_tensorflow(
     tf_padding="SAME",
     stride=1,
     data_format="NCHW",
-    is_dynamic=False,
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -119,15 +118,9 @@ def compare_with_tensorflow(
     loss_diff = test_global_storage.Get("loss_diff").transpose(xy_data_transpose)
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
-    print("of_out", of_out.numpy().transpose(xy_data_transpose).flatten()[0:20])
-    print("tf_out", tf_out.numpy().flatten()[0:20])
-    print("of_out", of_out.numpy().transpose(xy_data_transpose).flatten()[-20:-1])
-    print("tf_out", tf_out.numpy().flatten()[-20:-1])
     idx = np.where(
         np.abs(of_out.numpy().transpose(xy_data_transpose) - tf_out.numpy()) > 5e-4
     )
-    print("of", of_out.numpy().transpose(xy_data_transpose)[idx])
-    print("tf", tf_out.numpy()[idx])
     max_diff = np.max(
         np.absolute(of_out.numpy().transpose(xy_data_transpose) - tf_out.numpy())
     )
@@ -137,26 +130,6 @@ def compare_with_tensorflow(
         rtol=1e-5,
         atol=1e-5,
     ), max_diff
-
-    print(
-        "of_x_diff",
-        test_global_storage.Get("x_diff").transpose(xy_data_transpose).flatten()[0:20],
-    )
-    print("tf_x_diff", tf_x_diff.numpy().flatten()[0:20])
-    print(
-        "of_x_diff",
-        test_global_storage.Get("x_diff")
-        .transpose(xy_data_transpose)
-        .flatten()[-20:-1],
-    )
-    print("tf_x_diff", tf_x_diff.numpy().flatten()[-20:-1])
-    print(
-        "max",
-        np.abs(
-            test_global_storage.Get("x_diff").transpose(xy_data_transpose)
-            - tf_x_diff.numpy()
-        ).max(),
-    )
 
     assert np.allclose(
         test_global_storage.Get("x_diff").transpose(xy_data_transpose),
@@ -183,9 +156,7 @@ def test_padding_valid(test_case):
     arg_dict["tf_padding"] = ["VALID"]
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW", "NHWC"]
-    arg_dict["is_dynamic"] = [False]
     for arg in GenArgList(arg_dict):
-        print(*arg)
         compare_with_tensorflow(*arg)
 
 
@@ -200,9 +171,7 @@ def test_padding_same(test_case):
     arg_dict["tf_padding"] = ["SAME"]
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW", "NHWC"]
-    arg_dict["is_dynamic"] = [False]
     for arg in GenArgList(arg_dict):
-        print(*arg)
         compare_with_tensorflow(*arg)
 
 
@@ -217,9 +186,7 @@ def test_pad_list1(test_case):
     arg_dict["tf_padding"] = [[[0, 0], [0, 1], [1, 0], [0, 0]]]
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
-    arg_dict["is_dynamic"] = [False]
     for arg in GenArgList(arg_dict):
-        print(*arg)
         compare_with_tensorflow(*arg)
 
 
@@ -234,9 +201,7 @@ def test_pad_list2(test_case):
     arg_dict["tf_padding"] = [[[0, 0], [1, 1], [1, 1], [0, 0]]]
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
-    arg_dict["is_dynamic"] = [False]
     for arg in GenArgList(arg_dict):
-        print(*arg)
         compare_with_tensorflow(*arg)
 
 
@@ -251,9 +216,7 @@ def test_pad_list3(test_case):
     arg_dict["tf_padding"] = [[[0, 0], [1, 0], [1, 0], [0, 0]]]
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
-    arg_dict["is_dynamic"] = [False]
     for arg in GenArgList(arg_dict):
-        print(*arg)
         compare_with_tensorflow(*arg)
 
 
@@ -268,7 +231,5 @@ def test_pad_list4(test_case):
     arg_dict["tf_padding"] = [[[0, 0], [10, 2], [10, 2], [0, 0]]]
     arg_dict["stride"] = [1, 2]
     arg_dict["data_format"] = ["NCHW"]
-    arg_dict["is_dynamic"] = [False]
     for arg in GenArgList(arg_dict):
-        print(*arg)
         compare_with_tensorflow(*arg)
