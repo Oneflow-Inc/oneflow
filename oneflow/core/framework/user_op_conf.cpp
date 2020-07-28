@@ -232,8 +232,7 @@ UserOpConfWrapper UserOpConfWrapperBuilder::Build() {
   return wrapper_;
 }
 
-void BackwardOpConfContext::DefineOp(const std::string& op_name,
-                                     const UserOpConfWrapperBuilderFn& fn) {
+void BackwardOpConfContext::DefineOp(const std::string& op_name, const BackwardOpBuilderFn& fn) {
   auto it = op_builder_fns_.find(op_name);
   CHECK(it == op_builder_fns_.end()) << " op_name " << op_name << " has been defined.";
   op_builder_fns_[op_name] = fn;

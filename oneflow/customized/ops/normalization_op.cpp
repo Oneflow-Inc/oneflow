@@ -176,7 +176,7 @@ REGISTER_USER_OP_GRAD("normalization")
       // calculate inv_variance from moving_variance
       const auto var_add_eps_op_name =
           "System-AutoGrad-" + ctx->FwOp().op_name() + "-VarianceAddEpsilon";
-      ctx->DefineOp(var_add_eps_op_name, [&ctx](user_op::UserOpConfWrapperBuilder& builder) {
+      ctx->DefineOp(var_add_eps_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("scalar_add")
             .InputBind("in", ctx->FwOp().input("moving_variance", 0))
             .Attr("has_float_operand", true)
@@ -189,7 +189,7 @@ REGISTER_USER_OP_GRAD("normalization")
 
       const auto var_rsqrt_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "-VarianceRsqrt";
       ctx->DefineOp(var_rsqrt_op_name,
-                    [&ctx, &var_add_eps_op_name](user_op::UserOpConfWrapperBuilder& builder) {
+                    [&ctx, &var_add_eps_op_name](user_op::BackwardOpBuilder& builder) {
                       return builder.OpTypeName("rsqrt")
                           .InputBind("x", ctx->GetOp(var_add_eps_op_name).output("out", 0))
                           .Output("y")
@@ -198,7 +198,7 @@ REGISTER_USER_OP_GRAD("normalization")
 
       const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(grad_op_name, [&ctx, &is_training,
-                                   &var_rsqrt_op_name](user_op::UserOpConfWrapperBuilder& builder) {
+                                   &var_rsqrt_op_name](user_op::BackwardOpBuilder& builder) {
         builder.OpTypeName("normalization_grad")
             .InputBind("x", ctx->FwOp().input("x", 0))
             .InputBind("dy", ctx->FwOp().output_grad("y", 0))
@@ -227,7 +227,7 @@ REGISTER_USER_OP_GRAD("normalization")
             // local variable(scale_bn_func) need to be captured by value
             const auto reshape_op_name = "System-AutoGrad-" + name + "-Reshape";
             ctx->DefineOp(reshape_op_name,
-                          [&ctx, &axis, scale_bn_func](user_op::UserOpConfWrapperBuilder& builder) {
+                          [&ctx, &axis, scale_bn_func](user_op::BackwardOpBuilder& builder) {
                             DimVector broadcast_dim_vec;
                             const auto& in_shape = ctx->FwOp().arg_tensor_desc("x", 0).shape();
                             FOR_RANGE(size_t, i, 0, in_shape.NumAxes()) {
@@ -249,7 +249,7 @@ REGISTER_USER_OP_GRAD("normalization")
             // local variable(reshape_op_name/input_bn_func) need to be captured by value
             const auto mul_op_name = "System-AutoGrad-" + name + "-BroadcastMul";
             ctx->DefineOp(mul_op_name, [&ctx, reshape_op_name,
-                                        input_bn_func](user_op::UserOpConfWrapperBuilder& builder) {
+                                        input_bn_func](user_op::BackwardOpBuilder& builder) {
               return builder.OpTypeName("broadcast_mul")
                   .InputBind("x", ctx->GetOp(reshape_op_name).output("out", 0))
                   .InputBind("y", input_bn_func())
@@ -259,7 +259,7 @@ REGISTER_USER_OP_GRAD("normalization")
           };
 
       const auto dy_h2f_cast_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "-Cast-dy-h2f";
-      ctx->DefineOp(dy_h2f_cast_op_name, [&ctx](user_op::UserOpConfWrapperBuilder& builder) {
+      ctx->DefineOp(dy_h2f_cast_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("cast")
             .Input("in", ctx->FwOp().output_grad("y", 0))
             .Output("out")
@@ -290,7 +290,7 @@ REGISTER_USER_OP_GRAD("normalization")
 
       const auto dx_f2h_cast_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "-Cast-dx-f2h";
       ctx->DefineOp(dx_f2h_cast_op_name,
-                    [&ctx, &dy_mul_inv_var_op_name](user_op::UserOpConfWrapperBuilder& builder) {
+                    [&ctx, &dy_mul_inv_var_op_name](user_op::BackwardOpBuilder& builder) {
                       return builder.OpTypeName("cast")
                           .InputBind("in", ctx->GetOp(dy_mul_inv_var_op_name).output("z", 0))
                           .Output("out")
@@ -301,7 +301,7 @@ REGISTER_USER_OP_GRAD("normalization")
       // TODO(liujuncheng): delete identity op when boxing support separated regsts
       const auto gamma_identity_op_name = ctx->FwOp().op_name() + "_grad_gamma_diff_identity";
       ctx->DefineOp(gamma_identity_op_name,
-                    [&ctx, &grad_op_name](user_op::UserOpConfWrapperBuilder& builder) {
+                    [&ctx, &grad_op_name](user_op::BackwardOpBuilder& builder) {
                       return builder.OpTypeName("identity")
                           .InputBind("in", ctx->GetOp(grad_op_name).output("gamma_diff", 0))
                           .Output("out")
@@ -311,7 +311,7 @@ REGISTER_USER_OP_GRAD("normalization")
       // TODO(liujuncheng): delete identity op when boxing support separated regsts
       const auto beta_identity_op_name = ctx->FwOp().op_name() + "_grad_beta_diff_identity";
       ctx->DefineOp(beta_identity_op_name,
-                    [&ctx, &grad_op_name](user_op::UserOpConfWrapperBuilder& builder) {
+                    [&ctx, &grad_op_name](user_op::BackwardOpBuilder& builder) {
                       return builder.OpTypeName("identity")
                           .InputBind("in", ctx->GetOp(grad_op_name).output("beta_diff", 0))
                           .Output("out")

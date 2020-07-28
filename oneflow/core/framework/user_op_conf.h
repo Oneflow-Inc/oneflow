@@ -166,8 +166,8 @@ class UserOpConfWrapperBuilder final {
   HashMap<std::string, UserOpAttrVal> attr_;
 };
 
-using UserOpConfWrapperBuilderFn =
-    std::function<UserOpConfWrapper(user_op::UserOpConfWrapperBuilder&)>;
+using BackwardOpBuilder = UserOpConfWrapperBuilder;
+using BackwardOpBuilderFn = std::function<UserOpConfWrapper(BackwardOpBuilder&)>;
 class BackwardOpConfContext final {
  public:
   BackwardOpConfContext(const UserOpWrapper& fw_op_wp, std::vector<OperatorConf>* bw_op_confs)
@@ -175,12 +175,12 @@ class BackwardOpConfContext final {
 
  public:
   UserOpWrapper& FwOp() { return fw_op_wp_; }
-  void DefineOp(const std::string& op_name, const UserOpConfWrapperBuilderFn& fn);
+  void DefineOp(const std::string& op_name, const BackwardOpBuilderFn& fn);
   UserOpConfWrapper& GetOp(const std::string& op_name);
 
  private:
   UserOpWrapper fw_op_wp_;
-  HashMap<std::string, UserOpConfWrapperBuilderFn> op_builder_fns_;
+  HashMap<std::string, BackwardOpBuilderFn> op_builder_fns_;
   HashMap<std::string, UserOpConfWrapper> op_builder_results_;
   std::vector<OperatorConf>* bw_op_confs_;
 };
