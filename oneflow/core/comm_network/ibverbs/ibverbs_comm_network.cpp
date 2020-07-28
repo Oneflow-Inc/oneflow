@@ -84,7 +84,7 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
   ibv_device* device = device_list[0];
   wrap_ibv_open_device(&context_, device);
   CHECK(context_);
-  ibv_free_device_list(device_list);
+  wrap_ibv_free_device_list(device_list);
   pd_ = ibv_alloc_pd(context_);
   CHECK(pd_);
   ibv_device_attr device_attr;
