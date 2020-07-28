@@ -168,16 +168,8 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
 def _CloneFunctionDesc(func_desc, job_func):
     new_func_desc = FunctionDesc(job_func=job_func)
     new_func_desc.job_config_proto.CopyFrom(func_desc.job_config_proto)
-    _TryCompleteDefaultJobConfigProto(new_func_desc.job_config_proto)
     new_func_desc.function_attribute = copy.deepcopy(func_desc.function_attribute)
     return new_func_desc
-
-
-def _TryCompleteDefaultJobConfigProto(job_conf):
-    # TODO(daquexian): remove this function
-    return
-    if job_conf.WhichOneof("job_type") is None:
-        job_conf.predict_conf.SetInParent()
 
 
 def oneflow_function_config(*field_paths):

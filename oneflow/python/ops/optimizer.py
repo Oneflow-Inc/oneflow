@@ -70,9 +70,10 @@ class LrScheduler:
             train_conf.model_update_conf.warmup_conf.CopyFrom(self.warmup_conf)
         if self.lr_lbn is not None:
             assert self.learning_rate_decay_conf is None
+            assert self.base_lr is None
             train_conf.primary_lr_lbn = self.lr_lbn
             # primary_lr is a required field
-            train_conf.primary_lr = self.base_lr
+            train_conf.primary_lr = 0
         else:
             assert self.learning_rate_decay_conf is not None
             train_conf.model_update_conf.learning_rate_decay.CopyFrom(
@@ -100,7 +101,7 @@ class LrScheduler:
 class CosineScheduler(LrScheduler):
     def __init__(
         self,
-        total_steps: int,
+        steps: int,
         base_lr: float,
         alpha: float = 0.0,
         warmup_steps: int = 0,
@@ -113,13 +114,13 @@ class CosineScheduler(LrScheduler):
             warmup_begin_multiplier=warmup_begin_multiplier,
             warmup_mode=warmup_mode,
         )
-        self.total_steps = total_steps
+        self.steps = steps
         self.alpha = alpha
 
     @property
     def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
         learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
-        learning_rate_decay_conf.cosine_conf.decay_batches = self.total_steps
+        learning_rate_decay_conf.cosine_conf.decay_batches = self.steps
         learning_rate_decay_conf.cosine_conf.alpha = self.alpha
         return learning_rate_decay_conf
 
@@ -140,9 +141,9 @@ class PiecewiseConstantScheduler(LrScheduler):
         self,
         boundaries: Sequence[int],
         values: Sequence[float],
-        warmup_steps=0,
-        warmup_begin_multiplier=0,
-        warmup_mode="linear",
+        warmup_steps: int = 0,
+        warmup_begin_multiplier: float = 0,
+        warmup_mode: str = "linear",
     ):
         assert len(boundaries) + 1 == len(values)
         super().__init__(
@@ -168,16 +169,16 @@ class PiecewiseConstantScheduler(LrScheduler):
 class PiecewiseScalingScheduler(LrScheduler):
     def __init__(
         self,
-        base_lr,
-        boundaries,
-        scales,
-        warmup_steps=0,
-        warmup_begin_multiplier=0,
-        warmup_mode="linear",
+        base_lr: float,
+        boundaries: Sequence[int],
+        scales: Sequence[float],
+        warmup_steps: int = 0,
+        warmup_begin_multiplier: float = 0,
+        warmup_mode: str = "linear",
     ):
         assert len(boundaries) == len(scales)
         super().__init__(
-            base_lr,
+            base_lr=base_lr,
             warmup_steps=warmup_steps,
             warmup_begin_multiplier=warmup_begin_multiplier,
             warmup_mode=warmup_mode,
@@ -199,17 +200,17 @@ class PiecewiseScalingScheduler(LrScheduler):
 class PolynomialSchduler(LrScheduler):
     def __init__(
         self,
-        base_lr,
-        steps,
-        end_learning_rate=0.0001,
-        power=1.0,
-        cycle=False,
-        warmup_steps=0,
-        warmup_begin_multiplier=0,
-        warmup_mode="linear",
+        base_lr: float,
+        steps: int,
+        end_learning_rate: float = 0.0001,
+        power: float = 1.0,
+        cycle: bool = False,
+        warmup_steps: int = 0,
+        warmup_begin_multiplier: float = 0,
+        warmup_mode: str = "linear",
     ):
         super().__init__(
-            base_lr,
+            base_lr=base_lr,
             warmup_steps=warmup_steps,
             warmup_begin_multiplier=warmup_begin_multiplier,
             warmup_mode=warmup_mode,
@@ -234,22 +235,22 @@ class PolynomialSchduler(LrScheduler):
 class LinearConsineScheduler(LrScheduler):
     def __init__(
         self,
-        total_steps,
-        base_lr,
-        num_periods=0.5,
-        alpha=0.0,
-        beta=0.001,
-        warmup_steps=0,
-        warmup_begin_multiplier=0,
-        warmup_mode="linear",
+        steps: int,
+        base_lr: float,
+        num_periods: float = 0.5,
+        alpha: float = 0.0,
+        beta: float = 0.001,
+        warmup_steps: int = 0,
+        warmup_begin_multiplier: float = 0,
+        warmup_mode: str = "linear",
     ):
         super().__init__(
-            base_lr,
+            base_lr=base_lr,
             warmup_steps=warmup_steps,
             warmup_begin_multiplier=warmup_begin_multiplier,
             warmup_mode=warmup_mode,
         )
-        self.total_steps = total_steps
+        self.steps = steps
         self.num_periods = num_periods
         self.alpha = alpha
         self.beta = beta
@@ -267,16 +268,16 @@ class LinearConsineScheduler(LrScheduler):
 class ExponentialScheduler(LrScheduler):
     def __init__(
         self,
-        steps,
-        base_lr,
-        decay_rate,
+        steps: int,
+        base_lr: float,
+        decay_rate: float,
         staircase=False,
-        warmup_steps=0,
-        warmup_begin_multiplier=0,
-        warmup_mode="linear",
+        warmup_steps: int = 0,
+        warmup_begin_multiplier: float = 0,
+        warmup_mode: str = "linear",
     ):
         super().__init__(
-            base_lr,
+            base_lr=base_lr,
             warmup_steps=warmup_steps,
             warmup_begin_multiplier=warmup_begin_multiplier,
             warmup_mode=warmup_mode,
@@ -297,16 +298,16 @@ class ExponentialScheduler(LrScheduler):
 class InverseTimeScheduler(LrScheduler):
     def __init__(
         self,
-        steps,
-        base_lr,
-        decay_rate,
-        staircase=False,
-        warmup_steps=0,
-        warmup_begin_multiplier=0,
-        warmup_mode="linear",
+        steps: int,
+        base_lr: float,
+        decay_rate: float,
+        staircase: bool = False,
+        warmup_steps: int = 0,
+        warmup_begin_multiplier: float = 0,
+        warmup_mode: str = "linear",
     ):
         super().__init__(
-            base_lr,
+            base_lr=base_lr,
             warmup_steps=warmup_steps,
             warmup_begin_multiplier=warmup_begin_multiplier,
             warmup_mode=warmup_mode,
@@ -327,16 +328,16 @@ class InverseTimeScheduler(LrScheduler):
 class NaturalExpScheduler(LrScheduler):
     def __init__(
         self,
-        steps,
-        base_lr,
-        decay_rate,
-        staircase=False,
-        warmup_steps=0,
-        warmup_begin_multiplier=0,
-        warmup_mode="linear",
+        steps: int,
+        base_lr: float,
+        decay_rate: float,
+        staircase: bool = False,
+        warmup_steps: int = 0,
+        warmup_begin_multiplier: float = 0,
+        warmup_mode: str = "linear",
     ):
         super().__init__(
-            base_lr,
+            base_lr=base_lr,
             warmup_steps=warmup_steps,
             warmup_begin_multiplier=warmup_begin_multiplier,
             warmup_mode=warmup_mode,
