@@ -88,7 +88,7 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
   CHECK(pd_);
   ibv_device_attr device_attr;
   CHECK_EQ(wrap_ibv_query_device(context_, &device_attr), 0);
-  cq_ = ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
+  wrap_ibv_create_cq(&cq_, context_, device_attr.max_cqe, nullptr, nullptr, 0);
   CHECK(cq_);
   ibv_port_attr port_attr;
   CHECK_EQ(ibv_query_port(context_, 1, &port_attr), 0);
