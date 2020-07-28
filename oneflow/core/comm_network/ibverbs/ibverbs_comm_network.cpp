@@ -44,9 +44,9 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
-  CHECK_EQ(ibv_destroy_cq(cq_), 0);
-  CHECK_EQ(ibv_dealloc_pd(pd_), 0);
-  CHECK_EQ(ibv_close_device(context_), 0);
+  CHECK_EQ(wrap_ibv_destroy_cq(cq_), 0);
+  CHECK_EQ(wrap_ibv_dealloc_pd(pd_), 0);
+  CHECK_EQ(wrap_ibv_close_device(context_), 0);
 }
 
 void IBVerbsCommNet::RegisterMemoryDone() {
