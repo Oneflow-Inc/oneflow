@@ -188,6 +188,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   InstructionMsgList list;
   int64_t in_id = vm::TestUtil::NewStringSymbol(&list, "in_0");
   int64_t out_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
+  int64_t tmp_buffer_id = vm::TestUtil::NewStringSymbol(&list, "tmp_buffer_0");
   int64_t test_source_id = 0;
   {
     auto op_conf = std::make_shared<OperatorConf>();
@@ -227,8 +228,10 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   {
     int64_t y_parallel_desc_id = 0;
     y = vm::TestUtil::NewObject(&list, "gpu", "0:0", &y_parallel_desc_id);
+    int64_t tmp_buffer = vm::TestUtil::NewObject(&list, "gpu", "0:0", &y_parallel_desc_id);
     int64_t op_node_signature_id =
-        NewOpNodeSignature(&list, {"in_0"}, {x_parallel_desc_id}, {"out_0"}, {y_parallel_desc_id});
+        NewOpNodeSignature(&list, {"in_0"}, {x_parallel_desc_id}, {"out_0", "tmp_buffer_0"},
+                           {y_parallel_desc_id, y_parallel_desc_id});
     list.EmplaceBack(vm::NewInstruction("gpu.CallOpKernel")
                          ->add_parallel_desc(y_parallel_desc_id)
                          ->add_mut_operand(ccrelu_id)
@@ -238,7 +241,9 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
                          ->add_const_operand(x)
                          ->add_separator()
                          ->add_symbol_operand(out_id)
+                         ->add_symbol_operand(tmp_buffer_id)
                          ->add_mut_operand(y)
+                         ->add_mut_operand(tmp_buffer)
                          ->add_separator());
   }
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
@@ -301,6 +306,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   int64_t parallel_desc_id = 0;
   int64_t opkernel_id = vm::TestUtil::NewObject(&list, "gpu", "0:0", &parallel_desc_id);
   int64_t out_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
+  int64_t tmp_buffer_id = vm::TestUtil::NewStringSymbol(&list, "tmp_buffer_0");
   int64_t test_source_id = 0;
   {
     auto op_conf = std::make_shared<OperatorConf>();
@@ -336,8 +342,10 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   }
   int64_t y_parallel_desc_id = 0;
   int64_t y = vm::TestUtil::NewObject(&list, "gpu", "0:0", &y_parallel_desc_id);
+  int64_t tmp_buffer = vm::TestUtil::NewObject(&list, "gpu", "0:0", &y_parallel_desc_id);
   op_node_signature_id =
-      NewOpNodeSignature(&list, {"in_0"}, {parallel_desc_id}, {"out_0"}, {y_parallel_desc_id});
+      NewOpNodeSignature(&list, {"in_0"}, {parallel_desc_id}, {"out_0", "tmp_buffer_0"},
+                         {y_parallel_desc_id, y_parallel_desc_id});
   list.EmplaceBack(vm::NewInstruction("gpu.compute.UserStatelessCallOpKernel")
                        ->add_parallel_desc(y_parallel_desc_id)
                        ->add_symbol_operand(job_desc_id)
@@ -349,7 +357,9 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
                        ->add_const_operand(x)
                        ->add_separator()
                        ->add_symbol_operand(out_id)
+                       ->add_symbol_operand(tmp_buffer_id)
                        ->add_mut_operand(y)
+                       ->add_mut_operand(tmp_buffer)
                        ->add_separator());
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
