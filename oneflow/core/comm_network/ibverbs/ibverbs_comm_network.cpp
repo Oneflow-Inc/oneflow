@@ -92,9 +92,9 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
   wrap_ibv_create_cq(&cq_, context_, device_attr.max_cqe, nullptr, nullptr, 0);
   CHECK(cq_);
   ibv_port_attr port_attr;
-  CHECK_EQ(ibv_query_port(context_, 1, &port_attr), 0);
+  CHECK_EQ(wrap_ibv_query_port(context_, 1, &port_attr), 0);
   ibv_gid gid;
-  CHECK_EQ(ibv_query_gid(context_, 1, 0, &gid), 0);
+  CHECK_EQ(wrap_ibv_query_gid(context_, 1, 0, &gid), 0);
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   qp_vec_.assign(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
@@ -133,7 +133,8 @@ void IBVerbsCommNet::PollCQ() {
   std::vector<ibv_wc> wc_vec(max_poll_wc_num_);
   while (poll_exit_flag_.test_and_set() == false) {
     poll_exit_flag_.clear();
-    int32_t found_wc_num = ibv_poll_cq(cq_, max_poll_wc_num_, wc_vec.data());
+    int32_t found_wc_num = -1;
+    wrap_ibv_poll_cq(cq_, max_poll_wc_num_, wc_vec.data(), &found_wc_num);
     CHECK_GE(found_wc_num, 0);
     FOR_RANGE(int32_t, i, 0, found_wc_num) {
       const ibv_wc& wc = wc_vec.at(i);
