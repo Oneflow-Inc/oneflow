@@ -372,9 +372,12 @@ class EagerBlobTrait(object):
                     blob_object.op_arg_parallel_attr.sbp_parallel,
                     blob_object.op_arg_parallel_attr.opt_mirrored_parallel,
                 )
-                tmp_blob_object = boxing_util.BoxingTo(
-                    builder, blob_object, tmp_op_arg_parallel_attr
-                )
+                with oneflow.scope.placement(
+                    self.parallel_conf.device_tag, list(self.parallel_conf.device_name)
+                ):
+                    tmp_blob_object = boxing_util.BoxingTo(
+                        builder, blob_object, tmp_op_arg_parallel_attr
+                    )
                 nonlocal consistent_blob_name
                 consistent_blob_name = "{}-consistent".format(self.logical_blob_name)
                 if not blob_register.HasObject4BlobName(consistent_blob_name):

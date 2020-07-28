@@ -36,10 +36,10 @@ COMMAND(
 using OperatorConfInstr = vm::InitSymbolInstructionType<OperatorConf>;
 COMMAND(vm::RegisterInstructionType<OperatorConfInstr>("InitOperatorConfSymbol"));
 
-COMMAND(Global<vm::SymbolStorage<OpParallelAttribute>>::SetAllocated(
-    new vm::SymbolStorage<OpParallelAttribute>()));
-using OpParallelAttributeInstr = vm::InitSymbolInstructionType<OpParallelAttribute>;
-COMMAND(vm::RegisterInstructionType<OpParallelAttributeInstr>("InitOpParallelAttributeSymbol"));
+COMMAND(Global<vm::SymbolStorage<OpNodeSignatureDesc>>::SetAllocated(
+    new vm::SymbolStorage<OpNodeSignatureDesc>()));
+using OpNodeSignatureInstr = vm::InitSymbolInstructionType<OpNodeSignatureDesc>;
+COMMAND(vm::RegisterInstructionType<OpNodeSignatureInstr>("InitOpNodeSignatureDescSymbol"));
 
 }  // namespace eager
 }  // namespace oneflow

@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 import re
 import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.lib.core.enable_if as enable_if
@@ -59,7 +60,8 @@ def deprecated_placement(*args, **kwargs):
 def api_placement(
     device_tag: str, machine_device_ids: str
 ) -> placement_ctx.PlacementScope:
-    return enable_if.unique([GetPlacementScope])(device_tag, machine_device_ids)
+    func = enable_if.unique([GetPlacementScope, GetNormalModePlacementScope])
+    return func(device_tag, machine_device_ids)
 
 
 @enable_if.condition(
@@ -68,6 +70,17 @@ def api_placement(
 )
 def GetPlacementScope(device_tag, machine_device_ids):
     return placement_ctx.PlacementScope(device_tag, machine_device_ids)
+
+
+@enable_if.condition(hob.in_normal_mode & hob.session_initialized)
+def GetNormalModePlacementScope(device_tag, machine_device_ids):
+    sess = session_ctx.GetDefaultSession()
+    scope = sess.MakeScope(
+        lambda old_scope, builder: old_scope.BuildWithNewParallelDesc(
+            builder, device_tag, machine_device_ids
+        )
+    )
+    return sess.NewCurrentScope(scope)
 
 
 def GetDefaultMachineDeviceIds(resource):
