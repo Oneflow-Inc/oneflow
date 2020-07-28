@@ -193,7 +193,7 @@ def conv2d(
     filters: remote_blob_util.BlobDef,
     strides: Union[int, Sequence[int]],
     padding: Union[str, Sequence[Sequence[int]]],
-    data_format: str = "NHWC",
+    data_format: str = "NCHW",
     dilations: Optional[Union[int, Sequence[int]]] = None,
     groups: int = 1,
     name: Optional[str] = None,
@@ -285,7 +285,7 @@ def batch_normalization(
     offset: remote_blob_util.BlobDef,
     scale: remote_blob_util.BlobDef,
     variance_epsilon: float,
-    axis: int = -1,
+    axis: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""
@@ -325,7 +325,7 @@ def tf_conv2d(
     filters: remote_blob_util.BlobDef,
     strides: Union[int, Sequence[int]],
     padding: str,
-    data_format: str = "NHWC",
+    data_format: str = "NCHW",
     dilations: Optional[Union[int, Sequence[int]]] = None,
     groups: int = 1,
     name: Optional[str] = None,
@@ -488,7 +488,7 @@ def avg_pool1d(
     ksize: Union[int, Sequence[int]],
     strides: Union[int, Sequence[int]],
     padding: Union[str, Sequence[Sequence[int]]],
-    data_format: str = "NWC",
+    data_format: str = "NCW",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     # TODO: fix cuDNN bugs in pooling_1d
@@ -515,7 +515,7 @@ def max_pool2d(
     ksize: Union[int, Sequence[int]],
     strides: Union[int, Sequence[int]],
     padding: Union[str, Sequence[Sequence[int]]],
-    data_format: str = "NHWC",
+    data_format: str = "NCHW",
     ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -555,7 +555,7 @@ def avg_pool2d(
     ksize: Union[int, Sequence[int]],
     strides: Union[int, Sequence[int]],
     padding: Union[str, Sequence[Sequence[int]]],
-    data_format: str = "NHWC",
+    data_format: str = "NCHW",
     ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -595,7 +595,7 @@ def max_pool3d(
     ksize: Union[int, Sequence[int]],
     strides: Union[int, Sequence[int]],
     padding: Union[str, Sequence[Sequence[int]]],
-    data_format: str = "NDHWC",
+    data_format: str = "NCDHW",
     ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -635,7 +635,7 @@ def avg_pool3d(
     ksize: Union[int, Sequence[int]],
     strides: Union[int, Sequence[int]],
     padding: Union[str, Sequence[Sequence[int]]],
-    data_format: str = "NDHWC",
+    data_format: str = "NCDHW",
     ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -967,7 +967,7 @@ def deconv2d(
     output_shape: Optional[remote_blob_util.BlobDef] = None,
     strides: Optional[Union[int, Sequence[int]]] = None,
     padding: str = "VALID",
-    data_format: str = "NHWC",
+    data_format: str = "NCHW",
     name: Optional[str] = None,
     input: Optional[remote_blob_util.BlobDef] = None,
     filters: Optional[remote_blob_util.BlobDef] = None,
@@ -1121,7 +1121,7 @@ def deconv2d(
         assert pad % 2 == 0
         padding_before.append(pad // 2)
     return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Deconv2d_"))
         .Op("deconv2d")
         .Input("in", [input])
         .Input("weight", [filters])
@@ -1146,7 +1146,7 @@ def deconv2d_torch(
     output_padding=None,
     strides=None,
     padding_needed=None,
-    data_format="NHWC",
+    data_format="NCHW",
     name=None,
     input=None,
     filters=None,
@@ -1215,7 +1215,7 @@ def deconv2d_torch(
         padding_before.append(pad // 2)
 
     return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Deconv2d_"))
         .Op("deconv2d")
         .Input("in", [input])
         .Input("weight", [filters])
