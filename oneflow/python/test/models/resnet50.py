@@ -88,27 +88,30 @@ g_trainable = True
 
 
 def _data_load(args, data_dir):
-    image_blob_conf = flow.data.BlobConf(
-        "encoded",
-        shape=(IMAGE_SIZE, IMAGE_SIZE, 3),
-        dtype=flow.float,
-        codec=flow.data.ImageCodec([flow.data.ImagePreprocessor("bgr2rgb")]),
-        preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
-    )
-
-    label_blob_conf = flow.data.BlobConf(
-        "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
-    )
-
     node_num = args.num_nodes
     total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
-    return flow.data.decode_ofrecord(
+    rgb_mean = [123.68, 116.78, 103.94]
+    ofrecord = flow.data.ofrecord_reader(
         data_dir,
-        (label_blob_conf, image_blob_conf),
         batch_size=total_batch_size,
         data_part_num=args.data_part_num,
         name="decode",
     )
+    image = flow.data.ofrecord_image_decoder(ofrecord, "encoded", color_space="RGB")
+    label = flow.data.ofrecord_raw_decoder(
+        ofrecord, "class/label", shape=(), dtype=flow.int32
+    )
+    rsz = flow.image.resize(
+        image, resize_x=IMAGE_SIZE, resize_y=IMAGE_SIZE, color_space="RGB"
+    )
+    normal = flow.image.crop_mirror_normalize(
+        rsz,
+        color_space="RGB",
+        output_layout="NCHW",
+        mean=rgb_mean,
+        output_dtype=flow.float,
+    )
+    return label, normal
 
 
 def _conv2d(
@@ -242,7 +245,6 @@ def resnet_stem(input):
 
 def resnet50(args, data_dir):
     (labels, images) = _data_load(args, data_dir)
-    images = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
     g_output_key.append("input_img")
     g_output.append(images)
 
