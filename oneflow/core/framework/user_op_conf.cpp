@@ -149,14 +149,18 @@ bool UserOpWrapper::NeedGenGradTensor4OpInput(const std::string& input_arg_name,
   return diff_fn_(GenRepeatedBn(input_arg_name, index)) != nullptr;
 }
 
-std::string UserOpWrapper::GetGradTensorWithOpOutput(const std::string& output_arg_name,
-                                                     int32_t index) const {
+std::string UserOpWrapper::output_grad(const std::string& output_arg_name, int32_t index) const {
   auto it = op_conf().user_conf().output().find(output_arg_name);
   CHECK(it != op_conf().user_conf().output().end())
       << "arg_name: " << output_arg_name << ", index: " << index;
   CHECK(index >= 0 && index < it->second.s_size())
       << "arg_name: " << output_arg_name << ", index: " << index;
   return GenLogicalBlobName(*diff_fn_(GenRepeatedBn(output_arg_name, index)));
+}
+
+std::string UserOpWrapper::GetGradTensorWithOpOutput(const std::string& output_arg_name,
+                                                     int32_t index) const {
+  return output_grad(output_arg_name, index);
 }
 
 void UserOpWrapper::BindGradTensorWithOpInput(const std::string logical_grad_blob_name,
@@ -166,11 +170,21 @@ void UserOpWrapper::BindGradTensorWithOpInput(const std::string logical_grad_blo
   *diff_fn_(GenRepeatedBn(input_arg_name, index)) = GenLogicalBlobId(logical_grad_blob_name);
 }
 
-const TensorDesc& UserOpWrapper::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                            int32_t index) const {
+const TensorDesc& UserOpWrapper::arg_tensor_desc(const std::string& arg_name, int32_t index) const {
   std::string bn = GenRepeatedBn(arg_name, index);
   CHECK(bn2tensor_desc_.find(bn) != bn2tensor_desc_.end());
   return bn2tensor_desc_.at(bn);
+}
+
+const TensorDesc& UserOpWrapper::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                            int32_t index) const {
+  return arg_tensor_desc(arg_name, index);
+}
+
+void UserOpWrapper::InputGradBind(OpArg& input, const UserOpInputGradGetFn& grad_fn) {
+  if (NeedGenGradTensor4OpInput(input.name(), input.index())) {
+    BindGradTensorWithOpOutput(grad_fn(), input.name(), input.index());
+  }
 }
 
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::InputBind(

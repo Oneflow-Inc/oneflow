@@ -168,16 +168,173 @@ REGISTER_USER_OP("normalization_grad")
       return Maybe<void>::Ok();
     });
 
+// REGISTER_USER_OP_GRAD("normalization")
+//     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+//       if (op.NeedGenGradTensor4OpInput("x", 0) || op.NeedGenGradTensor4OpInput("gamma", 0)
+//           || op.NeedGenGradTensor4OpInput("beta", 0)) {
+//         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+//         auto grad_op_builder = builder.Op("normalization_grad")
+//                                    .Input("x", op.input("x", 0))
+//                                    .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+//                                    .Input("gamma", op.input("gamma", 0))
+//                                    .Attr("axis", op.attr<int32_t>("axis"))
+//                                    .Attr("epsilon", op.attr<float>("epsilon"))
+//                                    .Output("gamma_diff")
+//                                    .Output("beta_diff")
+//                                    .Output("dx");
+//         const bool training = op.attr<bool>("training");
+//         if (training) {
+//           grad_op_builder.Input("mean", op.output("mean", 0))
+//               .Input("inv_variance", op.output("inv_variance", 0));
+//         } else {
+//           grad_op_builder.Input("mean", op.input("moving_mean", 0));
+//
+//           // calculate inv_variance from moving_variance
+//           const auto var_add_eps_op_name =
+//               "System-AutoGrad-" + op.op_name() + "-VarianceAddEpsilon";
+//           const auto var_add_eps_op =
+//               user_op::UserOpConfWrapperBuilder(var_add_eps_op_name)
+//                   .Op("scalar_add")
+//                   .Input("in", op.input("moving_variance", 0))
+//                   .Attr("has_float_operand", true)
+//                   .Attr("has_int_operand", false)
+//                   .Attr("int_operand", static_cast<int64_t>(0))
+//                   .Attr("float_operand", static_cast<double>(op.attr<float>("epsilon")))
+//                   .Output("out")
+//                   .Build();
+//           AddOp(var_add_eps_op);
+//
+//           const auto var_rsqrt_op_name = "System-AutoGrad-" + op.op_name() + "-VarianceRsqrt";
+//           const auto var_sqrt_op = user_op::UserOpConfWrapperBuilder(var_rsqrt_op_name)
+//                                        .Op("rsqrt")
+//                                        .Input("x", var_add_eps_op.output("out", 0))
+//                                        .Output("y")
+//                                        .Build();
+//           AddOp(var_sqrt_op);
+//
+//           grad_op_builder.Input("inv_variance", var_sqrt_op.output("y", 0));
+//
+//           if (op.NeedGenGradTensor4OpInput("x", 0)) {
+//             // calculate dx manually as cudnn cannot be used in evaluation mode
+//             // reference: https://github.com/pytorch/pytorch/issues/4284
+//             const auto axis = op.attr<int32_t>("axis");
+//             const auto BroadcastMulAtAxis = [&op, &axis, &AddOp](const std::string& scale_bn,
+//                                                                  const std::string& input_bn,
+//                                                                  const std::string& name) {
+//               DimVector broadcast_dim_vec;
+//               const auto& in_shape = op.TensorDesc4ArgNameAndIndex("x", 0).shape();
+//               FOR_RANGE(size_t, i, 0, in_shape.NumAxes()) {
+//                 if (i != axis) {
+//                   broadcast_dim_vec.push_back(1);
+//                 } else {
+//                   broadcast_dim_vec.push_back(in_shape.At(axis));
+//                 }
+//               }
+//               const Shape broadcast_shape(broadcast_dim_vec);
+//
+//               const auto reshape_op_name = "System-AutoGrad-" + name + "-Reshape";
+//               const auto reshape_op = user_op::UserOpConfWrapperBuilder(reshape_op_name)
+//                                           .Op("reshape")
+//                                           .Input("in", scale_bn)
+//                                           .Attr("shape", broadcast_shape)
+//                                           .Output("out")
+//                                           .Build();
+//               AddOp(reshape_op);
+//               const auto mul_op_name = "System-AutoGrad-" + name + "-BroadcastMul";
+//               const auto mul_op = user_op::UserOpConfWrapperBuilder(mul_op_name)
+//                                       .Op("broadcast_mul")
+//                                       .Input("x", reshape_op.output("out", 0))
+//                                       .Input("y", input_bn)
+//                                       .Output("z")
+//                                       .Build();
+//               AddOp(mul_op);
+//               return mul_op;
+//             };
+//             bool fp16 = op.TensorDesc4ArgNameAndIndex("y", 0).data_type() == DataType::kFloat16;
+//             std::string dy_fp32_or_fp64;
+//             if (fp16) {
+//               const DataType param_data_type =
+//                   op.TensorDesc4ArgNameAndIndex("gamma", 0).data_type();
+//               const auto cast_op_name = "System-AutoGrad-" + op.op_name() + "-Cast-dy-h2f";
+//               const auto cast_op = user_op::UserOpConfWrapperBuilder(cast_op_name)
+//                                        .Op("cast")
+//                                        .Input("in", op.GetGradTensorWithOpOutput("y", 0))
+//                                        .Output("out")
+//                                        .Attr("dtype", param_data_type)
+//                                        .Build();
+//               AddOp(cast_op);
+//               dy_fp32_or_fp64 = cast_op.output("out", 0);
+//             } else {
+//               dy_fp32_or_fp64 = op.GetGradTensorWithOpOutput("y", 0);
+//             }
+//             const auto dy_mul_gamma_op =
+//                 BroadcastMulAtAxis(op.input("gamma", 0), dy_fp32_or_fp64, "out_grad_mul_gamma");
+//             const auto dy_mul_inv_var_op = BroadcastMulAtAxis(
+//                 var_sqrt_op.output("y", 0), dy_mul_gamma_op.output("z", 0),
+//                 "out_grad_mul_inv_var");
+//
+//             std::string dx_fp32_or_fp64 = dy_mul_inv_var_op.output("z", 0);
+//             std::string dx;
+//             if (fp16) {
+//               const auto cast_op_name = "System-AutoGrad-" + op.op_name() + "-Cast-dx-f2h";
+//               const auto cast_op = user_op::UserOpConfWrapperBuilder(cast_op_name)
+//                                        .Op("cast")
+//                                        .Input("in", dx_fp32_or_fp64)
+//                                        .Output("out")
+//                                        .Attr("dtype", DataType::kFloat16)
+//                                        .Build();
+//               AddOp(cast_op);
+//               dx = cast_op.output("out", 0);
+//             } else {
+//               dx = dx_fp32_or_fp64;
+//             }
+//             op.BindGradTensorWithOpInput(dx, "x", 0);
+//           }
+//         }
+//
+//         const user_op::UserOpConfWrapper grad_op = grad_op_builder.Build();
+//         if ((training && op.NeedGenGradTensor4OpInput("x", 0))
+//             || op.NeedGenGradTensor4OpInput("gamma", 0)
+//             || op.NeedGenGradTensor4OpInput("beta", 0)) {
+//           AddOp(grad_op);
+//         }
+//         if (training && op.NeedGenGradTensor4OpInput("x", 0)) {
+//           op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+//         }
+//         if (op.NeedGenGradTensor4OpInput("gamma", 0)) {
+//           // TODO(liujuncheng): delete identity op when boxing support separated regsts
+//           const auto identity =
+//               user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_gamma_diff_identity")
+//                   .Op("identity")
+//                   .Input("in", grad_op.output("gamma_diff", 0))
+//                   .Output("out")
+//                   .Build();
+//           AddOp(identity);
+//           op.BindGradTensorWithOpInput(identity.output("out", 0), "gamma", 0);
+//         }
+//         if (op.NeedGenGradTensor4OpInput("beta", 0)) {
+//           // TODO(liujuncheng): delete identity op when boxing support separated regsts
+//           const auto identity =
+//               user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_beta_diff_identity")
+//                   .Op("identity")
+//                   .Input("in", grad_op.output("beta_diff", 0))
+//                   .Output("out")
+//                   .Build();
+//           AddOp(identity);
+//           op.BindGradTensorWithOpInput(identity.output("out", 0), "beta", 0);
+//         }
+//       }
+//     });
+
 REGISTER_USER_OP_GRAD("normalization")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
       const bool is_training = ctx->FwOp().attr<bool>("training");
-      const bool is_fp16 =
-          ctx->FwOp().TensorDesc4ArgNameAndIndex("y", 0).data_type() == DataType::kFloat16;
+      const bool is_fp16 = ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kFloat16;
 
       const auto var_add_eps_op_name =
           "System-AutoGrad-" + ctx->FwOp().op_name() + "-VarianceAddEpsilon";
       ctx->DefineOp(var_add_eps_op_name, [&](user_op::UserOpConfWrapperBuilder& builder) {
-        return builder.OpType("scalar_add")
+        return builder.OpTypeName("scalar_add")
             .InputBind("in", ctx->FwOp().input("moving_variance", 0))
             .Attr("has_float_operand", true)
             .Attr("has_int_operand", false)
@@ -199,7 +356,7 @@ REGISTER_USER_OP_GRAD("normalization")
       ctx->DefineOp(grad_op_name, [&](user_op::UserOpConfWrapperBuilder& builder) {
         builder.OpTypeName("normalization_grad")
             .InputBind("x", ctx->FwOp().input("x", 0))
-            .InputBind("dy", ctx->FwOp().input_grad("y", 0))
+            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
             .InputBind("gamma", ctx->FwOp().input("gamma", 0))
             .Attr("axis", ctx->FwOp().attr<int32_t>("axis"))
             .Attr("epsilon", ctx->FwOp().attr<float>("epsilon"))
@@ -223,7 +380,7 @@ REGISTER_USER_OP_GRAD("normalization")
           [&axis, &ctx](std::function<std::string()> scale_bn_func,
                         std::function<std::string()> input_bn_func, const std::string& name) {
             DimVector broadcast_dim_vec;
-            const auto& in_shape = ctx->FwOp().TensorDesc4ArgNameAndIndex("x", 0).shape();
+            const auto& in_shape = ctx->FwOp().arg_tensor_desc("x", 0).shape();
             FOR_RANGE(size_t, i, 0, in_shape.NumAxes()) {
               if (i != axis) {
                 broadcast_dim_vec.push_back(1);
@@ -257,7 +414,7 @@ REGISTER_USER_OP_GRAD("normalization")
         return builder.OpTypeName("cast")
             .Input("in", ctx->FwOp().output_grad("y", 0))
             .Output("out")
-            .Attr("dtype", ctx->FwOp().TensorDesc4ArgNameAndIndex("gamma", 0).data_type())
+            .Attr("dtype", ctx->FwOp().arg_tensor_desc("gamma", 0).data_type())
             .Build();
       });
 
