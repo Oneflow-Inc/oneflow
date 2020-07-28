@@ -384,104 +384,10 @@ def tf_conv2d(
     Returns:
         remote_blob_util.BlobDef:  A `Blob` with the same type as `input` and the same outer batch shape.
     """
-    assert len(input.shape) == 4
-    assert len(filters.shape) == 4
-    NDims = 2
-    if isinstance(strides, (list, tuple)):
-        assert len(strides) == 2, ValueError(
-            "strides length must be 2 when passed as a list."
-        )
-    elif isinstance(strides, int):
-        strides = [strides, strides]
-    else:
-        raise ValueError("strides must be an int or a list.")
-
-    if padding.upper() != "SAME" and padding.upper() != "VALID":
-        raise ValueError('padding must be "SAME" or "VALID".')
-
-    if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
-        raise ValueError('data_format must be "NHWC" or "NCHW".')
-
-    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
-
-    if dilations is None:
-        dilations = [1, 1]
-    else:
-        if isinstance(dilations, (list, tuple)):
-            assert len(dilations) == 2, ValueError(
-                "dilations length must be 2 when passed as a list."
-            )
-        elif isinstance(dilations, int):
-            dilations = [dilations, dilations]
-        else:
-            raise ValueError("dilations must be an int or a list.")
-
-    if channel_pos == "channels_first":
-        input_size = input.shape[2:4]
-        kernel_size_list = filters.shape[2:4]
-    elif channel_pos == "channels_last":
-        input_size = input.shape[-3:-1]
-        kernel_size_list = filters.shape[-3:-1]
-    else:
-        raise ValueError("invalid data_format")
-    # add pad op if needs odd padding
     if padding.upper() == "SAME":
-        padding_left = [0] * NDims
-        padding_right = [0] * NDims
-        for i in range(NDims):
-            effective_filter_size = (kernel_size_list[i] - 1) * dilations[i] + 1
-            tmp_output_size = (input_size[i] + strides[i] - 1) // strides[i]
-            padding_needed = max(
-                0,
-                (tmp_output_size - 1) * strides[i]
-                + effective_filter_size
-                - input_size[i],
-            )
-            padding_left[i] = padding_needed // 2
-            padding_right[i] = padding_needed - padding_needed // 2
-        if padding_left != padding_right:
-            assert data_format.upper() == "NCHW"
-            input = flow.pad(
-                input,
-                [
-                    (0, 0),
-                    (0, 0),
-                    (padding_left[0], padding_right[0]),
-                    (padding_left[1], padding_right[1]),
-                ],
-                name=name + "_pad" if name is not None else None,
-            )
-            padding = "VALID"
-    assert isinstance(kernel_size_list, (list, tuple))
-    assert isinstance(groups, int)
-    assert groups > 0
-    if groups > 1:
-        if data_format.upper() == "NCHW":
-            assert groups <= filters.shape[0]
-            assert filters.shape[0] % groups == 0
-            assert groups <= input.shape[1]
-            assert input.shape[1] % groups == 0
-            assert filters.shape[1] == input.shape[1] // groups
-        elif data_format.upper() == "NHWC":
-            raise ValueError("data_format NHWC not support groups > 1")
-        else:
-            raise ValueError("invalid data_format")
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
-        .Op("conv2d")
-        .Input("in", [input])
-        .Input("weight", [filters])
-        .Output("out")
-        .Attr("filters", filters.shape[0])
-        .Attr("padding", padding.lower())
-        .Attr("data_format", channel_pos)
-        .Attr("kernel_size", kernel_size_list)
-        .Attr("strides", strides)
-        .Attr("dilation_rate", dilations)
-        .Attr("groups", groups)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
+        padding = "SAME_UPPER"
+    return flow.nn.conv2d(
+        input, filters, strides, padding, data_format, dilations, groups, name
     )
 
 
