@@ -39,9 +39,8 @@ def _check_cpu_only_relu_device(test_case, verbose=False):
     def cpu_only_relu_job(x_def: oft.Numpy.Placeholder(shape=(2, 5), dtype=flow.float)):
         y = _cpu_only_relu(x_def)
         if verbose:
-            print("cpu_only_relu output devices", y.parallel_conf.device_name)
-        for device in y.parallel_conf.device_name:
-            test_case.assertTrue("cpu" in device)
+            print("cpu_only_relu output device", y.parallel_conf.device_tag)
+        test_case.assertTrue("cpu" in y.parallel_conf.device_tag)
         return y
 
     cpu_only_relu_job(np.random.rand(2, 5).astype(np.single)).get()
@@ -58,8 +57,7 @@ def _check_non_cpu_only_relu_device(test_case):
         with flow.scope.placement("gpu", "0:0"):
             y = flow.math.relu(x_def)
 
-        for device in y.parallel_conf.device_name:
-            test_case.assertTrue("gpu" in device)
+        test_case.assertTrue("gpu" in y.parallel_conf.device_tag)
 
         return y
 

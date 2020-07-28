@@ -25,6 +25,7 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
   mdupdt_op.set_name(op.op_name() + "_optimizer");
   ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, job_builder,
                         mdupdt_op.mutable_rmsprop_model_update_conf());
+  mdupdt_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
   job_builder->AddOps(parallel_conf, {mdupdt_op});
 }
 

@@ -13,28 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from __future__ import absolute_import
-import oneflow.core.job.job_conf_pb2 as job_conf_pb
-
-from contextlib import contextmanager
+import oneflow as flow
+from util import convert_to_onnx_and_check
 
 
-def CurrentJobConf():
-    return job_conf_stack[0]
+func_config = flow.FunctionConfig()
+func_config.default_data_type(flow.float)
 
 
-@contextmanager
-def JobConfScope(job_conf):
-    global job_conf_stack
-    job_conf_stack.insert(0, job_conf)
-    yield
-    job_conf_stack.pop(0)
+def test_reshape(test_case):
+    @flow.global_function(func_config)
+    def reshape(x=flow.FixedTensorDef((3, 4, 2, 5))):
+        return flow.reshape(x, (4, 30))
 
-
-def GetInitialJobConf(job_name):
-    job_conf = job_conf_pb.JobConfigProto()
-    job_conf.job_name = job_name
-    return job_conf
-
-
-job_conf_stack = [GetInitialJobConf("__InitialJob__")]
+    convert_to_onnx_and_check(reshape)

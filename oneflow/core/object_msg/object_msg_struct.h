@@ -23,7 +23,7 @@ namespace oneflow {
 
 #define OBJECT_MSG_DEFINE_STRUCT(field_type, field_name)                            \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                   \
+  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                \
   _OBJECT_MSG_DEFINE_STRUCT(STATIC_COUNTER(field_counter), field_type, field_name);
 
 // details

@@ -33,6 +33,7 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, dtype, axis):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -110,6 +111,7 @@ def _of_dynamic_concat(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -304,6 +306,7 @@ def _test_hybrid_concat(
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 

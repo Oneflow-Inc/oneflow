@@ -31,6 +31,7 @@ def compare_with_tensorflow(device_type, in_shape, direction, data_type):
     assert data_type in ["float32", "double", "int8", "int32", "int64"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
