@@ -283,27 +283,26 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
   return Maybe<void>::Ok();
 }
 
-Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, const SbpSignature& sbp_sig,
-                                                         int64_t parallel_num) {
+Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t parallel_num) {
   HashSet<std::string> obns(op->output_bns().begin(), op->output_bns().end());
   auto GetParallelNum = [&](const std::string& bn_in_op) {
     if (obns.find(bn_in_op) == obns.end()) { return parallel_num; }
     return lbi2parallel_desc_from_producer_view_.at(op->BnInOp2Lbi(bn_in_op)).parallel_num();
   };
-  for (const auto& pair : sbp_sig.bn_in_op2sbp_parallel()) {
-    if (pair.second.has_split_parallel()) {
-      int64_t axis = pair.second.split_parallel().axis();
-      const LogicalBlobId& lbi = op->BnInOp2Lbi(pair.first);
-      int64_t blob_parallel_num = GetParallelNum(pair.first);
-      const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
-      int64_t num_axes = logical_blob_desc.shape().NumAxes();
-      if (axis < 0) { axis += num_axes; }
-      CHECK_GE_OR_RETURN(axis, 0);
-      CHECK_LT_OR_RETURN(axis, num_axes);
-      CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
-          << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
-          << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
-    }
+  for (const auto& pair : JUST(op->sbp_signature())->bn_in_op2sbp_parallel()) {
+    if (!pair.second.has_split_parallel()) { continue; }
+    if (JUST(op->OptMirroredParallel4BnInOp(pair.first))->has_mirrored_parallel()) { continue; }
+    int64_t axis = pair.second.split_parallel().axis();
+    const LogicalBlobId& lbi = op->BnInOp2Lbi(pair.first);
+    int64_t blob_parallel_num = GetParallelNum(pair.first);
+    const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
+    int64_t num_axes = logical_blob_desc.shape().NumAxes();
+    if (axis < 0) { axis += num_axes; }
+    CHECK_GE_OR_RETURN(axis, 0);
+    CHECK_LT_OR_RETURN(axis, num_axes);
+    CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
+        << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
+        << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
   }
   return Maybe<void>::Ok();
 }
@@ -542,11 +541,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
     }
     return nullptr;
   };
-  ParallelContext parallel_ctx;
-  parallel_ctx.set_parallel_id(0);
-  parallel_ctx.set_parallel_num(1);
-  JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, CHECK_JUST(op->sbp_signature()),
-                               [](OpContext*) {}));
+  JUST(op->InferLogicalOutBlobDescsIf(GetBlobDesc4BnInOp, BatchAxis4Ibn, parallel_desc));
   // Fill logical blob_desc signature.
   JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc*> {
     const auto* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
@@ -570,7 +565,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   // Infer whether input/output blobs are backward used
   InferBlobBackwardSignature(op);
   // Check splitability
-  JUST(CheckOpBlobSplitability(op, *JUST(op->sbp_signature()), parallel_desc.parallel_num()));
+  JUST(CheckOpBlobSplitability(op, parallel_desc.parallel_num()));
 
   return op->GetOpAttributeWithoutOpNameAndLbn();
 }
