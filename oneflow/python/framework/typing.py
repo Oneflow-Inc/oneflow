@@ -203,17 +203,14 @@ def OriginFrom(parameterised, generic):
             return False
         if generic == typing.Dict:
             return (
-                type(parameterised) is type(typing.Dict[str, int])
                 and parameterised.__origin__ is dict
             )
         if generic == typing.Tuple:
             return (
-                type(parameterised) is type(typing.Tuple[int])
                 and parameterised.__origin__ is tuple
             )
         if generic == typing.List:
             return (
-                type(parameterised) is type(typing.List[int])
                 and parameterised.__origin__ is list
             )
         if generic == Callback:
