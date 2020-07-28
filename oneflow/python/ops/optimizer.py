@@ -71,10 +71,10 @@ class LrScheduler:
             warmup_conf.linear_conf.warmup_batches = self.warmup_steps
             warmup_conf.linear_conf.start_multiplier = self.warmup_begin_multiplier
         elif self.warmup_mode == "constant":
-            # TODO(daquexian):
-            pass
+            warmup_conf.linear_conf.warmup_batches = self.warmup_steps
+            warmup_conf.linear_conf.multiplier = self.warmup_begin_multiplier
         else:
-            raise RuntimeError()
+            raise RuntimeError("Unknown warmup_mode '{}'".format(self.warmup_mode))
         return warmup_conf
 
 
@@ -114,6 +114,227 @@ class CustomScheduler(LrScheduler):
     @property
     def learning_rate_decay_conf(self) -> op_conf_pb.LearningRateDecayConf:
         return None
+
+
+@oneflow_export("optimizer.PiecewiseConstantScheduler")
+class PiecewiseConstantScheduler(LrScheduler):
+    def __init__(
+        self,
+        # TODO(daquexian): refine api
+        base_lr: float,
+        boundaries: Sequence[int],
+        values: Sequence[float],
+        warmup_steps=0,
+        warmup_begin_multiplier=0,
+        warmup_mode="linear",
+    ):
+        super().__init__(
+            base_lr,
+            warmup_steps=warmup_steps,
+            warmup_begin_multiplier=warmup_begin_multiplier,
+            warmup_mode=warmup_mode,
+        )
+        self.boundaries = boundaries
+        self.values = values
+
+    @property
+    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+        learning_rate_decay_conf.piecewise_constant_conf.boundaries.extend(
+            self.boundaries
+        )
+        learning_rate_decay_conf.piecewise_constant_conf.values.extend(self.values)
+        return learning_rate_decay_conf
+
+
+@oneflow_export("optimizer.PiecewiseScalingScheduler")
+class PiecewiseScalingScheduler(LrScheduler):
+    def __init__(
+        self,
+        # TODO(daquexian): refine api
+        base_lr,
+        boundaries,
+        scales,
+        warmup_steps=0,
+        warmup_begin_multiplier=0,
+        warmup_mode="linear",
+    ):
+        super().__init__(
+            base_lr,
+            warmup_steps=warmup_steps,
+            warmup_begin_multiplier=warmup_begin_multiplier,
+            warmup_mode=warmup_mode,
+        )
+        self.boundaries = boundaries
+        self.scales = scales
+
+    @property
+    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+        learning_rate_decay_conf.piecewise_scaling_conf.boundaries.extend(
+            self.boundaries
+        )
+        learning_rate_decay_conf.piecewise_scaling_conf.scales.extend(self.scales)
+        return learning_rate_decay_conf
+
+
+@oneflow_export("optimizer.PolynomialSchduler")
+class PolynomialSchduler(LrScheduler):
+    def __init__(
+        self,
+        base_lr,
+        steps,
+        end_learning_rate=0.0001,
+        power=1.0,
+        cycle=False,
+        warmup_steps=0,
+        warmup_begin_multiplier=0,
+        warmup_mode="linear",
+    ):
+        super().__init__(
+            base_lr,
+            warmup_steps=warmup_steps,
+            warmup_begin_multiplier=warmup_begin_multiplier,
+            warmup_mode=warmup_mode,
+        )
+        self.steps = steps
+        self.end_learning_rate = end_learning_rate
+        self.power = power
+        self.cycle = cycle
+
+    @property
+    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+        learning_rate_decay_conf.polynomial_conf.decay_batches = self.steps
+        learning_rate_decay_conf.polynomial_conf.end_learning_rate = (
+            self.end_learning_rate
+        )
+        learning_rate_decay_conf.polynomial_conf.power = self.power
+        learning_rate_decay_conf.polynomial_conf.cycle = self.cycle
+        return learning_rate_decay_conf
+
+
+class LinearConsineScheduler(LrScheduler):
+    def __init__(
+        self,
+        total_steps,
+        base_lr,
+        num_periods=0.5,
+        alpha=0.0,
+        beta=0.001,
+        warmup_steps=0,
+        warmup_begin_multiplier=0,
+        warmup_mode="linear",
+    ):
+        super().__init__(
+            base_lr,
+            warmup_steps=warmup_steps,
+            warmup_begin_multiplier=warmup_begin_multiplier,
+            warmup_mode=warmup_mode,
+        )
+        self.total_steps = total_steps
+        self.num_periods = num_periods
+        self.alpha = alpha
+        self.beta = beta
+
+    @property
+    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+        learning_rate_decay_conf.linear_cosine_conf.decay_batches = self.steps
+        learning_rate_decay_conf.linear_cosine_conf.num_periods = self.num_periods
+        learning_rate_decay_conf.polynomial_conf.alpha = self.alpha
+        learning_rate_decay_conf.polynomial_conf.beta = self.beta
+        return learning_rate_decay_conf
+
+
+class ExponentialScheduler(LrScheduler):
+    def __init__(
+        self,
+        steps,
+        base_lr,
+        decay_rate,
+        staircase=False,
+        warmup_steps=0,
+        warmup_begin_multiplier=0,
+        warmup_mode="linear",
+    ):
+        super().__init__(
+            base_lr,
+            warmup_steps=warmup_steps,
+            warmup_begin_multiplier=warmup_begin_multiplier,
+            warmup_mode=warmup_mode,
+        )
+        self.steps = steps
+        self.decay_rate = decay_rate
+        self.staircase = staircase
+
+    @property
+    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+        learning_rate_decay_conf.exponential_conf.decay_batches = self.steps
+        learning_rate_decay_conf.exponential_conf.decay_rate = self.decay_rate
+        learning_rate_decay_conf.exponential_conf.staircase = self.staircase
+        return learning_rate_decay_conf
+
+
+class InverseTimeScheduler(LrScheduler):
+    def __init__(
+        self,
+        steps,
+        base_lr,
+        decay_rate,
+        staircase=False,
+        warmup_steps=0,
+        warmup_begin_multiplier=0,
+        warmup_mode="linear",
+    ):
+        super().__init__(
+            base_lr,
+            warmup_steps=warmup_steps,
+            warmup_begin_multiplier=warmup_begin_multiplier,
+            warmup_mode=warmup_mode,
+        )
+        self.steps = steps
+        self.decay_rate = decay_rate
+        self.staircase = staircase
+
+    @property
+    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+        learning_rate_decay_conf.inverse_time_conf.decay_batches = self.steps
+        learning_rate_decay_conf.inverse_time_conf.decay_rate = self.decay_rate
+        learning_rate_decay_conf.inverse_time_conf.staircase = self.staircase
+        return learning_rate_decay_conf
+
+
+class NaturalExpScheduler(LrScheduler):
+    def __init__(
+        self,
+        steps,
+        base_lr,
+        decay_rate,
+        staircase=False,
+        warmup_steps=0,
+        warmup_begin_multiplier=0,
+        warmup_mode="linear",
+    ):
+        super().__init__(
+            base_lr,
+            warmup_steps=warmup_steps,
+            warmup_begin_multiplier=warmup_begin_multiplier,
+            warmup_mode=warmup_mode,
+        )
+        self.steps = steps
+        self.decay_rate = decay_rate
+        self.staircase = staircase
+
+    @property
+    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+        learning_rate_decay_conf.natural_exp_conf.decay_batches = self.steps
+        learning_rate_decay_conf.natural_exp_conf.decay_rate = self.decay_rate
+        learning_rate_decay_conf.natural_exp_conf.staircase = self.staircase
+        return learning_rate_decay_conf
 
 
 class Optimizer:
@@ -234,3 +455,181 @@ class Adam(Optimizer):
         train_conf.model_update_conf.adam_conf.do_bias_correction = (
             self.do_bias_correction
         )
+
+
+@oneflow_export("optimizer.Adam")
+class Adam(Optimizer):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        beta1=0.9,
+        beta2=0.999,
+        epsilon=1e-8,
+        do_bias_correction=False,
+        loss_scale_factor: Optional[float] = None,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[str] = None,
+        weight_decay_excludes: Optional[str] = None,
+        clip: Optional[float] = None,
+        train_step_lbn: Optional[str] = None,
+    ):
+        super().__init__(
+            lr_scheduler,
+            loss_scale_factor,
+            weight_decay,
+            weight_decay_includes,
+            weight_decay_excludes,
+            clip,
+            train_step_lbn,
+        )
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+        self.do_bias_correction = do_bias_correction
+
+    def _SetSpecificFieldsInTrainConf(self, train_conf):
+        train_conf.model_update_conf.adam_conf.beta1 = self.beta1
+        train_conf.model_update_conf.adam_conf.beta2 = self.beta2
+        train_conf.model_update_conf.adam_conf.epsilon = self.epsilon
+        train_conf.model_update_conf.adam_conf.do_bias_correction = (
+            self.do_bias_correction
+        )
+
+
+@oneflow_export("optimizer.Adam")
+class Adam(Optimizer):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        beta1=0.9,
+        beta2=0.999,
+        epsilon=1e-8,
+        do_bias_correction=False,
+        loss_scale_factor: Optional[float] = None,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[str] = None,
+        weight_decay_excludes: Optional[str] = None,
+        clip: Optional[float] = None,
+        train_step_lbn: Optional[str] = None,
+    ):
+        super().__init__(
+            lr_scheduler,
+            loss_scale_factor,
+            weight_decay,
+            weight_decay_includes,
+            weight_decay_excludes,
+            clip,
+            train_step_lbn,
+        )
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+        self.do_bias_correction = do_bias_correction
+
+    def _SetSpecificFieldsInTrainConf(self, train_conf):
+        train_conf.model_update_conf.adam_conf.beta1 = self.beta1
+        train_conf.model_update_conf.adam_conf.beta2 = self.beta2
+        train_conf.model_update_conf.adam_conf.epsilon = self.epsilon
+        train_conf.model_update_conf.adam_conf.do_bias_correction = (
+            self.do_bias_correction
+        )
+
+
+@oneflow_export("optimizer.RMSProp")
+class RMSProp(Optimizer):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        decay_rate: float = 0.99,
+        epsilon: float = 1e-8,
+        loss_scale_factor: Optional[float] = None,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[str] = None,
+        weight_decay_excludes: Optional[str] = None,
+        clip: Optional[float] = None,
+        train_step_lbn: Optional[str] = None,
+    ):
+        super().__init__(
+            lr_scheduler,
+            loss_scale_factor,
+            weight_decay,
+            weight_decay_includes,
+            weight_decay_excludes,
+            clip,
+            train_step_lbn,
+        )
+        self.decay_rate = decay_rate
+        self.epsilon = epsilon
+
+    def _SetSpecificFieldsInTrainConf(self, train_conf):
+        train_conf.model_update_conf.rmsprop_conf.decay_rate = self.decay_rate
+        train_conf.model_update_conf.rmsprop_conf.epsilon = self.epsilon
+
+
+@oneflow_export("optimizer.LARS")
+class LARS(Optimizer):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        momentum_beta: float = 0.9,
+        epsilon: float = 1e-9,
+        lars_coefficient: float = 0.0001,
+        loss_scale_factor: Optional[float] = None,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[str] = None,
+        weight_decay_excludes: Optional[str] = None,
+        clip: Optional[float] = None,
+        train_step_lbn: Optional[str] = None,
+    ):
+        super().__init__(
+            lr_scheduler,
+            loss_scale_factor,
+            weight_decay,
+            weight_decay_includes,
+            weight_decay_excludes,
+            clip,
+            train_step_lbn,
+        )
+        self.momentum_beta = momentum_beta
+        self.epsilon = epsilon
+        self.lars_coefficient = lars_coefficient
+
+    def _SetSpecificFieldsInTrainConf(self, train_conf):
+        train_conf.model_update_conf.lars_conf.momentum_beta = self.momentum_beta
+        train_conf.model_update_conf.lars_conf.epsilon = self.epsilon
+        train_conf.model_update_conf.lars_conf.lars_coefficient = self.lars_coefficient
+
+
+@oneflow_export("optimizer.LazyAdam")
+class LARS(Optimizer):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        beta1: float = 0.9,
+        beta2: float = 0.9,
+        epsilon: float = 1e-8,
+        lars_coefficient: float = 0.0001,
+        loss_scale_factor: Optional[float] = None,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[str] = None,
+        weight_decay_excludes: Optional[str] = None,
+        clip: Optional[float] = None,
+        train_step_lbn: Optional[str] = None,
+    ):
+        super().__init__(
+            lr_scheduler,
+            loss_scale_factor,
+            weight_decay,
+            weight_decay_includes,
+            weight_decay_excludes,
+            clip,
+            train_step_lbn,
+        )
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+
+    def _SetSpecificFieldsInTrainConf(self, train_conf):
+        train_conf.model_update_conf.lazy_adam_conf.beta1 = self.beta1
+        train_conf.model_update_conf.lazy_adam_conf.beta2 = self.beta2
+        train_conf.model_update_conf.lazy_adam_conf.epsilon = self.epsilon
