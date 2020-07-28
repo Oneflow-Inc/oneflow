@@ -171,12 +171,11 @@ class PiecewiseScalingScheduler(LrScheduler):
         self,
         base_lr: float,
         boundaries: Sequence[int],
-        scales: Sequence[float],
+        scale: Union[float, Sequence[float]],
         warmup_steps: int = 0,
         warmup_begin_multiplier: float = 0,
         warmup_mode: str = "linear",
     ):
-        assert len(boundaries) == len(scales)
         super().__init__(
             base_lr=base_lr,
             warmup_steps=warmup_steps,
@@ -184,7 +183,10 @@ class PiecewiseScalingScheduler(LrScheduler):
             warmup_mode=warmup_mode,
         )
         self.boundaries = boundaries
-        self.scales = [1] + scales
+        if isinstance(scale, float):
+            scale = [scale] * len(boundaries)
+        assert len(boundaries) == len(scale)
+        self.scale = [1] + scale
 
     @property
     def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
@@ -192,7 +194,7 @@ class PiecewiseScalingScheduler(LrScheduler):
         learning_rate_decay_conf.piecewise_scaling_conf.boundaries.extend(
             self.boundaries
         )
-        learning_rate_decay_conf.piecewise_scaling_conf.scales.extend(self.scales)
+        learning_rate_decay_conf.piecewise_scaling_conf.scales.extend(self.scale)
         return learning_rate_decay_conf
 
 
