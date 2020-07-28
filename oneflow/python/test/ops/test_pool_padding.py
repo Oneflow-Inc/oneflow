@@ -135,18 +135,13 @@ def _GetSequence(value, n, name):
 
 def test_pool(_):
     arg_dict = OrderedDict()
-    is_user_op = os.getenv("ENABLE_USER_OP") != "False"
-    if is_user_op:
-        arg_dict["device_type"] = ["gpu", "cpu"]
-    else:
-        arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["pool_conf"] = pool_confs
     arg_dict["data_type"] = ["float32"]
     arg_dict["pooling_type"] = ["AVG", "MAX"]
     arg_dict["is_dynamic"] = [True, False]
 
     for case in GenArgList(arg_dict):
-        print(case)
         (device_type, pool_conf, data_type, pooling_type, is_dynamic) = case
         x_shape = pool_conf["x_shape"]
         ksize = pool_conf["ksize"]
@@ -183,8 +178,6 @@ def test_pool(_):
                 dx_tf.numpy(),
                 b.numpy(),
             )
-            # print("dx_tf", dx_tf.numpy())
-            # print("dx_of", b.numpy())
 
         # 1F results
         dtype = type_name_to_flow_type[data_type]
@@ -196,6 +189,7 @@ def test_pool(_):
 
         tensor_def = None
         if is_dynamic:
+            func_config.default_distribute_strategy(flow.scope.mirrored_view())
             tensor_def = oft.ListNumpy.Placeholder
         else:
             tensor_def = oft.Numpy.Placeholder
@@ -249,6 +243,3 @@ def test_pool(_):
             case,
             y_ndarray - y_tf.numpy(),
         )
-        print(case)
-        # print("of y", y_ndarray)
-        # print("tf y", y_tf.numpy())
