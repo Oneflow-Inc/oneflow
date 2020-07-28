@@ -27,6 +27,24 @@ import oneflow.core.job.job_conf_pb2 as job_conf_pb
 from typing import Tuple, Optional, Union, Sequence
 
 
+class ClipGradientConf:
+    @property
+    def clip_conf(self) -> op_conf_pb.ClipConf:
+        raise NotImplementedError()
+
+
+@oneflow_export("grad_clipping.by_global_norm")
+class ClipByGlobalNorm(ClipGradientConf):
+    def __init__(self, val):
+        self.val = val
+
+    @property
+    def clip_conf(self):
+        clip_conf = op_conf_pb.ClipConf()
+        clip_conf.clip_by_global_norm.clip_norm = self.val
+        return clip_conf
+
+
 class LrScheduler:
     def __init__(
         self,
@@ -341,7 +359,7 @@ class Optimizer:
         self,
         lr_scheduler: LrScheduler,
         loss_scale_factor: Optional[int] = None,
-        clip: Optional[float] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[str] = None,
     ):
         self.lr_scheduler = lr_scheduler
@@ -349,7 +367,7 @@ class Optimizer:
         self.weight_decay = weight_decay
         self.weight_decay_includes = weight_decay_includes
         self.weight_decay_excludes = weight_decay_excludes
-        self.clip = clip
+        self.grad_clipping = grad_clipping
         self.train_step_lbn = train_step_lbn
 
     def _SetSpecificFieldsInTrainConf(self, train_conf):
@@ -360,8 +378,8 @@ class Optimizer:
         train_conf = job_conf_pb.TrainConf()
         self.lr_scheduler.SetLrFieldsInTrainConf(train_conf)
         update_conf = train_conf.model_update_conf
-        if self.clip is not None:
-            update_conf.clip_conf.clip_by_global_norm.clip_norm = self.clip
+        if self.grad_clipping is not None:
+            update_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
         if self.train_step_lbn is not None:
             train_conf.train_step_lbn = self.train_step_lbn
         if self.loss_scale_factor is not None:
@@ -381,11 +399,11 @@ class SGD(Optimizer):
         lr_scheduler: LrScheduler,
         loss_scale_factor: Optional[float] = None,
         momentum: int = 0.9,
-        clip: Optional[float] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[str] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, clip, train_step_lbn,
+            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
         )
         self.momentum = momentum
 
@@ -406,11 +424,11 @@ class Adam(Optimizer):
         epsilon=1e-8,
         do_bias_correction=False,
         loss_scale_factor: Optional[float] = None,
-        clip: Optional[float] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[str] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, clip, train_step_lbn,
+            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
         )
         self.beta1 = beta1
         self.beta2 = beta2
@@ -439,11 +457,11 @@ class AdamW(Optimizer):
         weight_decay: Optional[float] = None,
         weight_decay_includes: Optional[Union[Sequence[str], str]] = None,
         weight_decay_excludes: Optional[Union[Sequence[str], str]] = None,
-        clip: Optional[float] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[str] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, clip, train_step_lbn,
+            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
         )
         self.beta1 = beta1
         self.beta2 = beta2
@@ -490,11 +508,11 @@ class RMSProp(Optimizer):
         decay_rate: float = 0.99,
         epsilon: float = 1e-8,
         loss_scale_factor: Optional[float] = None,
-        clip: Optional[float] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[str] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, clip, train_step_lbn,
+            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
         )
         self.decay_rate = decay_rate
         self.epsilon = epsilon
@@ -513,11 +531,11 @@ class LARS(Optimizer):
         epsilon: float = 1e-9,
         lars_coefficient: float = 0.0001,
         loss_scale_factor: Optional[float] = None,
-        clip: Optional[float] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[str] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, clip, train_step_lbn,
+            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
         )
         self.momentum_beta = momentum_beta
         self.epsilon = epsilon
@@ -539,11 +557,11 @@ class LazyAdam(Optimizer):
         epsilon: float = 1e-8,
         lars_coefficient: float = 0.0001,
         loss_scale_factor: Optional[float] = None,
-        clip: Optional[float] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[str] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, clip, train_step_lbn,
+            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
         )
         self.beta1 = beta1
         self.beta2 = beta2
