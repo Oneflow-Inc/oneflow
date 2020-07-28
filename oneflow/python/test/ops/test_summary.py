@@ -37,7 +37,7 @@ def test_summary(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
-    logdir = "~/oneflow/log"
+    logdir = "./oneflow/log"
 
     @flow.global_function(func_config)
     def CreateWriter():
@@ -90,20 +90,19 @@ def test_summary(test_case):
     for i in range(200):
         t = ["vgg16", "resnet50", "mask-rcnn", "yolov3"]
         pb = flow.summary.text(t)
-        value = np.array(list(str(pb).encode("ascii")), dtype=np.int8)
+        value = np.fromstring(str(pb), dtype=np.int8)
         step = np.array([i], dtype=np.int64)
         PbJob([value], [step])
 
         pb2 = flow.summary.hparams(hparams)
         value = np.fromstring(str(pb2), dtype=np.int8)
         step = np.array([i], dtype=np.int64)
-        tag = np.array(list("hparams".encode("ascii")), dtype=np.int8)
         PbJob([value], [step])
 
     for idx in range(10):
         value = np.array([idx], dtype=np.float32)
         step = np.array([idx], dtype=np.int64)
-        tag = np.array(list("scalar".encode("ascii")), dtype=np.int8)
+        tag = np.fromstring("scalar", dtype=np.int8)
         ScalarJob([value], [step], [tag])
 
     value = np.array(
@@ -117,7 +116,7 @@ def test_summary(test_case):
     for idx in range(1):
         value = np.random.rand(100, 100, 100).astype(np.float32)
         step = np.array([idx], dtype=np.int64)
-        tag = np.array(list("histogram".encode("ascii")), dtype=np.int8)
+        tag = np.fromstring("histogram", dtype=np.int8)
         HistogramJob([value], [step], [tag])
 
     value_ = np.random.rand(10, 10, 10).astype(np.float32)
@@ -149,6 +148,7 @@ def test_summary(test_case):
     graph = flow.summary.Graph(logdir)
     graph.write_structure_graph()
 
+test_summary(1)
 
 def summary_image():
     flow.clear_default_session()
@@ -185,5 +185,5 @@ def summary_image():
     imageNew = np.expand_dims(imageNew, axis=0)
     images = np.concatenate((images, imageNew), axis=0)
     step = np.array([1], dtype=np.int64)
-    tag = np.array(list("image".encode("ascii")), dtype=np.int8)
+    tag = np.fromstring("image", dtype=np.int8)
     ImageJob([images], [step], [tag])
