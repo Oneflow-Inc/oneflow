@@ -87,4 +87,5 @@ do
     trap cleanup EXIT
     $PY_BIN setup.py bdist_wheel -d tmp_wheel --build_dir $ONEFLOW_BUILD_DIR
     auditwheel repair tmp_wheel/*.whl --wheel-dir $HOUSE_DIR
+    cleanup
 done
