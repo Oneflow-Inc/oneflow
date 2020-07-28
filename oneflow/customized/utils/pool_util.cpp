@@ -74,7 +74,7 @@ Params3D::Params3D(const int32_t dim, const ShapeView& x_shape, const std::strin
   batch_num_ = x_shape.At(0);
 }
 
-void Params3D::ResetIfDynamic(const ShapeView& x_shape) {
+void Params3D::Reset(const ShapeView& x_shape) {
   x_3d_ = {GetInDim(x_shape, data_format_, 0, dim_), GetInDim(x_shape, data_format_, 1, dim_),
            GetInDim(x_shape, data_format_, 2, dim_)};
   Get3DOutputSize(x_3d_, pool_size_3d_, strides_3d_, padding_, ceil_mode_, nullptr, &y_3d_,

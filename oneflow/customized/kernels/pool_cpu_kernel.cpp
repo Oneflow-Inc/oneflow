@@ -29,7 +29,7 @@ struct PoolOpKernelState final : public user_op::OpKernelState {
       : params_3d(params_3d), is_dynamic(is_dynamic) {}
   const Params3D& GetParams3D() { return params_3d; }
   void Update(const ShapeView& x_shape) {
-    if (is_dynamic) { params_3d.ResetIfDynamic(x_shape); }
+    if (is_dynamic) { params_3d.Reset(x_shape); }
   }
 };
 

@@ -31,7 +31,7 @@ class Params3D {
            const std::vector<int32_t>& padding_after, const std::vector<int32_t>& pool_size,
            const std::vector<int32_t>& strides, const bool ceil_mode);
   ~Params3D() = default;
-  void ResetIfDynamic(const ShapeView& x_shape);
+  void Reset(const ShapeView& x_shape);
 
   Shape GetYShape() const;
   Shape GetXShape5D() const;
