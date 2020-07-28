@@ -195,7 +195,7 @@ def test_slice_grad(test_case):
         x = flow.get_variable(
             shape=(2, 5, 4),
             dtype=flow.float,
-            initializer=flow.random_uniform_initializer(0, 1),
+            initializer=flow.random_uniform_initializer(0, 2),
             name="variable",
         )
         x = flow.identity(x)
