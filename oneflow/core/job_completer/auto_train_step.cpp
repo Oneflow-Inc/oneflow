@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job_completer/op_graph_pass.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -70,9 +71,17 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
           .Build();
 
   JobBuilder job_builder(job);
-  job_builder.AddOps(
-      GenParallelConfOfCpuZeroOnMaster(),
-      {variable_op_conf, identity_op_conf, scalar_add_op.op_conf(), assign_op.op_conf()});
+  const ParallelConf& parallel_conf = GenParallelConfOfCpuZeroOnMaster();
+  int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
+      job->job_conf().DebugString(), parallel_conf.DebugString(), false);
+  OperatorConf scalar_add_op_conf(scalar_add_op.op_conf());
+  OperatorConf assign_op_conf(assign_op.op_conf());
+  variable_op_conf.set_scope_symbol_id(scope_symbol_id);
+  identity_op_conf.set_scope_symbol_id(scope_symbol_id);
+  scalar_add_op_conf.set_scope_symbol_id(scope_symbol_id);
+  assign_op_conf.set_scope_symbol_id(scope_symbol_id);
+  job_builder.AddOps(parallel_conf,
+                     {variable_op_conf, identity_op_conf, scalar_add_op_conf, assign_op_conf});
   job->mutable_job_conf()->mutable_train_conf()->set_train_step_lbn(train_step_lbn);
   return Maybe<void>::Ok();
 }
