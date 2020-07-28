@@ -22,7 +22,7 @@ limitations under the License.
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
-#include <infiniband/verbs.h>
+#include "oneflow/core/comm_network/ibverbs/ibverbs_wrapper.h"
 
 namespace oneflow {
 
