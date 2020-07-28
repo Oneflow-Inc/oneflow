@@ -187,11 +187,14 @@ Maybe<void> MakeBlobDesc4BnInOp(vm::Instruction* instruction, const T& args,
 }
 
 template<typename T>
-Maybe<void> MakeBlob4BnInOp(vm::Instruction* instruction, const T& args,
-                            std::function<Blob*(const std::string&)>* Blob4BnInOp) {
+Maybe<void> MakeBlob4BnInOp(
+    vm::Instruction* instruction, const T& args,
+    std::function<Blob*(const std::string&)>* Blob4BnInOp,
+    const std::function<bool(const std::string&, const BlobObject&)>& FilterOutBlob) {
   const auto& obn2blob = std::make_shared<HashMap<std::string, Blob*>>();
   JUST(ForEachObnAndBlobObject(
       instruction, args, [&](const std::string& bn_in_op, BlobObject* blob_object) -> Maybe<void> {
+        if (!FilterOutBlob(bn_in_op, *blob_object)) { return Maybe<void>::Ok(); }
         CHECK_OR_RETURN(obn2blob->emplace(bn_in_op, blob_object->mut_blob()).second);
         return Maybe<void>::Ok();
       }));
@@ -210,6 +213,13 @@ Maybe<void> MakeBlob4BnInOp(vm::Instruction* instruction, const T& args,
     return nullptr;
   };
   return Maybe<void>::Ok();
+}
+
+template<typename T>
+Maybe<void> MakeBlob4BnInOp(vm::Instruction* instruction, const T& args,
+                            std::function<Blob*(const std::string&)>* Blob4BnInOp) {
+  return MakeBlob4BnInOp(instruction, args, Blob4BnInOp,
+                         [](const std::string&, const BlobObject&) { return true; });
 }
 
 template<typename T>
@@ -295,7 +305,11 @@ Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruc
                                  return blob_object->TryInitBlob();
                                }));
   std::function<Blob*(const std::string&)> Blob4BnInOp;
-  JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
+  Shape empty_shape{};
+  const auto& FilterOutBlob = [&](const std::string& bn_in_op, const BlobObject& blob_object) {
+    return !(bn_in_op == "tmp_buffer_0" && blob_object.blob_desc().shape() == empty_shape);
+  };
+  JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp, FilterOutBlob));
   opkernel_obj->kernel().Infer(Blob4BnInOp);
   return Maybe<void>::Ok();
 }
@@ -344,7 +358,11 @@ Maybe<void> OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instr
   std::shared_ptr<user_op::OpKernelState> new_state;
   {
     std::function<Blob*(const std::string&)> Blob4BnInOp;
-    JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
+    Shape empty_shape{};
+    const auto& FilterOutBlob = [&](const std::string& bn_in_op, const BlobObject& blob_object) {
+      return !(bn_in_op == "tmp_buffer_0" && blob_object.blob_desc().shape() == empty_shape);
+    };
+    JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp, FilterOutBlob));
     EagerKernel* eager_kernel = opkernel_obj->mut_kernel();
     const auto& old_state = opkernel_obj->opkernel_state();
     new_state = eager_kernel->EagerForward(old_state, device_ctx, Blob4BnInOp);
