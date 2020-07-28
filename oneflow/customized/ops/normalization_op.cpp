@@ -331,6 +331,7 @@ REGISTER_USER_OP_GRAD("normalization")
       const bool is_training = ctx->FwOp().attr<bool>("training");
       const bool is_fp16 = ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kFloat16;
 
+      // calculate inv_variance from moving_variance
       const auto var_add_eps_op_name =
           "System-AutoGrad-" + ctx->FwOp().op_name() + "-VarianceAddEpsilon";
       ctx->DefineOp(var_add_eps_op_name, [&ctx](user_op::UserOpConfWrapperBuilder& builder) {
