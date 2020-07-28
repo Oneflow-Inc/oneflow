@@ -109,6 +109,11 @@ REGISTER_USER_OP("same_padding_grad")
           .PartialSum(user_op::OpArg("dy", 0))
           .PartialSum(user_op::OpArg("dx", 0))
           .Build();
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("x_like", 0))
+          .Broadcast(user_op::OpArg("dy", 0))
+          .Broadcast(user_op::OpArg("dx", 0))
+          .Build();
       return Maybe<void>::Ok();
     });
 
