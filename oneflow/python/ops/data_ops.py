@@ -26,6 +26,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+import traceback
 
 
 @oneflow_export("data.ImagePreprocessor")
@@ -206,6 +207,16 @@ def decode_ofrecord(
     buffer_size: int = 1024,
     name: str = None,
 ) -> Tuple[remote_blob_util.BlobDef]:
+    print(
+        "WARNING:",
+        "oneflow.data.decode_ofrecord is deprecated, and NOT work in eager mode, please use: \n",
+        "    1)   ofrecord = oneflow.data.ofrecord_reader(...) to read ofrecord; \n",
+        "    2)   image = oneflow.data.ofrecord_image_decoder(...) to decode image; \n",
+        "    3)   raw = oneflow.data.ofrecord_raw_decoder(...) to decode raw data like label; \n",
+        traceback.format_stack()[-2],
+    )
+    assert not flow.eager_execution_enabled()
+
     if name is None:
         name = id_util.UniqueStr("Decode_")
 
