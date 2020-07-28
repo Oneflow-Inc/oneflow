@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job/job_builder.h"
+#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job_completer/clone_grad.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
@@ -148,8 +149,12 @@ void GenerateOriginDiffLbi(const LogicalBlobId& lbi, std::vector<OperatorConf>* 
   out_diff_lbi->set_blob_name(constant_like_conf->out());
 }
 
-ParallelConf ProducerParallelConf4Lbi(const OpGraph& op_graph, const LogicalBlobId& lbi) {
+const ParallelConf& ProducerParallelConf4Lbi(const OpGraph& op_graph, const LogicalBlobId& lbi) {
   return op_graph.OpNode4OpName(lbi.op_name())->parallel_desc().parallel_conf();
+}
+
+int64_t ScopeSymbolId4Lbi(const OpGraph& op_graph, const LogicalBlobId& lbi) {
+  return op_graph.OpNode4OpName(lbi.op_name())->op().op_conf().scope_symbol_id();
 }
 
 void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
@@ -170,7 +175,9 @@ void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder
             .Attr<bool>("has_int_operand", false)
             .Attr<int64_t>("int_operand", 0)
             .Build();
-    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
+    OperatorConf scalr_mul_op_conf(scalar_mul_op.op_conf());
+    scalr_mul_op_conf.set_scope_symbol_id(ScopeSymbolId4Lbi(op_graph, lbi));
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalr_mul_op_conf});
     diff_lbi = GenLogicalBlobId(scalar_mul_op.output("out", 0));
   }
 }
@@ -197,6 +204,9 @@ Maybe<void> TryMirroredCastTotalLossInstanceNum(
     cast_from_mirrored->set_out("out");
     cast_from_mirrored->mutable_sbp_parallel()->mutable_partial_sum_parallel();
     const auto& parallel_conf = job_builder->ParallelConf4Lbi(*total_loss_instance_num_lbi);
+    int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
+        job_builder->job().job_conf().DebugString(), parallel_conf.DebugString(), true);
+    op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
     total_loss_instance_num_lbi->set_op_name(op_conf.name());
     total_loss_instance_num_lbi->set_blob_name("out");
@@ -218,6 +228,7 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     instance_num_op_conf->set_y("y");
     instance_num_op_conf->set_data_type(op_node->LogicalBlobDesc4Lbi(loss_lbi).data_type());
     instance_num_op_conf->mutable_include_axis_conf()->add_axis(0);
+    instance_num_op.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), {instance_num_op});
     lbi->set_op_name(instance_num_op.name());
     lbi->set_blob_name("y");
@@ -240,7 +251,11 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     total_loss_instance_num_conf->set_out("out");
 
     ParallelConf parallel_conf;
-    parallel_conf.add_device_name("0:cpu:0");
+    parallel_conf.set_device_tag("cpu");
+    parallel_conf.add_device_name("0:0");
+    int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
+        job_builder->job().job_conf().DebugString(), parallel_conf.DebugString(), false);
+    op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
 
     total_loss_instance_num_lbi.set_op_name(op_conf.name());
@@ -260,7 +275,9 @@ void ScaleModelDiffByDynamicLossInstanceNum(
             .Input("scalar", GenLogicalBlobName(total_loss_instance_num_lbi))
             .Output("y")
             .Build();
-    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_div_op.op_conf()});
+    OperatorConf scalar_div_op_conf(scalar_div_op.op_conf());
+    scalar_div_op_conf.set_scope_symbol_id(ScopeSymbolId4Lbi(op_graph, lbi));
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_div_op_conf});
     diff_lbi = GenLogicalBlobId(scalar_div_op.output("y", 0));
   }
 }
@@ -378,6 +395,8 @@ void InitOutOba2OutDiffLbi(const std::list<OpNode*>& loss_nodes,
         &(*out_oba2out_diff_lbi)[GenOpBlobArg(loss_op_node->op().op_name(), *bn_it)];
     std::vector<OperatorConf> ops;
     GenerateOriginDiffLbi(loss_lbi, &ops, out_diff_lbi);
+    int64_t scope_symbol_id = loss_op_node->op().op_conf().scope_symbol_id();
+    for (auto& op : ops) { op.set_scope_symbol_id(scope_symbol_id); }
     job_builder->AddOps(loss_op_node->parallel_desc().parallel_conf(), ops);
   }
 }
@@ -421,6 +440,8 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   }
   ParallelConf global_norm_parallel_conf =
       all_same_parallel_desc ? parallel_desc->parallel_conf() : GenParallelConfOfCpuZeroOnMaster();
+  int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
+      job_builder->job().job_conf().DebugString(), global_norm_parallel_conf.DebugString(), false);
   std::vector<std::string> lbns_to_add;
   for (const auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& diff_lbi = pair.second;
@@ -429,6 +450,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
     SquareSumOpConf* square_sum_conf = square_sum_op_conf.mutable_square_sum_conf();
     square_sum_conf->set_x(GenLogicalBlobName(diff_lbi));
     square_sum_conf->set_y("y");
+    square_sum_op_conf.set_scope_symbol_id(ScopeSymbolId4Lbi(op_graph, pair.first));
     job_builder->AddOps(lbi2parallel_desc.at(pair.first)->parallel_conf(), {square_sum_op_conf});
     lbns_to_add.push_back(GenLogicalBlobName(square_sum_op_conf.name(), square_sum_conf->y()));
   }
@@ -445,7 +467,9 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
     }
     lbns_to_add.resize(start);
     const auto add_op = add_op_builder.Output("out").Build();
-    job_builder->AddOps(global_norm_parallel_conf, {add_op.op_conf()});
+    OperatorConf add_op_conf(add_op.op_conf());
+    add_op_conf.set_scope_symbol_id(scope_symbol_id);
+    job_builder->AddOps(global_norm_parallel_conf, {add_op_conf});
     lbns_to_add.push_back(add_op.output("out", 0));
   }
   auto inv_global_norm_op = user_op::UserOpConfWrapperBuilder(
@@ -454,7 +478,9 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                                 .Input("x", lbns_to_add.front())
                                 .Output("y")
                                 .Build();
-  job_builder->AddOps(global_norm_parallel_conf, {inv_global_norm_op.op_conf()});
+  OperatorConf inv_global_norm_op_conf(inv_global_norm_op.op_conf());
+  inv_global_norm_op_conf.set_scope_symbol_id(scope_symbol_id);
+  job_builder->AddOps(global_norm_parallel_conf, {inv_global_norm_op_conf});
   OperatorConf inv_clip_norm_op_conf{};
   inv_clip_norm_op_conf.set_name("System-ClipGradient-GlobalNorm-InvClipNorm-" + NewUniqueId());
   ConstantLikeOpConf* inv_clip_norm_constant_like_conf =
@@ -462,6 +488,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   inv_clip_norm_constant_like_conf->set_like(inv_global_norm_op.output("y", 0));
   inv_clip_norm_constant_like_conf->set_float_operand(1.0 / conf.clip_norm());
   inv_clip_norm_constant_like_conf->set_out("out");
+  inv_clip_norm_op_conf.set_scope_symbol_id(scope_symbol_id);
   job_builder->AddOps(global_norm_parallel_conf, {inv_clip_norm_op_conf});
   auto minimum_op =
       user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Minimum-" + NewUniqueId())
@@ -471,7 +498,9 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                                          inv_clip_norm_constant_like_conf->out()))
           .Output("z")
           .Build();
-  job_builder->AddOps(global_norm_parallel_conf, {minimum_op.op_conf()});
+  OperatorConf minimum_op_conf(minimum_op.op_conf());
+  minimum_op_conf.set_scope_symbol_id(scope_symbol_id);
+  job_builder->AddOps(global_norm_parallel_conf, {minimum_op_conf});
   const std::string gradient_scale_factor_lbn = minimum_op.output("z", 0);
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
@@ -483,7 +512,9 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                              .Input("scalar", gradient_scale_factor_lbn)
                              .Output("y")
                              .Build();
-    job_builder->AddOps(lbi2parallel_desc.at(lbi)->parallel_conf(), {scalar_mul_op.op_conf()});
+    OperatorConf scalar_mul_op_conf(scalar_mul_op.op_conf());
+    scalar_mul_op_conf.set_scope_symbol_id(ScopeSymbolId4Lbi(op_graph, lbi));
+    job_builder->AddOps(lbi2parallel_desc.at(lbi)->parallel_conf(), {scalar_mul_op_conf});
     diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
   }
 }
@@ -591,11 +622,8 @@ Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
                               &out_oba2clone_bw_add_out_lbi);
     std::vector<OperatorConf> ops;
     JUST(GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
-    if (op_node->op().op_conf().has_scope_symbol_id()) {
-      for (auto& op_conf : ops) {
-        op_conf.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
-      }
-    }
+    int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();
+    for (auto& op_conf : ops) { op_conf.set_scope_symbol_id(scope_symbol_id); }
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), ops);
   }
   OpBlobArgPairs fw_bw_oba_pairs;
@@ -683,7 +711,9 @@ void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
             .Attr<bool>("has_int_operand", false)
             .Attr<int64_t>("int_operand", 0)
             .Build();
-    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
+    OperatorConf scalar_mul_op_conf(scalar_mul_op.op_conf());
+    scalar_mul_op_conf.set_scope_symbol_id(ScopeSymbolId4Lbi(op_graph, lbi));
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op_conf});
     diff_lbi = GenLogicalBlobId(scalar_mul_op.output("out", 0));
   }
 }
@@ -694,6 +724,7 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
     const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
+    int64_t scope_symbol_id = model_op_node->op().op_conf().scope_symbol_id();
     CHECK(model_op_node->op().op_conf().has_variable_conf());
     const VariableOpConf& variable_conf = model_op_node->op().op_conf().variable_conf();
     if (!variable_conf.has_regularizer()) { continue; }
@@ -708,6 +739,7 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
       l1_l2_regularize_gradient_conf->set_out("out");
       l1_l2_regularize_gradient_conf->set_l1(regularizer_conf.l1_l2_conf().l1());
       l1_l2_regularize_gradient_conf->set_l2(regularizer_conf.l1_l2_conf().l2());
+      regularize_gradient_op_conf.set_scope_symbol_id(scope_symbol_id);
       job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
                           {regularize_gradient_op_conf});
       diff_lbi.set_op_name(regularize_gradient_op_conf.name());
@@ -734,6 +766,7 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
     LogicalBlobId& diff_lbi = pair.second;
     const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
     if (model_op_node->parallel_desc().parallel_num() <= 1) { continue; }
+    int64_t scope_symbol_id = model_op_node->op().op_conf().scope_symbol_id();
     OperatorConf parallel_cast_op_conf{};
     parallel_cast_op_conf.set_name("System-AutoGrad-ParallelCast-" + NewUniqueId());
     ParallelCastOpConf* parallel_cast_conf = parallel_cast_op_conf.mutable_parallel_cast_conf();
@@ -747,6 +780,7 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
     } else {
       UNIMPLEMENTED();
     }
+    parallel_cast_op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(), {parallel_cast_op_conf});
     diff_lbi.set_op_name(parallel_cast_op_conf.name());
     diff_lbi.set_blob_name(parallel_cast_conf->out());
@@ -759,12 +793,14 @@ void AddDiffStaticShapeCast(const OpGraph& op_graph, JobBuilder* job_builder,
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
     const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
+    int64_t scope_symbol_id = model_op_node->op().op_conf().scope_symbol_id();
     OperatorConf cast_to_static_shape_op_conf{};
     cast_to_static_shape_op_conf.set_name("System-AutoGrad-StaticShapeCast-" + NewUniqueId());
     CastToStaticShapeOpConf* cast_to_static_shape_conf =
         cast_to_static_shape_op_conf.mutable_cast_to_static_shape_conf();
     cast_to_static_shape_conf->set_in(GenLogicalBlobName(diff_lbi));
     cast_to_static_shape_conf->set_out("out");
+    cast_to_static_shape_op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
                         {cast_to_static_shape_op_conf});
     diff_lbi.set_op_name(cast_to_static_shape_op_conf.name());

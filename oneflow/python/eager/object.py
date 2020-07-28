@@ -18,8 +18,6 @@ from __future__ import absolute_import
 import oneflow.python.eager.symbol as symbol_util
 import oneflow
 
-import traceback
-
 
 class Object(object):
     def __init__(self, object_id, parallel_desc_symbol):
@@ -59,7 +57,3 @@ class BlobObject(Object):
         for release in self.release_:
             release(self)
         self.release_ = []
-
-    def InitOpArgBlobAttr(self, op_arg_blob_attr):
-        assert self.op_arg_blob_attr_ is None
-        self.op_arg_blob_attr_ = op_arg_blob_attr

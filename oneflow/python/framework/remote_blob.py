@@ -115,6 +115,11 @@ class LazyConsistentBlob(ConsistentBlob):
 
     @property
     def shape(self):
+        if oneflow.scope.mirrored_view_enabled():
+            print(
+                "WARNING:",
+                "You access a consistent blob shape in mirrored view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+            )
         return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.lbn_)
 
     @property
@@ -191,6 +196,11 @@ class LazyMirroredBlob(MirroredBlob):
 
     @property
     def shape(self):
+        if oneflow.scope.consistent_view_enabled():
+            print(
+                "WARNING:",
+                "You access a mirrored blob shape in consistent view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+            )
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
             self.job_name_, self.lbn_
         )
@@ -346,18 +356,20 @@ class EagerBlobTrait(object):
 
             def BoxingToSingleDevice(builder):
                 parallel_conf = placement_pb.ParallelConf()
-                parallel_conf.device_name.append(
-                    "{}:{}:{}".format(0, blob_object.parallel_desc_symbol.device_tag, 0)
-                )
+                parallel_conf.device_tag = blob_object.parallel_desc_symbol.device_tag
+                parallel_conf.device_name.append("{}:{}".format(0, 0))
                 tmp_parallel_desc_symbol = builder.GetParallelDescSymbol(parallel_conf)
                 tmp_op_arg_parallel_attr = op_arg_util.OpArgParallelAttribute(
                     tmp_parallel_desc_symbol,
                     blob_object.op_arg_parallel_attr.sbp_parallel,
                     blob_object.op_arg_parallel_attr.opt_mirrored_parallel,
                 )
-                tmp_blob_object = boxing_util.BoxingTo(
-                    builder, blob_object, tmp_op_arg_parallel_attr
-                )
+                with oneflow.scope.placement(
+                    self.parallel_conf.device_tag, list(self.parallel_conf.device_name)
+                ):
+                    tmp_blob_object = boxing_util.BoxingTo(
+                        builder, blob_object, tmp_op_arg_parallel_attr
+                    )
                 nonlocal consistent_blob_name
                 consistent_blob_name = "{}-consistent".format(self.logical_blob_name)
                 if not blob_register.HasObject4BlobName(consistent_blob_name):

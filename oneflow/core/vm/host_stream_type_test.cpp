@@ -42,7 +42,7 @@ TEST(HostStreamType, basic) {
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject", "Malloc"});
   auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
-  int64_t object_id = TestUtil::NewObject(&list, "0:cpu:0");
+  int64_t object_id = TestUtil::NewObject(&list, "cpu", "0:0");
   list.EmplaceBack(
       NewInstruction("CudaMallocHost")->add_mut_operand(object_id)->add_int64_operand(1024));
   list.EmplaceBack(NewInstruction("CudaFreeHost")->add_mut_operand(object_id));
@@ -69,7 +69,7 @@ TEST(HostStreamType, two_device) {
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), parallel_num, {"Malloc"});
   auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
-  int64_t object_id = TestUtil::NewObject(&list, "0:cpu:0-1");
+  int64_t object_id = TestUtil::NewObject(&list, "cpu", "0:0-1");
   list.EmplaceBack(
       NewInstruction("CudaMallocHost")->add_mut_operand(object_id)->add_int64_operand(1024));
   vm->Receive(&list);
