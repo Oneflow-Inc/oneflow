@@ -33,11 +33,10 @@ def _read_images_by_cv(image_files):
 
 
 def test_summary(test_case):
-    flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
-    logdir = "./oneflow/log"
+    logdir = "/home/zjhushengjian/oneflow/log"
 
     @flow.global_function(func_config)
     def CreateWriter():
@@ -45,24 +44,24 @@ def test_summary(test_case):
 
     @flow.global_function(func_config)
     def ScalarJob(
-        value=flow.MirroredTensorDef((1,), dtype=flow.float),
-        step=flow.MirroredTensorDef((1,), dtype=flow.int64),
-        tag=flow.MirroredTensorDef((1000,), dtype=flow.int8),
+        value:flow.typing.ListNumpy.Placeholder((1,), dtype=flow.float),
+        step:flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
+        tag:flow.typing.ListNumpy.Placeholder((1000,), dtype=flow.int8),
     ):
         flow.summary.scalar(value, step, tag)
 
     @flow.global_function(func_config)
     def HistogramJob(
-        value=flow.MirroredTensorDef((200, 200, 200), dtype=flow.float),
-        step=flow.MirroredTensorDef((1,), dtype=flow.int64),
-        tag=flow.MirroredTensorDef((9,), dtype=flow.int8),
+        value:flow.typing.ListNumpy.Placeholder((200, 200, 200), dtype=flow.float),
+        step:flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
+        tag:flow.typing.ListNumpy.Placeholder((9,), dtype=flow.int8),
     ):
         flow.summary.histogram(value, step, tag)
 
     @flow.global_function(func_config)
     def PbJob(
-        value=flow.MirroredTensorDef((1500,), dtype=flow.int8),
-        step=flow.MirroredTensorDef((1,), dtype=flow.int64),
+        value:flow.typing.ListNumpy.Placeholder((1500,), dtype=flow.int8),
+        step:flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
     ):
         flow.summary.pb(value, step=step)
 
@@ -148,7 +147,9 @@ def test_summary(test_case):
     graph = flow.summary.Graph(logdir)
     graph.write_structure_graph()
 
+
 test_summary(1)
+
 
 def summary_image():
     flow.clear_default_session()
@@ -163,9 +164,9 @@ def summary_image():
 
     @flow.global_function(func_config)
     def ImageJob(
-        value=flow.MirroredTensorDef(shape=(100, 2000, 2000, 4), dtype=flow.uint8),
-        step=flow.MirroredTensorDef((1,), dtype=flow.int64),
-        tag=flow.MirroredTensorDef((10,), dtype=flow.int8),
+        value:flow.typing.ListNumpy.Placeholder(shape=(100, 2000, 2000, 4), dtype=flow.uint8),
+        step:flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
+        tag:flow.typing.ListNumpy.Placeholder((10,), dtype=flow.int8),
     ):
         flow.summary.image(value, step=step, tag=tag)
 
