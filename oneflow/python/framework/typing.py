@@ -202,17 +202,11 @@ def OriginFrom(parameterised, generic):
         if not hasattr(parameterised, "__origin__"):
             return False
         if generic == typing.Dict:
-            return (
-                and parameterised.__origin__ is dict
-            )
+            return parameterised.__origin__ is dict
         if generic == typing.Tuple:
-            return (
-                and parameterised.__origin__ is tuple
-            )
+            return parameterised.__origin__ is tuple
         if generic == typing.List:
-            return (
-                and parameterised.__origin__ is list
-            )
+            return parameterised.__origin__ is list
         if generic == Callback:
             return parameterised.__origin__ is Callback
 
