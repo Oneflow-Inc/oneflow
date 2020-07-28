@@ -110,7 +110,7 @@ class OfBlob(object):
 
     def _CopyBodyFromNdarray(self, src_ndarray):
         assert not self.is_dynamic
-        method_name = oneflow_api.Dtype_GetOfBlobCurTensorCopyToBufferFuncName(
+        method_name = oneflow_api.Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName(
             self.dtype.oneflow_proto_dtype
         )
         copy_method = getattr(oneflow_api, method_name)
