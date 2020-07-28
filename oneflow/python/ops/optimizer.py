@@ -30,7 +30,7 @@ from typing import Tuple, Optional, Union, Sequence
 class LrScheduler:
     def __init__(
         self,
-        base_lr: float,
+        base_lr: Optional[float] = None,
         lr_lbn: Optional[str] = None,
         warmup_steps: int = 0,
         warmup_begin_multiplier: float = 0,
@@ -90,7 +90,7 @@ class CosineScheduler(LrScheduler):
         warmup_mode: str = "linear",
     ):
         super().__init__(
-            base_lr,
+            base_lr=base_lr,
             warmup_steps=warmup_steps,
             warmup_begin_multiplier=warmup_begin_multiplier,
             warmup_mode=warmup_mode,
@@ -109,7 +109,7 @@ class CosineScheduler(LrScheduler):
 @oneflow_export("optimizer.CustomScheduler")
 class CustomScheduler(LrScheduler):
     def __init__(self, lbn: str):
-        super().__init__(0, lr_lbn=lbn)
+        super().__init__(lr_lbn=lbn)
 
     @property
     def learning_rate_decay_conf(self) -> op_conf_pb.LearningRateDecayConf:
@@ -120,16 +120,15 @@ class CustomScheduler(LrScheduler):
 class PiecewiseConstantScheduler(LrScheduler):
     def __init__(
         self,
-        # TODO(daquexian): refine api
-        base_lr: float,
         boundaries: Sequence[int],
         values: Sequence[float],
         warmup_steps=0,
         warmup_begin_multiplier=0,
         warmup_mode="linear",
     ):
+        assert len(boundaries) + 1 == len(values)
         super().__init__(
-            base_lr,
+            base_lr=values[0],
             warmup_steps=warmup_steps,
             warmup_begin_multiplier=warmup_begin_multiplier,
             warmup_mode=warmup_mode,
@@ -151,7 +150,6 @@ class PiecewiseConstantScheduler(LrScheduler):
 class PiecewiseScalingScheduler(LrScheduler):
     def __init__(
         self,
-        # TODO(daquexian): refine api
         base_lr,
         boundaries,
         scales,
@@ -159,6 +157,7 @@ class PiecewiseScalingScheduler(LrScheduler):
         warmup_begin_multiplier=0,
         warmup_mode="linear",
     ):
+        assert len(boundaries) == len(scales)
         super().__init__(
             base_lr,
             warmup_steps=warmup_steps,
@@ -166,7 +165,7 @@ class PiecewiseScalingScheduler(LrScheduler):
             warmup_mode=warmup_mode,
         )
         self.boundaries = boundaries
-        self.scales = scales
+        self.scales = [1] + scales
 
     @property
     def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
@@ -341,10 +340,7 @@ class Optimizer:
     def __init__(
         self,
         lr_scheduler: LrScheduler,
-        loss_scale_factor: Optional[float] = None,
-        weight_decay: Optional[float] = None,
-        weight_decay_includes: Optional[Sequence[str]] = None,
-        weight_decay_excludes: Optional[Sequence[str]] = None,
+        loss_scale_factor: Optional[int] = None,
         clip: Optional[float] = None,
         train_step_lbn: Optional[str] = None,
     ):
@@ -366,19 +362,10 @@ class Optimizer:
         update_conf = train_conf.model_update_conf
         if self.clip is not None:
             update_conf.clip_conf.clip_by_global_norm.clip_norm = self.clip
-        if self.weight_decay is not None:
-            update_conf.weight_decay_conf.weight_decay_rate = weight_decay
-            assert not (
-                self.weight_decay_excludes is not None
-                and self.weight_decay_includes is not None
-            )
-            # TODO(daquexian):
-            if self.weight_decay_includes is not None:
-                pass
-            else:
-                pass
         if self.train_step_lbn is not None:
             train_conf.train_step_lbn = self.train_step_lbn
+        if self.loss_scale_factor is not None:
+            update_conf.loss_scale_factor = self.loss_scale_factor
         self._SetSpecificFieldsInTrainConf(train_conf)
         return train_conf
 
@@ -394,20 +381,11 @@ class SGD(Optimizer):
         lr_scheduler: LrScheduler,
         loss_scale_factor: Optional[float] = None,
         momentum: int = 0.9,
-        weight_decay: Optional[float] = None,
-        weight_decay_includes: Optional[str] = None,
-        weight_decay_excludes: Optional[str] = None,
         clip: Optional[float] = None,
         train_step_lbn: Optional[str] = None,
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            weight_decay,
-            weight_decay_includes,
-            weight_decay_excludes,
-            clip,
-            train_step_lbn,
+            lr_scheduler, loss_scale_factor, clip, train_step_lbn,
         )
         self.momentum = momentum
 
@@ -428,20 +406,11 @@ class Adam(Optimizer):
         epsilon=1e-8,
         do_bias_correction=False,
         loss_scale_factor: Optional[float] = None,
-        weight_decay: Optional[float] = None,
-        weight_decay_includes: Optional[str] = None,
-        weight_decay_excludes: Optional[str] = None,
         clip: Optional[float] = None,
         train_step_lbn: Optional[str] = None,
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            weight_decay,
-            weight_decay_includes,
-            weight_decay_excludes,
-            clip,
-            train_step_lbn,
+            lr_scheduler, loss_scale_factor, clip, train_step_lbn,
         )
         self.beta1 = beta1
         self.beta2 = beta2
@@ -457,8 +426,8 @@ class Adam(Optimizer):
         )
 
 
-@oneflow_export("optimizer.Adam")
-class Adam(Optimizer):
+@oneflow_export("optimizer.AdamW")
+class AdamW(Optimizer):
     def __init__(
         self,
         lr_scheduler: LrScheduler,
@@ -468,24 +437,25 @@ class Adam(Optimizer):
         do_bias_correction=False,
         loss_scale_factor: Optional[float] = None,
         weight_decay: Optional[float] = None,
-        weight_decay_includes: Optional[str] = None,
-        weight_decay_excludes: Optional[str] = None,
+        weight_decay_includes: Optional[Union[Sequence[str], str]] = None,
+        weight_decay_excludes: Optional[Union[Sequence[str], str]] = None,
         clip: Optional[float] = None,
         train_step_lbn: Optional[str] = None,
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            weight_decay,
-            weight_decay_includes,
-            weight_decay_excludes,
-            clip,
-            train_step_lbn,
+            lr_scheduler, loss_scale_factor, clip, train_step_lbn,
         )
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
         self.do_bias_correction = do_bias_correction
+        self.weight_decay = weight_decay
+        if isinstance(weight_decay_includes, str):
+            weight_decay_includes = [weight_decay_includes]
+        if isinstance(weight_decay_excludes, str):
+            weight_decay_excludes = [weight_decay_excludes]
+        self.weight_decay_includes = weight_decay_includes
+        self.weight_decay_excludes = weight_decay_excludes
 
     def _SetSpecificFieldsInTrainConf(self, train_conf):
         train_conf.model_update_conf.adam_conf.beta1 = self.beta1
@@ -494,45 +464,22 @@ class Adam(Optimizer):
         train_conf.model_update_conf.adam_conf.do_bias_correction = (
             self.do_bias_correction
         )
-
-
-@oneflow_export("optimizer.Adam")
-class Adam(Optimizer):
-    def __init__(
-        self,
-        lr_scheduler: LrScheduler,
-        beta1=0.9,
-        beta2=0.999,
-        epsilon=1e-8,
-        do_bias_correction=False,
-        loss_scale_factor: Optional[float] = None,
-        weight_decay: Optional[float] = None,
-        weight_decay_includes: Optional[str] = None,
-        weight_decay_excludes: Optional[str] = None,
-        clip: Optional[float] = None,
-        train_step_lbn: Optional[str] = None,
-    ):
-        super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            weight_decay,
-            weight_decay_includes,
-            weight_decay_excludes,
-            clip,
-            train_step_lbn,
-        )
-        self.beta1 = beta1
-        self.beta2 = beta2
-        self.epsilon = epsilon
-        self.do_bias_correction = do_bias_correction
-
-    def _SetSpecificFieldsInTrainConf(self, train_conf):
-        train_conf.model_update_conf.adam_conf.beta1 = self.beta1
-        train_conf.model_update_conf.adam_conf.beta2 = self.beta2
-        train_conf.model_update_conf.adam_conf.epsilon = self.epsilon
-        train_conf.model_update_conf.adam_conf.do_bias_correction = (
-            self.do_bias_correction
-        )
+        if self.weight_decay is not None:
+            train_conf.model_update_conf.weight_decay_conf.weight_decay_rate = (
+                weight_decay
+            )
+            assert not (
+                self.weight_decay_excludes is not None
+                and self.weight_decay_includes is not None
+            )
+            if self.weight_decay_includes is not None:
+                train_conf.model_update_conf.weight_decay_conf.includes.pattern.extend(
+                    self.weight_decay_includes
+                )
+            else:
+                train_conf.model_update_conf.weight_decay_conf.excludes.pattern.extend(
+                    self.weight_decay_excludes
+                )
 
 
 @oneflow_export("optimizer.RMSProp")
@@ -543,20 +490,11 @@ class RMSProp(Optimizer):
         decay_rate: float = 0.99,
         epsilon: float = 1e-8,
         loss_scale_factor: Optional[float] = None,
-        weight_decay: Optional[float] = None,
-        weight_decay_includes: Optional[str] = None,
-        weight_decay_excludes: Optional[str] = None,
         clip: Optional[float] = None,
         train_step_lbn: Optional[str] = None,
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            weight_decay,
-            weight_decay_includes,
-            weight_decay_excludes,
-            clip,
-            train_step_lbn,
+            lr_scheduler, loss_scale_factor, clip, train_step_lbn,
         )
         self.decay_rate = decay_rate
         self.epsilon = epsilon
@@ -575,20 +513,11 @@ class LARS(Optimizer):
         epsilon: float = 1e-9,
         lars_coefficient: float = 0.0001,
         loss_scale_factor: Optional[float] = None,
-        weight_decay: Optional[float] = None,
-        weight_decay_includes: Optional[str] = None,
-        weight_decay_excludes: Optional[str] = None,
         clip: Optional[float] = None,
         train_step_lbn: Optional[str] = None,
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            weight_decay,
-            weight_decay_includes,
-            weight_decay_excludes,
-            clip,
-            train_step_lbn,
+            lr_scheduler, loss_scale_factor, clip, train_step_lbn,
         )
         self.momentum_beta = momentum_beta
         self.epsilon = epsilon
@@ -601,7 +530,7 @@ class LARS(Optimizer):
 
 
 @oneflow_export("optimizer.LazyAdam")
-class LARS(Optimizer):
+class LazyAdam(Optimizer):
     def __init__(
         self,
         lr_scheduler: LrScheduler,
@@ -610,20 +539,11 @@ class LARS(Optimizer):
         epsilon: float = 1e-8,
         lars_coefficient: float = 0.0001,
         loss_scale_factor: Optional[float] = None,
-        weight_decay: Optional[float] = None,
-        weight_decay_includes: Optional[str] = None,
-        weight_decay_excludes: Optional[str] = None,
         clip: Optional[float] = None,
         train_step_lbn: Optional[str] = None,
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            weight_decay,
-            weight_decay_includes,
-            weight_decay_excludes,
-            clip,
-            train_step_lbn,
+            lr_scheduler, loss_scale_factor, clip, train_step_lbn,
         )
         self.beta1 = beta1
         self.beta2 = beta2
