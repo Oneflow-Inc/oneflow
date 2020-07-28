@@ -34,6 +34,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
 from functools import reduce
+import traceback
 
 
 class ArgBlobDef(blob_desc.BlobDesc):
@@ -117,24 +118,7 @@ class ArgBlobDef(blob_desc.BlobDesc):
         return interface_blob_conf
 
 
-@oneflow_export("FixedTensorDef")
 class FixedTensorDef(ArgBlobDef):
-    """`FixedTensorDef` is a placeholder for numpy input of a OneFlow function. 
-    A `numpy.ndarray` takes a `FixedTensorDef`'s place must have a identical shape.
-    For instance::
-        
-        @oneflow.global_function
-        def train(
-            image_blob=oneflow.FixedTensorDef(
-                shape=(2, 255, 255, 3), dtype=flow.float32
-            )
-        ):
-            # your network
-        
-        train(np.random.randn(2, 255, 255, 3).astype(np.float32))
-        
-    """
-
     def __init__(
         self,
         shape: Sequence[int],
@@ -198,27 +182,7 @@ class FixedTensorDef(ArgBlobDef):
         session.AsyncPush(self.op_name, _MakePushNdarrayCallback(arg_ndarray))
 
 
-@oneflow_export("MirroredTensorDef")
 class MirroredTensorDef(ArgBlobDef):
-    """`MirroredTensorDef` is a placeholder for numpy input of a OneFlow function. 
-    A `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
-    For instance::
-        
-        @oneflow.global_function
-        def train(
-            image_blob=oneflow.MirroredTensorDef(
-                shape=(2, 255, 255, 3), dtype=flow.float32
-            )
-        ):
-            # your network
-        
-        input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
-        input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
-        train([input1])
-        train([input2])
-
-    """
-
     def __init__(
         self,
         shape: Sequence[int],
@@ -280,27 +244,7 @@ class MirroredTensorDef(ArgBlobDef):
             )
 
 
-@oneflow_export("MirroredTensorListDef")
 class MirroredTensorListDef(ArgBlobDef):
-    """`MirroredTensorListDef` is a placeholder for numpy input of a OneFlow function. 
-    A `list` of `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
-    For instance::
-        
-        @oneflow.global_function
-        def train(
-            image_blob=oneflow.MirroredTensorListDef(
-                shape=(2, 255, 255, 3), dtype=flow.float32
-            )
-        ):
-            # your network
-        
-        input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
-        input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
-        train([[input1]])
-        train([[input2]])
-
-    """
-
     def __init__(
         self,
         shape: Sequence[int],
@@ -394,3 +338,60 @@ def _MakePushNdarrayCallback(ndarray):
 def _MakePushNdarrayListCallback(ndarray_list):
     copied = [np.copy(ndarray) for ndarray in ndarray_list]
     return lambda ofblob: ofblob.CopyFromNdarrayList(copied)
+
+
+@oneflow_export("FixedTensorDef")
+class DeprecatedFixedTensorDef(FixedTensorDef):
+    def __init__(self, *args, **kwargs):
+        running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
+        if not running_script.endswith('input_blob_def.py"'):
+            print(
+                "WARNING: oneflow.FixedTensorDef has been deprecated. "
+                "Please use oneflow.typing.Numpy.Placeholder instead."
+            )
+            print(
+                """For instance:
+            - def job_func(images=oneflow.FixedTensorDef((32, 1, 28, 28), dtype=flow.float))
+            + def job_func(images:oneflow.typing.Numpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"""
+            )
+            print(traceback.format_stack()[-2])
+
+        super().__init__(*args, **kwargs)
+
+
+@oneflow_export("MirroredTensorDef")
+class DeprecatedMirroredTensorDef(MirroredTensorDef):
+    def __init__(self, *args, **kwargs):
+        running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
+        if not running_script.endswith('input_blob_def.py"'):
+            print(
+                "WARNING: oneflow.MirroredTensorDef has been deprecated. "
+                "Please use oneflow.typing.ListNumpy.Placeholder instead."
+            )
+            print(
+                """For instance:
+            - def job_func(images=oneflow.MirroredTensorDef((32, 1, 28, 28), dtype=flow.float))
+            + def job_func(images:oneflow.typing.ListNumpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"""
+            )
+            print(traceback.format_stack()[-2])
+
+        super().__init__(*args, **kwargs)
+
+
+@oneflow_export("MirroredTensorListDef")
+class DeprecatedTensorListDef(MirroredTensorListDef):
+    def __init__(self, *args, **kwargs):
+        running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
+        if not running_script.endswith('input_blob_def.py"'):
+            print(
+                "WARNING: oneflow.MirroredTensorListDef has been deprecated. "
+                "Please use oneflow.typing.ListListNumpy.Placeholder instead."
+            )
+            print(
+                """For instance:
+            - def job_func(images=oneflow.MirroredTensorListDef((32, 1, 28, 28), dtype=flow.float))
+            + def job_func(images:oneflow.typing.ListListNumpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"""
+            )
+            print(traceback.format_stack()[-2])
+
+        super().__init__(*args, **kwargs)
