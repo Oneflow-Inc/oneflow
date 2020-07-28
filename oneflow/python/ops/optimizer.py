@@ -33,7 +33,7 @@ class ClipGradientConf:
         raise NotImplementedError()
 
 
-@oneflow_export("grad_clipping.by_global_norm")
+@oneflow_export("optimizer.grad_clipping.by_global_norm")
 class ClipByGlobalNorm(ClipGradientConf):
     def __init__(self, clip_norm):
         self.clip_norm = clip_norm
@@ -45,21 +45,50 @@ class ClipByGlobalNorm(ClipGradientConf):
         return clip_conf
 
 
+class WarmupConf:
+    @property
+    def warmup_conf(self) -> op_conf_pb.WarmupConf:
+        raise NotImplementedError()
+
+
+@oneflow_export("optimizer.warmup.constant")
+class ConstantWarmup(WarmupConf):
+    def __init__(self, steps, multiplier):
+        self.steps = steps
+        self.multiplier = multiplier
+
+    @property
+    def warmup_conf(self) -> op_conf_pb.WarmupConf:
+        warmup_conf = op_conf_pb.WarmupConf()
+        warmup_conf.constant_conf.warmup_batches = self.steps
+        warmup_conf.constant_conf.multiplier = self.multiplier
+        return warmup_conf
+
+
+@oneflow_export("optimizer.warmup.linear")
+class LinearWarmup(WarmupConf):
+    def __init__(self, steps, start_multiplier):
+        self.steps = steps
+        self.start_multiplier = start_multiplier
+
+    @property
+    def warmup_conf(self) -> op_conf_pb.WarmupConf:
+        warmup_conf = op_conf_pb.WarmupConf()
+        warmup_conf.linear_conf.warmup_batches = self.steps
+        warmup_conf.linear_conf.start_multiplier = self.start_multiplier
+        return warmup_conf
+
+
 class LrScheduler:
     def __init__(
         self,
         base_lr: Optional[float] = None,
         lr_lbn: Optional[str] = None,
-        warmup_steps: int = 0,
-        warmup_begin_multiplier: float = 0,
-        warmup_mode: str = "linear",
+        warmup: Optional[WarmupConf] = None,
     ):
-        assert warmup_mode in ["linear", "constant"]
         self.base_lr = base_lr
         self.lr_lbn = lr_lbn
-        self.warmup_steps = warmup_steps
-        self.warmup_begin_multiplier = warmup_begin_multiplier
-        self.warmup_mode = warmup_mode
+        self.warmup = warmup
 
     @property
     def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
@@ -83,18 +112,9 @@ class LrScheduler:
 
     @property
     def warmup_conf(self) -> op_conf_pb.WarmupConf:
-        if self.warmup_steps == 0:
+        if self.warmup is None:
             return None
-        warmup_conf = op_conf_pb.WarmupConf()
-        if self.warmup_mode == "linear":
-            warmup_conf.linear_conf.warmup_batches = self.warmup_steps
-            warmup_conf.linear_conf.start_multiplier = self.warmup_begin_multiplier
-        elif self.warmup_mode == "constant":
-            warmup_conf.linear_conf.warmup_batches = self.warmup_steps
-            warmup_conf.linear_conf.multiplier = self.warmup_begin_multiplier
-        else:
-            raise RuntimeError("Unknown warmup_mode '{}'".format(self.warmup_mode))
-        return warmup_conf
+        return self.warmup.warmup_conf
 
 
 @oneflow_export("optimizer.CosineScheduler")
@@ -104,16 +124,9 @@ class CosineScheduler(LrScheduler):
         steps: int,
         base_lr: float,
         alpha: float = 0.0,
-        warmup_steps: int = 0,
-        warmup_begin_multiplier: float = 0,
-        warmup_mode: str = "linear",
+        warmup: Optional[WarmupConf] = None,
     ):
-        super().__init__(
-            base_lr=base_lr,
-            warmup_steps=warmup_steps,
-            warmup_begin_multiplier=warmup_begin_multiplier,
-            warmup_mode=warmup_mode,
-        )
+        super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.alpha = alpha
 
@@ -141,17 +154,10 @@ class PiecewiseConstantScheduler(LrScheduler):
         self,
         boundaries: Sequence[int],
         values: Sequence[float],
-        warmup_steps: int = 0,
-        warmup_begin_multiplier: float = 0,
-        warmup_mode: str = "linear",
+        warmup: Optional[WarmupConf] = None,
     ):
         assert len(boundaries) + 1 == len(values)
-        super().__init__(
-            base_lr=values[0],
-            warmup_steps=warmup_steps,
-            warmup_begin_multiplier=warmup_begin_multiplier,
-            warmup_mode=warmup_mode,
-        )
+        super().__init__(base_lr=values[0], warmup=warmup)
         self.boundaries = boundaries
         self.values = values
 
@@ -172,16 +178,9 @@ class PiecewiseScalingScheduler(LrScheduler):
         base_lr: float,
         boundaries: Sequence[int],
         scale: Union[float, Sequence[float]],
-        warmup_steps: int = 0,
-        warmup_begin_multiplier: float = 0,
-        warmup_mode: str = "linear",
+        warmup: Optional[WarmupConf] = None,
     ):
-        super().__init__(
-            base_lr=base_lr,
-            warmup_steps=warmup_steps,
-            warmup_begin_multiplier=warmup_begin_multiplier,
-            warmup_mode=warmup_mode,
-        )
+        super().__init__(base_lr=base_lr, warmup=warmup)
         self.boundaries = boundaries
         if isinstance(scale, float):
             scale = [scale] * len(boundaries)
@@ -207,16 +206,9 @@ class PolynomialSchduler(LrScheduler):
         end_learning_rate: float = 0.0001,
         power: float = 1.0,
         cycle: bool = False,
-        warmup_steps: int = 0,
-        warmup_begin_multiplier: float = 0,
-        warmup_mode: str = "linear",
+        warmup: Optional[WarmupConf] = None,
     ):
-        super().__init__(
-            base_lr=base_lr,
-            warmup_steps=warmup_steps,
-            warmup_begin_multiplier=warmup_begin_multiplier,
-            warmup_mode=warmup_mode,
-        )
+        super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.end_learning_rate = end_learning_rate
         self.power = power
@@ -242,16 +234,9 @@ class LinearConsineScheduler(LrScheduler):
         num_periods: float = 0.5,
         alpha: float = 0.0,
         beta: float = 0.001,
-        warmup_steps: int = 0,
-        warmup_begin_multiplier: float = 0,
-        warmup_mode: str = "linear",
+        warmup: Optional[WarmupConf] = None,
     ):
-        super().__init__(
-            base_lr=base_lr,
-            warmup_steps=warmup_steps,
-            warmup_begin_multiplier=warmup_begin_multiplier,
-            warmup_mode=warmup_mode,
-        )
+        super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.num_periods = num_periods
         self.alpha = alpha
@@ -274,16 +259,9 @@ class ExponentialScheduler(LrScheduler):
         base_lr: float,
         decay_rate: float,
         staircase=False,
-        warmup_steps: int = 0,
-        warmup_begin_multiplier: float = 0,
-        warmup_mode: str = "linear",
+        warmup: Optional[WarmupConf] = None,
     ):
-        super().__init__(
-            base_lr=base_lr,
-            warmup_steps=warmup_steps,
-            warmup_begin_multiplier=warmup_begin_multiplier,
-            warmup_mode=warmup_mode,
-        )
+        super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.decay_rate = decay_rate
         self.staircase = staircase
@@ -304,16 +282,9 @@ class InverseTimeScheduler(LrScheduler):
         base_lr: float,
         decay_rate: float,
         staircase: bool = False,
-        warmup_steps: int = 0,
-        warmup_begin_multiplier: float = 0,
-        warmup_mode: str = "linear",
+        warmup: Optional[WarmupConf] = None,
     ):
-        super().__init__(
-            base_lr=base_lr,
-            warmup_steps=warmup_steps,
-            warmup_begin_multiplier=warmup_begin_multiplier,
-            warmup_mode=warmup_mode,
-        )
+        super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.decay_rate = decay_rate
         self.staircase = staircase
@@ -334,16 +305,9 @@ class NaturalExpScheduler(LrScheduler):
         base_lr: float,
         decay_rate: float,
         staircase: bool = False,
-        warmup_steps: int = 0,
-        warmup_begin_multiplier: float = 0,
-        warmup_mode: str = "linear",
+        warmup: Optional[WarmupConf] = None,
     ):
-        super().__init__(
-            base_lr=base_lr,
-            warmup_steps=warmup_steps,
-            warmup_begin_multiplier=warmup_begin_multiplier,
-            warmup_mode=warmup_mode,
-        )
+        super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.decay_rate = decay_rate
         self.staircase = staircase
