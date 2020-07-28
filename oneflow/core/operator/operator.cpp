@@ -108,6 +108,20 @@ Maybe<void> Operator::InferParallelSignature() {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Operator::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  ParallelContext parallel_ctx;
+  parallel_ctx.set_parallel_id(0);
+  parallel_ctx.set_parallel_num(1);
+  SbpSignature sbp_signature;
+  auto* map = sbp_signature.mutable_bn_in_op2sbp_parallel();
+  for (const auto& ibn : input_bns()) { (*map)[ibn].mutable_split_parallel()->set_axis(0); }
+  for (const auto& obn : output_bns()) { (*map)[obn].mutable_split_parallel()->set_axis(0); }
+  return InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &sbp_signature, [](OpContext*) {});
+}
+
 Maybe<void> Operator::InferBlobDescsIf(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
