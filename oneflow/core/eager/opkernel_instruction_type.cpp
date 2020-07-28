@@ -156,44 +156,6 @@ Maybe<void> ForEachObnAndBlobObject(vm::Instruction* instruction, const T& args,
 
 template<typename T>
 Maybe<void> MakeBlobDesc4BnInOp(vm::Instruction* instruction, const T& args,
-                                OpKernelObject* opkernel_obj,
-                                std::function<BlobDesc*(const std::string&)>* BlobDesc4BnInOp) {
-  const auto& obn2blob_desc = std::make_shared<HashMap<std::string, BlobDesc*>>();
-  {
-    HashSet<const BlobDesc*> out_blob_descs;
-    JUST(ForEachObnAndBlobObject(
-        instruction, args,
-        [&](const std::string& bn_in_op, BlobObject* blob_object) -> Maybe<void> {
-          auto* blob_desc = blob_object->mut_blob_desc();
-          CHECK_OR_RETURN(out_blob_descs.insert(blob_desc).second);
-          CHECK_OR_RETURN(obn2blob_desc->emplace(bn_in_op, blob_desc).second);
-          return Maybe<void>::Ok();
-        }));
-  }
-  const auto& ibn2blob_desc = std::make_shared<HashMap<std::string, const BlobDesc*>>();
-  JUST(ForEachIbnAndBlobObject(
-      instruction, args,
-      [&](const std::string& bn_in_op, const BlobObject& blob_object) -> Maybe<void> {
-        CHECK_OR_RETURN(ibn2blob_desc->emplace(bn_in_op, &blob_object.blob_desc()).second);
-        return Maybe<void>::Ok();
-      }));
-  const std::string tmp_bn = GenRepeatedBn("tmp_buffer", 0);
-  BlobDesc* tmp = opkernel_obj->mut_tmp_buffer_blob_object()->mut_blob_desc();
-  *BlobDesc4BnInOp = [obn2blob_desc, ibn2blob_desc, tmp_bn,
-                      tmp](const std::string& bn_in_op) -> BlobDesc* {
-    const auto& output_iter = obn2blob_desc->find(bn_in_op);
-    if (output_iter != obn2blob_desc->end()) { return output_iter->second; }
-    const auto& input_iter = ibn2blob_desc->find(bn_in_op);
-    if (input_iter != ibn2blob_desc->end()) { return const_cast<BlobDesc*>(input_iter->second); }
-    if (tmp_bn == bn_in_op) { return tmp; }
-    return nullptr;
-  };
-  return Maybe<void>::Ok();
-}
-
-template<typename T>
-Maybe<void> MakeBlobDesc4BnInOp(vm::Instruction* instruction, const T& args,
-                                SystemOpKernelObject* opkernel_obj,
                                 std::function<BlobDesc*(const std::string&)>* BlobDesc4BnInOp) {
   const auto& obn2blob_desc = std::make_shared<HashMap<std::string, BlobDesc*>>();
   {
@@ -225,42 +187,14 @@ Maybe<void> MakeBlobDesc4BnInOp(vm::Instruction* instruction, const T& args,
 }
 
 template<typename T>
-Maybe<void> MakeBlob4BnInOp(vm::Instruction* instruction, const T& args,
-                            OpKernelObject* opkernel_obj,
-                            std::function<Blob*(const std::string&)>* Blob4BnInOp) {
+Maybe<void> MakeBlob4BnInOp(
+    vm::Instruction* instruction, const T& args,
+    std::function<Blob*(const std::string&)>* Blob4BnInOp,
+    const std::function<bool(const std::string&, const BlobObject&)>& FilterOutBlob) {
   const auto& obn2blob = std::make_shared<HashMap<std::string, Blob*>>();
   JUST(ForEachObnAndBlobObject(
       instruction, args, [&](const std::string& bn_in_op, BlobObject* blob_object) -> Maybe<void> {
-        CHECK_OR_RETURN(obn2blob->emplace(bn_in_op, blob_object->mut_blob()).second);
-        return Maybe<void>::Ok();
-      }));
-  const auto& ibn2blob = std::make_shared<HashMap<std::string, const Blob*>>();
-  JUST(ForEachIbnAndBlobObject(
-      instruction, args,
-      [&](const std::string& bn_in_op, const BlobObject& blob_object) -> Maybe<void> {
-        CHECK_OR_RETURN(ibn2blob->emplace(bn_in_op, &blob_object.blob()).second);
-        return Maybe<void>::Ok();
-      }));
-  const std::string tmp_bn = GenRepeatedBn("tmp_buffer", 0);
-  Blob* tmp = opkernel_obj->mut_tmp_buffer_blob_object()->mut_blob();
-  *Blob4BnInOp = [obn2blob, ibn2blob, tmp_bn, tmp](const std::string& bn_in_op) -> Blob* {
-    const auto& output_iter = obn2blob->find(bn_in_op);
-    if (output_iter != obn2blob->end()) { return output_iter->second; }
-    const auto& input_iter = ibn2blob->find(bn_in_op);
-    if (input_iter != ibn2blob->end()) { return const_cast<Blob*>(input_iter->second); }
-    if (tmp_bn == bn_in_op) { return tmp; }
-    return nullptr;
-  };
-  return Maybe<void>::Ok();
-}
-
-template<typename T>
-Maybe<void> MakeBlob4BnInOp(vm::Instruction* instruction, const T& args,
-                            SystemOpKernelObject* opkernel_obj,
-                            std::function<Blob*(const std::string&)>* Blob4BnInOp) {
-  const auto& obn2blob = std::make_shared<HashMap<std::string, Blob*>>();
-  JUST(ForEachObnAndBlobObject(
-      instruction, args, [&](const std::string& bn_in_op, BlobObject* blob_object) -> Maybe<void> {
+        if (!FilterOutBlob(bn_in_op, *blob_object)) { return Maybe<void>::Ok(); }
         CHECK_OR_RETURN(obn2blob->emplace(bn_in_op, blob_object->mut_blob()).second);
         return Maybe<void>::Ok();
       }));
@@ -282,6 +216,13 @@ Maybe<void> MakeBlob4BnInOp(vm::Instruction* instruction, const T& args,
 }
 
 template<typename T>
+Maybe<void> MakeBlob4BnInOp(vm::Instruction* instruction, const T& args,
+                            std::function<Blob*(const std::string&)>* Blob4BnInOp) {
+  return MakeBlob4BnInOp(instruction, args, Blob4BnInOp,
+                         [](const std::string&, const BlobObject&) { return true; });
+}
+
+template<typename T>
 void InitOutputBlobObjects(vm::Instruction* instruction, const T& args,
                            const std::shared_ptr<MemoryCase>& mem_case, DataType data_type) {
   const auto& InitRwMutexedObject = [&](vm::RwMutexedObject* rw_mutexed_object) {
@@ -299,12 +240,6 @@ void InitOutputBlobObjects(vm::Instruction* instruction, const T& args,
   FOR_RANGE(int, i, 0, args.mut2_output_blob_size()) {
     InitRwMutexedObject(instruction->mut_operand_type(args.mut2_output_blob(i)));
   }
-}
-
-void ResetTmpBufferBlobObject(OpKernelObject* opkernel_obj, DeviceType device_type,
-                              int64_t device_id, DataType default_data_type) {
-  const auto& mem_case = MakeMemCase(device_type, device_id);
-  opkernel_obj->reset_tmp_buffer_blob_object(new BlobObject(mem_case, default_data_type));
 }
 
 template<typename T>
@@ -345,16 +280,14 @@ Maybe<void> CheckBlobParallel(vm::Instruction* instruction, const T& args,
 
 template<typename T>
 Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruction, const T& args,
-                          const std::shared_ptr<MemoryCase>& mem_case, DeviceType device_type) {
+                          const std::shared_ptr<MemoryCase>& mem_case) {
   {
     DataType default_data_type = opkernel_obj->job_desc().DefaultDataType();
     CHECK_NE_OR_RETURN(default_data_type, DataType::kInvalidDataType);
     InitOutputBlobObjects(instruction, args, mem_case, default_data_type);
-    int64_t device_id = instruction->stream().device_id();
-    ResetTmpBufferBlobObject(opkernel_obj, device_type, device_id, default_data_type);
   }
   std::function<BlobDesc*(const std::string&)> BlobDesc4BnInOp;
-  JUST(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj, &BlobDesc4BnInOp));
+  JUST(MakeBlobDesc4BnInOp(instruction, args, &BlobDesc4BnInOp));
   const OpNodeSignatureDesc* op_node_signature = nullptr;
   {
     const auto* operand = instruction->operand_type(args.op_node_signature());
@@ -371,25 +304,26 @@ Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruc
                                [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
                                  return blob_object->TryInitBlob();
                                }));
-  if (opkernel_obj->tmp_buffer_blob_object().blob_desc().shape().elem_cnt() > 0) {
-    JUST(opkernel_obj->mut_tmp_buffer_blob_object()->TryInitBlob());
-  }
   std::function<Blob*(const std::string&)> Blob4BnInOp;
-  JUST(MakeBlob4BnInOp(instruction, args, opkernel_obj, &Blob4BnInOp));
+  Shape empty_shape{};
+  const auto& FilterOutBlob = [&](const std::string& bn_in_op, const BlobObject& blob_object) {
+    return !(bn_in_op == "tmp_buffer_0" && blob_object.blob_desc().shape() == empty_shape);
+  };
+  JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp, FilterOutBlob));
   opkernel_obj->kernel().Infer(Blob4BnInOp);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* instruction,
                           const StatelessCallOpKernelInstrOperand& args,
-                          const std::shared_ptr<MemoryCase>& mem_case, DeviceType device_type) {
+                          const std::shared_ptr<MemoryCase>& mem_case) {
   {
     DataType default_data_type = opkernel_obj->job_desc().DefaultDataType();
     CHECK_NE_OR_RETURN(default_data_type, DataType::kInvalidDataType);
     InitOutputBlobObjects(instruction, args, mem_case, default_data_type);
   }
   std::function<BlobDesc*(const std::string&)> BlobDesc4BnInOp;
-  JUST(MakeBlobDesc4BnInOp(instruction, args, opkernel_obj, &BlobDesc4BnInOp));
+  JUST(MakeBlobDesc4BnInOp(instruction, args, &BlobDesc4BnInOp));
   const OpNodeSignatureDesc* op_node_signature = nullptr;
   {
     const auto* operand = instruction->operand_type(args.op_node_signature());
@@ -407,7 +341,7 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
                                  return blob_object->TryInitBlob();
                                }));
   std::function<Blob*(const std::string&)> Blob4BnInOp;
-  JUST(MakeBlob4BnInOp(instruction, args, opkernel_obj, &Blob4BnInOp));
+  JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
   opkernel_obj->kernel().SystemForwardHeader(KernelCtx(), Blob4BnInOp);
   return Maybe<void>::Ok();
 }
@@ -421,13 +355,14 @@ Maybe<void> OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instr
                                  blob_object->TryAllocateBlobBodyMemory(device_ctx);
                                  return Maybe<void>::Ok();
                                }));
-  if (opkernel_obj->mut_tmp_buffer_blob_object()->blob_desc().shape().elem_cnt() > 0) {
-    opkernel_obj->mut_tmp_buffer_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
-  }
   std::shared_ptr<user_op::OpKernelState> new_state;
   {
     std::function<Blob*(const std::string&)> Blob4BnInOp;
-    JUST(MakeBlob4BnInOp(instruction, args, opkernel_obj, &Blob4BnInOp));
+    Shape empty_shape{};
+    const auto& FilterOutBlob = [&](const std::string& bn_in_op, const BlobObject& blob_object) {
+      return !(bn_in_op == "tmp_buffer_0" && blob_object.blob_desc().shape() == empty_shape);
+    };
+    JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp, FilterOutBlob));
     EagerKernel* eager_kernel = opkernel_obj->mut_kernel();
     const auto& old_state = opkernel_obj->opkernel_state();
     new_state = eager_kernel->EagerForward(old_state, device_ctx, Blob4BnInOp);
@@ -447,7 +382,7 @@ Maybe<void> OpKernelCompute(SystemOpKernelObject* opkernel_obj, vm::Instruction*
   KernelCtx kernel_ctx;
   kernel_ctx.device_ctx = device_ctx;
   std::function<Blob*(const std::string&)> Blob4BnInOp;
-  JUST(MakeBlob4BnInOp(instruction, args, opkernel_obj, &Blob4BnInOp));
+  JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
   opkernel_obj->kernel().SystemForwardDataContent(kernel_ctx, Blob4BnInOp);
   return Maybe<void>::Ok();
 }
@@ -478,7 +413,7 @@ Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction
   DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
   int64_t device_id = instruction->stream().device_id();
   const auto& mem_case = MakeMemCase(device_type, device_id);
-  JUST(OpKernelInfer(opkernel_obj, instruction, args, mem_case, device_type));
+  JUST(OpKernelInfer(opkernel_obj, instruction, args, mem_case));
   return Maybe<void>::Ok();
 }
 
@@ -520,7 +455,7 @@ Maybe<void> UserStatelessCallOpKernelInstructionType::Infer(
   int64_t device_id = instruction->stream().device_id();
   auto* opkernel = JUST(GetSharedOpKernel<OpKernelObject>(instruction, device_type, args));
   const auto& mem_case = MakeMemCase(device_type, device_id);
-  JUST(OpKernelInfer(opkernel, instruction, args, mem_case, device_type));
+  JUST(OpKernelInfer(opkernel, instruction, args, mem_case));
   return Maybe<void>::Ok();
 }
 
@@ -564,7 +499,7 @@ Maybe<void> SystemStatelessCallOpKernelInstructionType::Infer(
   int64_t device_id = instruction->stream().device_id();
   auto* opkernel = JUST(GetSharedOpKernel<SystemOpKernelObject>(instruction, device_type, args));
   const auto& mem_case = GetOutBlobMemCase(device_type, device_id);
-  JUST(OpKernelInfer(opkernel, instruction, args, mem_case, device_type));
+  JUST(OpKernelInfer(opkernel, instruction, args, mem_case));
   return Maybe<void>::Ok();
 }
 
