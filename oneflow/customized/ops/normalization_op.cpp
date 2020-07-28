@@ -333,7 +333,7 @@ REGISTER_USER_OP_GRAD("normalization")
 
       const auto var_add_eps_op_name =
           "System-AutoGrad-" + ctx->FwOp().op_name() + "-VarianceAddEpsilon";
-      ctx->DefineOp(var_add_eps_op_name, [&](user_op::UserOpConfWrapperBuilder& builder) {
+      ctx->DefineOp(var_add_eps_op_name, [&ctx](user_op::UserOpConfWrapperBuilder& builder) {
         return builder.OpTypeName("scalar_add")
             .InputBind("in", ctx->FwOp().input("moving_variance", 0))
             .Attr("has_float_operand", true)
@@ -344,16 +344,18 @@ REGISTER_USER_OP_GRAD("normalization")
             .Build();
       });
 
-      const atuo var_rsqrt_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "-VarianceRsqrt";
-      ctx->DefineOp(var_rsqrt_op_name, [&](user_op::UserOpConfWrapperBuilder& builder) {
-        return builder.OpTypeName("rsqrt")
-            .InputBind("x", ctx->GetOp(var_add_eps_op_name).output("out", 0))
-            .Output("y")
-            .Build();
-      });
+      const auto var_rsqrt_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "-VarianceRsqrt";
+      ctx->DefineOp(var_rsqrt_op_name,
+                    [&ctx, &var_add_eps_op_name](user_op::UserOpConfWrapperBuilder& builder) {
+                      return builder.OpTypeName("rsqrt")
+                          .InputBind("x", ctx->GetOp(var_add_eps_op_name).output("out", 0))
+                          .Output("y")
+                          .Build();
+                    });
 
       const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(grad_op_name, [&](user_op::UserOpConfWrapperBuilder& builder) {
+      ctx->DefineOp(grad_op_name, [&ctx, &is_training,
+                                   &var_rsqrt_op_name](user_op::UserOpConfWrapperBuilder& builder) {
         builder.OpTypeName("normalization_grad")
             .InputBind("x", ctx->FwOp().input("x", 0))
             .InputBind("dy", ctx->FwOp().output_grad("y", 0))
@@ -377,7 +379,7 @@ REGISTER_USER_OP_GRAD("normalization")
       // reference: https://github.com/pytorch/pytorch/issues/4284
       const auto axis = ctx->FwOp().attr<int32_t>("axis");
       const auto BroadcastMulAtAxisOpDefine =
-          [&axis, &ctx](std::function<std::string()> scale_bn_func,
+          [&ctx, &axis](std::function<std::string()> scale_bn_func,
                         std::function<std::string()> input_bn_func, const std::string& name) {
             DimVector broadcast_dim_vec;
             const auto& in_shape = ctx->FwOp().arg_tensor_desc("x", 0).shape();
@@ -391,7 +393,9 @@ REGISTER_USER_OP_GRAD("normalization")
             const Shape broadcast_shape(broadcast_dim_vec);
 
             const auto reshape_op_name = "System-AutoGrad-" + name + "-Reshape";
-            ctx->DefineOp(reshape_op_name, [&](user_op::UserOpConfWrapperBuilder& builder) {
+            // note problem
+            ctx->DefineOp(reshape_op_name, [&scale_bn_func, &broadcast_shape](
+                                               user_op::UserOpConfWrapperBuilder& builder) {
               return builder.OpTypeName("reshape")
                   .InputBind("in", scale_bn_func())
                   .Attr("shape", broadcast_shape)
@@ -400,7 +404,9 @@ REGISTER_USER_OP_GRAD("normalization")
             });
 
             const auto mul_op_name = "System-AutoGrad-" + name + "-BroadcastMul";
-            ctx->DefineOp(mul_op_name, [&](user_op::UserOpConfWrapperBuilder& builder) {
+            // note problem
+            ctx->DefineOp(mul_op_name, [&ctx, &reshape_op_name, &input_bn_func](
+                                           user_op::UserOpConfWrapperBuilder& builder) {
               return builder.OpTypeName("broadcast_mul")
                   .InputBind("x", ctx->GetOp(reshape_op_name).output("out", 0))
                   .InputBind("y", input_bn_func())
@@ -410,7 +416,7 @@ REGISTER_USER_OP_GRAD("normalization")
           };
 
       const auto dy_h2f_cast_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "-Cast-dy-h2f";
-      ctx->DefineOp(dy_h2f_cast_op_name, [&](user_op::UserOpConfWrapperBuilder& builder) {
+      ctx->DefineOp(dy_h2f_cast_op_name, [&ctx](user_op::UserOpConfWrapperBuilder& builder) {
         return builder.OpTypeName("cast")
             .Input("in", ctx->FwOp().output_grad("y", 0))
             .Output("out")
@@ -418,10 +424,10 @@ REGISTER_USER_OP_GRAD("normalization")
             .Build();
       });
 
-      const auto mul_gamma_name = "out_grad_mul_gamma";
+      const std::string mul_gamma_name = "out_grad_mul_gamma";
       const auto dy_mul_gamma_op_name = "System-AutoGrad-" + mul_gamma_name + "-BroadcastMul";
-      BroadcastMulAtAxisOpDefine([&]() { return ctx->FwOp().input("gamma", 0); },
-                                 [&]() {
+      BroadcastMulAtAxisOpDefine([&ctx]() { return ctx->FwOp().input("gamma", 0); },
+                                 [&ctx, &is_fp16, &dy_h2f_cast_op_name]() {
                                    if (is_fp16) {
                                      return ctx->GetOp(dy_h2f_cast_op_name).output("out", 0);
                                    } else {
@@ -430,55 +436,65 @@ REGISTER_USER_OP_GRAD("normalization")
                                  },
                                  mul_gamma_name);
 
-      const auto mul_inv_var_name = "out_grad_mul_inv_var";
+      const std::string mul_inv_var_name = "out_grad_mul_inv_var";
       const auto dy_mul_inv_var_op_name = "System-AutoGrad-" + mul_inv_var_name + "-BroadcastMul";
-      BroadcastMulAtAxisOpDefine([&]() { return ctx->GetOp(var_rsqrt_op_name).output("y", 0); },
-                                 [&]() { return ctx->GetOp(dy_mul_gamma_op_name).output("z", 0); },
-                                 mul_inv_var_name);
+      BroadcastMulAtAxisOpDefine(
+          [&ctx, &var_rsqrt_op_name]() { return ctx->GetOp(var_rsqrt_op_name).output("y", 0); },
+          [&ctx, &dy_mul_gamma_op_name]() {
+            return ctx->GetOp(dy_mul_gamma_op_name).output("z", 0);
+          },
+          mul_inv_var_name);
 
       const auto dx_f2h_cast_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "-Cast-dx-f2h";
-      ctx->DefineOp(dx_f2h_cast_op_name, [&](user_op::UserOpConfWrapperBuilder& builder) {
-        return builder.OpTypeName("cast")
-            .InputBind("in", ctx->GetOp(dy_mul_inv_var_op_name).output("z", 0))
-            .Output("out")
-            .Attr("dtype", DataType::kFloat16)
-            .Build();
-      });
+      ctx->DefineOp(dx_f2h_cast_op_name,
+                    [&ctx, &dy_mul_inv_var_op_name](user_op::UserOpConfWrapperBuilder& builder) {
+                      return builder.OpTypeName("cast")
+                          .InputBind("in", ctx->GetOp(dy_mul_inv_var_op_name).output("z", 0))
+                          .Output("out")
+                          .Attr("dtype", DataType::kFloat16)
+                          .Build();
+                    });
 
       // TODO(liujuncheng): delete identity op when boxing support separated regsts
       const auto gamma_identity_op_name = ctx->FwOp().op_name() + "_grad_gamma_diff_identity";
-      ctx->DefineOp(gamma_identity_op_name, [&](user_op::UserOpConfWrapperBuilder& builder) {
-        return builder.OpTypeName("identity")
-            .InputBind("in", ctx->GetOp(grad_op_name).output("gamma_diff", 0))
-            .Output("out")
-            .Build();
-      });
+      ctx->DefineOp(gamma_identity_op_name,
+                    [&ctx, &grad_op_name](user_op::UserOpConfWrapperBuilder& builder) {
+                      return builder.OpTypeName("identity")
+                          .InputBind("in", ctx->GetOp(grad_op_name).output("gamma_diff", 0))
+                          .Output("out")
+                          .Build();
+                    });
 
       // TODO(liujuncheng): delete identity op when boxing support separated regsts
       const auto beta_identity_op_name = ctx->FwOp().op_name() + "_grad_beta_diff_identity";
-      ctx->DefineOp(beta_identity_op_name, [&](user_op::UserOpConfWrapperBuilder& builder) {
-        return builder.OpTypeName("identity")
-            .InputBind("in", ctx->GetOp(grad_op_name).output("beta_diff", 0))
-            .Output("out")
-            .Build();
-      });
+      ctx->DefineOp(beta_identity_op_name,
+                    [&ctx, &grad_op_name](user_op::UserOpConfWrapperBuilder& builder) {
+                      return builder.OpTypeName("identity")
+                          .InputBind("in", ctx->GetOp(grad_op_name).output("beta_diff", 0))
+                          .Output("out")
+                          .Build();
+                    });
 
-      ctx->FwOp().InputGradBind(OpArg("x", 0), [&]() {
-        if (is_training) {
-          return ctx->GetOp(grad_op_name).output("dx", 0);
-        } else {
-          if (is_fp16) {
-            return ctx->GetOp(dx_f2h_cast_op_name).output("out", 0);
-          } else {
-            return ctx->GetOp(dy_mul_inv_var_op_name).output("z", 0);
-          }
-        }
-      });
+      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
+                                [&ctx, &is_training, &is_fp16, &grad_op_name, &dx_f2h_cast_op_name,
+                                 &dy_mul_inv_var_op_name]() {
+                                  if (is_training) {
+                                    return ctx->GetOp(grad_op_name).output("dx", 0);
+                                  } else {
+                                    if (is_fp16) {
+                                      return ctx->GetOp(dx_f2h_cast_op_name).output("out", 0);
+                                    } else {
+                                      return ctx->GetOp(dy_mul_inv_var_op_name).output("z", 0);
+                                    }
+                                  }
+                                });
 
-      ctx->FwOp().InputGradBind(
-          OpArg("gamma", 0), [&]() { return ctx->GetOp(gamma_identity_op_name).output("out", 0); });
-      ctx->FwOp().InputGradBind(
-          OpArg("beta", 0), [&]() { return ctx->GetOp(beta_identity_op_name).output("out", 0); });
+      ctx->FwOp().InputGradBind(user_op::OpArg("gamma", 0), [&ctx, &gamma_identity_op_name]() {
+        return ctx->GetOp(gamma_identity_op_name).output("out", 0);
+      });
+      ctx->FwOp().InputGradBind(user_op::OpArg("beta", 0), [&ctx, &beta_identity_op_name]() {
+        return ctx->GetOp(beta_identity_op_name).output("out", 0);
+      });
     });
 
 }  // namespace oneflow

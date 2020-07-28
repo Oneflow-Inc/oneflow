@@ -181,9 +181,10 @@ const TensorDesc& UserOpWrapper::TensorDesc4ArgNameAndIndex(const std::string& a
   return arg_tensor_desc(arg_name, index);
 }
 
-void UserOpWrapper::InputGradBind(OpArg& input, const UserOpInputGradGetFn& grad_fn) {
+void UserOpWrapper::InputGradBind(const user_op::OpArg& input,
+                                  const UserOpInputGradGetFn& grad_fn) {
   if (NeedGenGradTensor4OpInput(input.name(), input.index())) {
-    BindGradTensorWithOpOutput(grad_fn(), input.name(), input.index());
+    BindGradTensorWithOpInput(grad_fn(), input.name(), input.index());
   }
 }
 
@@ -195,7 +196,7 @@ UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::InputBind(
 
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Input(const std::string& arg_name,
                                                           const std::string& logical_blob_name) {
-  reurn InputBind(arg_name, logical_blob_name);
+  return InputBind(arg_name, logical_blob_name);
 }
 
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& arg_name) {
@@ -235,7 +236,7 @@ void BackwardOpConfContext::DefineOp(const std::string& op_name,
                                      const UserOpConfWrapperBuilderFn& fn) {
   auto it = op_builder_fns_.find(op_name);
   CHECK(it == op_builder_fns_.end()) << " op_name " << op_name << " has been defined.";
-  op_builder_fns[op_name] = fn;
+  op_builder_fns_[op_name] = fn;
 }
 
 UserOpConfWrapper& BackwardOpConfContext::GetOp(const std::string& op_name) {
@@ -249,7 +250,8 @@ UserOpConfWrapper& BackwardOpConfContext::GetOp(const std::string& op_name) {
     CHECK(fn_it != op_builder_fns_.end()) << " op_name " << op_name << " has no builder function.";
     CHECK(fn_it->second != nullptr) << " op_name " << op_name << " builder function is null.";
     UserOpConfWrapperBuilder builder(op_name);
-    auto ret = op_builder_results_.emplace(std::make_pair(op_name, std::move(fn_it->second(builder));
+    auto ret =
+        op_builder_results_.emplace(std::make_pair(op_name, std::move(fn_it->second(builder))));
     CHECK(ret.second == true) << " op_name " << op_name << " build result insert failed.";
 
     // add new op conf
@@ -260,10 +262,6 @@ UserOpConfWrapper& BackwardOpConfContext::GetOp(const std::string& op_name) {
 }
 
 }  // namespace user_op
-
-}  // namespace oneflow
-
-namespace {
 
 Maybe<void> CheckArgDefIsValidInUserOpConf(
     const OperatorConf& op_conf, const PbMap<std::string, UserOpConf_ListString>& arg_name2lbns,
@@ -342,8 +340,6 @@ Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf*
   }
   return Maybe<void>::Ok();
 }
-
-}  // namespace
 
 Maybe<long long> GetUserOpAttrTypeImpl(const std::string& op_type_name,
                                        const std::string& attr_name) {

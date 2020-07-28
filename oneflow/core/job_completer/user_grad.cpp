@@ -35,8 +35,8 @@ Maybe<void> GenerateBackwardOpConf(
 
   user_op::UserOpWrapper fw_user_op(fw_op.op_conf(), LogicalBlobDesc4BnInOp, DiffLbi4BnInOp);
   if (nullptr != val->bw_gen_fn) {
-    // new interface
-    BackwardOpConfContext ctx(fw_user_op, bw_op_confs);
+    // new refined interface
+    user_op::BackwardOpConfContext ctx(fw_user_op, bw_op_confs);
     val->bw_gen_fn(&ctx);
   } else if (nullptr != val->gen_bw_fn) {
     // old interface, will be removed when all backward gradient configs are using new interface
