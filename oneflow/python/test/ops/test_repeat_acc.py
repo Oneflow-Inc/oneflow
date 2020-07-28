@@ -23,6 +23,9 @@ func_config.default_data_type(flow.float)
 
 
 def test_repeat_acc(test_case):
+    if flow.eager_execution_enabled():
+        return
+
     @flow.global_function(func_config)
     def RepeatAccJob(a: oft.Numpy.Placeholder((3, 4))):
         return flow.acc(flow.repeat(a, 3), 3)
