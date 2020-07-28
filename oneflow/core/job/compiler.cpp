@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/job_completer/job_completer.h"
+#include "oneflow/core/job_rewriter/job_completer.h"
 
 namespace oneflow {
 
