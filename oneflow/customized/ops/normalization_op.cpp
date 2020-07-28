@@ -184,7 +184,7 @@ REGISTER_USER_OP_GRAD("normalization")
             .Attr("int_operand", static_cast<int64_t>(0))
             .Attr("float_operand", static_cast<double>(ctx->FwOp().attr<float>("epsilon")))
             .Output("out")
-            .Finish();
+            .Build();
       });
 
       const atuo var_rsqrt_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "-VarianceRsqrt";
@@ -192,7 +192,7 @@ REGISTER_USER_OP_GRAD("normalization")
         return builder.OpTypeName("rsqrt")
             .InputBind("x", ctx->GetOp(var_add_eps_op_name).output("out", 0))
             .Output("y")
-            .Finish();
+            .Build();
       });
 
       const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
@@ -213,7 +213,7 @@ REGISTER_USER_OP_GRAD("normalization")
           builder.InputBind("mean", ctx->FwOp().input("moving_mean", 0))
               .InputBind("inv_variance", ctx->GetOp(var_rsqrt_op_name).output("y", 0));
         }
-        return builder.Finish();
+        return builder.Build();
       });
 
       // calculate dx manually as cudnn cannot be used in evaluation mode
@@ -239,7 +239,7 @@ REGISTER_USER_OP_GRAD("normalization")
                   .InputBind("in", scale_bn_func())
                   .Attr("shape", broadcast_shape)
                   .Output("out")
-                  .Finish();
+                  .Build();
             });
 
             const auto mul_op_name = "System-AutoGrad-" + name + "-BroadcastMul";
@@ -248,7 +248,7 @@ REGISTER_USER_OP_GRAD("normalization")
                   .InputBind("x", ctx->GetOp(reshape_op_name).output("out", 0))
                   .InputBind("y", input_bn_func())
                   .Output("z")
-                  .Finish();
+                  .Build();
             });
           };
 
@@ -258,7 +258,7 @@ REGISTER_USER_OP_GRAD("normalization")
             .Input("in", ctx->FwOp().output_grad("y", 0))
             .Output("out")
             .Attr("dtype", ctx->FwOp().TensorDesc4ArgNameAndIndex("gamma", 0).data_type())
-            .Finish();
+            .Build();
       });
 
       const auto mul_gamma_name = "out_grad_mul_gamma";
@@ -285,7 +285,7 @@ REGISTER_USER_OP_GRAD("normalization")
             .InputBind("in", ctx->GetOp(dy_mul_inv_var_op_name).output("z", 0))
             .Output("out")
             .Attr("dtype", DataType::kFloat16)
-            .Finish();
+            .Build();
       });
 
       // TODO(liujuncheng): delete identity op when boxing support separated regsts
@@ -294,7 +294,7 @@ REGISTER_USER_OP_GRAD("normalization")
         return builder.OpTypeName("identity")
             .InputBind("in", ctx->GetOp(grad_op_name).output("gamma_diff", 0))
             .Output("out")
-            .Finish();
+            .Build();
       });
 
       // TODO(liujuncheng): delete identity op when boxing support separated regsts
@@ -303,7 +303,7 @@ REGISTER_USER_OP_GRAD("normalization")
         return builder.OpTypeName("identity")
             .InputBind("in", ctx->GetOp(grad_op_name).output("beta_diff", 0))
             .Output("out")
-            .Finish();
+            .Build();
       });
 
       ctx->FwOp().InputGradBind(OpArg("x", 0), [&]() {

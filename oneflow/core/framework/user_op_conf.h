@@ -115,21 +115,25 @@ class UserOpWrapper final {
 class UserOpConfWrapperBuilder final {
  public:
   UserOpConfWrapperBuilder(const std::string& op_name) : op_name_(op_name) {}
-  UserOpConfWrapperBuilder& Op(const std::string& op_type_name) {
+
+  UserOpConfWrapperBuilder& OpTypeName(const std::string& op_type_name) {
     op_type_name_ = op_type_name;
     return *this;
   }
-  UserOpConfWrapperBuilder& Input(const std::string& arg_name,
-                                  const std::string& logical_blob_name);
+  UserOpConfWrapperBuilder& Op(const std::string& op_type_name) { return OpTypeName(op_type_name); }
+
   UserOpConfWrapperBuilder& InputBind(const std::string& arg_name,
                                       const std::string& logical_blob_name);
+  UserOpConfWrapperBuilder& Input(const std::string& arg_name,
+                                  const std::string& logical_blob_name);
+
   UserOpConfWrapperBuilder& Output(const std::string& arg_name, int32_t num);
   UserOpConfWrapperBuilder& Output(const std::string& arg_name);
+
   template<typename T>
   UserOpConfWrapperBuilder& Attr(const std::string& attr_name, const T& val);
 
   UserOpConfWrapper Build();
-  UserOpConfWrapper Finish();
 
  private:
   UserOpConfWrapper wrapper_;
