@@ -51,7 +51,6 @@ if [[ $SKIP_THIRD_PARTY != 1 ]]; then
     cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release \
         -DONEFLOW=OFF \
         -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR   \
-        -DBUILD_RDMA=ON \
         $ONEFLOW_SRC_DIR
     make -j nccl
     make -j`nproc` prepare_oneflow_third_party
@@ -81,7 +80,6 @@ do
         -DPython3_ROOT_DIR=$PY_ROOT \
         -DCMAKE_BUILD_TYPE=Release  \
         -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR   \
-        -DBUILD_RDMA=ON \
         $EXTRA_ONEFLOW_CMAKE_ARGS   \
         $ONEFLOW_SRC_DIR
     cmake --build . -j `nproc`
