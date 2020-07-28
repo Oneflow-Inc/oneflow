@@ -36,7 +36,7 @@ def test_summary(test_case):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     logdir = "~/oneflow/log"
 
     @flow.global_function(func_config)
@@ -154,7 +154,7 @@ def summary_image():
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-
+    func_config.default_logical_view(flow.scope.mirrored_view())
     logdir = "~/oneflow/log"
 
     @flow.global_function(func_config)
