@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
-#include "oneflow/core/job_completer/op_graph_pass.h"
-#include "oneflow/core/job_completer/autograd.h"
+#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
