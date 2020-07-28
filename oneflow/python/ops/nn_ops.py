@@ -1338,7 +1338,9 @@ def deconv2d(
         assert pad % 2 == 0
         padding_before.append(pad // 2)
     return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Deconv2d_"))
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Deconv2d_")
+        )
         .Op("deconv2d")
         .Input("in", [input])
         .Input("weight", [filters])
@@ -1432,7 +1434,9 @@ def deconv2d_torch(
         padding_before.append(pad // 2)
 
     return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Deconv2d_"))
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Deconv2d_")
+        )
         .Op("deconv2d")
         .Input("in", [input])
         .Input("weight", [filters])

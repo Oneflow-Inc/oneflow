@@ -28,12 +28,13 @@ for gpu in gpus:
 
 global_storage = {}
 
+
 def global_storage_setter(name):
     global global_storage
 
     def _set(x):
         global_storage[name] = x
-    
+
     return _set
 
 
