@@ -35,13 +35,13 @@ class ClipGradientConf:
 
 @oneflow_export("grad_clipping.by_global_norm")
 class ClipByGlobalNorm(ClipGradientConf):
-    def __init__(self, val):
-        self.val = val
+    def __init__(self, clip_norm):
+        self.clip_norm = clip_norm
 
     @property
     def clip_conf(self):
         clip_conf = op_conf_pb.ClipConf()
-        clip_conf.clip_by_global_norm.clip_norm = self.val
+        clip_conf.clip_by_global_norm.clip_norm = self.clip_norm
         return clip_conf
 
 
