@@ -381,7 +381,7 @@ def compare_reduce_sum_with_tensorflow(
     of_out = ReduceSumJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_sum(x, axis=axis, keepdims=keepdims)
-    test_case.assertTrue(np.array_equal(of_out.numpy(), tf_out.numpy()))
+    test_case.assertTrue(np.allclose(of_out.numpy(), tf_out.numpy()))
 
 
 def test_reduce_sum_func(test_case):
