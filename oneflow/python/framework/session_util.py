@@ -42,6 +42,7 @@ from oneflow.python.framework.pull_util import (
 from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
+from oneflow.python.framework.check_point import SnapshotManager
 import oneflow.python.eager.blob_register as blob_register_util
 from contextlib import contextmanager
 from typing import Callable
@@ -74,6 +75,7 @@ class Session(object):
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
         self.backward_blob_register_ = blob_register_util.BlobRegister()
         self.InitNormalModeNoneScope()
+        self.snapshot_mgr_ = SnapshotManager()
 
     @property
     def status(self):
@@ -124,6 +126,10 @@ class Session(object):
     @property
     def backward_blob_register(self):
         return self.backward_blob_register_
+
+    @property
+    def snapshot_mgr(self):
+        return self.snapshot_mgr_
 
     def InitNormalModeScope(self):
         job_conf = job_conf_pb.JobConfigProto()
