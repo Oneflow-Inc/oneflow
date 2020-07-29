@@ -11,13 +11,13 @@
   - To install latest release of OneFlow:
 
     ```
-    pip install oneflow
+    python3 -m pip install oneflow
     ```
 
   - To install nightly release of OneFlow:
 
     ```
-    pip install --find-links https://oneflow-inc.github.io/nightly oneflow
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow
     ```
 
 ### Build OneFlow from Source
