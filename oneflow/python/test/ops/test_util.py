@@ -68,7 +68,7 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
                 initializer=flow.zeros_initializer(),
             )
             loss = flow_op(x, *flow_args)
-            flow.optimizer.SGD(flow.optimizer.CosineScheduler(10000, 0.001)).minimize(
+            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0).minimize(
                 loss
             )
 
