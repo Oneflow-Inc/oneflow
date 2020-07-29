@@ -2,7 +2,7 @@
 
 ### Install OneFlow
 
-  #### System Requirements
+  #### System Requirements to Run OneFlow
 
   - Nvidia Linux x86_64 driver version >= 440.33
 
@@ -11,37 +11,42 @@
   - To install latest release of OneFlow:
 
     ```
-    pip install oneflow
+    python3 -m pip install oneflow
     ```
 
   - To install nightly release of OneFlow:
 
     ```
-    pip install --find-links https://oneflow-inc.github.io/nightly oneflow
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow
     ```
 
 ### Build OneFlow from Source
 
-1. #### System Requirements
+1. #### System Requirements to Build OneFlow
 
-    - Please use a newer version of CMake to build OneFlow. You could download cmake release from here: 
-      https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz
+    - Please use a newer version of CMake to build OneFlow. You could download cmake release from [here](https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz).
 
-    - Building OneFlow from source requires a [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) libary installed. 
-    
-      It is recommended to install [Intel MKL](https://software.intel.com/content/www/us/en/develop/tools/math-kernel-library.html) which provides APIs compatible with BLAS. Please refer to Intel's official guide on how to install MKL [here](https://software.intel.com/content/www/us/en/develop/tools/math-kernel-library/choose-download.html).
+    - Please make sure you have G++ and GCC >= 4.8.5 installed. Clang is not supported for now.
 
-      On CentOS, if you have MKL installed, please update the environment variable.
+    - To install dependencies, run:
+
+      ```
+      yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
+      rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
+      yum update -y && yum install -y epel-release && \
+      yum install -y intel-mkl-64bit-2020.0-088 nasm swig rdma-core-devel
+      ```
+
+      On CentOS, if you have MKL installed, please update the environment variable:
 
       ```
       export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
       ```
 
-      Or you can install OpenBLAS and other tools through:
+      If you don't want to build OneFlow with MKL, you could install OpenBLAS:
 
       ```
-      sudo yum -y install epel-release
-      sudo yum -y install gcc-c++ openblas-devel kernel-devel-$(uname -r) nasm swig
+      sudo yum -y install openblas-devel
       ```
 
 2. #### Clone Source Code
