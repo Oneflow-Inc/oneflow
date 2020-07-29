@@ -68,9 +68,9 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
                 initializer=flow.zeros_initializer(),
             )
             loss = flow_op(x, *flow_args)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0).minimize(
-                loss
-            )
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0
+            ).minimize(loss)
 
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
 
