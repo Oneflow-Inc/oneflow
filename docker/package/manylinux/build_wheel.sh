@@ -62,7 +62,7 @@ ONEFLOW_BUILD_DIR=$CACHE_DIR/build-oneflow
 
 function cleanup {
   set -x
-  rm  -r tmp_wheel
+  rm  -rf tmp_wheel
 }
 
 for PY_VER in ${PY_VERS[@]}
