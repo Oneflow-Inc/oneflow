@@ -739,24 +739,26 @@ NcclAllReduce = Sequential(
     OptionalBoxing(CopyD2H),
 )
 
+BoxingOneToOne = Sequential(
+    boxing_middle.BoxingToMiddle(
+        OptionalBoxing(CopyD2H),
+        boxing_middle.ReplaceProducerDeviceTag("cpu"),
+        boxing_middle.ProducerSbpParallel,
+    ),
+    boxing_middle.BoxingToMiddle(
+        CpuOneToOne,
+        boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+        boxing_middle.ConsumerSbpParallel,
+    ),
+    OptionalBoxing(CopyH2D),
+)
+
 conditional_function_table = [
     CopyH2D,
     CopyD2H,
     NoBoxing,
     # one to one
-    Sequential(
-        boxing_middle.BoxingToMiddle(
-            OptionalBoxing(CopyD2H),
-            boxing_middle.ReplaceProducerDeviceTag("cpu"),
-            boxing_middle.ProducerSbpParallel,
-        ),
-        boxing_middle.BoxingToMiddle(
-            CpuOneToOne,
-            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
-            boxing_middle.ConsumerSbpParallel,
-        ),
-        OptionalBoxing(CopyH2D),
-    ),
+    BoxingOneToOne,
     # B -> B
     BroadcastManyToOne,
     Sequential(
@@ -781,7 +783,7 @@ conditional_function_table = [
             boxing_middle.BroadcastParallel,
         ),
         OptionalBoxing(CopyH2D),
-        exclude=(BroadcastManyToOne, CopyH2D, CopyD2H, NoBoxing, CpuOneToOne),
+        exclude=(BroadcastManyToOne, CopyH2D, CopyD2H, NoBoxing, BoxingOneToOne),
     ),
     # B -> S
     Sequential(

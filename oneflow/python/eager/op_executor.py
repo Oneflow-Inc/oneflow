@@ -20,6 +20,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
+import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow.python.framework.device_util as device_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -41,6 +42,14 @@ def Interpret(op_attribute, parallel_conf, blob_register):
         parallel_conf = text_format.Parse(parallel_conf, placement_pb.ParallelConf())
     else:
         assert isinstance(parallel_conf, placement_pb.ParallelConf)
+    if op_attribute.op_conf.HasField("distribute_split_conf"):
+        return DistributeSplitOrClone(op_attribute, parallel_conf, blob_register)
+    if op_attribute.op_conf.HasField("distribute_clone_conf"):
+        return DistributeSplitOrClone(op_attribute, parallel_conf, blob_register)
+    if op_attribute.op_conf.HasField("distribute_concat_conf"):
+        return DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register)
+    if op_attribute.op_conf.HasField("distribute_add_conf"):
+        return DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register)
     if op_attribute.op_conf.HasField("variable_conf"):
         return _FindOrCreateVarBlobObject(op_attribute, parallel_conf, blob_register)
     if op_attribute.op_conf.HasField("foreign_watch_conf"):
@@ -72,6 +81,66 @@ def MirroredCast(op_attribute, blob_register):
                 in_blob_object, op_arg_parallel_attr
             )
             bn_in_op2blob_object["out"] = out_blob_object
+
+    vm_util.LogicalRun(BuildInstruction)
+
+
+def DistributeSplitOrClone(op_attribute, parallel_conf, blob_register):
+    parallel_sig = op_attribute.parallel_signature.bn_in_op2parallel_desc_symbol_id
+
+    def GetInBlobObject(builder, ibn, bn_in_op2blob_object):
+        origin_blob_object = bn_in_op2blob_object[ibn]
+        in_op_parallel_desc_sym = symbol_storage.GetSymbol4Id(parallel_sig[ibn])
+        in_op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
+            in_op_parallel_desc_sym, op_attribute, ibn
+        )
+        return boxing_util.BoxingTo(
+            builder, origin_blob_object, in_op_arg_parallel_attr
+        )
+
+    def BuildInstruction(builder):
+        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+            physical_out_blob_objects = builder.UnpackLogicalBlobToPhysicalBlobs(
+                GetInBlobObject(builder, "in", bn_in_op2blob_object)
+            )
+            for i, blob_object in enumerate(physical_out_blob_objects):
+                bn_in_op2blob_object["out_%s" % i] = blob_object
+
+    vm_util.LogicalRun(BuildInstruction)
+
+
+def DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register):
+    op_parallel_desc_sym = symbol_storage.GetSymbol4Id(
+        op_attribute.parallel_signature.op_parallel_desc_symbol_id
+    )
+    parallel_size = len(op_attribute.input_bns)
+    op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
+        op_parallel_desc_sym, op_attribute, "out"
+    )
+    op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, "out")
+    parallel_sig = op_attribute.parallel_signature.bn_in_op2parallel_desc_symbol_id
+
+    def GetInBlobObject(builder, i, bn_in_op2blob_object):
+        ibn = "in_%s" % i
+        origin_blob_object = bn_in_op2blob_object[ibn]
+        in_op_parallel_desc_sym = symbol_storage.GetSymbol4Id(parallel_sig[ibn])
+        in_op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
+            in_op_parallel_desc_sym, op_attribute, ibn
+        )
+        return boxing_util.BoxingTo(
+            builder, origin_blob_object, in_op_arg_parallel_attr
+        )
+
+    def BuildInstruction(builder):
+        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+
+            def GetPhysicalInBlob(i):
+                return GetInBlobObject(builder, i, bn_in_op2blob_object)
+
+            in_blob_objects = [GetPhysicalInBlob(i) for i in range(parallel_size)]
+            bn_in_op2blob_object["out"] = builder.PackPhysicalBlobsToLogicalBlob(
+                in_blob_objects, op_arg_parallel_attr, op_arg_blob_attr
+            )
 
     vm_util.LogicalRun(BuildInstruction)
 
