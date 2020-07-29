@@ -26,7 +26,7 @@ def _of_object_segm_poly_flip(poly_list, image_size, flip_code):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def object_segm_poly_flip_job(
