@@ -16,7 +16,7 @@ limitations under the License.
 import oneflow as flow
 import oneflow.typing as oft
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Dict
 
 
 def test_annotation_return_None(test_case):
@@ -122,6 +122,84 @@ def test_annotation_watch_ListListNumpy(test_case):
         return x
 
     foo([[data]])
+
+
+def test_annotation_Dict_Numpy(test_case):
+    flow.config.gpu_device_num(1)
+
+    @flow.global_function()
+    def foo(x: oft.Numpy.Placeholder((10,))) -> Dict[str, oft.Numpy]:
+        return {"x": x}
+
+    data = np.ones((10,), dtype=np.float32)
+    test_case.assertTrue(np.array_equal(foo(data)["x"], data))
+
+
+def test_annotation_Dict_ListNumpy(test_case):
+    flow.config.gpu_device_num(1)
+
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+
+    @flow.global_function(func_config)
+    def foo(x: oft.ListNumpy.Placeholder((10,))) -> Dict[str, oft.ListNumpy]:
+        return {"x": x}
+
+    data = np.ones((10,), dtype=np.float32)
+    test_case.assertTrue(np.array_equal(foo([data])["x"][0], data))
+
+
+def test_annotation_Dict_ListListNumpy(test_case):
+    flow.config.gpu_device_num(1)
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+
+    @flow.global_function(func_config)
+    def foo(x: oft.ListListNumpy.Placeholder((10,))) -> Dict[str, oft.ListListNumpy]:
+        return {"x": x}
+
+    data = np.ones((10,), dtype=np.float32)
+    test_case.assertTrue(np.array_equal(foo([[data]])["x"][0][0], data))
+
+
+def test_annotation_Dict_Nesting_Numpy(test_case):
+    flow.config.gpu_device_num(1)
+
+    @flow.global_function()
+    def foo(x: oft.Numpy.Placeholder((10,))) -> Dict[str, Dict[str, oft.Numpy]]:
+        return {"x": {"x": x}}
+
+    data = np.ones((10,), dtype=np.float32)
+    test_case.assertTrue(np.array_equal(foo(data)["x"]["x"], data))
+
+
+def test_annotation_Dict_Nesting_ListNumpy(test_case):
+    flow.config.gpu_device_num(1)
+
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+
+    @flow.global_function(func_config)
+    def foo(x: oft.ListNumpy.Placeholder((10,))) -> Dict[str, Dict[str, oft.ListNumpy]]:
+        return {"x": {"x": x}}
+
+    data = np.ones((10,), dtype=np.float32)
+    test_case.assertTrue(np.array_equal(foo([data])["x"]["x"][0], data))
+
+
+def test_annotation_Dict_Nesting_ListListNumpy(test_case):
+    flow.config.gpu_device_num(1)
+    func_config = flow.FunctionConfig()
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+
+    @flow.global_function(func_config)
+    def foo(
+        x: oft.ListListNumpy.Placeholder((10,))
+    ) -> Dict[str, Dict[str, oft.ListListNumpy]]:
+        return {"x": {"x": x}}
+
+    data = np.ones((10,), dtype=np.float32)
+    test_case.assertTrue(np.array_equal(foo([[data]])["x"]["x"][0][0], data))
 
 
 def test_annotation_Tuple_Numpy(test_case):
