@@ -97,7 +97,7 @@ class OFRecordImageDecoderRandomCropModule(module_util.Module):
         module_util.Module.__init__(self, module_name)
         seed, has_seed = flow.random.gen_seed(random_seed)
         self.op_module_builder = (
-            flow.consistent_user_op_module_builder("ofrecord_image_decoder_random_crop")
+            flow.user_op_module_builder("ofrecord_image_decoder_random_crop")
             .InputSize("in", 1)
             .Output("out")
             .Attr("blob_name", blob_name)
@@ -244,7 +244,7 @@ class CoinFlipModule(module_util.Module):
         module_util.Module.__init__(self, module_name)
         seed, has_seed = flow.random.gen_seed(random_seed)
         self.op_module_builder = (
-            flow.consistent_user_op_module_builder("coin_flip")
+            flow.user_op_module_builder("coin_flip")
             .Output("out")
             .Attr("batch_size", batch_size)
             .Attr("probability", probability)

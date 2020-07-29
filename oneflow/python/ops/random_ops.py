@@ -47,7 +47,7 @@ class BernoulliModule(module_util.Module):
         module_util.Module.__init__(self, module_name)
         seed, has_seed = flow.random.gen_seed(random_seed)
         self.op_module_builder = (
-            flow.consistent_user_op_module_builder("bernoulli")
+            flow.user_op_module_builder("bernoulli")
             .InputSize("in", 1)
             .Output("out")
             .Attr("dtype", dtype)
