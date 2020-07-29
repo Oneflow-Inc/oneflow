@@ -62,7 +62,7 @@ ONEFLOW_BUILD_DIR=$CACHE_DIR/build-oneflow
 
 function cleanup {
   set -x
-  rm  -r tmp_wheel
+  rm  -rf tmp_wheel
 }
 
 for PY_VER in ${PY_VERS[@]}
@@ -87,4 +87,5 @@ do
     trap cleanup EXIT
     $PY_BIN setup.py bdist_wheel -d tmp_wheel --build_dir $ONEFLOW_BUILD_DIR
     auditwheel repair tmp_wheel/*.whl --wheel-dir $HOUSE_DIR
+    cleanup
 done
