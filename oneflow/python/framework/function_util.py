@@ -797,9 +797,9 @@ def allow_cpu_return_op(func_desc, value):
 def deprecated_set_default_distribute_strategy(*args, **kwargs):
     print(
         "WARNING:",
-        "oneflow.default_distribute_strategy",
+        "function_config.default_distribute_strategy",
         "has been deprecated. Please use {} instead.".format(
-            "oneflow.default_logical_view"
+            "function_config.default_logical_view"
         ),
     )
     print(traceback.format_stack()[-3], file=sys.stderr)
