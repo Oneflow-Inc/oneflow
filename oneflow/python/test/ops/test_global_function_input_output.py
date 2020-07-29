@@ -26,7 +26,7 @@ def test_lazy_input_output(test_case):
     flow.enable_eager_execution(False)
 
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def foo_job(input_def: oft.Numpy.Placeholder(shape=(2, 5))):
@@ -53,7 +53,7 @@ def test_eager_output(test_case):
     flow.enable_eager_execution()
 
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def foo_job():
@@ -72,7 +72,7 @@ def test_eager_multi_output(test_case):
     flow.enable_eager_execution()
 
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def foo_job():
@@ -100,7 +100,7 @@ def test_eager_input(test_case):
     flow.enable_eager_execution()
 
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     input = np.random.rand(2, 5).astype(np.single)
     output = np.maximum(input, 0)
@@ -119,7 +119,7 @@ def test_eager_input_fixed(test_case):
     flow.enable_eager_execution()
 
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     input = np.arange(10).astype(np.single)
     output = input + 1.0
@@ -138,7 +138,7 @@ def test_eager_multi_input(test_case):
     flow.enable_eager_execution()
 
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     input_1 = np.random.rand(3, 4).astype(np.single)
     input_2 = np.array([2]).astype(np.single)
@@ -161,7 +161,7 @@ def test_eager_input_output(test_case):
     flow.enable_eager_execution()
 
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     input = np.random.rand(5, 4).astype(np.single)
     output = input * 2.0

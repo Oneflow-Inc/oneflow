@@ -73,7 +73,7 @@ if args.with_xla:
 
 setup(
     name='oneflow',
-    version='0.1.4',
+    version='0.1.6',
     url='https://www.oneflow.org/',
     install_requires=REQUIRED_PACKAGES,
     packages=packages,
