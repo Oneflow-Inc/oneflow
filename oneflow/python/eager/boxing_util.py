@@ -722,6 +722,7 @@ def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
 
 def _GetEagerNcclAllReduce(parallel_conf, ibn2blob_object):
     op_conf = op_conf_pb.OperatorConf()
+    op_conf.device_type = c_api_util.DeviceType4DeviceTag("gpu")
     op_conf.name = "eager_nccl_all_reduce"
     op_conf.user_conf.op_type_name = "eager_nccl_all_reduce"
     op_conf.user_conf.input["in"].s.append("eager_nccl_all_reduce/in_0")
