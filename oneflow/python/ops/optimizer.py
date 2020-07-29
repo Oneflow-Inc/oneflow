@@ -15,6 +15,8 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
+import collections.abc
+
 import oneflow as flow
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
@@ -182,10 +184,10 @@ class PiecewiseScalingScheduler(LrScheduler):
     ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.boundaries = boundaries
-        if isinstance(scale, float):
+        if not isinstance(scale, collections.abc.Sequence):
             scale = [scale] * len(boundaries)
         assert len(boundaries) == len(scale)
-        self.scale = [1] + scale
+        self.scale = [1] + list(scale)
 
     @property
     def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
@@ -351,9 +353,12 @@ class Optimizer:
         self._SetSpecificFieldsInTrainConf(train_conf)
         return train_conf
 
-    def minimize(self, loss) -> None:
+    def minimize(self, loss: Union[Sequence[str], str]) -> None:
+        if not isinstance(loss, collections.abc.Sequence):
+            loss = [loss]
         c_api_util.CurJobBuildAndInferCtx_SetTrainConf(self.train_conf)
-        flow.losses.add_loss(loss)
+        for x in loss:
+            flow.losses.add_loss(x)
 
 
 @oneflow_export("optimizer.SGD")
@@ -432,9 +437,9 @@ class AdamW(Optimizer):
         self.epsilon = epsilon
         self.do_bias_correction = do_bias_correction
         self.weight_decay = weight_decay
-        if isinstance(weight_decay_includes, str):
+        if not isinstance(weight_decay_includes, collections.abc.Sequence):
             weight_decay_includes = [weight_decay_includes]
-        if isinstance(weight_decay_excludes, str):
+        if not isinstance(weight_decay_excludes, collections.abc.Sequence):
             weight_decay_excludes = [weight_decay_excludes]
         self.weight_decay_includes = weight_decay_includes
         self.weight_decay_excludes = weight_decay_excludes
