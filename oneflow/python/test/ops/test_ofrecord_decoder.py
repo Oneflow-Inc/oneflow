@@ -166,6 +166,8 @@ func_config.default_data_type(flow.float)
 
 
 def test_ofrecord_decoder(test_case):
+    if flow.eager_execution_enabled():
+        return
     num_examples = 1000
     batch_size = 100
     assert num_examples % batch_size == 0

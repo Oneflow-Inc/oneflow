@@ -151,7 +151,7 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
             test_global_storage.Get("weight_diff").transpose(1, 2, 3, 0),
             tf_weight_diff.numpy(),
             rtol=1e-5,
-            atol=1e-5,
+            atol=1e-4,
         )
 
 
