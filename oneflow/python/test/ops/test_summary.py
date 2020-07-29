@@ -44,24 +44,24 @@ def test_summary(test_case):
 
     @flow.global_function(func_config)
     def ScalarJob(
-        value:flow.typing.ListNumpy.Placeholder((1,), dtype=flow.float),
-        step:flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
-        tag:flow.typing.ListNumpy.Placeholder((1000,), dtype=flow.int8),
+        value: flow.typing.ListNumpy.Placeholder((1,), dtype=flow.float),
+        step: flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
+        tag: flow.typing.ListNumpy.Placeholder((1000,), dtype=flow.int8),
     ):
         flow.summary.scalar(value, step, tag)
 
     @flow.global_function(func_config)
     def HistogramJob(
-        value:flow.typing.ListNumpy.Placeholder((200, 200, 200), dtype=flow.float),
-        step:flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
-        tag:flow.typing.ListNumpy.Placeholder((9,), dtype=flow.int8),
+        value: flow.typing.ListNumpy.Placeholder((200, 200, 200), dtype=flow.float),
+        step: flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
+        tag: flow.typing.ListNumpy.Placeholder((9,), dtype=flow.int8),
     ):
         flow.summary.histogram(value, step, tag)
 
     @flow.global_function(func_config)
     def PbJob(
-        value:flow.typing.ListNumpy.Placeholder((1500,), dtype=flow.int8),
-        step:flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
+        value: flow.typing.ListNumpy.Placeholder((1500,), dtype=flow.int8),
+        step: flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
     ):
         flow.summary.pb(value, step=step)
 
@@ -161,9 +161,11 @@ def summary_image():
 
     @flow.global_function(func_config)
     def ImageJob(
-        value:flow.typing.ListNumpy.Placeholder(shape=(100, 2000, 2000, 4), dtype=flow.uint8),
-        step:flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
-        tag:flow.typing.ListNumpy.Placeholder((10,), dtype=flow.int8),
+        value: flow.typing.ListNumpy.Placeholder(
+            shape=(100, 2000, 2000, 4), dtype=flow.uint8
+        ),
+        step: flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
+        tag: flow.typing.ListNumpy.Placeholder((10,), dtype=flow.int8),
     ):
         flow.summary.image(value, step=step, tag=tag)
 
