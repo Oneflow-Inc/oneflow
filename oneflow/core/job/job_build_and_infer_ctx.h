@@ -37,6 +37,7 @@ class JobBuildAndInferCtx {
   Maybe<OpAttribute> AddAndInferConsistentOp(const OperatorConf& op_conf);
   Maybe<OpAttribute> AddAndInferMirroredOp(const OperatorConf& op_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
+  Maybe<void> SetTrainConf(const TrainConf& train_conf);
 
   bool HasJobConf() const;
   Maybe<Shape> GetStaticShape(const std::string& lbn) const;
