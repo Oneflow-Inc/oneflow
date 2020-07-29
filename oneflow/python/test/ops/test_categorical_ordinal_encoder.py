@@ -26,7 +26,7 @@ def _test_categorical_ordinal_encoder(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def test_job(

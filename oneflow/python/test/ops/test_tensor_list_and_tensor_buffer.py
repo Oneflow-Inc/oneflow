@@ -22,7 +22,7 @@ def _of_tensor_list_identity(test_case, verbose=False):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def job_fn(x_def: oft.ListListNumpy.Placeholder(shape=(2, 5))):
@@ -48,7 +48,7 @@ def _of_tensor_list_to_tensor_buffer(test_case, verbose=False):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def job_fn(x_def: oft.ListListNumpy.Placeholder(shape=(2, 5, 4), dtype=flow.float)):
