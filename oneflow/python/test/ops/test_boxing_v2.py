@@ -34,7 +34,7 @@ def _test_split_to_split(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def split_to_split_job(x: oft.Numpy.Placeholder((96, 96))):
@@ -73,7 +73,7 @@ def _test_split_to_broadcast(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def split_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96))):
@@ -111,7 +111,7 @@ def _test_broadcast_to_split(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def broadcast_to_split_job(x: oft.Numpy.Placeholder((96, 96))):
@@ -149,7 +149,7 @@ def _test_partial_sum_to_split(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def partial_sum_to_split_job(x: oft.Numpy.Placeholder((96, 96, 96))):
@@ -183,7 +183,7 @@ def _test_partial_sum_to_broadcast(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def partial_sum_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96, 96))):
@@ -216,7 +216,7 @@ def _test_broadcast_to_broadcast(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def broadcast_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96, 96))):
@@ -249,7 +249,7 @@ def _test_multi_lbi(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def multi_lbi_job(x: oft.Numpy.Placeholder((96, 96, 96))):
