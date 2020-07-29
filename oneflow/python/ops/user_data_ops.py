@@ -68,6 +68,7 @@ def api_ofrecord_image_decoder_random_crop(
     random_aspect_ratio: Sequence[float] = [0.75, 1.333333],
     name: str = "OFRecordImageDecoderRandomCrop",
 ) -> BlobDef:
+    assert isinstance(name, str)
     module = flow.find_or_create_module(
         name,
         lambda: OFRecordImageDecoderRandomCropModule(
@@ -77,7 +78,7 @@ def api_ofrecord_image_decoder_random_crop(
             random_seed=seed,
             random_area=random_area,
             random_aspect_ratio=random_aspect_ratio,
-            module_name=name,
+            name=name,
         ),
     )
     return module(input_blob)
@@ -92,9 +93,9 @@ class OFRecordImageDecoderRandomCropModule(module_util.Module):
         random_seed: Optional[int],
         random_area: Sequence[float],
         random_aspect_ratio: Sequence[float],
-        module_name: str,
+        name: str,
     ):
-        module_util.Module.__init__(self, module_name)
+        module_util.Module.__init__(self, name)
         seed, has_seed = flow.random.gen_seed(random_seed)
         self.op_module_builder = (
             flow.user_op_module_builder("ofrecord_image_decoder_random_crop")
@@ -221,13 +222,11 @@ def api_coin_flip(
     probability: float = 0.5,
     name: str = "CoinFlip",
 ) -> BlobDef:
+    assert isinstance(name, str)
     module = flow.find_or_create_module(
         name,
         lambda: OFRecordImageDecoderRandomCropModule(
-            batch_size=batch_size,
-            probability=probability,
-            random_seed=seed,
-            module_name=name,
+            batch_size=batch_size, probability=probability, random_seed=seed, name=name,
         ),
     )
     return module()
@@ -239,9 +238,9 @@ class CoinFlipModule(module_util.Module):
         batch_size: str,
         probability: float,
         random_seed: Optional[int],
-        module_name: str,
+        name: str,
     ):
-        module_util.Module.__init__(self, module_name)
+        module_util.Module.__init__(self, name)
         seed, has_seed = flow.random.gen_seed(random_seed)
         self.op_module_builder = (
             flow.user_op_module_builder("coin_flip")

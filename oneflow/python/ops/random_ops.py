@@ -31,20 +31,21 @@ def Bernoulli(
     dtype: Optional[dtype_util.dtype] = None,
     name: str = "Bernoulli",
 ) -> remote_blob_util.BlobDef:
+    assert isinstance(name, str)
     if dtype is None:
         dtype = x.dtype
 
     module = flow.find_or_create_module(
-        name, lambda: BernoulliModule(dtype=dtype, random_seed=seed, module_name=name,),
+        name, lambda: BernoulliModule(dtype=dtype, random_seed=seed, name=name),
     )
     return module(x)
 
 
 class BernoulliModule(module_util.Module):
     def __init__(
-        self, dtype: dtype_util.dtype, random_seed: Optional[int], module_name: str,
+        self, dtype: dtype_util.dtype, random_seed: Optional[int], name: str,
     ):
-        module_util.Module.__init__(self, module_name)
+        module_util.Module.__init__(self, name)
         seed, has_seed = flow.random.gen_seed(random_seed)
         self.op_module_builder = (
             flow.user_op_module_builder("bernoulli")
