@@ -37,7 +37,7 @@
       yum install -y intel-mkl-64bit-2020.0-088 nasm swig rdma-core-devel
       ```
 
-      On CentOS, if you have MKL installed, please update the environment variable.
+      On CentOS, if you have MKL installed, please update the environment variable:
 
       ```
       export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
