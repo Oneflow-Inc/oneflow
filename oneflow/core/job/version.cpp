@@ -77,7 +77,8 @@ void DumpVersionInfo() {
     int cuda_runtime_version;
     cudaError_t err = cudaRuntimeGetVersion(&cuda_runtime_version);
     if (err == cudaSuccess) {
-      LOG(INFO) << "CUDA runtime version: " << GetCudaVersionString(cuda_runtime_version);
+      LOG(INFO) << "CUDA runtime version: " << GetCudaVersionString(cuda_runtime_version)
+                << "\nNvidia Linux x86_64 driver version >= 440.33 required";
     } else {
       LOG(ERROR) << "Failed to get cuda runtime version: " << cudaGetErrorString(err);
     }
