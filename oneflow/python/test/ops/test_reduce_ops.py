@@ -98,7 +98,7 @@ def test_reduce_any_scalar(test_case):
 def test_reduce_any_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo(x: oft.Numpy.Placeholder((10,), dtype=flow.int8)):
@@ -183,7 +183,7 @@ def test_reduce_prod_scalar(test_case):
 def test_reduce_prod_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo(x: oft.Numpy.Placeholder((10,))):
@@ -291,7 +291,7 @@ def test_reduce_min_scalar(test_case):
 def test_reduce_min_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo(x: oft.Numpy.Placeholder((10,))):
@@ -376,7 +376,7 @@ def test_reduce_all_scalar(test_case):
 def test_reduce_all_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo(x: oft.Numpy.Placeholder((10,), dtype=flow.int8)):
@@ -461,7 +461,7 @@ def test_reduce_sum_scalar(test_case):
 def test_reduce_sum_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo(x: oft.Numpy.Placeholder((10,))):
@@ -546,7 +546,7 @@ def test_reduce_euclidean_norm_scalar(test_case):
 def test_reduce_euclidean_norm_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo(x: oft.Numpy.Placeholder((10,))):
@@ -631,7 +631,7 @@ def test_reduce_logsumexp_scalar(test_case):
 def test_reduce_logsumexp_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo(x: oft.Numpy.Placeholder((10,))):
@@ -716,7 +716,7 @@ def test_reduce_std_scalar(test_case):
 def test_reduce_std_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo(x: oft.Numpy.Placeholder((10,))):
@@ -801,7 +801,7 @@ def test_reduce_variance_scalar(test_case):
 def test_reduce_variance_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo(x: oft.Numpy.Placeholder((10,))):
@@ -909,7 +909,7 @@ def test_reduce_max_scalar(test_case):
 def test_reduce_max_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo(x: oft.Numpy.Placeholder((10,))):
