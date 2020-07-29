@@ -31,7 +31,7 @@ def my_test_source(name):
 def test_testsource(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def TestSourceJob():
@@ -49,7 +49,7 @@ def TODO_test_mirror_testsource(test_case):
     # TODO(chengcheng) source op set mirrored strategy
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def TestSourceJob():

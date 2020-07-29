@@ -23,7 +23,7 @@ def _of_image_batch_align(images, input_shape, output_shape, alignment):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def image_batch_align_job(

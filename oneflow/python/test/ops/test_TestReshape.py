@@ -60,11 +60,11 @@ def mirrored_tensor_def_test(test_case, func_config):
 
 def test_fixed_TestReshape(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     fixed_tensor_def_test(test_case, func_config)
 
 
 def test_mirrored_TestReshape(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     mirrored_tensor_def_test(test_case, func_config)
