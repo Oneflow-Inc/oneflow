@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
-#include "oneflow/core/job_completer/op_graph_pass.h"
-#include "oneflow/core/job_completer/autograd.h"
+#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
@@ -572,6 +572,11 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
 
 bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
 
+Maybe<void> JobBuildAndInferCtx::SetTrainConf(const TrainConf& train_conf) {
+  *job_->mutable_job_conf()->mutable_train_conf() = train_conf;
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) {
   if (IsMirroredBlob(lbn)) { return AddLossMirroredBlobName(lbn); }
   return AddLossConsistentBlobName(lbn);
@@ -901,6 +906,10 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
+  if (job().job_conf().has_train_conf()) {
+    CHECK_OR_RETURN(job().job_conf().train_conf().has_model_update_conf());
+    CHECK_OR_RETURN(job().job_conf().train_conf().has_primary_lr());
+  }
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
     return FunctionPass(pass_name)(mut_job());
