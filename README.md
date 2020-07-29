@@ -28,7 +28,7 @@
 
     - Please make sure you have G++ and GCC >= 4.8.5 installed. Clang is not supported for now.
 
-    - Please install required dependencies:
+    - Please install dependencies:
 
       ```
       yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
