@@ -101,7 +101,7 @@ class OFRecordImageDecoderRandomCropModule(module_util.Module):
             flow.user_op_module_builder("ofrecord_image_decoder_random_crop")
             .InputSize("in", 1)
             .Output("out")
-            .Attr("blob_name", blob_name)
+            .Attr("name", blob_name)
             .Attr("color_space", color_space)
             .Attr("num_attempts", num_attempts)
             .Attr("random_area", random_area)
@@ -112,7 +112,7 @@ class OFRecordImageDecoderRandomCropModule(module_util.Module):
         )
         self.op_module_builder.user_op_module.InitOpKernel()
 
-    def forward(self):
+    def forward(self, input: BlobDef):
         if self.call_seq_no == 0:
             name = self.module_name
         else:
@@ -120,6 +120,7 @@ class OFRecordImageDecoderRandomCropModule(module_util.Module):
 
         return (
             self.op_module_builder.OpName(name)
+            .Input("in", [input])
             .Build()
             .InferAndTryRun()
             .SoleOutputBlob()
@@ -225,7 +226,7 @@ def api_coin_flip(
     assert isinstance(name, str)
     module = flow.find_or_create_module(
         name,
-        lambda: OFRecordImageDecoderRandomCropModule(
+        lambda: CoinFlipModule(
             batch_size=batch_size, probability=probability, random_seed=seed, name=name,
         ),
     )

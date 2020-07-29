@@ -58,7 +58,7 @@ class BernoulliModule(module_util.Module):
         )
         self.op_module_builder.user_op_module.InitOpKernel()
 
-    def forward(self):
+    def forward(self, x: remote_blob_util.BlobDef):
         if self.call_seq_no == 0:
             name = self.module_name
         else:
@@ -66,6 +66,7 @@ class BernoulliModule(module_util.Module):
 
         return (
             self.op_module_builder.OpName(name)
+            .Input("in", [x])
             .Build()
             .InferAndTryRun()
             .SoleOutputBlob()
