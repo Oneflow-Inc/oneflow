@@ -28,9 +28,13 @@ import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.core.job.placement_pb2 as placement_pb
+import oneflow.python.framework.dtype as dtype_util
+import oneflow.python.eager.op_infer_util as op_infer_util
 from google.protobuf import text_format
 
 import oneflow
+import numpy as np
+import os
 
 
 def Interpret(op_attribute, parallel_conf, blob_register):
@@ -157,7 +161,7 @@ def _FindOrCreateVarBlobObject(op_attribute, parallel_conf, blob_register):
         return
     _NaiveInterpret(op_attribute, parallel_conf, blob_register)
     var_blob = _MakeEagerLogicalBlob(op_attribute, "out", blob_register=blob_register)
-    EagerInitVariableBlob(op_attribute.op_conf, var_blob)
+    EagerInitVariableBlob(sess, op_attribute.op_conf, var_blob)
     sess.StashVariableBlob4Job(job_name, op_attribute.op_conf.name, var_blob)
     return var_blob
 
@@ -199,9 +203,15 @@ def _MakeEagerLogicalBlob(op_attribute, obn, blob_register):
         return remote_blob_util.EagerConsistentBlob(lbi, blob_object)
 
 
-def EagerInitVariableBlob(var_op_conf, var_blob):
+def EagerInitVariableBlob(sess, var_op_conf, var_blob):
+    snapshot_path = sess.snapshot_mgr.get_snapshot_path(var_op_conf.name)
     with oneflow.scope.placement("cpu", "0:0"):
-        _Assign(var_blob.blob_object, _ModelInit(var_op_conf))
+        if snapshot_path is None:
+            blob_object = _EagerRunModelInit(var_op_conf)
+        else:
+            blob_object = _EagerRunModelLoad(var_op_conf, snapshot_path)
+
+        _Assign(var_blob.blob_object, blob_object)
 
 
 def _Assign(var_blob_object, value_blob_object):
@@ -222,8 +232,8 @@ def _Assign(var_blob_object, value_blob_object):
     vm_util.LogicalRun(BuildAssignInstruction)
 
 
-def _ModelInit(var_op_conf):
-    op_conf, lbi = _GetModelInitAndLbi(var_op_conf)
+def _EagerRunModelInit(var_op_conf):
+    op_conf, _ = _GenModelInitOpConfAndRetLbi(var_op_conf)
     bn_in_op2blob_object = {}
 
     def BuildNotMirroredScope(old_scope, builder):
@@ -241,10 +251,63 @@ def _ModelInit(var_op_conf):
     sess = session_ctx.GetDefaultSession()
     with sess.NewCurrentScope(sess.MakeScope(BuildNotMirroredScope)):
         vm_util.LogicalRun(BuildModeInitInstruction)
+
     return bn_in_op2blob_object["out_0"]
 
 
-def _GetModelInitAndLbi(var_op_conf):
+def _EagerRunModelLoad(var_op_conf, snapshot_path):
+    assert isinstance(snapshot_path, str)
+    assert os.path.basename(snapshot_path) == "out"
+    snapshot_path = os.path.dirname(snapshot_path)
+    assert os.path.basename(snapshot_path) == var_op_conf.name
+    snapshot_path = os.path.dirname(snapshot_path)
+
+    path_input_op_conf, path_lbi = _GenModelLoadPathInputOpConfAndRetLbi()
+    model_load_op_conf, _ = _GenModelLoadOpConfAndRetLbi(var_op_conf, path_lbi)
+    path_input_blob_objects = {}
+    model_load_blob_objects = {}
+
+    def BuildNotMirroredScope(old_scope, builder):
+        return old_scope.BuildWithNewIsMirrored(builder, False)
+
+    def BuildModelLoadPathInputInstruction(builder):
+        op_attribute = op_infer_util.Infer(path_input_op_conf, ibn2blob_object={})
+        parallel_conf = oneflow.placement.current_scope().default_parallel_conf
+        builder.StatelessCall(
+            op_attribute, parallel_conf, bn_in_op2blob_object=path_input_blob_objects
+        )
+
+    def FeedPath(ofblob):
+        ofblob.CopyFromNdarray(
+            np.frombuffer(snapshot_path.encode("ascii"), dtype=np.int8)
+        )
+
+    def BuildFeedPathInstruction(builder):
+        blob_object = path_input_blob_objects["out"]
+        builder.FeedBlob(blob_object, FeedPath)
+        builder.InsertRemoveForeignCallbackInstruction(blob_object.object_id, FeedPath)
+
+    def BuildModeLoadInstruction(builder):
+        path_blob_object = path_input_blob_objects["out"]
+        model_load_blob_objects["path"] = path_blob_object
+        op_attribute = op_infer_util.Infer(
+            model_load_op_conf, ibn2blob_object=model_load_blob_objects
+        )
+        parallel_conf = path_blob_object.parallel_desc_symbol.parallel_conf
+        builder.StatelessCall(
+            op_attribute, parallel_conf, bn_in_op2blob_object=model_load_blob_objects
+        )
+
+    sess = session_ctx.GetDefaultSession()
+    with sess.NewCurrentScope(sess.MakeScope(BuildNotMirroredScope)):
+        vm_util.LogicalRun(BuildModelLoadPathInputInstruction)
+        vm_util.LogicalRun(BuildFeedPathInstruction)
+        vm_util.LogicalRun(BuildModeLoadInstruction)
+
+    return model_load_blob_objects["out_0"]
+
+
+def _GenModelInitOpConfAndRetLbi(var_op_conf):
     variable_op_conf = op_conf_util.VariableOpConf()
     variable_op_conf.CopyFrom(var_op_conf.variable_conf)
     op_conf = op_conf_util.OperatorConf()
@@ -256,4 +319,40 @@ def _GetModelInitAndLbi(var_op_conf):
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.model_init_conf.out[0]
+    return op_conf, lbi
+
+
+def _GenModelLoadOpConfAndRetLbi(var_op_conf, path_lbi):
+    variable_op_conf = op_conf_util.VariableOpConf()
+    variable_op_conf.CopyFrom(var_op_conf.variable_conf)
+
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = "model_load"
+    op_conf.device_type = device_util.DeviceType4DeviceTag("cpu")
+    op_conf.model_load_conf.path = "{}/{}".format(path_lbi.op_name, path_lbi.blob_name)
+    op_conf.model_load_conf.out.append("out_0")
+    op_conf.model_load_conf.variable_op_name.append(var_op_conf.name)
+    op_conf.model_load_conf.original_variable_conf.append(variable_op_conf)
+
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = op_conf.model_load_conf.out[0]
+    return op_conf, lbi
+
+
+def _GenModelLoadPathInputOpConfAndRetLbi():
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = "model_load_path_input"
+    op_conf.input_conf.out = "out"
+
+    blob_conf = op_conf_util.InterfaceBlobConf()
+    blob_conf.shape.dim.append(65536)
+    blob_conf.data_type = dtype_util.int8.oneflow_proto_dtype
+    blob_conf.batch_axis.value = 0
+    blob_conf.is_dynamic = True
+    op_conf.input_conf.blob_conf.CopyFrom(blob_conf)
+
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = op_conf.input_conf.out
     return op_conf, lbi
