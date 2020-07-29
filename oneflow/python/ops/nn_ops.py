@@ -1138,11 +1138,13 @@ def dropout(
     assert rate is not None and rate >= 0.0 and rate < 1.0
     if not flow.current_global_function_desc().IsTrainable() or rate == 0.0:
         return x
-    mask = random_mask_like(x, rate, seed, noise_shape)
+    if name is None:
+        name = id_util.UniqueStr("Dropout_")
+    mask = random_mask_like(
+        x, rate, seed, noise_shape, "%s-dropout_random_mask_like" % name
+    )
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Dropout_")
-        )
+        flow.user_op_builder(name)
         .Op("dropout")
         .Input("in", [x])
         .Input("mask", [mask])
