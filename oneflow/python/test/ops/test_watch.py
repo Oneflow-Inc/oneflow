@@ -40,7 +40,7 @@ def test_two_device(test_case):
         test_case.assertTrue(np.allclose(data, x.numpy()))
 
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def ReluJob(x: oft.Numpy.Placeholder((10,))):
