@@ -28,9 +28,9 @@ def do_test(test_case, mirrored):
     func_config.train.primary_lr(5)
     func_config.train.model_update_conf(dict(naive_conf={}))
     if mirrored:
-        func_config.default_distribute_strategy(flow.scope.mirrored_view())
+        func_config.default_logical_view(flow.scope.mirrored_view())
     else:
-        func_config.default_distribute_strategy(flow.scope.consistent_view())
+        func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo():

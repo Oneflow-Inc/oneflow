@@ -21,7 +21,7 @@ import oneflow.typing as oft
 @flow.unittest.num_nodes_required(2)
 def test_multi_node_dynamic_binary_split_concat_empty(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_placement_scope(flow.scope.placement("cpu", "0:0"))
     func_config.default_data_type(flow.float)
     flow.config.machine_num(2)
