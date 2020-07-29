@@ -56,20 +56,20 @@ def mirrored_tensor_def_test(test_case, func_config):
 
 def test_ccrelu(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     fixed_tensor_def_test(test_case, func_config)
 
 
 def test_mirror_ccrelu(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     mirrored_tensor_def_test(test_case, func_config)
 
 
 def test_1n2c_mirror_dynamic_ccrelu(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
@@ -86,5 +86,5 @@ def test_1n2c_mirror_dynamic_ccrelu(test_case):
 @flow.unittest.num_nodes_required(2)
 def test_ccrelu_2n1c(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     fixed_tensor_def_test(test_case, func_config)
