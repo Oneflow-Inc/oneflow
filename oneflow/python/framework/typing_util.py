@@ -176,7 +176,10 @@ def TransformReturnedLocalBlob(local_blob, annotation):
     elif oft.OriginFrom(annotation, typing.Dict):
         assert type(local_blob) is dict
         assert len(annotation.__args__) == 2
-        vals = [TransformReturnedLocalBlob(val, annotation.__args__[1]) for val in local_blob.values()]
+        vals = [
+            TransformReturnedLocalBlob(val, annotation.__args__[1])
+            for val in local_blob.values()
+        ]
         return dict(zip(local_blob.keys(), vals))
     elif oft.OriginFrom(annotation, oft.PyStructCompatibleToBlob):
         return TransformLocalBlob(local_blob, annotation)
