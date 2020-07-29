@@ -192,6 +192,11 @@ class Callback(typing.Generic[typing.TypeVar("T")]):
     pass
 
 
+@oneflow_export("typing.Collection")
+class Collection(typing.Generic[typing.TypeVar("T")]):
+    pass
+
+
 def OriginFrom(parameterised, generic):
     if inspect.isclass(parameterised) and inspect.isclass(generic):
         return issubclass(parameterised, generic)
@@ -209,5 +214,7 @@ def OriginFrom(parameterised, generic):
             return parameterised.__origin__ is list
         if generic == Callback:
             return parameterised.__origin__ is Callback
+        if generic == Collection:
+            return parameterised.__origin__ is Collection
 
     raise NotImplementedError("python typing is a monster torturing everyone.")
