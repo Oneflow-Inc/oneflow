@@ -387,12 +387,13 @@ def test_annotation_Collection_Tuple_Numpy(test_case):
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo(data)[0], data))
 
+
 def test_annotation_Collection_Mix_Nesting_Numpy(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function()
     def foo(x: oft.Numpy.Placeholder((10,))) -> oft.Collection[oft.Numpy]:
-        return (x,(x,), [x,x, x], {"x": {256: x}})
+        return (x, (x,), [x, x, x], {"x": {256: x}})
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo(data)[0], data))
@@ -454,6 +455,7 @@ def test_annotation_Collection_Tuple_ListNumpy(test_case):
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo([data])[0][0], data))
 
+
 def test_annotation_Collection_Mix_Nesting_ListNumpy(test_case):
     flow.config.gpu_device_num(1)
     func_config = flow.FunctionConfig()
@@ -461,7 +463,7 @@ def test_annotation_Collection_Mix_Nesting_ListNumpy(test_case):
 
     @flow.global_function(func_config)
     def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Collection[oft.ListNumpy]:
-        return (x,(x,), [x,x, x], {"x": {256: x}})
+        return (x, (x,), [x, x, x], {"x": {256: x}})
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo([data])[0][0], data))
@@ -478,7 +480,9 @@ def test_annotation_Collection_ListListNumpy(test_case):
     func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
-    def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.Collection[oft.ListListNumpy]:
+    def foo(
+        x: oft.ListListNumpy.Placeholder((10,))
+    ) -> oft.Collection[oft.ListListNumpy]:
         return x
 
     data = np.ones((10,), dtype=np.float32)
@@ -491,7 +495,9 @@ def test_annotation_Collection_List_ListListNumpy(test_case):
     func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
-    def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.Collection[oft.ListListNumpy]:
+    def foo(
+        x: oft.ListListNumpy.Placeholder((10,))
+    ) -> oft.Collection[oft.ListListNumpy]:
         return [x]
 
     data = np.ones((10,), dtype=np.float32)
@@ -504,7 +510,9 @@ def test_annotation_Collection_Dict_ListListNumpy(test_case):
     func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
-    def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.Collection[oft.ListListNumpy]:
+    def foo(
+        x: oft.ListListNumpy.Placeholder((10,))
+    ) -> oft.Collection[oft.ListListNumpy]:
         return {"x": x}
 
     data = np.ones((10,), dtype=np.float32)
@@ -517,11 +525,14 @@ def test_annotation_Collection_Tuple_ListListNumpy(test_case):
     func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
-    def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.Collection[oft.ListListNumpy]:
+    def foo(
+        x: oft.ListListNumpy.Placeholder((10,))
+    ) -> oft.Collection[oft.ListListNumpy]:
         return (x,)
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo([[data]])[0][0][0], data))
+
 
 def test_annotation_Collection_Mix_Nesting_ListListNumpy(test_case):
     flow.config.gpu_device_num(1)
@@ -529,8 +540,10 @@ def test_annotation_Collection_Mix_Nesting_ListListNumpy(test_case):
     func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
-    def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.Collection[oft.ListListNumpy]:
-        return (x,(x,), [x,x, x], {"x": {256: x}})
+    def foo(
+        x: oft.ListListNumpy.Placeholder((10,))
+    ) -> oft.Collection[oft.ListListNumpy]:
+        return (x, (x,), [x, x, x], {"x": {256: x}})
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo([[data]])[0][0][0], data))
@@ -539,4 +552,3 @@ def test_annotation_Collection_Mix_Nesting_ListListNumpy(test_case):
     test_case.assertTrue(np.array_equal(foo([[data]])[2][1][0][0], data))
     test_case.assertTrue(np.array_equal(foo([[data]])[2][2][0][0], data))
     test_case.assertTrue(np.array_equal(foo([[data]])[3]["x"][256][0][0], data))
-
