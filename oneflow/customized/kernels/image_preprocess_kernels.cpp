@@ -311,7 +311,7 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("crop_mirror_normalize")
+REGISTER_USER_KERNEL("crop_mirror_normalize_from_uint8")
     .SetCreateFn<CropMirrorNormalizeFromStaticShapeToFloatKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      & (user_op::HobDataType("in", 0) == DataType::kUInt8)
@@ -401,7 +401,7 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("crop_mirror_normalize")
+REGISTER_USER_KERNEL("crop_mirror_normalize_from_tensorbuffer")
     .SetCreateFn<CropMirrorNormalizeFromTensorBufferToFloatKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)

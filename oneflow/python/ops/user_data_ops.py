@@ -154,9 +154,20 @@ def CropMirrorNormalize(
 ):
     if name is None:
         name = id_util.UniqueStr("CropMirrorNormalize_")
-    op = (
-        flow.user_op_builder(name).Op("crop_mirror_normalize").Input("in", [input_blob])
-    )
+    op_type_name = ""
+    if input_blob.dtype is dtype_util.tensor_buffer:
+        op_type_name = "crop_mirror_normalize_from_tensorbuffer"
+    elif input_blob.dtype is dtype_util.uint8:
+        op_type_name = "crop_mirror_normalize_from_uint8"
+    else:
+        print(
+            "ERROR! oneflow.data.crop_mirror_normalize op",
+            " NOT support input data type : ",
+            input_blob.dtype,
+        )
+        raise NotImplementedError
+
+    op = flow.user_op_builder(name).Op(op_type_name).Input("in", [input_blob])
     if mirror_blob is not None:
         op = op.Input("mirror", [mirror_blob])
     return (
