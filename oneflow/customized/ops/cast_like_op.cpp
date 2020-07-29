@@ -50,13 +50,18 @@ REGISTER_USER_OP("cast_like")
             .Build();
       }
       ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("in", 0))
-          .Broadcast(user_op::OpArg("like", 0))
+          .PartialSum(user_op::OpArg("like", 0))
+          .Broadcast(user_op::OpArg("in", 0))
           .Broadcast(user_op::OpArg("out", 0))
           .Build();
       ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("in", 0))
+          .Broadcast(user_op::OpArg("like", 0))
+          .PartialSum(user_op::OpArg("in", 0))
+          .PartialSum(user_op::OpArg("out", 0))
+          .Build();
+      ctx->NewBuilder()
           .PartialSum(user_op::OpArg("like", 0))
+          .PartialSum(user_op::OpArg("in", 0))
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
       return Maybe<void>::Ok();
