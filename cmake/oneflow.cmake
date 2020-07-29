@@ -34,7 +34,7 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
     error( "Expanding macro in WIN32 is not supported yet")
   else()
     add_custom_command(OUTPUT ${of_e_h_expanded}
-      COMMAND ${CMAKE_C_COMPILER} 
+      COMMAND ${CMAKE_C_COMPILER}
       ARGS -E -I"${PROJECT_SOURCE_DIR}" -I"${PROJECT_BINARY_DIR}"
       -o "${of_e_h_expanded}" "${oneflow_hdr_to_be_expanded}"
       DEPENDS ${oneflow_hdr_to_be_expanded}
@@ -100,7 +100,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cuh$")
-    if(BUILD_CUDA) 
+    if(BUILD_CUDA)
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
@@ -118,7 +118,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
     set(group_this ON)
   endif()
-  
+
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*_test\\.cpp$")
       # test file
@@ -168,7 +168,7 @@ message("-- Using Python executable: " ${Python_EXECUTABLE})
 if (NOT Python_INCLUDE_DIRS)
   message(STATUS "Getting python include directory from sysconfig..")
   execute_process(
-    COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_paths()['include'])" 
+    COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_paths()['include'])"
     OUTPUT_VARIABLE Python_INCLUDE_DIRS
     RESULT_VARIABLE ret_code)
   string(STRIP ${Python_INCLUDE_DIRS} Python_INCLUDE_DIRS)
@@ -185,11 +185,11 @@ message(STATUS "Found python include directory ${Python_INCLUDE_DIRS}")
 if (NOT Python_NumPy_INCLUDE_DIRS)
   message(STATUS "Getting numpy include directory by numpy.get_include()..")
   execute_process(
-    COMMAND ${Python_EXECUTABLE} -c "import numpy; print(numpy.get_include())" 
+    COMMAND ${Python_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
     OUTPUT_VARIABLE Python_NumPy_INCLUDE_DIRS
     RESULT_VARIABLE ret_code)
   string(STRIP ${Python_NumPy_INCLUDE_DIRS} Python_NumPy_INCLUDE_DIRS)
-  if ((NOT ret_code EQUAL 0) OR (NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS}) 
+  if ((NOT ret_code EQUAL 0) OR (NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS})
     OR (NOT EXISTS ${Python_NumPy_INCLUDE_DIRS}/numpy/arrayobject.h))
     set(Python_NumPy_INCLUDE_DIRS "")
   endif()
@@ -199,11 +199,17 @@ if (NOT Python_NumPy_INCLUDE_DIRS)
 endif()
 message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
 
+add_custom_target(py_dev_requirements ALL 
+  COMMAND ${Python_EXECUTABLE} -m pip install -r ${PROJECT_SOURCE_DIR}/dev-requirements.txt --user
+)
+
 # clang format
 add_custom_target(of_format
-  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
-  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow/python --fix
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix --quiet
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --python_bin ${Python_EXECUTABLE} --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow/python --fix
   )
+add_dependencies(of_format py_dev_requirements)
 
 # generate version
 if(BUILD_GIT_VERSION)
@@ -225,12 +231,12 @@ if(BUILD_GIT_VERSION)
   add_definitions(-DWITH_GIT_VERSION)
 endif()
 
+set(of_proto_python_dir "${PROJECT_BINARY_DIR}/of_proto_python")
+
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
   COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow/core
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${of_proto_python_dir}
 	)
 add_dependencies(make_pyproto_dir prepare_oneflow_third_party)
 foreach(proto_name ${of_all_proto})
@@ -265,7 +271,7 @@ elseif(UNIX)
   set(of_libs -Wl,--whole-archive of_ccobj of_protoobj -Wl,--no-whole-archive)
 elseif(WIN32)
   set(of_libs of_ccobj of_protoobj)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj") 
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
 endif()
 
 # build swig
@@ -282,21 +288,22 @@ set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
 target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+add_dependencies(oneflow_internal py_dev_requirements)
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 file(REMOVE_RECURSE "${of_pyscript_dir}/oneflow/python")
 add_custom_target(of_pyscript_copy ALL
+    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/clean_generated_api.py --root_path=${of_pyscript_dir}/oneflow
     COMMAND "${CMAKE_COMMAND}" -E copy
         "${PROJECT_SOURCE_DIR}/oneflow/init.py" "${of_pyscript_dir}/oneflow/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
 file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
 copy_files("${oneflow_all_python_file}" "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}" of_pyscript_copy)
+
 file(WRITE ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags = []\n")
 if (BUILD_CUDA)
   file(APPEND ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-DWITH_CUDA')\n")
@@ -310,9 +317,18 @@ endif()
 add_dependencies(of_pyscript_copy of_protoobj)
 add_custom_target(generate_api ALL
   COMMAND rm -rf ${of_pyscript_dir}/oneflow/generated
-  COMMAND export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH && ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow/generated)
+  COMMAND export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH && ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow)
 add_dependencies(generate_api of_pyscript_copy)
 add_dependencies(generate_api oneflow_internal)
+
+file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
+add_custom_target(pip_install)
+add_dependencies(pip_install generate_api)
+add_custom_command(
+  TARGET pip_install
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  COMMAND ${Python_EXECUTABLE} -m pip install -e ${PROJECT_SOURCE_DIR} --install-option="--build_dir=${PROJECT_BINARY_DIR_RELATIVE}" --user)
+
 # get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 # foreach(dir ${include_dirs})
 #   message("-I'${dir}' ")
@@ -343,6 +359,14 @@ if(BUILD_TESTING)
     #    oneflow_add_executable(${test_exe_name} ${cc})
     #    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
     #  endforeach()
+  endif()
+  if (of_separate_test_cc)
+    foreach(cc ${of_separate_test_cc})
+      get_filename_component(test_name ${cc} NAME_WE)
+      string(CONCAT test_exe_name ${test_name} exe)
+      oneflow_add_executable(${test_exe_name} ${cc})
+      target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+    endforeach()
   endif()
 endif()
 

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/gdb.h"
 #include "oneflow/core/common/cached_caller.h"
@@ -57,11 +72,48 @@ void Kernel::CheckSameDim0ValidNum(
   UNIMPLEMENTED();
 }
 
+void Kernel::SetOutputBlobProducerInferAccessChecker(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForEachObnAndIsHeaderInferedBeforeCompute(BnInOp2Blob, [&](const std::string& obn, bool _) {
+    BnInOp2Blob(obn)->set_blob_access_checker(Global<BlobAccessCheckerIf<true, false>>::Get());
+  });
+}
+
+void Kernel::SetOutputBlobProducerComputeAccessChecker(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForEachObnAndIsHeaderInferedBeforeCompute(
+      BnInOp2Blob, [&](const std::string& obn, bool is_header_infered_before_compute) {
+        const BlobAccessChecker* checker = nullptr;
+        if (is_header_infered_before_compute) {
+          checker = Global<BlobAccessCheckerIf<false, true>>::Get();
+        } else {
+          checker = Global<BlobAccessCheckerIf<true, true>>::Get();
+        }
+        BnInOp2Blob(obn)->set_blob_access_checker(checker);
+      });
+}
+
+void Kernel::SetOutputBlobConsumerAccessChecker(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForEachObnAndIsMutableByConsumer(BnInOp2Blob, [&](const std::string& obn, bool is_mutable) {
+    const BlobAccessChecker* checker = nullptr;
+    if (is_mutable) {
+      checker = Global<BlobAccessCheckerIf<false, true>>::Get();
+    } else {
+      checker = Global<BlobAccessCheckerIf<false, false>>::Get();
+    }
+    BnInOp2Blob(obn)->set_blob_access_checker(checker);
+  });
+}
+
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  SetOutputBlobProducerInferAccessChecker(BnInOp2Blob);
   ForwardHeader(ctx, BnInOp2Blob);
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
+  SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob);
   ForwardDataContent(ctx, BnInOp2Blob);
+  SetOutputBlobConsumerAccessChecker(BnInOp2Blob);
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,

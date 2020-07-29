@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/boxing_op.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -113,6 +128,38 @@ Maybe<void> BoxingOp::InferTmpBlobDesc(
     data_tmp_blob_desc->mut_shape() = Shape(*data_tmp_vec_ptr);
     data_tmp_blob_desc->set_data_type(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type());
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> BoxingOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  const OptInt64* batch_axis = nullptr;
+  for (const auto& ibn : input_bns()) {
+    const OptInt64* const cur_ibn_batch_axis = BatchAxis4BnInOp(ibn);
+    if (cur_ibn_batch_axis->has_value() == false) { continue; }
+    if (batch_axis) {
+      CHECK_OR_RETURN(*batch_axis == *cur_ibn_batch_axis);
+    } else {
+      batch_axis = cur_ibn_batch_axis;
+    }
+  }
+  OptInt64 no_batch_axis;
+  if (batch_axis == nullptr) { batch_axis = &no_batch_axis; }
+  for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *batch_axis; }
+  return Maybe<void>::Ok();
+}
+Maybe<void> BoxingOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+  const SbpParallel& sbp_parallel = JUST(SbpInferHint4Ibn(input_bns().Get(0)))->sbp_parallel();
+  FOR_RANGE(int32_t, i, 0, input_bns().size()) {
+    CHECK_OR_RETURN(sbp_parallel == JUST(SbpInferHint4Ibn(input_bns().Get(i)))->sbp_parallel());
+  }
+  (*bn2sbp)[input_bns().Get(0)] = sbp_parallel;
+  (*bn2sbp)[output_bns().Get(0)] = sbp_parallel;
   return Maybe<void>::Ok();
 }
 

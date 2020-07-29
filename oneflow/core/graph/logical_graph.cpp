@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/graph/logical_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/operator/operator.h"
@@ -27,7 +42,6 @@ void LogicalGraph::ForEachLogicalNode(std::function<void(LogicalNodeType*)> func
 void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
-  ReplaceAllReduceFacades();
 }
 
 void LogicalGraph::NaiveBuildFwStruct(
@@ -116,121 +130,6 @@ void LogicalGraph::SetNodeDataLbi() {
   });
 }
 
-void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
-  std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
-  std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
-  CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
-  CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
-  if (GlobalJobDesc().enable_nccl() && src_pd->device_type() == DeviceType::kGPU) {
-    if (src_pd->sorted_machine_ids().size() == 1
-        || GlobalJobDesc().use_nccl_inter_node_communication()) {
-      AddNcclAllReduce(src, dst);
-    } else if (src_pd->device_num_of_each_machine() == 1) {
-      AddReduceScatterAddGatherNodes(src, dst, ReduceRankCtx());
-    } else {
-      AddNcclReduceScatterAndAllGather(src, dst);
-    }
-  } else {
-    AddReduceScatterAddGatherNodes(src, dst, ReduceRankCtx());
-  }
-}
-
-void LogicalGraph::AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNode* dst) {
-  std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
-
-  ReduceRankCtx rank_ctx = ReduceRankCtx().CtxWithScatter(src_pd->device_num_of_each_machine());
-
-  OperatorConf nccl_reduce_scatter_op_conf{};
-  nccl_reduce_scatter_op_conf.set_name("nccl_reduce_scatter_" + NewUniqueId());
-  nccl_reduce_scatter_op_conf.set_device_type(src_pd->device_type());
-  nccl_reduce_scatter_op_conf.mutable_nccl_reduce_scatter_conf();
-  NcclReduceScatterLogicalNode* nccl_reduce_scatter_node = NewNode<NcclReduceScatterLogicalNode>();
-  nccl_reduce_scatter_node->mut_op_vec() = {
-      ConstructOp(nccl_reduce_scatter_op_conf, &GlobalJobDesc())};
-  nccl_reduce_scatter_node->mut_parallel_desc() = src_pd;
-  nccl_reduce_scatter_node->mut_rank_ctx() = rank_ctx;
-  Connect<LogicalNode>(src, NewEdge(), nccl_reduce_scatter_node);
-
-  OperatorConf nccl_all_gather_op_conf{};
-  nccl_all_gather_op_conf.set_name("nccl_all_gather_" + NewUniqueId());
-  nccl_all_gather_op_conf.set_device_type(src_pd->device_type());
-  nccl_all_gather_op_conf.mutable_nccl_all_gather_conf();
-  NcclAllGatherLogicalNode* nccl_all_gather_node = NewNode<NcclAllGatherLogicalNode>();
-  nccl_all_gather_node->mut_op_vec() = {ConstructOp(nccl_all_gather_op_conf, &GlobalJobDesc())};
-  nccl_all_gather_node->mut_parallel_desc() = src_pd;
-  nccl_all_gather_node->mut_rank_ctx() = rank_ctx;
-  Connect<LogicalNode>(nccl_all_gather_node, NewEdge(), dst);
-
-  AddReduceScatterAddGatherNodes(nccl_reduce_scatter_node, nccl_all_gather_node, rank_ctx);
-}
-
-void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
-  std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
-  OperatorConf nccl_all_reduce_op_conf{};
-  nccl_all_reduce_op_conf.set_name("nccl_all_reduce_" + NewUniqueId());
-  nccl_all_reduce_op_conf.set_device_type(src_pd->device_type());
-  NcclAllReduceOpConf* nccl_all_reduce_conf =
-      nccl_all_reduce_op_conf.mutable_nccl_all_reduce_conf();
-  nccl_all_reduce_conf->set_in(
-      GenLogicalBlobName(src->SoleOp()->BnInOp2Lbi(src->SoleOp()->SoleObn())));
-  nccl_all_reduce_conf->set_out("out");
-  NcclAllReduceLogicalNode* nccl_all_reduce_node = NewNode<NcclAllReduceLogicalNode>();
-  nccl_all_reduce_node->mut_op_vec() = {ConstructOp(nccl_all_reduce_op_conf, &GlobalJobDesc())};
-  nccl_all_reduce_node->mut_parallel_desc() = src_pd;
-  nccl_all_reduce_node->mut_rank_ctx() = ReduceRankCtx().CtxWithScatter(src_pd->parallel_num());
-  Connect<LogicalNode>(src, NewEdge(), nccl_all_reduce_node);
-  Connect<LogicalNode>(nccl_all_reduce_node, NewEdge(), dst);
-}
-
-void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst,
-                                                  const ReduceRankCtx& prev_rank_ctx) {
-  std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
-
-  int64_t segment_count =
-      prev_rank_ctx.TotalSegmentCount() == 1
-          ? (src_pd->device_num_of_each_machine() == 1 ? src_pd->sorted_machine_ids().size()
-                                                       : src_pd->device_num_of_each_machine())
-          : src_pd->sorted_machine_ids().size();
-
-  ReduceRankCtx current_rank_ctx = prev_rank_ctx.CtxWithScatter(segment_count);
-  ReduceScatterLogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
-  OperatorConf reduce_scatter_op_conf{};
-  reduce_scatter_op_conf.set_name("reduce_scatter_" + NewUniqueId());
-  reduce_scatter_op_conf.set_device_type(src_pd->device_type());
-  reduce_scatter_op_conf.mutable_reduce_scatter_conf();
-  reduce_scatter_node->mut_op_vec() = {ConstructOp(reduce_scatter_op_conf, &GlobalJobDesc())};
-  reduce_scatter_node->mut_parallel_desc() = src_pd;
-  reduce_scatter_node->mut_rank_ctx() = current_rank_ctx;
-  Connect<LogicalNode>(src, NewEdge(), reduce_scatter_node);
-
-  ReduceAddLogicalNode* reduce_add_node = NewNode<ReduceAddLogicalNode>();
-  OperatorConf reduce_add_op_conf{};
-  reduce_add_op_conf.set_name("reduce_add_" + NewUniqueId());
-  reduce_add_op_conf.set_device_type(src_pd->device_type());
-  reduce_add_op_conf.mutable_reduce_add_conf();
-  reduce_add_node->mut_op_vec() = {ConstructOp(reduce_add_op_conf, &GlobalJobDesc())};
-  reduce_add_node->mut_parallel_desc() = src_pd;
-  reduce_add_node->mut_rank_ctx() = current_rank_ctx;
-  Connect<LogicalNode>(reduce_scatter_node, NewEdge(), reduce_add_node);
-
-  ReduceGatherLogicalNode* reduce_gather_node = NewNode<ReduceGatherLogicalNode>();
-  OperatorConf reduce_gather_op_conf{};
-  reduce_gather_op_conf.set_name("reduce_gather_" + NewUniqueId());
-  reduce_gather_op_conf.set_device_type(src_pd->device_type());
-  reduce_gather_op_conf.mutable_reduce_gather_conf();
-  reduce_gather_node->mut_op_vec() = {ConstructOp(reduce_gather_op_conf, &GlobalJobDesc())};
-  reduce_gather_node->mut_parallel_desc() = src_pd;
-  reduce_gather_node->mut_rank_ctx() = current_rank_ctx;
-
-  if (current_rank_ctx.TotalSegmentCount() == src_pd->parallel_num()) {
-    Connect<LogicalNode>(reduce_add_node, NewEdge(), reduce_gather_node);
-  } else {
-    AddReduceScatterAddGatherNodes(reduce_add_node, reduce_gather_node, current_rank_ctx);
-  }
-
-  Connect<LogicalNode>(reduce_gather_node, NewEdge(), dst);
-}
-
 void LogicalGraph::ForEachNecessaryCtrlEdge(
     const std::function<void(const LogicalNode*, const LogicalNode*, int64_t)>& Handler) const {
   HashMap<std::string, const LogicalNode*> op_name2node;
@@ -261,23 +160,6 @@ void LogicalGraph::ForEachNecessaryCtrlEdge(
         }
       }
     }
-  });
-}
-
-void LogicalGraph::ReplaceAllReduceFacades() {
-  ForEachLogicalNode<AllReduceFacadeLogicalNode>([this](AllReduceFacadeLogicalNode* facade_node) {
-    CHECK_EQ(facade_node->in_edges().size(), 1);
-    CHECK_EQ(facade_node->out_edges().size(), 1);
-    LogicalNode* src = facade_node->SoleInEdge()->src_node();
-    LogicalNode* dst = facade_node->SoleOutEdge()->dst_node();
-    DisConnect(facade_node->SoleInEdge());
-    DisConnect(facade_node->SoleOutEdge());
-    DeleteNode(facade_node);
-    AddAllReduce(src, dst);
-    Operator* all_reduce_ending_op = dst->SoleInEdge()->src_node()->SoleOp().get();
-    const LogicalBlobId& ending_lbi =
-        all_reduce_ending_op->BnInOp2Lbi(all_reduce_ending_op->SoleObn());
-    *dst->SoleOp()->MutBnInOp2Lbi(dst->SoleOp()->SoleIbn()) = ending_lbi;
   });
 }
 

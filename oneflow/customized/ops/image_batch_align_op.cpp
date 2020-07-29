@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -67,6 +82,12 @@ REGISTER_CPU_ONLY_USER_OP("image_batch_align")
       CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
       return Maybe<void>::Ok();
+    })
+    .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
+                             const user_op::UserOpConfWrapper& conf) {
+      user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
+      CHECK(out_modifier != nullptr);
+      out_modifier->set_header_infered_before_compute(false);
     });
 
 }  // namespace oneflow

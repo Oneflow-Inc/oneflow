@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/device/cuda_util.h"
 
@@ -13,11 +28,8 @@ int64_t IDMgr::GetGpuNcclThrdId(int64_t dev_phy_id) const {
 int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 4 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuReduceCtrlThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 5 + dev_phy_id;
-}
 int64_t IDMgr::GetGpuMdUpdtThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 6 + dev_phy_id;
+  return gpu_device_num_ * 5 + dev_phy_id;
 }
 int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * GetCudaWorkTypeSize() + dev_phy_id;

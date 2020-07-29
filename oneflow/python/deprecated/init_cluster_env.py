@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import getpass
@@ -13,7 +28,7 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("deprecated.init_worker")
-def init_worker(scp_binary=True, use_uuid=True):
+def init_worker(scp_binary: bool = True, use_uuid: bool = True) -> None:
     assert type(env_util.default_env_proto) is EnvProto
     env_util.defautl_env_proto_mutable = False
     env_proto = env_util.default_env_proto
@@ -53,7 +68,7 @@ def init_worker(scp_binary=True, use_uuid=True):
 
 
 @oneflow_export("deprecated.delete_worker")
-def delete_worker():
+def delete_worker() -> None:
     # assert env_util.env_proto_mutable == False
     env_proto = env_util.default_env_proto
     assert isinstance(env_proto, EnvProto)

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -277,10 +292,13 @@ REGISTER_USER_OP_GRAD("normalization")
         }
 
         const user_op::UserOpConfWrapper grad_op = grad_op_builder.Build();
-        bool need_norm_grad_op = false;
+        if ((training && op.NeedGenGradTensor4OpInput("x", 0))
+            || op.NeedGenGradTensor4OpInput("gamma", 0)
+            || op.NeedGenGradTensor4OpInput("beta", 0)) {
+          AddOp(grad_op);
+        }
         if (training && op.NeedGenGradTensor4OpInput("x", 0)) {
           op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-          need_norm_grad_op = true;
         }
         if (op.NeedGenGradTensor4OpInput("gamma", 0)) {
           // TODO(liujuncheng): delete identity op when boxing support separated regsts
@@ -292,7 +310,6 @@ REGISTER_USER_OP_GRAD("normalization")
                   .Build();
           AddOp(identity);
           op.BindGradTensorWithOpInput(identity.output("out", 0), "gamma", 0);
-          need_norm_grad_op = true;
         }
         if (op.NeedGenGradTensor4OpInput("beta", 0)) {
           // TODO(liujuncheng): delete identity op when boxing support separated regsts
@@ -304,9 +321,7 @@ REGISTER_USER_OP_GRAD("normalization")
                   .Build();
           AddOp(identity);
           op.BindGradTensorWithOpInput(identity.output("out", 0), "beta", 0);
-          need_norm_grad_op = true;
         }
-        if (need_norm_grad_op) { AddOp(grad_op); }
       }
     });
 

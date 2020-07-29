@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 // include sstream first to avoid some compiling error
 // caused by the following trick
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
@@ -10,10 +25,10 @@
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/storage.h"
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/object_wrapper.h"
+#include "oneflow/core/eager/eager_symbol_storage.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -31,7 +46,7 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = vm::IdUtil::NewLogicalSymbolId();
-  Global<vm::Storage<SerializedT>>::Get()->Add(symbol_id, std::make_shared<SerializedT>());
+  Global<vm::SymbolStorage<T>>::Get()->Add(symbol_id, SerializedT());
   list.EmplaceBack(vm::NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
   list.EmplaceBack(vm::NewInstruction(instr_type_name)->add_init_symbol_operand(symbol_id));
   vm->Receive(&list);

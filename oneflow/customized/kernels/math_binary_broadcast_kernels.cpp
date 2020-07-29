@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
@@ -20,8 +35,8 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
-    T* dptr_x = tensor_x->mut_dptr<T>();
-    T* dptr_y = tensor_y->mut_dptr<T>();
+    const T* dptr_x = tensor_x->dptr<T>();
+    const T* dptr_y = tensor_y->dptr<T>();
     K* dptr_z = tensor_z->mut_dptr<K>();
     size_t num_axes = tensor_z->shape().NumAxes();
     binary_func(ctx->device_ctx(), XpuVarNdarray<K>(tensor_z->shape(), dptr_z, num_axes),

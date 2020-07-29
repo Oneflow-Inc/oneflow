@@ -1,9 +1,25 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -29,14 +45,14 @@ def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     if mirrored:
-        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+        func_config.default_distribute_strategy(flow.scope.mirrored_view())
     else:
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_distribute_strategy(flow.scope.consistent_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     def do_gather_nd(x_blob, i_blob):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "params",
                 shape=params.shape,
@@ -53,8 +69,8 @@ def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
 
         @flow.global_function(func_config)
         def gather_nd_fn(
-            params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
-            indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
+            params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
+            indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
         ):
             return do_gather_nd(params_def, indices_def)
 
@@ -62,8 +78,8 @@ def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
 
         @flow.global_function(func_config)
         def gather_nd_fn(
-            params_def=flow.FixedTensorDef(params.shape, dtype=flow.float),
-            indices_def=flow.FixedTensorDef(indices.shape, dtype=flow.int32),
+            params_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float),
+            indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
         ):
             return do_gather_nd(params_def, indices_def)
 
@@ -74,16 +90,16 @@ def _of_dynamic_params_gather_nd(params, indices, static_params_shape, compare_f
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(func_config)
     def gather_nd_fn(
-        params_def=flow.MirroredTensorDef(static_params_shape, dtype=flow.float),
-        indices_def=flow.MirroredTensorDef(indices.shape, dtype=flow.int32),
+        params_def: oft.ListNumpy.Placeholder(static_params_shape, dtype=flow.float),
+        indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
     ):
-        with flow.device_prior_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             one_var = flow.get_variable(
                 "one",
                 shape=(1,),
@@ -99,7 +115,7 @@ def _of_dynamic_params_gather_nd(params, indices, static_params_shape, compare_f
 
     check_point = flow.train.CheckPoint()
     check_point.init()
-    return gather_nd_fn([params], [indices]).get().ndarray_list()[0]
+    return gather_nd_fn([params], [indices]).get().numpy_list()[0]
 
 
 def _compare_gather_nd_with_tf(
@@ -124,13 +140,13 @@ def _compare_gather_nd_with_tf(
 
         def compare_dy(params_grad):
             test_case.assertTrue(
-                np.array_equal(dy.numpy(), params_grad.ndarray_list()[0])
+                np.array_equal(dy.numpy(), params_grad.numpy_list()[0])
             )
 
     else:
 
         def compare_dy(params_grad):
-            test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.ndarray()))
+            test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.numpy()))
 
     gather_nd_fn = _make_gather_nd_fn(
         params, indices, device_type, mirrored, compare_dy
@@ -140,9 +156,9 @@ def _compare_gather_nd_with_tf(
     check_point.init()
 
     if mirrored:
-        of_y = gather_nd_fn([params], [indices]).get().ndarray_list()[0]
+        of_y = gather_nd_fn([params], [indices]).get().numpy_list()[0]
     else:
-        of_y = gather_nd_fn(params, indices).get().ndarray()
+        of_y = gather_nd_fn(params, indices).get().numpy()
 
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
 
@@ -166,7 +182,7 @@ def _compare_dynamic_gather_nd_with_tf(
         dy = tf.tensor_scatter_nd_add(zero_params, i, dy.values)
 
     def compare_dy(params_grad):
-        test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.ndarray_list()[0]))
+        test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.numpy_list()[0]))
 
     of_y = _of_dynamic_params_gather_nd(
         params, indices, static_params_shape, compare_dy
@@ -178,17 +194,17 @@ def _of_gather_nd_dynamic_indices(params, indices, indices_static_shape, device_
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def gather_nd_fn(
-        params_def=flow.MirroredTensorDef(params.shape, dtype=flow.float),
-        indices_def=flow.MirroredTensorDef(indices_static_shape, dtype=flow.int32),
+        params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
+        indices_def: oft.ListNumpy.Placeholder(indices_static_shape, dtype=flow.int32),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.gather_nd(params_def, indices_def)
 
-    return gather_nd_fn([params], [indices]).get().ndarray_list()[0]
+    return gather_nd_fn([params], [indices]).get().numpy_list()[0]
 
 
 def _compare_gather_nd_dynamic_indices_with_tf(

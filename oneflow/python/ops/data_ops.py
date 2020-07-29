@@ -1,26 +1,46 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
+
+from typing import Optional, Sequence, Tuple, Union, List
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.record.image_pb2 as image_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-
 from oneflow.python.oneflow_export import oneflow_export
+import traceback
 
 
 @oneflow_export("data.ImagePreprocessor")
 class ImagePreprocessor(object):
-    def __init__(self, preprocessor):
+    def __init__(self, preprocessor: str) -> None:
         assert isinstance(preprocessor, str)
         if preprocessor.lower() != "bgr2rgb" and preprocessor.lower() != "mirror":
             raise ValueError('preprocessor must be "bgr2rgb" or "mirror".')
 
         self.preprocessor = preprocessor
 
-    def to_proto(self, proto=None):
+    def to_proto(
+        self, proto: Optional[image_util.ImagePreprocess] = None
+    ) -> image_util.ImagePreprocess:
         if proto is None:
             proto = image_util.ImagePreprocess()
 
@@ -36,14 +56,16 @@ class ImagePreprocessor(object):
 
 @oneflow_export("data.ImageResizePreprocessor")
 class ImageResizePreprocessor(object):
-    def __init__(self, width, height):
+    def __init__(self, width: int, height: int) -> None:
         assert isinstance(width, int)
         assert isinstance(height, int)
 
         self.width = width
         self.height = height
 
-    def to_proto(self, proto=None):
+    def to_proto(
+        self, proto: Optional[image_util.ImagePreprocess] = None
+    ) -> image_util.ImagePreprocess:
         proto = proto or image_util.ImagePreprocess()
         setattr(proto.resize, "width", self.width)
         setattr(proto.resize, "height", self.height)
@@ -52,13 +74,20 @@ class ImageResizePreprocessor(object):
 
 @oneflow_export("data.ImageCodec")
 class ImageCodec(object):
-    def __init__(self, image_preprocessors=None):
+    def __init__(
+        self,
+        image_preprocessors: Optional[
+            Union[List[ImageResizePreprocessor], Tuple[ImageResizePreprocessor]]
+        ] = None,
+    ) -> None:
         if isinstance(image_preprocessors, (list, tuple)):
             self.image_preprocessors = list(image_preprocessors)
         else:
             self.image_preprocessors = []
 
-    def to_proto(self, proto=None):
+    def to_proto(
+        self, proto: Optional[op_conf_util.EncodeConf] = None
+    ) -> op_conf_util.EncodeConf:
         if proto is None:
             proto = op_conf_util.EncodeConf()
 
@@ -68,10 +97,12 @@ class ImageCodec(object):
 
 @oneflow_export("data.RawCodec")
 class RawCodec(object):
-    def __init__(self, auto_zero_padding=False):
+    def __init__(self, auto_zero_padding: bool = False) -> None:
         self.auto_zero_padding = auto_zero_padding
 
-    def to_proto(self, proto=None):
+    def to_proto(
+        self, proto: Optional[op_conf_util.EncodeConf] = None
+    ) -> op_conf_util.EncodeConf:
         if proto is None:
             proto = op_conf_util.EncodeConf()
 
@@ -82,10 +113,12 @@ class RawCodec(object):
 
 @oneflow_export("data.BytesListCodec")
 class BytesListCodec(object):
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def to_proto(self, proto=None):
+    def to_proto(
+        self, proto: Optional[op_conf_util.EncodeConf] = None
+    ) -> op_conf_util.EncodeConf:
         if proto is None:
             proto = op_conf_util.EncodeConf()
 
@@ -96,8 +129,11 @@ class BytesListCodec(object):
 @oneflow_export("data.NormByChannelPreprocessor")
 class NormByChannelPreprocessor(object):
     def __init__(
-        self, mean_values, std_values=(1.0, 1.0, 1.0), data_format="channels_last",
-    ):
+        self,
+        mean_values: Union[List[float], Tuple[float]],
+        std_values: Union[List[float], Tuple[float]] = (1.0, 1.0, 1.0),
+        data_format: str = "channels_last",
+    ) -> None:
         assert isinstance(mean_values, (list, tuple))
         assert isinstance(std_values, (list, tuple))
         assert isinstance(data_format, str)
@@ -105,7 +141,9 @@ class NormByChannelPreprocessor(object):
         self.std_values = std_values
         self.data_format = data_format
 
-    def to_proto(self, proto=None):
+    def to_proto(
+        self, proto: Optional[op_conf_util.PreprocessConf] = None
+    ) -> op_conf_util.PreprocessConf:
         if proto is None:
             proto = op_conf_util.PreprocessConf()
 
@@ -118,7 +156,22 @@ class NormByChannelPreprocessor(object):
 
 @oneflow_export("data.BlobConf")
 class BlobConf(object):
-    def __init__(self, name, shape, dtype, codec, preprocessors=None):
+    def __init__(
+        self,
+        name: str,
+        shape: Sequence[int],
+        dtype: dtype_util.dtype,
+        codec: Union[ImageCodec, RawCodec],
+        preprocessors: Optional[
+            Sequence[
+                Union[
+                    ImagePreprocessor,
+                    ImageResizePreprocessor,
+                    NormByChannelPreprocessor,
+                ]
+            ]
+        ] = None,
+    ) -> None:
         assert isinstance(name, str)
         assert isinstance(shape, (list, tuple))
 
@@ -132,11 +185,11 @@ class BlobConf(object):
         else:
             self.preprocessors = []
 
-    def to_proto(self):
+    def to_proto(self) -> op_conf_util.BlobConf:
         blob_conf = op_conf_util.BlobConf()
         blob_conf.name = self.name
         blob_conf.shape.dim.extend(self.shape)
-        blob_conf.data_type = self.dtype
+        blob_conf.data_type = self.dtype.oneflow_proto_dtype
         self.codec.to_proto(blob_conf.encode_case)
         blob_conf.preprocess.extend([p.to_proto() for p in self.preprocessors])
         return blob_conf
@@ -144,16 +197,26 @@ class BlobConf(object):
 
 @oneflow_export("data.decode_ofrecord")
 def decode_ofrecord(
-    ofrecord_dir,
-    blobs,
-    batch_size=1,
-    data_part_num=1,
-    part_name_prefix="part-",
-    part_name_suffix_length=-1,
-    shuffle=False,
-    buffer_size=1024,
-    name=None,
-):
+    ofrecord_dir: str,
+    blobs: Sequence[BlobConf],
+    batch_size: int = 1,
+    data_part_num: int = 1,
+    part_name_prefix: str = "part-",
+    part_name_suffix_length: int = -1,
+    shuffle: bool = False,
+    buffer_size: int = 1024,
+    name: str = None,
+) -> Tuple[remote_blob_util.BlobDef]:
+    print(
+        "WARNING:",
+        "oneflow.data.decode_ofrecord is deprecated, and NOT work in eager mode, please use: \n",
+        "    1)   ofrecord = oneflow.data.ofrecord_reader(...) to read ofrecord; \n",
+        "    2)   image = oneflow.data.ofrecord_image_decoder(...) to decode image; \n",
+        "    3)   raw = oneflow.data.ofrecord_raw_decoder(...) to decode raw data like label; \n",
+        traceback.format_stack()[-2],
+    )
+    assert not flow.eager_execution_enabled()
+
     if name is None:
         name = id_util.UniqueStr("Decode_")
 
@@ -176,21 +239,21 @@ def decode_ofrecord(
         lbi.blob_name = blob_conf.name
         lbis.append(lbi)
 
-    compile_context.CurJobAddConsistentOp(op_conf)
+    interpret_util.ConsistentForward(op_conf)
     return tuple(map(lambda x: remote_blob_util.RemoteBlob(x), lbis))
 
 
 @oneflow_export("data.ofrecord_loader")
 def ofrecord_loader(
-    ofrecord_dir,
-    batch_size=1,
-    data_part_num=1,
-    part_name_prefix="part-",
-    part_name_suffix_length=-1,
-    shuffle=False,
-    shuffle_buffer_size=1024,
-    name=None,
-):
+    ofrecord_dir: str,
+    batch_size: int = 1,
+    data_part_num: int = 1,
+    part_name_prefix: str = "part-",
+    part_name_suffix_length: int = -1,
+    shuffle: bool = False,
+    shuffle_buffer_size: int = 1024,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     if name is None:
         name = id_util.UniqueStr("OFRecord_Loader_")
 
@@ -210,22 +273,22 @@ def ofrecord_loader(
     lbi.op_name = name
     lbi.blob_name = "out"
 
-    compile_context.CurJobAddConsistentOp(op_conf)
+    interpret_util.ConsistentForward(op_conf)
     return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("data.ofrecord_reader")
 def ofrecord_reader(
-    ofrecord_dir,
-    batch_size=1,
-    data_part_num=1,
-    part_name_prefix="part-",
-    part_name_suffix_length=-1,
-    random_shuffle=False,
-    shuffle_buffer_size=1024,
-    shuffle_after_epoch=False,
-    name=None,
-):
+    ofrecord_dir: str,
+    batch_size: int = 1,
+    data_part_num: int = 1,
+    part_name_prefix: str = "part-",
+    part_name_suffix_length: int = -1,
+    random_shuffle: bool = False,
+    shuffle_buffer_size: int = 1024,
+    shuffle_after_epoch: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     if name is None:
         name = id_util.UniqueStr("OFRecord_Reader_")
 
@@ -233,14 +296,14 @@ def ofrecord_reader(
         flow.user_op_builder(name)
         .Op("OFRecordReader")
         .Output("out")
-        .Attr("data_dir", ofrecord_dir, "AttrTypeString")
-        .Attr("data_part_num", data_part_num, "AttrTypeInt32")
-        .Attr("batch_size", batch_size, "AttrTypeInt32")
-        .Attr("part_name_prefix", part_name_prefix, "AttrTypeString")
-        .Attr("random_shuffle", random_shuffle, "AttrTypeBool")
-        .Attr("shuffle_buffer_size", shuffle_buffer_size, "AttrTypeInt32")
-        .Attr("shuffle_after_epoch", shuffle_after_epoch, "AttrTypeBool")
-        .Attr("part_name_suffix_length", part_name_suffix_length, "AttrTypeInt32")
+        .Attr("data_dir", ofrecord_dir)
+        .Attr("data_part_num", data_part_num)
+        .Attr("batch_size", batch_size)
+        .Attr("part_name_prefix", part_name_prefix)
+        .Attr("random_shuffle", random_shuffle)
+        .Attr("shuffle_buffer_size", shuffle_buffer_size)
+        .Attr("shuffle_after_epoch", shuffle_after_epoch)
+        .Attr("part_name_suffix_length", part_name_suffix_length)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -248,7 +311,14 @@ def ofrecord_reader(
 
 
 @oneflow_export("data.decode_random")
-def decode_random(shape, dtype, batch_size=1, initializer=None, tick=None, name=None):
+def decode_random(
+    shape: Sequence[int],
+    dtype: dtype_util.dtype,
+    batch_size: int = 1,
+    initializer: Optional[op_conf_util.InitializerConf] = None,
+    tick: Optional[remote_blob_util.BlobDef] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     op_conf = op_conf_util.OperatorConf()
 
     if name is None:
@@ -260,7 +330,7 @@ def decode_random(shape, dtype, batch_size=1, initializer=None, tick=None, name=
     op_conf.decode_random_conf.shape.dim.extend(shape)
 
     assert dtype is not None
-    setattr(op_conf.decode_random_conf, "data_type", dtype)
+    setattr(op_conf.decode_random_conf, "data_type", dtype.oneflow_proto_dtype)
 
     op_conf.decode_random_conf.batch_size = batch_size
 
@@ -279,5 +349,5 @@ def decode_random(shape, dtype, batch_size=1, initializer=None, tick=None, name=
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
 
-    compile_context.CurJobAddConsistentOp(op_conf)
+    interpret_util.ConsistentForward(op_conf)
     return remote_blob_util.RemoteBlob(lbi)

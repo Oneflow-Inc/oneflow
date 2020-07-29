@@ -1,5 +1,21 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def MakeFuncConfig(enable_inplace):
@@ -27,13 +43,13 @@ def test_inplace_variable(test_case):
 
     flow.train.CheckPoint().init()
     test_case.assertTrue(
-        np.allclose(InplaceVariable().get().ndarray(), np.ones((10,), np.float32))
+        np.allclose(InplaceVariable().get().numpy(), np.ones((10,), np.float32))
     )
 
 
 def test_deadlock(test_case):
     @flow.global_function(MakeFuncConfig(True))
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
 
@@ -42,7 +58,7 @@ def test_deadlock(test_case):
 
 def test_nodeadlock_with_return(test_case):
     @flow.global_function(MakeFuncConfig(True))
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
         return y
@@ -52,7 +68,7 @@ def test_nodeadlock_with_return(test_case):
 
 def test_reentrant_lock_check_failed(test_case):
     @flow.global_function(MakeFuncConfig(True))
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
 
@@ -67,7 +83,7 @@ def test_const_inplace_variable(test_case):
         return y
 
     flow.train.CheckPoint().init()
-    of_ret = InplaceVariable().get().ndarray()
+    of_ret = InplaceVariable().get().numpy()
     test_case.assertTrue(np.allclose(of_ret, np.ones((10,), np.float32)))
 
 

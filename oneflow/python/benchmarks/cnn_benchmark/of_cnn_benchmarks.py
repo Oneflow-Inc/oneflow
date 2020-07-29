@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import, division, print_function
 
 import argparse
@@ -142,13 +157,10 @@ optimizer_dict = {
 #        "warmup_conf": {"linear_conf": {"warmup_batches":10000, "start_multiplier":0}},
 
 func_config = flow.FunctionConfig()
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_distribute_strategy(flow.scope.consistent_view())
 func_config.train.primary_lr(args.learning_rate)
 func_config.default_data_type(flow.float)
 func_config.train.model_update_conf(optimizer_dict[args.optimizer])
-func_config.disable_all_reduce_sequence(True)
-func_config.all_reduce_group_min_mbyte(8)
-func_config.all_reduce_group_num(128)
 func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 
 if args.weight_l2:

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/xrt/launch_kernel.h"
 #include "oneflow/xrt/api.h"
 #include "oneflow/xrt/compilation_cache.h"
@@ -15,6 +30,7 @@ DEFINE_int32(max_batch_size, EnvToInt(FLAGS_max_batch_size, 1),
 
 DECLARE_bool(tensorrt_fp16);
 DECLARE_bool(tensorrt_int8);
+DECLARE_string(int8_calibration);
 
 namespace oneflow {
 namespace xrt {
@@ -165,6 +181,8 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
     CHECK_EQ(device_type, DeviceType::kGPU);
     run_options.max_batch_size = FLAGS_max_batch_size;
     run_options.tensorrt_fp16 = FLAGS_tensorrt_fp16;
+    run_options.tensorrt_int8 = FLAGS_tensorrt_int8;
+    run_options.tensorrt_int8_calibration = FLAGS_int8_calibration;
   }
   bool status = executable->Run(entry_params, run_options, block_until_done);
   CHECK(status) << "Executable is running failed.";

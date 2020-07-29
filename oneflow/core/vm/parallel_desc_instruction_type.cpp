@@ -1,10 +1,25 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/flat_msg_view.h"
+#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
-#include "oneflow/core/vm/storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/object_wrapper.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -48,16 +63,16 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
       auto mirrored_object =
           ObjectMsgPtr<MirroredObject>::NewFrom(vm->mut_allocator(), logical_object.Mutable(), 0);
       {
-        const auto& serialized_conf =
-            Global<Storage<ParallelConf>>::Get()->Get(view->logical_object_id(i));
+        const auto& parallel_desc =
+            Global<SymbolStorage<ParallelDesc>>::Get()->GetPtr(view->logical_object_id(i));
         auto* rw_mutexed_object = mirrored_object->mut_rw_mutexed_object();
-        rw_mutexed_object->Init<ObjectWrapper<ParallelDesc>>(serialized_conf);
+        rw_mutexed_object->Init<ObjectWrapper<ParallelDesc>>(parallel_desc);
       }
       CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
     }
   }
 };
-COMMAND(Global<Storage<ParallelConf>>::SetAllocated(new Storage<ParallelConf>()));
+COMMAND(Global<SymbolStorage<ParallelDesc>>::SetAllocated(new SymbolStorage<ParallelDesc>()));
 COMMAND(RegisterInstructionType<NewParallelDescSymbolInstructionType>("NewParallelDescSymbol"));
 
 }  // namespace vm

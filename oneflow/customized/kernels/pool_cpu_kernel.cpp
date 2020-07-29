@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/customized/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/customized/utils/pool_util.h"
@@ -85,6 +100,7 @@ struct PoolCpuKernelUtil {
     const T* output_diff = out_diff_blob->dptr<T>();
     const T* output = out_blob->dptr<T>();
     const T* input = in_blob->dptr<T>();
+    std::memset(in_diff_blob->mut_dptr<T>(), T(0), in.elem_cnt() * sizeof(T));
     T* input_diff = in_diff_blob->mut_dptr<T>();
     FOR_RANGE(int64_t, n, 0, in.At(0)) {
       FOR_RANGE(int64_t, c, 0, in.At(1)) {
@@ -179,6 +195,7 @@ struct PoolCpuKernelUtil {
     ConstEigenArrayMap<T> in_mat(in_blob->dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
     ConstEigenArrayMap<T> out_diff_mat(out_diff_blob->dptr<T>(), out.At(1),
                                        out.elem_cnt() / out.At(1));
+    std::memset(in_diff_blob->mut_dptr<T>(), T(0), in.elem_cnt() * sizeof(T));
     EigenArrayMap<T> in_diff_mat(in_diff_blob->mut_dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
     FOR_RANGE(int64_t, n, 0, in.At(0)) {
       FOR_RANGE(int64_t, pd, 0, out.At(2)) {

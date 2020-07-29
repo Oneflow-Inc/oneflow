@@ -1,8 +1,24 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
+
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/operator/variable_op.h"
-#include "oneflow/core/framework/op_registration.h"
 
 namespace oneflow {
 
@@ -54,10 +70,10 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   size_t mem_block_num = RegstNum4OpSameOutputBlob(op.op_conf().op_type_case());
   if (op.op_conf().has_user_conf()) {
     const std::string& op_type_name = op.op_conf().user_conf().op_type_name();
-    const auto* op_reg_val = user_op::LookUpInOpRegistry(op_type_name);
-    CHECK(op_reg_val != nullptr) << "op_type_name " << op_type_name << " not register";
-    if (op_reg_val->same_output_regst_num > 0) {
-      mem_block_num = op_reg_val->same_output_regst_num;
+    const auto* op_reg_result = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
+    CHECK(op_reg_result != nullptr) << "op_type_name " << op_type_name << " not register";
+    if (op_reg_result->same_output_regst_num > 0) {
+      mem_block_num = op_reg_result->same_output_regst_num;
     }
   }
   // when output blob num > 1 and task node on out edge is all NormalForwardCompTaskNode ,

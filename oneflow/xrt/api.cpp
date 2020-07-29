@@ -1,10 +1,33 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/xrt/api.h"
 
+#include "absl/strings/str_cat.h"
 #include "glog/logging.h"
 
 #include "oneflow/core/operator/operator.h"  // GenLogicalBlobName, GenLogicalBlobId
 #include "oneflow/xrt/build_graph.h"
 #include "oneflow/xrt/utility/env.h"
+
+#include <fstream>
+#include <mutex>
+
+#ifdef WITH_TENSORRT
+#include "oneflow/xrt/tensorrt/trt_int8_calibrator.h"
+#endif  // WITH_TENSORRT
 
 DEFINE_int32(clustering_minimum_nodes, EnvToInt(FLAGS_clustering_minimum_nodes, 1),
              "Minium nodes of a cluster after clustering.");
@@ -24,6 +47,11 @@ DEFINE_bool(tensorrt_fp16, EnvToBool(FLAGS_tensorrt_fp16, false),
 DEFINE_bool(tensorrt_int8, EnvToBool(FLAGS_tensorrt_int8, false),
             "Enable int8 precision for TENSORRT engine.");
 
+DEFINE_string(int8_calibration, EnvToString(FLAGS_int8_calibration, ""),
+              "TensorRT int8 calibration table directory. "
+              "Default is empty, and this means the calibration table will be "
+              "implictly generated if tensorrt_int8 flag is true.");
+
 namespace oneflow {
 namespace xrt {
 
@@ -33,8 +61,6 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
     {OP_TYPE_CASE(Identity), "Identity"},
     // {OP_TYPE_CASE(FullyConnected), "FullyConnected"},
     {OP_TYPE_CASE(AdamModelUpdate), "AdamOptimizer"},
-    // {OP_TYPE_CASE(ReduceConcat), "ReduceConcat"},
-    // {OP_TYPE_CASE(ReduceSplit), "ReduceSplit"},
     // TODO(hjchen2)
 };
 
@@ -73,6 +99,7 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"layer_norm_grad", "LayerNormGrad"},
     {"scalar_add", "ScalarAdd"},
     {"scalar_mul", "ScalarMul"},
+    {"leaky_relu", "LeakyRelu"},
 };
 
 std::string ExtractOpTypeAsString(const OperatorConf &conf) {
@@ -159,7 +186,12 @@ void InitXrtConfigurations(const XrtConfig &config) {
   if (config.has_tensorrt_config()) {
     const XrtConfig::TensorRTConfig &trt_config = config.tensorrt_config();
     if (trt_config.has_use_fp16()) { FLAGS_tensorrt_fp16 = trt_config.use_fp16(); }
-    if (trt_config.has_use_int8()) { FLAGS_tensorrt_int8 = trt_config.use_int8(); }
+    if (trt_config.has_use_int8()) {
+      FLAGS_tensorrt_int8 = trt_config.use_int8();
+      if (trt_config.has_int8_calibration()) {
+        FLAGS_int8_calibration = trt_config.int8_calibration();
+      }
+    }
   }
 }
 
@@ -192,6 +224,42 @@ void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job, bool train_p
   // Rebuild Job
   RunXrtPass("RebuildCompiledJob", graph.get(), options, job);
 }
+
+#ifdef WITH_TENSORRT
+namespace tensorrt {
+void CacheInt8Calibration() {
+  const auto &calib_resources = TRTInt8CalibratorResource::All();
+  for (const auto &res : calib_resources) {
+    std::lock_guard<std::mutex> lock(res.second->mutex_);
+    if (!res.second->calibrator_->isDone()) {
+      res.second->calibrator_->waitAndSetDone();
+      res.second->thread_->join();
+    }
+    res.second->calibrator_->ReleaseDevBuffers();
+  }
+}
+
+void WriteInt8Calibration(const std::string &path) {
+  const auto &calib_resources = TRTInt8CalibratorResource::All();
+  for (const auto &res : calib_resources) {
+    CHECK(res.second->calibrator_->isDone())  // NOLINT
+        << "Calibration table maybe has not been generated "
+        << "since the calibrator has not been done.";
+
+    const std::string &calibration_table_data =
+        res.second->calibrator_->getCalibrationTableAsString();
+    CHECK(calibration_table_data.size()) << "Calibration table data is empty.";
+
+    std::string calib_store_path =  // NOLINT
+        absl::StrCat(path, "/", res.first /*calibrator name*/);
+    std::ofstream ofile(calib_store_path, std::ios::out);
+    CHECK(ofile.good()) << "Could not open calibration file: " << calib_store_path;
+    ofile << calibration_table_data;
+    ofile.close();
+  }
+}
+}  // namespace tensorrt
+#endif  // WITH_TENSORRT
 
 }  // namespace xrt
 }  // namespace oneflow

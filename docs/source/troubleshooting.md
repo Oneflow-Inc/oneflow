@@ -1,9 +1,17 @@
 # Troubleshooting
 
+- `CUDNN_STATUS_NOT_INITIALIZED`
+    - You might see error message like this:
+        ```
+        F0723 19:05:56.194067 40970 cuda_util.cpp:82] Check failed: error == CUDNN_STATUS_SUCCESS (1 vs. 0) CUDNN_STATUS_NOT_INITIALIZED
+        ```
+    - Please upgrade to Nvidia Linux x86_64 driver version >= 440.33
+    - For more information, please refer to [cuda compatibility docs](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
+
 - Failed to compile `.cu` files
-    1. Please refer to [CUDA System Requirements](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#system-requirements) . Make sure your linux distribution and libraries shipped with it meet the requirements.
-    2. If you are using tools like conda, please make sure libraries you install doesn't shade the proper installation comes with linux distribution or package management like apt-get.
-    3. Please build OneFlow with a newer version of CMake. You could download version 3.14 from here: [https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz](https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz)
+    - Please refer to [CUDA System Requirements](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#system-requirements) . Make sure your linux distribution and libraries shipped with it meet the requirements.
+    - If you are using tools like conda, please make sure libraries you install doesn't shade the proper installation comes with linux distribution or package management like apt-get.
+    - Please build OneFlow with a newer version of CMake. You could download version 3.14 from here: [https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz](https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz)
 
 - How do I know what compilers and flags are used to compile OneFlow?
     - run `make clean && make VERBOSE=1` to get exact compile commands with compiler path and flags
@@ -28,7 +36,7 @@
         cmake -DTHIRD_PARTY=ON .. && make
         ```
 
-        instead of 
+        instead of
 
         ```bash
         cmake -DTHIRD_PARTY=ON .. && make -j$(nproc) `
@@ -53,7 +61,7 @@
     - add cmake flag `-DCMAKE_BUILD_TYPE=RELWITHDEBINFO` or `-DCMAKE_BUILD_TYPE=DEBUG` and recompile
 
 - `libof_ccobj.a: File truncated`
-    - You might see error message like this: 
+    - You might see error message like this:
 
         ```
         /usr/bin/ar: libof_ccobj.a: File truncated
@@ -65,7 +73,7 @@
 
     - You should upgrade your GNU Binutils. Version 2.33.1 is recommended. If you are using conda, you could install it by running `conda install -c conda-forge binutils`
 
-- failed to compile because C++ 17 is enabled
+- Failed to compile because C++ 17 is enabled
     - In some cases, environment variable `CXXFLAGS` is not empty and contains `--std c++17`.
     - Check if it is empty by running `echo $CXXFLAGS` and clear it with `unset CXXFLAGS`.
 
@@ -87,9 +95,16 @@
         pip3 install -r dev-requirements.txt
         ```
 
-- get gdb warning `ptrace: Operation not permitted.` and gdb command `bt` prints no backtrace
+- Get gdb warning `ptrace: Operation not permitted.` and gdb command `bt` prints no backtrace
     - You might get this warning when debugging OneFlow with gdb inside a docker container. Try add these flags when launching your container:
         ```
         docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined
         ```
     - Please refer to https://stackoverflow.com/questions/19215177/how-to-solve-ptrace-operation-not-permitted-when-trying-to-attach-gdb-to-a-pro
+
+- It takes too long to download python packages when running `make`
+    - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
+        ```
+        python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+        ```
+    - For more information on this, please refer to [pypi 镜像使用帮助](https://mirror.tuna.tsinghua.edu.cn/help/pypi/)

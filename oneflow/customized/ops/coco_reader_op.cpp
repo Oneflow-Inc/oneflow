@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job/sbp_parallel.h"
 
@@ -68,6 +83,37 @@ REGISTER_CPU_ONLY_USER_OP("COCOReader")
         ctx->BatchAxis4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second)->set_value(0);
       }
       return Maybe<void>::Ok();
+    })
+    .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
+                             const user_op::UserOpConfWrapper& conf) {
+      user_op::OutputArgModifier* image_modifier = GetOutputArgModifierFn("image", 0);
+      CHECK(image_modifier != nullptr);
+      image_modifier->set_header_infered_before_compute(false);
+
+      user_op::OutputArgModifier* image_id_modifier = GetOutputArgModifierFn("image_id", 0);
+      CHECK(image_id_modifier != nullptr);
+      image_id_modifier->set_header_infered_before_compute(false);
+
+      user_op::OutputArgModifier* image_size_modifier = GetOutputArgModifierFn("image_size", 0);
+      CHECK(image_size_modifier != nullptr);
+      image_size_modifier->set_header_infered_before_compute(false);
+
+      user_op::OutputArgModifier* gt_bbox_modifier = GetOutputArgModifierFn("gt_bbox", 0);
+      CHECK(gt_bbox_modifier != nullptr);
+      gt_bbox_modifier->set_header_infered_before_compute(false);
+
+      user_op::OutputArgModifier* gt_label_modifier = GetOutputArgModifierFn("gt_label", 0);
+      CHECK(gt_label_modifier != nullptr);
+      gt_label_modifier->set_header_infered_before_compute(false);
+
+      user_op::OutputArgModifier* gt_segm_modifier = GetOutputArgModifierFn("gt_segm", 0);
+      CHECK(gt_segm_modifier != nullptr);
+      gt_segm_modifier->set_header_infered_before_compute(false);
+
+      user_op::OutputArgModifier* gt_segm_index_modifier =
+          GetOutputArgModifierFn("gt_segm_index", 0);
+      CHECK(gt_segm_index_modifier != nullptr);
+      gt_segm_index_modifier->set_header_infered_before_compute(false);
     });
 
 }  // namespace oneflow

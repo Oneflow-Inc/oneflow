@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CUSTOMIZED_KERNELS_MATH_UNARY_ELEMENTWISE_FUNC_H_
 #define ONEFLOW_CUSTOMIZED_KERNELS_MATH_UNARY_ELEMENTWISE_FUNC_H_
 
@@ -29,9 +44,9 @@ OF_PP_FOR_EACH_TUPLE(DECLARE_UNARY_FUNCTOR, MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
 
 template<typename T>
 struct AbsFunctor {
-  static OF_DEVICE_FUNC const T Forward(const T x) { return x < 0 ? -x : x; }
+  static OF_DEVICE_FUNC const T Forward(const T x) { return x < T(0) ? -x : x; }
 
-  static OF_DEVICE_FUNC const T Backward(const T x, const T dy) { return x < 0 ? -dy : dy; }
+  static OF_DEVICE_FUNC const T Backward(const T x, const T dy) { return x < T(0) ? -dy : dy; }
 };
 
 template<typename T>
@@ -845,12 +860,12 @@ struct ReciprocalFunctor<half> {
 template<>
 struct ReciprocalNoNanFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) {
-    if (__hequ(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
+    if (__heq(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
     return hrcp(x);
   }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
-    if (__hequ(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
+    if (__heq(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
     return __hmul(dy, __hneg(hrcp(__hmul(x, x))));
   }
 };

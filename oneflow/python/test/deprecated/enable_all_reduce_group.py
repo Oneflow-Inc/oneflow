@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import numpy as np
 import oneflow as flow
 import oneflow.core.common.data_type_pb2 as data_type_conf_util
@@ -30,13 +45,13 @@ func_config.enable_all_reduce_group(True)
 
 @flow.global_function(func_config)
 def OneDeviceUpdateVariable(x=input_blob_def):
-    with flow.device_prior_placement("gpu", "0:0"):
+    with flow.scope.placement("gpu", "0:0"):
         return UpdateVariable(x, "one-device")
 
 
 @flow.global_function(func_config)
 def TwoDeviceUpdateVariable(x=input_blob_def):
-    with flow.device_prior_placement("gpu", "0:0-1"):
+    with flow.scope.placement("gpu", "0:0-1"):
         return UpdateVariable(x, "two-device")
 
 
@@ -45,7 +60,7 @@ func_config.enable_all_reduce_group(True)
 
 @flow.global_function(func_config)
 def DisableAllReduceGroupUpdateVariable(x=input_blob_def):
-    with flow.device_prior_placement("gpu", "0:0-1"):
+    with flow.scope.placement("gpu", "0:0-1"):
         return UpdateVariable(x, "disable-all-reduce-group")
 
 

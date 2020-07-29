@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import, division, print_function
 
 import argparse
@@ -131,23 +146,17 @@ def BertDecoder(
     config_ordered_dict["masked_lm_positions"] = max_predictions_per_seq
     config_ordered_dict["masked_lm_weights"] = max_predictions_per_seq
 
-    blob_confs = []
-    for k, v in config_ordered_dict.items():
-        blob_confs.append(
-            _blob_conf(k, [v], flow.float if k == "masked_lm_weights" else flow.int32)
-        )
-
-    decoders = flow.data.decode_ofrecord(
-        data_dir,
-        blob_confs,
-        batch_size=batch_size,
-        name="decode",
-        data_part_num=data_part_num,
+    ofrecord = flow.data.ofrecord_reader(
+        data_dir, batch_size=batch_size, data_part_num=data_part_num, name="decode",
     )
-
     ret = {}
-    for i, k in enumerate(config_ordered_dict):
-        ret[k] = decoders[i]
+    for k, v in config_ordered_dict.items():
+        ret[k] = flow.data.ofrecord_raw_decoder(
+            ofrecord,
+            k,
+            shape=(v,),
+            dtype=flow.float if k == "masked_lm_weights" else flow.int32,
+        )
     return ret
 
 
@@ -223,14 +232,12 @@ _BERT_MODEL_UPDATE_CONF = dict(
 )
 
 func_config = flow.FunctionConfig()
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_distribute_strategy(flow.scope.consistent_view())
 func_config.train.primary_lr(args.learning_rate)
 func_config.default_data_type(flow.float)
 func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
 func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
-# func_config.disable_all_reduce_sequence(True)
-# func_config.all_reduce_group_min_mbyte(8)
-# func_config.all_reduce_group_num(128)
+
 
 flow.config.gpu_device_num(args.gpu_num_per_node)
 

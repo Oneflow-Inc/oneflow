@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/customized/ops/nn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -46,7 +61,7 @@ T* GetImgMutDptr(user_op::Tensor* tensor, int64_t idx) {
 
 template<typename T>
 const T* GetImgDptr(const user_op::Tensor* tensor, int64_t idx) {
-  return GetImgMutDptr<T>(const_cast<user_op::Tensor*>(tensor), idx);
+  return tensor->dptr<T>() + tensor->shape().Count(1) * idx;
 }
 
 size_t CalcElemNumOfColBuf(const ShapeView& out_shape, const ShapeView& weight_shape,

@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 import random
 import string
@@ -118,31 +133,31 @@ def _blob_conf(name, shape, dtype=flow.int32, codec=flow.data.RawCodec()):
 
 
 def decoder(data_dir, length, batch_size=1, data_part_num=1):
-    blob_confs = []
-    blob_confs.append(_blob_conf("int32", [length], dtype=flow.int32))
-    blob_confs.append(_blob_conf("int64", [length], dtype=flow.int64))
-    blob_confs.append(_blob_conf("float", [length], dtype=flow.float))
-    blob_confs.append(_blob_conf("double", [length], dtype=flow.double))
-    blob_confs.append(
-        _blob_conf(
-            "bytes", [1, length], dtype=flow.int8, codec=flow.data.BytesListCodec()
-        )
+    ofrecord = flow.data.ofrecord_reader(
+        data_dir, batch_size=batch_size, data_part_num=data_part_num
     )
-
-    blobs = flow.data.decode_ofrecord(
-        data_dir,
-        blob_confs,
-        batch_size=batch_size,
-        name="decode",
-        data_part_num=data_part_num,
+    blob_int32 = flow.data.ofrecord_raw_decoder(
+        ofrecord, "int32", shape=(length,), dtype=flow.int32
+    )
+    blob_int64 = flow.data.ofrecord_raw_decoder(
+        ofrecord, "int64", shape=(length,), dtype=flow.int64
+    )
+    blob_float = flow.data.ofrecord_raw_decoder(
+        ofrecord, "float", shape=(length,), dtype=flow.float
+    )
+    blob_double = flow.data.ofrecord_raw_decoder(
+        ofrecord, "double", shape=(length,), dtype=flow.double
+    )
+    blob_bytes = flow.data.ofrecord_raw_decoder(
+        ofrecord, "bytes", shape=(1, length,), dtype=flow.int8
     )
 
     return {
-        "int32": blobs[0],
-        "int64": blobs[1],
-        "float": blobs[2],
-        "double": blobs[3],
-        "bytes": blobs[4],
+        "int32": blob_int32,
+        "int64": blob_int64,
+        "float": blob_float,
+        "double": blob_double,
+        "bytes": blob_bytes,
     }
 
 
@@ -166,11 +181,11 @@ def test_ofrecord_decoder(test_case):
 
     for i in range(num_examples // batch_size):
         d = OfrecordDecoderJob().get()
-        test_case.assertTrue(np.array_equal(d["int32"].ndarray(), int32_np[i]))
-        test_case.assertTrue(np.array_equal(d["int64"].ndarray(), int64_np[i]))
-        # test_case.assertTrue(np.array_equal(d['float'].ndarray(), float_np[i]))
-        assert np.allclose(d["float"].ndarray(), float_np[i], rtol=1e-5, atol=1e-5)
-        test_case.assertTrue(np.array_equal(d["double"].ndarray(), double_np[i]))
+        test_case.assertTrue(np.array_equal(d["int32"].numpy(), int32_np[i]))
+        test_case.assertTrue(np.array_equal(d["int64"].numpy(), int64_np[i]))
+        # test_case.assertTrue(np.array_equal(d['float'].numpy(), float_np[i]))
+        assert np.allclose(d["float"].numpy(), float_np[i], rtol=1e-5, atol=1e-5)
+        test_case.assertTrue(np.array_equal(d["double"].numpy(), double_np[i]))
         for j, int8_list in enumerate(d["bytes"]):
             # print(''.join([chr(x) for x in int8_list[0]]), bytes_data[i*batch_size + j])
             assert (

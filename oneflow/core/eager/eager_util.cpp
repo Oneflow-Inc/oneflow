@@ -1,11 +1,29 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/eager/eager_util.h"
 #include "oneflow/core/eager/eager_symbol.pb.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/instruction.pb.h"
-#include "oneflow/core/vm/storage.h"
-#include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 
@@ -17,17 +35,18 @@ namespace {
 void StorageAdd(const EagerSymbol& symbol) {
   int64_t symbol_id = symbol.symbol_id();
   if (symbol.has_string_symbol()) {
-    const auto& str = std::make_shared<std::string>(symbol.string_symbol());
-    Global<vm::Storage<std::string>>::Get()->Add(symbol_id, str);
+    Global<vm::SymbolStorage<std::string>>::Get()->Add(symbol_id, symbol.string_symbol());
+  } else if (symbol.has_scope_symbol()) {
+    Global<vm::SymbolStorage<Scope>>::Get()->Add(symbol_id, symbol.scope_symbol());
   } else if (symbol.has_job_conf_symbol()) {
-    const auto& job_conf = std::make_shared<JobConfigProto>(symbol.job_conf_symbol());
-    Global<vm::Storage<JobConfigProto>>::Get()->Add(symbol_id, job_conf);
+    Global<vm::SymbolStorage<JobDesc>>::Get()->Add(symbol_id, symbol.job_conf_symbol());
   } else if (symbol.has_parallel_conf_symbol()) {
-    const auto& parallel_conf = std::make_shared<ParallelConf>(symbol.parallel_conf_symbol());
-    Global<vm::Storage<ParallelConf>>::Get()->Add(symbol_id, parallel_conf);
+    Global<vm::SymbolStorage<ParallelDesc>>::Get()->Add(symbol_id, symbol.parallel_conf_symbol());
   } else if (symbol.has_op_conf_symbol()) {
-    const auto& op_conf = std::make_shared<OperatorConf>(symbol.op_conf_symbol());
-    Global<vm::Storage<OperatorConf>>::Get()->Add(symbol_id, op_conf);
+    Global<vm::SymbolStorage<OperatorConf>>::Get()->Add(symbol_id, symbol.op_conf_symbol());
+  } else if (symbol.has_op_node_signature_symbol()) {
+    Global<vm::SymbolStorage<OpNodeSignatureDesc>>::Get()->Add(symbol_id,
+                                                               symbol.op_node_signature_symbol());
   } else {
     UNIMPLEMENTED();
   }

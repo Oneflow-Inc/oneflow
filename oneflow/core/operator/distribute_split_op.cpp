@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -41,9 +56,11 @@ class DistributeSplitOp final : public Operator {
 
 void DistributeSplitOp::InitFromOpConf() {
   CHECK(op_conf().has_distribute_split_conf());
-
   EnrollInputBn("in");
-  EnrollRepeatedOutputBn("out");
+  EnrollRepeatedOutputBnWithSetter("out", [&](OutputBlobModifier* ob_modifier) {
+    ob_modifier->set_header_infered_before_compute(false);
+    ob_modifier->set_is_mutable(op_conf().distribute_split_conf().is_variable_ref());
+  });
 }
 
 const PbMessage& DistributeSplitOp::GetCustomizedConf() const {

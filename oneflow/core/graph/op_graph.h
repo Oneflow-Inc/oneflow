@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_GRAPH_OP_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_OP_GRAPH_H_
 
@@ -123,6 +138,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   explicit OpGraph() = default;
   ~OpGraph() override = default;
 
+  static Maybe<OpGraph> New(const Job& job);
+
   Maybe<void> ForEachOpNode(const std::function<Maybe<void>(const OpNode&)>& DoEach) const;
 
   const OpNode* OpNode4OpName(const std::string& name) const;
@@ -164,7 +181,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferBlobLastUsed() const;
   void InferTimeShape() const;
   void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
-  void InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_parallel_view_conf) const;
+  Maybe<void> InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const;
   Maybe<void> InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
   Maybe<void> InferLogicalBlobDesc(const Job& job) const;
   bool IsBatchAxisBlob(const std::string& op_name, const LogicalBlobId& lbi) const;

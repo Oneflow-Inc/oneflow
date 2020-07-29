@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
@@ -38,7 +53,7 @@ class ResizeToStaticShapeKernel final : public user_op::OpKernel {
     int64_t record_num = in_blob->shape().At(0);
     CHECK_GT(record_num, 0);
 
-    TensorBuffer* buffers = in_blob->mut_dptr<TensorBuffer>();
+    const TensorBuffer* buffers = in_blob->dptr<TensorBuffer>();
     uint8_t* out_dptr = out_blob->mut_dptr<uint8_t>();
     const ShapeView& out_shape = out_blob->shape();
     CHECK(out_shape.NumAxes() == 4);  // {N, H, W, C}
@@ -52,7 +67,7 @@ class ResizeToStaticShapeKernel final : public user_op::OpKernel {
     int opencv_inter_type = GetOpencvInterp(interp_type);
 
     MultiThreadLoop(record_num, [&](size_t i) {
-      TensorBuffer* buffer = buffers + i;
+      const TensorBuffer* buffer = buffers + i;
       uint8_t* dptr = out_dptr + one_sample_elem_cnt * i;
       const Shape& in_shape = buffer->shape();
       CHECK(in_shape.NumAxes() == 3);  // {H, W, C}
@@ -85,12 +100,12 @@ class ResizeShorterToTensorBufferKernel final : public user_op::OpKernel {
     int64_t record_num = in_blob->shape().At(0);
     CHECK_GT(record_num, 0);
 
-    TensorBuffer* in_buffers = in_blob->mut_dptr<TensorBuffer>();
+    const TensorBuffer* in_buffers = in_blob->dptr<TensorBuffer>();
     TensorBuffer* out_buffers = out_blob->mut_dptr<TensorBuffer>();
     int64_t resize_shorter = ctx->Attr<int64_t>("resize_shorter");
 
     MultiThreadLoop(record_num, [&](size_t i) {
-      TensorBuffer* in_buffer = in_buffers + i;
+      const TensorBuffer* in_buffer = in_buffers + i;
       TensorBuffer* out_buffer = out_buffers + i;
       const Shape& in_shape = in_buffer->shape();
       CHECK_EQ(in_shape.NumAxes(), 3);  // {H, W, C}

@@ -2,7 +2,7 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/job/task.proto";
-import "oneflow/core/job/job.proto";
+import "oneflow/core/job/job_conf.proto";
 import "oneflow/core/memory/memory_block.proto";
 import "oneflow/core/graph/boxing/collective_boxing.proto";
 

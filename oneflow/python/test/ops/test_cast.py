@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 from collections import OrderedDict
 
@@ -6,6 +21,7 @@ import oneflow as flow
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+import oneflow.typing as oft
 
 
 def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dtype):
@@ -16,17 +32,17 @@ def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dt
 
     @flow.global_function(func_config)
     def cast_forward(
-        input_def=flow.FixedTensorDef(
+        input_def: oft.Numpy.Placeholder(
             shape=input_shape, dtype=type_name_to_flow_type[dtype]
         )
     ):
-        with flow.fixed_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.cast(input_def, dtype=type_name_to_flow_type[dtype])
 
     input = np.random.rand(*input_shape).astype(type_name_to_np_type[dtype])
     of_out = cast_forward(input).get()
     tf_out = tf.cast(input, dtype=type_name_to_np_type[dtype])
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
 
 
 def compare_with_tensorflow(device_type, input_shape, dtype):
@@ -41,7 +57,7 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
 
     @flow.global_function(func_config)
     def CastJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "in",
                 shape=input_shape,
@@ -68,7 +84,7 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
         tf_out = tf.cast(x, dtype=type_name_to_np_type[dtype])
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )

@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import copy
 import sys
 
@@ -38,22 +53,45 @@ def _blob_conf(name, shape, dtype=flow.int32):
 def BertDecoder(
     data_dir, batch_size=1, data_part_num=1, seq_length=128, max_predictions_per_seq=20
 ):
-    blob_confs = []
-    blob_confs.append(_blob_conf("input_ids", [seq_length]))
-    blob_confs.append(_blob_conf("next_sentence_labels", [1]))
-    blob_confs.append(_blob_conf("input_mask", [seq_length]))
-    blob_confs.append(_blob_conf("segment_ids", [seq_length]))
-    blob_confs.append(_blob_conf("masked_lm_ids", [max_predictions_per_seq]))
-    blob_confs.append(_blob_conf("masked_lm_positions", [max_predictions_per_seq]))
-    blob_confs.append(
-        _blob_conf("masked_lm_weights", [max_predictions_per_seq], flow.float)
+    ofrecord = flow.data.ofrecord_reader(
+        data_dir, batch_size=batch_size, data_part_num=data_part_num, name="decode",
     )
-    return flow.data.decode_ofrecord(
-        data_dir,
-        blob_confs,
-        batch_size=batch_size,
-        name="decode",
-        data_part_num=data_part_num,
+    input_ids = flow.data.ofrecord_raw_decoder(
+        ofrecord, "input_ids", shape=(seq_length,), dtype=flow.int32
+    )
+    next_sentence_labels = flow.data.ofrecord_raw_decoder(
+        ofrecord, "next_sentence_labels", shape=(1,), dtype=flow.int32
+    )
+    input_mask = flow.data.ofrecord_raw_decoder(
+        ofrecord, "input_mask", shape=(seq_length,), dtype=flow.int32
+    )
+    segment_ids = flow.data.ofrecord_raw_decoder(
+        ofrecord, "segment_ids", shape=(seq_length,), dtype=flow.int32
+    )
+    masked_lm_ids = flow.data.ofrecord_raw_decoder(
+        ofrecord, "masked_lm_ids", shape=(max_predictions_per_seq,), dtype=flow.int32
+    )
+    masked_lm_positions = flow.data.ofrecord_raw_decoder(
+        ofrecord,
+        "masked_lm_positions",
+        shape=(max_predictions_per_seq,),
+        dtype=flow.int32,
+    )
+    masked_lm_weights = flow.data.ofrecord_raw_decoder(
+        ofrecord,
+        "masked_lm_weights",
+        shape=(max_predictions_per_seq,),
+        dtype=flow.float,
+    )
+
+    return (
+        input_ids,
+        next_sentence_labels,
+        input_mask,
+        segment_ids,
+        masked_lm_ids,
+        masked_lm_positions,
+        masked_lm_weights,
     )
 
 
@@ -142,7 +180,7 @@ def PretrainJob():
 
 
 func_config = flow.FunctionConfig()
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_distribute_strategy(flow.scope.consistent_view())
 func_config.train.primary_lr(FLAGS.lr)
 func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
 func_config.enable_auto_mixed_precision(FLAGS.enable_auto_mixed_precision)
@@ -187,7 +225,7 @@ def GetSeveralLossesAsNumpy(enable_inplace, num_iters=10):
     flow.config.enable_debug_mode(True)
     flow.config.gpu_device_num(1)
     train_config = flow.FunctionConfig()
-    train_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    train_config.default_distribute_strategy(flow.scope.consistent_view())
     train_config.train.primary_lr(FLAGS.lr)
     train_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
     train_config.enable_inplace(enable_inplace)

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -34,6 +49,7 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
 
  private:
   bool IsKernelLaunchSynchronized() const override { return false; }
+
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const SyncDynamicResizeOpConf& conf = this->op_conf().sync_dynamic_resize_conf();
@@ -55,14 +71,25 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
                out->mem_case(), in->mem_case());
     AutoMemcpy(ctx.device_ctx, cuda_host_mem_ptr->Ptr(), size->dptr(), sizeof(SizeType),
                MakeHostMemCase(), size->mem_case());
-    ctx.device_ctx->AddCallBack([out, cuda_host_mem_ptr, conf, this]() {
+    const auto& UpdateShape = [out, cuda_host_mem_ptr, conf, this]() {
       const int64_t new_size = *reinterpret_cast<SizeType*>(cuda_host_mem_ptr->Ptr());
       CHECK_GE(new_size, 0);
       CHECK_LE(new_size, out->shape_view().At(conf.axis()));
-      out->mut_shape_view()->Set(conf.axis(), new_size);
+      // NOTE(Liang Depeng): `mut_shape_view` should be used here to get the blob's `MutShapeView`
+      //                     pointer. But this callback is called after `Kernel::Forward` function's
+      //                     execution and the header check is already been set to false at that
+      //                     moment. So we have to choose the `ForceMutShapeView` function with
+      //                     header checker disabled.
+      out->ForceMutShapeView()->Set(conf.axis(), new_size);
       std::lock_guard<std::mutex> lock(mutex_);
       queue_.push(cuda_host_mem_ptr);
-    });
+    };
+    if (conf.eager()) {
+      CudaCheck(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()));
+      UpdateShape();
+    } else {
+      ctx.device_ctx->AddCallBack(UpdateShape);
+    }
   }
 
   mutable std::queue<std::shared_ptr<CudaHostMem>> queue_;

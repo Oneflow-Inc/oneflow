@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/eager/opkernel_object.h"
@@ -53,29 +68,41 @@ class CpuSystemStatelessCallOpKernelInstructionType final
 COMMAND(vm::RegisterInstructionType<CpuSystemStatelessCallOpKernelInstructionType>(
     "cpu.compute.SystemStatelessCallOpKernel"));
 
-class CpuWatchBlobHeaderInstructionType final : public WatchBlobHeaderInstructionType {
+class CpuFetchBlobHeaderInstructionType final : public FetchBlobHeaderInstructionType {
  public:
-  CpuWatchBlobHeaderInstructionType() = default;
-  ~CpuWatchBlobHeaderInstructionType() override = default;
+  CpuFetchBlobHeaderInstructionType() = default;
+  ~CpuFetchBlobHeaderInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<CpuWatchBlobHeaderInstructionType>("cpu.WatchBlobHeader"));
+COMMAND(vm::RegisterInstructionType<CpuFetchBlobHeaderInstructionType>("cpu.FetchBlobHeader"));
 
-class CpuWatchBlobBodyInstructionType final : public WatchBlobBodyInstructionType {
+class CpuFetchBlobBodyInstructionType final : public FetchBlobBodyInstructionType {
  public:
-  CpuWatchBlobBodyInstructionType() = default;
-  ~CpuWatchBlobBodyInstructionType() override = default;
+  CpuFetchBlobBodyInstructionType() = default;
+  ~CpuFetchBlobBodyInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<CpuWatchBlobBodyInstructionType>("cpu.WatchBlobBody"));
+COMMAND(vm::RegisterInstructionType<CpuFetchBlobBodyInstructionType>("cpu.FetchBlobBody"));
+
+class CpuFeedBlobInstructionType final : public FeedBlobInstructionType {
+ public:
+  CpuFeedBlobInstructionType() = default;
+  ~CpuFeedBlobInstructionType() override = default;
+
+  using stream_type = vm::CpuStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<CpuFeedBlobInstructionType>("cpu.FeedBlob"));
 
 }  // namespace eager
 }  // namespace oneflow

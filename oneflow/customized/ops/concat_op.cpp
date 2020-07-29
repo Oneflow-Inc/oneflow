@@ -1,70 +1,110 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
-REGISTER_USER_OP("concat")
-    .InputWithMinimum("in", 2)
-    .Output("out")
-    .Attr("axis", UserOpAttrType::kAtInt32)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const int32_t axis = ctx->Attr<int32_t>("axis");
-      const user_op::TensorDesc* in_0_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      DimVector out_dim_vec = in_0_desc->shape().dim_vec();
+namespace {
 
-      for (size_t i = 1; i < ctx->inputs().size(); ++i) {
-        const user_op::TensorDesc* in_i_desc = ctx->TensorDesc4ArgNameAndIndex("in", i);
-        for (int64_t j = 0; j < in_i_desc->shape().NumAxes(); ++j) {
-          if (j == axis) {
-            out_dim_vec[j] += in_i_desc->shape().At(j);
-          } else {
-            CHECK_EQ_OR_RETURN(out_dim_vec[j], in_i_desc->shape().At(j));
-          }
+Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* first_in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  const int64_t axis = ctx->Attr<int64_t>("axis");
+  CHECK_GE_OR_RETURN(axis, 0);
+  CHECK_LT_OR_RETURN(axis, first_in_desc->shape().NumAxes());
+  DimVector out_dim_vec = first_in_desc->shape().dim_vec();
+  out_dim_vec.at(axis) = 0;
+  int64_t dynamic_dim_size = 0;
+  for (const auto& in_arg_pair : ctx->inputs()) {
+    const user_op::TensorDesc* in_desc =
+        ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
+    CHECK_EQ_OR_RETURN(in_desc->data_type(), first_in_desc->data_type());
+    CHECK_EQ_OR_RETURN(in_desc->shape().NumAxes(), first_in_desc->shape().NumAxes());
+    FOR_RANGE(int64_t, i, 0, in_desc->shape().NumAxes()) {
+      if (i == axis) {
+        if (in_desc->is_dynamic()) {
+          dynamic_dim_size += in_desc->shape().At(i);
+        } else {
+          out_dim_vec.at(axis) += in_desc->shape().At(i);
         }
-        CHECK_EQ_OR_RETURN(in_i_desc->data_type(), in_0_desc->data_type());
+      } else {
+        CHECK_EQ_OR_RETURN(in_desc->shape().At(i), out_dim_vec.at(i));
       }
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_desc = *in_0_desc;
-      *out_desc->mut_shape() = Shape(out_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const int32_t axis = ctx->Attr<int32_t>("axis");
-      const user_op::TensorDesc& in_0_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, i, 0, in_0_tensor.shape().NumAxes()) {
-        if (i == axis) { continue; }
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-      }
-      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-      return Maybe<void>::Ok();
-    });
+    }
+  }
 
-REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) {
+  user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  const int64_t max_dim_size = ctx->Attr<int64_t>("max_dim_size");
+  CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size);
+  if (dynamic_dim_size == 0) {
+    out_desc->set_is_dynamic(false);
+  } else {
+    out_desc->set_is_dynamic(true);
+    out_dim_vec.at(axis) = max_dim_size;
+  }
+  *out_desc->mut_shape() = Shape(out_dim_vec);
+  *out_desc->mut_data_type() = first_in_desc->data_type();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
+  const int64_t axis = ctx->Attr<int64_t>("axis");
+  const user_op::TensorDesc& first_in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, first_in_desc.shape().NumAxes()) {
+    if (i == axis) { continue; }
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+
+void GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   bool need_grad = false;
-  int32_t in_size = op.input_size("in");
-  for (size_t i = 0; i < in_size; ++i) {
+  const int32_t in_size = op.input_size("in");
+  FOR_RANGE(int32_t, i, 0, in_size) {
     if (op.NeedGenGradTensor4OpInput("in", i)) { need_grad = true; }
   }
   if (need_grad) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    for (size_t i = 0; i < in_size; ++i) { builder = builder.Input("like", op.input("in", i)); }
-    user_op::UserOpConfWrapper grad_op = builder.Op("split_like")
-                                             .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+    builder = builder.Op("split_like");
+    FOR_RANGE(int32_t, i, 0, in_size) { builder = builder.Input("like", op.input("in", i)); }
+    user_op::UserOpConfWrapper grad_op = builder.Input("in", op.GetGradTensorWithOpOutput("out", 0))
                                              .Output("out", in_size)
-                                             .Attr("axis", op.attr<int32_t>("axis"))
+                                             .Attr("axis", op.attr<int64_t>("axis"))
                                              .Build();
 
-    for (size_t i = 0; i < in_size; ++i) {
+    FOR_RANGE(int32_t, i, 0, in_size) {
       if (op.NeedGenGradTensor4OpInput("in", i)) {
         op.BindGradTensorWithOpInput(grad_op.output("out", i), "in", i);
       }
     }
     AddOp(grad_op);
   }
-});
+}
+
+}  // namespace
+
+REGISTER_USER_OP("concat")
+    .InputWithMinimum("in", 2)
+    .Output("out")
+    .Attr("axis", UserOpAttrType::kAtInt64)
+    .Attr("max_dim_size", UserOpAttrType::kAtInt64)
+    .SetTensorDescInferFn(InferTensorDesc)
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+    .SetGetSbpFn(GetSbpSignature);
+
+REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn(GenGrapOp);
 
 }  // namespace oneflow

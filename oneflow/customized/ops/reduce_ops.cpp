@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/reduce_sbp_util.h"
 #include "oneflow/core/ndarray/binary_func.h"
@@ -87,6 +102,7 @@ REGISTER_REDUCE_USER_OP("reduce_all", BinaryFuncAll)
 REGISTER_REDUCE_USER_OP("reduce_min", BinaryFuncMin)
 REGISTER_REDUCE_USER_OP("reduce_prod", BinaryFuncProd)
 REGISTER_REDUCE_USER_OP("reduce_sum", BinaryFuncSum)
+REGISTER_REDUCE_USER_OP("reduce_max", BinaryFuncMax)
 
 REGISTER_USER_OP_GRAD("reduce_sum")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
