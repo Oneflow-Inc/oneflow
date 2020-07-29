@@ -148,9 +148,6 @@ def test_summary(test_case):
     graph.write_structure_graph()
 
 
-test_summary(1)
-
-
 def summary_image():
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
