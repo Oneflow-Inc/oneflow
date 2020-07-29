@@ -26,7 +26,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
-from typing import Tuple, Optional, Union, Sequence
+from typing import Tuple, Optional, Union, Sequence, Text
 
 
 class ClipGradientConf:
@@ -85,7 +85,7 @@ class LrScheduler:
     def __init__(
         self,
         base_lr: Optional[float] = None,
-        lr_lbn: Optional[str] = None,
+        lr_lbn: Optional[Text] = None,
         warmup: Optional[WarmupConf] = None,
     ):
         self.base_lr = base_lr
@@ -142,7 +142,7 @@ class CosineScheduler(LrScheduler):
 
 @oneflow_export("optimizer.CustomScheduler")
 class CustomScheduler(LrScheduler):
-    def __init__(self, lbn: str):
+    def __init__(self, lbn: Text):
         super().__init__(lr_lbn=lbn)
 
     @property
@@ -329,7 +329,7 @@ class Optimizer:
         lr_scheduler: LrScheduler,
         loss_scale_factor: Optional[int] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
-        train_step_lbn: Optional[str] = None,
+        train_step_lbn: Optional[Text] = None,
     ):
         self.lr_scheduler = lr_scheduler
         self.loss_scale_factor = loss_scale_factor
@@ -353,7 +353,7 @@ class Optimizer:
         self._SetSpecificFieldsInTrainConf(train_conf)
         return train_conf
 
-    def minimize(self, loss: Union[Sequence[str], str]) -> None:
+    def minimize(self, loss: Union[Sequence[Text], Text]) -> None:
         if not isinstance(loss, collections.abc.Sequence):
             loss = [loss]
         c_api_util.CurJobBuildAndInferCtx_SetTrainConf(self.train_conf)
@@ -369,7 +369,7 @@ class SGD(Optimizer):
         loss_scale_factor: Optional[float] = None,
         momentum: int = 0.9,
         grad_clipping: Optional[ClipGradientConf] = None,
-        train_step_lbn: Optional[str] = None,
+        train_step_lbn: Optional[Text] = None,
     ):
         super().__init__(
             lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
@@ -394,7 +394,7 @@ class Adam(Optimizer):
         do_bias_correction=False,
         loss_scale_factor: Optional[float] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
-        train_step_lbn: Optional[str] = None,
+        train_step_lbn: Optional[Text] = None,
     ):
         super().__init__(
             lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
@@ -424,10 +424,10 @@ class AdamW(Optimizer):
         do_bias_correction=False,
         loss_scale_factor: Optional[float] = None,
         weight_decay: Optional[float] = None,
-        weight_decay_includes: Optional[Union[Sequence[str], str]] = None,
-        weight_decay_excludes: Optional[Union[Sequence[str], str]] = None,
+        weight_decay_includes: Optional[Union[Sequence[Text], Text]] = None,
+        weight_decay_excludes: Optional[Union[Sequence[Text], Text]] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
-        train_step_lbn: Optional[str] = None,
+        train_step_lbn: Optional[Text] = None,
     ):
         super().__init__(
             lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
@@ -478,7 +478,7 @@ class RMSProp(Optimizer):
         epsilon: float = 1e-8,
         loss_scale_factor: Optional[float] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
-        train_step_lbn: Optional[str] = None,
+        train_step_lbn: Optional[Text] = None,
     ):
         super().__init__(
             lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
@@ -501,7 +501,7 @@ class LARS(Optimizer):
         lars_coefficient: float = 0.0001,
         loss_scale_factor: Optional[float] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
-        train_step_lbn: Optional[str] = None,
+        train_step_lbn: Optional[Text] = None,
     ):
         super().__init__(
             lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
@@ -526,7 +526,7 @@ class LazyAdam(Optimizer):
         epsilon: float = 1e-8,
         loss_scale_factor: Optional[float] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
-        train_step_lbn: Optional[str] = None,
+        train_step_lbn: Optional[Text] = None,
     ):
         super().__init__(
             lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
