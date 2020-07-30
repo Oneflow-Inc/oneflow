@@ -28,25 +28,25 @@ from cnns_tests import (
 )
 
 
-class TestEagerAlexNet(Test1NodeMixin, TestAlexNetMixin, absltest.TestCase):
+class TestAlexNet(Test1NodeMixin, TestAlexNetMixin, absltest.TestCase):
     def setUp(self):
         super().setUp()
         flow.enable_eager_execution(True)
 
 
-class TestEagerResNet50(Test1NodeMixin, TestResNet50Mixin, absltest.TestCase):
+class TestResNet50(Test1NodeMixin, TestResNet50Mixin, absltest.TestCase):
     def setUp(self):
         super().setUp()
         flow.enable_eager_execution(True)
 
 
-class TestEagerVgg16(Test1NodeMixin, TestVgg16Mixin, absltest.TestCase):
+class TestVgg16(Test1NodeMixin, TestVgg16Mixin, absltest.TestCase):
     def setUp(self):
         super().setUp()
         flow.enable_eager_execution(True)
 
 
-class TestEagerInceptionV3(Test1NodeMixin, TestInceptionV3Mixin, absltest.TestCase):
+class TestInceptionV3(Test1NodeMixin, TestInceptionV3Mixin, absltest.TestCase):
     def setUp(self):
         super().setUp()
         flow.enable_eager_execution(True)
