@@ -33,7 +33,7 @@
 
   - CPU-only OneFlow is not available for now.
 
-  - Releases are built with G++/GCC 4.8.5 and cuDNN 7.
+  - Releases are built with G++/GCC 4.8.5, cuDNN 7 and MKL 2020.0-088.
 
 ### Build OneFlow from Source
 
