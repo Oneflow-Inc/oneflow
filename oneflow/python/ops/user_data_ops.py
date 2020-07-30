@@ -58,7 +58,7 @@ def OFRecordRawDecoder(
 @oneflow_export(
     "data.OFRecordImageDecoderRandomCrop", "data.ofrecord_image_decoder_random_crop"
 )
-def OFRecordImageDecoderRandomCrop(
+def api_ofrecord_image_decoder_random_crop(
     input_blob: BlobDef,
     blob_name: str,
     color_space: str = "BGR",
@@ -66,25 +66,65 @@ def OFRecordImageDecoderRandomCrop(
     seed: Optional[int] = None,
     random_area: Sequence[float] = [0.08, 1.0],
     random_aspect_ratio: Sequence[float] = [0.75, 1.333333],
-    name: Optional[str] = None,
+    name: str = "OFRecordImageDecoderRandomCrop",
 ) -> BlobDef:
-    if name is None:
-        name = id_util.UniqueStr("OFRecordImageDecoderRandomCrop_")
-    return (
-        flow.user_op_builder(name)
-        .Op("ofrecord_image_decoder_random_crop")
-        .Input("in", [input_blob])
-        .Output("out")
-        .Attr("name", blob_name)
-        .Attr("color_space", color_space)
-        .Attr("num_attempts", num_attempts)
-        .SetRandomSeed(seed)
-        .Attr("random_area", random_area)
-        .Attr("random_aspect_ratio", random_aspect_ratio)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
+    assert isinstance(name, str)
+    module = flow.find_or_create_module(
+        name,
+        lambda: OFRecordImageDecoderRandomCropModule(
+            blob_name=blob_name,
+            color_space=color_space,
+            num_attempts=num_attempts,
+            random_seed=seed,
+            random_area=random_area,
+            random_aspect_ratio=random_aspect_ratio,
+            name=name,
+        ),
     )
+    return module(input_blob)
+
+
+class OFRecordImageDecoderRandomCropModule(module_util.Module):
+    def __init__(
+        self,
+        blob_name: str,
+        color_space: str,
+        num_attempts: int,
+        random_seed: Optional[int],
+        random_area: Sequence[float],
+        random_aspect_ratio: Sequence[float],
+        name: str,
+    ):
+        module_util.Module.__init__(self, name)
+        seed, has_seed = flow.random.gen_seed(random_seed)
+        self.op_module_builder = (
+            flow.user_op_module_builder("ofrecord_image_decoder_random_crop")
+            .InputSize("in", 1)
+            .Output("out")
+            .Attr("name", blob_name)
+            .Attr("color_space", color_space)
+            .Attr("num_attempts", num_attempts)
+            .Attr("random_area", random_area)
+            .Attr("random_aspect_ratio", random_aspect_ratio)
+            .Attr("has_seed", has_seed)
+            .Attr("seed", seed)
+            .CheckAndComplete()
+        )
+        self.op_module_builder.user_op_module.InitOpKernel()
+
+    def forward(self, input: BlobDef):
+        if self.call_seq_no == 0:
+            name = self.module_name
+        else:
+            name = id_util.UniqueStr("OFRecordImageDecoderRandomCrop_")
+
+        return (
+            self.op_module_builder.OpName(name)
+            .Input("in", [input])
+            .Build()
+            .InferAndTryRun()
+            .SoleOutputBlob()
+        )
 
 
 @oneflow_export("data.OFRecordImageDecoder", "data.ofrecord_image_decoder")
@@ -188,26 +228,55 @@ def CropMirrorNormalize(
 
 
 @oneflow_export("random.CoinFlip", "random.coin_flip")
-def CoinFlip(
+def api_coin_flip(
     batch_size: int = 1,
     seed: Optional[int] = None,
     probability: float = 0.5,
-    name: Optional[str] = None,
+    name: str = "CoinFlip",
 ) -> BlobDef:
-    if name is None:
-        name = id_util.UniqueStr("CoinFlip_")
-
-    return (
-        flow.user_op_builder(name)
-        .Op("coin_flip")
-        .Output("out")
-        .Attr("batch_size", batch_size)
-        .Attr("probability", probability)
-        .SetRandomSeed(seed)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
+    assert isinstance(name, str)
+    module = flow.find_or_create_module(
+        name,
+        lambda: CoinFlipModule(
+            batch_size=batch_size, probability=probability, random_seed=seed, name=name,
+        ),
     )
+    return module()
+
+
+class CoinFlipModule(module_util.Module):
+    def __init__(
+        self,
+        batch_size: str,
+        probability: float,
+        random_seed: Optional[int],
+        name: str,
+    ):
+        module_util.Module.__init__(self, name)
+        seed, has_seed = flow.random.gen_seed(random_seed)
+        self.op_module_builder = (
+            flow.user_op_module_builder("coin_flip")
+            .Output("out")
+            .Attr("batch_size", batch_size)
+            .Attr("probability", probability)
+            .Attr("has_seed", has_seed)
+            .Attr("seed", seed)
+            .CheckAndComplete()
+        )
+        self.op_module_builder.user_op_module.InitOpKernel()
+
+    def forward(self):
+        if self.call_seq_no == 0:
+            name = self.module_name
+        else:
+            name = id_util.UniqueStr("CoinFlip_")
+
+        return (
+            self.op_module_builder.OpName(name)
+            .Build()
+            .InferAndTryRun()
+            .SoleOutputBlob()
+        )
 
 
 @oneflow_export("image.decode", "image_decode")
