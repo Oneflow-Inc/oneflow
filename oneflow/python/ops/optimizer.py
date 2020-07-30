@@ -353,7 +353,9 @@ class Optimizer:
         self._SetSpecificFieldsInTrainConf(train_conf)
         return train_conf
 
-    def minimize(self, loss: Union[Sequence[Text], Text]) -> None:
+    def minimize(
+        self, loss: Union[Sequence[remote_blob_util.BlobDef], remote_blob_util.BlobDef]
+    ) -> None:
         if not isinstance(loss, collections.abc.Sequence):
             loss = [loss]
         c_api_util.CurJobBuildAndInferCtx_SetTrainConf(self.train_conf)
