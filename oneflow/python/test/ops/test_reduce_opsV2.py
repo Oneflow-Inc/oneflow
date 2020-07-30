@@ -113,7 +113,7 @@ def test_reduce_sum_scalar(test_case):
 def test_reduce_sum_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
     def Foo(x: oft.Numpy.Placeholder((10,))):
