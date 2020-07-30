@@ -21,6 +21,7 @@ import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList
 import oneflow.typing as oft
+import test_global_storage
 
 
 def compare_reduce_any_with_tensorflow(
@@ -200,18 +201,41 @@ def compare_reduce_min_with_tensorflow(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
+    func_config.train.primary_lr(1e-4)
+    func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(func_config)
     def ReduceMinJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
-            return flow.math.reduce_min(x, axis=axis, keepdims=keepdims)
+            x += flow.get_variable(
+                name="v1",
+                shape=input_shape,
+                dtype=flow.float,
+                initializer=flow.zeros_initializer(),
+            )
+            loss = flow.math.reduce_min(x, axis=axis, keepdims=keepdims)
+            loss = flow.identity(loss)
+            flow.losses.add_loss(loss)
+            flow.watch(x, test_global_storage.Setter("x"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+            flow.watch(loss, test_global_storage.Setter("loss"))
+            flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
+
+            return loss
 
     x = np.random.rand(*input_shape).astype(np.float32)
     # OneFlow
     of_out = ReduceMinJob(x).get()
     # TensorFlow
-    tf_out = tf.math.reduce_min(x, axis=axis, keepdims=keepdims)
+    with tf.GradientTape(persistent=True) as tape:
+        x = tf.Variable(x)
+        tf_out = tf.math.reduce_min(x, axis=axis, keepdims=keepdims)
+    loss_diff = test_global_storage.Get("loss_diff")
+    tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+    )
 
 
 def test_reduce_min_func(test_case):
@@ -794,19 +818,42 @@ def compare_reduce_max_with_tensorflow(
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float32)
+    func_config.default_data_type(flow.float)
+    func_config.train.primary_lr(1e-4)
+    func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(func_config)
     def ReduceMaxJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
-            return flow.math.reduce_max(x, axis=axis, keepdims=keepdims)
+            x += flow.get_variable(
+                name="v1",
+                shape=input_shape,
+                dtype=flow.float,
+                initializer=flow.zeros_initializer(),
+            )
+            loss = flow.math.reduce_max(x, axis=axis, keepdims=keepdims)
+            loss = flow.identity(loss)
+            flow.losses.add_loss(loss)
+            flow.watch(x, test_global_storage.Setter("x"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+            flow.watch(loss, test_global_storage.Setter("loss"))
+            flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
+
+            return loss
 
     x = np.random.rand(*input_shape).astype(np.float32)
     # OneFlow
     of_out = ReduceMaxJob(x).get()
     # TensorFlow
-    tf_out = tf.math.reduce_max(x, axis=axis, keepdims=keepdims)
+    with tf.GradientTape(persistent=True) as tape:
+        x = tf.Variable(x)
+        tf_out = tf.math.reduce_max(x, axis=axis, keepdims=keepdims)
+    loss_diff = test_global_storage.Get("loss_diff")
+    tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
+    assert np.allclose(
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+    )
 
 
 def test_reduce_max_func(test_case):
