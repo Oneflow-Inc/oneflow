@@ -8,16 +8,27 @@
 
   #### Install Pip package
 
-  - To install latest release of OneFlow:
+  - To install latest release of OneFlow with CUDA support:
 
     ```
-    python3 -m pip install oneflow
+    python3 -m pip install oneflow_cu102
     ```
+
+  - To install OneFlow with legacy CUDA support, run one of:
+    ```
+    python3 -m pip install oneflow_cu101
+    python3 -m pip install oneflow_cu100
+    python3 -m pip install oneflow_cu92
+    python3 -m pip install oneflow_cu91
+    python3 -m pip install oneflow_cu90
+    ```
+
+  - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver and install `oneflow_cu102` if possible. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
   - To install nightly release of OneFlow:
 
     ```
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu102
     ```
 
 ### Build OneFlow from Source
