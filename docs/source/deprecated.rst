@@ -1,6 +1,6 @@
 oneflow.deprecated
 ===================================
-Operators with variables
+Deprecated APIs
 ----------------------------------
 .. currentmodule:: oneflow.deprecated
 .. automodule:: oneflow.deprecated
