@@ -203,6 +203,8 @@ class Operator {
   virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
 
+  ParallelSignature* mut_parallel_signature() { return op_attribute_.mutable_parallel_signature(); }
+
   Maybe<const SbpSignature*> sbp_signature() const;
   SbpSignature* mut_sbp_signature() { return op_attribute_.mutable_sbp_signature(); }
   BlobLastUsedSignature* mut_blob_last_used_signature() {

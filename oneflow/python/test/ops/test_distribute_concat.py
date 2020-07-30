@@ -18,8 +18,6 @@ import oneflow as flow
 
 
 def test_deadlock(test_case):
-    if flow.eager_execution_enabled():
-        return
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
     func_config.enable_inplace(False)
