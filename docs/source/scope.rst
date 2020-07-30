@@ -1,6 +1,6 @@
 oneflow.scope
 ===================================
-Operators with variables
+Scope
 ----------------------------------
 .. currentmodule:: oneflow.scope
 .. automodule:: oneflow.scope

@@ -1,6 +1,6 @@
 oneflow.regularizers
 ===================================
-Operators with variables
+Regularizers
 ----------------------------------
 .. currentmodule:: oneflow.regularizers
 .. automodule:: oneflow.regularizers
