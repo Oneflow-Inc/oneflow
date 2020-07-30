@@ -51,6 +51,24 @@ class TestEagerAlexNet(Test1NodeMixin, TestAlexNetMixin, absltest.TestCase):
         flow.enable_eager_execution(True)
 
 
+class TestEagerResNet50(Test1NodeMixin, TestResNet50Mixin, absltest.TestCase):
+    def setUp(self):
+        super().setUp()
+        flow.enable_eager_execution(True)
+
+
+class TestEagerVgg16(Test1NodeMixin, TestVgg16Mixin, absltest.TestCase):
+    def setUp(self):
+        super().setUp()
+        flow.enable_eager_execution(True)
+
+
+class TestEagerInceptionV3(Test1NodeMixin, TestInceptionV3Mixin, absltest.TestCase):
+    def setUp(self):
+        super().setUp()
+        flow.enable_eager_execution(True)
+
+
 flow.unittest.register_test_cases(
     scope=globals(),
     directory=os.path.dirname(os.path.realpath(__file__)),
