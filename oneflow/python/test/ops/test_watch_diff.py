@@ -46,7 +46,9 @@ def WatchDiff(test_case, device_type, input_shape, dtype):
                 trainable=True,
             )
             flow.watch_diff(x, CheckOnes)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(x)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(x)
 
     check_point = flow.train.CheckPoint()
     check_point.init()
