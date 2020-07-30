@@ -353,7 +353,9 @@ class Optimizer:
         self._SetSpecificFieldsInTrainConf(train_conf)
         return train_conf
 
-    def minimize(self, loss: Union[Sequence[Text], Text]) -> None:
+    def minimize(
+        self, loss: Union[Sequence[remote_blob_util.BlobDef], remote_blob_util.BlobDef]
+    ) -> None:
         if not isinstance(loss, collections.abc.Sequence):
             loss = [loss]
         c_api_util.CurJobBuildAndInferCtx_SetTrainConf(self.train_conf)
@@ -437,9 +439,9 @@ class AdamW(Optimizer):
         self.epsilon = epsilon
         self.do_bias_correction = do_bias_correction
         self.weight_decay = weight_decay
-        if not isinstance(weight_decay_includes, collections.abc.Sequence):
+        if isinstance(weight_decay_includes, str):
             weight_decay_includes = [weight_decay_includes]
-        if not isinstance(weight_decay_excludes, collections.abc.Sequence):
+        if isinstance(weight_decay_excludes, str):
             weight_decay_excludes = [weight_decay_excludes]
         self.weight_decay_includes = weight_decay_includes
         self.weight_decay_excludes = weight_decay_excludes
@@ -453,7 +455,7 @@ class AdamW(Optimizer):
         )
         if self.weight_decay is not None:
             train_conf.model_update_conf.weight_decay_conf.weight_decay_rate = (
-                weight_decay
+                self.weight_decay
             )
             assert not (
                 self.weight_decay_excludes is not None
@@ -463,7 +465,7 @@ class AdamW(Optimizer):
                 train_conf.model_update_conf.weight_decay_conf.includes.pattern.extend(
                     self.weight_decay_includes
                 )
-            else:
+            elif self.weight_decay_excludes is not None:
                 train_conf.model_update_conf.weight_decay_conf.excludes.pattern.extend(
                     self.weight_decay_excludes
                 )
