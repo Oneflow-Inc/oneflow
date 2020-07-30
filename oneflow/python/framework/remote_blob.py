@@ -32,7 +32,6 @@ import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.core.job.placement_pb2 as placement_pb
-from oneflow.python.oneflow_export import oneflow_deprecate
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
 
@@ -114,7 +113,6 @@ class LazyConsistentBlob(ConsistentBlob):
         ConsistentBlob.__init__(self, lbi, **kw)
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
 
-    @oneflow_deprecate()
     @property
     def shape(self):
         if oneflow.scope.mirrored_view_enabled():
@@ -196,7 +194,6 @@ class LazyMirroredBlob(MirroredBlob):
     def sub_consistent_blob_list(self):
         return self.sub_consistent_blob_list_
 
-    @oneflow_deprecate()
     @property
     def shape(self):
         if oneflow.scope.consistent_view_enabled():
