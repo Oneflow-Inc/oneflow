@@ -92,10 +92,12 @@ Maybe<const std::string*> Operator::obn4lbi(const LogicalBlobId& lbi) const {
   return &iter->second;
 }
 
-Maybe<void> Operator::InferParallelSignatureIf() { return InferParallelSignature(); }
+Maybe<void> Operator::InferParallelSignatureIf() {
+  if (op_conf().scope_symbol_id() == 0) { return Maybe<void>::Ok(); }
+  return InferParallelSignature();
+}
 
 Maybe<void> Operator::InferParallelSignature() {
-  if (op_conf().scope_symbol_id() == 0) { return Maybe<void>::Ok(); }
   const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
   const auto& scope = *JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
   int64_t parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
@@ -833,16 +835,6 @@ bool operator==(const OperatorConf& lhs, const OperatorConf& rhs) {
 
 namespace {
 
-Maybe<void> InferOpOutBlobDescs(
-    Operator* op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
-  ParallelContext parallel_ctx;
-  parallel_ctx.set_parallel_id(0);
-  parallel_ctx.set_parallel_num(1);
-  JUST(op->InferOutBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, CHECK_JUST(op->sbp_signature()),
-                               [](OpContext*) {}));
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> InferOpOutSbpParallel(
     Operator* op, const OpNodeSignature& upstream_signature,
     const std::function<const BlobDesc&(const std::string&)>& ConstBlobDesc4Ibn,
@@ -935,9 +927,12 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
     CHECK_OR_RETURN(iter != map.end());
     return &iter->second;
   };
+  // infer batch_axis
   JUST(op->InferBatchAxisIf(ConstBlobDesc4Ibn, BatchAxis4Ibn));
+  // infer is_mirrored
   JUST(InferMirroredSignature(op.get(), upstream_signature, is_mirrored, parallel_desc));
   SbpSignature sbp_sig_conf;
+  // iner sbp
   JUST(InferOpOutSbpParallel(op.get(), upstream_signature, ConstBlobDesc4Ibn, sbp_sig_conf,
                              parallel_desc));
   const auto& BlobDesc4BnInOp = [&](const std::string& bn_in_op) -> BlobDesc* {
@@ -946,7 +941,8 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
     }
     return bn_in_op2blob_desc[bn_in_op].get();
   };
-  JUST(InferOpOutBlobDescs(op.get(), BlobDesc4BnInOp));
+  // infer logical blob_desc
+  JUST(op->InferLogicalOutBlobDescsIf(BlobDesc4BnInOp, BatchAxis4Ibn, parallel_desc));
   JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc*> {
     CHECK_OR_RETURN(bn_in_op2blob_desc.find(bn_in_op) != bn_in_op2blob_desc.end());
     return bn_in_op2blob_desc[bn_in_op].get();
