@@ -1,6 +1,6 @@
 oneflow.tensorrt
 ===================================
-Operators with variables
+TensorRT integration
 ----------------------------------
 .. currentmodule:: oneflow.tensorrt
 .. automodule:: oneflow.tensorrt

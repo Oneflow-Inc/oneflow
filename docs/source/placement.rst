@@ -1,6 +1,6 @@
 oneflow.placement
 ===================================
-Operators with variables
+Placement
 ----------------------------------
 .. currentmodule:: oneflow.placement
 .. automodule:: oneflow.placement

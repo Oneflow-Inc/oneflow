@@ -1,6 +1,6 @@
 oneflow.sysconfig
 ===================================
-Operators with variables
+System configurations
 ----------------------------------
 .. currentmodule:: oneflow.sysconfig
 .. automodule:: oneflow.sysconfig

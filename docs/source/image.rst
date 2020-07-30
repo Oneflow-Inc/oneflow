@@ -1,6 +1,6 @@
 oneflow.image
 ===================================
-Operators with variables
+Image processing
 ----------------------------------
 .. currentmodule:: oneflow.image
 .. automodule:: oneflow.image
