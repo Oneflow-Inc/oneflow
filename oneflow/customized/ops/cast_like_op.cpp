@@ -19,22 +19,23 @@ namespace oneflow {
 
 REGISTER_USER_OP("cast_like")
     .Input("in")
-    .Input("like")
+    .Input("dtype_like")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* input_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const user_op::TensorDesc* like_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("like", 0);
+      const user_op::TensorDesc* dtype_like_tensor_desc =
+          ctx->TensorDesc4ArgNameAndIndex("dtype_like", 0);
       user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *output_tensor_desc = *input_tensor_desc;
-      *output_tensor_desc->mut_data_type() = like_tensor_desc->data_type();
+      *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-      CHECK_NOTNULL(like_modifier);
-      like_modifier->set_use_header_only(true);
-      like_modifier->set_requires_grad(false);
+      user_op::InputArgModifier* dtype_like_modifier = GetInputArgModifierFn("dtype_like", 0);
+      CHECK_NOTNULL(dtype_like_modifier);
+      dtype_like_modifier->set_use_header_only(true);
+      dtype_like_modifier->set_requires_grad(false);
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
@@ -45,22 +46,22 @@ REGISTER_USER_OP("cast_like")
       for (int i = 0; i < in_shape.NumAxes(); ++i) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("in", 0), i)
-            .Split(user_op::OpArg("like", 0), i)
+            .Split(user_op::OpArg("dtype_like", 0), i)
             .Split(user_op::OpArg("out", 0), i)
             .Build();
       }
       ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("like", 0))
+          .PartialSum(user_op::OpArg("dtype_like", 0))
           .Broadcast(user_op::OpArg("in", 0))
           .Broadcast(user_op::OpArg("out", 0))
           .Build();
       ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("like", 0))
+          .Broadcast(user_op::OpArg("dtype_like", 0))
           .PartialSum(user_op::OpArg("in", 0))
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
       ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("like", 0))
+          .PartialSum(user_op::OpArg("dtype_like", 0))
           .PartialSum(user_op::OpArg("in", 0))
           .PartialSum(user_op::OpArg("out", 0))
           .Build();

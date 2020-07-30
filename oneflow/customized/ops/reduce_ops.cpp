@@ -145,7 +145,7 @@ void GenerateBackwardOpConf4ReduceMaxMin(const user_op::UserOpWrapper& op, user_
     user_op::UserOpConfWrapperBuilder cast_mask_builder(op.op_name() + "_grad_cast_mask");
     user_op::UserOpConfWrapper cast_mask_op = cast_mask_builder.Op("cast_like")
                                                   .Input("in", broadcast_eq_op.output("z", 0))
-                                                  .Input("like", op.input("input_tensor", 0))
+                                                  .Input("dtype_like", op.input("input_tensor", 0))
                                                   .Output("out")
                                                   .Build();
     AddOp(cast_mask_op);
