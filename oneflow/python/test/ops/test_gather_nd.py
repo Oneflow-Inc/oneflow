@@ -223,6 +223,8 @@ def _compare_gather_nd_dynamic_indices_with_tf(
 
 
 def test_gather_nd(test_case):
+    if flow.eager_execution_enabled():
+        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["params_shape"] = [(10,)]
@@ -281,8 +283,6 @@ def test_dynamic_gather_nd(test_case):
 
 
 def test_gather_nd_dynamic_indices(test_case):
-    if flow.eager_execution_enabled():
-        return
     arg_dict = OrderedDict()
     arg_dict["params_shape"] = [(25, 10)]
     arg_dict["indices_shape"] = [(11, 1)]
