@@ -33,6 +33,7 @@ function build() {
         -v $tmp_dir/py-build-lib:/oneflow-src/build/lib/ \
         -w /ci-tmp \
         "$docker_tag" \
+        --package-name oneflow_cu102 \
         /oneflow-src/docker/package/manylinux/build_wheel.sh --python3.6
 }
 
