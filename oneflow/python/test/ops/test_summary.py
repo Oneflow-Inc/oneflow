@@ -36,7 +36,7 @@ def test_summary(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
-    logdir = "/home/zjhushengjian/oneflow/log"
+    logdir = "/home/caishenghang/ci-tmp/oneflow/log"
 
     @flow.global_function(func_config)
     def CreateWriter():
