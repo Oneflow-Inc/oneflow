@@ -1,4 +1,5 @@
-FROM nvidia/cuda:10.2-cudnn7-devel-centos7
+ARG from
+FROM ${from}
 LABEL maintainer="OneFlow Maintainers"
 
 # manylinux2014
@@ -12,8 +13,8 @@ ENV LD_LIBRARY_PATH /usr/local/lib64:/usr/local/lib
 ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
 
 # use tuna mirror
-COPY docker/package/manylinux/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo
-RUN yum makecache
+# COPY docker/package/manylinux/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo
+# RUN yum makecache
 
 ARG MANYLINUX_SHA=f5da004
 RUN yum -y install unzip && curl -L -o manylinux.zip https://github.com/pypa/manylinux/archive/${MANYLINUX_SHA}.zip && unzip manylinux.zip -d tmp && cp -r tmp/*/docker/build_scripts /build_scripts && bash build_scripts/build.sh && rm -r build_scripts tmp manylinux.zip
@@ -26,7 +27,7 @@ RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproduct
     yum update -y && yum install -y epel-release && \
     yum install -y intel-mkl-64bit-2020.0-088 nasm swig rdma-core-devel
 
-ENV TUNA_INDEX="-i https://pypi.tuna.tsinghua.edu.cn/simple"
+# ENV TUNA_INDEX="-i https://pypi.tuna.tsinghua.edu.cn/simple"
 RUN /opt/python/cp35-cp35m/bin/pip install $TUNA_INDEX -U cmake && ln -s /opt/_internal/cpython-3.5.9/bin/cmake /usr/bin/cmake
 
 # overwrite patchelf to fix "maximum size exceed" problem
