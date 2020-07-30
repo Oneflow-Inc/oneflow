@@ -4,6 +4,7 @@
 
   #### System Requirements to Run OneFlow
 
+  - Python >= 3.5
   - Nvidia Linux x86_64 driver version >= 440.33
 
   #### Install Pip package
@@ -11,13 +12,13 @@
   - To install latest release of OneFlow:
 
     ```
-    python3 -m pip install oneflow
+    python3 -m pip install oneflow --user
     ```
 
   - To install nightly release of OneFlow:
 
     ```
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow --user
     ```
 
 ### Build OneFlow from Source
