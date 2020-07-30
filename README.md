@@ -23,13 +23,17 @@
     python3 -m pip install oneflow_cu90
     ```
 
-  - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver and install `oneflow_cu102` if possible. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
+  - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver to version 440.33 or above and install `oneflow_cu102` if possible. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
   - To install nightly release of OneFlow:
 
     ```
     python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu102
     ```
+
+  - CPU-only OneFlow is not available for now.
+
+  - Releases are built with G++/GCC 4.8.5 and cuDNN 7.
 
 ### Build OneFlow from Source
 
