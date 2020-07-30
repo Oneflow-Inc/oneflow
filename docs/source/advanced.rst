@@ -1,6 +1,6 @@
 oneflow.advanced
 ===================================
-Operators with variables
+Advanced features
 ----------------------------------
 .. currentmodule:: oneflow.advanced
 .. automodule:: oneflow.advanced
