@@ -221,8 +221,11 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
         NcclInitCollectiveNode(collective_node, src_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeReduce, root_parallel_id);
         Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), collective_node);
+        CompTaskNode* dst_node = sorted_dst_comp_tasks.front();
         if (i == root_parallel_id) {
-          CompTaskNode* dst_node = sorted_dst_comp_tasks.front();
+          Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
+        } else {
+          collective_node->BuildCtrlRegstDesc(dst_node);
           Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
         }
       }
@@ -338,6 +341,7 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
           Connect<TaskNode>(gpu_src_node, ctx->task_graph()->NewEdge(), collective_node);
         } else {
           gpu_src_node->BuildCtrlRegstDesc(collective_node);
+          Connect<TaskNode>(gpu_src_node, ctx->task_graph()->NewEdge(), collective_node);
         }
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
       }
