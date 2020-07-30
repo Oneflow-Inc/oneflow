@@ -192,7 +192,7 @@ def _of_gather_nd_dynamic_indices(params, indices, indices_static_shape, device_
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def gather_nd_fn(
         params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
         indices_def: oft.ListNumpy.Placeholder(indices_static_shape, dtype=flow.int32),

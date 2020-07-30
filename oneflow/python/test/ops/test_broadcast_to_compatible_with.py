@@ -28,7 +28,7 @@ def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def broadcast_to_compatible_with_fn(
         x_def: oft.ListNumpy.Placeholder(shape=x_shape, dtype=flow.float)
     ):
@@ -64,7 +64,7 @@ def _of_broadcast_to_compatible_with_dynamic(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def broadcast_to_compatible_with_fn(
         x_def: oft.ListNumpy.Placeholder(x_shape, dtype=flow.float),
         a_def: oft.ListNumpy.Placeholder(a_shape, dtype=flow.float),

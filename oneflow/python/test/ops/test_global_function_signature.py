@@ -47,7 +47,7 @@ def test_annotation_ListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.ListNumpy:
         return x
 
@@ -61,7 +61,7 @@ def test_annotation_ListListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.ListListNumpy:
         return x
 
@@ -96,7 +96,7 @@ def test_annotation_watch_ListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.ListNumpy:
         flow.watch(x, Watch)
         return x
@@ -116,7 +116,7 @@ def test_annotation_watch_ListListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.ListListNumpy:
         flow.watch(x, Watch)
         return x
@@ -141,7 +141,7 @@ def test_annotation_Dict_ListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(x: oft.ListNumpy.Placeholder((10,))) -> Dict[str, oft.ListNumpy]:
         return {"x": x}
 
@@ -154,7 +154,7 @@ def test_annotation_Dict_ListListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(x: oft.ListListNumpy.Placeholder((10,))) -> Dict[str, oft.ListListNumpy]:
         return {"x": x}
 
@@ -179,7 +179,7 @@ def test_annotation_Dict_Nesting_ListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(x: oft.ListNumpy.Placeholder((10,))) -> Dict[str, Dict[str, oft.ListNumpy]]:
         return {"x": {"x": x}}
 
@@ -192,7 +192,7 @@ def test_annotation_Dict_Nesting_ListListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(
         x: oft.ListListNumpy.Placeholder((10,))
     ) -> Dict[str, Dict[str, oft.ListListNumpy]]:
@@ -219,7 +219,7 @@ def test_annotation_Tuple_ListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(x: Tuple[oft.ListNumpy.Placeholder((10,))]) -> Tuple[oft.ListNumpy]:
         return x
 
@@ -232,7 +232,7 @@ def test_annotation_Tuple_ListListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(x: Tuple[oft.ListListNumpy.Placeholder((10,))]) -> Tuple[oft.ListListNumpy]:
         return x
 
@@ -266,7 +266,7 @@ def test_annotation_Callback_ListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Callback[oft.ListNumpy]:
         return x
 
@@ -283,7 +283,7 @@ def test_annotation_Callback_ListListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.Callback[oft.ListListNumpy]:
         return x
 
@@ -300,7 +300,7 @@ def test_annotation_Callback_Tuple_Numpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(x: oft.Numpy.Placeholder((10,))) -> oft.Callback[Tuple[oft.Numpy]]:
         return (x,)
 
@@ -317,7 +317,7 @@ def test_annotation_Callback_Tuple_ListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Callback[Tuple[oft.ListNumpy]]:
         return (x,)
 
@@ -335,7 +335,7 @@ def test_annotation_Callback_Tuple_ListListNumpy(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo(
         x: oft.ListListNumpy.Placeholder((10,))
     ) -> oft.Callback[Tuple[oft.ListListNumpy]]:

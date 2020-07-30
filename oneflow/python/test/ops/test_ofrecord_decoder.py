@@ -174,7 +174,7 @@ def test_ofrecord_decoder(test_case):
         num_examples, length, batch_size
     )
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def OfrecordDecoderJob():
         data = decoder(get_temp_dir(), length, batch_size)
         return data

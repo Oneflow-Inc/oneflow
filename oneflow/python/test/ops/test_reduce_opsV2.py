@@ -113,7 +113,7 @@ def test_reduce_sum_batch_axis_reduced(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.reduce_sum(x)
         test_case.assertTrue(y.split_axis is None)

@@ -35,7 +35,7 @@ def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=N
     if dynamic is True:
         func_config.default_logical_view(flow.scope.mirrored_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(function_config=func_config)
         def slice(
             input_blob: oft.ListNumpy.Placeholder(shape=input_shape, dtype=dtype)
         ):
@@ -47,7 +47,7 @@ def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=N
     else:
         func_config.default_logical_view(flow.scope.consistent_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(function_config=func_config)
         def slice(input_blob: oft.Numpy.Placeholder(shape=input_shape, dtype=dtype)):
             return do_slice(input_blob, index_args)
 

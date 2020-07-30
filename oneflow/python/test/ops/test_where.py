@@ -197,14 +197,14 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
     if input_shape is None:
         func_config.default_logical_view(flow.scope.consistent_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(function_config=func_config)
         def where_fn(input_def: oft.Numpy.Placeholder(input.shape, dtype=flow.float)):
             return flow.where(input_def)
 
     else:
         func_config.default_logical_view(flow.scope.mirrored_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(function_config=func_config)
         def where_fn(
             input_def: oft.ListNumpy.Placeholder(input_shape, dtype=flow.float)
         ):

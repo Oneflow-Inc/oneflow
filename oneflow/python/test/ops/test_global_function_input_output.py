@@ -28,7 +28,7 @@ def test_lazy_input_output(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo_job(input_def: oft.Numpy.Placeholder(shape=(2, 5))):
         var = flow.get_variable(
             name="var",
@@ -55,7 +55,7 @@ def test_eager_output(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo_job():
         x = flow.constant(1, shape=(2, 5), dtype=flow.float)
         return x
@@ -74,7 +74,7 @@ def test_eager_multi_output(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo_job():
         x = flow.constant(1, shape=(2, 5), dtype=flow.float)
         y = flow.get_variable(
@@ -105,7 +105,7 @@ def test_eager_input(test_case):
     input = np.random.rand(2, 5).astype(np.single)
     output = np.maximum(input, 0)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo_job(x_def: oft.ListNumpy.Placeholder(shape=(2, 5), dtype=flow.float)):
         y = flow.math.relu(x_def)
         test_case.assertTrue(np.allclose(y.numpy(0), output))
@@ -124,7 +124,7 @@ def test_eager_input_fixed(test_case):
     input = np.arange(10).astype(np.single)
     output = input + 1.0
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo_job(x_def: oft.Numpy.Placeholder(shape=(10,), dtype=flow.float)):
         y = x_def + flow.constant(1.0, shape=(1,), dtype=flow.float)
         test_case.assertTrue(np.allclose(y.numpy(0), output))
@@ -144,7 +144,7 @@ def test_eager_multi_input(test_case):
     input_2 = np.array([2]).astype(np.single)
     output = input_1 * input_2
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo_job(
         x_def: oft.ListNumpy.Placeholder(shape=(3, 4), dtype=flow.float),
         y_def: oft.ListNumpy.Placeholder(shape=(1,), dtype=flow.float),
@@ -166,7 +166,7 @@ def test_eager_input_output(test_case):
     input = np.random.rand(5, 4).astype(np.single)
     output = input * 2.0
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo_job(x_def: oft.ListNumpy.Placeholder(shape=(5, 4), dtype=flow.float)):
         y = x_def * flow.constant(2.0, shape=(1,), dtype=flow.float)
         return y
