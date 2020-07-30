@@ -88,6 +88,7 @@ def api_oneflow_function(
     r"""Creates a callable OneFlow global function from a Python function.
 
     For instance::
+
         @oneflow.global_function(flow.FunctionConfig())
         def train():
             # your model
@@ -597,7 +598,7 @@ def set_cudnn_conv_enable_true_half(func_desc, value=True):
     "cudnn_conv_enable_pseudo_half", "enable_cudnn_conv_pseudo_half"
 )
 def set_cudnn_conv_enable_pseudo_half(func_desc, value):
-    r"""Whether  enable pseudo_half mode or not during  convolution calculation process while using cudnn 
+    r"""Whether  enable pseudo_half mode or not during  convolution calculation process while using cudnn
 
     Args:
         func_desc ([type]): [description]
