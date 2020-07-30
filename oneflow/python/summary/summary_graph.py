@@ -41,8 +41,6 @@ class Graph(object):
         """
         if logdir is None:
             raise Exception("logdir should not be None!")
-        if not os.path.isdir(logdir):
-            raise Exception("Logdir %r is illegal!" % logdir)
         logdir += "/graph"
         if not os.path.exists(logdir):
             os.makedirs(logdir)
