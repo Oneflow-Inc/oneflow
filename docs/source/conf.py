@@ -200,3 +200,12 @@ autodoc_default_options = {
     'undoc-members': True,
     'exclude-members': '__weakref__'
 }
+
+def should_skip_member(app, what, name, obj, skip, options):
+    should_skip = hasattr(obj, "_ONEFLOW_SPHINX_SKIP") and obj._ONEFLOW_SPHINX_SKIP
+    if should_skip:
+        print("skipping", what, name, obj)
+    return should_skip
+
+def setup(app):
+    app.connect('autodoc-skip-member', should_skip_member)

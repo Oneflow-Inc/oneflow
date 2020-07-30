@@ -27,3 +27,10 @@ def oneflow_export(*api_names, **kwargs):
         return func_or_class
 
     return Decorator
+
+def oneflow_deprecate(*api_names, **kwargs):
+    def Decorator(func_or_class):
+        func_or_class._ONEFLOW_SPHINX_SKIP = True
+        return func_or_class
+
+    return Decorator
