@@ -22,28 +22,35 @@ namespace oneflow {
 namespace {
 
 Maybe<void> GenerateBackwardOpConf(
-    const Operator& op, std::vector<OperatorConf>* op_confs,
+    const Operator& fw_op, std::vector<OperatorConf>* bw_op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
-  CHECK(op.op_conf().has_user_conf());
-  const UserOpConf& user_conf = op.op_conf().user_conf();
+  CHECK(fw_op.op_conf().has_user_conf());
+  const UserOpConf& user_conf = fw_op.op_conf().user_conf();
   const user_op::OpGradRegistryResult* val =
       user_op::UserOpRegistryMgr::Get().GetOpGradRegistryResult(user_conf.op_type_name());
   if (val == nullptr) {
-    return Error::GradientFunctionNotFound() << PbMessage2TxtString(op.op_conf());
+    return Error::GradientFunctionNotFound() << PbMessage2TxtString(fw_op.op_conf());
   }
-  user_op::UserOpWrapper user_op(op.op_conf(), LogicalBlobDesc4BnInOp, DiffLbi4BnInOp);
-  auto AddOp = [&](const user_op::UserOpConfWrapper& wrapper) {
-    op_confs->push_back(wrapper.op_conf());
-  };
 
-  val->gen_bw_fn(user_op, AddOp);
+  user_op::UserOpWrapper fw_user_op(fw_op.op_conf(), LogicalBlobDesc4BnInOp, DiffLbi4BnInOp);
+  if (nullptr != val->bw_gen_fn) {
+    // new refined interface
+    user_op::BackwardOpConfContext ctx(fw_user_op, bw_op_confs);
+    val->bw_gen_fn(&ctx);
+  } else if (nullptr != val->gen_bw_fn) {
+    // old interface, will be removed when all backward gradient configs are using new interface
+    auto AddOp = [&](const user_op::UserOpConfWrapper& wrapper) {
+      bw_op_confs->push_back(wrapper.op_conf());
+    };
+    val->gen_bw_fn(fw_user_op, AddOp);
+  }
 
-  for (const std::string& ibn : op.input_bns()) {
+  for (const std::string& ibn : fw_op.input_bns()) {
     LogicalBlobId* lbi = DiffLbi4BnInOp(ibn);
     if (lbi != nullptr) {
       CHECK(lbi->has_op_name() && lbi->has_blob_name())
-          << " user_op: " << op.op_name() << " op_type_name: " << user_conf.op_type_name()
+          << " user_op: " << fw_op.op_name() << " op_type_name: " << user_conf.op_type_name()
           << " 's input blob " << ibn << " has not generate input diff blob !";
     }
   }
