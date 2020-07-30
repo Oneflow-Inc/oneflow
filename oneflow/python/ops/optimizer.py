@@ -123,8 +123,8 @@ class LrScheduler:
 class CosineScheduler(LrScheduler):
     def __init__(
         self,
-        steps: int,
         base_lr: float,
+        steps: int,
         alpha: float = 0.0,
         warmup: Optional[WarmupConf] = None,
     ):
@@ -228,11 +228,12 @@ class PolynomialSchduler(LrScheduler):
         return learning_rate_decay_conf
 
 
-class LinearConsineScheduler(LrScheduler):
+@oneflow_export("optimizer.LinearCosineScheduler")
+class LinearCosineScheduler(LrScheduler):
     def __init__(
         self,
-        steps: int,
         base_lr: float,
+        steps: int,
         num_periods: float = 0.5,
         alpha: float = 0.0,
         beta: float = 0.001,
@@ -254,11 +255,12 @@ class LinearConsineScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
+@oneflow_export("optimizer.ExponentialScheduler")
 class ExponentialScheduler(LrScheduler):
     def __init__(
         self,
-        steps: int,
         base_lr: float,
+        steps: int,
         decay_rate: float,
         staircase=False,
         warmup: Optional[WarmupConf] = None,
@@ -277,11 +279,12 @@ class ExponentialScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
+@oneflow_export("optimizer.InverseTimeScheduler")
 class InverseTimeScheduler(LrScheduler):
     def __init__(
         self,
-        steps: int,
         base_lr: float,
+        steps: int,
         decay_rate: float,
         staircase: bool = False,
         warmup: Optional[WarmupConf] = None,
@@ -300,11 +303,12 @@ class InverseTimeScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
+@oneflow_export("optimizer.NaturalExpScheduler")
 class NaturalExpScheduler(LrScheduler):
     def __init__(
         self,
-        steps: int,
         base_lr: float,
+        steps: int,
         decay_rate: float,
         staircase: bool = False,
         warmup: Optional[WarmupConf] = None,
