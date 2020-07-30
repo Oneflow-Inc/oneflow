@@ -22,6 +22,8 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 
+IntPair = Tuple[int, int]
+
 
 @oneflow_export("layers.dense")
 def dense(
@@ -128,9 +130,9 @@ def dense(
 def conv2d(
     inputs: remote_blob_util.BlobDef,
     filters: int,
-    kernel_size: Union[int, Sequence[int]] = 1,
-    strides: Union[int, Sequence[int]] = 1,
-    padding: Union[str, Sequence[Sequence[int]]] = "VALID",
+    kernel_size: Union[int, IntPair] = 1,
+    strides: Union[int, IntPair] = 1,
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]] = "VALID",
     data_format: str = "NCHW",
     dilation_rate: int = 1,
     groups: int = 1,

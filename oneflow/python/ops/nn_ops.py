@@ -19,7 +19,7 @@ import collections
 import os
 import sys
 import random
-from typing import Union, Optional, Sequence
+from typing import Union, Optional, Sequence, Tuple
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -28,6 +28,8 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.module as module_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+
+IntPair = Tuple[int, int]
 
 
 def calc_same_padding(input_size, filter_size, dilation_rate, stride):
@@ -193,10 +195,10 @@ def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, str
 def conv2d(
     input: remote_blob_util.BlobDef,
     filters: remote_blob_util.BlobDef,
-    strides: Union[int, Sequence[int]],
-    padding: Union[str, Sequence[Sequence[int]]],
+    strides: Union[int, IntPair],
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
     data_format: str = "NCHW",
-    dilations: Optional[Union[int, Sequence[int]]] = None,
+    dilations: Optional[Union[int, IntPair]] = None,
     groups: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -206,7 +208,7 @@ def conv2d(
         input (remote_blob_util.BlobDef): A `Blob` of rank at least 4.[batch_num, height, width, channel] 
         filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape `[filter_height, filter_width, in_channels, out_channels]`
         strides (Union[int, Sequence[int]]): An int or list of `ints` that has length `1`, `2` or `4`. The stride of the sliding window for each dimension of `input`. 
-        padding (str): padding: `string` `"SAME"` or `"VALID"` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
+        padding (str): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
         data_format (str, optional): `"NHWC" or "NCHW"`. Defaults to `"NHWC"`.
         dilations (Optional[Union[int, Sequence[int]]], optional):  The dilation factor for each dimension of`input`. Defaults to None.
         groups (int, optional): int value greater than 0. Defaults to 1.
@@ -214,7 +216,7 @@ def conv2d(
 
     Raises:
         ValueError: strides must be an int or a list.
-        ValueError: padding must be "SAME" or "VALID".
+        ValueError: padding must be "SAME" or `"SAME_LOWER" or "SAME_UPPER" or "VALID" or Tuple[IntPair, IntPair, IntPair, IntPair].
         ValueError: data_format must be "NHWC" or "NCHW".
         ValueError: dilations must be an int or a list.
         ValueError: invalid data_format.
@@ -517,9 +519,9 @@ def calc_pool_padding(padding, dhw_offset, ndims):
 @oneflow_export("nn.max_pool2d")
 def max_pool2d(
     input: remote_blob_util.BlobDef,
-    ksize: Union[int, Sequence[int]],
-    strides: Union[int, Sequence[int]],
-    padding: Union[str, Sequence[Sequence[int]]],
+    ksize: Union[int, IntPair],
+    strides: Union[int, IntPair],
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
     data_format: str = "NCHW",
     ceil_mode: bool = False,
     name: Optional[str] = None,
@@ -528,9 +530,9 @@ def max_pool2d(
 
     Args:
         input (remote_blob_util.BlobDef): A 4-D `Blob` of the format specified by data_format.
-        ksize (Union[int, Sequence[int]]): An int or list of ints that has length 1, 2 or 4. The size of the window for each dimension of the input `Blob`.
-        strides (Union[int, Sequence[int]]): An int or list of ints that has length 1, 2 or 4. The stride of the sliding window for each dimension of the input `Blob`.
-        padding (str): '`VALID'` or '`SAME'`. The padding algorithm. 
+        ksize (Union[int, IntPair]): An int or list of ints that has length 1, 2. The size of the window for each dimension of the input `Blob`.
+        strides (Union[int, IntPair]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input `Blob`.
+        padding (str): '`VALID'` or '`SAME' or '`SAME_LOWER' or '`SAME_UPPER' or Tuple[IntPair, IntPair, IntPair, IntPair]`. The padding algorithm. 
         data_format (str, optional): '`NHWC'`, '`NCHW'` or '`NCHW_VECT_C'`. Defaults to "NHWC".
         name (Optional[str], optional): This operator's name(optional).. Defaults to None.
 
@@ -566,9 +568,9 @@ def max_pool2d(
 @oneflow_export("nn.avg_pool2d")
 def avg_pool2d(
     input: remote_blob_util.BlobDef,
-    ksize: Union[int, Sequence[int]],
-    strides: Union[int, Sequence[int]],
-    padding: Union[str, Sequence[Sequence[int]]],
+    ksize: Union[int, IntPair],
+    strides: Union[int, IntPair],
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
     data_format: str = "NCHW",
     ceil_mode: bool = False,
     name: Optional[str] = None,
@@ -577,9 +579,9 @@ def avg_pool2d(
 
     Args:
         input (remote_blob_util.BlobDef): A 4-D `Blob` of shape [batch, height, width, channels].
-        ksize (Union[int, Sequence[int]]):  An int or list of ints that has length 1, 2 or 4. The size of the window for each dimension of the input `Blob`.
-        strides (Union[int, Sequence[int]]): An int or list of ints that has length 1, 2 or 4. The stride of the sliding window for each dimension of the input `Blob`.
-        padding (str): '`VALID'` or '`SAME'`. The padding algorithm.
+        ksize (Union[int, IntPair]):  An int or list of ints that has length 1, 2. The size of the window for each dimension of the input `Blob`.
+        strides (Union[int, IntPair]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input `Blob`.
+        padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER'` or Tuple[IntPair, IntPair, IntPair, IntPair]. The padding algorithm.
         data_format (str, optional): '`NHWC'` or '`NCHW'`. Defaults to "NHWC".
         name (Optional[str], optional):  This operator's name(optional). Defaults to None.
 
