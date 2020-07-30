@@ -32,11 +32,11 @@ def _read_images_by_cv(image_files):
     return [cv2.resize(image, (512, 512)) for image in images]
 
 
-def test_summary(test_case):
+def summary_demo():
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
-    logdir = "/home/caishenghang/ci-tmp/oneflow/log"
+    logdir = "/oneflow/log"
 
     @flow.global_function(func_config)
     def CreateWriter():
@@ -64,6 +64,16 @@ def test_summary(test_case):
         step: flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
     ):
         flow.summary.pb(value, step=step)
+
+     @flow.global_function(func_config)
+    def ImageJob(
+        value: flow.typing.ListNumpy.Placeholder(
+            shape=(100, 2000, 2000, 4), dtype=flow.uint8
+        ),
+        step: flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
+        tag: flow.typing.ListNumpy.Placeholder((10,), dtype=flow.int8),
+    ):
+        flow.summary.image(value, step=step, tag=tag)
 
     @flow.global_function(func_config)
     def FlushJob():
@@ -144,31 +154,6 @@ def test_summary(test_case):
         x=x,
     )
 
-    graph = flow.summary.Graph(logdir)
-    graph.write_structure_graph()
-
-
-def summary_image():
-    flow.clear_default_session()
-    func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
-    func_config.default_logical_view(flow.scope.mirrored_view())
-    logdir = "~/oneflow/log"
-
-    @flow.global_function(func_config)
-    def CreateWriter():
-        flow.summary.create_summary_writer(logdir)
-
-    @flow.global_function(func_config)
-    def ImageJob(
-        value: flow.typing.ListNumpy.Placeholder(
-            shape=(100, 2000, 2000, 4), dtype=flow.uint8
-        ),
-        step: flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
-        tag: flow.typing.ListNumpy.Placeholder((10,), dtype=flow.int8),
-    ):
-        flow.summary.image(value, step=step, tag=tag)
-
     image1_path = "~/oneflow/image1"
     image2_path = "~/oneflow/image2"
 
@@ -187,3 +172,8 @@ def summary_image():
     step = np.array([1], dtype=np.int64)
     tag = np.fromstring("image", dtype=np.int8)
     ImageJob([images], [step], [tag])
+
+    graph = flow.summary.Graph(logdir)
+    graph.write_structure_graph()
+
+    
