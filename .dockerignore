@@ -29,7 +29,7 @@ dist
 
 build/third_party/re2/src/re2-*
 
-/wheelhouse
+/wheelhouse*
 /.DS_Store
 /tmp_wheel
 /manylinux*
