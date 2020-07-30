@@ -21,7 +21,6 @@ from absl import app
 from absl.testing import absltest
 from test_1node_mixin import Test1NodeMixin
 from cnns_tests import (
-    TestNetMixin,
     TestAlexNetMixin,
     TestResNet50Mixin,
     TestVgg16Mixin,

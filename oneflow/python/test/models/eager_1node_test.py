@@ -21,7 +21,6 @@ from absl import app
 from absl.testing import absltest
 from test_1node_mixin import Test1NodeMixin
 from cnns_tests import (
-    TestNetMixin,
     TestAlexNetMixin,
     TestResNet50Mixin,
     TestVgg16Mixin,
@@ -53,7 +52,7 @@ class TestEagerInceptionV3(Test1NodeMixin, TestInceptionV3Mixin, absltest.TestCa
         flow.enable_eager_execution(True)
 
 
-class _ClearDefaultSession(object):
+class TestEagerMixin(object):
     def setUp(self):
         flow.clear_default_session()
         flow.enable_eager_execution(True)
@@ -64,7 +63,7 @@ flow.unittest.register_test_cases(
     directory=os.path.dirname(os.path.realpath(__file__)),
     filter_by_num_nodes=lambda x: x == 1,
     base_class=absltest.TestCase,
-    test_case_mixin=_ClearDefaultSession,
+    test_case_mixin=TestEagerMixin,
 )
 
 
