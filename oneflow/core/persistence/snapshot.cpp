@@ -33,6 +33,11 @@ std::string GenDataFilePath(const std::string& root, const std::string& key) {
 SnapshotReader::SnapshotReader(const std::string& snapshot_root_path)
     : root_path_(snapshot_root_path) {}
 
+bool SnapshotReader::HasKey(const std::string& key) const {
+  const std::string path = GenDataFilePath(root_path_, key);
+  return SnapshotFS()->FileExists(path);
+}
+
 void SnapshotReader::Read(const std::string& key, Blob* blob) const {
   Shape shape;
   blob->shape().ToShape(&shape);

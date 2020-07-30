@@ -364,24 +364,24 @@ def test_reduce_all_batch_axis_reduced(test_case):
 
 
 def compare_reduce_sum_with_tensorflow(
-    device_type, input_shape, axis, keepdims, rtol=1e-5, atol=1e-5
+    test_case, device_type, input_shape, axis, keepdims
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float32)
+    func_config.default_data_type(flow.int32)
 
     @flow.global_function(function_config=func_config)
     def ReduceSumJob(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
 
-    x = np.random.rand(*input_shape).astype(np.float32)
+    x = (np.random.rand(*input_shape) * 100).astype(np.int32)
     # OneFlow
     of_out = ReduceSumJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_sum(x, axis=axis, keepdims=keepdims)
-    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=rtol, atol=atol)
+    test_case.assertTrue(np.allclose(of_out.numpy(), tf_out.numpy()))
 
 
 def test_reduce_sum_func(test_case):
@@ -391,7 +391,7 @@ def test_reduce_sum_func(test_case):
     arg_dict["axis"] = [None, [], [1], [0, 2]]
     arg_dict["keepdims"] = [True, False]
     for arg in GenArgList(arg_dict):
-        compare_reduce_sum_with_tensorflow(*arg)
+        compare_reduce_sum_with_tensorflow(test_case, *arg)
 
 
 def test_reduce_sum_with_one_value_func(test_case):
@@ -401,7 +401,7 @@ def test_reduce_sum_with_one_value_func(test_case):
     arg_dict["axis"] = [None, [], [0]]
     arg_dict["keepdims"] = [True, False]
     for arg in GenArgList(arg_dict):
-        compare_reduce_sum_with_tensorflow(*arg)
+        compare_reduce_sum_with_tensorflow(test_case, *arg)
 
 
 def test_reduce_sum_col_reduce(test_case):
@@ -411,7 +411,7 @@ def test_reduce_sum_col_reduce(test_case):
     arg_dict["axis"] = [[0]]
     arg_dict["keepdims"] = [True, False]
     for arg in GenArgList(arg_dict):
-        compare_reduce_sum_with_tensorflow(*arg)
+        compare_reduce_sum_with_tensorflow(test_case, *arg)
 
 
 def test_reduce_sum_row_reduce(test_case):
@@ -421,7 +421,7 @@ def test_reduce_sum_row_reduce(test_case):
     arg_dict["axis"] = [[1]]
     arg_dict["keepdims"] = [True, False]
     for arg in GenArgList(arg_dict):
-        compare_reduce_sum_with_tensorflow(*arg)
+        compare_reduce_sum_with_tensorflow(test_case, *arg)
 
 
 def test_reduce_sum_scalar(test_case):
@@ -431,7 +431,7 @@ def test_reduce_sum_scalar(test_case):
     arg_dict["axis"] = [[0, 1]]
     arg_dict["keepdims"] = [True, False]
     for arg in GenArgList(arg_dict):
-        compare_reduce_sum_with_tensorflow(*arg)
+        compare_reduce_sum_with_tensorflow(test_case, *arg)
 
 
 def test_reduce_sum_batch_axis_reduced(test_case):

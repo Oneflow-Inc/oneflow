@@ -36,9 +36,14 @@ class ForeignCallback {
 
   virtual void RemoveForeignCallback(int64_t unique_id) const { UNIMPLEMENTED(); }
 
-  // return scope_id
+  // return scope_symbol_id
   virtual int64_t MakeScopeSymbol(const std::string& job_conf, const std::string& parallel_conf,
                                   bool is_mirrored) const {
+    UNIMPLEMENTED();
+    return 0;
+  }
+  // return parallel_desc_symbol_id
+  virtual int64_t MakeParallelDescSymbol(const std::string& parallel_conf) const {
     UNIMPLEMENTED();
     return 0;
   }
