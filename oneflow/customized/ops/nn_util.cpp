@@ -45,8 +45,7 @@ void CalcOutAndPadding(int64_t input_size, int32_t filter_size, int32_t dilation
 }
 
 void CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate, int32_t stride,
-                     const std::string& padding_type, int32_t* padding_small,
-                     int32_t* padding_large) {
+                     int32_t* padding_small, int32_t* padding_large) {
   CHECK_GT(stride, 0);
   CHECK_GE(dilation_rate, 1);
 
@@ -68,7 +67,6 @@ void CalcConvOut(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
     *output_size = (input_size + 2 * padding_before - effective_filter_size + stride) / stride;
     CHECK_GE((*output_size), 0);
   }
-  if (output_size) { CHECK_GE((*output_size), 0); }
 }
 
 const size_t IdxOffset(const std::string& data_format) {

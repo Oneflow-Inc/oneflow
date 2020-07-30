@@ -32,7 +32,6 @@ REGISTER_USER_OP("same_padding")
       const TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
       *y_desc = *x_desc;
-      const std::string& padding = ctx->Attr<std::string>("padding");
       const std::string& data_format = ctx->Attr<std::string>("data_format");
       const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
       const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
@@ -47,7 +46,7 @@ REGISTER_USER_OP("same_padding")
         int32_t padding_small = 0;
         int32_t padding_large = 0;
         CalcSamePadding(x_desc->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                        strides.at(i), padding, &padding_small, &padding_large);
+                        strides.at(i), &padding_small, &padding_large);
         y_dim_vec[idx_offset + i] =
             x_desc->shape().At(idx_offset + i) + padding_small + padding_large;
       }

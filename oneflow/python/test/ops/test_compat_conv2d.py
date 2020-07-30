@@ -138,12 +138,9 @@ def compare_with_tensorflow(
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
 
-    max_diff = np.max(
-        np.absolute(of_out.numpy().transpose(0, 2, 3, 1) - tf_out.numpy())
-    )
     assert np.allclose(
         of_out.numpy().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-5, atol=1e-5
-    ), max_diff
+    )
     assert np.allclose(
         test_global_storage.Get("x_diff").transpose(0, 2, 3, 1),
         tf_x_diff.numpy(),

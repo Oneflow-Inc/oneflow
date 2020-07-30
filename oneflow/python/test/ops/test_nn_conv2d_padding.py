@@ -35,8 +35,11 @@ def compare_with_tensorflow(
     groups,
     of_padding="SAME",
     tf_padding="SAME",
-    stride=1,
+    stride_h=1,
+    stride_w=1,
     data_format="NCHW",
+    dilation_h=1,
+    dilation_w=1,
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -76,10 +79,10 @@ def compare_with_tensorflow(
             loss = flow.nn.conv2d(
                 x,
                 weight,
-                strides=[stride, stride],
+                strides=[stride_h, stride_w],
                 padding=of_padding,
                 data_format=data_format,
-                dilations=[1, 1],
+                dilations=[dilation_h, dilation_w],
                 groups=groups,
             )
             flow.losses.add_loss(loss)
@@ -110,9 +113,10 @@ def compare_with_tensorflow(
         tf_out = tf.nn.conv2d(
             x,
             weight,
-            strides=[1, stride, stride, 1],
+            strides=[1, stride_h, stride_w, 1],
             padding=tf_padding,
             data_format="NHWC",
+            dilations=[1, dilation_h, dilation_w, 1],
         )
 
     loss_diff = test_global_storage.Get("loss_diff").transpose(xy_data_transpose)
@@ -121,15 +125,12 @@ def compare_with_tensorflow(
     idx = np.where(
         np.abs(of_out.numpy().transpose(xy_data_transpose) - tf_out.numpy()) > 5e-4
     )
-    max_diff = np.max(
-        np.absolute(of_out.numpy().transpose(xy_data_transpose) - tf_out.numpy())
-    )
     assert np.allclose(
         of_out.numpy().transpose(xy_data_transpose),
         tf_out.numpy(),
         rtol=1e-5,
         atol=1e-5,
-    ), max_diff
+    )
 
     assert np.allclose(
         test_global_storage.Get("x_diff").transpose(xy_data_transpose),
@@ -154,8 +155,11 @@ def test_padding_valid(test_case):
     arg_dict["groups"] = [1]
     arg_dict["of_padding"] = ["VALID"]
     arg_dict["tf_padding"] = ["VALID"]
-    arg_dict["stride"] = [1, 2]
+    arg_dict["stride_h"] = [1]
+    arg_dict["stride_w"] = [1]
     arg_dict["data_format"] = ["NCHW", "NHWC"]
+    arg_dict["dilation_h"] = [2]
+    arg_dict["dilation_w"] = [3]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
@@ -169,8 +173,11 @@ def test_padding_same(test_case):
     arg_dict["groups"] = [1]
     arg_dict["of_padding"] = ["SAME_UPPER"]
     arg_dict["tf_padding"] = ["SAME"]
-    arg_dict["stride"] = [1, 2]
+    arg_dict["stride_h"] = [2]
+    arg_dict["stride_w"] = [3]
     arg_dict["data_format"] = ["NCHW", "NHWC"]
+    arg_dict["dilation_h"] = [1]
+    arg_dict["dilation_w"] = [1]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
@@ -182,10 +189,13 @@ def test_pad_list1(test_case):
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
     arg_dict["groups"] = [1]
-    arg_dict["of_padding"] = [[[0, 0], [0, 0], [0, 1], [1, 0]]]
+    arg_dict["of_padding"] = [[[0, 0], [0, 1], [1, 0], [0, 0]]]
     arg_dict["tf_padding"] = [[[0, 0], [0, 1], [1, 0], [0, 0]]]
-    arg_dict["stride"] = [1, 2]
-    arg_dict["data_format"] = ["NCHW"]
+    arg_dict["stride_h"] = [2]
+    arg_dict["stride_w"] = [3]
+    arg_dict["data_format"] = ["NHWC"]
+    arg_dict["dilation_h"] = [2]
+    arg_dict["dilation_w"] = [4]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
@@ -199,8 +209,11 @@ def test_pad_list2(test_case):
     arg_dict["groups"] = [1]
     arg_dict["of_padding"] = [[[0, 0], [0, 0], [1, 1], [1, 1]]]
     arg_dict["tf_padding"] = [[[0, 0], [1, 1], [1, 1], [0, 0]]]
-    arg_dict["stride"] = [1, 2]
+    arg_dict["stride_h"] = [2]
+    arg_dict["stride_w"] = [3]
     arg_dict["data_format"] = ["NCHW"]
+    arg_dict["dilation_h"] = [2]
+    arg_dict["dilation_w"] = [4]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
@@ -208,13 +221,17 @@ def test_pad_list2(test_case):
 def test_pad_list3(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 32, 10, 10), (10, 32, 11, 11)]
+    arg_dict["x_shape"] = [(10, 32, 10, 10)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3, 2]
     arg_dict["groups"] = [1]
     arg_dict["of_padding"] = [[[0, 0], [0, 0], [1, 0], [1, 0]]]
     arg_dict["tf_padding"] = [[[0, 0], [1, 0], [1, 0], [0, 0]]]
-    arg_dict["stride"] = [1, 2]
+    arg_dict["stride_h"] = [1]
+    arg_dict["stride_w"] = [2]
+    arg_dict["data_format"] = ["NCHW"]
+    arg_dict["dilation_h"] = [1]
+    arg_dict["dilation_w"] = [3]
     arg_dict["data_format"] = ["NCHW"]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
@@ -225,11 +242,14 @@ def test_pad_list4(test_case):
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["x_shape"] = [(10, 32, 10, 10), (10, 32, 11, 11)]
     arg_dict["filters"] = [64]
-    arg_dict["kernel_size"] = [3, 2]
+    arg_dict["kernel_size"] = [3]
     arg_dict["groups"] = [1]
     arg_dict["of_padding"] = [[[0, 0], [0, 0], [10, 2], [10, 2]]]
     arg_dict["tf_padding"] = [[[0, 0], [10, 2], [10, 2], [0, 0]]]
-    arg_dict["stride"] = [1, 2]
+    arg_dict["stride_h"] = [2]
+    arg_dict["stride_w"] = [3]
     arg_dict["data_format"] = ["NCHW"]
+    arg_dict["dilation_h"] = [2]
+    arg_dict["dilation_w"] = [4]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
