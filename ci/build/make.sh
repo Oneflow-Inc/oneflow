@@ -18,6 +18,7 @@ fi
 # build manylinux image
 cd $src_dir
 docker build -f $src_dir/docker/package/manylinux/Dockerfile \
+    --build-arg from=nvidia/cuda:10.2-cudnn7-devel-centos7 \
     $docker_proxy_build_args -t $docker_tag .
 
 cd -
