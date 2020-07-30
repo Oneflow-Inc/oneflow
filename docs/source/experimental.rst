@@ -1,6 +1,6 @@
 oneflow.experimental
 ===================================
-Operators with variables
+Experimental features
 ----------------------------------
 .. currentmodule:: oneflow.experimental
 .. automodule:: oneflow.experimental

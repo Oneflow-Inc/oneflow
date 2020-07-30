@@ -1,6 +1,6 @@
 oneflow.random
 ===================================
-Operators with variables
+Random
 ----------------------------------
 .. currentmodule:: oneflow.random
 .. automodule:: oneflow.random

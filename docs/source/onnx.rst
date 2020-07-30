@@ -1,6 +1,6 @@
 oneflow.onnx
 ===================================
-Operators with variables
+ONNX integration
 ----------------------------------
 .. currentmodule:: oneflow.onnx
 .. automodule:: oneflow.onnx

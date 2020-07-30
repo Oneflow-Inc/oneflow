@@ -1,6 +1,6 @@
 oneflow.system
 ===================================
-Operators with variables
+System configurations
 ----------------------------------
 .. currentmodule:: oneflow.system
 .. automodule:: oneflow.system

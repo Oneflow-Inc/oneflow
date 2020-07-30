@@ -1,6 +1,6 @@
 oneflow.optimizer
 ===================================
-Operators with variables
+Optimizers
 ----------------------------------
 .. currentmodule:: oneflow.optimizer
 .. automodule:: oneflow.optimizer
