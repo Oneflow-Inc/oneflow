@@ -121,6 +121,8 @@ def _of_dynamic_params_gather_nd(params, indices, static_params_shape, compare_f
 def _compare_gather_nd_with_tf(
     test_case, device_type, params_shape, indices_shape, mirrored=False
 ):
+    if flow.eager_execution_enabled():
+        return
     params, indices = _random_inputs(params_shape, indices_shape)
 
     i = tf.constant(indices)
@@ -210,6 +212,8 @@ def _of_gather_nd_dynamic_indices(params, indices, indices_static_shape, device_
 def _compare_gather_nd_dynamic_indices_with_tf(
     test_case, params_shape, indices_shape, indices_static_shape, device_type
 ):
+    if flow.eager_execution_enabled():
+        return
     params, indices = _random_inputs(params_shape, indices_shape)
 
     i = tf.constant(indices)
@@ -223,8 +227,6 @@ def _compare_gather_nd_dynamic_indices_with_tf(
 
 
 def test_gather_nd(test_case):
-    if flow.eager_execution_enabled():
-        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["params_shape"] = [(10,)]
