@@ -95,7 +95,7 @@ void CopyNDCpuImpl(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyN
     const int64_t dst_offset = dst_helper.NdIndexToOffset(dst_idx);
     unsigned char* dst_ptr = reinterpret_cast<unsigned char*>(dst) + dst_offset;
     const unsigned char* src_ptr = reinterpret_cast<const unsigned char*>(src) + src_offset;
-    dst_ptr[0] = src_ptr[0];
+    *dst_ptr = *src_ptr;
   }
 }
 

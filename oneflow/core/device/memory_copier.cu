@@ -37,6 +37,7 @@ __global__ void CopyNDGpu(const int n, void* dst, const void* src,
     int64_t src_idx[NDIMS];
     int64_t dst_idx[NDIMS];
     copy_helper.OffsetToNdIndex(i, copy_idx);
+#pragma unroll
     for (int64_t j = 0; j < NDIMS; j++) {
       src_idx[j] = src_pos.val[j] + copy_idx[j];
       dst_idx[j] = dst_pos.val[j] + copy_idx[j];
@@ -45,7 +46,7 @@ __global__ void CopyNDGpu(const int n, void* dst, const void* src,
     const int64_t dst_offset = dst_helper.NdIndexToOffset(dst_idx);
     unsigned char* dst_ptr = reinterpret_cast<unsigned char*>(dst) + dst_offset;
     const unsigned char* src_ptr = reinterpret_cast<const unsigned char*>(src) + src_offset;
-    dst_ptr[0] = src_ptr[0];
+    *dst_ptr = *src_ptr;
   }
 }
 
@@ -53,22 +54,22 @@ __global__ void CopyNDGpu(const int n, void* dst, const void* src,
 
 template<int32_t NDIMS>
 void CopyNDGpuImpl(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc) {
-  NdIndexOffsetHelper<int64_t, NDIMS> src_helper(desc.src_shape.dim_vec().data());
-  NdIndexOffsetHelper<int64_t, NDIMS> dst_helper(desc.dst_shape.dim_vec().data());
-  NdIndexOffsetHelper<int64_t, NDIMS> copy_helper(desc.extent.dim_vec().data());
-  Int32Array<NDIMS> src_pos_struct;
-  Int32Array<NDIMS> dst_pos_struct;
   CHECK_EQ(desc.dst_pos.NumAxes(), NDIMS);
   CHECK_EQ(desc.src_pos.NumAxes(), NDIMS);
   CHECK_EQ(desc.dst_shape.NumAxes(), NDIMS);
   CHECK_EQ(desc.src_shape.NumAxes(), NDIMS);
   CHECK_EQ(desc.extent.NumAxes(), NDIMS);
+  NdIndexOffsetHelper<int64_t, NDIMS> src_helper(desc.src_shape.dim_vec().data());
+  NdIndexOffsetHelper<int64_t, NDIMS> dst_helper(desc.dst_shape.dim_vec().data());
+  NdIndexOffsetHelper<int64_t, NDIMS> copy_helper(desc.extent.dim_vec().data());
+  Int32Array<NDIMS> src_pos;
+  Int32Array<NDIMS> dst_pos;
   FOR_RANGE(int64_t, i, 0, NDIMS) {
-    dst_pos_struct.val[i] = desc.dst_pos.At(i);
-    src_pos_struct.val[i] = desc.src_pos.At(i);
+    dst_pos.val[i] = desc.dst_pos.At(i);
+    src_pos.val[i] = desc.src_pos.At(i);
   }
   RUN_CUDA_KERNEL((CopyNDGpu<NDIMS>), ctx, desc.extent.elem_cnt(), desc.extent.elem_cnt(), dst, src,
-                  dst_helper, src_helper, copy_helper, dst_pos_struct, src_pos_struct);
+                  dst_helper, src_helper, copy_helper, dst_pos, src_pos);
 }
 
 #define SPECIALIZE_COPY_ND_GPU_IMPL(NDIMS)                                        \
