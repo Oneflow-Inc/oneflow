@@ -30,6 +30,7 @@ parser.add_argument(
     help="Package xla libraries if true, otherwise not."
 )
 parser.add_argument('--build_dir', type=str, default='build')
+parser.add_argument('--package_name', type=str, default='oneflow')
 args, remain_args = parser.parse_known_args()
 sys.argv = ['setup.py'] + remain_args
 
@@ -72,7 +73,7 @@ if args.with_xla:
         raise Exception("Patchelf set rpath failed. command is: %s" % command)
 
 setup(
-    name='oneflow',
+    name=args.package_name,
     version='0.1.6',
     url='https://www.oneflow.org/',
     install_requires=REQUIRED_PACKAGES,
