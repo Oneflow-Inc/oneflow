@@ -1,12 +1,17 @@
 # Troubleshooting
 
 - `CUDNN_STATUS_NOT_INITIALIZED`
-    - You might see error message like this:
+    - You might see error message like these:
+        ```
+        I0729 22:37:45.483937439   56788 ev_epoll_linux.c:82]        Use of signals is disabled. Epoll enginll not be used
+        E0729 22:37:45.515343 56788 version.cpp:82] Failed to get cuda runtime version: CUDA driver version nsufficient for CUDA runtime version
+        F0729 22:38:31.209002 56788 improver.cpp:535] Check failed: mem_size > 0 (-524288000 vs. 0)
+        ```
         ```
         F0723 19:05:56.194067 40970 cuda_util.cpp:82] Check failed: error == CUDNN_STATUS_SUCCESS (1 vs. 0) CUDNN_STATUS_NOT_INITIALIZED
         ```
-    - Please upgrade to Nvidia Linux x86_64 driver version >= 440.33
-    - For more information, please refer to [cuda compatibility docs](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
+    - Please upgrade to Nvidia Linux x86_64 driver. Version >= 440.33 is recommended.
+    - For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
 - Failed to compile `.cu` files
     - Please refer to [CUDA System Requirements](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#system-requirements) . Make sure your linux distribution and libraries shipped with it meet the requirements.
