@@ -146,8 +146,6 @@ Maybe<void> StartGlobalSession() {
   const JobSet& job_set = Global<LazyJobBuildAndInferCtxMgr>::Get()->job_set();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
-    TeePersistentLogStream::Create("structure_graph.json")
-        ->Write(Global<LazyJobBuildAndInferCtxMgr>::Get()->structure_graph());
   }
   if (job_set.job().empty()) { return Error::JobSetEmpty() << "no function defined"; }
   CHECK_ISNULL_OR_RETURN(Global<Oneflow>::Get());
