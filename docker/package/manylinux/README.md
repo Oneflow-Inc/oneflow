@@ -4,7 +4,7 @@
 
 在 OneFlow 源码根目录下运行:
 ```
-docker build -f docker/package/manylinux/Dockerfile -t oneflow:manylinux2014-cuda10.2 .
+docker build -f docker/package/manylinux/Dockerfile --build-arg from=nvidia/cuda:10.2-cudnn7-devel-centos7 -t oneflow:manylinux2014-cuda10.2 .
 ```
 
 ### 打包 manylinux python wheel
