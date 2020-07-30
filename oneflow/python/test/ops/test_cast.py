@@ -53,7 +53,7 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     
-    @flow.global_function(function_config=func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def CastJob():
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(

@@ -40,7 +40,7 @@ def RunOneflowOp(device_type, flow_op, x, y, data_type):
 
     flow_type = type_name_to_flow_type[data_type]
 
-    @flow.global_function(function_config=func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def FlowJob(
         x: oft.Numpy.Placeholder(x.shape, dtype=flow_type),
         y: oft.Numpy.Placeholder(y.shape, dtype=flow_type),

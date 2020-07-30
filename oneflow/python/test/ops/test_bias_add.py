@@ -33,7 +33,7 @@ def RunOneflowBiasAdd(device_type, value, bias, flow_args):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(function_config=func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def FlowJob(
         value: oft.Numpy.Placeholder(value.shape),
         bias: oft.Numpy.Placeholder(bias.shape),

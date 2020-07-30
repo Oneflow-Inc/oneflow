@@ -17,7 +17,7 @@ import oneflow as flow
 
 
 def AddLossUnderNormalMode():
-    flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0.1]), momentum=0).minimize(None)
+    flow.losses.add_loss(None)
 
 
 def test_ApiNotImplementedError(test_case):
