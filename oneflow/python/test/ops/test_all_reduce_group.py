@@ -33,7 +33,9 @@ def do_test(test_case, mirrored):
     @flow.global_function(type="train", function_config=func_config)
     def Foo():
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(1))
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0).minimize(w)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0
+        ).minimize(w)
         return w
 
     check_point = flow.train.CheckPoint()

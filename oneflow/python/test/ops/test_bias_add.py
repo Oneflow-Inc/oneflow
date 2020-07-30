@@ -52,7 +52,9 @@ def RunOneflowBiasAdd(device_type, value, bias, flow_args):
                 initializer=flow.zeros_initializer(),
             )
             loss = flow.nn.bias_add(value, bias, *flow_args)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0
+            ).minimize(loss)
 
             flow.watch_diff(value, test_global_storage.Setter("value_diff"))
             flow.watch_diff(bias, test_global_storage.Setter("bias_diff"))

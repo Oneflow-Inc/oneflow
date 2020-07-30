@@ -70,7 +70,7 @@ def test_smooth_l1_loss(_):
         flow.clear_default_session()
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
-        
+
         prediction = np.random.randn(*prediction_shape).astype(
             type_name_to_np_type[data_type]
         )
@@ -109,7 +109,9 @@ def test_smooth_l1_loss(_):
             prediction += v
             with flow.scope.placement(device_type, "0:0"):
                 loss = flow.smooth_l1_loss(prediction, label, beta)
-                flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(loss)
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+                ).minimize(loss)
                 return loss
 
         loss_np = np_result["loss"]

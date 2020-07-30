@@ -32,7 +32,9 @@ def test_2d_gpu_variable(test_case):
                 initializer=flow.constant_initializer(0),
             )
             print(w.numpy(0))
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0.1]), momentum=0).minimize(w)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [0.1]), momentum=0
+        ).minimize(w)
 
     Foo()
     Foo()

@@ -48,7 +48,9 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
                 )
                 x = x + values_blob
                 y = flow.clip_by_value(x, min, max)
-                flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0.1]), momentum=0).minimize(y)
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [0.1]), momentum=0
+                ).minimize(y)
 
             flow.watch_diff(x, grad_cb)
             return y

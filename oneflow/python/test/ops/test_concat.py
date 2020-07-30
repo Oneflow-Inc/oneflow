@@ -54,7 +54,9 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, dtype, axis):
                 trainable=True,
             )
             loss = flow.concat([x, y], axis)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
@@ -150,7 +152,9 @@ def _of_dynamic_concat(
         result = flow.concat(
             [var_0, var_1], axis=axis, max_dim_size=input_static_shape[axis]
         )
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(result)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+        ).minimize(result)
         flow.watch_diff(var_0, make_watch_diff_cb(0))
         flow.watch_diff(var_1, make_watch_diff_cb(1))
         return result
@@ -271,7 +275,9 @@ def _test_static_concat(test_case, shape, axis):
         )
         concated = flow.concat([input_0_def, input_1_def, var], axis=axis)
         test_case.assertTrue(not concated.is_dynamic)
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0).minimize(concated)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+        ).minimize(concated)
         flow.watch_diff(var, compare_var_diff)
         return var, concated
 
@@ -334,7 +340,9 @@ def _test_hybrid_concat(
         if verbose:
             print("concated static shape:", concated.shape)
 
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0).minimize(concated)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+        ).minimize(concated)
         flow.watch_diff(var, compare_var_diff)
 
         if max_dim_size is None:

@@ -46,7 +46,9 @@ def compare_with_tensorflow(device_type, x_shape, axis):
             )
             flow.watch_diff(x, check_grad)
             loss = flow.expand_dims(x, axis)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
             return loss
 
     # # OneFlow

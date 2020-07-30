@@ -79,7 +79,9 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
             y = flow.cast(y, dtype=flow_type)
             out = flow.math.multiply(x, y)
             out = flow.cast(out, dtype=flow.float)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(out)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(out)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))

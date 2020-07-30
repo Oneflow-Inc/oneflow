@@ -44,7 +44,9 @@ def compare_reduce_sum_with_tensorflow(
                 trainable=True,
             )
             loss = flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
             flow.watch(loss, test_global_storage.Setter("loss"))

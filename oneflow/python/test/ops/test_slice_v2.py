@@ -199,7 +199,9 @@ def test_slice_grad(test_case):
         x = flow.identity(x)
         flow.watch_diff(x, slice_grad_cb)
         y = flow.slice_v2(x, [(None, None, None), (2, -2, None)])
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0).minimize(y)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+        ).minimize(y)
         return y
 
     slice(input).get()

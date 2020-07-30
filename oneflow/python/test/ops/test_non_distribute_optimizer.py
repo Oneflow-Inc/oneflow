@@ -28,7 +28,9 @@ def test_non_distribute_optimizer(test_case):
     @flow.global_function(type="train", function_config=func_config)
     def Foo(x: oft.Numpy.Placeholder((2, 10))):
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(100))
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0).minimize(x + w)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0
+        ).minimize(x + w)
 
     Foo(np.ones((2, 10), dtype=np.float32))
 
@@ -51,7 +53,9 @@ def _test_two_job_non_distribute_optimizer(test_case):
     @flow.global_function(type="train", function_config=func_config)
     def Foo(x: oft.Numpy.Placeholder((2, 10))):
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(100))
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0.1]), momentum=0).minimize(x + w)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [0.1]), momentum=0
+        ).minimize(x + w)
 
     Foo(np.ones((2, 10), dtype=np.float32))
 
@@ -66,6 +70,8 @@ def _test_non_distribute_optimizer_var_as_loss(test_case):
     @flow.global_function(type="train", function_config=func_config)
     def Foo():
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(100))
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0).minimize(w)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0
+        ).minimize(w)
 
     Foo()

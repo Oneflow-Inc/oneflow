@@ -46,7 +46,9 @@ def of_run(device_type, x_shape, data_type, rate, seed):
             )
             of_out = flow.nn.dropout(x, rate=rate, seed=seed, name="dropout")
             loss = flow.math.square(of_out)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
@@ -104,7 +106,9 @@ def of_run_module(device_type, x_shape, data_type, rate, seed):
             )
             of_out = flow.nn.dropout(x, rate=rate, seed=seed, name="dropout")
             loss = flow.math.square(of_out)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
             return of_out
 
     check_point = flow.train.CheckPoint()

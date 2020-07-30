@@ -85,7 +85,7 @@ def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
- 
+
     @flow.global_function(type="train", function_config=func_config)
     def broadcast_to_compatible_with_fn(
         x_def: oft.Numpy.Placeholder(x.shape, dtype=flow.float)
@@ -109,7 +109,9 @@ def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
         ]
         x_var = x_var + x_def
         y = flow.broadcast_to_compatible_with(x_var, compatible_var)
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0).minimize(y)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+        ).minimize(y)
 
         flow.watch_diff(x_var, dx_watcher)
         return y

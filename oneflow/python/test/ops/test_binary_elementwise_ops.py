@@ -60,7 +60,9 @@ def RunOneflowBinaryOp(device_type, flow_op, x, y, data_type):
                 trainable=True,
             )
             loss = flow_op(x, y)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
             flow.watch_diff(y, test_global_storage.Setter("y_diff"))
 

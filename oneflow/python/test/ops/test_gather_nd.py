@@ -59,7 +59,9 @@ def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
             )
             x = x + x_blob
             y = flow.gather_nd(x, i_blob)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0).minimize(y)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(y)
         flow.watch_diff(x, compare_fn)
         return y
 
@@ -104,7 +106,9 @@ def _of_dynamic_params_gather_nd(params, indices, static_params_shape, compare_f
             )
             params_var = params_def * one_var
             y = flow.gather_nd(params_var, indices_def)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0).minimize(y)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(y)
 
         flow.watch_diff(params_var, compare_fn)
         return y

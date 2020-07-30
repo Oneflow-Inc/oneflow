@@ -38,7 +38,9 @@ def test_dynamic_reshape(test_case):
         )
         mm_out = flow.matmul(reshape_out1, my_model)
         reshape_out2 = flow.reshape(mm_out, (-1, 8, 4))
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(reshape_out2)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+        ).minimize(reshape_out2)
         return reshape_out1
 
     data = [np.random.rand(*data_shape).astype(np.float32) for i in range(num_gpus)]

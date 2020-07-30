@@ -28,7 +28,9 @@ def test_loss_inplace(test_case):
     def IdentityLoss(name):
         w = flow.get_variable(name, (10,), initializer=flow.constant_initializer(100))
         y = flow.math.reduce_sum(w)
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0).minimize(y)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0
+        ).minimize(y)
         return y
 
     TrainCompare(test_case, IdentityLoss)

@@ -78,7 +78,9 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
                 dtype=type_name_to_flow_type[dtype],
                 initializer=flow.random_uniform_initializer(minval=0.1, maxval=0.9),
             )
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))

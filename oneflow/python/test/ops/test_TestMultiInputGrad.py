@@ -63,7 +63,9 @@ def test_TestMultiInput_grad_mirrored_inplace(test_case):
                 trainable=True,
             )
             loss = TestMultiInput(x1, x2)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x1, test_global_storage.Setter("x1"))
             flow.watch_diff(x1, test_global_storage.Setter("x1_diff"))

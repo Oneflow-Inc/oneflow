@@ -80,7 +80,9 @@ def _make_unsoted_segment_sum_fn(device, data, segment_ids, num_segments):
             res = flow.math.unsorted_batch_segment_sum(
                 data=data, segment_ids=segment_ids, num_segments=num_segments
             )
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0).minimize(res)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(res)
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
             flow.watch_diff(res, test_global_storage.Setter("loss_diff"))
             return res

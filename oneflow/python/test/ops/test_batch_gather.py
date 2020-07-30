@@ -60,7 +60,9 @@ def _make_gather_fn(
             )
             x = x + x_blob
             y = flow.gather(x, i_blob, axis=axis, batch_dims=batch_dims)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0).minimize(y)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(y)
         flow.watch_diff(x, compare_fn)
         return y
 

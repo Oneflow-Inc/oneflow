@@ -68,7 +68,9 @@ def test_get_job_shared_variable(test_case):
     def train(x_def: oft.Numpy.Placeholder(shape=(2, 5), dtype=flow.float)):
         var = get_var("var", trainable=True)
         loss = var + x_def
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]), momentum=0).minimize(loss)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]), momentum=0
+        ).minimize(loss)
         return var
 
     @flow.global_function()
@@ -116,7 +118,9 @@ def test_get_job_inter_and_intra_shared_variable(test_case):
     def train(x_def: oft.Numpy.Placeholder(shape=variable_shape, dtype=flow.float)):
         var = get_var("var", trainable=True)
         loss = var + x_def
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]), momentum=0).minimize(loss)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]), momentum=0
+        ).minimize(loss)
         return var
 
     @flow.global_function()

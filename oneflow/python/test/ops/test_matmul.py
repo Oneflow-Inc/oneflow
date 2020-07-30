@@ -51,7 +51,9 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
                 trainable=True,
             )
             loss = flow.matmul(a, b, transpose_a, transpose_b)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(a, test_global_storage.Setter("a"))
             flow.watch_diff(a, test_global_storage.Setter("a_diff"))

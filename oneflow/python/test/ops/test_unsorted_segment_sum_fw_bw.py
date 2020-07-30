@@ -57,7 +57,9 @@ def _make_unsorted_segment_sum_fn(
             y = flow.math.unsorted_segment_sum(
                 x, i_blob, axis=axis, num_segments=num_segments
             )
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0).minimize(y)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(y)
         flow.watch_diff(x, compare_fn)
         return y
 

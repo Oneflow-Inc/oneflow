@@ -58,7 +58,9 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
                 loss = flow.math.multiply(x, y)
             elif case == "div":
                 loss = flow.math.divide(x, y)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch(y, test_global_storage.Setter("y"))

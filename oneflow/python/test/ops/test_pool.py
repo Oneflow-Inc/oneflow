@@ -218,7 +218,9 @@ def test_pool(_):
                     padding=padding,
                     data_format=data_format,
                 )
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(y)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(y)
             return y
 
         if is_dynamic:

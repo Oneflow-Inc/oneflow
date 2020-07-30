@@ -49,7 +49,9 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
                 trainable=True,
             )
             loss = flow.nn.softmax(x, axis=axis)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
