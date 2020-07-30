@@ -36,6 +36,7 @@ class SnapshotReader final {
   void Read(const std::string& key, const Shape& logical_blob_shape, const TensorSliceView& slice,
             Blob* blob) const;
   void Read(const std::string& key, Blob* blob) const;
+  bool HasKey(const std::string& key) const;
   void Close();
 
  private:
