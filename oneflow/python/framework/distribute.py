@@ -18,7 +18,7 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 
 import oneflow.python.framework.distribute_context as distribute_ctx
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import traceback
 
 
@@ -48,6 +48,7 @@ class SplitDistribute(Distribute):
 
 
 @oneflow_export("distribute.mirrored_strategy")
+@oneflow_deprecate()
 def deprecated_mirrored_strategy():
     print(
         "WARNING:",
@@ -75,6 +76,7 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
 
 
 @oneflow_export("distribute.mirrored_strategy_enabled")
+@oneflow_deprecate()
 def deprecated_mirrored_strategy_enabled():
     print(
         "WARNING:",
@@ -99,6 +101,7 @@ def MirroredStrategyEnabled() -> bool:
 
 
 @oneflow_export("distribute.consistent_strategy")
+@oneflow_deprecate()
 def deprecated_consistent_strategy():
     print(
         "WARNING:",
@@ -126,6 +129,7 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
 
 
 @oneflow_export("distribute.consistent_strategy_enabled")
+@oneflow_deprecate()
 def deprecated_consistent_strategy_enabled():
     print(
         "WARNING:",
@@ -170,7 +174,7 @@ def auto() -> AutoDistribute:
 def assert_is_valid_distribute(distribute: Distribute) -> None:
     assert isinstance(
         distribute, Distribute
-    ), """not a valid distribute policy. 
+    ), """not a valid distribute policy.
            expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"""
 
 
