@@ -23,6 +23,7 @@ import oneflow.core.job.placement_pb2 as placement_pb
 from google.protobuf import text_format
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.compiler as compiler
+import oneflow.python.eager.vm_util as vm_util
 
 
 def MakeScopeSymbol(job_conf_str, parallel_conf_str, is_mirrored):
@@ -31,6 +32,18 @@ def MakeScopeSymbol(job_conf_str, parallel_conf_str, is_mirrored):
     return compiler.MakeInitialScope(
         job_conf, parallel_conf.device_tag, list(parallel_conf.device_name), is_mirrored
     ).symbol_id
+
+
+def MakeParallelDescSymbol(parallel_conf_str):
+    parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
+    symbol_id = None
+
+    def BuildInstruction(builder):
+        nonlocal symbol_id
+        symbol_id = builder.GetParallelDescSymbol(parallel_conf).symbol_id
+
+    vm_util.LogicalRun(BuildInstruction)
+    return symbol_id
 
 
 def MirroredCast(op_attribute_str, parallel_conf_str):

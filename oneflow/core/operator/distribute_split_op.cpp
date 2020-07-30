@@ -16,6 +16,9 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/job/scope.h"
 
 namespace oneflow {
 
@@ -32,6 +35,7 @@ class DistributeSplitOp final : public Operator {
   LogicalNode* NewProperLogicalNode() const override { return new DistributeSplitLogicalNode; }
 
  private:
+  Maybe<void> InferParallelSignature() override;
   Maybe<void> InferBatchAxis(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
@@ -104,6 +108,23 @@ Maybe<void> DistributeSplitOp::InferOutParallelDesc(
     } else {
       *ParallelDesc4Obn(obn) = op_parallel_desc;
     }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DistributeSplitOp::InferParallelSignature() {
+  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope = *JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
+  int64_t op_parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
+  mut_parallel_signature()->set_op_parallel_desc_symbol_id(op_parallel_desc_symbol_id);
+  auto* map = mut_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
+  (*map)["in"] = op_parallel_desc_symbol_id;
+  const auto& op_parallel_desc = *JUST(scope.GetParallelDesc(op_conf()));
+  CHECK_EQ(op_parallel_desc.parallel_num(), output_bns().size());
+  FOR_RANGE(int, i, 0, output_bns().size()) {
+    const auto& out_parallel_conf = op_parallel_desc.GetParallelIdOnlyParallelConf(i);
+    (*map)[output_bns().Get(i)] =
+        Global<ForeignCallback>::Get()->MakeParallelDescSymbol(out_parallel_conf.DebugString());
   }
   return Maybe<void>::Ok();
 }

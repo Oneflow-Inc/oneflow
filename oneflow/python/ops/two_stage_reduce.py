@@ -38,7 +38,7 @@ def api_two_stage_reduce_max(
     return func(x, axis=axis, keepdims=keepdims, name=name)
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def two_stage_reduce_max(x, axis=None, keepdims=False, name=None):
     name = name if name is not None else id_util.UniqueStr("ReduceMax_")
     return two_stage_reduce(x, axis, keepdims, "reduce_max", name)
@@ -55,7 +55,7 @@ def api_two_stage_reduce_min(
     return func(x, axis=axis, keepdims=keepdims, name=name)
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def two_stage_reduce_min(x, axis=None, keepdims=False, name=None):
     name = name if name is not None else id_util.UniqueStr("ReduceMin_")
     return two_stage_reduce(x, axis, keepdims, "reduce_min", name)
