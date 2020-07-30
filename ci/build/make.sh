@@ -35,7 +35,7 @@ function build() {
         "$docker_tag" \
         /oneflow-src/docker/package/manylinux/build_wheel.sh \
             --python3.6 \
-            --package-name oneflow_cu102 \
+            --package-name oneflow_cu102
 }
 
 set +e
