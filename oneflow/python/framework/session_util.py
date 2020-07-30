@@ -40,7 +40,7 @@ from oneflow.python.framework.pull_util import (
     EagerFutureRemoteBlobs,
 )
 from oneflow.python.framework.session_context import SessionStatus
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.framework.check_point import SnapshotManager
 import oneflow.python.eager.blob_register as blob_register_util
@@ -454,6 +454,7 @@ session_ctx.OpenDefaultSession(Session())
 
 
 @oneflow_export("scope.current_scope")
+@oneflow_deprecate()
 def deprecated_current_scope(*args, **kwargs):
     print(
         "WARNING:",

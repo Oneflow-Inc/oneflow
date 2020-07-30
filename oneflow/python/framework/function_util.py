@@ -25,7 +25,7 @@ from typing import Any, Callable, Optional, Union
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.distribute_context as distribute_ctx
@@ -825,6 +825,7 @@ def allow_cpu_return_op(func_desc, value):
 
 
 @oneflow_function_config("default_distribute_strategy")
+@oneflow_deprecate()
 def deprecated_set_default_distribute_strategy(*args, **kwargs):
     print(
         "WARNING:",

@@ -28,9 +28,18 @@ def oneflow_export(*api_names, **kwargs):
 
     return Decorator
 
+
+_DEPRECATED = set()
+
+
 def oneflow_deprecate(*api_names, **kwargs):
     def Decorator(func_or_class):
-        func_or_class._ONEFLOW_SPHINX_SKIP = True
+        print(func_or_class)
+        _DEPRECATED.add(func_or_class)
         return func_or_class
 
     return Decorator
+
+
+def is_deprecated(func_or_class):
+    return func_or_class in _DEPRECATED

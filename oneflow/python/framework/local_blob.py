@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import numpy as np
 import oneflow.python.framework.remote_blob as remote_blob_util
 import traceback
+from oneflow.python.oneflow_export import oneflow_deprecate
 
 
 class LocalMirroredTensor(object):
@@ -35,6 +36,7 @@ class LocalMirroredTensor(object):
                 # do nothing
                 pass
 
+    @oneflow_deprecate()
     def ndarray_list(self):
         print(
             "WARNING:",
@@ -46,6 +48,7 @@ class LocalMirroredTensor(object):
     def numpy_list(self):
         return self.ndarray_list_
 
+    @oneflow_deprecate()
     def ndarray(self):
         print(
             "WARNING:",
@@ -78,6 +81,7 @@ class LocalMirroredTensorList(object):
             assert all(isinstance(ndarray, np.ndarray) for ndarray in ndarray_list)
         self.ndarray_lists_ = ndarray_lists
 
+    @oneflow_deprecate()
     def ndarray_lists(self):
         print(
             "WARNING:",
