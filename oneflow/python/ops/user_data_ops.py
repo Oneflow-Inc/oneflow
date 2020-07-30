@@ -69,6 +69,8 @@ def api_ofrecord_image_decoder_random_crop(
     name: str = "OFRecordImageDecoderRandomCrop",
 ) -> BlobDef:
     assert isinstance(name, str)
+    if seed is not None:
+        assert name is not None
     module = flow.find_or_create_module(
         name,
         lambda: OFRecordImageDecoderRandomCropModule(
@@ -235,6 +237,8 @@ def api_coin_flip(
     name: str = "CoinFlip",
 ) -> BlobDef:
     assert isinstance(name, str)
+    if seed is not None:
+        assert name is not None
     module = flow.find_or_create_module(
         name,
         lambda: CoinFlipModule(
@@ -600,6 +604,7 @@ class COCOReader(module_util.Module):
         module_util.Module.__init__(self, name)
         self.op_module_builder = (
             flow.consistent_user_op_module_builder("COCOReader")
+            .Op("COCOReader")
             .Output("image")
             .Output("image_id")
             .Output("image_size")
