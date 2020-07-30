@@ -40,6 +40,9 @@ def oneflow_deprecate(*api_names, **kwargs):
 
     return Decorator
 
+
 @oneflow_export("is_deprecated")
 def is_deprecated(func_or_class):
-    return isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
+    return (
+        isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
+    )
