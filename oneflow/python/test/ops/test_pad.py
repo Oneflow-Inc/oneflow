@@ -68,27 +68,3 @@ def test_pad_5d(test_case):
     ]
     for arg in GenArgDict(arg_dict):
         CompareOpWithTensorFlow(**arg)
-
-
-def test_pad_6d(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["flow_op"] = [flow.pad]
-    arg_dict["tf_op"] = [tf.pad]
-    arg_dict["input_shape"] = [(2, 2, 1, 3, 1, 3)]
-    arg_dict["op_args"] = [
-        Args(
-            [([1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12])],
-            tf.constant([([1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12])]),
-        ),
-        Args(
-            [([1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [11, 12])],
-            tf.constant([([1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [11, 12])]),
-        ),
-        Args(
-            [([0, 0], [0, 0], [10, 20], [0, 0], [3, 2], [11, 12])],
-            tf.constant([([0, 0], [0, 0], [10, 20], [0, 0], [3, 2], [11, 12])]),
-        ),
-    ]
-    for arg in GenArgDict(arg_dict):
-        CompareOpWithTensorFlow(**arg)
