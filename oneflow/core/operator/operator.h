@@ -115,6 +115,19 @@ class Operator {
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs
+  Maybe<void> InferLogicalOutBlobDescsIf(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4Ibn,
+      const ParallelDesc& parallel_desc) const {
+    return InferLogicalOutBlobDescs(BlobDesc4BnInOp, BatchAxis4Ibn, parallel_desc);
+  }
+  virtual Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4Ibn,
+      const ParallelDesc& parallel_desc) const;
+
+  // Read: shape of input_blobs
+  // Write: shape of output_blobs
   Maybe<void> InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                const ParallelContext*, const SbpSignature* sbp_signature,
                                std::function<void(OpContext*)> EnrollOpCtx) const;
@@ -189,6 +202,8 @@ class Operator {
 
   virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
+
+  ParallelSignature* mut_parallel_signature() { return op_attribute_.mutable_parallel_signature(); }
 
   Maybe<const SbpSignature*> sbp_signature() const;
   SbpSignature* mut_sbp_signature() { return op_attribute_.mutable_sbp_signature(); }
