@@ -13,24 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import numpy as np
 import oneflow as flow
+import numpy as np
+import os
+import random
+
+import oneflow.typing as oft
 
 
-def test_deadlock(test_case):
+def test_shape(test_case):
+    flow.clear_default_session()
     flow.config.gpu_device_num(2)
+
     func_config = flow.FunctionConfig()
-    func_config.enable_inplace(False)
+    func_config.default_distribute_strategy(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
-    def DistributeConcat():
-        with flow.scope.placement("gpu", "0:0"):
-            w = flow.get_variable(
-                "w", (2, 5), initializer=flow.constant_initializer(10)
-            )
-            x = w + 1
-            y = w + 1
-        ret = flow.advanced.distribute_concat([x, y])
-        # return ret
+    def foo_job(input: oft.Numpy.Placeholder(shape=(2, 5))):
+        ret = flow.identity(input)
+        test_case.assertTrue(ret.shape == (1, 5))
 
-    DistributeConcat()
+    input_tensor = np.arange(10).reshape(2, 5).astype(np.single)
+    foo_job(input_tensor)

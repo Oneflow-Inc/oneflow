@@ -722,6 +722,7 @@ def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
 
 def _GetEagerNcclAllReduce(parallel_conf, ibn2blob_object):
     op_conf = op_conf_pb.OperatorConf()
+    op_conf.device_type = c_api_util.DeviceType4DeviceTag("gpu")
     op_conf.name = "eager_nccl_all_reduce"
     op_conf.user_conf.op_type_name = "eager_nccl_all_reduce"
     op_conf.user_conf.input["in"].s.append("eager_nccl_all_reduce/in_0")
@@ -739,24 +740,26 @@ NcclAllReduce = Sequential(
     OptionalBoxing(CopyD2H),
 )
 
+BoxingOneToOne = Sequential(
+    boxing_middle.BoxingToMiddle(
+        OptionalBoxing(CopyD2H),
+        boxing_middle.ReplaceProducerDeviceTag("cpu"),
+        boxing_middle.ProducerSbpParallel,
+    ),
+    boxing_middle.BoxingToMiddle(
+        CpuOneToOne,
+        boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+        boxing_middle.ConsumerSbpParallel,
+    ),
+    OptionalBoxing(CopyH2D),
+)
+
 conditional_function_table = [
     CopyH2D,
     CopyD2H,
     NoBoxing,
     # one to one
-    Sequential(
-        boxing_middle.BoxingToMiddle(
-            OptionalBoxing(CopyD2H),
-            boxing_middle.ReplaceProducerDeviceTag("cpu"),
-            boxing_middle.ProducerSbpParallel,
-        ),
-        boxing_middle.BoxingToMiddle(
-            CpuOneToOne,
-            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
-            boxing_middle.ConsumerSbpParallel,
-        ),
-        OptionalBoxing(CopyH2D),
-    ),
+    BoxingOneToOne,
     # B -> B
     BroadcastManyToOne,
     Sequential(
@@ -781,7 +784,7 @@ conditional_function_table = [
             boxing_middle.BroadcastParallel,
         ),
         OptionalBoxing(CopyH2D),
-        exclude=(BroadcastManyToOne, CopyH2D, CopyD2H, NoBoxing, CpuOneToOne),
+        exclude=(BroadcastManyToOne, CopyH2D, CopyD2H, NoBoxing, BoxingOneToOne),
     ),
     # B -> S
     Sequential(
