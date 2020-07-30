@@ -50,13 +50,14 @@ cd $ONEFLOW_SRC_DIR
 
 THIRD_PARTY_BUILD_DIR=$CACHE_DIR/build-third-party
 THIRD_PARTY_INSTALL_DIR=$CACHE_DIR/build-third-party-install
+COMMON_CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release -DBUILD_RDMA=ON -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR"
 if [[ $SKIP_THIRD_PARTY != 1 ]]; then
     mkdir -p $THIRD_PARTY_BUILD_DIR
     pushd $THIRD_PARTY_BUILD_DIR
 
-    cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release \
+    cmake -DTHIRD_PARTY=ON \
+        $COMMON_CMAKE_ARGS \
         -DONEFLOW=OFF \
-        -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR   \
         $ONEFLOW_SRC_DIR
     make -j nccl
     make -j`nproc` prepare_oneflow_third_party
@@ -83,9 +84,8 @@ do
     PY_ROOT=/opt/python/${PY_ABI}
     PY_BIN=${PY_ROOT}/bin/python
     cmake -DTHIRD_PARTY=OFF -DONEFLOW=ON\
+        $COMMON_CMAKE_ARGS \
         -DPython3_ROOT_DIR=$PY_ROOT \
-        -DCMAKE_BUILD_TYPE=Release  \
-        -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR   \
         $EXTRA_ONEFLOW_CMAKE_ARGS   \
         $ONEFLOW_SRC_DIR
     cmake --build . -j `nproc`
