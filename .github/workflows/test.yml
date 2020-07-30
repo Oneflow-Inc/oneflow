@@ -55,6 +55,14 @@ jobs:
           -w /ci-tmp/manylinux2014-build-cache/build-oneflow/bin \
           oneflow-test \
           ./oneflow_testexe
+    - name: Eager Unit test
+      run: |
+        docker run --shm-size=8g --rm \
+          -v $HOME/ci-tmp:/ci-tmp \
+          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+          oneflow-test \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_eager_test.sh"
     - name: Unit test
       run: |
         docker run --shm-size=8g --rm \
@@ -63,14 +71,6 @@ jobs:
           --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
-    - name: Eager test
-      run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
-          oneflow-test \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_eager_test.sh"
     - name: Integration test
       run: |
         docker run --shm-size=8g --rm \
