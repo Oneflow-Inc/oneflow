@@ -267,7 +267,7 @@ REGISTER_USER_OP_GRAD("normalization")
             .Build();
       });
 
-      const std::string mul_gamma_name = "out_grad_mul_gamma";
+      const std::string mul_gamma_name = ctx->FwOp().op_name() + "_out_grad_mul_gamma";
       const auto dy_mul_gamma_op_name = "System-AutoGrad-" + mul_gamma_name + "-BroadcastMul";
       BroadcastMulAtAxisOpDefine([&ctx]() { return ctx->FwOp().input("gamma", 0); },
                                  [&ctx, &is_fp16, &dy_h2f_cast_op_name]() {
@@ -279,7 +279,7 @@ REGISTER_USER_OP_GRAD("normalization")
                                  },
                                  mul_gamma_name);
 
-      const std::string mul_inv_var_name = "out_grad_mul_inv_var";
+      const std::string mul_inv_var_name = ctx->FwOp().op_name() + "_out_grad_mul_inv_var";
       const auto dy_mul_inv_var_op_name = "System-AutoGrad-" + mul_inv_var_name + "-BroadcastMul";
       BroadcastMulAtAxisOpDefine(
           [&ctx, &var_rsqrt_op_name]() { return ctx->GetOp(var_rsqrt_op_name).output("y", 0); },
