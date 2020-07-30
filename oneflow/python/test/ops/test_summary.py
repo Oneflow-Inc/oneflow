@@ -65,7 +65,7 @@ def summary_demo():
     ):
         flow.summary.pb(value, step=step)
 
-     @flow.global_function(func_config)
+    @flow.global_function(func_config)
     def ImageJob(
         value: flow.typing.ListNumpy.Placeholder(
             shape=(100, 2000, 2000, 4), dtype=flow.uint8
@@ -175,5 +175,3 @@ def summary_demo():
 
     graph = flow.summary.Graph(logdir)
     graph.write_structure_graph()
-
-    
