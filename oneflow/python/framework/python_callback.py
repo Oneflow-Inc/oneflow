@@ -85,6 +85,13 @@ class PythonCallback(oneflow_internal.ForeignCallback):
             print(traceback.format_exc())
             raise e
 
+    def MakeParallelDescSymbol(self, parallel_conf_str):
+        try:
+            return interpreter_callback.MakeParallelDescSymbol(parallel_conf_str)
+        except Exception as e:
+            print(traceback.format_exc())
+            raise e
+
 
 def _WatcherHandler(unique_id, of_blob_ptr):
     global unique_id2handler
