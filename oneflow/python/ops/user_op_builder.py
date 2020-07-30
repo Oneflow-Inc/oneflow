@@ -370,20 +370,6 @@ class UserOpConfBuilder(object):
         self.user_op_.op_conf_.user_conf.attr[attr_name].CopyFrom(attribute)
         return self
 
-    def SetRandomSeed(self, seed=None):
-        if distribute.ConsistentStrategyEnabled():
-            if seed is None:
-                seed = random.randint(-2147483648, 2147483647)
-        elif distribute.MirroredStrategyEnabled():
-            if seed is None:
-                seed = -1
-        else:
-            raise ValueError(
-                "Unknow distirbute strategy when set random seed to user op"
-            )
-
-        return self.Attr("has_seed", (seed is not None)).Attr("seed", seed)
-
 
 @oneflow_export("user_op_module_builder")
 def api_user_op_module_builder(op_type_name):

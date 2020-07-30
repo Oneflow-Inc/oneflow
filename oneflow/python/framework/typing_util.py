@@ -78,6 +78,10 @@ def _CheckGlobalFunctionReturnAnnotation(cls):
         assert len(cls.__args__) > 0
         for cls_arg in cls.__args__:
             _CheckGlobalFunctionReturnAnnotation(cls_arg)
+    elif oft.OriginFrom(cls, typing.Dict):
+        assert cls.__args__ is not None, "(K, V) in typing.Dict[K,V] cannot be omitted"
+        assert len(cls.__args__) == 2
+        _CheckGlobalFunctionReturnAnnotation(cls.__args__[1])
     elif oft.OriginFrom(cls, oft.PyStructCompatibleToBlob):
         pass
     else:
@@ -114,6 +118,23 @@ def _CheckReturnByAnnotation(function_name, ret, annotation):
         )
         for ret_i, annotation_i in zip(ret, annotation.__args__):
             _CheckReturnByAnnotation(function_name, ret_i, annotation_i)
+    elif oft.OriginFrom(annotation, typing.Dict):
+        assert len(annotation.__args__) == 2
+        assert type(ret) is dict, error_str
+        for key, val in ret.items():
+            assert type(key) is annotation.__args__[0], (
+                "type of %s:%s and %s:%s do not matched return annotation (%s, %s) of global_function %s."
+                % (
+                    key,
+                    type(key),
+                    val,
+                    type(val),
+                    annotation.__args__[0],
+                    annotation.__args__[1],
+                    function_name,
+                )
+            )
+            _CheckReturnByAnnotation(function_name, val, annotation.__args__[1])
     elif oft.OriginFrom(annotation, oft.Numpy):
         assert isinstance(ret, remote_blob_util.BlobDef), "type(ret): %s" % type(ret)
         assert not ret.is_dynamic, (
@@ -152,6 +173,14 @@ def TransformReturnedLocalBlob(local_blob, annotation):
         assert len(local_blob) == len(annotation.__args__)
         pairs = zip(local_blob, annotation.__args__)
         return tuple(TransformReturnedLocalBlob(*pair) for pair in pairs)
+    elif oft.OriginFrom(annotation, typing.Dict):
+        assert type(local_blob) is dict
+        assert len(annotation.__args__) == 2
+        vals = [
+            TransformReturnedLocalBlob(val, annotation.__args__[1])
+            for val in local_blob.values()
+        ]
+        return dict(zip(local_blob.keys(), vals))
     elif oft.OriginFrom(annotation, oft.PyStructCompatibleToBlob):
         return TransformLocalBlob(local_blob, annotation)
     else:

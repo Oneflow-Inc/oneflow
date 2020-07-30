@@ -20,7 +20,7 @@ import oneflow.typing as oft
 
 def test_bernoulli(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)
@@ -38,7 +38,7 @@ def test_bernoulli(test_case):
 
 def test_bernoulli_mirrored(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
     @flow.global_function(func_config)

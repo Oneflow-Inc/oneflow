@@ -19,6 +19,7 @@ import copy
 import functools
 import re
 import inspect
+import traceback
 from typing import Any, Callable, Optional, Union
 
 import oneflow.python.framework.session_context as session_ctx
@@ -82,7 +83,7 @@ class FunctionConfig(object):
 
 @oneflow_export("global_function")
 def api_oneflow_function(
-    function_config: FunctionConfig = FunctionConfig(),
+    type: str = "predict", function_config: FunctionConfig = None,
 ) -> Callable[[Callable], Callable]:
     r"""Creates a callable OneFlow global function from a Python function.
 
@@ -97,6 +98,21 @@ def api_oneflow_function(
     Returns:
         Callable[[Callable], Callable]: a callable which is called to execute the compiled function
     """
+    if isinstance(type, FunctionConfig):
+        function_config = type
+        print(
+            """WARNING: flow.global_function(func_config) is deprecated. Please replace it with flow.global_function(type, func_config).
+            """
+        )
+        print(traceback.format_stack()[-2])
+    else:
+        assert type in ["train", "predict"]
+        if function_config is None:
+            function_config = FunctionConfig()
+        if type == "train":
+            function_config.function_desc.job_config_proto.train_conf.SetInParent()
+        else:
+            function_config.function_desc.job_config_proto.predict_conf.SetInParent()
     api = enable_if.unique([eager_oneflow_function, lazy_oneflow_function])
     return api(function_config)
 
@@ -152,14 +168,8 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
 def _CloneFunctionDesc(func_desc, job_func):
     new_func_desc = FunctionDesc(job_func=job_func)
     new_func_desc.job_config_proto.CopyFrom(func_desc.job_config_proto)
-    _TryCompleteDefaultJobConfigProto(new_func_desc.job_config_proto)
     new_func_desc.function_attribute = copy.deepcopy(func_desc.function_attribute)
     return new_func_desc
-
-
-def _TryCompleteDefaultJobConfigProto(job_conf):
-    if job_conf.WhichOneof("job_type") is None:
-        job_conf.predict_conf.SetInParent()
 
 
 def oneflow_function_config(*field_paths):
@@ -649,6 +659,11 @@ def set_model_update_conf(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
+    print(
+        """WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.
+        """
+    )
+    print(traceback.format_stack()[-3])
     assert type(value) is dict
     pb_msg = func_desc.job_config_proto.train_conf.model_update_conf
     pb_util.PythonDict2PbMessage(value, pb_msg)
@@ -675,6 +690,11 @@ def set_loss_scale_factor(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
+    print(
+        """WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.
+        """
+    )
+    print(traceback.format_stack()[-3])
     func_desc.job_config_proto.train_conf.loss_scale_factor = value
 
 
@@ -686,6 +706,11 @@ def set_primary_lr(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
+    print(
+        """WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.
+        """
+    )
+    print(traceback.format_stack()[-3])
     func_desc.job_config_proto.train_conf.primary_lr = value
 
 
@@ -697,6 +722,11 @@ def set_secondary_lr(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
+    print(
+        """WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.
+        """
+    )
+    print(traceback.format_stack()[-3])
     func_desc.job_config_proto.train_conf.secondary_lr = value
 
 
@@ -797,9 +827,9 @@ def allow_cpu_return_op(func_desc, value):
 def deprecated_set_default_distribute_strategy(*args, **kwargs):
     print(
         "WARNING:",
-        "oneflow.default_distribute_strategy",
+        "function_config.default_distribute_strategy",
         "has been deprecated. Please use {} instead.".format(
-            "oneflow.default_logical_view"
+            "function_config.default_logical_view"
         ),
     )
     print(traceback.format_stack()[-3], file=sys.stderr)
