@@ -52,9 +52,7 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
 
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
-
+    
     @flow.global_function(func_config)
     def CastJob():
         with flow.scope.placement(device_type, "0:0"):
@@ -67,7 +65,7 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
             )
 
             loss = flow.cast(x, dtype=flow.float)
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0).minimize(loss)
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
             flow.watch(loss, test_global_storage.Setter("loss"))

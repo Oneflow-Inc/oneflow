@@ -25,8 +25,6 @@ def do_test(test_case, mirrored):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
     func_config.enable_all_reduce_group(True)
-    func_config.train.primary_lr(5)
-    func_config.train.model_update_conf(dict(naive_conf={}))
     if mirrored:
         func_config.default_logical_view(flow.scope.mirrored_view())
     else:
@@ -35,7 +33,7 @@ def do_test(test_case, mirrored):
     @flow.global_function(func_config)
     def Foo():
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(1))
-        flow.losses.add_loss(w)
+        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0).minimize(w)
         return w
 
     check_point = flow.train.CheckPoint()
