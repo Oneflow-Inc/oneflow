@@ -1,4 +1,4 @@
-**OneFlow is an open-source performance-centered platform for machine learning.**
+**OneFlow is an performance-centered and open-source platform for machine learning.**
 
 - [Install OneFlow](#install-oneflow)
   - [System requirements](#system-requirements)
@@ -139,16 +139,13 @@ python mlp_mnist.py
 0.35245502
 ...
 ```
-More info on this demo, please refer to [Documentation on quick start](http://docs.oneflow.org/quick_start/quickstart_in_3_min.html).
+More info on this demo, please refer to [doc on quick start](http://docs.oneflow.org/quick_start/quickstart_in_3_min.html).
 
 ## Documentation
-### Usage & Design Docs 
-http://docs.oneflow.org/
-### API Reference
-https://oneflow-api.readthedocs.io/en/latest/
+### [Usage & Design Docs](http://docs.oneflow.org/)
+### [API Reference](https://oneflow-api.readthedocs.io/en/latest/)
 
-## Model Zoo and Benchmark
-https://github.com/Oneflow-Inc/OneFlow-Benchmark
+## [Model Zoo and Benchmark](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
 ### CNNs(ResNet-50, VGG-16, Inception-V3, AlexNet)
 * [CNNs](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/of_develop_py3/Classification/cnns)
 
@@ -159,10 +156,9 @@ https://github.com/Oneflow-Inc/OneFlow-Benchmark
 
 ## Communication
 * Github issues : any install, bug, feature issues.
-* www.oneflow.org : brand related information.
+* [www.oneflow.org](http://www.oneflow.org) : brand related information.
 
-## Contributing
-http://docs.oneflow.org/contribute/intro.html
+## [Contributing](http://docs.oneflow.org/contribute/intro.html)
 
 ## The Team
 OneFlow was originally developed by [OneFlow Inc](http://www.oneflow.org) and [Zhejiang Lab](http://www.zhejianglab.com/).
