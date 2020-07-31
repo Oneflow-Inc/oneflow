@@ -140,38 +140,33 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 endforeach()
 
-if(PY3)
-  find_package(Python3 COMPONENTS Interpreter REQUIRED)
-  find_package(Python3 COMPONENTS Development NumPy)
-  if (Python3_Development_FOUND AND Python3_INCLUDE_DIRS)
-    set(Python_INCLUDE_DIRS ${Python3_INCLUDE_DIRS})
-  endif()
-  if (Python3_NumPy_FOUND AND Python3_NumPy_INCLUDE_DIRS)
-    set(Python_NumPy_INCLUDE_DIRS ${Python3_NumPy_INCLUDE_DIRS})
-  endif()
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+message(STATUS "Python3 specified. Version found: " ${Python3_VERSION})
+set(Python_EXECUTABLE ${Python3_EXECUTABLE})
+message(STATUS "Using Python executable: " ${Python_EXECUTABLE})
 
-  message("-- Python3 specified. Version found: " ${Python3_VERSION})
-  set(Python_EXECUTABLE ${Python3_EXECUTABLE})
-else()
-  find_package(Python2 COMPONENTS Interpreter REQUIRED)
-  find_package(Python2 COMPONENTS Development NumPy)
-  if (Python2_Development_FOUND AND Python2_INCLUDE_DIRS)
-    set(Python_INCLUDE_DIRS ${Python2_INCLUDE_DIRS})
-  endif()
-  if (Python2_NumPy_FOUND AND Python2_NumPy_INCLUDE_DIRS)
-    set(Python_NumPy_INCLUDE_DIRS ${Python2_NumPy_INCLUDE_DIRS})
-  endif()
-  message("-- Python2 specified. Version found: " ${Python2_VERSION})
-  set(Python_EXECUTABLE ${Python2_EXECUTABLE})
+message(STATUS "Installing necessary Python packages...")
+set(requirements_txt ${PROJECT_SOURCE_DIR}/dev-requirements.txt)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${requirements_txt})
+execute_process(
+  COMMAND ${Python_EXECUTABLE} -m pip install -r ${requirements_txt}
+)
+message(STATUS "Python packages are installed.")
+
+find_package(Python3 COMPONENTS Development NumPy)
+if (Python3_Development_FOUND AND Python3_INCLUDE_DIRS)
+  set(Python_INCLUDE_DIRS ${Python3_INCLUDE_DIRS})
 endif()
-message("-- Using Python executable: " ${Python_EXECUTABLE})
+if (Python3_NumPy_FOUND AND Python3_NumPy_INCLUDE_DIRS)
+  set(Python_NumPy_INCLUDE_DIRS ${Python3_NumPy_INCLUDE_DIRS})
+endif()
 if (NOT Python_INCLUDE_DIRS)
   message(STATUS "Getting python include directory from sysconfig..")
   execute_process(
     COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_paths()['include'])"
     OUTPUT_VARIABLE Python_INCLUDE_DIRS
     RESULT_VARIABLE ret_code)
-  string(STRIP ${Python_INCLUDE_DIRS} Python_INCLUDE_DIRS)
+  string(STRIP "${Python_INCLUDE_DIRS}" Python_INCLUDE_DIRS)
   if ((NOT (ret_code EQUAL "0")) OR (NOT IS_DIRECTORY ${Python_INCLUDE_DIRS})
     OR (NOT EXISTS ${Python_INCLUDE_DIRS}/Python.h))
     set(Python_INCLUDE_DIRS "")
@@ -188,7 +183,7 @@ if (NOT Python_NumPy_INCLUDE_DIRS)
     COMMAND ${Python_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
     OUTPUT_VARIABLE Python_NumPy_INCLUDE_DIRS
     RESULT_VARIABLE ret_code)
-  string(STRIP ${Python_NumPy_INCLUDE_DIRS} Python_NumPy_INCLUDE_DIRS)
+  string(STRIP "${Python_NumPy_INCLUDE_DIRS}" Python_NumPy_INCLUDE_DIRS)
   if ((NOT ret_code EQUAL 0) OR (NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS})
     OR (NOT EXISTS ${Python_NumPy_INCLUDE_DIRS}/numpy/arrayobject.h))
     set(Python_NumPy_INCLUDE_DIRS "")
@@ -199,17 +194,12 @@ if (NOT Python_NumPy_INCLUDE_DIRS)
 endif()
 message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
 
-add_custom_target(py_dev_requirements ALL 
-  COMMAND ${Python_EXECUTABLE} -m pip install -r ${PROJECT_SOURCE_DIR}/dev-requirements.txt --user
-)
-
 # clang format
 add_custom_target(of_format
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix --quiet
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --python_bin ${Python_EXECUTABLE} --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow/python --fix
   )
-add_dependencies(of_format py_dev_requirements)
 
 # generate version
 if(BUILD_GIT_VERSION)
@@ -288,7 +278,6 @@ set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
 target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
-add_dependencies(oneflow_internal py_dev_requirements)
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 file(REMOVE_RECURSE "${of_pyscript_dir}/oneflow/python")
