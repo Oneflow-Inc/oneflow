@@ -156,6 +156,12 @@ Maybe<void> StartGlobalSession() {
   return Maybe<void>::Ok();
 }
 
+Maybe<std::string> GetSerializedStructureGraph() {
+  const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
+  return job_ctx_mgr->structure_graph();
+}
+
 Maybe<void> StopGlobalSession() {
   if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());

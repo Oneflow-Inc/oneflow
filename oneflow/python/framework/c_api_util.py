@@ -635,3 +635,11 @@ def GetJobSet():
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     return text_format.Parse(job_set, job_set_pb.JobSet())
+
+
+def GetStructureGraph():
+    structure_graph, error_str = oneflow_internal.GetSerializedStructureGraph()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return structure_graph

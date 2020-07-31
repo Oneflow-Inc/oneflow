@@ -22,6 +22,9 @@ limitations under the License.
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/eager/eager_symbol_storage.h"
 #include "oneflow/core/job/scope.h"
+#include <google/protobuf/text_format.h>
+#include "oneflow/customized/summary/summary_converter.h"
+#include <json.hpp>
 
 namespace oneflow {
 
@@ -1016,6 +1019,138 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(
   *IsLbiBackwardUsed = [backward_used_lbis](const LogicalBlobId& lbi) {
     return backward_used_lbis->find(lbi) != backward_used_lbis->end();
   };
+}
+
+namespace {
+
+std::string OpConf2ClassName(const OperatorConf& op_conf) {
+  if (op_conf.has_user_conf()) {
+    return op_conf.user_conf().op_type_name();
+  } else if (op_conf.has_variable_conf()) {
+    return "variable";
+  } else if (op_conf.has_decode_ofrecord_conf()) {
+    return "decode_ofrecord";
+  } else if (op_conf.has_input_conf() && op_conf.has_return_conf()) {
+    return "input";
+  } else if (op_conf.has_output_conf() && op_conf.has_return_conf()) {
+    return "output";
+  } else {
+    return "system_op";
+  }
+}
+
+void FormateUserConf(nlohmann::json& json_conf) {
+  nlohmann::json user_conf = json_conf["user_conf"];
+  if (user_conf.is_null()) {
+    json_conf.erase(json_conf.find("user_conf"));
+    return;
+  }
+  std::string nomarl_array[] = {"at_int32",  "at_int64",  "at_bool",  "at_float",
+                                "at_double", "at_string", "at_shape", "at_data_type"};
+  std::string list_array[] = {"at_list_int32",     "at_list_int64", "at_list_float",
+                              "at_list_data_type", "at_list_shape", "at_list_string"};
+  nlohmann::json attr_json = user_conf["attr"];
+  for (int32_t i = 0; i < attr_json.size(); i++) {
+    std::string key = attr_json[i]["key"];
+    nlohmann::json value_json = attr_json[i]["value"];
+    bool is_found_normal = false;
+    for (int32_t j = 0; j < nomarl_array->length(); j++) {
+      std::string value_key = nomarl_array[j];
+      if (value_json.contains(value_key)) {
+        is_found_normal = true;
+        if ("at_shape" == value_key) {
+          json_conf[key] = value_json[value_key]["dim"];
+        } else {
+          json_conf[key] = value_json[value_key];
+        }
+        break;
+      }
+    }
+    if (is_found_normal) { continue; }
+    for (int32_t j = 0; j < list_array->length(); j++) {
+      std::string value_key = list_array[j];
+      if (value_json.contains(value_key)) {
+        if (value_json[value_key].contains("val")) {
+          json_conf[key] = value_json[value_key]["val"];
+          break;
+        } else if (value_json[value_key].contains("dim")) {
+          json_conf[key] = value_json[value_key]["dim"];
+          break;
+        }
+      }
+    }
+  }
+  json_conf.erase(json_conf.find("user_conf"));
+}
+
+void FormateVariableConf(nlohmann::json& json_conf) {
+  nlohmann::json variable_conf = json_conf["variable_conf"];
+  if (variable_conf == nullptr) {
+    json_conf.erase(json_conf.find("variable_conf"));
+    return;
+  }
+  for (nlohmann::json::iterator it = variable_conf.begin(); it != variable_conf.end(); ++it) {
+    std::string key = it.key();
+    if ("shape" == key) {
+      json_conf[key] = it.value()["dim"];
+    } else {
+      json_conf[key] = it.value();
+    }
+  }
+  json_conf.erase(json_conf.find("variable_conf"));
+}
+
+}  // namespace
+
+std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
+    const std::string& job_name) const {
+  HashSet<std::string> input_op_names;
+  HashSet<std::string> output_op_names;
+  std::vector<nlohmann::json> layers_vec;
+  for (const auto& pair : op_name2op_) {
+    nlohmann::json json_layers_pair;
+
+    const Operator* op = pair.second.get();
+    const std::string& op_name = pair.first;
+    HashSet<std::string> inbound_nodes;
+    for (const auto& ibn : op->input_bns()) {
+      const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
+      if (op_name2op_.find(lbi.op_name()) != op_name2op_.end()) {
+        inbound_nodes.insert(lbi.op_name());
+      }
+    }
+
+    if (op->op_conf().has_input_conf() && op->op_conf().has_return_conf()) {
+      input_op_names.insert(op_name);
+    }
+    if (op->op_conf().has_output_conf() && op->op_conf().has_return_conf()) {
+      output_op_names.insert(op_name);
+    }
+    json_layers_pair["name"] = op_name;
+
+    std::string class_name = OpConf2ClassName(op->op_conf());
+    json_layers_pair["class_name"] = class_name;
+
+    nlohmann::json json_conf;
+    summary::ConvertProtobufMsg2Json(json_conf, op->op_conf());
+    FormateUserConf(json_conf);
+    FormateVariableConf(json_conf);
+    json_layers_pair["config"] = json_conf;
+
+    std::vector<std::string> inbound_nodes_vec;
+    for (const auto& in_node_name : inbound_nodes) { inbound_nodes_vec.emplace_back(in_node_name); }
+    json_layers_pair["inbound_nodes"] = inbound_nodes_vec;
+
+    layers_vec.emplace_back(json_layers_pair);
+  }
+
+  nlohmann::json json_pair;
+  json_pair["name"] = job_name;
+  json_pair["layers"] = layers_vec;
+  json_pair["input_layers"] = input_op_names;
+  json_pair["output_layers"] = output_op_names;
+
+  return json_pair.dump();
 }
 
 }  // namespace oneflow
