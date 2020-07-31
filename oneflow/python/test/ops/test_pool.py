@@ -134,6 +134,8 @@ def _GetSequence(value, n, name):
 
 
 def test_pool(_):
+    if flow.eager_execution_enabled():
+        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["pool_conf"] = pool_confs
