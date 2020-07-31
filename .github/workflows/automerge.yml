@@ -6,7 +6,7 @@ on:
       - unlabeled
 jobs:
   automerge:
-    runs-on: [self-hosted, linux]
+    runs-on: [self-hosted, linux, bot]
     steps:
       - name: automerge
         uses: "pascalgn/automerge-action@fc8281547d24638fac1e4149bbde710cced773d1"
