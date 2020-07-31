@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 #include "oneflow/core/persistence/posix/posix_file_system.h"
-#include "oneflow/core/persistence/windows/windows_file_system.h"
 #include "oneflow/core/job/job_set.pb.h"
 
 namespace oneflow {
@@ -112,8 +111,6 @@ void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
 fs::FileSystem* LocalFS() {
 #ifdef PLATFORM_POSIX
   static fs::FileSystem* fs = new fs::PosixFileSystem;
-#elif PLATFORM_WINDOWS
-  static fs::FileSystem* fs = new fs::WindowsFileSystem;
 #endif
   return fs;
 }
