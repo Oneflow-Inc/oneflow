@@ -703,6 +703,7 @@ def generate_random_batch_permutation_indices(
     )
     if seed is not None:
         op.Attr("seed", seed)
+        assert name is not None
     else:
         op.Attr("seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1))
     return op.Build().InferAndTryRun().RemoteBlobList()[0]

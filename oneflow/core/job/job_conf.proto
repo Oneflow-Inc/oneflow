@@ -9,14 +9,14 @@ import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/framework/user_op_attr.proto";
 
 message TrainConf {
-  required NormalModelUpdateOpUserConf model_update_conf = 3;
+  optional NormalModelUpdateOpUserConf model_update_conf = 3;
   repeated string loss_lbn = 6;
   optional int32 loss_scale_factor = 7 [default = 1];
   optional string train_step_lbn = 8;
   optional string primary_lr_lbn = 9;
   optional string secondary_lr_lbn = 10;
 
-  required float primary_lr = 101;
+  optional float primary_lr = 101;
   optional float secondary_lr = 102;
 }
 

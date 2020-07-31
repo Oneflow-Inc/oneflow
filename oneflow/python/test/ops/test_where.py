@@ -87,7 +87,7 @@ def _of_where(
 
     if dynamic:
         func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
-        func_config.default_distribute_strategy(flow.scope.mirrored_view())
+        func_config.default_logical_view(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
         def where_fn(
@@ -105,7 +105,7 @@ def _of_where(
         func_config.default_placement_scope(
             flow.scope.placement(device_type, machine_device_ids)
         )
-        func_config.default_distribute_strategy(flow.scope.consistent_view())
+        func_config.default_logical_view(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
         def where_fn(
@@ -199,14 +199,14 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
     func_config.default_data_type(flow.float)
 
     if input_shape is None:
-        func_config.default_distribute_strategy(flow.scope.consistent_view())
+        func_config.default_logical_view(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
         def where_fn(input_def: oft.Numpy.Placeholder(input.shape, dtype=flow.float)):
             return flow.where(input_def)
 
     else:
-        func_config.default_distribute_strategy(flow.scope.mirrored_view())
+        func_config.default_logical_view(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
         def where_fn(

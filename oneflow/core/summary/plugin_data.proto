@@ -1,0 +1,18 @@
+syntax = "proto2";
+package oneflow.summary;
+
+import "google/protobuf/struct.proto";
+
+message HParamsPluginData {
+  required int32 version = 1;
+  oneof data {
+    SessionStartInfo session_start_info = 3;
+  }
+}
+
+message SessionStartInfo {
+  map<string, google.protobuf.Value> hparams = 1;
+  required string group_name = 4;
+  required double start_time_secs = 5;
+  map<string, google.protobuf.Value> metrics = 6;
+}

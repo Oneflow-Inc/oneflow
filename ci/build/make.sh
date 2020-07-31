@@ -18,6 +18,7 @@ fi
 # build manylinux image
 cd $src_dir
 docker build -f $src_dir/docker/package/manylinux/Dockerfile \
+    --build-arg from=nvidia/cuda:10.2-cudnn7-devel-centos7 \
     $docker_proxy_build_args -t $docker_tag .
 
 cd -
@@ -32,7 +33,9 @@ function build() {
         -v $tmp_dir/py-build-lib:/oneflow-src/build/lib/ \
         -w /ci-tmp \
         "$docker_tag" \
-        /oneflow-src/docker/package/manylinux/build_wheel.sh --python3.6
+        /oneflow-src/docker/package/manylinux/build_wheel.sh \
+            --python3.6 \
+            --package-name oneflow_cu102
 }
 
 set +e

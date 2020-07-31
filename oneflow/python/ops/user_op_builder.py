@@ -304,27 +304,13 @@ For instance:
         self.user_op_.op_conf_.user_conf.attr[attr_name].CopyFrom(attribute)
         return self
 
-    def SetRandomSeed(self, seed=None):
-        if distribute.ConsistentStrategyEnabled():
-            if seed is None:
-                seed = random.randint(-2147483648, 2147483647)
-        elif distribute.MirroredStrategyEnabled():
-            if seed is None:
-                seed = -1
-        else:
-            raise ValueError(
-                "Unknow distirbute strategy when set random seed to user op"
-            )
-
-        return self.Attr("has_seed", (seed is not None)).Attr("seed", seed)
-
 
 @oneflow_export("user_op_module_builder")
-def api_user_op_module_builder(op_type_name):
+def api_user_op_module_builder(op_name):
     api = enable_if.unique(
         [lazy_user_op_module_builder, eager_logical_user_op_module_builder]
     )
-    return api(op_type_name)
+    return api(op_name)
 
 
 class UserOpModuleBuilder(UserOpConfBuilder):
@@ -338,15 +324,15 @@ class UserOpModuleBuilder(UserOpConfBuilder):
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def lazy_user_op_module_builder(op_type_name):
+def lazy_user_op_module_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpModuleBuilder(job_name, op_type_name, LazyUserOpModule)
+    return UserOpModuleBuilder(job_name, op_name, LazyUserOpModule)
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
-def eager_logical_user_op_module_builder(op_type_name):
+def eager_logical_user_op_module_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpModuleBuilder(job_name, op_type_name, EagerLogicalUserOpModule)
+    return UserOpModuleBuilder(job_name, op_name, EagerLogicalUserOpModule)
 
 
 class LazyUserOpModule(UserOpModule, UserOp):

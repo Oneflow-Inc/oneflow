@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/customized/summary/events_writer.h"
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 
@@ -129,6 +130,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   Global<ThreadMgr>::New(plan);
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
+  Global<summary::EventsWriter>::New();
 }
 
 void Runtime::DeleteAllGlobal() {
@@ -142,6 +144,7 @@ void Runtime::DeleteAllGlobal() {
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
+  Global<summary::EventsWriter>::Delete();
 }
 
 }  // namespace oneflow
