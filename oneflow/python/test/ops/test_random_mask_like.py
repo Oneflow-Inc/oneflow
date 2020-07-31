@@ -32,7 +32,7 @@ def of_run(device_type, x_shape, rate, seed):
     @flow.global_function(func_config)
     def RandomMaskLikeJob(x: oft.Numpy.Placeholder(x_shape)):
         with flow.scope.placement(device_type, "0:0"):
-            mask = flow.nn.random_mask_like(x, rate=rate, seed=seed)
+            mask = flow.nn.random_mask_like(x, rate=rate, seed=seed, name="random_mask")
             return mask
 
     # OneFlow
