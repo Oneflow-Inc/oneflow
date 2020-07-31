@@ -142,9 +142,7 @@ More info on this demo, please refer to [Documentation on quick start](http://do
 http://docs.oneflow.org/
 
 ## Resources
-### Model Zoo
-
-### Benchmark
+### Model Zoo & Benchmark
 https://github.com/Oneflow-Inc/OneFlow-Benchmark
 
 ## Communication
@@ -155,7 +153,7 @@ https://github.com/Oneflow-Inc/OneFlow-Benchmark
 http://docs.oneflow.org/contribute/intro.html
 
 ## The Team
-OneFlow was originally developed by OneFlow Inc and Zhejiang Lab.
+OneFlow was originally developed by [OneFlow Inc](www.oneflow.org) and [Zhejiang Lab](http://www.zhejianglab.com/).
 
 ## License
 [Apache License 2.0](LICENSE)
