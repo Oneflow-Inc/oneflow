@@ -29,19 +29,33 @@ from cnns_tests import (
 
 
 class TestAlexNet(Test1NodeMixin, TestAlexNetMixin, absltest.TestCase):
-    pass
+    def setUp(self):
+        super().setUp()
+        flow.enable_eager_execution(True)
 
 
 class TestResNet50(Test1NodeMixin, TestResNet50Mixin, absltest.TestCase):
-    pass
+    def setUp(self):
+        super().setUp()
+        flow.enable_eager_execution(True)
 
 
 class TestVgg16(Test1NodeMixin, TestVgg16Mixin, absltest.TestCase):
-    pass
+    def setUp(self):
+        super().setUp()
+        flow.enable_eager_execution(True)
 
 
 class TestInceptionV3(Test1NodeMixin, TestInceptionV3Mixin, absltest.TestCase):
-    pass
+    def setUp(self):
+        super().setUp()
+        flow.enable_eager_execution(True)
+
+
+class TestEagerMixin(object):
+    def setUp(self):
+        flow.clear_default_session()
+        flow.enable_eager_execution(True)
 
 
 flow.unittest.register_test_cases(
@@ -49,6 +63,7 @@ flow.unittest.register_test_cases(
     directory=os.path.dirname(os.path.realpath(__file__)),
     filter_by_num_nodes=lambda x: x == 1,
     base_class=absltest.TestCase,
+    test_case_mixin=TestEagerMixin,
 )
 
 
