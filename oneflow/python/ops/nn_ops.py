@@ -27,6 +27,7 @@ import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.module as module_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.distribute as distribute_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -730,18 +731,34 @@ def sparse_cross_entropy(
     else:
         assert len(labels.shape) == len(prediction.shape) - 1
 
-    return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("SparseCrossEntropy_")
+    if prediction.distribute is distribute_util.split(len(prediction.shape) - 1):
+        return (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("SparseCrossEntropyMs_")
+            )
+            .Op("sparse_cross_entropy_ms")
+            .Input("prediction", [prediction])
+            .Input("label", [labels])
+            .Output("out")
+            .Attr("depth", int(prediction.shape[-1]))
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
         )
-        .Op("sparse_cross_entropy")
-        .Input("prediction", [prediction])
-        .Input("label", [labels])
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
+    else:
+        return (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("SparseCrossEntropy_")
+            )
+            .Op("sparse_cross_entropy")
+            .Input("prediction", [prediction])
+            .Input("label", [labels])
+            .Output("out")
+            .Attr("depth", int(prediction.shape[-1]))
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
 
 
 @oneflow_export("nn.softmax_cross_entropy_with_logits")
@@ -811,21 +828,40 @@ def sparse_softmax_cross_entropy_with_logits(
     else:
         assert len(labels.shape) == len(logits.shape) - 1
 
-    prob, out = (
-        flow.user_op_builder(
-            name
-            if name is not None
-            else id_util.UniqueStr("SparseSoftmaxCrossEntropy_")
+    if logits.distribute is distribute_util.split(len(logits.shape) - 1):
+        prob, out = (
+            flow.user_op_builder(
+                name
+                if name is not None
+                else id_util.UniqueStr("SparseSoftmaxCrossEntropyMs_")
+            )
+            .Op("sparse_softmax_cross_entropy_ms")
+            .Input("prediction", [logits])
+            .Input("label", [labels])
+            .Output("prob")
+            .Output("out")
+            .Attr("depth", int(logits.shape[-1]))
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()
         )
-        .Op("sparse_softmax_cross_entropy")
-        .Input("prediction", [logits])
-        .Input("label", [labels])
-        .Output("prob")
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()
-    )
+    else:
+        prob, out = (
+            flow.user_op_builder(
+                name
+                if name is not None
+                else id_util.UniqueStr("SparseSoftmaxCrossEntropy_")
+            )
+            .Op("sparse_softmax_cross_entropy")
+            .Input("prediction", [logits])
+            .Input("label", [labels])
+            .Output("prob")
+            .Output("out")
+            .Attr("depth", int(logits.shape[-1]))
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()
+        )
     return out
 
 
