@@ -36,6 +36,8 @@ def test_lazy_input_output(test_case):
             dtype=flow.float,
             initializer=flow.ones_initializer(),
         )
+        input_def = flow.cast_to_current_logical_view(input_def)
+        var = flow.cast_to_current_logical_view(var)
         output = var + input_def
         return output
 
