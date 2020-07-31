@@ -170,7 +170,9 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override {
-    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).get();
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; }
+    return it->second.get();
   }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();

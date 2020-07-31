@@ -27,9 +27,11 @@ typedef fixed_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
 class Params3D {
  public:
   Params3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
-           const std::string& padding, const std::vector<int32_t>& pool_size,
-           const std::vector<int32_t>& strides);
+           const std::string& padding, const std::vector<int32_t>& padding_before,
+           const std::vector<int32_t>& padding_after, const std::vector<int32_t>& pool_size,
+           const std::vector<int32_t>& strides, const bool ceil_mode);
   ~Params3D() = default;
+  void Reset(const ShapeView& x_shape);
 
   Shape GetYShape() const;
   Shape GetXShape5D() const;
@@ -49,6 +51,8 @@ class Params3D {
   std::vector<int32_t> padding_before_3d_;
   std::vector<int32_t> padding_after_3d_;
   std::string data_format_;
+  std::string padding_;
+  bool ceil_mode_;
   int64_t batch_num_;
   int64_t channel_num_;
 };

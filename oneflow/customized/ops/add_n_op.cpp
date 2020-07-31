@@ -34,10 +34,6 @@ REGISTER_USER_OP("add_n")
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      for (const auto& pair : ctx->inputs()) {
-        CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex(pair.first, pair.second)
-                        == *ctx->BatchAxis4ArgNameAndIndex("in", 0));
-      }
       return user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis(ctx);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) {
