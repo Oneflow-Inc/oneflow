@@ -96,9 +96,10 @@ def get_current_machine_id() -> int:
 
 @oneflow_export("env.machine")
 def api_machine(*val: list) -> None:
-    r"""Set machines' hostnames.  
-    
+    r"""Set machines' hostnames.
+
     For instance::
+
         oneflow.env.machine([{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}])
 
     Args:

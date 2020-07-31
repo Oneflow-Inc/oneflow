@@ -153,62 +153,6 @@ def _ConvConvertInputs(
         node.data_format = "NCHW"
 
 
-def _AddPadding(ctx, node, kernel_shape, strides, dilations=None, spatial=2):
-    padding = node.get_attr("padding")
-    if padding:
-        if dilations is None:
-            dilations = [1] * spatial * 2
-        padding = padding.s.decode("utf-8")
-        if padding == "same":
-            pads = [0] * spatial * 2
-            input_shape = ctx.get_shape(node.input[0])
-            output_shape = ctx.get_shape(node.output[0])
-            # check if the input shape is valid
-            if len(input_shape) != len(pads):
-                logger.error(
-                    "node %s input needs to be rank %d, is %d",
-                    node.name,
-                    len(pads),
-                    len(input_shape),
-                )
-            # transpose shape to nchw
-            if node.is_nhwc():
-                input_shape = _SpatialMap(input_shape, constants.NHWC_TO_NCHW)
-                output_shape = _SpatialMap(output_shape, constants.NHWC_TO_NCHW)
-            # calculate pads
-            if any(
-                input_shape[i + 2] == -1 or output_shape[i + 2] == -1
-                for i in range(spatial)
-            ):
-                logger.debug(
-                    "node %s has unknown dim for pads calculation, fallback to auto_pad: "
-                    "input_shape=%s, output_shape=%s",
-                    node.name,
-                    input_shape,
-                    output_shape,
-                )
-                node.set_attr("auto_pad", "SAME_LOWER")
-            else:
-                for i in range(spatial):
-                    pad = (
-                        (output_shape[i + 2] - 1) * strides[i]
-                        + dilations[i] * (kernel_shape[i] - 1)
-                        + 1
-                        - input_shape[i + 2]
-                    )
-                    pad = max(pad, 0)
-                    # pads[i] = pad // 2
-                    # pads[i + spatial] = pad - pad // 2
-                    pads[i + spatial] = pad // 2
-                    pads[i] = pad - pad // 2
-                node.set_attr("pads", pads)
-
-        elif padding == "valid":
-            pass
-        else:
-            raise ValueError("invalid padding value: " + padding)
-
-
 def conv_dims_attr(node, name, new_name=None):
     if new_name is None:
         new_name = name
@@ -249,7 +193,7 @@ class ConvOp:
         node.set_attr("dilations", node.get_attr_value("dilation_rate", [1, 1]))
         strides = conv_dims_attr(node, "strides")
         dilations = conv_dims_attr(node, "dilations")
-        _AddPadding(ctx, node, kernel_shape, strides, dilations=dilations, spatial=2)
+        node.set_attr("pads", node.get_attr_value("padding_before", [0, 0]) * 2)
         _ConvConvertInputs(ctx, node, with_kernel=True)
 
     @classmethod
@@ -291,7 +235,7 @@ class PoolOp:
         node.set_attr("kernel_shape", kernel_shape_flow)
         node.set_attr("strides", strides_flow)
         conv_dims_attr(node, "dilations")
-        _AddPadding(ctx, node, kernel_shape_flow, strides_flow)
+        node.set_attr("pads", node.get_attr_value("padding_before", [0, 0]) * 2)
         _ConvConvertInputs(ctx, node, with_kernel=False)
 
 
