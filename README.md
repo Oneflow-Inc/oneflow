@@ -116,7 +116,7 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
   You can check this [doc](oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
 
 ## Getting Started
-3 minites to run MNIST
+3 minutes to run MNIST.
 1. Clone the demo code from OneFlow documentation
 ```
 git clone https://github.com/Oneflow-Inc/oneflow-documentation.git
@@ -127,7 +127,7 @@ cd oneflow-documentation/cn/docs/code/quick_start/
 python mlp_mnist.py
 ```
 
-3. Then oneflow is running and you got the training loss
+3. Oneflow is running and you got the training loss
 ```
 2.7290366
 0.81281316
