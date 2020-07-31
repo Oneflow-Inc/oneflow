@@ -1,15 +1,15 @@
 **OneFlow is an performance-centered and open-source platform for machine learning.**
 
 - [Install OneFlow](#install-oneflow)
-  - [System requirements](#system-requirements)
-  - [Install with Pip package](#install-with-pip-package)
-  - [Build from source](#build-from-source)
+  - [System Requirements](#system-requirements)
+  - [Install with Pip Package](#install-with-pip-package)
+  - [Build from Source](#build-from-source)
   - [Troubleshooting](#troubleshooting)
   - [Advanced features](#advanced-features)
 - [Getting Started](#getting-started)
 - [Documentation](#documentation)
-  - [Usage & Design Docs](#usage--design-docs)
-  - [API Reference](#api-reference)
+    - [Usage & Design Docs](#usage--design-docs)
+    - [API Reference](#api-reference)
 - [Model Zoo and Benchmark](#model-zoo-and-benchmark)
   - [CNNs(ResNet-50, VGG-16, Inception-V3, AlexNet)](#cnnsresnet-50-vgg-16-inception-v3-alexnet)
   - [Wide&Deep](#widedeep)
@@ -21,12 +21,12 @@
 
 ## Install OneFlow
 
-  ### System requirements
+  ### System Requirements
 
   - Python >= 3.5
   - Nvidia Linux x86_64 driver version >= 440.33
 
-  ### Install with Pip package
+  ### Install with Pip Package
 
   - To install latest release of OneFlow with CUDA support:
 
@@ -55,7 +55,7 @@
 
   - Releases are built with G++/GCC 4.8.5, cuDNN 7 and MKL 2020.0-088.
 
-### Build from source
+### Build from Source
 
 1. #### System Requirements to Build OneFlow
 
@@ -142,10 +142,13 @@ python mlp_mnist.py
 More info on this demo, please refer to [doc on quick start](http://docs.oneflow.org/quick_start/quickstart_in_3_min.html).
 
 ## Documentation
-### [Usage & Design Docs](http://docs.oneflow.org/)
-### [API Reference](https://oneflow-api.readthedocs.io/en/latest/)
+#### Usage & Design Docs
+* [link](http://docs.oneflow.org/)
+#### API Reference
+* [link](https://oneflow-api.readthedocs.io/en/latest/)
 
-## [Model Zoo and Benchmark](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
+## Model Zoo and Benchmark
+* [link](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
 ### CNNs(ResNet-50, VGG-16, Inception-V3, AlexNet)
 * [CNNs](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/of_develop_py3/Classification/cnns)
 
@@ -158,7 +161,8 @@ More info on this demo, please refer to [doc on quick start](http://docs.oneflow
 * Github issues : any install, bug, feature issues.
 * [www.oneflow.org](http://www.oneflow.org) : brand related information.
 
-## [Contributing](http://docs.oneflow.org/contribute/intro.html)
+## Contributing
+*  [link](http://docs.oneflow.org/contribute/intro.html)
 
 ## The Team
 OneFlow was originally developed by [OneFlow Inc](http://www.oneflow.org) and [Zhejiang Lab](http://www.zhejianglab.com/).
