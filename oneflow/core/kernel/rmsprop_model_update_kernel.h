@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_KERNEL_RMSPROP_MODEL_UPDATE_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_RMSPROP_MODEL_UPDATE_KERNEL_H_
 
@@ -14,8 +29,8 @@ class RMSPropMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> 
 
  private:
   const PbMessage& GetCustomizedOpConf() const override;
-  void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2,
-                   const int64_t* train_step, const float* learning_rate,
+  void UpdateModel(DeviceCtx* ctx, T weight_decay, const int64_t* train_step,
+                   const float* learning_rate,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
@@ -24,9 +39,9 @@ class RMSPropMdUpdateKernelUtil final {
  public:
   // mean_square = (1 - decay_rate) * model_diff ^ 2 + decay_rate * mean_square
   // model = model - learning_rate * model_diff / sqrt(mean_square + epsilon)
-  static void UpdateModel(DeviceCtx*, int64_t n, const T* batch_instance_num_ptr,
-                          const int64_t* train_step, const float* learning_rate, T decay_rate,
-                          T epsilon, T l1, T l2, const T* model_diff, T* model, T* mean_square);
+  static void UpdateModel(DeviceCtx*, int64_t n, const int64_t* train_step,
+                          const float* learning_rate, T decay_rate, T epsilon, T weight_decay,
+                          const T* model_diff, T* model, T* mean_square);
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(RMSProp);

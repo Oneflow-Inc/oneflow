@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/gdb.h"
 #include "oneflow/core/common/cached_caller.h"
@@ -22,11 +37,16 @@ Kernel::~Kernel() {
   if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
 }
 
-void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
+void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
+  if (!(job_desc_ == nullptr || shape_infer_helper_ == nullptr)) { return; }
   job_desc_ = job_desc;
   kernel_conf_ = kernel_conf;
   shape_infer_helper_ =
       new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
+}
+
+void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
+  InitBase(job_desc, kernel_conf);
   VirtualKernelInit(device_ctx);
 }
 
@@ -43,7 +63,7 @@ void Kernel::Launch(const KernelCtx& ctx,
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
-  return op_attribute().bn_in_op2lbi().at(bn_in_op);
+  return op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
 }
 
 void Kernel::CheckSameDim0ValidNum(
@@ -52,11 +72,48 @@ void Kernel::CheckSameDim0ValidNum(
   UNIMPLEMENTED();
 }
 
+void Kernel::SetOutputBlobProducerInferAccessChecker(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForEachObnAndIsHeaderInferedBeforeCompute(BnInOp2Blob, [&](const std::string& obn, bool _) {
+    BnInOp2Blob(obn)->set_blob_access_checker(Global<BlobAccessCheckerIf<true, false>>::Get());
+  });
+}
+
+void Kernel::SetOutputBlobProducerComputeAccessChecker(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForEachObnAndIsHeaderInferedBeforeCompute(
+      BnInOp2Blob, [&](const std::string& obn, bool is_header_infered_before_compute) {
+        const BlobAccessChecker* checker = nullptr;
+        if (is_header_infered_before_compute) {
+          checker = Global<BlobAccessCheckerIf<false, true>>::Get();
+        } else {
+          checker = Global<BlobAccessCheckerIf<true, true>>::Get();
+        }
+        BnInOp2Blob(obn)->set_blob_access_checker(checker);
+      });
+}
+
+void Kernel::SetOutputBlobConsumerAccessChecker(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForEachObnAndIsMutableByConsumer(BnInOp2Blob, [&](const std::string& obn, bool is_mutable) {
+    const BlobAccessChecker* checker = nullptr;
+    if (is_mutable) {
+      checker = Global<BlobAccessCheckerIf<false, true>>::Get();
+    } else {
+      checker = Global<BlobAccessCheckerIf<false, false>>::Get();
+    }
+    BnInOp2Blob(obn)->set_blob_access_checker(checker);
+  });
+}
+
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  SetOutputBlobProducerInferAccessChecker(BnInOp2Blob);
   ForwardHeader(ctx, BnInOp2Blob);
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
+  SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob);
   ForwardDataContent(ctx, BnInOp2Blob);
+  SetOutputBlobConsumerAccessChecker(BnInOp2Blob);
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,
@@ -64,6 +121,10 @@ void Kernel::ForwardHeader(const KernelCtx& ctx,
   if (kernel_conf_.need_do_opaque_header()) {
     ForwardPackedHeader(ctx, BnInOp2Blob);
   } else {
+    CHECK(!this->kernel_conf().need_do_tensor_list())
+        << "Op's kernel (op_name: " << this->op_conf().name()
+        << ", op_type_case: " << this->op_conf().op_type_case()
+        << ") need to override ForwardHeader because of tensor list.";
     if (kernel_conf_.need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
   }
 }

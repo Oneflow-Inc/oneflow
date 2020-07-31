@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
@@ -360,7 +375,7 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
       act_event->set_stop_time(GetCurTime());
       // The stream poller thread is not allowed to perform blocking RPC call. Hence, the
       // RPC call is forwarded to the thread pool and will be executed there.
-      Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork(
+      Global<ThreadPool>::Get()->AddWork(
           [act_event]() { Global<CtrlClient>::Get()->PushActEvent(*act_event); });
     });
   } else {

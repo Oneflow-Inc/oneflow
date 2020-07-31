@@ -4,7 +4,7 @@ set(ZLIB_INCLUDE_DIR ${THIRD_PARTY_DIR}/zlib/include)
 set(ZLIB_LIBRARY_DIR ${THIRD_PARTY_DIR}/zlib/lib)
 
 set(ZLIB_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/zlib/install)
-set(ZLIB_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/zlib/src/zlib)
+set(ZLIB_URL ${THIRD_PARTY_SUBMODULE_DIR}/zlib/src/zlib)
 
 if(WIN32)
     set(ZLIB_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/zlib/install/lib)

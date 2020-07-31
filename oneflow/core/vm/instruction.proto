@@ -1,0 +1,43 @@
+syntax = "proto2";
+package oneflow.vm;
+
+message CurrentGlobalDeviceIdProto {}
+message SoleMirroredObjectProto {}
+message AllMirroredObjectProto {}
+
+message OperandProto {
+  required int64 logical_object_id = 1;
+  oneof operand_type {
+    CurrentGlobalDeviceIdProto current_global_device_id = 2;
+    SoleMirroredObjectProto sole_mirrored_object = 3;
+    AllMirroredObjectProto all_mirrored_object = 4;
+  }
+}
+
+message OperandSeparatorProto { }
+
+message InstructionOperandProto {
+  oneof type {
+    OperandProto const_operand = 1;
+    OperandProto mut_operand = 2;
+    OperandProto mut2_operand = 3;
+    OperandProto symbol_operand = 4;
+    OperandProto init_symbol_operand = 5;
+
+    OperandSeparatorProto separator = 7;
+    double double_operand = 8;
+    int64 int64_operand = 9;
+    uint64 uint64_operand = 10;
+    bool bool_operand = 11;
+  }
+}
+
+message InstructionProto {
+  required string instr_type_name = 1;
+  optional int64 parallel_desc_symbol_id = 2 [default = 0];
+  repeated InstructionOperandProto operand = 3;
+};
+
+message InstructionListProto {
+  repeated InstructionProto instruction = 1;
+}

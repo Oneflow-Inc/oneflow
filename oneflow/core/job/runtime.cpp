@@ -1,10 +1,26 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/runtime.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
-#include "oneflow/core/job/nccl_comm_manager.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
@@ -12,6 +28,9 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/customized/summary/events_writer.h"
+#include "oneflow/core/job/collective_boxing_executor.h"
+#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 
 namespace oneflow {
 
@@ -64,9 +83,9 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   HandoutTasks(source_tasks);
   HandoutTasks(other_tasks);
   runtime_ctx->WaitUntilCntEqualZero("constructing_actor_cnt");
-  LOG(INFO) << "All actor on this machine are constructed";
+  LOG(INFO) << "Actors on this machine constructed";
   OF_BARRIER();
-  LOG(INFO) << "All actor on all machine are constructed";
+  LOG(INFO) << "Actors on every machine constructed";
   if (Global<CommNet>::Get()) { Global<CommNet>::Get()->RegisterMemoryDone(); }
   runtime_ctx->NewCounter("model_init_cnt", mdupdt_tasks.size());
   SendCmdMsg(mdupdt_tasks, ActorCmd::kInitModel);
@@ -91,9 +110,9 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
       && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
-  if (Global<ResourceDesc>::Get()->TotalMachineNum() > 1) {
+  if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
 #ifdef PLATFORM_POSIX
-    if (Global<ResourceDesc>::Get()->use_rdma()) {
+    if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
       IBVerbsCommNet::Init(plan);
 #else
@@ -104,31 +123,28 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
     }
 #endif
   }
-#ifdef WITH_CUDA
-  InitGlobalCudaDeviceProp();
-#endif
+  Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
   Global<ThreadMgr>::New(plan);
-#ifdef WITH_CUDA
-  Global<NcclCommMgr>::New(plan);
-#endif  // WITH_CUDA
+  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
+  Global<summary::EventsWriter>::New();
 }
 
 void Runtime::DeleteAllGlobal() {
   Global<RuntimeJobDescs>::Delete();
-#ifdef WITH_CUDA
-  Global<NcclCommMgr>::Delete();
-#endif  // WITH_CUDA
+  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
   Global<ThreadMgr>::Delete();
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();
   Global<MemoryAllocator>::Delete();
+  Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
+  Global<summary::EventsWriter>::Delete();
 }
 
 }  // namespace oneflow

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_H_
 
@@ -40,16 +55,63 @@ class Kernel {
    */
   virtual bool IsKernelLaunchSynchronized() const { return true; }
 
+  void SystemForwardHeader(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    ForwardHeader(ctx, BnInOp2Blob);
+  }
+  void SystemForwardDataContent(const KernelCtx& ctx,
+                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    ForwardDataContent(ctx, BnInOp2Blob);
+  }
+  virtual void Forward(const KernelCtx& ctx,
+                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
+  void SetOutputBlobProducerInferAccessChecker(
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void SetOutputBlobProducerComputeAccessChecker(
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void SetOutputBlobConsumerAccessChecker(
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
  protected:
   Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
+  void InitBase(const JobDesc* job_desc, const KernelConf&);
   virtual void VirtualKernelInit(DeviceCtx* device_ctx) { VirtualKernelInit(); }
   virtual void VirtualKernelInit() {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
 
   virtual void InitConstBufBlobs(DeviceCtx* ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void Forward(const KernelCtx& ctx,
-                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
+  template<typename HandlerT>
+  void ForEachObnAndIsHeaderInferedBeforeCompute(
+      std::function<Blob*(const std::string&)> BnInOp2Blob, const HandlerT& Handler) const {
+    const auto& modifier_map =
+        this->kernel_conf_.op_attribute().arg_modifier_signature().obn2output_blob_modifier();
+    for (const std::string& obn : this->op_attribute().output_bns()) {
+      Blob* blob = BnInOp2Blob(obn);
+      if (blob) {
+        bool is_header_infered_before_compute =
+            modifier_map.at(obn).header_infered_before_compute();
+        Handler(obn, is_header_infered_before_compute);
+      }
+    }
+  }
+
+  template<typename HandlerT>
+  void ForEachObnAndIsMutableByConsumer(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                                        const HandlerT& Handler) const {
+    const auto& modifier_map =
+        this->kernel_conf_.op_attribute().arg_modifier_signature().obn2output_blob_modifier();
+    for (const std::string& obn : this->op_attribute().output_bns()) {
+      Blob* blob = BnInOp2Blob(obn);
+      if (blob) {
+        bool is_mutable_by_consumer = modifier_map.at(obn).is_mutable();
+        Handler(obn, is_mutable_by_consumer);
+      }
+    }
+  }
+
   virtual void ForwardHeader(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardShape(const KernelCtx& ctx,
@@ -57,7 +119,7 @@ class Kernel {
   void NaiveForwardShape(std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   // TODO(niuchong) : rename ForwardDataContent to ForwardBody
   virtual void ForwardDataContent(const KernelCtx& ctx,
-                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void ForwardPackedHeader(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();

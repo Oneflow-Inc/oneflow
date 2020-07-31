@@ -1,10 +1,34 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include <cuda.h>
+#include <thread>
+#include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/vm/virtual_machine_scope.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/job/eager_nccl_comm_manager.h"
 
 namespace oneflow {
 
@@ -25,20 +49,57 @@ void InitLogging(const CppLoggingConf& logging_conf) {
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
 }
 
+int32_t GetDefaultCpuDeviceNum() { return std::thread::hardware_concurrency(); }
+
+int32_t GetDefaultGpuDeviceNum() {
+#ifndef WITH_CUDA
+  return 0;
+#else
+  int device_count = 0;
+  cudaGetDeviceCount(&device_count);
+  return device_count;
+#endif
+}
+
+Resource GetDefaultResource(const EnvProto& env_proto) {
+  Resource resource;
+  resource.set_machine_num(env_proto.machine_size());
+  resource.set_cpu_device_num(GetDefaultCpuDeviceNum());
+  resource.set_gpu_device_num(GetDefaultGpuDeviceNum());
+  return resource;
+}
+
 }  // namespace
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitLogging(env_proto.cpp_logging_conf());
+#ifdef WITH_CUDA
+  InitGlobalCudaDeviceProp();
+#endif
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
   Global<CtrlClient>::New();
   int64_t this_mchn_id =
       Global<EnvDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
   Global<MachineCtx>::New(this_mchn_id);
+  Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
+  Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));
+  Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
+  Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
+  Global<EagerJobBuildAndInferCtxMgr>::New();
+  Global<EagerNcclCommMgr>::New();
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+  Global<EagerNcclCommMgr>::Delete();
+  Global<EagerJobBuildAndInferCtxMgr>::Delete();
+  Global<vm::VirtualMachineScope>::Delete();
+  Global<ThreadPool>::Delete();
+  if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
+    Global<ResourceDesc, ForSession>::Delete();
+  }
+  Global<ResourceDesc, ForEnv>::Delete();
   CHECK_NOTNULL(Global<MachineCtx>::Get());
   CHECK_NOTNULL(Global<CtrlClient>::Get());
   CHECK_NOTNULL(Global<CtrlServer>::Get());
@@ -47,6 +108,9 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<CtrlClient>::Delete();
   Global<CtrlServer>::Delete();
   Global<EnvDesc>::Delete();
+#ifdef WITH_CUDA
+  Global<cudaDeviceProp>::Delete();
+#endif
 }
 
 }  // namespace oneflow

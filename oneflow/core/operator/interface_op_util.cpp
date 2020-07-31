@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/interface_op_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
@@ -9,27 +24,19 @@ void CheckShape(const Shape& shape) {
   FOR_RANGE(int, i, 1, shape.NumAxes()) { CHECK_GT(shape.At(i), 0); }
 }
 
-const OptInt64& GetSplitAxis(const InterfaceBlobConf& input_blob_conf) {
-  if (input_blob_conf.has_split_axis()) {
-    return input_blob_conf.split_axis();
-  } else {
-    return input_blob_conf.batch_axis();
-  }
-}
-
 Maybe<void> GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std::string>& input_bns,
                             const PbRpf<std::string>& output_bns, SbpSignature* sbp_signature,
                             bool is_for_input_op) {
-  const OptInt64& opt_split_axis = GetSplitAxis(blob_conf);
-  if (opt_split_axis.has_value()) {
+  if (blob_conf.split_axis().has_value()) {
     int64_t num_axes = blob_conf.shape().dim_size();
-    int64_t split_axis = opt_split_axis.value();
+    int64_t split_axis = blob_conf.split_axis().value();
     if (split_axis < 0) { split_axis += num_axes; }
-    OF_CHECK_GE(split_axis, 0);
-    OF_CHECK_LT(split_axis, num_axes);
+    CHECK_GE_OR_RETURN(split_axis, 0);
+    CHECK_LT_OR_RETURN(split_axis, num_axes);
 
     SbpSignatureBuilder sbp_signature_builder;
     if (is_for_input_op) {
+      // broadcast tick args for InputOp
       sbp_signature_builder.Broadcast(input_bns);
     } else {
       sbp_signature_builder.Split(input_bns, split_axis);
@@ -52,9 +59,8 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
   out_blob_desc->set_data_type(blob_conf.data_type());
   out_blob_desc->set_is_dynamic(blob_conf.is_dynamic());
   out_blob_desc->set_is_tensor_list(blob_conf.is_tensor_list());
-  const auto& opt_split_axis = GetSplitAxis(blob_conf);
-  if (opt_split_axis.has_value()) {
-    int64_t split_axis = opt_split_axis.value();
+  if (blob_conf.split_axis().has_value()) {
+    int64_t split_axis = blob_conf.split_axis().value();
     BalancedSplitter bs(out_blob_desc->shape().At(split_axis), parallel_ctx->parallel_num());
     out_blob_desc->mut_shape().Set(split_axis, bs.At(parallel_ctx->parallel_id()).size());
   }

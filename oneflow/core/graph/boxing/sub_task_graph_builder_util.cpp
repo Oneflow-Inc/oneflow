@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
@@ -74,12 +89,33 @@ bool SubTskGphBuilderUtil::IsBoxingB2B(const SbpParallel& src, const SbpParallel
   return src.has_broadcast_parallel() && dst.has_broadcast_parallel();
 }
 
+bool SubTskGphBuilderUtil::IsBoxingB2S(const SbpParallel& src, const SbpParallel& dst) {
+  return src.has_broadcast_parallel() && dst.has_split_parallel();
+}
+
 bool SubTskGphBuilderUtil::BlobHasDynamicShape(const BlobDesc& blob_desc) {
   return blob_desc.is_dynamic();
 }
 
 bool SubTskGphBuilderUtil::IsErrorBoxingNotSupported(const ErrorProto& error) {
   return error.has_boxing_error() && error.boxing_error() == BoxingError::kNotSupported;
+}
+
+int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* dst) {
+  if (src->machine_id() != dst->machine_id()) {
+    return kDistanceDiffMachine;
+  } else if (src->device_type() != dst->device_type()) {
+    return kDistanceSameMachine;
+  } else if (src->device_type() == DeviceType::kCPU) {
+    return kDistanceSameDevice;
+  } else {
+    if (Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(src->thrd_id())
+        == Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(dst->thrd_id())) {
+      return kDistanceSameDevice;
+    } else {
+      return kDistanceSameMachine;
+    }
+  }
 }
 
 }  // namespace oneflow

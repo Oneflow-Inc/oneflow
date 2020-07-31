@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/machine_context.h"
@@ -17,7 +32,7 @@ namespace {
 Maybe<void> Run(const std::string& env_proto_filepath) {
   EnvProto env_proto;
   ParseProtoFromTextFile(env_proto_filepath, &env_proto);
-  OF_CHECK_ISNULL(Global<EnvGlobalObjectsScope>::Get());
+  CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());

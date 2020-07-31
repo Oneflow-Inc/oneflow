@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_COMMON_UTIL_H_
 #define ONEFLOW_CORE_COMMON_UTIL_H_
 
@@ -24,7 +39,7 @@
 #include <utility>
 
 #include "oneflow/core/common/meta_util.hpp"
-#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/global.h"
 
 DECLARE_string(log_dir);
 
@@ -60,32 +75,6 @@ namespace oneflow {
 #define UNIMPLEMENTED() LOG(FATAL) << "UNIMPLEMENTED"
 
 #define TODO() LOG(FATAL) << "TODO"
-
-template<typename T>
-class Global final {
- public:
-  static T* Get() { return *GetPPtr(); }
-  static void SetAllocated(T* val) { *GetPPtr() = val; }
-  template<typename... Args>
-  static void New(Args&&... args) {
-    CHECK(Get() == nullptr);
-    LOG(INFO) << "NewGlobal " << typeid(T).name();
-    *GetPPtr() = new T(std::forward<Args>(args)...);
-  }
-  static void Delete() {
-    if (Get() != nullptr) {
-      LOG(INFO) << "DeleteGlobal " << typeid(T).name();
-      delete Get();
-      *GetPPtr() = nullptr;
-    }
-  }
-
- private:
-  static T** GetPPtr() {
-    static T* ptr = nullptr;
-    return &ptr;
-  }
-};
 
 #define OF_COMMA ,
 
@@ -152,14 +141,6 @@ inline uint32_t NewRandomSeed() {
   return gen();
 }
 
-#if defined(WITH_CUDA)
-#define DEVICE_TYPE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU)
-#else
-#define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
-#endif
-
 #define DIM_SEQ           \
   OF_PP_MAKE_TUPLE_SEQ(1) \
   OF_PP_MAKE_TUPLE_SEQ(2) OF_PP_MAKE_TUPLE_SEQ(3) OF_PP_MAKE_TUPLE_SEQ(4) OF_PP_MAKE_TUPLE_SEQ(5)
@@ -173,8 +154,8 @@ inline double GetCurTime() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
-const size_t kCudaAlignSize = 256;
-const size_t kCudaMemAllocAlignSize = 256;
+const size_t kCudaAlignSize = 512;
+const size_t kCudaMemAllocAlignSize = 512;
 inline size_t RoundUp(size_t n, size_t val) { return (n + val - 1) / val * val; }
 
 inline size_t GetCudaAlignedSize(size_t size) { return RoundUp(size, kCudaAlignSize); }
@@ -204,12 +185,6 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
   Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
 }
 
-//  encode case
-#define ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT                                            \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kJpeg), ARITHMETIC_DATA_TYPE_SEQ)                   \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kRaw), ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ) \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kBytesList), ((char, DataType::kChar))((int8_t, DataType::kInt8)))
-
 #if defined(__GNUC__)
 #define ALWAYS_INLINE __attribute__((always_inline))
 #elif defined(__CUDACC__)
@@ -219,6 +194,10 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
 #endif
 
 bool IsKernelSafeInt32(int64_t n);
+
+inline void HashCombine(size_t* seed, size_t hash) {
+  *seed ^= (hash + 0x9e3779b9 + (*seed << 6U) + (*seed >> 2U));
+}
 
 }  // namespace oneflow
 

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
@@ -24,7 +39,8 @@ Maybe<OptInt64> GetSplitAxis(const VariableOpConf& variable_conf) {
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   if (op_conf().variable_conf().has_tick()) { EnrollInputBn("tick", false); }
-  EnrollOutputBn("out", job_desc().IsTrain() && op_conf().trainable())->set_is_mutable(true);
+  bool is_trainable = job_desc().IsTrain() && op_conf().trainable();
+  EnrollOutputBn("out", is_trainable)->set_is_mutable(true);
 }
 
 const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variable_conf(); }
@@ -33,9 +49,10 @@ Maybe<void> VariableOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
-  OF_CHECK(job_desc().job_conf().has_default_initializer_conf()
-           || job_desc().job_conf().has_default_initialize_with_snapshot_path()
-           || variable_conf.has_initializer() || variable_conf.has_initialize_with_snapshot());
+  CHECK_OR_RETURN(job_desc().job_conf().has_default_initializer_conf()
+                  || job_desc().job_conf().has_default_initialize_with_snapshot_path()
+                  || variable_conf.has_initializer()
+                  || variable_conf.has_initialize_with_snapshot());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(variable_conf.shape());
   out_blob_desc->set_data_type(variable_conf.has_data_type() ? variable_conf.data_type()
@@ -77,6 +94,10 @@ Maybe<void> VariableOp::InferSbpSignature(
   GetSbpSignatures(&sbp_sig_list);
   *sbp_signature = sbp_sig_list.sbp_signature().Get(0);
   return Maybe<void>::Ok();
+}
+
+Symbol<OperatorConf> VariableOp::GetOpConfWithoutOpNameAndLbn() const {
+  return SymbolOf(this->op_conf());
 }
 
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);

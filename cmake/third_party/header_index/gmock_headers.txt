@@ -1,0 +1,17 @@
+gmock/gmock-generated-matchers.h
+gmock/gmock-generated-function-mockers.h
+gmock/gmock-generated-actions.h
+gmock/gmock-more-matchers.h
+gmock/gmock-spec-builders.h
+gmock/gmock-generated-nice-strict.h
+gmock/gmock-actions.h
+gmock/gmock-cardinalities.h
+gmock/gmock-matchers.h
+gmock/gmock-more-actions.h
+gmock/gmock.h
+gmock/internal/gmock-port.h
+gmock/internal/gmock-internal-utils.h
+gmock/internal/gmock-generated-internal-utils.h
+gmock/internal/custom/gmock-port.h
+gmock/internal/custom/gmock-generated-actions.h
+gmock/internal/custom/gmock-matchers.h

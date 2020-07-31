@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 #define ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 
@@ -9,6 +24,7 @@
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/mirrored_parallel.pb.h"
 #include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/job_builder.h"
@@ -22,6 +38,8 @@ struct OpContext {
 };
 
 class LogicalNode;
+class MirroredSigInferHint;
+class Scope;
 
 class Operator {
  public:
@@ -30,12 +48,10 @@ class Operator {
   virtual ~Operator() = default;
 
   //
-  void InitFromOpConf(const OperatorConf& op_conf);
+  void Init(const OperatorConf& op_conf, const JobDesc* job_desc);
   virtual void InitFromOpConf() = 0;
 
   virtual LogicalNode* NewProperLogicalNode() const;
-
-  virtual bool IsLossOp() const { return false; }
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
@@ -82,6 +98,7 @@ class Operator {
   const std::string& SoleIbn() const;
   const std::string& SoleObn() const;
   const std::string& SoleTbn() const;
+  Maybe<const std::string*> obn4lbi(const LogicalBlobId& lbi) const;
 
 #define DEFINE_BLOB_NAMES_GETTER(getter_name)                                           \
   const PbRpf<std::string>& getter_name() const { return op_attribute_.getter_name(); } \
@@ -93,6 +110,21 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(const_buf_bns);
 
 #undef DEFINE_BLOB_NAMES_GETTER
+
+  Maybe<void> InferParallelSignatureIf();
+
+  // Read: shape of input_blobs
+  // Write: shape of output_blobs
+  Maybe<void> InferLogicalOutBlobDescsIf(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4Ibn,
+      const ParallelDesc& parallel_desc) const {
+    return InferLogicalOutBlobDescs(BlobDesc4BnInOp, BatchAxis4Ibn, parallel_desc);
+  }
+  virtual Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4Ibn,
+      const ParallelDesc& parallel_desc) const;
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs
@@ -128,9 +160,7 @@ class Operator {
 
   Maybe<void> InferBatchAxisIf(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-    return InferBatchAxis(LogicalBlobDesc4Ibn, BatchAxis4BnInOp);
-  }
+      std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4Ibn);
   Maybe<void> NaiveInferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const;
 
@@ -143,16 +173,24 @@ class Operator {
       Shape* time_shape) const;
   // Infer blob's SbpSignature
   Maybe<void> InferSbpSignatureIf(
-      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const;
+      const ParallelDesc& parallel_desc);
+  // Infer blob's MirroredSignature
+  Maybe<void> InferMirroredSignatureIf(
+      std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
+          MirroredSigInferHint4Ibn,
+      bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
   void GenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       KernelConf*, const OpContext*,
       std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const;
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
+  Maybe<const SbpParallel*> SbpParallel4BnInOp(const std::string& bn_in_op) const;
+  Maybe<const OptInt64*> BatchAxis4BnInOp(const std::string& bn_in_op) const;
+  Maybe<const OptMirroredParallel*> OptMirroredParallel4BnInOp(const std::string& bn_in_op) const;
 
   Maybe<void> GetSbpSignaturesIf(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -163,8 +201,23 @@ class Operator {
   void ForEachBnInOp(std::function<void(const std::string&)>) const;
 
   virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
+  std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
+
+  ParallelSignature* mut_parallel_signature() { return op_attribute_.mutable_parallel_signature(); }
+
+  Maybe<const SbpSignature*> sbp_signature() const;
+  SbpSignature* mut_sbp_signature() { return op_attribute_.mutable_sbp_signature(); }
+  BlobLastUsedSignature* mut_blob_last_used_signature() {
+    return op_attribute_.mutable_blob_last_used_signature();
+  }
+  BlobBackwardUsedSignature* mut_blob_backward_used_signature() {
+    return op_attribute_.mutable_blob_backward_used_signature();
+  }
+  Maybe<void> FillLogicalBlobDescSignature(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& BlobDesc4BnInOp);
 
  protected:
+  virtual Maybe<void> InferParallelSignature();
   virtual Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
@@ -184,6 +237,10 @@ class Operator {
     UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
     return Maybe<void>::Ok();
   }
+  virtual Maybe<void> InferMirroredSignature(
+      std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
+          MirroredSigInferHint4Ibn,
+      bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
 
   int64_t cudnn_buf_limit_byte() const;
 
@@ -229,8 +286,8 @@ class Operator {
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       KernelConf*) const {}
 
-  virtual LogicalBlobId ibn2lbi(const std::string& input_bn) const;
-  virtual LogicalBlobId obn2lbi(const std::string& output_bn) const;
+  virtual LogicalBlobId lbi4ibn(const std::string& input_bn) const;
+  virtual LogicalBlobId lbi4obn(const std::string& output_bn) const;
 
   OperatorConf* mut_op_conf() { return op_attribute_.mutable_op_conf(); }
 
@@ -240,10 +297,24 @@ class Operator {
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
+
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix);
+
+  void EnrollRepeatedOutputBnWithSetter(
+      const std::string& obn_prefix, int32_t num, bool has_diff,
+      const std::function<void(OutputBlobModifier*)>& ModifierSetter);
+  void EnrollRepeatedOutputBnWithSetter(
+      const std::string& obn_prefix, bool has_diff,
+      const std::function<void(OutputBlobModifier*)>& ModifierSetter);
+  void EnrollRepeatedOutputBnWithSetter(
+      const std::string& obn_prefix, int32_t num,
+      const std::function<void(OutputBlobModifier*)>& ModifierSetter);
+  void EnrollRepeatedOutputBnWithSetter(
+      const std::string& obn_prefix,
+      const std::function<void(OutputBlobModifier*)>& ModifierSetter);
   void EnrollConstBufBn(const std::string& cbbn);
 
   InputBlobModifier* EnrollInputBn(const std::string& ibn, bool has_diff);
@@ -255,6 +326,7 @@ class Operator {
 
   InputBlobModifier* MutInputBlobModifier4Ibn(const std::string& ibn);
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
+  OptMirroredParallel* MutOptMirroredParallel(const std::string& bn_in_op);
 
  private:
   virtual Maybe<void> InferBatchAxis(
@@ -272,18 +344,21 @@ class Operator {
   virtual LogicalBlobId cbbn2lbi(const std::string& const_buf_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
-    return op_attribute_.mutable_bn_in_op2lbi();
+    return op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi();
   }
 
-  friend std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc*);
-  void set_job_desc(const JobDesc* job_desc) { job_desc_ = job_desc; }
+  virtual void EmplaceLbi2Obn(const LogicalBlobId& lbi, const std::string& obn);
+  bool has_job_desc() const { return job_desc_ != nullptr; }
 
   OpAttribute op_attribute_;
   const JobDesc* job_desc_;
+  HashMap<LogicalBlobId, std::string> lbi2obn_;
 };
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
 std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn);
+
+bool IsCpuOnly(const OperatorConf& op_conf);
 
 struct OnlyCpuSupportPredicator {
   OnlyCpuSupportPredicator(bool only_cpu) : only_cpu_(only_cpu) {}
@@ -381,10 +456,9 @@ Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn, SbpParallel* sb
 Maybe<bool> ParseDisableBoxingFlag(const std::string& lbn_with_hint, bool* disable_boxing);
 
 Maybe<void> InferOpSbpSignature(
-    const Operator& op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
+    Operator* op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
     const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
-    std::function<const OptInt64&(const LogicalBlobId&)> GetBatchAxis4Lbi,
-    SbpSignature* sbp_sig_to_infer);
+    std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp);
 
 std::string GetInputLbnInOpCustomizedConf(const PbMessage& msg,
                                           const std::string& fd_name_may_have_idx);
@@ -392,6 +466,9 @@ void ReplaceInputLbnInOpCustomizedConf(PbMessage* msg, const std::string& fd_nam
                                        const std::string& old_val, const std::string& new_val);
 
 bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
+
+Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
+                                    const OpNodeSignature& upstream_signature, const Scope& scope);
 
 }  // namespace oneflow
 

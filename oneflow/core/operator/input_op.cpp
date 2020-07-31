@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/operator/input_op.h"
 #include "oneflow/core/operator/interface_op_util.h"
@@ -16,8 +31,10 @@ const PbMessage& InputOp::GetCustomizedConf() const { return op_conf().input_con
 Maybe<void> InputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx,
                                     const SbpSignature* sbp_signature) const {
-  return InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(),
-                                           GetBlobDesc4BnInOp("out"), parallel_ctx);
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  JUST(InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(), out_blob_desc,
+                                         parallel_ctx));
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InputOp::InferBatchAxis(
@@ -41,6 +58,10 @@ Maybe<void> InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
                                               output_bns(),
                                               sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
+}
+
+Symbol<OperatorConf> InputOp::GetOpConfWithoutOpNameAndLbn() const {
+  return SymbolOf(this->op_conf());
 }
 
 REGISTER_OP(OperatorConf::kInputConf, InputOp);

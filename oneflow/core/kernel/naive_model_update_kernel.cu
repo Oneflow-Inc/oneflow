@@ -1,18 +1,31 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/naive_model_update_kernel.h"
-#include "oneflow/core/kernel/normal_model_update_kernel.cuh"
 
 namespace oneflow {
 
 namespace {
 
 template<typename T>
-__global__ void UpdateModelGpu(const int64_t n, const T* batch_instance_num_ptr,
-                               const float* learning_rate, T l1, T l2, const T* model_diff,
-                               T* model) {
+__global__ void UpdateModelGpu(const int64_t n, const float* learning_rate, T weight_decay,
+                               const T* model_diff, T* model) {
+  const float lr = *learning_rate;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T reg_diff = RegularizeDiff(model_diff[i], *batch_instance_num_ptr, l1, l2, model[i]);
-    model[i] = model[i] - *learning_rate * reg_diff;
+    model[i] = model[i] - lr * (model_diff[i] + weight_decay * model[i]);
   }
 }
 
@@ -21,10 +34,10 @@ __global__ void UpdateModelGpu(const int64_t n, const T* batch_instance_num_ptr,
 template<typename T>
 class NaiveMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx* ctx, const int64_t n, const T* batch_instance_num_ptr,
-                          const float* learning_rate, T l1, T l2, const T* model_diff, T* model) {
+  static void UpdateModel(DeviceCtx* ctx, const int64_t n, const float* learning_rate,
+                          T weight_decay, const T* model_diff, T* model) {
     UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, batch_instance_num_ptr, learning_rate, l1, l2, model_diff, model);
+        n, learning_rate, weight_decay, model_diff, model);
   }
 };
 

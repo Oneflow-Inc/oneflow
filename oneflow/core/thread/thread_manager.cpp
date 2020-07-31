@@ -1,10 +1,27 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/cpu_thread.h"
 #include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -24,17 +41,16 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
 
 #ifdef WITH_CUDA
   FOR_RANGE(int64_t, i, 0, GetCudaWorkTypeSize()) {
-    FOR_RANGE(int64_t, dev_phy_id, 0, Global<ResourceDesc>::Get()->GpuDeviceNum()) {
+    FOR_RANGE(int64_t, dev_phy_id, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
       threads_.push_back(new GpuThread(thrd_id++, dev_phy_id));
     }
   }
 #endif
-  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->CpuDeviceNum()) {
+  FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum())) {
     threads_.push_back(new CpuThread(thrd_id++));
   }
   threads_.push_back(new CpuThread(thrd_id++));  // comm_net
   CreatePersistenceThrd(plan, thrd_id);
-  compute_thread_pool_.reset(new ThreadPool(Global<ResourceDesc>::Get()->ComputeThreadPoolSize()));
 }
 
 void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {
@@ -55,12 +71,12 @@ void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
 }
 
 void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
-  size_t thread_num = Global<ThreadMgr>::Get()->compute_thread_pool()->thread_num();
+  size_t thread_num = Global<ThreadPool>::Get()->thread_num();
   thread_num = std::min(num, thread_num);
   BalancedSplitter bs(num, thread_num);
   BlockingCounter bc(thread_num);
   FOR_RANGE(size_t, range_id, 0, thread_num) {
-    Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork([&bc, &bs, range_id, Callback] {
+    Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, Callback] {
       FOR_RANGE(size_t, i, bs.At(range_id).begin(), bs.At(range_id).end()) { Callback(i); }
       bc.Decrease();
     });

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/reshape_op_util.h"
 
 namespace oneflow {
@@ -11,23 +26,23 @@ Maybe<Shape> ReshapeOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
     int64_t dim = reshape_proto.dim(axis);
     dim_vec.push_back(dim);
     if (dim == -1) {
-      OF_CHECK(has_minus_1 == false) << "only one `-1' supported";
+      CHECK_OR_RETURN(has_minus_1 == false) << "only one `-1' supported";
       has_minus_1 = true;
       minus_1_axis = axis;
     } else if (dim > 0) {
-      OF_CHECK_LE(dim, in_shape.elem_cnt()) << "invalid axis: " << axis << ", dim: " << dim;
+      CHECK_LE_OR_RETURN(dim, in_shape.elem_cnt()) << "invalid axis: " << axis << ", dim: " << dim;
       total_elem_dim_exclude_minus_1 *= dim;
-      OF_CHECK_LE(total_elem_dim_exclude_minus_1, in_shape.elem_cnt())
+      CHECK_LE_OR_RETURN(total_elem_dim_exclude_minus_1, in_shape.elem_cnt())
           << "element number in reshape_conf is bigger than input blob";
     } else {
       OF_UNIMPLEMENTED() << "only positive number or -1 supported";
     }
   }
-  OF_CHECK_EQ(in_shape.elem_cnt() % total_elem_dim_exclude_minus_1, 0);
+  CHECK_EQ_OR_RETURN(in_shape.elem_cnt() % total_elem_dim_exclude_minus_1, 0);
   if (has_minus_1) {
     dim_vec[minus_1_axis] = in_shape.elem_cnt() / total_elem_dim_exclude_minus_1;
   } else {
-    OF_CHECK_EQ(in_shape.elem_cnt(), total_elem_dim_exclude_minus_1)
+    CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), total_elem_dim_exclude_minus_1)
         << "input blob's element number not equals reshape_conf";
   }
   return std::make_shared<Shape>(dim_vec);
@@ -35,13 +50,13 @@ Maybe<Shape> ReshapeOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
 
 Maybe<void> ReshapeOpUtil::Squeeze(const Shape& origin, Shape* shape,
                                    HashMap<int, int>* squeezed_axis2origin_axis) {
-  OF_CHECK_GT(origin.NumAxes(), 0);
+  CHECK_GT_OR_RETURN(origin.NumAxes(), 0);
   DimVector dim_vec;
   FOR_RANGE(int, axis, 0, origin.NumAxes()) {
     int64_t dim = origin.At(axis);
-    OF_CHECK_GT(dim, 0);
+    CHECK_GT_OR_RETURN(dim, 0);
     if (dim == 1) { continue; }
-    OF_CHECK(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis).second);
+    CHECK_OR_RETURN(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis).second);
     dim_vec.push_back(dim);
   }
   *shape = Shape(dim_vec);
@@ -71,11 +86,11 @@ Maybe<void> ReshapeOpUtil::GetGroupStartInAxis2OutAxis(
       --out_axis;
     }
   }
-  OF_CHECK_GE(in_axis, -1);
-  OF_CHECK_GE(out_axis, -1);
-  OF_CHECK_LE(in_axis, 0);
-  OF_CHECK_LE(out_axis, 0);
-  OF_CHECK_EQ(in_axis == 0 && out_axis == 0, false);
+  CHECK_GE_OR_RETURN(in_axis, -1);
+  CHECK_GE_OR_RETURN(out_axis, -1);
+  CHECK_LE_OR_RETURN(in_axis, 0);
+  CHECK_LE_OR_RETURN(out_axis, 0);
+  CHECK_EQ_OR_RETURN(in_axis == 0 && out_axis == 0, false);
   return Maybe<void>::Ok();
 }
 

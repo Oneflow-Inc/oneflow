@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/user_op_def.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 
@@ -64,7 +79,7 @@ bool UserOpDefWrapper::AttrHasDefaultVal(const std::string& name) const {
     CHECK(AttrHasDefaultVal(name));                                                       \
     const UserOpAttrVal& default_val = attrs_.at(name)->default_val();                    \
     CHECK_EQ(static_cast<int>(attr_type), default_val.value_case());                      \
-    return AttrValAccessor<cpp_type>::GetAttr(default_val);                               \
+    return AttrValAccessor<cpp_type>::Attr(default_val);                                  \
   }
 
 OF_PP_FOR_EACH_TUPLE(ATTR_TYPE_SPECIALIZATION, ATTR_SEQ)

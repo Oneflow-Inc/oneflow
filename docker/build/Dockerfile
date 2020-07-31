@@ -2,15 +2,21 @@
 ARG CUDA=10.0
 
 FROM nvidia/cuda:${CUDA}-cudnn7-devel-centos7
+RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
+    rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
 RUN yum update -y && yum install -y epel-release
 RUN yum update -y && yum install -y rdma-core-devel \
-    openblas-devel \
     nasm \
     cmake3 \
     make \
     git \
     centos-release-scl \
-    swig
+    swig \
+    intel-mkl-2020.0-088 \
+    zlib-devel \
+    curl-devel \
+    which
+
 RUN ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
 RUN mkdir -p /tmp/download/cmake-extracted && \
@@ -18,8 +24,9 @@ RUN mkdir -p /tmp/download/cmake-extracted && \
     curl --location https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0.tar.gz --output cmake.tar.gz && \
     tar -xvzf cmake.tar.gz --directory cmake-extracted && \
     cd cmake-extracted/* && \
-    mkdir /cmake-install && \
-    cmake . -DCMAKE_INSTALL_PREFIX=/cmake-install && \
+    mkdir /cmake-install
+RUN cd /tmp/download/cmake-extracted/* && \
+    cmake . -DCMAKE_USE_SYSTEM_CURL=ON -DCMAKE_INSTALL_PREFIX=/cmake-install && \
     make -j $(nproc) && \
     make install
 ENV PATH="/cmake-install/bin:${PATH}"
@@ -33,10 +40,12 @@ RUN if [ "${USE_PYTHON_3_OR_2}" -eq 2 ] ; then yum update -y \
     && rm get-pip.py \
     && pip install numpy==1.12.0 protobuf ; fi
 
+COPY dev-requirements.txt /workspace/dev-requirements.txt
+
 RUN if [ "${USE_PYTHON_3_OR_2}" -eq 3 ] ; then yum update -y \
     && yum install -y rh-python36 python36-devel.x86_64 python36-devel \
     && python3 -m ensurepip \
-    && pip3 install numpy protobuf ; fi
+    && pip3 install /workspace/dev-requirements.txt; fi
 
 WORKDIR /workspace/build
 
@@ -51,9 +60,8 @@ RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON .. &&
 COPY oneflow /workspace/oneflow
 COPY tools /workspace/tools
 
-RUN if [ "${USE_PYTHON_3_OR_2}" -eq 2 ] ; then cmake -DTHIRD_PARTY=OFF -DPY3=OFF .. && make -j $(nproc) ; fi
-
-RUN if [ "${USE_PYTHON_3_OR_2}" -eq 3 ] ; then cmake -DTHIRD_PARTY=OFF -DPY3=ON .. && make -j $(nproc) ; fi
+RUN export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH; \
+    cmake -DTHIRD_PARTY=OFF .. && make -j $(nproc) ;
 
 ## BUILD WHEEL
 WORKDIR /workspace

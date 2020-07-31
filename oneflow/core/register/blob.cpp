@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -23,6 +38,8 @@ bool TensorBackInserter::IsCurMutTensorAvailable() const {
 }
 
 FullyMutTensorView* TensorBackInserter::add_tensor() {
+  blob_->blob_access_checker()->CheckHeaderMutable();
+  blob_->blob_access_checker()->CheckBodyMutable();
   blob_->AddTensor(&cur_mut_tensor_);
   return &cur_mut_tensor_;
 }
@@ -48,6 +65,7 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
   blob_desc_ = blob_desc;
   dptr_ = body_ptr;
   header_ptr_.reset(new PodPtr(blob_desc_->header_pod_desc(), header_ptr));
+  this->blob_access_checker_ = Global<BlobAccessCheckerIf<true, true>>::Get();
   FOR_RANGE(int32_t, i, 0, FieldKey::kFieldKeySize) {
     FieldKey key = static_cast<FieldKey>(i);
     header_fields_[i] = header_ptr_->MutTensorPtr<int64_t>(key);
@@ -63,10 +81,7 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
     *mut_header_field<FieldKey::kTensorListSlices>() = 0;
     *mut_header_field<FieldKey::kTensorListSlicesLength>() = 1;
     *mut_header_field<FieldKey::kLastTensorDataOffset>() = 0;
-    begin_tensor_.reset(
-        new TensorView(this, header_field<FieldKey::kTensorShapeList>(), dptr<char>()));
-    begin_mut_tensor_.reset(new DataOnlyMutTensorView(
-        this, mut_header_field<FieldKey::kTensorShapeList>(), mut_dptr<char>()));
+    ResetTensorView();
     int64_t* shape_ptr = mut_header_field<FieldKey::kTensorShapeList>();
     shape_view_.reset(new ShapeView(shape_ptr, static_shape().NumAxes()));
     if (blob_desc->is_dynamic()) {
@@ -77,6 +92,18 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
     const DimVector& dim_vec = static_shape().dim_vec();
     shape_view_.reset(new ShapeView(dim_vec.data(), dim_vec.size()));
   }
+}
+
+void Blob::ResetTensorView() {
+  begin_tensor_.reset(
+      new TensorView(this, header_field<FieldKey::kTensorShapeList>(), dptr<char>()));
+  begin_mut_tensor_.reset(new DataOnlyMutTensorView(
+      this, mut_header_field<FieldKey::kTensorShapeList>(), mut_dptr<char>()));
+}
+
+void Blob::reset_dptr(char* dptr) {
+  dptr_ = dptr;
+  ResetTensorView();
 }
 
 size_t Blob::total_num_of_tensors() const {
@@ -180,7 +207,7 @@ void Blob::ReserveOneEmptyTensorList() {
 FullyMutTensorView Blob::EndFullyMutTensor() {
   size_t shape_list_capacity = header_field_capacity<FieldKey::kTensorShapeList>();
   int64_t* end_shape_ptr = mut_header_field<FieldKey::kTensorShapeList>() + shape_list_capacity;
-  char* end_tensor_dptr = mut_dptr<char>() + blob_desc().ByteSizeOfBlobBody();
+  char* end_tensor_dptr = ForceMutDptr<char>() + blob_desc().ByteSizeOfBlobBody();
   return FullyMutTensorView(this, end_shape_ptr, end_tensor_dptr);
 }
 
@@ -208,12 +235,14 @@ size_t Blob::ByteSizeOfBlobBody() const {
 
 void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
+  this->blob_access_checker()->CheckBodyMutable();
   AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfBlobBody(), mem_case(),
              rhs->mem_case());
 }
 
 void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
+  this->blob_access_checker()->CheckBodyMutable();
   const size_t body_byte_size = ByteSizeOfBlobBody();
   CHECK_EQ(rhs->ByteSizeOfBlobBody(), body_byte_size);
   AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), body_byte_size, mem_case(), rhs->mem_case());

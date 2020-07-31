@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_REGISTER_BLOB_H_
 #define ONEFLOW_CORE_REGISTER_BLOB_H_
 
@@ -12,6 +27,26 @@
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
+
+class BlobAccessChecker {
+ public:
+  virtual void CheckHeaderMutable() const = 0;
+  virtual void CheckBodyMutable() const = 0;
+};
+
+template<bool is_header_mutable, bool is_body_mutable>
+class BlobAccessCheckerIf final : public BlobAccessChecker {
+ public:
+  void CheckHeaderMutable() const override {
+    CHECK(is_header_mutable)
+        << "header mutable check not passed, blob's shape is not mutable at this moment!";
+  }
+
+  void CheckBodyMutable() const override {
+    CHECK(is_body_mutable)
+        << "body mutable check not passed, blob's data is not mutable at this moment!";
+  }
+};
 
 class Blob;
 
@@ -72,13 +107,26 @@ class Blob final {
   }
   template<typename T = void>
   T* mut_dptr() {
+    this->blob_access_checker()->CheckBodyMutable();
+    CheckDataType<T>(data_type());
+    return static_cast<T*>(dptr_);
+  }
+  template<typename T = void>
+  T* ForceMutDptr() {
     CheckDataType<T>(data_type());
     return static_cast<T*>(dptr_);
   }
   const Shape& static_shape() const { return blob_desc_->body_shape(); }
   const ShapeView& shape_view() const { return *shape_view_; }
   const ShapeView& shape() const { return *shape_view_; }
-  MutShapeView* mut_shape_view() { return mut_shape_view_.get(); }
+  MutShapeView* mut_shape_view() {
+    this->blob_access_checker()->CheckHeaderMutable();
+    return mut_shape_view_.get();
+  }
+
+  MutShapeView* ForceMutShapeView() { return mut_shape_view_.get(); }
+
+  void reset_dptr(char* dptr);
 
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
@@ -93,6 +141,12 @@ class Blob final {
 
   int32_t record_num() const { return record_num_; }
   void set_record_num(int32_t val) { record_num_ = val; }
+
+  void set_blob_access_checker(const BlobAccessChecker* blob_access_checker) {
+    this->blob_access_checker_ = blob_access_checker;
+  }
+
+  const BlobAccessChecker* blob_access_checker() { return this->blob_access_checker_; }
 
  private:
   void Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
@@ -117,7 +171,9 @@ class Blob final {
   bool IsEndFullyMutTensor(const FullyMutTensorView& tensor) const;
   void clear_tensor_lists();
   void add_tensor_list_slice();
+  void ResetTensorView();
 
+  const BlobAccessChecker* blob_access_checker_;
   MemoryCase mem_case_;
   const RtBlobDesc* blob_desc_;
   void* dptr_;
@@ -157,6 +213,15 @@ class RecordBlob final {
   Blob* records_;
   int32_t record_num_;
 };
+
+#define INIT_GLOBAL_BLOB_MUTABLE_CHECKER(is_header_mutable, is_body_mutable)             \
+  COMMAND(Global<BlobAccessCheckerIf<is_header_mutable, is_body_mutable>>::SetAllocated( \
+      new BlobAccessCheckerIf<is_header_mutable, is_body_mutable>()))
+
+INIT_GLOBAL_BLOB_MUTABLE_CHECKER(false, false);
+INIT_GLOBAL_BLOB_MUTABLE_CHECKER(false, true);
+INIT_GLOBAL_BLOB_MUTABLE_CHECKER(true, false);
+INIT_GLOBAL_BLOB_MUTABLE_CHECKER(true, true);
 
 }  // namespace oneflow
 

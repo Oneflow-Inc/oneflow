@@ -1,12 +1,30 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/improver.h"
-#include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/profiler.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/regst_lifetime_graph.h"
 #include "oneflow/core/graph/sharable_mem_block_graph.h"
@@ -508,11 +526,9 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
   int64_t mem_size = amd_.machine_amd(machine_id).zone_size(memory_zone_id);
-  const ResourceDesc* resource_desc = Global<ResourceDesc>::Get();
+  const ResourceDesc* resource_desc = Global<ResourceDesc, ForSession>::Get();
   if (memory_zone_id == resource_desc->GpuDeviceNum()) {
     mem_size -= resource_desc->reserved_host_mem_byte();
-    mem_size -=
-        Global<const IOConf>::Get()->persistence_buf_byte() * record_load_task_num_.at(machine_id);
   } else {
     mem_size -= resource_desc->reserved_device_mem_byte();
   }
@@ -524,7 +540,7 @@ int64_t Improver::GetMemoryZoneId(const MemoryCase& mem_case) const {
   if (mem_case.has_device_cuda_mem()) {
     return mem_case.device_cuda_mem().device_id();
   } else {
-    return Global<ResourceDesc>::Get()->GpuDeviceNum();
+    return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
   }
 }
 
@@ -541,7 +557,7 @@ void Improver::MakeMemZoneRegstDescs(const Plan& plan, MemZoneRegstDescs* mz2reg
   }
 }
 
-bool Improver::IsAnyZoneOutOfMemory(
+Maybe<void> Improver::CheckAllZoneNotOOM(
     const MemZoneRegstDescs& mz_regst_descs,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
@@ -553,14 +569,15 @@ bool Improver::IsAnyZoneOutOfMemory(
           CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii);
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
       if (calc >= available) {
-        LOG(INFO) << "OOM detected at compile time, machine_id: " << machine_id
-                  << ", mem_zone_id: " << mem_zone_id << ", calc: " << calc
-                  << ", available: " << available;
-        return true;
+        const auto* id_mgr = Global<IDMgr>::Get();
+        const char* device_tag = JUST(DeviceTag4DeviceType(
+            id_mgr->IsGpuMemZone(mem_zone_id) ? DeviceType::kGPU : DeviceType::kCPU));
+        return Error::MemoryZoneOutOfMemory(machine_id, mem_zone_id, calc, available, device_tag)
+               << "OOM detected at compile time. ";
       }
     }
   }
-  return false;
+  return Maybe<void>::Ok();
 }
 
 double Improver::CalcMaxRegstDescDuration(
@@ -579,31 +596,35 @@ double Improver::CalcMaxRegstDescDuration(
   return max_duration;
 }
 
-double Improver::BinarySearchII(
+Maybe<double> Improver::BinarySearchII(
     double base_ii,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
     const MemZoneRegstDescs& mz_regst_descs) const {
   double max_duration = CalcMaxRegstDescDuration(PathDurations4RegstDescId, mz_regst_descs);
-  CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId,
-                              max_duration));
+  JUST(CheckAllZoneNotOOM(mz_regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId,
+                          max_duration));
   const double ii_search_threshold = 1;
   double r = max_duration;
   double l = base_ii;
   double mid = base_ii;
   while ((r - l) > ii_search_threshold) {
     mid = (l + r) / 2;
-    if (IsAnyZoneOutOfMemory(mz_regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId,
-                             mid)) {
+    const auto& oom_status = TRY(CheckAllZoneNotOOM(mz_regst_descs, PathDurations4RegstDescId,
+                                                    PathIIScales4RegstDescId, mid));
+
+    if (oom_status.IsOk()) {
+      r = mid;
+    } else if (oom_status.error()->has_memory_zone_out_of_memory()) {
       l = mid;
     } else {
-      r = mid;
+      return oom_status.error();
     }
   }
   return r;
 }
 
-void Improver::ForEachImprovedRegstNum(
+Maybe<void> Improver::ForEachImprovedRegstNum(
     const Plan& plan, bool is_memory_limited, double ii,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
@@ -611,7 +632,8 @@ void Improver::ForEachImprovedRegstNum(
   if (is_memory_limited) {
     MemZoneRegstDescs mz_regst_descs;
     MakeMemZoneRegstDescs(plan, &mz_regst_descs);
-    ii = BinarySearchII(ii, PathDurations4RegstDescId, PathIIScales4RegstDescId, mz_regst_descs);
+    ii = JUST(
+        BinarySearchII(ii, PathDurations4RegstDescId, PathIIScales4RegstDescId, mz_regst_descs));
   }
   LOG(INFO) << "memory " << (is_memory_limited ? "limited" : "unlimited") << " ii: " << ii;
   for (const auto& task_proto : plan.task()) {
@@ -626,6 +648,7 @@ void Improver::ForEachImprovedRegstNum(
       Handler(pair.second.regst_desc_id(), regst_num);
     }
   }
+  return Maybe<void>::Ok();
 }
 
 void Improver::ForEachInferredMemBlockCriticalSection(
@@ -646,6 +669,10 @@ void Improver::ForEachInferredMemBlockCriticalSection(
               [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
                 int64_t lhs_order_in_graph = OrderInGraph4TaskId(lhs->producer_task_id());
                 int64_t rhs_order_in_graph = OrderInGraph4TaskId(rhs->producer_task_id());
+                if (lhs_order_in_graph == rhs_order_in_graph) {
+                  CHECK_NE(lhs->mem_block_offset(), rhs->mem_block_offset());
+                  return lhs->mem_block_offset() < rhs->mem_block_offset();
+                }
                 CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
                 return lhs_order_in_graph < rhs_order_in_graph;
               });
@@ -656,15 +683,10 @@ void Improver::ForEachInferredMemBlockCriticalSection(
 void Improver::Init(const AvailableMemDesc& amd, const Plan& naive_plan) {
   start_mem_block_id_ = Global<IDMgr>::Get()->NewMemBlockId();
   amd_ = amd;
-  record_load_task_num_.assign(Global<ResourceDesc>::Get()->TotalMachineNum(), 0);
-  for (const TaskProto& task_proto : naive_plan.task()) {
-    if (task_proto.task_type() == TaskType::kRecordLoad) {
-      record_load_task_num_.at(Global<IDMgr>::Get()->MachineId4ActorId(task_proto.task_id())) += 1;
-    }
-  }
 }
 
-Plan Improver::GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan) {
+Maybe<Plan> Improver::GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd,
+                                                const Plan& naive_plan) {
   Init(amd, naive_plan);
   Plan complete_plan = GenAndInferMemBlockId(naive_plan);
   // Check if there is any zone out of memory even though all register_num == 1
@@ -672,14 +694,14 @@ Plan Improver::GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan
   MakeMemZoneRegstDescs(complete_plan, &mz_regst_descs);
   HashMap<int64_t, double> zero2one{{0, 1}};
   auto Zero2One = [&](int64_t) -> const HashMap<int64_t, double>& { return zero2one; };
-  CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, Zero2One, Zero2One, 1));
+  JUST(CheckAllZoneNotOOM(mz_regst_descs, Zero2One, Zero2One, 1));
   SetUniqueMemBlockId4UnreusedMemRegst(&complete_plan);
   GenMemBlockAndChunk4Plan(&complete_plan);
   return complete_plan;
 }
 
-Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
-                       const std::string& act_event_filepath) {
+Maybe<Plan> Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
+                              const std::string& act_event_filepath) {
   Init(amd, naive_plan);
   std::list<std::unique_ptr<ActEvent>> act_events;
   ParseActEvents(act_event_filepath, &act_events);
@@ -694,8 +716,8 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&mem_unlimited_plan));
   Plan complete_plan = GenAndInferMemBlockId(mem_unlimited_plan);
   Plan plan(complete_plan);
-  ForEachImprovedRegstNum(complete_plan, true, base_ii, PathDurations4RegstDescId,
-                          PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan));
+  JUST(ForEachImprovedRegstNum(complete_plan, true, base_ii, PathDurations4RegstDescId,
+                               PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan)));
   FixReliantCtrlRegstNum(plan, MakeGetterGetPlanRegstNum(&plan), MakeSetterSetPlanRegstNum(&plan));
   SetUniqueMemBlockId4UnreusedMemRegst(&plan);
   GenMemBlockAndChunk4Plan(&plan);

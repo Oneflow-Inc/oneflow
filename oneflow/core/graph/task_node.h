@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 
@@ -173,9 +188,9 @@ struct IndependentThreadNum4TaskType final {
   std::function<size_t()> get_num_;
 };
 
-#define REGISTER_INDEPENDENT_THREAD_NUM(task_type, num)            \
+#define REGISTER_INDEPENDENT_THREAD_NUM(task_type, ...)            \
   REGISTER_CLASS_CREATOR(task_type, IndependentThreadNum4TaskType, \
-                         ([] { return new IndependentThreadNum4TaskType(num); }))
+                         ([] { return new IndependentThreadNum4TaskType(__VA_ARGS__); }))
 
 struct TickTockTaskType final {};
 

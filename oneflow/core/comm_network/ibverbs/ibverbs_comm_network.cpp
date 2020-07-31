@@ -1,6 +1,22 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
@@ -14,6 +30,10 @@ std::string GenTokensMsgKey(int64_t machine_id) {
 
 std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
   return "IBVerbsConnInfo/" + std::to_string(src_machine_id) + "/" + std::to_string(dst_machine_id);
+}
+
+void IBVForkInit() {
+  if (ibv_fork_init() != 0) { LOG(ERROR) << "ibv_fork_init failed"; }
 }
 
 }  // namespace
@@ -56,7 +76,7 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
 
 IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
     : CommNetIf(plan),
-      token2mem_desc_(Global<ResourceDesc>::Get()->TotalMachineNum()),
+      token2mem_desc_(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum()),
       poll_exit_flag_(ATOMIC_FLAG_INIT) {
   ibv_device** device_list = ibv_get_device_list(nullptr);
   PCHECK(device_list);
@@ -75,7 +95,7 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
   ibv_gid gid;
   CHECK_EQ(ibv_query_gid(context_, 1, 0, &gid), 0);
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
-  qp_vec_.assign(Global<ResourceDesc>::Get()->TotalMachineNum(), nullptr);
+  qp_vec_.assign(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
     IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, cq_, cq_);
     qp_vec_.at(peer_id) = cur_qp;
@@ -139,6 +159,8 @@ void IBVerbsCommNet::PollCQ() {
 }
 
 const int32_t IBVerbsCommNet::max_poll_wc_num_ = 32;
+
+COMMAND(IBVForkInit());
 
 }  // namespace oneflow
 

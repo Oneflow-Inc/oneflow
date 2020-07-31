@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_REGISTER_OFBLOB_H_
 #define ONEFLOW_CORE_REGISTER_OFBLOB_H_
 
@@ -20,9 +35,10 @@ class OfBlob final {
 
   int data_type() const { return blob_->data_type(); }
   size_t NumAxes() const { return blob_->shape().NumAxes(); }
-  size_t is_tensor_list() const { return blob_->blob_desc().is_tensor_list(); }
+  bool is_tensor_list() const { return blob_->blob_desc().is_tensor_list(); }
   bool is_dynamic() const { return blob_->blob_desc().is_dynamic(); }
   void CopyShapeTo(int64_t* ptr, int64_t num_axis) const;
+  void CopyStaticShapeTo(int64_t* ptr, int64_t num_axis) const;
   void CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const;
 
   int64_t TotalNumOfTensors() const;
@@ -68,6 +84,11 @@ inline void OfBlob::CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
 inline void OfBlob::CopyShapeTo(int64_t* ptr, int64_t num_axis) const {
   CHECK_EQ(num_axis, NumAxes());
   FOR_RANGE(int32_t, i, 0, num_axis) { ptr[i] = blob_->shape().At(i); }
+}
+
+inline void OfBlob::CopyStaticShapeTo(int64_t* ptr, int64_t num_axis) const {
+  CHECK_EQ(num_axis, NumAxes());
+  FOR_RANGE(int32_t, i, 0, num_axis) { ptr[i] = blob_->static_shape().At(i); }
 }
 
 inline int64_t OfBlob::TotalNumOfTensors() const { return blob_->total_num_of_tensors(); }

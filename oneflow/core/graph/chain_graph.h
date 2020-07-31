@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_GRAPH_CHAIN_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_CHAIN_GRAPH_H_
 
@@ -9,6 +24,7 @@ namespace oneflow {
 const int64_t BITSET_SIZE = 8 * 1024;
 
 class TaskNode;
+class TaskEdge;
 
 struct Chain {
   // nodes belong to this chain
@@ -72,9 +88,11 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
     return task_node2chain_node_.at(task_node);
   }
 
-  void GroupTaskNodesByMachineAndCollectAncestors(
-      const TaskGraph& task_gph, HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks,
-      HashMap<TaskNode*, HashSet<TaskNode*>>* node2ancestors) const;
+  void GroupTaskNodesByMachine(const TaskGraph& task_gph,
+                               HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks) const;
+  void CollectTaskNodeAncestors(const TaskGraph& task_gph,
+                                HashMap<TaskNode*, HashSet<TaskNode*>>* node2ancestors,
+                                HashSet<TaskEdge*>* ignore_edges) const;
   void MergeTaskNodes(const HashMap<int64_t, std::vector<TaskNode*>>& machine2tasks,
                       const HashMap<TaskNode*, HashSet<TaskNode*>>& node2ancestors,
                       std::vector<std::vector<TaskNode*>>* chains) const;

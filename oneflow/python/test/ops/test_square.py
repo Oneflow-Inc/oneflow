@@ -1,12 +1,30 @@
-import os
-import numpy as np
-import tensorflow as tf
-import oneflow as flow
-from collections import OrderedDict 
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
 
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+import os
+from collections import OrderedDict
+
+import numpy as np
+import oneflow as flow
+import tensorflow as tf
+import test_global_storage
 from test_util import GenArgList
-from test_util import GetSavePath
-from test_util import Save
+
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 
 
 def compare_with_tensorflow(device_type, x_shape):
@@ -17,9 +35,9 @@ def compare_with_tensorflow(device_type, x_shape):
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function(func_config)
+    @flow.global_function(func_config)
     def SquareJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
@@ -30,10 +48,10 @@ def compare_with_tensorflow(device_type, x_shape):
             loss = flow.math.square(x)
             flow.losses.add_loss(loss)
 
-            flow.watch(x, Save("x"))
-            flow.watch_diff(x, Save("x_diff"))
-            flow.watch(loss, Save("loss"))
-            flow.watch_diff(loss, Save("loss_diff"))
+            flow.watch(x, test_global_storage.Setter("x"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+            flow.watch(loss, test_global_storage.Setter("loss"))
+            flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
 
             return loss
 
@@ -43,14 +61,14 @@ def compare_with_tensorflow(device_type, x_shape):
     of_out = SquareJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
+        x = tf.Variable(test_global_storage.Get("x"))
         tf_out = tf.math.square(x)
-    loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
+    loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
 
 

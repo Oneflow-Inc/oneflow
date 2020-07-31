@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/xrt/passes/pass.h"
 
 #include <string>
@@ -35,9 +50,14 @@ void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
                         const std::string &blob_name, const std::string &fixed_blob_name) {
   auto *spec_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
   switch (op_conf->op_type_case()) {
-    case OperatorConf::kPrintConf: {
-      int index = GetRepeatedIndex(input);
-      *(op_conf->mutable_print_conf()->mutable_in(index)->mutable_lbn()) = fixed_blob_name;
+    case OperatorConf::kUserConf: {
+      std::pair<std::string, int32_t> pair = GetFieldNameAndIndex4StrVal(input);
+      auto it = op_conf->user_conf().input().find(pair.first);
+      CHECK(it != op_conf->user_conf().input().end());
+      CHECK(pair.second >= 0 && pair.second < it->second.s_size());
+      CHECK_EQ(it->second.s(pair.second), blob_name);
+      (*(op_conf->mutable_user_conf()->mutable_input()))[pair.first].set_s(pair.second,
+                                                                           fixed_blob_name);
       break;
     }
     default: ReplaceStrValInPbFdOrPbRpf(spec_conf, input, blob_name, fixed_blob_name);

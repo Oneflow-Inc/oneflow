@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/passes/cluster.h"
 #include "oneflow/xrt/passes/pass.h"
@@ -146,8 +161,8 @@ void MarkClusterIdPass::DumpClusterInfoToGraph(XrtGraph *graph) {
     for (const ClusterNode *folded_node : node->folded_nodes()) {
       int64_t unique_id = folded_node->xrt_node()->unique_id();
       XrtNode *xrt_node = graph->Node(unique_id);
-      xrt_node->SetAttr<XrtEngine>("engine", node->engine());
-      xrt_node->SetAttr<int64_t>("cluster_id", node->cluster_id());
+      xrt_node->Attr<XrtEngine>("engine", node->engine());
+      xrt_node->Attr<int64_t>("cluster_id", node->cluster_id());
     }
   }
 }

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include <gtest/gtest.h>
 #include <unordered_map>
 #include "oneflow/core/common/data_type.h"
@@ -93,6 +108,30 @@ TEST(PP_SEQ, for_each_tuple) {
 #undef MAKE_ENTRY
 #undef SEQ
   for (int i = 1; i <= 4; ++i) { ASSERT_EQ(i, identity[i]); }
+}
+
+TEST(PP_SEQ, outter_for_each_tuple) {
+#define SEQ ((1, 1))((2, 2))((3, 3))((4, 4))
+#define MAKE_ENTRY(x, y) {x, y},
+  std::unordered_map<int, int> identity = {OF_PP_OUTTER_FOR_EACH_TUPLE(MAKE_ENTRY, SEQ)};
+#undef MAKE_ENTRY
+#undef SEQ
+  for (int i = 1; i <= 4; ++i) { ASSERT_EQ(i, identity[i]); }
+}
+
+TEST(PP_SEQ, nested_for_each_tuple) {
+#define SEQ ((0))((1))((2))((3))
+#define MAKE_INNER(x) x,
+#define MAKE_OUTTER(x) {OF_PP_FOR_EACH_TUPLE(MAKE_INNER, SEQ)},
+  std::vector<std::vector<int>> table = {OF_PP_OUTTER_FOR_EACH_TUPLE(MAKE_OUTTER, SEQ)};
+#undef MAKE_OUTTER
+#undef MAKE_INNER
+#undef SEQ
+  ASSERT_EQ(table.size(), 4);
+  for (int i = 0; i < 4; ++i) {
+    ASSERT_EQ(table[i].size(), 4);
+    for (int j = 0; j < 4; ++j) { ASSERT_EQ(j, table[i][j]); }
+  }
 }
 
 TEST(PP_SEQ, seq_product_for_each) {

@@ -2,16 +2,78 @@
 
 XRT是一个同时支持多个计算引擎的运行时加速库，目前已经集成了TensorFlow XLA和Nvidia TensorRT两个后端引擎。其中XLA全面支持训练和预测，TensorRT支持预测以及部分算子支持训练。对于同一个计算图，XRT允许多个计算引擎联合使用，以获得更好的加速效果。
 
+不同的后端引擎支持不同的后端硬件，比如XLA支持CPU和Nvidia GPU，但TensorRT仅支持Nvidia GPU。
+
 对于任意后端引擎，XRT的执行过程均分成以下四个步骤：
 
 1. 计算图的转换
-2. 引擎无关优化
-3. 生成引擎相关Executable
-4. 执行Executable
+2. 划分计算子图
+3. 引擎无关优化
+4. 生成引擎相关Executable
+5. 执行Executable
 
-### 引擎无关优化
+### Build with XLA
 
-- 划分子图
+- #### Install Bazel
+
+  Download and install bazel from [here](https://docs.bazel.build/versions/1.0.0/bazel-overview.html) , and version 0.24.1 is recommended. You can confirm bazel is installed successfully by running the following command:
+
+  ```shell
+  bazel version
+  ```
+
+- #### Build Third Parties
+
+  Inside directory `build`, run:
+
+  ```shell
+  cmake -DWITH_XLA=ON -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release ..
+  make -j$(nproc)
+  ```
+
+  If the downloading error occurred, you should go back to the previous step to reinstall the cmake, then clean the file CMakeCache.txt and build the third-parties once again.
+
+- #### Build OneFlow
+
+  Inside directory `build`, run:
+  ```shell
+  cmake .. \
+  -DWITH_XLA=ON \
+  -DTHIRD_PARTY=OFF \
+  -DCMAKE_BUILD_TYPE=Release
+  
+  make -j$(nproc)
+  ```
+
+### Build with TensorRT
+
+- #### Build Third Parties
+
+  1. Download TensorRT(>=6.0) .tgz and unzip the package.
+  
+  2. Inside directory `build`, run:
+  
+  ```shell
+  cmake -DWITH_TENSORRT=ON -DTENSORRT_ROOT=your_tensorrt_path -DTHIRD_PARTY=ON ..
+  make -j$(nproc)
+  ```
+- #### Build OneFlow
+
+  Inside directory `build`, run:
+  ```shell
+  cmake .. \
+  -DWITH_TENSORRT=ON \
+  -DTENSORRT_ROOT=your_tensorrt_path \
+  -DTHIRD_PARTY=OFF
+
+  make -j$(nproc)
+  ```
+
+### 计算图的转换
+
+  将OneFlow Job转换成XRT的计算流图 (XrtGraph)，该计算流图经过一序列变换后，最终被编译成后端引擎相关的Executable。
+
+### 划分计算子图
 
   根据计算图中每个计算节点是否可编译、device、sbp policy等一系列属性，对节点进行聚合，被聚合的节点被新的节点（Launch节点）折叠后并在节点内进行子图重建，同时确定子图的后端执行引擎。
 
@@ -43,11 +105,13 @@ XRT是一个同时支持多个计算引擎的运行时加速库，目前已经�
 
     同时FLAGS_strict_clustering=true时会导致合并的子图变小，可能导致后端引擎丧失一些优化机会。FLAGS_strict_clustering默认设为true。
 
-- ...
+### 引擎无关优化
+
+暂未提供，后续可以加入一些图优化相关的pass。
 
 ### Executable的生成
 
-在runtime阶段，每个子图都可以被编译成一个与引擎相关的Executable。
+在runtime阶段，每个计算子图都可以被编译成一个与引擎相关的Executable。
 
 对于静态shape的子图，由于缓存机制，每个子图只需要在运行时编译一次。对于包含动态shape的子图，则可能每次运行时都需要编译一次，因此如果计算图中包含动态shape的节点，暂时不建议使用XRT。
 
@@ -86,13 +150,13 @@ OneFlow中XRT的使用默认是关闭的，可以通过前端的Python接口和�
   ```python
   import oneflow as flow
 
+  config = flow.function_config()
+
   # 配置使用XLA
-  # True开启XLA，False关闭XLA，默认为未定义状态
-  flow.config.use_xla_jit(True)
+  config.use_xla_jit()
 
   # 配置使用TensorRT
-  # True开启TensorRT，False关闭TensorRT，默认为未定义状态
-  flow.config.use_tensorrt(True)
+  config.use_tensorrt()
   ```
 
 - 从环境变量配置
@@ -101,6 +165,75 @@ OneFlow中XRT的使用默认是关闭的，可以通过前端的Python接口和�
   # 只在Python前端未定义状态下生效
   export FLAGS_use_xla_jit=true # true为开启，false为关闭
   export FLAGS_use_tensorrt=true # true为开启，false为关闭
+  ```
+
+- 低精度配置
+
+  ```python
+  # XLA自动混合精度(float16)
+  config.enable_auto_mixed_precision()
+
+  # TensorRT float16
+  config.tensorrt.use_fp16()
+
+  # TensorRT int8 (离线加载Calibration的方式)
+  config.tensorrt.use_int8()
+  # Set int8 calibration table path
+  int8_calibration_path = "./int8_calibration"
+  config.tensorrt.int8_calibration(int8_calibration_path)
+  ```
+
+#### 使用Int8量化计算
+
+XRT支持离线加载和在线生成量化校准表两种方式来启动Int8的量化计算。离线加载的方式需要提前生成一个TensorRT格式的量化校准表，而且该量化校准表通常可以被重复使用，而在线生成的方式则在同一份脚本中，同时进行正常精度的计算和量化校准表的生成，一旦校准表生成后，则会在下一个迭代中自动切换到Int8精度的计算。
+
+- 生成Int8量化校准表(Int8 Calibration Table)
+
+  首先你需要为生成量化校准表准备一个校准数据集，通常可以是训练集或验证集的一个子集。然后按照正常的网络配置，开启TensorRT Int8。比如：
+
+  ```python
+  import oneflow as flow
+
+  config = flow.function_config()
+
+  config.use_tensorrt()
+  config.tensorrt.use_int8()
+
+  @flow.function(config)
+  def Job(input):
+      # define your network
+      pass
+  ```
+  当开启Int8，但又没有指定对应的量化校准表时，XRT会自动进入量化表生成模式，之后feed的数据都会按照正常的精度（fp32或fp16）进行计算，计算的结果会被用于生成对应的Int8量化校准表。最后将生成的量化校准表保存到指定的目录，在该目录下，每一个子图都会生成一个对应的量化校准表文件。
+  
+  ```python
+  # 使用10个batch的数据生成Int8量化校准表
+  for _ in range(10):
+      input = next_calibration_batch() # 加载校准数据集
+      Job(input).get()
+
+  # 保存量化校准表
+  flow.tensorrt.write_int8_calibration("./int8_calibration") # int8_calibration目录需要手动创建
+  ```
+  当Int8量化校准表生成完成后，你就可以按照上面介绍的离线加载Calibration的方式启动TensorRT Int8的量化计算。
+
+- 在线生成量化校准表并进行int8计算
+
+  在线方式分成两个步骤，首先利用校准数据集生成量化校准表，然后直接利用生成的量化校准表进行Int8的构图和计算。同样以上面的Job为例，
+
+  ```python
+  # 使用10个batch的数据生成Int8量化校准表
+  for _ in range(10):
+    input = next_calibration_batch() # 加载校准数据集
+    Job(input).get()
+
+  # 缓存量化校准表
+  flow.tensorrt.cache_int8_calibration()
+
+  # 当量化校准表cache完成后，XRT会自动切换到int8的计算
+  for _ in range(100):
+    input = next_batch() # 加载数据
+    Job(input).get()
   ```
 
 ### BenchMark

@@ -1,9 +1,25 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_JOB_ID_MANAGER_H_
 #define ONEFLOW_CORE_JOB_ID_MANAGER_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -18,7 +34,6 @@ class IDMgr final {
   int64_t GetGpuD2HThrdId(int64_t dev_phy_id) const;
   int64_t GetGpuNcclThrdId(int64_t dev_phy_id) const;
   int64_t GetGpuMixThrdId(int64_t dev_phy_id) const;
-  int64_t GetGpuReduceCtrlThrdId(int64_t dev_phy_id) const;
   int64_t GetGpuMdUpdtThrdId(int64_t dev_phy_id) const;
   int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const;
   int64_t CommNetThrdId() const;
@@ -32,7 +47,9 @@ class IDMgr final {
   int64_t NewChunkId() { return chunk_id_count_++; }
 
   // MemZoneId
-  int64_t CpuMemZoneId() const { return Global<ResourceDesc>::Get()->GpuDeviceNum(); }
+  int64_t CpuMemZoneId() const { return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum(); }
+  bool IsCpuMemZone(int64_t mem_zone_id) const { return mem_zone_id == CpuMemZoneId(); }
+  bool IsGpuMemZone(int64_t mem_zone_id) const { return mem_zone_id < gpu_device_num_; }
   int64_t GpuMemZoneId(int64_t dev_phy_id) const { return dev_phy_id; }
   int64_t GetGpuPhyIdFromMemZoneId(int64_t mem_zone_id) const {
     CHECK_LT(mem_zone_id, gpu_device_num_);
@@ -66,6 +83,7 @@ class IDMgr final {
   int64_t GlobalWorkStreamId4ActorId(int64_t actor_id) const;
   int64_t GlobalWorkStreamId4TaskId(int64_t task_id) const;
   int64_t AllocateChainId(int64_t global_work_stream_id);
+  int64_t PickCpuThrdIdEvenly(int64_t machine_id);
 
  private:
   friend class Global<IDMgr>;
@@ -81,6 +99,7 @@ class IDMgr final {
   HashMap<int64_t, int64_t> machine_thrd_id2stream_id_cnt_;
   HashMap<int64_t, int64_t> stream_id2chain_cnt_;
   int64_t base_independent_thrd_id_;
+  HashMap<int64_t, int64_t> machine_id2num_cpu_thrd_id_picked_;
 
   //  64 bit id design:
   //   sign | machine | thread | local_work_stream | task

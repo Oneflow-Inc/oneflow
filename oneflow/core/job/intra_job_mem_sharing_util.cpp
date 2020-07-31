@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/str_util.h"
@@ -55,6 +70,7 @@ void GenRegstDescId2RegstDesc(Plan* plan,
 struct MemoryChain {
   std::vector<TaskProto*> sorted_tasks;
   HashSet<RegstDescProto*> mem_reused_regsts;
+  int64_t total_mem_reused_size = 0;
 };
 
 void InitMemoryChains(Plan* plan,
@@ -79,6 +95,7 @@ void InitMemoryChains(Plan* plan,
           && regst_desc->regst_desc_type().has_data_regst_desc()
           && Shape(regst_desc->regst_desc_type().data_regst_desc().time_shape()) == meta_shape) {
         CHECK(mem_chain->mem_reused_regsts.insert(regst_desc).second);
+        mem_chain->total_mem_reused_size += RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
       }
     }
   }
@@ -105,6 +122,9 @@ void InitMemoryChains(Plan* plan,
 bool TryMergeMemChain2MergedChains(
     std::vector<MemoryChain*>* merged_chains, MemoryChain* mem_chain,
     const std::function<bool(const MemoryChain*, const MemoryChain*)>& IsStrictOrderL2R) {
+  std::sort(merged_chains->begin(), merged_chains->end(), [&](MemoryChain* lhs, MemoryChain* rhs) {
+    return lhs->total_mem_reused_size > rhs->total_mem_reused_size;
+  });
   for (MemoryChain* merged_chain : *merged_chains) {
     if (IsStrictOrderL2R(merged_chain, mem_chain)) {
       merged_chain->sorted_tasks.insert(merged_chain->sorted_tasks.end(),
@@ -112,6 +132,7 @@ bool TryMergeMemChain2MergedChains(
                                         mem_chain->sorted_tasks.end());
       merged_chain->mem_reused_regsts.insert(mem_chain->mem_reused_regsts.begin(),
                                              mem_chain->mem_reused_regsts.end());
+      merged_chain->total_mem_reused_size += mem_chain->total_mem_reused_size;
       return true;
     }
   }
