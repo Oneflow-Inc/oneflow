@@ -14,13 +14,26 @@ OneFlow API Reference
     oneflow
     env
     config
-    train
+    optimizer
     losses
     math
     nn
     layers
     data
     distribute
+    advanced 
+    tensorrt 
+    deprecated  
+    experimental 
+    scope 
+    placement 
+    sysconfig 
+    onnx   
+    random 
+    system 
+    regularizers  
+    image
+    train
 
 
 Indices and tables
