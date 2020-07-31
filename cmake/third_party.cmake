@@ -125,6 +125,7 @@ set(oneflow_third_party_dependencies
   grpc_copy_headers_to_destination
   grpc_copy_libs_to_destination
   opencv_copy_headers_to_destination
+  libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
   eigen
   cocoapi_copy_headers_to_destination
@@ -145,6 +146,7 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${GRPC_INCLUDE_DIR}
     ${LIBJPEG_INCLUDE_DIR}
     ${OPENCV_INCLUDE_DIR}
+    ${LIBPNG_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
