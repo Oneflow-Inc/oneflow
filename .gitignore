@@ -15,5 +15,6 @@ core.*
 /.idea
 /manylinux*
 wheelhouse/
+wheelhouse*
 .DS_Store
 /tmp_wheel

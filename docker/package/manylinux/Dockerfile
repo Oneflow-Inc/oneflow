@@ -1,4 +1,5 @@
-FROM nvidia/cuda:10.2-cudnn7-devel-centos7
+ARG from
+FROM ${from}
 LABEL maintainer="OneFlow Maintainers"
 
 # manylinux2014

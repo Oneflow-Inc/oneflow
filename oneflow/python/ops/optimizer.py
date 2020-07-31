@@ -123,8 +123,8 @@ class LrScheduler:
 class CosineScheduler(LrScheduler):
     def __init__(
         self,
-        steps: int,
         base_lr: float,
+        steps: int,
         alpha: float = 0.0,
         warmup: Optional[WarmupConf] = None,
     ):
@@ -228,11 +228,12 @@ class PolynomialSchduler(LrScheduler):
         return learning_rate_decay_conf
 
 
-class LinearConsineScheduler(LrScheduler):
+@oneflow_export("optimizer.LinearCosineScheduler")
+class LinearCosineScheduler(LrScheduler):
     def __init__(
         self,
-        steps: int,
         base_lr: float,
+        steps: int,
         num_periods: float = 0.5,
         alpha: float = 0.0,
         beta: float = 0.001,
@@ -254,11 +255,12 @@ class LinearConsineScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
+@oneflow_export("optimizer.ExponentialScheduler")
 class ExponentialScheduler(LrScheduler):
     def __init__(
         self,
-        steps: int,
         base_lr: float,
+        steps: int,
         decay_rate: float,
         staircase=False,
         warmup: Optional[WarmupConf] = None,
@@ -277,11 +279,12 @@ class ExponentialScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
+@oneflow_export("optimizer.InverseTimeScheduler")
 class InverseTimeScheduler(LrScheduler):
     def __init__(
         self,
-        steps: int,
         base_lr: float,
+        steps: int,
         decay_rate: float,
         staircase: bool = False,
         warmup: Optional[WarmupConf] = None,
@@ -300,11 +303,12 @@ class InverseTimeScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
+@oneflow_export("optimizer.NaturalExpScheduler")
 class NaturalExpScheduler(LrScheduler):
     def __init__(
         self,
-        steps: int,
         base_lr: float,
+        steps: int,
         decay_rate: float,
         staircase: bool = False,
         warmup: Optional[WarmupConf] = None,
@@ -353,7 +357,9 @@ class Optimizer:
         self._SetSpecificFieldsInTrainConf(train_conf)
         return train_conf
 
-    def minimize(self, loss: Union[Sequence[Text], Text]) -> None:
+    def minimize(
+        self, loss: Union[Sequence[remote_blob_util.BlobDef], remote_blob_util.BlobDef]
+    ) -> None:
         if not isinstance(loss, collections.abc.Sequence):
             loss = [loss]
         c_api_util.CurJobBuildAndInferCtx_SetTrainConf(self.train_conf)
@@ -437,9 +443,9 @@ class AdamW(Optimizer):
         self.epsilon = epsilon
         self.do_bias_correction = do_bias_correction
         self.weight_decay = weight_decay
-        if not isinstance(weight_decay_includes, collections.abc.Sequence):
+        if isinstance(weight_decay_includes, str):
             weight_decay_includes = [weight_decay_includes]
-        if not isinstance(weight_decay_excludes, collections.abc.Sequence):
+        if isinstance(weight_decay_excludes, str):
             weight_decay_excludes = [weight_decay_excludes]
         self.weight_decay_includes = weight_decay_includes
         self.weight_decay_excludes = weight_decay_excludes
@@ -453,7 +459,7 @@ class AdamW(Optimizer):
         )
         if self.weight_decay is not None:
             train_conf.model_update_conf.weight_decay_conf.weight_decay_rate = (
-                weight_decay
+                self.weight_decay
             )
             assert not (
                 self.weight_decay_excludes is not None
@@ -463,7 +469,7 @@ class AdamW(Optimizer):
                 train_conf.model_update_conf.weight_decay_conf.includes.pattern.extend(
                     self.weight_decay_includes
                 )
-            else:
+            elif self.weight_decay_excludes is not None:
                 train_conf.model_update_conf.weight_decay_conf.excludes.pattern.extend(
                     self.weight_decay_excludes
                 )

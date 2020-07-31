@@ -64,6 +64,7 @@ class JobBuildAndInferCtx {
 
   const Job& job() const;
   Maybe<void> CheckJob() const;
+  std::string GetJobStructureGraphJson(const std::string& job_name) const;
 
   virtual Maybe<void> Complete() = 0;
 

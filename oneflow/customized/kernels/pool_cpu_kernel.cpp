@@ -22,6 +22,17 @@ namespace oneflow {
 
 namespace {
 
+struct PoolOpKernelState final : public user_op::OpKernelState {
+  Params3D params_3d;
+  bool is_dynamic;
+  PoolOpKernelState(Params3D params_3d, bool is_dynamic)
+      : params_3d(params_3d), is_dynamic(is_dynamic) {}
+  const Params3D& GetParams3D() { return params_3d; }
+  void Update(const ShapeView& x_shape) {
+    if (is_dynamic) { params_3d.Reset(x_shape); }
+  }
+};
+
 template<typename T>
 struct PoolCpuKernelUtil {
  public:
@@ -230,16 +241,16 @@ struct PoolCpuKernelUtil {
   static void AvgFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    // TODO: tsai: reset op kernel state when is_dynamic if ready
-    const OpKernelStateWrapper<Params3D>* params_3d =
-        dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
-    CHECK(params_3d != nullptr);
+    auto* pool_state = dynamic_cast<PoolOpKernelState*>(state);
+    CHECK(pool_state != nullptr);
+    pool_state->Update(x->shape());
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
-      CFirstForward(params_3d->Get(), x, y, GetZeroVal<T>, [](const T& lhs, T& rhs) { rhs += lhs; },
+      CFirstForward(pool_state->GetParams3D(), x, y, GetZeroVal<T>,
+                    [](const T& lhs, T& rhs) { rhs += lhs; },
                     [](const int64_t size, T& out) { out /= size; });
     } else if (data_format == "channels_last") {
-      CLastForward(params_3d->Get(), x, y, GetZeroVal<T>,
+      CLastForward(pool_state->GetParams3D(), x, y, GetZeroVal<T>,
                    [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
                       EigenMatrixMap<T>& out_mat) { out_mat.col(out_col) += in_mat.col(in_col); },
                    [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {
@@ -255,17 +266,16 @@ struct PoolCpuKernelUtil {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    // TODO: tsai: reset op kernel state when is_dynamic if ready
-    const OpKernelStateWrapper<Params3D>* params_3d =
-        dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
-    CHECK(params_3d != nullptr);
+    auto* pool_state = dynamic_cast<PoolOpKernelState*>(state);
+    CHECK(pool_state != nullptr);
+    pool_state->Update(x->shape());
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
-      CFirstBackward(params_3d->Get(), dy, y, x, dx,
+      CFirstBackward(pool_state->GetParams3D(), dy, y, x, dx,
                      [](const T& in, const T& out, const T& out_diff, const int64_t size,
                         T& in_diff) { in_diff += (out_diff / static_cast<T>(size)); });
     } else if (data_format == "channels_last") {
-      CLastBackward(params_3d->Get(), dy, y, x, dx,
+      CLastBackward(pool_state->GetParams3D(), dy, y, x, dx,
                     [](const int64_t out_col, const int64_t in_col, const int64_t size,
                        ConstEigenArrayMap<T>& out_arr, ConstEigenArrayMap<T>& in_arr,
                        ConstEigenArrayMap<T>& out_diff_arr, EigenArrayMap<T>& in_diff_arr) {
@@ -279,19 +289,18 @@ struct PoolCpuKernelUtil {
   static void MaxFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    // TODO: tsai: reset op kernel state when is_dynamic if ready
-    const OpKernelStateWrapper<Params3D>* params_3d =
-        dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
-    CHECK(params_3d != nullptr);
+    auto* pool_state = dynamic_cast<PoolOpKernelState*>(state);
+    CHECK(pool_state != nullptr);
+    pool_state->Update(x->shape());
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
-      CFirstForward(params_3d->Get(), x, y, GetMinVal<T>,
+      CFirstForward(pool_state->GetParams3D(), x, y, GetMinVal<T>,
                     [](const T& lhs, T& rhs) {
                       if (lhs > rhs) { rhs = lhs; }
                     },
                     [](const int64_t size, T& out) {});
     } else if (data_format == "channels_last") {
-      CLastForward(params_3d->Get(), x, y, GetMinVal<T>,
+      CLastForward(pool_state->GetParams3D(), x, y, GetMinVal<T>,
                    [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
                       EigenMatrixMap<T>& out_mat) {
                      out_mat.col(out_col) = out_mat.col(out_col).cwiseMax(in_mat.col(in_col));
@@ -307,20 +316,19 @@ struct PoolCpuKernelUtil {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    // TODO: tsai: reset op kernel state when is_dynamic if ready
-    const OpKernelStateWrapper<Params3D>* params_3d =
-        dynamic_cast<OpKernelStateWrapper<Params3D>*>(state);
-    CHECK(params_3d != nullptr);
+    auto* pool_state = dynamic_cast<PoolOpKernelState*>(state);
+    CHECK(pool_state != nullptr);
+    pool_state->Update(x->shape());
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
       CFirstBackward(
-          params_3d->Get(), dy, y, x, dx,
+          pool_state->GetParams3D(), dy, y, x, dx,
           [](const T& in, const T& out, const T& out_diff, const int64_t size, T& in_diff) {
             if (in == out) { in_diff += out_diff; }
           });
     } else if (data_format == "channels_last") {
       CLastBackward(
-          params_3d->Get(), dy, y, x, dx,
+          pool_state->GetParams3D(), dy, y, x, dx,
           [](const int64_t out_col, const int64_t in_col, const int64_t size,
              ConstEigenArrayMap<T>& out_arr, ConstEigenArrayMap<T>& in_arr,
              ConstEigenArrayMap<T>& out_diff_arr, EigenArrayMap<T>& in_diff_arr) {
@@ -339,10 +347,16 @@ std::shared_ptr<user_op::OpKernelState> DoCreateOpKernelState(user_op::KernelIni
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const std::string& data_format = ctx->Attr<std::string>("data_format");
   const std::string& padding = ctx->Attr<std::string>("padding");
+  const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
+  const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
   const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
   const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
-  return std::make_shared<OpKernelStateWrapper<Params3D>>(dim, x_shape, data_format, padding,
-                                                          pool_size, strides);
+  const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
+  bool is_dynamic = ctx->TensorDesc4ArgNameAndIndex("x", 0)->is_dynamic();
+  Params3D params_3d = Params3D(dim, x_shape, data_format, padding, padding_before, padding_after,
+                                pool_size, strides, ceil_mode);
+  std::shared_ptr<PoolOpKernelState> state(new PoolOpKernelState(params_3d, is_dynamic));
+  return std::move(state);
 }
 
 }  // namespace
