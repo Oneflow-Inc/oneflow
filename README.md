@@ -31,25 +31,19 @@
   - To install latest release of OneFlow with CUDA support:
 
     ```
-    python3 -m pip install oneflow_cu102 --user
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu102 --user
     ```
 
   - To install OneFlow with legacy CUDA support, run one of:
     ```
-    python3 -m pip install oneflow_cu101
-    python3 -m pip install oneflow_cu100
-    python3 -m pip install oneflow_cu92
-    python3 -m pip install oneflow_cu91
-    python3 -m pip install oneflow_cu90
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu101 --user
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu100 --user
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu92 --user
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu91 --user
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu90 --user
     ```
 
   - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver to version 440.33 or above and install `oneflow_cu102` if possible. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
-
-  - To install nightly release of OneFlow:
-
-    ```
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu102 --user
-    ```
 
   - CPU-only OneFlow is not available for now.
 
@@ -124,7 +118,7 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 1. Clone the demo code from OneFlow documentation
 ```
 git clone https://github.com/Oneflow-Inc/oneflow-documentation.git
-cd oneflow-documentation/cn/docs/code/quick_start/ 
+cd oneflow-documentation/cn/docs/code/quick_start/
 ```
 2. Run it in Python
 ```
