@@ -1,4 +1,4 @@
-**OneFlow is a performance-centered platform for machine learning.**
+**OneFlow is an open-source performance-centered platform for machine learning.**
 
 - [Install OneFlow](#install-oneflow)
   - [System requirements](#system-requirements)
@@ -8,9 +8,12 @@
   - [Advanced features](#advanced-features)
 - [Getting Started](#getting-started)
 - [Documentation](#documentation)
-- [Resources](#resources)
-  - [Model Zoo](#model-zoo)
-  - [Benchmark](#benchmark)
+  - [Usage & Design Docs](#usage--design-docs)
+  - [API Reference](#api-reference)
+- [Model Zoo and Benchmark](#model-zoo-and-benchmark)
+  - [CNNs(ResNet-50, VGG-16, Inception-V3, AlexNet)](#cnnsresnet-50-vgg-16-inception-v3-alexnet)
+  - [Wide&Deep](#widedeep)
+  - [BERT](#bert)
 - [Communication](#communication)
 - [Contributing](#contributing)
 - [The Team](#the-team)
@@ -139,21 +142,30 @@ python mlp_mnist.py
 More info on this demo, please refer to [Documentation on quick start](http://docs.oneflow.org/quick_start/quickstart_in_3_min.html).
 
 ## Documentation
+### Usage & Design Docs 
 http://docs.oneflow.org/
+### API Reference
+https://oneflow-api.readthedocs.io/en/latest/
 
-## Resources
-### Model Zoo & Benchmark
+## Model Zoo and Benchmark
 https://github.com/Oneflow-Inc/OneFlow-Benchmark
+### CNNs(ResNet-50, VGG-16, Inception-V3, AlexNet)
+* [CNNs](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/of_develop_py3/Classification/cnns)
+
+### Wide&Deep
+* [OneFlow-WDL](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/of_develop_py3/ClickThroughRate/WideDeepLearning)
+### BERT
+* [Bert](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/of_develop_py3/LanguageModeling/BERT)
 
 ## Communication
 * Github issues : any install, bug, feature issues.
-* oneflow.org : brand related information.
+* www.oneflow.org : brand related information.
 
 ## Contributing
 http://docs.oneflow.org/contribute/intro.html
 
 ## The Team
-OneFlow was originally developed by [OneFlow Inc](www.oneflow.org) and [Zhejiang Lab](http://www.zhejianglab.com/).
+OneFlow was originally developed by [OneFlow Inc](http://www.oneflow.org) and [Zhejiang Lab](http://www.zhejianglab.com/).
 
 ## License
 [Apache License 2.0](LICENSE)
