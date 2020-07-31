@@ -71,6 +71,7 @@
 
     ```
     git clone https://github.com/Oneflow-Inc/oneflow
+    cd oneflow
     git submodule update --init --recursive
     ```
 
