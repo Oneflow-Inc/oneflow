@@ -1060,6 +1060,8 @@ def random_mask_like(
     if noise_shape is not None:
         assert 0, "noise_shape will be supported later."
         assert isinstance(noise_shape, (list, tuple))
+    if seed is not None:
+        assert name is not None
     if name is None:
         mask_op = (
             flow.user_op_builder(id_util.UniqueStr("RandomMaskLike_"))
@@ -1089,7 +1091,8 @@ class RandomMaskLike(module_util.Module):
             seed = random.randint(-sys.maxsize, sys.maxsize)
 
         self.op_module_builder = (
-            flow.user_op_module_builder("random_mask_like")
+            flow.user_op_module_builder(name)
+            .Op("random_mask_like")
             .InputSize("like", 1)
             .Output("out")
             .Attr("rate", float(rate))
@@ -1138,11 +1141,15 @@ def dropout(
     assert rate is not None and rate >= 0.0 and rate < 1.0
     if not flow.current_global_function_desc().IsTrainable() or rate == 0.0:
         return x
-    mask = random_mask_like(x, rate, seed, noise_shape)
+    if seed is not None:
+        assert name is not None
+    if name is None:
+        name = id_util.UniqueStr("Dropout_")
+    mask = random_mask_like(
+        x, rate, seed, noise_shape, "%s-dropout_random_mask_like" % name
+    )
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Dropout_")
-        )
+        flow.user_op_builder(name)
         .Op("dropout")
         .Input("in", [x])
         .Input("mask", [mask])
