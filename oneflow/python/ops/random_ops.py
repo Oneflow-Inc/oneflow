@@ -34,7 +34,8 @@ def Bernoulli(
     assert isinstance(name, str)
     if dtype is None:
         dtype = x.dtype
-
+    if seed is not None:
+        assert name is not None
     module = flow.find_or_create_module(
         name, lambda: BernoulliModule(dtype=dtype, random_seed=seed, name=name),
     )

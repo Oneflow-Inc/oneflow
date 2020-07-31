@@ -77,6 +77,7 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(0),
             )
+            x = flow.cast_to_current_logical_view(x)
             x = x + updates_blob
             y = flow.scatter_nd(indices_blob, x, shape)
             flow.losses.add_loss(y)
@@ -269,6 +270,10 @@ def _of_tensor_scatter_nd_add(
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(0),
             )
+            params_var = flow.cast_to_current_logical_view(params_var)
+            params_blob = flow.cast_to_current_logical_view(params_blob)
+            updates_blob = flow.cast_to_current_logical_view(updates_blob)
+            updates_var = flow.cast_to_current_logical_view(updates_var)
             params_var = params_var + params_blob
             updates_var = updates_var + updates_blob
             out = flow.tensor_scatter_nd_add(params_var, indices_blob, updates_var)

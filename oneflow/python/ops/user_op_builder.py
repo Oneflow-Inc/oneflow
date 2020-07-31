@@ -306,11 +306,11 @@ For instance:
 
 
 @oneflow_export("user_op_module_builder")
-def api_user_op_module_builder(op_type_name):
+def api_user_op_module_builder(op_name):
     api = enable_if.unique(
         [lazy_user_op_module_builder, eager_logical_user_op_module_builder]
     )
-    return api(op_type_name)
+    return api(op_name)
 
 
 class UserOpModuleBuilder(UserOpConfBuilder):
@@ -324,15 +324,15 @@ class UserOpModuleBuilder(UserOpConfBuilder):
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def lazy_user_op_module_builder(op_type_name):
+def lazy_user_op_module_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpModuleBuilder(job_name, op_type_name, LazyUserOpModule)
+    return UserOpModuleBuilder(job_name, op_name, LazyUserOpModule)
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
-def eager_logical_user_op_module_builder(op_type_name):
+def eager_logical_user_op_module_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpModuleBuilder(job_name, op_type_name, EagerLogicalUserOpModule)
+    return UserOpModuleBuilder(job_name, op_name, EagerLogicalUserOpModule)
 
 
 class LazyUserOpModule(UserOpModule, UserOp):
