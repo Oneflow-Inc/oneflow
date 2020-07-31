@@ -1,13 +1,29 @@
-# Oneflow
+**OneFlow is a performance-centered platform for machine learning.**
 
-### Install OneFlow
+- [Install OneFlow](#install-oneflow)
+  - [System requirements](#system-requirements)
+  - [Install with Pip package](#install-with-pip-package)
+  - [Build from source](#build-from-source)
+  - [Troubleshooting](#troubleshooting)
+  - [Advanced features](#advanced-features)
+- [Getting Started](#getting-started)
+- [Documentation](#documentation)
+- [Resources](#resources)
+  - [Model Zoo](#model-zoo)
+  - [Benchmark](#benchmark)
+- [Communication](#communication)
+- [Contributing](#contributing)
+- [The Team](#the-team)
+- [License](#license)
 
-  #### System Requirements to Run OneFlow
+## Install OneFlow
+
+  ### System requirements
 
   - Python >= 3.5
   - Nvidia Linux x86_64 driver version >= 440.33
 
-  #### Install Pip package
+  ### Install with Pip package
 
   - To install latest release of OneFlow with CUDA support:
 
@@ -36,7 +52,7 @@
 
   - Releases are built with G++/GCC 4.8.5, cuDNN 7 and MKL 2020.0-088.
 
-### Build OneFlow from Source
+### Build from source
 
 1. #### System Requirements to Build OneFlow
 
@@ -93,8 +109,53 @@
 
 Please refer to [troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling and running OneFlow.
 
-### Advanced Features
+### Advanced features
 
 - #### XRT
 
   You can check this [doc](oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
+
+## Getting Started
+3 minites to run MNIST
+1. Clone the demo code from OneFlow documentation
+```
+git clone https://github.com/Oneflow-Inc/oneflow-documentation.git
+cd oneflow-documentation/cn/docs/code/quick_start/ 
+```
+2. Run it in Python
+```
+python mlp_mnist.py
+```
+
+3. Then oneflow is running and you got the training loss
+```
+2.7290366
+0.81281316
+0.50629824
+0.35949975
+0.35245502
+...
+```
+More info on this demo, please refer to [Documentation on quick start](http://docs.oneflow.org/quick_start/quickstart_in_3_min.html).
+
+## Documentation
+http://docs.oneflow.org/
+
+## Resources
+### Model Zoo
+
+### Benchmark
+https://github.com/Oneflow-Inc/OneFlow-Benchmark
+
+## Communication
+* Github issues : any install, bug, feature issues.
+* oneflow.org : brand related information.
+
+## Contributing
+http://docs.oneflow.org/contribute/intro.html
+
+## The Team
+OneFlow was originally developed by OneFlow Inc and Zhejiang Lab.
+
+## License
+[Apache License 2.0](LICENSE)
