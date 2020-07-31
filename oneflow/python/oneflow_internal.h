@@ -95,6 +95,11 @@ std::string GetSerializedJobSet(std::string* error_str) {
   return oneflow::GetSerializedJobSet().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
+std::string GetSerializedStructureGraph(std::string* error_str) {
+  return oneflow::GetSerializedStructureGraph().GetDataAndSerializedErrorProto(error_str,
+                                                                               std::string(""));
+}
+
 std::string GetFunctionConfigDef(std::string* error_str) {
   return oneflow::GetFunctionConfigDef().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
