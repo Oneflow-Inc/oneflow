@@ -207,10 +207,10 @@ def conv2d(
     Args:
         input (remote_blob_util.BlobDef): A `Blob` of rank at least 4.[batch_num, height, width, channel] 
         filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape `[filter_height, filter_width, in_channels, out_channels]`
-        strides (Union[int, Sequence[int]]): An int or list of `ints` that has length `1`, `2` or `4`. The stride of the sliding window for each dimension of `input`. 
+        strides (Union[int, IntPair]): An int or list of `ints` that has length `1`, `2` or `4`. The stride of the sliding window for each dimension of `input`. 
         padding (str): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
-        data_format (str, optional): `"NHWC" or "NCHW"`. Defaults to `"NHWC"`.
-        dilations (Optional[Union[int, Sequence[int]]], optional):  The dilation factor for each dimension of`input`. Defaults to None.
+        data_format (str, optional): `"NHWC" or "NCHW"`. Defaults to `"NCHW"`.
+        dilations (Optional[Union[int, IntPair]], optional):  The dilation factor for each dimension of`input`. Defaults to None.
         groups (int, optional): int value greater than 0. Defaults to 1.
         name (Optional[str], optional): This operator's name. Defaults to None.
 
@@ -321,7 +321,7 @@ def batch_normalization(
         offset (remote_blob_util.BlobDef): An 1D offset `Blob`, often denoted  in equations, or None. If present, will be added to the normalized `Blob`.
         scale (remote_blob_util.BlobDef): A 1D scale `Blob`, often denoted  in equations, or None. If present, the scale is applied to the normalized `Blob`.
         variance_epsilon (float):   A small float number to avoid dividing by 0.
-        axis (int, optional): 1 for '`NCHW'` data format. Defaults to -1.
+        axis (int, optional): 1 for '`NCHW'` data format. Defaults to 1.
         name (Optional[str], optional): This operator's name.
 
     Returns:
@@ -371,7 +371,7 @@ def tf_conv2d(
         filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape `[filter_height, filter_width, in_channels, out_channels]`
         strides (Union[int, Sequence[int]]): An int or list of `ints` that has length `1`, `2` or `4`. The stride of the sliding window for each dimension of `input`. 
         padding (str): `"SAME"` or `"VALID"` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
-        data_format (str, optional): `"NHWC"` or `"NCHW"`. Defaults to `"NHWC"`.
+        data_format (str, optional): `"NHWC"` or `"NCHW"`. Defaults to `"NCHW"`.
         dilations (Optional[Union[int, Sequence[int]]], optional): The dilation factor for each dimension of`input`. Defaults to None.
         groups (int, optional): int value greater than 0. Defaults to 1.
         name (Optional[str], optional): This operator's name. Defaults to None.
@@ -533,7 +533,7 @@ def max_pool2d(
         ksize (Union[int, IntPair]): An int or list of ints that has length 1, 2. The size of the window for each dimension of the input `Blob`.
         strides (Union[int, IntPair]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input `Blob`.
         padding (str): '`VALID'` or '`SAME' or '`SAME_LOWER' or '`SAME_UPPER' or Tuple[IntPair, IntPair, IntPair, IntPair]`. The padding algorithm. 
-        data_format (str, optional): '`NHWC'`, '`NCHW'` or '`NCHW_VECT_C'`. Defaults to "NHWC".
+        data_format (str, optional): '`NHWC'`, '`NCHW'` or '`NCHW_VECT_C'`. Defaults to "NCHW".
         name (Optional[str], optional): This operator's name(optional).. Defaults to None.
 
     Returns:
@@ -582,7 +582,7 @@ def avg_pool2d(
         ksize (Union[int, IntPair]):  An int or list of ints that has length 1, 2. The size of the window for each dimension of the input `Blob`.
         strides (Union[int, IntPair]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input `Blob`.
         padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER'` or Tuple[IntPair, IntPair, IntPair, IntPair]. The padding algorithm.
-        data_format (str, optional): '`NHWC'` or '`NCHW'`. Defaults to "NHWC".
+        data_format (str, optional): '`NHWC'` or '`NCHW'`. Defaults to "NCHW".
         name (Optional[str], optional):  This operator's name(optional). Defaults to None.
 
     Returns:
@@ -630,8 +630,8 @@ def max_pool3d(
         input (remote_blob_util.BlobDef):  A 5-D `Blob` of the format specified by data_format.
         ksize (Union[int, Sequence[int]]):  An int or list of ints that has length 1, 3 or 5. The size of the window for each dimension of the input `Blob`.
         strides (Union[int, Sequence[int]]): An int or list of ints that has length 1, 3 or 5. The stride of the sliding window for each dimension of the input `Blob`.
-        padding (str): '`VALID'` or '`SAME'`. The padding algorithm
-        data_format (str, optional):   "NDHWC" or "NCDHW". Defaults to "NDHWC".
+        padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER or Sequence[Sequence[int]]'`. 
+        data_format (str, optional):   "NDHWC" or "NCDHW". Defaults to "NCDHW".
         name (Optional[str], optional): This operator's name(optional).
 
     Returns:
@@ -679,8 +679,8 @@ def avg_pool3d(
         input (remote_blob_util.BlobDef): A 5-D `Blob` of shape [batch, height, width, channels].
         ksize (Union[int, Sequence[int]]): An int or list of ints that has length 1, 3 or 5. The size of the window for each dimension of the input `Blob`.
         strides (Union[int, Sequence[int]]): An int or list of ints that has length 1, 3 or 5. The stride of the sliding window for each dimension of the input `Blob`.
-        padding (str): '`VALID'` or '`SAME'`. 
-        data_format (str, optional):  '`NDHWC'` or '`NCDHW'`. Defaults to "NDHWC".
+        padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER or Sequence[Sequence[int]]'`. 
+        data_format (str, optional):  '`NDHWC'` or '`NCDHW'`. Defaults to "NCDHW".
         name (Optional[str], optional):  This operator's name(optional).Defaults to None.
 
     Returns:
@@ -1139,7 +1139,7 @@ def deconv2d(
         output_shape (Optional[remote_blob_util.BlobDef], optional): A 1-D `Blob` representing the output shape of the deconvolution op. Defaults to None.
         strides (Optional[Union[int, Sequence[int]]], optional): `int` or `int list`. Defaults to None.
         padding (str, optional):  `'VALID'` or `'SAME'`. Defaults to "VALID".
-        data_format (str, optional): `'NHWC'` or `'NCHW'`. Defaults to "NHWC".
+        data_format (str, optional): `'NHWC'` or `'NCHW'`. Defaults to "NCHW".
         name (Optional[str], optional): This operator's name(optional). Defaults to None.
         input (Optional[remote_blob_util.BlobDef], optional): Alias for value. Defaults to None.
         filters (Optional[remote_blob_util.BlobDef], optional): Alias for filter. Defaults to None.
