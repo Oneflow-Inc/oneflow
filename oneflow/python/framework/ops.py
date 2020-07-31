@@ -1,28 +1,50 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
+import oneflow.core.common.data_type_pb2 as data_type_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.common.data_type_pb2 as data_type_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-
+import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.hob as hob
+import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow
+from typing import Union, Optional
 
 
-@oneflow_export('repeat')
-def repeat(
-        input,
-        repeat_num,
-        name=None):
+@oneflow_export("repeat")
+def api_repeat(
+    input: remote_blob_util.BlobDef, repeat_num: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    func = enable_if.unique([repeat])
+    return func(input, repeat_num, name=name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def repeat(input, repeat_num, name=None):
+    assert not oneflow.eager_execution_enabled()
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Repeat_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Repeat_"),
     )
-    setattr(op_conf.repeat_conf, "in", input.logical_blob_name)
+    setattr(op_conf.repeat_conf, "in", input.unique_name)
     op_conf.repeat_conf.out = "out"
     op_conf.repeat_conf.repeat_num = repeat_num
     compile_context.CurJobAddOp(op_conf)
@@ -32,18 +54,22 @@ def repeat(
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export('acc')
-def acc(
-        one,
-        max_acc_num,
-        name=None):
+@oneflow_export("acc")
+def api_acc(
+    one: remote_blob_util.BlobDef, max_acc_num: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    func = enable_if.unique([acc])
+    return func(one, max_acc_num, name=name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def acc(one, max_acc_num, name=None):
+    assert not oneflow.eager_execution_enabled()
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Acc_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Acc_"),
     )
-    op_conf.acc_conf.one = one.logical_blob_name
+    op_conf.acc_conf.one = one.unique_name
     op_conf.acc_conf.acc = "acc"
     op_conf.acc_conf.max_acc_num = max_acc_num
     compile_context.CurJobAddOp(op_conf)
@@ -53,18 +79,22 @@ def acc(
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export('unpack')
-def unpack(
-        input,
-        unpack_num,
-        name=None):
+@oneflow_export("unpack")
+def api_unpack(
+    input: remote_blob_util.BlobDef, unpack_num: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    func = enable_if.unique([unpack])
+    return func(input, unpack_num, name=name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def unpack(input, unpack_num, name=None):
+    assert not oneflow.eager_execution_enabled()
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Unpack_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Unpack_"),
     )
-    setattr(op_conf.unpack_conf, "in", input.logical_blob_name)
+    setattr(op_conf.unpack_conf, "in", input.unique_name)
     op_conf.unpack_conf.out = "out"
     op_conf.unpack_conf.unpack_num = unpack_num
     compile_context.CurJobAddOp(op_conf)
@@ -74,18 +104,22 @@ def unpack(
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export('pack')
-def pack(
-        input,
-        pack_num,
-        name=None):
+@oneflow_export("pack")
+def api_pack(
+    input: remote_blob_util.BlobDef, pack_num: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    func = enable_if.unique([pack])
+    return func(input, pack_num, name=name)
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def pack(input, pack_num, name=None):
+    assert not oneflow.eager_execution_enabled()
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("Pack_"),
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Pack_"),
     )
-    setattr(op_conf.pack_conf, "in", input.logical_blob_name)
+    setattr(op_conf.pack_conf, "in", input.unique_name)
     op_conf.pack_conf.out = "out"
     op_conf.pack_conf.pack_num = pack_num
     compile_context.CurJobAddOp(op_conf)
@@ -95,10 +129,22 @@ def pack(
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export('parallel_cast')
-def parallel_cast(
-        input,
-        name=None, distribute=None, gradient_distribute=None):
+@oneflow_export("parallel_cast")
+def api_parallel_cast(
+    input: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+    distribute: Optional[distribute_util.Distribute] = None,
+    gradient_distribute: Optional[distribute_util.Distribute] = None,
+) -> remote_blob_util.BlobDef:
+    func = enable_if.unique([parallel_cast])
+    return func(
+        input, name=name, distribute=distribute, gradient_distribute=gradient_distribute
+    )
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
+    assert not oneflow.eager_execution_enabled()
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -106,7 +152,7 @@ def parallel_cast(
         name if name is not None else id_util.UniqueStr("ParallelCast_"),
     )
     op_conf.parallel_cast_conf.out = "out"
-    setattr(op_conf.parallel_cast_conf, "in", input.logical_blob_name)
+    setattr(op_conf.parallel_cast_conf, "in", input.unique_name)
 
     def to_split_axis(dist):
         split_axis = data_type_util.OptInt64()
@@ -121,7 +167,9 @@ def parallel_cast(
     if distribute is not None:
         op_conf.parallel_cast_conf.split_axis.CopyFrom(to_split_axis(distribute))
     if gradient_distribute is not None:
-        op_conf.parallel_cast_conf.gradient_split_axis.CopyFrom(to_split_axis(gradient_distribute))
+        op_conf.parallel_cast_conf.gradient_split_axis.CopyFrom(
+            to_split_axis(gradient_distribute)
+        )
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name

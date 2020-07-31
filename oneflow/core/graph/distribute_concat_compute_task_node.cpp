@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/graph/distribute_concat_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
@@ -54,7 +69,11 @@ void DistributeConcatCompTaskNode::BuildOutRegst() {
       cur_node->BindBnWithRegst(obn, out_regst);
     }
   });
-  out_regst->set_hint_inplace_consumed_regst_desc_id(GetSoleConsumedRegst("in")->regst_desc_id());
+  // NOTE: we can ONLY set inplace when regst has ONLY ONE blob
+  auto in_regst = GetSoleConsumedRegst("in");
+  if (in_regst->NumOfLbi() == 1) {
+    out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
+  }
 }
 
 void DistributeConcatCompTaskNode::InferProducedDataRegstTimeShape() {

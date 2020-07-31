@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CXT_MGR_H_
 #define ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CXT_MGR_H_
 
@@ -13,25 +28,59 @@ namespace oneflow {
 class JobBuildAndInferCtxMgr {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtxMgr);
-  ~JobBuildAndInferCtxMgr() = default;
+  virtual ~JobBuildAndInferCtxMgr() = default;
 
   Maybe<void> OpenJobBuildAndInferCtx(const std::string& job_name);
   Maybe<JobBuildAndInferCtx*> FindJobBuildAndInferCtx(const std::string& job_name);
   Maybe<std::string> GetCurrentJobName() const;
-  void CloseCurrentJobBuildAndInferCtx();
+  Maybe<void> CloseCurrentJobBuildAndInferCtx();
   Maybe<void> AddLbiAndDiffWatcherUuidPair(const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) const;
 
   const JobSet& job_set() const { return job_set_; }
+  std::string structure_graph() const;
+
+ protected:
+  virtual JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const = 0;
+  JobBuildAndInferCtxMgr() : has_cur_job_(false) {}
+  virtual void VirtualCloseJob() = 0;
+  JobSet* mut_job_set() { return &job_set_; }
+
+  void clear_job_name2infer_ctx() { job_name2infer_ctx_.clear(); }
 
  private:
-  JobBuildAndInferCtxMgr() : has_cur_job_(false) {}
-  friend class Global<JobBuildAndInferCtxMgr>;
-
   JobSet job_set_;
   bool has_cur_job_;
   std::string cur_job_name_;
   HashMap<std::string, std::unique_ptr<JobBuildAndInferCtx>> job_name2infer_ctx_;
 };
+
+class LazyJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LazyJobBuildAndInferCtxMgr);
+  LazyJobBuildAndInferCtxMgr() : JobBuildAndInferCtxMgr() {}
+  ~LazyJobBuildAndInferCtxMgr() override = default;
+
+ private:
+  friend class Global<LazyJobBuildAndInferCtxMgr>;
+
+  void VirtualCloseJob() override {}
+  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
+};
+
+class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EagerJobBuildAndInferCtxMgr);
+  EagerJobBuildAndInferCtxMgr() : JobBuildAndInferCtxMgr() {}
+  ~EagerJobBuildAndInferCtxMgr() override = default;
+
+ private:
+  friend class Global<EagerJobBuildAndInferCtxMgr>;
+
+  void VirtualCloseJob() override;
+  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
+};
+
+bool EagerExecutionEnabled();
 
 }  // namespace oneflow
 

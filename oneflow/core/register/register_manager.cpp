@@ -1,10 +1,27 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
 
@@ -123,7 +140,7 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
     regst->packed_blob_.reset(
         new Blob(regst->regst_desc()->mem_case(), packed_blob_desc, main_mem_ptr));
     cur_header_pointer = main_mem_ptr;
-    if (main_mem_ptr == nullptr) {
+    if (main_mem_ptr == nullptr || packed_blob_desc->is_body_disabled()) {
       cur_body_pointer = nullptr;
     } else {
       cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
@@ -142,20 +159,10 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
           blob_ptr = std::move(std::make_unique<Blob>(regst->regst_desc()->mem_case(), blob_desc,
                                                       cur_header_pointer + header_offset,
                                                       cur_body_pointer + body_offset));
-          InitOFRecordBlobIfNeed(blob_ptr.get());
+          InitNonPODTypeBlobIfNeed(Global<MemoryAllocator>::Get(), blob_ptr.get());
         }
         CHECK(regst->lbi2blob_.emplace(lbi.lbi(), std::move(blob_ptr)).second);
       });
-}
-
-void RegstMgr::InitOFRecordBlobIfNeed(Blob* blob_ptr) {
-  const RtBlobDesc& blob_desc = blob_ptr->blob_desc();
-  if (blob_desc.data_type() == kOFRecord) {
-    int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
-    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
-      Global<MemoryAllocator>::Get()->PlacementNew(&blob_ptr->mut_dptr<OFRecord>()[idx]);
-    }
-  }
 }
 
 const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const {

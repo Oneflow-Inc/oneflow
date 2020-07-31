@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/xrt/tensorrt/trt_graph_compiler.h"
 #include "oneflow/xrt/node_util.h"
 #include "oneflow/xrt/tensorrt/ops/op_kernel.h"
@@ -22,6 +37,7 @@ void TrtGraphCompiler::SetupKernelContextParam(const XrtNode *node,
                                                TrtOpContext::Param *context_param) {
   util::Map<Argument, TrtValue> input_ops;
   util::Map<std::string /* produce/consume key */, Argument> input_output_args;
+  std::vector<std::string> output_names;
   for (const XrtEdge *edge : node->in_edges()) {
     if (!edge->IsControlEdge()) {
       const Argument &arg = edge->argument();
@@ -37,6 +53,7 @@ void TrtGraphCompiler::SetupKernelContextParam(const XrtNode *node,
       const Argument &arg = edge->argument();
       const std::string &k = arg.meta_data().produce_key;
       input_output_args.emplace(k, arg);
+      output_names.push_back(k);
     }
   }
 
@@ -47,6 +64,7 @@ void TrtGraphCompiler::SetupKernelContextParam(const XrtNode *node,
   context_param->message = OpMessage(node);
   context_param->arguments = std::move(input_output_args);
   context_param->inputs = std::move(input_ops);
+  context_param->output_names = std::move(output_names);
   context_param->num_outputs = num_outputs;
 }
 
@@ -78,9 +96,9 @@ std::shared_ptr<Executable> TrtGraphCompiler::Compile(
     builder_->MarkOutput(value.handle());
   }
 
-  // return std::make_shared<TrtExecutable>(builder_->BuildCudaEngine());
-  return std::make_shared<TrtExecutable>(builder_->ReleaseBuilder(), builder_->ReleaseNetwork(),
-                                         builder_->host_weights());
+  // return std::make_shared<TrtExecutable>(builder_->name(), builder_->BuildCudaEngine());
+  return std::make_shared<TrtExecutable>(builder_->name(), builder_->ReleaseBuilder(),
+                                         builder_->ReleaseNetwork(), builder_->host_weights());
 }
 
 REGISTER_GRAPH_COMPILER(XrtEngine::TENSORRT, TrtGraphCompiler);

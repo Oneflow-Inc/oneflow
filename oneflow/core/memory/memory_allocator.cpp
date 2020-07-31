@@ -1,9 +1,73 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/register/blob.h"
+#include "oneflow/core/common/tensor_buffer.h"
+#include "oneflow/core/record/record.pb.h"
 
 namespace oneflow {
+
+void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
+  void* ptr = nullptr;
+  if (mem_case.has_host_mem()) {
+    if (mem_case.host_mem().has_cuda_pinned_mem()) {
+      if (Global<ResourceDesc, ForSession>::Get()->enable_numa_aware_cuda_malloc_host()) {
+        NumaAwareCudaMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &ptr, size);
+      } else {
+        CudaCheck(cudaMallocHost(&ptr, size));
+      }
+    } else {
+      ptr = malloc(size);
+      CHECK_NOTNULL(ptr);
+    }
+  } else if (mem_case.has_device_cuda_mem()) {
+    CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
+    CudaCheck(cudaMalloc(&ptr, size));
+  } else {
+    UNIMPLEMENTED();
+  }
+  return ptr;
+}
+
+void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
+  if (mem_case.has_host_mem()) {
+    if (mem_case.host_mem().has_cuda_pinned_mem()) {
+      CudaCheck(cudaFreeHost(ptr));
+    } else {
+      free(ptr);
+    }
+  } else if (mem_case.has_device_cuda_mem()) {
+    CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
+    CudaCheck(cudaFree(ptr));
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+void* MemoryAllocatorImpl::AllocateUnPinnedHostMem(size_t size) {
+  void* ptr = malloc(size);
+  CHECK_NOTNULL(ptr);
+  return ptr;
+}
+
+void MemoryAllocatorImpl::DeallocateUnPinnedHostMem(void* ptr) { free(ptr); }
 
 MemoryAllocator::~MemoryAllocator() {
   for (std::function<void()> deleter : deleters_) { deleter(); }
@@ -11,22 +75,11 @@ MemoryAllocator::~MemoryAllocator() {
 
 char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   const int memset_val = 0;
-  char* dptr = nullptr;
+  char* dptr = static_cast<char*>(MemoryAllocatorImpl::Allocate(mem_case, size));
   if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().has_cuda_pinned_mem()) {
-      if (Global<ResourceDesc>::Get()->enable_numa_aware_cuda_malloc_host()) {
-        NumaAwareCudaMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &dptr, size);
-      } else {
-        CudaCheck(cudaMallocHost(&dptr, size));
-      }
-    } else {
-      dptr = reinterpret_cast<char*>(malloc(size));
-      CHECK_NOTNULL(dptr);
-    }
     memset(dptr, memset_val, size);
   } else if (mem_case.has_device_cuda_mem()) {
     CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
-    CudaCheck(cudaMalloc(&dptr, size));
     CudaCheck(cudaMemset(dptr, memset_val, size));
   } else {
     UNIMPLEMENTED();
@@ -36,17 +89,22 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
 }
 
 void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
-  if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().has_cuda_pinned_mem()) {
-      CudaCheck(cudaFreeHost(dptr));
-    } else {
-      free(dptr);
+  MemoryAllocatorImpl::Deallocate(static_cast<void*>(dptr), mem_case);
+}
+
+void InitNonPODTypeBlobIfNeed(MemoryAllocator* allocator, Blob* blob_ptr) {
+  const RtBlobDesc& blob_desc = blob_ptr->blob_desc();
+  if (blob_desc.data_type() == kOFRecord) {
+    int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
+    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
+      allocator->PlacementNew(&blob_ptr->mut_dptr<OFRecord>()[idx]);
     }
-  } else if (mem_case.has_device_cuda_mem()) {
-    CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
-    CudaCheck(cudaFree(dptr));
-  } else {
-    UNIMPLEMENTED();
+  }
+  if (blob_desc.data_type() == kTensorBuffer) {
+    int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
+    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
+      allocator->PlacementNew(&blob_ptr->mut_dptr<TensorBuffer>()[idx]);
+    }
   }
 }
 

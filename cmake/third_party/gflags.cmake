@@ -5,7 +5,7 @@ set(GFLAGS_LIBRARY_DIR ${THIRD_PARTY_DIR}/gflags/lib)
 
 set(gflags_HEADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include)
 set(gflags_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/lib)
-set(gflags_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/gflags/src/gflags)
+set(gflags_URL ${THIRD_PARTY_SUBMODULE_DIR}/gflags/src/gflags)
 
 if(WIN32)
     set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR}/${CMAKE_BUILD_TYPE})
@@ -23,11 +23,17 @@ foreach(LIBRARY_NAME ${GFLAGS_LIBRARY_NAMES})
     list(APPEND GFLAGS_BUILD_STATIC_LIBRARIES ${GFLAGS_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
+set (GFLAGS_PUBLIC_H
+  ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include/gflags/config.h
+  ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include/gflags/gflags_completions.h
+  ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include/gflags/gflags_declare.h
+  ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include/gflags/gflags.h
+)
+
 if (THIRD_PARTY)
 
-# TODO: investigate if these three lines are necessary
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_DEBUG} -fPIC")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE} -fPIC")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fPIC")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
 ExternalProject_Add(gflags
@@ -44,14 +50,17 @@ ExternalProject_Add(gflags
         -DGFLAGS_NAMESPACE:STRING=gflags
 )
 
-
 add_custom_target(gflags_create_header_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${GFLAGS_INCLUDE_DIR}
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${GFLAGS_INCLUDE_DIR}/gflags
   DEPENDS gflags)
 
 add_custom_target(gflags_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${gflags_HEADERS_DIR} ${GFLAGS_INCLUDE_DIR}
     DEPENDS gflags_create_header_dir)
+
+foreach(header_file ${GFLAGS_PUBLIC_H})
+  add_custom_command(TARGET gflags_copy_headers_to_destination PRE_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header_file} ${GFLAGS_INCLUDE_DIR}/gflags)
+endforeach()
 
 add_custom_target(gflags_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GFLAGS_LIBRARY_DIR}

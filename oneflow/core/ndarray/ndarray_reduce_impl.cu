@@ -1,9 +1,45 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include <cub/cub.cuh>
 #include "oneflow/core/ndarray/ndarray_reduce_impl.h"
 #include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/permutation_iterator.h"
+
+namespace cub {
+struct Prod {
+  template<typename T>
+  __host__ __device__ __forceinline__ T operator()(const T& a, const T& b) const {
+    return a * b;
+  }
+};
+struct Any {
+  template<typename T>
+  __host__ __device__ __forceinline__ T operator()(const T& a, const T& b) const {
+    return a || b;
+  }
+};
+struct All {
+  template<typename T>
+  __host__ __device__ __forceinline__ T operator()(const T& a, const T& b) const {
+    return a && b;
+  }
+};
+}  // namespace cub
 
 namespace oneflow {
 

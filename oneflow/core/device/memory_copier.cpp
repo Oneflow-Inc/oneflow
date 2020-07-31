@@ -1,5 +1,21 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
 
@@ -27,7 +43,61 @@ void CheckMemoryCopyNdDesc(const MemoryCopyNdDesc& desc) {
   CheckPosExtent(num_axes, desc.src_shape, desc.src_pos, desc.extent);
 }
 
+template<typename T>
+MemoryCopyNdDesc GetDescInBytes(const MemoryCopyNdDesc& desc) {
+  MemoryCopyNdDesc desc_in_bytes;
+  DimVector dst_shape_vec;
+  DimVector src_shape_vec;
+  DimVector dst_pos_vec;
+  DimVector src_pos_vec;
+  DimVector extent_vec;
+  FOR_RANGE(int64_t, i, 0, MemoryCopyNdDescGetNumAxes(desc)) {
+    if (i == (MemoryCopyNdDescGetNumAxes(desc) - 1)) {
+      const int64_t size_of_data_type = sizeof(T);
+      dst_shape_vec.push_back(desc.dst_shape.At(i) * size_of_data_type);
+      src_shape_vec.push_back(desc.src_shape.At(i) * size_of_data_type);
+      dst_pos_vec.push_back(desc.dst_pos.At(i) * size_of_data_type);
+      src_pos_vec.push_back(desc.src_pos.At(i) * size_of_data_type);
+      extent_vec.push_back(desc.extent.At(i) * size_of_data_type);
+    } else {
+      dst_shape_vec.push_back(desc.dst_shape.At(i));
+      src_shape_vec.push_back(desc.src_shape.At(i));
+      dst_pos_vec.push_back(desc.dst_pos.At(i));
+      src_pos_vec.push_back(desc.src_pos.At(i));
+      extent_vec.push_back(desc.extent.At(i));
+    }
+  }
+  desc_in_bytes.dst_shape = Shape(dst_shape_vec);
+  desc_in_bytes.src_shape = Shape(src_shape_vec);
+  desc_in_bytes.dst_pos = NdIndex(dst_pos_vec);
+  desc_in_bytes.src_pos = NdIndex(src_pos_vec);
+  desc_in_bytes.extent = Shape(extent_vec);
+  return desc_in_bytes;
+}
+
 }  // namespace
+
+template<int32_t NDIMS>
+void CopyNDCpuImpl(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc) {
+  NdIndexOffsetHelper<int64_t, NDIMS> src_helper(desc.src_shape.dim_vec().data());
+  NdIndexOffsetHelper<int64_t, NDIMS> dst_helper(desc.dst_shape.dim_vec().data());
+  NdIndexOffsetHelper<int64_t, NDIMS> copy_helper(desc.extent.dim_vec().data());
+  FOR_RANGE(int64_t, i, 0, desc.extent.elem_cnt()) {
+    int64_t copy_idx[NDIMS];
+    int64_t src_idx[NDIMS];
+    int64_t dst_idx[NDIMS];
+    copy_helper.OffsetToNdIndex(i, copy_idx);
+    FOR_RANGE(int64_t, j, 0, NDIMS) {
+      src_idx[j] = desc.src_pos.At(j) + copy_idx[j];
+      dst_idx[j] = desc.dst_pos.At(j) + copy_idx[j];
+    }
+    const int64_t src_offset = src_helper.NdIndexToOffset(src_idx);
+    const int64_t dst_offset = dst_helper.NdIndexToOffset(dst_idx);
+    unsigned char* dst_ptr = reinterpret_cast<unsigned char*>(dst) + dst_offset;
+    const unsigned char* src_ptr = reinterpret_cast<const unsigned char*>(src) + src_offset;
+    *dst_ptr = *src_ptr;
+  }
+}
 
 MemoryCopyNdDesc MemoryCopyNdDesc::CreateDimReducedDesc() const {
   MemoryCopyNdDesc reduced;
@@ -83,6 +153,13 @@ void MemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
   }
 }
 
+template<typename T>
+void MemoryCopier::CopyElem(DeviceCtx* ctx, void* dst, const void* src,
+                            const MemoryCopyNdDesc& desc) const {
+  MemoryCopyNdDesc desc_in_bytes = GetDescInBytes<T>(desc);
+  Copy(ctx, dst, src, desc_in_bytes);
+}
+
 void MemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
                           size_t src_pitch, size_t width, size_t height) const {
   unsigned char* dst_ptr = (unsigned char*)dst;
@@ -121,6 +198,20 @@ void HostMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t
   memcpy(dst, src, count);
 }
 
+void HostMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
+                              const MemoryCopyNdDesc& desc) const {
+  const int32_t num_axes = desc.src_shape.NumAxes();
+  if (num_axes == 4) {
+    CopyNDCpuImpl<4>(ctx, dst, src, desc);
+  } else if (num_axes == 5) {
+    CopyNDCpuImpl<5>(ctx, dst, src, desc);
+  } else if (num_axes == 6) {
+    CopyNDCpuImpl<6>(ctx, dst, src, desc);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 #ifdef WITH_CUDA
 
 void CudaAsyncMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const {
@@ -149,7 +240,16 @@ void CudaAsyncMemoryCopier::Copy3D(DeviceCtx* ctx, void* dst, const void* src,
 
 void CudaAsyncMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
                                    const MemoryCopyNdDesc& desc) const {
-  UNIMPLEMENTED();
+  const int32_t num_axes = desc.src_shape.NumAxes();
+  if (num_axes == 4) {
+    CopyNDGpuImpl<4>(ctx, dst, src, desc);
+  } else if (num_axes == 5) {
+    CopyNDGpuImpl<5>(ctx, dst, src, desc);
+  } else if (num_axes == 6) {
+    CopyNDGpuImpl<6>(ctx, dst, src, desc);
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kCPU, []() { return new HostMemoryCopier(); });
@@ -167,5 +267,22 @@ MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type) {
 }
 
 #endif
+
+#define SPECIALIZE_COPY_ELEM(dtype)                                                        \
+  template void MemoryCopier::CopyElem<dtype>(DeviceCtx * ctx, void* dst, const void* src, \
+                                              const MemoryCopyNdDesc& desc) const;
+SPECIALIZE_COPY_ELEM(float16)
+SPECIALIZE_COPY_ELEM(float)
+SPECIALIZE_COPY_ELEM(double)
+SPECIALIZE_COPY_ELEM(int32_t)
+SPECIALIZE_COPY_ELEM(int64_t)
+SPECIALIZE_COPY_ELEM(int8_t)
+
+#define SPECIALIZE_COPY_ND_CPU_IMPL(NDIMS)                                        \
+  template void CopyNDCpuImpl<NDIMS>(DeviceCtx * ctx, void* dst, const void* src, \
+                                     const MemoryCopyNdDesc& desc);
+SPECIALIZE_COPY_ND_CPU_IMPL(4)
+SPECIALIZE_COPY_ND_CPU_IMPL(5)
+SPECIALIZE_COPY_ND_CPU_IMPL(6)
 
 }  // namespace oneflow

@@ -11,3 +11,7 @@ message BlobDescProto {
   required bool is_dynamic = 5;
   required bool header_is_opaque = 6;
 }
+
+message BlobDescSignature {
+  map<string, BlobDescProto> bn_in_op2blob_desc = 1;
+}

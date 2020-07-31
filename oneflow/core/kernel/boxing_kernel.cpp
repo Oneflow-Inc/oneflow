@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/boxing_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/operator/op_conf_util.h"
@@ -59,8 +74,9 @@ class DataContentDesc final {
 
   int64_t TotalElemNum() const { return seg_num_ * elem_sum_.back(); }
 
-  std::tuple<int64_t, char*> CalcContinuousElemNumStartFrom(int64_t idx) const {
-    std::tuple<int64_t, char*> ret(0, nullptr);
+  template<typename DptrT, DptrT* (*GetDptrT)(Blob*)>
+  std::tuple<int64_t, DptrT*> CalcContinuousElemNumStartFrom(int64_t idx) const {
+    std::tuple<int64_t, DptrT*> ret(0, nullptr);
     int64_t seg_idx = idx / elem_sum_.back();
     int64_t idx_in_seg = idx % elem_sum_.back();
     auto elem_sum_it = std::upper_bound(elem_sum_.begin(), elem_sum_.end(), idx_in_seg);
@@ -70,7 +86,7 @@ class DataContentDesc final {
     int64_t idx_in_blob = idx_in_seg;
     if (bn_idx > 0) { idx_in_blob -= elem_sum_[bn_idx - 1]; }
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx));
-    std::get<1>(ret) = blob->mut_dptr<char>()
+    std::get<1>(ret) = GetDptrT(blob)
                        + (seg_idx * blob->static_shape().Count(axis_) + idx_in_blob)
                              * GetSizeOfDataType(blob->data_type());
     return ret;
@@ -84,6 +100,9 @@ class DataContentDesc final {
   int32_t axis_;
 };
 
+static const char* GetConstDptr(Blob* blob) { return blob->dptr<char>(); }
+static char* GetMutDptr(Blob* blob) { return blob->mut_dptr<char>(); }
+
 void ConcatSplitPartDataContent(DeviceCtx* ctx, const DataContentDesc& in_desc,
                                 const DataContentDesc& out_desc, int32_t part_id,
                                 int32_t part_num) {
@@ -92,19 +111,22 @@ void ConcatSplitPartDataContent(DeviceCtx* ctx, const DataContentDesc& in_desc,
   Range range = bs.At(part_id);
   int64_t in_idx = range.begin();
   int64_t in_elem_num = 0;
-  char* in_ptr = nullptr;
+  const char* in_ptr = nullptr;
   int64_t out_idx = range.begin();
   int64_t out_elem_num = 0;
   char* out_ptr = nullptr;
+
   while (in_elem_num > 0 || out_elem_num > 0 || in_idx < range.end() || out_idx < range.end()) {
     if (in_elem_num == 0) {
-      std::tie(in_elem_num, in_ptr) = in_desc.CalcContinuousElemNumStartFrom(in_idx);
+      std::tie(in_elem_num, in_ptr) =
+          in_desc.CalcContinuousElemNumStartFrom<const char, GetConstDptr>(in_idx);
       in_elem_num = std::min(in_elem_num, range.end() - in_idx);
       if (in_elem_num == 0) { break; }
       in_idx += in_elem_num;
     }
     if (out_elem_num == 0) {
-      std::tie(out_elem_num, out_ptr) = out_desc.CalcContinuousElemNumStartFrom(out_idx);
+      std::tie(out_elem_num, out_ptr) =
+          out_desc.CalcContinuousElemNumStartFrom<char, GetMutDptr>(out_idx);
       out_elem_num = std::min(out_elem_num, range.end() - out_idx);
       if (out_elem_num == 0) { break; }
       out_idx += out_elem_num;
@@ -132,15 +154,14 @@ void ConcatSplitDataContent(DeviceCtx* ctx, std::function<Blob*(const std::strin
   CHECK_EQ(in_desc.OneElemSize(), out_desc.OneElemSize());
   static const size_t min_byte_one_part = 128;
   int32_t part_num = in_desc.TotalElemNum() * in_desc.OneElemSize() / min_byte_one_part;
-  part_num = std::min(part_num, Global<ThreadMgr>::Get()->compute_thread_pool()->thread_num());
+  part_num = std::min(part_num, Global<ThreadPool>::Get()->thread_num());
   if (part_num >= 2) {
     BlockingCounter bc(part_num);
     FOR_RANGE(int32_t, part_id, 0, part_num) {
-      Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork(
-          [&ctx, &in_desc, &out_desc, part_id, &part_num, &bc]() {
-            ConcatSplitPartDataContent(ctx, in_desc, out_desc, part_id, part_num);
-            bc.Decrease();
-          });
+      Global<ThreadPool>::Get()->AddWork([&ctx, &in_desc, &out_desc, part_id, &part_num, &bc]() {
+        ConcatSplitPartDataContent(ctx, in_desc, out_desc, part_id, part_num);
+        bc.Decrease();
+      });
     }
     bc.WaitUntilCntEqualZero();
   } else {

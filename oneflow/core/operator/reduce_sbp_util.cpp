@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/reduce_sbp_util.h"
 
 namespace oneflow {
@@ -18,11 +33,7 @@ std::function<bool(int32_t)> ReduceSbpUtil::MakePredicatorIsReducedAxis(const Pb
 std::function<bool(int32_t)> ReduceSbpUtil::MakePredicatorIsReducedAxis(
     const HashSet<int32_t>& axes, int32_t num_axes) {
   auto axis_set = std::make_shared<HashSet<int32_t>>(axes);
-  if (axis_set->empty()) {
-    return [](int32_t axis) { return true; };
-  } else {
-    return [axis_set](int32_t axis) -> bool { return axis_set->find(axis) != axis_set->end(); };
-  }
+  return [axis_set](int32_t axis) -> bool { return axis_set->find(axis) != axis_set->end(); };
 }
 
 }  // namespace oneflow

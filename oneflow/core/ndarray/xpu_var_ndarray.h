@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_NDARRAY_XPU_VAR_NDARRAY_H_
 #define ONEFLOW_CORE_NDARRAY_XPU_VAR_NDARRAY_H_
 
@@ -20,6 +35,8 @@ class XpuVarNdarray final : public XpuNdarrayBase<XpuVarNdarray<T>, T> {
       : shape_(blob->shape(), ndims_left_extend_to), ptr_(blob->mut_dptr<T>()) {}
   XpuVarNdarray(const Shape& shape, T* ptr) : shape_(shape), ptr_(ptr) {}
   XpuVarNdarray(const ShapeView& shape, T* ptr) : shape_(shape), ptr_(ptr) {}
+  XpuVarNdarray(const ShapeView& shape, T* ptr, int ndims_left_extend_to)
+      : shape_(shape, ndims_left_extend_to), ptr_(ptr) {}
   ~XpuVarNdarray() = default;
   OF_DEVICE_FUNC ALWAYS_INLINE XpuVarNdarray(const XpuVarNdarray&) = default;
   OF_DEVICE_FUNC ALWAYS_INLINE XpuVarNdarray(const XpuShape& shape, T* ptr)

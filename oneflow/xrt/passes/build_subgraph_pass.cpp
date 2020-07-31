@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include <fstream>
 #include <iostream>
 
@@ -81,7 +96,7 @@ void BuildSubGraphPass::Run(XrtGraph *graph, const XrtPassOptions &options) {
     XrtNode *launch_node = launch_nodes[cluster_id];
     XrtGraph *sub_graph = graph->AddSubgraph(launch_node->unique_id());
     // Set subgraph execution engine.
-    sub_graph->SetAttr("engine", NodeEngine(*(kv.second.begin())));
+    sub_graph->Attr("engine", NodeEngine(*(kv.second.begin())));
 
     util::Map<int64_t, XrtNode *> sub_graph_nodes;
     for (XrtNode *n : kv.second) {
@@ -119,7 +134,7 @@ void BuildSubGraphPass::CreateLaunchNodes(XrtGraph *graph,
   for (const auto &pair : cluster_ids) {
     int64_t cluster_id = pair.first;
     XrtNode *launch_node = graph->AddNode();
-    launch_node->SetAttr("cluster_id", cluster_id);
+    launch_node->Attr("cluster_id", cluster_id);
     launch_node->set_device(pair.second);
     launch_node->set_type(_XrtLaunchOpType);
 

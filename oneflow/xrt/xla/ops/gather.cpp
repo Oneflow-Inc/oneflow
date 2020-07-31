@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/xrt/xla/ops/op_context.h"
 #include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
@@ -111,14 +126,14 @@ xla::XlaOp GenericGatherGrad(
 class GatherOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    Shape input_shape = ctx->InputShape("in");
-    Shape indices_shape = ctx->InputShape("indices");
+    Shape input_shape = ctx->InputShape("in_0");
+    Shape indices_shape = ctx->InputShape("indices_0");
     CHECK_GT(input_shape.NumAxes(), 0);
     CHECK_GT(indices_shape.NumAxes(), 0);
     CHECK_LE(indices_shape.NumAxes(), input_shape.NumAxes());
 
-    xla::XlaOp input = ctx->Input("in");
-    xla::XlaOp indices = ctx->Input("indices");
+    xla::XlaOp input = ctx->Input("in_0");
+    xla::XlaOp indices = ctx->Input("indices_0");
     int axis = GatherAxis(ctx);
     int batch_dims = GatherBatchDims(ctx);
 
@@ -128,112 +143,27 @@ class GatherOp : public XlaOpKernel {
     } else {
       output = GenericGather(input, indices, input_shape, indices_shape, axis);
     }
-    ctx->SetOutput("out", output);
+    ctx->SetOutput("out_0", output);
   }
 
-  virtual int GatherAxis(XlaOpContext *ctx) const { return ctx->GetAttr<int64_t>("axis"); }
+  virtual int GatherAxis(XlaOpContext *ctx) const { return ctx->Attr<int64_t>("axis"); }
   virtual int GatherBatchDims(XlaOpContext *ctx) const { return 0; }
 };
 
 class BatchGatherOp : public GatherOp {
  public:
   int GatherAxis(XlaOpContext *ctx) const override {
-    Shape indices_shape = ctx->InputShape("indices");
+    Shape indices_shape = ctx->InputShape("indices_0");
     return indices_shape.NumAxes() - 1;
   }
   int GatherBatchDims(XlaOpContext *ctx) const override {
-    Shape indices_shape = ctx->InputShape("indices");
+    Shape indices_shape = ctx->InputShape("indices_0");
     return indices_shape.NumAxes() - 1;
   }
 };
 
 REGISTER_XLA_OP_KERNEL(Gather, GatherOp).Finalize();
 REGISTER_XLA_OP_KERNEL(BatchGather, BatchGatherOp).Finalize();
-
-class GatherGradOp : public XlaOpKernel {
- public:
-  void Compile(XlaOpContext *ctx) override {
-    xla::XlaBuilder *builder = ctx->builder();
-    xla::XlaOp updates = ctx->Input("out_diff");
-    xla::XlaOp indices = ctx->Input("indices");
-    int64_t gather_dim_size = ctx->GetAttr<int64_t>("gather_dim_size");
-    int64_t axis = ctx->GetAttr<int64_t>("axis");
-
-    Shape updates_shape = ctx->InputShape("out_diff");
-    Shape indices_shape = ctx->InputShape("indices");
-    DataType updates_data_type = ctx->InputType("out_diff");
-
-    const auto &indices_dim_vec = indices_shape.dim_vec();
-    const auto &updates_dim_vec = updates_shape.dim_vec();
-    CHECK_LT(axis, updates_dim_vec.size());
-    std::vector<int64_t> buffer_dim_vec;
-
-    for (int i = 0; i < axis; ++i) { buffer_dim_vec.push_back(updates_dim_vec[i]); }
-    buffer_dim_vec.push_back(gather_dim_size);
-    for (int i = axis + indices_dim_vec.size(); i < updates_dim_vec.size(); ++i) {
-      buffer_dim_vec.push_back(updates_dim_vec[i]);
-    }
-
-    xla::XlaOp buffer = Zeros(ctx->builder(), AsShape(buffer_dim_vec), updates_data_type);
-    auto combiner = [](xla::XlaOp x, xla::XlaOp y, xla::XlaBuilder *) { return xla::Add(x, y); };
-    ctx->SetOutput("in_diff", GenericGatherGrad(buffer, updates, indices, true, combiner, builder));
-  }
-};
-
-REGISTER_XLA_OP_KERNEL(GatherGrad, GatherGradOp).Finalize();
-
-class UnsortedSegmentSumOp : public XlaOpKernel {
- public:
-  void Compile(XlaOpContext *ctx) override {
-    xla::XlaOp segment_ids = ctx->Input("segment_ids");
-    xla::XlaOp data = ctx->Input("segment_ids");
-    Shape data_shape = ctx->InputShape("data");
-    Shape segment_ids_shape = ctx->InputShape("segment_ids");
-    DataType data_type = ctx->InputType("data");
-    int64_t num_segments = ctx->GetAttr<int64_t>("num_segments");
-    std::vector<int64_t> buffer_dim_vec = InitBufferDimVec(ctx);
-
-    buffer_dim_vec.push_back(num_segments);
-    for (int i = Axis(ctx) + segment_ids_shape.NumAxes(); i < data_shape.dim_vec().size(); ++i) {
-      buffer_dim_vec.push_back(data_shape.dim_vec()[i]);
-    }
-
-    const int64_t num_elems = segment_ids_shape.NumAxes() > 0 ? segment_ids_shape.At(0) : 1;
-
-    if (data_shape.NumAxes() == 0 && num_elems != 1) { data = xla::Broadcast(data, {num_elems}); }
-
-    xla::XlaOp default_value = Zeros(ctx->builder(), AsShape(buffer_dim_vec), data_type);
-    xla::XlaBuilder *builder = ctx->builder();
-    std::vector<long long> buffer_dim_vecs(buffer_dim_vec.size());
-
-    xla::XlaOp buffer = xla::Broadcast(default_value, buffer_dim_vecs);
-    auto combiner = [](xla::XlaOp x, xla::XlaOp y, xla::XlaBuilder *) { return xla::Add(x, y); };
-    ctx->SetOutput("out", GenericGatherGrad(buffer, data, segment_ids, false, combiner, builder));
-  }
-
-  virtual int Axis(XlaOpContext *ctx) const { return ctx->GetAttr<int64_t>("axis"); }
-
-  virtual std::vector<int64_t> InitBufferDimVec(XlaOpContext *ctx) const {
-    std::vector<int64_t> buffer_dim_vec;
-    const auto data_dim_vec = ctx->InputShape("data").dim_vec();
-    for (int i = 0; i < ctx->GetAttr<int64_t>("axis"); ++i) {
-      buffer_dim_vec.push_back(data_dim_vec[i]);
-    }
-    return std::move(buffer_dim_vec);
-  }
-};
-
-class UnsortedBatchSegmentSumOp : public UnsortedSegmentSumOp {
- public:
-  int Axis(XlaOpContext *ctx) const override { return 0; }
-
-  std::vector<int64_t> InitBufferDimVec(XlaOpContext *ctx) const override {
-    return {ctx->InputShape("segment_ids").At(0)};
-  }
-};
-
-REGISTER_XLA_OP_KERNEL(UnsortedSegmentSum, UnsortedSegmentSumOp).Finalize();
-REGISTER_XLA_OP_KERNEL(UnsortedBatchSegmentSum, UnsortedBatchSegmentSumOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

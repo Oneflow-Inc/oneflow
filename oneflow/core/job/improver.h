@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_JOB_IMPROVER_H_
 #define ONEFLOW_CORE_JOB_IMPROVER_H_
 
@@ -15,14 +30,14 @@ class Improver final {
   Improver() : start_mem_block_id_(-1) {}
   ~Improver() = default;
 
-  Plan Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
-               const std::string& act_event_filepath);
-  Plan GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan);
+  Maybe<Plan> Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
+                      const std::string& act_event_filepath);
+  Maybe<Plan> GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan);
 
  private:
   Plan GenAndInferMemBlockId(const Plan& naive_plan) const;
   void Init(const AvailableMemDesc& amd, const Plan& naive_plan);
-  void ForEachImprovedRegstNum(
+  Maybe<void> ForEachImprovedRegstNum(
       const Plan& plan, bool is_memory_limited, double ii,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
@@ -33,12 +48,12 @@ class Improver final {
   //  first dimension index of MemZoneRegstDescs is machine_id
   //  second dimension index of MemZoneRegstDescs is mem_zone_id
   using MemZoneRegstDescs = std::vector<std::vector<std::list<const RegstDescProto*>>>;
-  bool IsAnyZoneOutOfMemory(
+  Maybe<void> CheckAllZoneNotOOM(
       const MemZoneRegstDescs& mz_regst_descs,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Ratio4RegstDescId,
       double ii) const;
-  double BinarySearchII(
+  Maybe<double> BinarySearchII(
       double base_ii,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Ratio4RegstDescId,
@@ -52,7 +67,6 @@ class Improver final {
 
   int32_t start_mem_block_id_;
   AvailableMemDesc amd_;
-  std::vector<int32_t> record_load_task_num_;
 };
 
 }  // namespace oneflow

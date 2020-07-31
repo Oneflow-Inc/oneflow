@@ -1,7 +1,23 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -71,7 +87,7 @@ void RuntimeBlobShapeInferHelper::InferShape(std::function<Blob*(const std::stri
     }
     return std::shared_ptr<const OpInferCacheValue>(ret);
   };
-  size_t cache_size = Global<ResourceDesc>::Get()->thread_local_cache_max_size();
+  size_t cache_size = Global<ResourceDesc, ForSession>::Get()->thread_local_cache_max_size();
   const auto& shape_infer_ret = ThreadLocalCachedCall(cache_size, Infer, op_infer_cache_key_);
   const auto& obn_idx2shape_sym = shape_infer_ret->obn_idx2shape_sym;
   FOR_RANGE(int, i, 0, op_->output_bns().size()) {

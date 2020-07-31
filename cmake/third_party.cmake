@@ -13,6 +13,7 @@ include(opencv)
 include(eigen)
 include(cocoapi)
 include(half)
+include(re2)
 include(json)
 
 if (WITH_XLA)
@@ -37,6 +38,12 @@ if (BUILD_CUDA)
       break()
     endif()
   endforeach()
+  if(NOT EXISTS ${cuda_lib_dir}/libcudart_static.a)
+    if(NOT EXISTS ${CUDA_cudart_static_LIBRARY})
+      message(FATAL_ERROR "cuda lib not found: ${cuda_lib_dir}/libcudart_static.a")
+    endif()
+    get_filename_component(cuda_lib_dir ${CUDA_cudart_static_LIBRARY} DIRECTORY)
+  endif()
   set(extra_cuda_libs libculibos.a libcurand_static.a)
   foreach(extra_cuda_lib ${extra_cuda_libs})
     list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/${extra_cuda_lib})
@@ -58,7 +65,7 @@ if (BUILD_CUDA)
   else()
     message(FATAL_ERROR "cuda lib not found: ${cublas_lib_dir}/libcublas_static.a or ${cuda_lib_dir}/libcublas_static.a")
   endif()
-  find_package(CuDNN REQUIRED)
+  find_package(CUDNN REQUIRED)
 endif()
 
 if (NOT WIN32)
@@ -91,6 +98,10 @@ set(oneflow_third_party_libs
     ${COCOAPI_STATIC_LIBRARIES}
 )
 
+if (NOT WITH_XLA)
+  list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
+endif()
+
 if(WIN32)
   # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"
   list(APPEND oneflow_third_party_libs "ShLwApi.Lib")
@@ -114,15 +125,18 @@ set(oneflow_third_party_dependencies
   grpc_copy_headers_to_destination
   grpc_copy_libs_to_destination
   opencv_copy_headers_to_destination
+  libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
   eigen
   cocoapi_copy_headers_to_destination
   cocoapi_copy_libs_to_destination
   half_copy_headers_to_destination
+  re2
   json_copy_headers_to_destination
 )
 
-include_directories(
+
+list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${ZLIB_INCLUDE_DIR}
     ${GFLAGS_INCLUDE_DIR}
     ${GLOG_INCLUDE_DIR}
@@ -132,11 +146,16 @@ include_directories(
     ${GRPC_INCLUDE_DIR}
     ${LIBJPEG_INCLUDE_DIR}
     ${OPENCV_INCLUDE_DIR}
+    ${LIBPNG_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
     ${JSON_INCLUDE_DIR}
 )
+
+if (NOT WITH_XLA)
+  list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${RE2_INCLUDE_DIR})
+endif()
 
 if (BUILD_CUDA)
   include(cub)
@@ -155,11 +174,11 @@ if (BUILD_CUDA)
   list(APPEND oneflow_third_party_dependencies nccl_copy_headers_to_destination)
   list(APPEND oneflow_third_party_dependencies nccl_copy_libs_to_destination)
 
-  include_directories(
+  list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${CUDNN_INCLUDE_DIRS}
     ${CUB_INCLUDE_DIR}
     ${NCCL_INCLUDE_DIR}
-)
+  )
 endif()
 
 if(BUILD_RDMA)
@@ -182,6 +201,8 @@ if(BUILD_RDMA)
     message(FATAL_ERROR "UNIMPLEMENTED")
   endif()
 endif()
+
+include_directories(${ONEFLOW_INCLUDE_SRC_DIRS})
 
 if(WITH_XLA)
   list(APPEND oneflow_third_party_dependencies tensorflow_copy_libs_to_destination)

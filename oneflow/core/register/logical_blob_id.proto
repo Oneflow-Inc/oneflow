@@ -22,3 +22,7 @@ message LogicalBlobIdGroups {
   }
   repeated LogicalBlobIdGroup lbi_group = 2;
 }
+
+message ArgSignature {
+  map<string, LogicalBlobId> bn_in_op2lbi = 1;
+}

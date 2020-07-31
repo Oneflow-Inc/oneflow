@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_GRAPH_LOGICAL_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_LOGICAL_GRAPH_H_
 
@@ -34,12 +49,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
 
   void MergeEdge();
   void SetNodeDataLbi();
-  void AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst,
-                                      const ReduceRankCtx& prev_rank_ctx);
-  void AddAllReduce(LogicalNode* src, LogicalNode* dst);
-  void AddNcclAllReduce(LogicalNode* src, LogicalNode* dst);
-  void AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNode* dst);
-  void ReplaceAllReduceFacades();
 
   void UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn);
   void UpdateEdge2Obn(const LogicalEdge* edge, const std::string& obn);

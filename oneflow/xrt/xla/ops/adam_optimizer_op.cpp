@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/xrt/xla/ops/optimizer_op.h"
 
 namespace oneflow {
@@ -6,8 +21,7 @@ namespace mola {
 
 class AdamOptimizerOp : public OptimizerOp {
  private:
-  void ApplyUpdate(XlaOpContext *ctx, xla::XlaOp gradient, xla::XlaOp instance_num,
-                   xla::XlaOp learning_rate) override {
+  void ApplyUpdate(XlaOpContext *ctx, xla::XlaOp gradient, xla::XlaOp learning_rate) override {
     xla::XlaOp weight = ctx->Input("model");
     xla::XlaOp m = ctx->Input("m");
     xla::XlaOp v = ctx->Input("v");
@@ -17,13 +31,11 @@ class AdamOptimizerOp : public OptimizerOp {
       for (int i = 0; i < gradient_shape.NumAxes() - 1; ++i) {
         bcast_sizes.push_back(gradient_shape.At(i));
       }
-      instance_num = xla::Broadcast(instance_num, bcast_sizes);
       learning_rate = xla::Broadcast(learning_rate, bcast_sizes);
     }
-    gradient = gradient / instance_num;
 
     NormalModelUpdateOpUserConf *user_conf =
-        dynamic_cast<NormalModelUpdateOpUserConf *>(ctx->GetAttr<PbMessage *>("user_conf"));
+        dynamic_cast<NormalModelUpdateOpUserConf *>(ctx->Attr<PbMessage *>("user_conf"));
     CHECK(user_conf) << "Can not get message `user_conf`.";
     if (user_conf->has_adam_conf()) {
       xla::XlaOp one = One(ctx->builder(), ctx->InputType("m"));
@@ -43,16 +55,6 @@ class AdamOptimizerOp : public OptimizerOp {
       gradient = m / (xla::Sqrt(v) + epsilon);
     }
 
-    float l1_val = ctx->GetAttr<float>("l1");
-    float l2_val = ctx->GetAttr<float>("l2");
-    if (std::abs(l1_val) > 1e-6) {
-      xla::XlaOp l1 = xla::ScalarLike(gradient, l1_val);
-      gradient = gradient + l1 * xla::Sign(weight);
-    }
-    if (std::abs(l2_val) > 1e-6) {
-      xla::XlaOp l2 = xla::ScalarLike(gradient, l2_val);
-      gradient = gradient + l2 * weight;
-    }
     ctx->SetOutput("model", weight - learning_rate * gradient);
     // ctx->SetOutput("out", weight - learning_rate * gradient);
   }

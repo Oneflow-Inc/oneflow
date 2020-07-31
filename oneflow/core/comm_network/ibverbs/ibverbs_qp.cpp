@@ -1,7 +1,23 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
@@ -14,7 +30,8 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   // qp_
   ibv_device_attr device_attr;
   CHECK_EQ(ibv_query_device(ctx, &device_attr), 0);
-  uint32_t max_recv_wr = Global<ResourceDesc>::Get()->rdma_recv_msg_buf_byte() / sizeof(ActorMsg);
+  uint32_t max_recv_wr =
+      Global<ResourceDesc, ForSession>::Get()->rdma_recv_msg_buf_byte() / sizeof(ActorMsg);
   max_recv_wr = std::min<uint32_t>(max_recv_wr, device_attr.max_qp_wr);
   ibv_qp_init_attr qp_init_attr;
   qp_init_attr.qp_context = nullptr;

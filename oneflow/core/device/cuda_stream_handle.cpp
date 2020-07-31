@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job/job_desc.h"
@@ -63,9 +78,8 @@ const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
 
 void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
   CudaCBEvent cb_event;
-  cb_event.callback = callback;
-  CudaCheck(
-      cudaEventCreateWithFlags(&(cb_event.event), cudaEventBlockingSync | cudaEventDisableTiming));
+  cb_event.callback = std::move(callback);
+  CudaCheck(cudaEventCreateWithFlags(&(cb_event.event), cudaEventDisableTiming));
   CudaCheck(cudaEventRecord(cb_event.event, *cuda_stream()));
   cb_event_chan_->Send(cb_event);
 }

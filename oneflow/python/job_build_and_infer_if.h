@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/record/record.pb.h"
@@ -12,8 +27,8 @@ void JobBuildAndInferCtx_Open(const std::string& job_name, std::string* error_st
 }
 
 std::string JobBuildAndInferCtx_GetCurrentJobName(std::string* error_str) {
-  return oneflow::JobBuildAndInferCtx_GetCurrentJobName().GetDataAndSerializedErrorProto(error_str,
-                                                                                         "");
+  return oneflow::JobBuildAndInferCtx_GetCurrentJobName().GetDataAndSerializedErrorProto(
+      error_str, std::string(""));
 }
 
 void JobBuildAndInferCtx_Close(std::string* error_str) {
@@ -30,6 +45,12 @@ void CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_conf,
       .GetDataAndSerializedErrorProto(error_str);
 }
 
+void CurJobBuildAndInferCtx_SetTrainConf(const std::string& serialized_train_conf,
+                                         std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_SetTrainConf(serialized_train_conf)
+      .GetDataAndSerializedErrorProto(error_str);
+}
+
 void CurJobBuildAndInferCtx_Complete(std::string* error_str) {
   return oneflow::CurJobBuildAndInferCtx_Complete().GetDataAndSerializedErrorProto(error_str);
 }
@@ -39,33 +60,16 @@ bool CurJobBuildAndInferCtx_HasJobConf(std::string* error_str) {
                                                                                      false);
 }
 
-std::string CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
-                                                              std::string* error_str) {
-  return oneflow::CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(serialized_op_conf)
-      .GetDataAndSerializedErrorProto(error_str, "");
+std::string CurJobBuildAndInferCtx_AddAndInferMirroredOp(const std::string& serialized_op_conf,
+                                                         std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_AddAndInferMirroredOp(serialized_op_conf)
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
-void CurJobBuildAndInferCtx_AddAndInferOp(const std::string& serialized_op_conf,
-                                          const std::string& serialized_parallel_conf,
-                                          std::string* error_str) {
-  return oneflow::CurJobBuildAndInferCtx_AddAndInferOp(serialized_op_conf, serialized_parallel_conf)
-      .GetDataAndSerializedErrorProto(error_str);
-}
-
-void CurJobBuildAndInferCtx_AddAndInferMirroredOp(const std::string& serialized_op_conf,
-                                                  const std::string& serialized_parallel_conf,
-                                                  std::string* error_str) {
-  return oneflow::CurJobBuildAndInferCtx_AddAndInferMirroredOp(serialized_op_conf,
-                                                               serialized_parallel_conf)
-      .GetDataAndSerializedErrorProto(error_str);
-}
-
-void CurJobBuildAndInferCtx_AddAndInferConsistentOp(const std::string& serialized_op_conf,
-                                                    const std::string& serialized_parallel_conf,
-                                                    std::string* error_str) {
-  return oneflow::CurJobBuildAndInferCtx_AddAndInferConsistentOp(serialized_op_conf,
-                                                                 serialized_parallel_conf)
-      .GetDataAndSerializedErrorProto(error_str);
+std::string CurJobBuildAndInferCtx_AddAndInferConsistentOp(const std::string& serialized_op_conf,
+                                                           std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_AddAndInferConsistentOp(serialized_op_conf)
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 void CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn, std::string* error_str) {
@@ -83,7 +87,7 @@ std::string JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(const std::stri
                                                                  const std::string& lbn,
                                                                  std::string* error_str) {
   return oneflow::JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(job_name, lbn)
-      .GetDataAndSerializedErrorProto(error_str, "");
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 long long JobBuildAndInferCtx_GetDataType(const std::string& job_name, const std::string& lbn,
@@ -104,29 +108,29 @@ bool JobBuildAndInferCtx_DisableBoxing(const std::string& job_name, const std::s
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
-long long JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const std::string& lbn,
-                                           std::string* error_str) {
+bool JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const std::string& lbn,
+                                      std::string* error_str) {
   return oneflow::JobBuildAndInferCtx_IsTensorList(job_name, lbn)
-      .GetDataAndSerializedErrorProto(error_str, 0LL);
+      .GetDataAndSerializedErrorProto(error_str, false);
 }
 
 std::string JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name, const std::string& lbn,
                                              std::string* error_str) {
   return oneflow::JobBuildAndInferCtx_GetBatchAxis(job_name, lbn)
-      .GetDataAndSerializedErrorProto(error_str, "");
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 std::string JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& job_name,
                                                              const std::string& lbn,
                                                              std::string* error_str) {
   return oneflow::JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn)
-      .GetDataAndSerializedErrorProto(error_str, "");
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 std::string JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(
     const std::string& job_name, const std::string& lbn, std::string* error_str) {
   return oneflow::JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(job_name, lbn)
-      .GetDataAndSerializedErrorProto(error_str, "");
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 bool JobBuildAndInferCtx_IsMirroredBlob(const std::string& job_name, const std::string& lbn,
@@ -145,13 +149,13 @@ std::string JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi(const std::strin
                                                                 const std::string& lbn, int index,
                                                                 std::string* error_str) {
   return oneflow::JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, lbn, index)
-      .GetDataAndSerializedErrorProto(error_str, "");
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 std::string JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape(
     const std::string& job_name, const std::string& lbn, std::string* error_str) {
   return oneflow::JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape(job_name, lbn)
-      .GetDataAndSerializedErrorProto(error_str, "");
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 long long JobBuildAndInferCtx_MirroredBlobGetDataType(const std::string& job_name,
@@ -177,18 +181,18 @@ std::string JobBuildAndInferCtx_MirroredBlobGetBatchAxis(const std::string& job_
                                                          const std::string& lbn,
                                                          std::string* error_str) {
   return oneflow::JobBuildAndInferCtx_MirroredBlobGetBatchAxis(job_name, lbn)
-      .GetDataAndSerializedErrorProto(error_str, "");
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 std::string JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
     const std::string& job_name, const std::string& lbn, std::string* error_str) {
   return oneflow::JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(job_name, lbn)
-      .GetDataAndSerializedErrorProto(error_str, "");
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 std::string JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView(
     const std::string& job_name, const std::string& lbn, std::string* error_str) {
   return oneflow::JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView(
              job_name, lbn)
-      .GetDataAndSerializedErrorProto(error_str, "");
+      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }

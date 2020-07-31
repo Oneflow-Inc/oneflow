@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 
@@ -10,6 +25,9 @@
 
 namespace oneflow {
 
+class SubTskGphBuilder;
+class SubTskGphBuilderCtx;
+
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
@@ -21,9 +39,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void AddOrderingCtrlEdgeInSameChain();
-  void AddReduceNoBwForwardNodeOverlapingCtrlEdges();
 
-  void EnableInplaceMemSharingInReduceStruct();
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
 
@@ -34,15 +50,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV1);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByConnectNodeOnSameGpuDevice);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect);
 
@@ -63,16 +73,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskNode* TryAddCopyH2DTaskTo(TaskNode*);
   TaskNode* AddCopyD2HTaskFrom(TaskNode*);
   TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);
-  void BuildOutBoxing(
-      const LogicalNode* logical, const std::vector<CompTaskNode*>& sorted_comp_tasks,
-      std::vector<TaskNode*>* sorted_out_box,
-      std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
-          MutBufTask,
-      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
-  void BuildInBoxing(const LogicalNode* logical,
-                     const std::vector<CompTaskNode*>& sorted_comp_tasks,
-                     std::vector<TaskNode*>* sorted_in_box,
-                     std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
   void ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
                         const std::vector<CompTaskNode*>& dst_task_nodes, int64_t ctrl_regst_num);
@@ -99,6 +99,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;
+  std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
+  std::shared_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
 };
 
 bool IsBackEdge(TaskNode* src, TaskNode* dst);

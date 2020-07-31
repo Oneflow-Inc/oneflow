@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_JOB_RESOURCE_DESC_H_
 #define ONEFLOW_CORE_JOB_RESOURCE_DESC_H_
 
@@ -11,6 +26,8 @@ static const size_t kMB = 1024 * 1024;
 class ResourceDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ResourceDesc);
+  explicit ResourceDesc(const Resource& resource) : resource_(resource) {}
+
   ~ResourceDesc() = default;
 
   size_t TotalMachineNum() const;
@@ -35,14 +52,13 @@ class ResourceDesc final {
   size_t thread_local_cache_max_size() const { return resource_.thread_local_cache_max_size(); }
   int32_t ComputeThreadPoolSize() const;
   bool enable_debug_mode() const;
+  CollectiveBoxingConf collective_boxing_conf() const;
 
   void SetMachineNum(int32_t val) { resource_.set_machine_num(val); }
   void SetCpuDeviceNum(int32_t val) { resource_.set_cpu_device_num(val); }
+  const Resource& resource() const { return resource_; }
 
  private:
-  friend class Global<ResourceDesc>;
-  explicit ResourceDesc(const Resource& resource) : resource_(resource) {}
-
   Resource resource_;
 };
 

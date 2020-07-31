@@ -34,7 +34,7 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
     error( "Expanding macro in WIN32 is not supported yet")
   else()
     add_custom_command(OUTPUT ${of_e_h_expanded}
-      COMMAND ${CMAKE_C_COMPILER} 
+      COMMAND ${CMAKE_C_COMPILER}
       ARGS -E -I"${PROJECT_SOURCE_DIR}" -I"${PROJECT_BINARY_DIR}"
       -o "${of_e_h_expanded}" "${oneflow_hdr_to_be_expanded}"
       DEPENDS ${oneflow_hdr_to_be_expanded}
@@ -94,8 +94,13 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.hpp$")
+    list(APPEND of_all_obj_cc ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cuh$")
-    if(BUILD_CUDA) 
+    if(BUILD_CUDA)
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
@@ -113,7 +118,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
     set(group_this ON)
   endif()
-  
+
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*_test\\.cpp$")
       # test file
@@ -135,21 +140,105 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 endforeach()
 
-# clang format
-add_custom_target(of_format)
+if(PY3)
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+  find_package(Python3 COMPONENTS Development NumPy)
+  if (Python3_Development_FOUND AND Python3_INCLUDE_DIRS)
+    set(Python_INCLUDE_DIRS ${Python3_INCLUDE_DIRS})
+  endif()
+  if (Python3_NumPy_FOUND AND Python3_NumPy_INCLUDE_DIRS)
+    set(Python_NumPy_INCLUDE_DIRS ${Python3_NumPy_INCLUDE_DIRS})
+  endif()
 
-foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc} ${of_python_obj_cc})
-    add_custom_command(TARGET of_format PRE_BUILD
-    COMMAND clang-format -i -style=file ${source_file})
-endforeach()
+  message("-- Python3 specified. Version found: " ${Python3_VERSION})
+  set(Python_EXECUTABLE ${Python3_EXECUTABLE})
+else()
+  find_package(Python2 COMPONENTS Interpreter REQUIRED)
+  find_package(Python2 COMPONENTS Development NumPy)
+  if (Python2_Development_FOUND AND Python2_INCLUDE_DIRS)
+    set(Python_INCLUDE_DIRS ${Python2_INCLUDE_DIRS})
+  endif()
+  if (Python2_NumPy_FOUND AND Python2_NumPy_INCLUDE_DIRS)
+    set(Python_NumPy_INCLUDE_DIRS ${Python2_NumPy_INCLUDE_DIRS})
+  endif()
+  message("-- Python2 specified. Version found: " ${Python2_VERSION})
+  set(Python_EXECUTABLE ${Python2_EXECUTABLE})
+endif()
+message("-- Using Python executable: " ${Python_EXECUTABLE})
+if (NOT Python_INCLUDE_DIRS)
+  message(STATUS "Getting python include directory from sysconfig..")
+  execute_process(
+    COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_paths()['include'])"
+    OUTPUT_VARIABLE Python_INCLUDE_DIRS
+    RESULT_VARIABLE ret_code)
+  string(STRIP ${Python_INCLUDE_DIRS} Python_INCLUDE_DIRS)
+  if ((NOT (ret_code EQUAL "0")) OR (NOT IS_DIRECTORY ${Python_INCLUDE_DIRS})
+    OR (NOT EXISTS ${Python_INCLUDE_DIRS}/Python.h))
+    set(Python_INCLUDE_DIRS "")
+  endif()
+endif()
+if (NOT Python_INCLUDE_DIRS)
+  message(FATAL_ERROR "Cannot find python include directory")
+endif()
+message(STATUS "Found python include directory ${Python_INCLUDE_DIRS}")
+
+if (NOT Python_NumPy_INCLUDE_DIRS)
+  message(STATUS "Getting numpy include directory by numpy.get_include()..")
+  execute_process(
+    COMMAND ${Python_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
+    OUTPUT_VARIABLE Python_NumPy_INCLUDE_DIRS
+    RESULT_VARIABLE ret_code)
+  string(STRIP ${Python_NumPy_INCLUDE_DIRS} Python_NumPy_INCLUDE_DIRS)
+  if ((NOT ret_code EQUAL 0) OR (NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS})
+    OR (NOT EXISTS ${Python_NumPy_INCLUDE_DIRS}/numpy/arrayobject.h))
+    set(Python_NumPy_INCLUDE_DIRS "")
+  endif()
+endif()
+if (NOT Python_NumPy_INCLUDE_DIRS)
+  message(FATAL_ERROR "Cannot find numpy include directory")
+endif()
+message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
+
+add_custom_target(py_dev_requirements ALL 
+  COMMAND ${Python_EXECUTABLE} -m pip install -r ${PROJECT_SOURCE_DIR}/dev-requirements.txt --user
+)
+
+# clang format
+add_custom_target(of_format
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix --quiet
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --python_bin ${Python_EXECUTABLE} --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow/python --fix
+  )
+add_dependencies(of_format py_dev_requirements)
+
+# generate version
+if(BUILD_GIT_VERSION)
+  set(OF_GIT_VERSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/of_git_version)
+  set(OF_GIT_VERSION_FILE ${OF_GIT_VERSION_DIR}/version.cpp)
+  set(OF_GIT_VERSION_DUMMY_FILE ${OF_GIT_VERSION_DIR}/_version.cpp)
+  add_custom_target(of_git_version_create_dir
+          COMMAND ${CMAKE_COMMAND} -E make_directory ${OF_GIT_VERSION_DIR})
+  add_custom_command(
+          OUTPUT ${OF_GIT_VERSION_DUMMY_FILE}
+          COMMAND ${CMAKE_COMMAND} -DOF_GIT_VERSION_FILE=${OF_GIT_VERSION_FILE}
+            -DOF_GIT_VERSION_ROOT=${PROJECT_SOURCE_DIR}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/git_version.cmake
+          DEPENDS of_git_version_create_dir)
+  add_custom_target(of_git_version
+          DEPENDS ${OF_GIT_VERSION_DUMMY_FILE})
+  set_source_files_properties(${OF_GIT_VERSION_FILE} PROPERTIES GENERATED TRUE)
+  list(APPEND of_all_obj_cc ${OF_GIT_VERSION_FILE})
+  add_definitions(-DWITH_GIT_VERSION)
+endif()
+
+set(of_proto_python_dir "${PROJECT_BINARY_DIR}/of_proto_python")
 
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
   COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow/core
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${of_proto_python_dir}
 	)
+add_dependencies(make_pyproto_dir prepare_oneflow_third_party)
 foreach(proto_name ${of_all_proto})
   file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})
@@ -169,6 +258,9 @@ include_directories(${PROJECT_BINARY_DIR})
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
+if (BUILD_GIT_VERSION)
+  add_dependencies(of_ccobj of_git_version)
+endif()
 if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
 endif()
@@ -179,7 +271,7 @@ elseif(UNIX)
   set(of_libs -Wl,--whole-archive of_ccobj of_protoobj -Wl,--no-whole-archive)
 elseif(WIN32)
   set(of_libs of_ccobj of_protoobj)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj") 
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
 endif()
 
 # build swig
@@ -191,51 +283,51 @@ endforeach()
 RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
                               ${PROJECT_SOURCE_DIR}
                               ${of_all_rel_swigs})
-if(${CMAKE_VERSION} VERSION_LESS "3.14") 
-  find_package(PythonLibs)
-  if(NOT PYTHONLIBS_FOUND)
-    message(FATAL_ERROR "python include files and libraries not found")
-  endif()
-  message("-- Python Version: " ${PYTHONLIBS_VERSION_STRING})
-  message("You can set PYTHON_INCLUDE_DIR and PYTHON_LIBRARY to specify Python version, run \"sysconfig.get_paths()\" in python")
-  if(NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS})
-    message(FATAL_ERROR "Python_NumPy_INCLUDE_DIRS not set. You could get it by running \"numpy.get_include()\" in python")
-  endif()
-  include_directories(${PYTHON_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
-elseif(PY3)
-  find_package (Python3 COMPONENTS Development NumPy)
-  message("-- Python3 specified. Version found: " ${Python3_VERSION})
-  include_directories(${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
-else()
-  find_package (Python2 COMPONENTS Development NumPy)
-  message("-- Python2 specified. Version found: " ${Python2_VERSION})
-  include_directories(${Python2_INCLUDE_DIRS} ${Python2_NumPy_INCLUDE_DIRS})
-endif()
 oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
 target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
+target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+add_dependencies(oneflow_internal py_dev_requirements)
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 file(REMOVE_RECURSE "${of_pyscript_dir}/oneflow/python")
 add_custom_target(of_pyscript_copy ALL
+    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/clean_generated_api.py --root_path=${of_pyscript_dir}/oneflow
     COMMAND "${CMAKE_COMMAND}" -E copy
-        "${PROJECT_SOURCE_DIR}/oneflow/__init__.py" "${of_pyscript_dir}/oneflow/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/core/__init__.py"
+        "${PROJECT_SOURCE_DIR}/oneflow/init.py" "${of_pyscript_dir}/oneflow/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python"
-    COMMAND python3 "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
+    COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
 file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
-foreach(oneflow_python_file ${oneflow_all_python_file})
-  file(RELATIVE_PATH oneflow_python_rel_file_path "${PROJECT_SOURCE_DIR}" ${oneflow_python_file})
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E copy
-    "${oneflow_python_file}"
-    "${of_pyscript_dir}/${oneflow_python_rel_file_path}")
-endforeach()
+copy_files("${oneflow_all_python_file}" "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}" of_pyscript_copy)
+
+file(WRITE ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags = []\n")
+if (BUILD_CUDA)
+  file(APPEND ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-DWITH_CUDA')\n")
+endif()
+if (USE_CXX11_ABI)
+  file(APPEND ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=1')\n")
+else()
+  file(APPEND ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=0')\n")
+endif()
+
+add_dependencies(of_pyscript_copy of_protoobj)
+add_custom_target(generate_api ALL
+  COMMAND rm -rf ${of_pyscript_dir}/oneflow/generated
+  COMMAND export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH && ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow)
+add_dependencies(generate_api of_pyscript_copy)
+add_dependencies(generate_api oneflow_internal)
+
+file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
+add_custom_target(pip_install)
+add_dependencies(pip_install generate_api)
+add_custom_command(
+  TARGET pip_install
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  COMMAND ${Python_EXECUTABLE} -m pip install -e ${PROJECT_SOURCE_DIR} --install-option="--build_dir=${PROJECT_BINARY_DIR_RELATIVE}" --user)
 
 # get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 # foreach(dir ${include_dirs})
@@ -268,4 +360,44 @@ if(BUILD_TESTING)
     #    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
     #  endforeach()
   endif()
+  if (of_separate_test_cc)
+    foreach(cc ${of_separate_test_cc})
+      get_filename_component(test_name ${cc} NAME_WE)
+      string(CONCAT test_exe_name ${test_name} exe)
+      oneflow_add_executable(${test_exe_name} ${cc})
+      target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+    endforeach()
+  endif()
 endif()
+
+# build include
+set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")
+add_custom_target(of_include_copy ALL
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
+add_dependencies(of_include_copy of_ccobj)
+file(REMOVE_RECURSE "${ONEFLOW_INCLUDE_DIR}")
+foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
+  set(oneflow_all_include_file)
+  #file(GLOB_RECURSE h_files "${of_include_src_dir}/*.h")
+  #list(APPEND oneflow_all_include_file ${h_files})
+  #file(GLOB_RECURSE hpp_files "${of_include_src_dir}/*.hpp")
+  #list(APPEND oneflow_all_include_file ${hpp_files})
+  file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
+  copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
+endforeach()
+
+copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
+
+set(OF_CORE_HDRS)
+list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence")
+foreach(of_core_dir_name ${of_core_dir_name_list})
+  file(GLOB_RECURSE h_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.h")
+  list(APPEND OF_CORE_HDRS ${h_files})
+  file(GLOB_RECURSE hpp_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.hpp")
+  list(APPEND OF_CORE_HDRS ${hpp_files})
+endforeach()
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/new_kernel_util.h")
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_context.h")
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_util.cuh")
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_builder.h")
+copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
 
@@ -25,9 +40,6 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
 void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                     const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
-
-template<DeviceType device_type>
-void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
 
 template<typename T>
 OF_DEVICE_FUNC T ReduceCoreAdd(const T x, const T y) {
@@ -206,6 +218,7 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::va
                    const int incy);
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
 };
 
 // GPU, Integral, Floating
@@ -308,6 +321,7 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::va
       public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
                    const int incy);
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
 };
 
 using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);

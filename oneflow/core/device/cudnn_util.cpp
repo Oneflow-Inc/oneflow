@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/device/cudnn_util.h"
 
@@ -114,6 +129,40 @@ CudnnActivationDesc::CudnnActivationDesc(cudnnActivationMode_t mode,
 }
 
 CudnnActivationDesc::~CudnnActivationDesc() { CudaCheck(cudnnDestroyActivationDescriptor(val_)); }
+
+size_t GetCudnnDataTypeByteSize(cudnnDataType_t data_type) {
+  size_t byte_size = 0;
+  switch (data_type) {
+    case CUDNN_DATA_FLOAT:
+    case CUDNN_DATA_INT32:
+    case CUDNN_DATA_INT8x4:
+    case CUDNN_DATA_UINT8x4: {
+      byte_size = 4;
+      break;
+    }
+    case CUDNN_DATA_DOUBLE: {
+      byte_size = 8;
+      break;
+    }
+    case CUDNN_DATA_HALF: {
+      byte_size = 2;
+      break;
+    }
+    case CUDNN_DATA_INT8:
+    case CUDNN_DATA_UINT8: {
+      byte_size = 1;
+      break;
+    }
+#if CUDNN_VERSION > 7200
+    case CUDNN_DATA_INT8x32: {
+      byte_size = 32;
+      break;
+    }
+#endif
+    default: { UNIMPLEMENTED(); }
+  }
+  return byte_size;
+}
 
 #endif  // WITH_CUDA
 

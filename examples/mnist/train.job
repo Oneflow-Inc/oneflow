@@ -1,4 +1,0 @@
-net: "./train.net"
-resource: "./1_machine_2_gpu.resource"
-placement: "./train.placement"
-other: "./train.other"
