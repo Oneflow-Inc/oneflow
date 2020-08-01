@@ -38,11 +38,11 @@ def summary_demo():
     func_config.default_logical_view(flow.scope.mirrored_view())
     logdir = "/oneflow/log"
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def CreateWriter():
         flow.summary.create_summary_writer(logdir)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ScalarJob(
         value: flow.typing.ListNumpy.Placeholder((1,), dtype=flow.float),
         step: flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
@@ -50,7 +50,7 @@ def summary_demo():
     ):
         flow.summary.scalar(value, step, tag)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def HistogramJob(
         value: flow.typing.ListNumpy.Placeholder((200, 200, 200), dtype=flow.float),
         step: flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
@@ -58,14 +58,14 @@ def summary_demo():
     ):
         flow.summary.histogram(value, step, tag)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def PbJob(
         value: flow.typing.ListNumpy.Placeholder((1500,), dtype=flow.int8),
         step: flow.typing.ListNumpy.Placeholder((1,), dtype=flow.int64),
     ):
         flow.summary.pb(value, step=step)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ImageJob(
         value: flow.typing.ListNumpy.Placeholder(
             shape=(100, 2000, 2000, 4), dtype=flow.uint8
@@ -75,7 +75,7 @@ def summary_demo():
     ):
         flow.summary.image(value, step=step, tag=tag)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def FlushJob():
         flow.summary.flush_summary_writer()
 

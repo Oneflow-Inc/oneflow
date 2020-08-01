@@ -26,7 +26,7 @@ def _check(test_case, a, b, out):
 
 
 def _run_test(test_case, a, b, dtype, device):
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def BroadcastMaximum(
         a: oft.Numpy.Placeholder(a.shape, dtype=dtype),
         b: oft.Numpy.Placeholder(b.shape, dtype=dtype),

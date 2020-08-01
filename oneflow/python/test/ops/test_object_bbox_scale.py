@@ -105,7 +105,7 @@ def _of_target_resize_bbox_scale(images, bbox_list, target_size, max_size):
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def target_resize_bbox_scale_job(
         image_def: oft.ListListNumpy.Placeholder(
             shape=tuple(image_shape), dtype=flow.float

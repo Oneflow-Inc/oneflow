@@ -48,8 +48,6 @@ def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
         func_config.default_logical_view(flow.scope.mirrored_view())
     else:
         func_config.default_logical_view(flow.scope.consistent_view())
-    func_config.train.primary_lr(1e-3)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     def do_gather_nd(x_blob, i_blob):
         with flow.scope.placement(device_type, "0:0"):
@@ -62,13 +60,15 @@ def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
             x = flow.cast_to_current_logical_view(x)
             x = x + x_blob
             y = flow.gather_nd(x, i_blob)
-            flow.losses.add_loss(y)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(y)
         flow.watch_diff(x, compare_fn)
         return y
 
     if mirrored:
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def gather_nd_fn(
             params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
             indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
@@ -77,7 +77,7 @@ def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
 
     else:
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def gather_nd_fn(
             params_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float),
             indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
@@ -92,10 +92,8 @@ def _of_dynamic_params_gather_nd(params, indices, static_params_shape, compare_f
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
-    func_config.train.primary_lr(1e-3)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def gather_nd_fn(
         params_def: oft.ListNumpy.Placeholder(static_params_shape, dtype=flow.float),
         indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
@@ -110,7 +108,9 @@ def _of_dynamic_params_gather_nd(params, indices, static_params_shape, compare_f
             one_var = flow.cast_to_current_logical_view(one_var)
             params_var = params_def * one_var
             y = flow.gather_nd(params_var, indices_def)
-            flow.losses.add_loss(y)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(y)
 
         flow.watch_diff(params_var, compare_fn)
         return y
@@ -198,7 +198,7 @@ def _of_gather_nd_dynamic_indices(params, indices, indices_static_shape, device_
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def gather_nd_fn(
         params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
         indices_def: oft.ListNumpy.Placeholder(indices_static_shape, dtype=flow.int32),

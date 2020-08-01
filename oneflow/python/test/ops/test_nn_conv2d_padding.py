@@ -45,9 +45,8 @@ def compare_with_tensorflow(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     if data_format == "NCHW":
         xy_data_transpose = (0, 2, 3, 1)
@@ -56,7 +55,7 @@ def compare_with_tensorflow(
         xy_data_transpose = (0, 1, 2, 3)
         weight_data_transpose = (1, 2, 3, 0)
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def ConvJob():
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -85,7 +84,9 @@ def compare_with_tensorflow(
                 dilations=[dilation_h, dilation_w],
                 groups=groups,
             )
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))

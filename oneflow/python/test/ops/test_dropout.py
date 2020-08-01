@@ -34,10 +34,7 @@ def of_run(device_type, x_shape, data_type, rate, seed):
     else:
         dtype = type_name_to_flow_type[data_type]
 
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
-
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def DropoutJob():
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -49,7 +46,9 @@ def of_run(device_type, x_shape, data_type, rate, seed):
             )
             of_out = flow.nn.dropout(x, rate=rate, seed=seed, name="dropout")
             loss = flow.math.square(of_out)
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
@@ -95,10 +94,7 @@ def of_run_module(device_type, x_shape, data_type, rate, seed):
     func_config = flow.FunctionConfig()
     dtype = type_name_to_flow_type[data_type]
 
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
-
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def DropoutJob() -> flow.typing.Numpy:
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -110,7 +106,9 @@ def of_run_module(device_type, x_shape, data_type, rate, seed):
             )
             of_out = flow.nn.dropout(x, rate=rate, seed=seed, name="dropout")
             loss = flow.math.square(of_out)
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
             return of_out
 
     check_point = flow.train.CheckPoint()

@@ -50,7 +50,7 @@ def _make_coco_data_load_fn(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def coco_load_fn():
         with flow.scope.placement("cpu", "0:0-{}".format(nthread - 1)):
             (

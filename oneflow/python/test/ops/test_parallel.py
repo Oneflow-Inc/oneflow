@@ -39,7 +39,7 @@ def NaiveTest(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AddJob(a: oft.Numpy.Placeholder(shape), b: oft.Numpy.Placeholder(shape)):
         return a + b + b
 

@@ -45,7 +45,7 @@ def _of_assign_and_relu(value, dtype, device_type):
     func_config.default_data_type(dtype)
     func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def assign_fn(value_def: oft.Numpy.Placeholder(value.shape, dtype=dtype)):
         var = flow.get_variable(
             name="var",
@@ -55,7 +55,7 @@ def _of_assign_and_relu(value, dtype, device_type):
         )
         flow.assign(var, value_def)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def relu_fn():
         var = flow.get_variable(
             name="var",
