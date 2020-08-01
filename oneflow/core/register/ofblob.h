@@ -59,6 +59,8 @@ class OfBlob final {
   void CurMutTensorCopyShapeFrom(const int64_t* ptr, int64_t num_axis) const;
   template<typename T>
   void CurMutTensorAutoMemCopyFrom(const T* ptr, int64_t len) const;
+  template<typename T>
+  void StaticTensorAutoMemCopyFrom(const T* ptr, int64_t len) const;
 
  private:
   void ClearShape(FullyMutTensorView* tensor) const;
@@ -144,6 +146,15 @@ void OfBlob::CurMutTensorAutoMemCopyFrom(const T* ptr, int64_t len) const {
   CHECK(tensor_back_inserter_->cur_mut_tensor()->data_type() == GetDataType<T>::value);
   SyncAutoMemcpy(device_ctx_, tensor_back_inserter_->cur_mut_tensor()->mut_dptr(), ptr,
                  len * sizeof(T), blob_->mem_case(), mem_case_);
+}
+
+template<typename T>
+void OfBlob::StaticTensorAutoMemCopyFrom(const T* ptr, int64_t len) const {
+  blob_->blob_access_checker()->CheckBodyMutable();
+  CHECK_EQ(blob_->sole_tensor().shape().elem_cnt(), len);
+  CHECK(blob_->sole_tensor().data_type() == GetDataType<T>::value);
+  SyncAutoMemcpy(device_ctx_, blob_->sole_mut_tensor().mut_dptr(), ptr, len * sizeof(T),
+                 blob_->mem_case(), mem_case_);
 }
 
 }  // namespace oneflow
