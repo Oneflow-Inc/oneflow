@@ -145,12 +145,12 @@ More info on this demo, please refer to [doc on quick start](http://docs.oneflow
 ## Model Zoo and Benchmark
 * [link](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
 ### CNNs(ResNet-50, VGG-16, Inception-V3, AlexNet)
-* [CNNs](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/of_develop_py3/Classification/cnns)
+* [CNNs](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/Classification/cnns)
 
 ### Wide&Deep
-* [OneFlow-WDL](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/of_develop_py3/ClickThroughRate/WideDeepLearning)
+* [OneFlow-WDL](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/ClickThroughRate/WideDeepLearning)
 ### BERT
-* [Bert](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/of_develop_py3/LanguageModeling/BERT)
+* [Bert](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/BERT)
 
 ## Communication
 * Github issues : any install, bug, feature issues.
