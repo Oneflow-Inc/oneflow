@@ -150,7 +150,7 @@ More info on this demo, please refer to [doc on quick start](http://docs.oneflow
 ### Wide&Deep
 * [OneFlow-WDL](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/ClickThroughRate/WideDeepLearning)
 ### BERT
-* [Bert](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/BERT)
+* [BERT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/BERT)
 
 ## Communication
 * Github issues : any install, bug, feature issues.
