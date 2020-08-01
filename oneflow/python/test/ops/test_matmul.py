@@ -32,10 +32,8 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def MatmulJob():
         with flow.scope.placement(device_type, "0:0"):
             a = flow.get_variable(
@@ -53,7 +51,9 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
                 trainable=True,
             )
             loss = flow.matmul(a, b, transpose_a, transpose_b)
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(a, test_global_storage.Setter("a"))
             flow.watch_diff(a, test_global_storage.Setter("a_diff"))

@@ -184,17 +184,15 @@ def test_pool(_):
 
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
-        func_config.train.primary_lr(1e-4)
-        func_config.train.model_update_conf(dict(naive_conf={}))
 
         tensor_def = None
         if is_dynamic:
-            func_config.default_distribute_strategy(flow.scope.mirrored_view())
+            func_config.default_logical_view(flow.scope.mirrored_view())
             tensor_def = oft.ListNumpy.Placeholder
         else:
             tensor_def = oft.Numpy.Placeholder
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def pooling_job(x: tensor_def(x_shape, dtype=dtype)):
             v = flow.get_variable(
                 "x",
@@ -224,7 +222,9 @@ def test_pool(_):
                     padding=padding,
                     data_format=data_format,
                 )
-            flow.losses.add_loss(y)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(y)
             return y
 
         if is_dynamic:

@@ -29,7 +29,7 @@ def of_run(device_type, x_shape, rate, seed):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def RandomMaskLikeJob(x: oft.Numpy.Placeholder(x_shape)):
         with flow.scope.placement(device_type, "0:0"):
             mask = flow.nn.random_mask_like(x, rate=rate, seed=seed, name="random_mask")

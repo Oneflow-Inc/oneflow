@@ -66,8 +66,6 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
         func_config.default_logical_view(flow.scope.mirrored_view())
     else:
         func_config.default_logical_view(flow.scope.consistent_view())
-    func_config.train.primary_lr(1e-3)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     def do_scatter_nd(indices_blob, updates_blob):
         with flow.scope.placement(device_type, "0:0"):
@@ -80,13 +78,15 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
             x = flow.cast_to_current_logical_view(x)
             x = x + updates_blob
             y = flow.scatter_nd(indices_blob, x, shape)
-            flow.losses.add_loss(y)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(y)
         flow.watch_diff(x, compare_fn)
         return y
 
     if mirrored:
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def scatter_nd_fn(
             indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
             updates_def: oft.ListNumpy.Placeholder(updates.shape, dtype=flow.float),
@@ -95,7 +95,7 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
 
     else:
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def scatter_nd_fn(
             indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
             updates_def: oft.Numpy.Placeholder(updates.shape, dtype=flow.float),
@@ -195,10 +195,8 @@ def _compare_scatter_nd_update_with_tf(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
-    func_config.train.primary_lr(1e-3)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def scatter_nd_update_grad_fn(
         x_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float),
         indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
@@ -220,7 +218,9 @@ def _compare_scatter_nd_update_with_tf(
             x = x + x_def
             y = y + y_def
             z = flow.tensor_scatter_nd_update(x, indices_def, y)
-            flow.losses.add_loss(z)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(z)
 
         flow.watch_diff(x, compare_dz_dx)
         flow.watch_diff(y, compare_dz_dy)
@@ -253,8 +253,6 @@ def _of_tensor_scatter_nd_add(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-3)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     def do_tensor_scatter_nd_add(params_blob, indices_blob, updates_blob):
         with flow.scope.placement(device_type, "0:0"):
@@ -277,7 +275,9 @@ def _of_tensor_scatter_nd_add(
             params_var = params_var + params_blob
             updates_var = updates_var + updates_blob
             out = flow.tensor_scatter_nd_add(params_var, indices_blob, updates_var)
-            flow.losses.add_loss(out)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(out)
 
         flow.watch_diff(params_var, params_grad_watcher)
         flow.watch_diff(updates_var, updates_grad_watcher)
@@ -286,7 +286,7 @@ def _of_tensor_scatter_nd_add(
     if mirrored:
         func_config.default_logical_view(flow.scope.mirrored_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def tensor_scatter_nd_add_fn(
             params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
             indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
@@ -305,7 +305,7 @@ def _of_tensor_scatter_nd_add(
     else:
         func_config.default_logical_view(flow.scope.consistent_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def tensor_scatter_nd_add_fn(
             params_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float),
             indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
@@ -374,7 +374,7 @@ def _of_scatter_nd_dynamic_indices(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def scatter_nd_fn(
         indices_def: oft.ListNumpy.Placeholder(indices_static_shape, dtype=flow.int32),
         updates_def: oft.ListNumpy.Placeholder(updates_static_shape, dtype=flow.float),
@@ -413,7 +413,7 @@ def _of_tensor_scatter_nd_update_dynamic_indices(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def tensor_scatter_nd_update_fn(
         params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
         indices_def: oft.ListNumpy.Placeholder(indices_static_shape, dtype=flow.int32),
@@ -460,7 +460,7 @@ def _of_tensor_scatter_nd_add_dynamic_indices(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def tensor_scatter_nd_add_fn(
         params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
         indices_def: oft.ListNumpy.Placeholder(indices_static_shape, dtype=flow.int32),

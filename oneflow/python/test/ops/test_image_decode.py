@@ -31,7 +31,7 @@ def _of_image_decode(images):
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def image_decode_job(
         images_def: oft.ListListNumpy.Placeholder(shape=static_shape, dtype=flow.int8)
     ):

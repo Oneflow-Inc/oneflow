@@ -32,7 +32,7 @@ def constant(device_type):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ConstantJob():
         with flow.scope.placement(device_type, "0:0"):
             x = flow.constant(

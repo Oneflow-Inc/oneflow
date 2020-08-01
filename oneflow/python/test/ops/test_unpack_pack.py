@@ -27,7 +27,7 @@ def test_unpack_pack(test_case):
     if flow.eager_execution_enabled():
         return
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def UnpackPackJob(a: oft.Numpy.Placeholder((3, 4))):
         return flow.pack(flow.unpack(a, 3), 3)
 

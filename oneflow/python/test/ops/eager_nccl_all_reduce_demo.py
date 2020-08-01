@@ -26,7 +26,7 @@ func_config.default_logical_view(flow.scope.consistent_view())
 
 if __name__ == "__main__":
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def test_job(x: oft.Numpy.Placeholder((10000,), dtype=flow.float)):
         return flow.eager_nccl_all_reduce(
             x, parallel_conf="""  device_tag: "gpu", device_name: "0:0-3" """,
