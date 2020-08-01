@@ -37,7 +37,7 @@ def _check_unique(test_case, x, y, idx, count, num_unique):
 
 
 def _run_test(test_case, x, dtype, device):
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def UniqueWithCountsJob(x: oft.Numpy.Placeholder(x.shape, dtype=dtype)):
         with flow.scope.placement(device, "0:0"):
             return flow.experimental.unique_with_counts(x)

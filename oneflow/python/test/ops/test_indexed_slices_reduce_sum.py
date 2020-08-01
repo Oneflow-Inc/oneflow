@@ -40,7 +40,7 @@ def _check(test_case, x_indices, x_values, y_indices, y_values, num_unique):
 
 
 def _run_test(test_case, indices, values, indices_dtype, values_dtype, device):
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def TestJob(
         indices: oft.Numpy.Placeholder(indices.shape, dtype=indices_dtype),
         values: oft.Numpy.Placeholder(values.shape, dtype=values_dtype),
