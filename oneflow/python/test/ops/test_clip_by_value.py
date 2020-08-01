@@ -66,14 +66,14 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
     func_config = flow.FunctionConfig()
     func_config.default_data_type(data_type)
     if grad_cb is not None:
-        trainable = "train"
+        func_config_type = "train"
     else:
-        trainable = "predict"
+        func_config_type = "predict"
 
     if dynamic:
         func_config.default_logical_view(flow.scope.mirrored_view())
 
-        @flow.global_function(type=trainable, function_config=func_config)
+        @flow.global_function(type=func_config_type, function_config=func_config)
         def clip_fn(
             values_def: oft.ListNumpy.Placeholder(values.shape, dtype=data_type)
         ):
@@ -86,7 +86,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
     else:
         func_config.default_logical_view(flow.scope.consistent_view())
 
-        @flow.global_function(type=trainable, function_config=func_config)
+        @flow.global_function(type=func_config_type, function_config=func_config)
         def clip_fn(values_def: oft.Numpy.Placeholder(values.shape, dtype=data_type)):
             return clip(values_def)
 
