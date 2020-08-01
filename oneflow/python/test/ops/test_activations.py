@@ -38,8 +38,6 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
         data_type = flow.float
 
     func_config.default_data_type(data_type)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     of_activation_map = {
         "relu": flow.nn.relu,
@@ -53,7 +51,7 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
         #        "gelu": tfa.activations.gelu,
     }
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def ActivationJob():
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -64,7 +62,8 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
                 trainable=True,
             )
             loss = of_activation_map[activation_type](x)
-            flow.losses.add_loss(loss)
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [1e-4])
+            flow.optimizer.SGD(lr_scheduler, momentum=0).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))

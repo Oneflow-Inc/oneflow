@@ -25,10 +25,8 @@ def test_dynamic_reshape(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def DynamicReshapeJob(x: oft.ListNumpy.Placeholder(data_shape)):
         reshape_out1 = flow.reshape(x, (-1, 20))
         my_model = flow.get_variable(
@@ -41,7 +39,9 @@ def test_dynamic_reshape(test_case):
         my_model = flow.cast_to_current_logical_view(my_model)
         mm_out = flow.matmul(reshape_out1, my_model)
         reshape_out2 = flow.reshape(mm_out, (-1, 8, 4))
-        flow.losses.add_loss(reshape_out2)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+        ).minimize(reshape_out2)
         return reshape_out1
 
     data = [np.random.rand(*data_shape).astype(np.float32) for i in range(num_gpus)]

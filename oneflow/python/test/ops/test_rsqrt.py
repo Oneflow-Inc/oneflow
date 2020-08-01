@@ -28,7 +28,7 @@ def _run_test(test_case, x, dtype, device):
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def RsqrtJob(x: oft.Numpy.Placeholder(x.shape, dtype=dtype)):
         return flow.math.rsqrt(x)
 

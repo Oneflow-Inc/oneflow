@@ -34,7 +34,7 @@ def compare_with_tensorflow(device_type, in_shape, k, data_type, sorted):
     func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def TopKJob(
         input: oft.ListNumpy.Placeholder(
             tuple([dim + 10 for dim in in_shape]),

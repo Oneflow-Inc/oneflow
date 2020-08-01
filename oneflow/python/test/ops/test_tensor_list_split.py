@@ -39,7 +39,7 @@ def _of_tensor_list_split(input_tensor_list, input_static_shape, device_tag="gpu
     func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_placement_scope(flow.scope.placement(device_tag, "0:0"))
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def tensor_list_split_job(
         input_def: oft.ListListNumpy.Placeholder(
             shape=tuple(input_static_shape), dtype=flow.float

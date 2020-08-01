@@ -69,7 +69,7 @@ def test_MirroredTensorDef(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def Foo(x: oft.ListNumpy.Placeholder((2, 5))):
         return x
 
@@ -83,7 +83,7 @@ def test_MirroredTensorListDef(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def Foo(x: oft.ListListNumpy.Placeholder((2, 5))):
         return x
 
@@ -103,7 +103,7 @@ def test_MirroredTensorDef_4_device(test_case):
     image_shape = (64, 3, 224, 224)
     label_shape = (64, 1)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def Foo(
         image_label: Tuple[
             oft.ListNumpy.Placeholder(image_shape),
