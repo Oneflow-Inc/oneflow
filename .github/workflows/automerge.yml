@@ -16,3 +16,4 @@ jobs:
           MERGE_RETRY_SLEEP: "60000"
           UPDATE_RETRIES: "99999999999999"
           UPDATE_RETRY_SLEEP: "60000"
+          MERGE_METHOD: "squash"
