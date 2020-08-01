@@ -32,6 +32,11 @@ template<typename T>
 T GetDtypeMatchedValue(double floating, int64_t integral);
 
 template<>
+float16 GetDtypeMatchedValue(double floating, int64_t integral) {
+  return static_cast<float16>(floating);
+}
+
+template<>
 float GetDtypeMatchedValue(double floating, int64_t integral) {
   return static_cast<float>(floating);
 }
@@ -74,8 +79,8 @@ class PadKernel final : public user_op::OpKernel {
     const int64_t ndims = x->shape().NumAxes();
     const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
     CHECK_EQ(padding_before.size(), ndims);
-    NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(), constant_value,
-                                     y->mut_dptr<T>());
+    NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(),
+                                     static_cast<T>(constant_value), y->mut_dptr<T>());
     MemoryCopyNdDesc memory_copy_nd_desc;
 
     DimVector src_shape_vec(ndims);
@@ -108,6 +113,7 @@ class PadKernel final : public user_op::OpKernel {
 
 REGISTER_PAD_KERNEL(DeviceType::kGPU, double)
 REGISTER_PAD_KERNEL(DeviceType::kGPU, float)
+REGISTER_PAD_KERNEL(DeviceType::kGPU, float16)
 REGISTER_PAD_KERNEL(DeviceType::kGPU, int32_t)
 REGISTER_PAD_KERNEL(DeviceType::kGPU, int64_t)
 REGISTER_PAD_KERNEL(DeviceType::kGPU, int8_t)
@@ -164,6 +170,7 @@ class PadGradKernel final : public user_op::OpKernel {
 
 REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, double)
 REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, float)
+REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, float16)
 REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, int32_t)
 REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, int64_t)
 REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, int8_t)

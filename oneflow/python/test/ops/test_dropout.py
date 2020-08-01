@@ -99,7 +99,7 @@ def of_run_module(device_type, x_shape, data_type, rate, seed):
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(func_config)
-    def DropoutJob():
+    def DropoutJob() -> flow.typing.Numpy:
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
@@ -115,9 +115,10 @@ def of_run_module(device_type, x_shape, data_type, rate, seed):
 
     check_point = flow.train.CheckPoint()
     check_point.init()
-    of_out = DropoutJob().get().numpy()
+    of_out = DropoutJob()
+    of_out2 = DropoutJob()
 
-    return of_out
+    return of_out, of_out2
 
 
 def test_dropout_module(test_case):
@@ -126,93 +127,100 @@ def test_dropout_module(test_case):
     arg_dict["x_shape"] = [(2, 2, 2, 2)]
     arg_dict["data_type"] = ["float32"]
     arg_dict["rate"] = [0.75]
-    arg_dict["seed"] = [12345, 54321]
+    arg_dict["seed"] = [12345]
 
     literals = {
-        ("cpu", 12345): np.array(
-            [
-                4.0,
-                4.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                4.0,
-                0.0,
-                0.0,
-                0.0,
-                4.0,
-                4.0,
-                0.0,
-                0.0,
-                4.0,
-            ]
-        ),
-        ("cpu", 54321): np.array(
-            [
-                4.0,
-                0.0,
-                0.0,
-                0.0,
-                4.0,
-                4.0,
-                0.0,
-                4.0,
-                0.0,
-                0.0,
-                0.0,
-                4.0,
-                0.0,
-                0.0,
-                4.0,
-                0.0,
-            ]
-        ),
-        ("gpu", 12345): np.array(
-            [
-                4.0,
-                4.0,
-                0.0,
-                4.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                4.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-            ]
-        ),
-        ("gpu", 54321): np.array(
-            [
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                4.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                4.0,
-                0.0,
-                0.0,
-                0.0,
-                4.0,
-            ]
-        ),
+        "cpu": [
+            np.array(
+                [
+                    4.0,
+                    4.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    4.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    4.0,
+                    4.0,
+                    0.0,
+                    0.0,
+                    4.0,
+                ]
+            ),
+            np.array(
+                [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    4.0,
+                    4.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    4.0,
+                    0.0,
+                    0.0,
+                ]
+            ),
+        ],
+        "gpu": [
+            np.array(
+                [
+                    4.0,
+                    4.0,
+                    0.0,
+                    4.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    4.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                ]
+            ),
+            np.array(
+                [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    4.0,
+                    4.0,
+                    0.0,
+                ]
+            ),
+        ],
     }
 
     for arg in GenArgList(arg_dict):
-        of_out = of_run_module(*arg)
+        of_out_a, of_out_b = of_run_module(*arg)
         test_case.assertEqual(
-            (np.abs(literals[(arg[0], arg[4])] - of_out.flatten()) < 10e-7).all(), True
+            (np.abs(literals[arg[0]][0] - of_out_a.flatten()) < 10e-7).all(), True
+        )
+        test_case.assertEqual(
+            (np.abs(literals[arg[0]][1] - of_out_b.flatten()) < 10e-7).all(), True
         )

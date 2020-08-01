@@ -5,7 +5,7 @@ on:
       - labeled
 jobs:
   automerge:
-    runs-on: [self-hosted, linux]
+    runs-on: [self-hosted, linux, bot]
     timeout-minutes: 720
     steps:
       - name: automerge

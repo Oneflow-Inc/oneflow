@@ -25,7 +25,7 @@ from typing import Any, Callable, Optional, Union
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.distribute_context as distribute_ctx
@@ -88,6 +88,7 @@ def api_oneflow_function(
     r"""Creates a callable OneFlow global function from a Python function.
 
     For instance::
+
         @oneflow.global_function(flow.FunctionConfig())
         def train():
             # your model
@@ -597,7 +598,7 @@ def set_cudnn_conv_enable_true_half(func_desc, value=True):
     "cudnn_conv_enable_pseudo_half", "enable_cudnn_conv_pseudo_half"
 )
 def set_cudnn_conv_enable_pseudo_half(func_desc, value):
-    r"""Whether  enable pseudo_half mode or not during  convolution calculation process while using cudnn 
+    r"""Whether  enable pseudo_half mode or not during  convolution calculation process while using cudnn
 
     Args:
         func_desc ([type]): [description]
@@ -824,6 +825,7 @@ def allow_cpu_return_op(func_desc, value):
 
 
 @oneflow_function_config("default_distribute_strategy")
+@oneflow_deprecate()
 def deprecated_set_default_distribute_strategy(*args, **kwargs):
     print(
         "WARNING:",
