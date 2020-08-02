@@ -1,4 +1,4 @@
-**OneFlow is a performance-centered and open-source platform for machine learning.**
+**OneFlow is a performance-centered and open-source deep learning framework.**
 
 - [Install OneFlow](#install-oneflow)
   - [System Requirements](#system-requirements)
@@ -42,6 +42,12 @@
     python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu91 --user
     python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu90 --user
     ```
+
+  - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
+    ```
+    python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+    ```
+    For more information on this, please refer to [pypi 镜像使用帮助](https://mirror.tuna.tsinghua.edu.cn/help/pypi/)
 
   - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver to version 440.33 or above and install `oneflow_cu102` if possible. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
@@ -145,12 +151,12 @@ More info on this demo, please refer to [doc on quick start](http://docs.oneflow
 ## Model Zoo and Benchmark
 * [link](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
 ### CNNs(ResNet-50, VGG-16, Inception-V3, AlexNet)
-* [CNNs](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/of_develop_py3/Classification/cnns)
+* [CNNs](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/Classification/cnns)
 
 ### Wide&Deep
-* [OneFlow-WDL](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/of_develop_py3/ClickThroughRate/WideDeepLearning)
+* [OneFlow-WDL](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/ClickThroughRate/WideDeepLearning)
 ### BERT
-* [Bert](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/of_develop_py3/LanguageModeling/BERT)
+* [BERT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/BERT)
 
 ## Communication
 * Github issues : any install, bug, feature issues.

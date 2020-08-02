@@ -33,7 +33,7 @@ def test_testsource(test_case):
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def TestSourceJob():
         with flow.scope.placement("cpu", "0:0"):
             ret = my_test_source("my_cc_test_source_op")
@@ -51,7 +51,7 @@ def TODO_test_mirror_testsource(test_case):
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def TestSourceJob():
         with flow.scope.placement("cpu", "0:0"):
             ret = my_test_source("my_cc_test_source_op")

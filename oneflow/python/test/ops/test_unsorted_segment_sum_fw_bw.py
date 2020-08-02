@@ -44,8 +44,6 @@ def _make_unsorted_segment_sum_fn(
         func_config.default_logical_view(flow.scope.mirrored_view())
     else:
         func_config.default_logical_view(flow.scope.consistent_view())
-    func_config.train.primary_lr(1e-3)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     def do_unsorted_segment_sum(x_blob, i_blob):
         with flow.scope.placement(device_type, "0:0"):
@@ -59,13 +57,15 @@ def _make_unsorted_segment_sum_fn(
             y = flow.math.unsorted_segment_sum(
                 x, i_blob, axis=axis, num_segments=num_segments
             )
-            flow.losses.add_loss(y)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(y)
         flow.watch_diff(x, compare_fn)
         return y
 
     if mirrored:
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def unsorted_segment_sum_fn(
             data_def: oft.ListNumpy.Placeholder(data.shape, dtype=flow.float),
             segment_ids_def: oft.ListNumpy.Placeholder(
@@ -76,7 +76,7 @@ def _make_unsorted_segment_sum_fn(
 
     else:
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def unsorted_segment_sum_fn(
             data_def: oft.Numpy.Placeholder(data.shape, dtype=flow.float),
             segment_ids_def: oft.Numpy.Placeholder(segment_ids.shape, dtype=flow.int32),
