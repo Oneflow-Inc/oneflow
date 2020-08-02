@@ -57,7 +57,6 @@ class SharedOrPlain final {
 template<typename S, typename P>
 SharedOrPlain<S, P>::SharedOrPlain(const SharedOrPlain& rhs) {
   if (rhs.IsPlain()) {
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
     std::memcpy(this, &rhs, sizeof(*this));
   } else {
     shared_ptr_ = rhs.shared_ptr_;
