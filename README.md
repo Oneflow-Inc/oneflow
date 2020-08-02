@@ -1,4 +1,4 @@
-**OneFlow is a performance-centered and open-source platform for machine learning.**
+**OneFlow is a performance-centered and open-source deep learning framework.**
 
 - [Install OneFlow](#install-oneflow)
   - [System Requirements](#system-requirements)
