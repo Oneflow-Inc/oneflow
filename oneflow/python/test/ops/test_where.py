@@ -60,6 +60,7 @@ def _of_where(
                     dtype=flow.float,
                     initializer=flow.constant_initializer(0),
                 )
+                x_var = flow.cast_to_current_logical_view(x_var)
                 x_var = x_var + x
                 y_var = flow.get_variable(
                     "y",
@@ -67,6 +68,7 @@ def _of_where(
                     dtype=flow.float,
                     initializer=flow.constant_initializer(0),
                 )
+                y_var = flow.cast_to_current_logical_view(y_var)
                 y_var = y_var + y
 
             z = flow.where(condition, x_var, y_var)

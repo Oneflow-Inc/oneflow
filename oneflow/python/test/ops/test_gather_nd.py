@@ -59,6 +59,7 @@ def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(0),
             )
+            x = flow.cast_to_current_logical_view(x)
             x = x + x_blob
             y = flow.gather_nd(x, i_blob)
             flow.losses.add_loss(y)
@@ -106,6 +107,7 @@ def _of_dynamic_params_gather_nd(params, indices, static_params_shape, compare_f
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(1),
             )
+            one_var = flow.cast_to_current_logical_view(one_var)
             params_var = params_def * one_var
             y = flow.gather_nd(params_var, indices_def)
             flow.losses.add_loss(y)
