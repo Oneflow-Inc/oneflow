@@ -25,10 +25,10 @@ endif()
 message(STATUS ${TENSORFLOW_BUILD_CMD})
 
 set(TENSORFLOW_PROJECT  tensorflow)
-set(TENSORFLOW_GIT_URL  https://github.com/tensorflow/tensorflow.git)
+set(TENSORFLOW_GIT_URL  https://github.com/OneFlow-Inc/tensorflow.git)
 #set(TENSORFLOW_GIT_TAG  master)
-set(TENSORFLOW_GIT_TAG  80c04b80ad66bf95aa3f41d72a6bba5e84a99622)
-set(TENSORFLOW_SOURCES_DIR ${THIRD_PARTY_SUBMODULE_DIR}/tensorflow)
+set(TENSORFLOW_GIT_TAG  dea9488e5f05ffcaff7e729f33d475af3a7021ba)
+set(TENSORFLOW_SOURCES_DIR ${CMAKE_CURRENT_BINARY_DIR}/tensorflow)
 set(TENSORFLOW_SRCS_DIR ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 set(TENSORFLOW_INC_DIR  ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 
@@ -64,7 +64,6 @@ if (THIRD_PARTY)
     PREFIX ${TENSORFLOW_SOURCES_DIR}
     GIT_REPOSITORY ${TENSORFLOW_GIT_URL}
     GIT_TAG ${TENSORFLOW_GIT_TAG}
-    PATCH_COMMAND patch -Np1 < ${PATCHES_DIR}/xla.patch
     CONFIGURE_COMMAND ""
     BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
                   bazel build ${TENSORFLOW_BUILD_CMD} -j 20 //tensorflow/compiler/jit/xla_lib:libxla_core.so
