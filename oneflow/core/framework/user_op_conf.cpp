@@ -163,7 +163,7 @@ std::string UserOpWrapper::GetGradTensorWithOpOutput(const std::string& output_a
   return output_grad(output_arg_name, index);
 }
 
-void UserOpWrapper::BindGradTensorWithOpInput(const std::string logical_grad_blob_name,
+void UserOpWrapper::BindGradTensorWithOpInput(const std::string& logical_grad_blob_name,
                                               const std::string& input_arg_name,
                                               int32_t index) const {
   CHECK(NeedGenGradTensor4OpInput(input_arg_name, index));
