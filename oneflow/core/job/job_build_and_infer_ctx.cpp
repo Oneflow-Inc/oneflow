@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_symbol_storage.h"
 #include "oneflow/core/job/scope.h"
 #include <google/protobuf/text_format.h>
-#include "oneflow/customized/summary/summary_converter.h"
+#include "oneflow/user/summary/summary_converter.h"
 #include <json.hpp>
 
 namespace oneflow {
