@@ -246,7 +246,7 @@ def _EagerRunModelInit(var_op_conf):
     op_conf, _ = _GenModelInitOpConfAndRetLbi(var_op_conf)
     bn_in_op2blob_object = {}
 
-    def BuildModeInitInstruction(builder):
+    def BuildModelInitInstruction(builder):
         upstream_signature = op_attribute_pb.OpNodeSignature()
         op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
         op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
@@ -259,7 +259,7 @@ def _EagerRunModelInit(var_op_conf):
 
     sess = session_ctx.GetDefaultSession()
     with sess.NewCurrentScope(sess.MakeScope(_BuildNotMirroredScope)):
-        vm_util.LogicalRun(BuildModeInitInstruction)
+        vm_util.LogicalRun(BuildModelInitInstruction)
 
     return bn_in_op2blob_object["out_0"]
 
@@ -304,7 +304,7 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
     model_load_op_conf, _ = _GenModelLoadOpConfAndRetLbi(var_op_conf, path_lbi)
     model_load_blob_objects = {}
 
-    def BuildModeLoadInstruction(builder):
+    def BuildModelLoadInstruction(builder):
         path_blob_object = path_input_blob_objects["out"]
         model_load_blob_objects["path"] = path_blob_object
         op_attribute = op_infer_util.Infer(
@@ -319,7 +319,7 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
     with sess.NewCurrentScope(sess.MakeScope(_BuildNotMirroredScope)):
         vm_util.LogicalRun(BuildModelIOPathInputInstruction)
         vm_util.LogicalRun(BuildFeedPathInstruction)
-        vm_util.LogicalRun(BuildModeLoadInstruction)
+        vm_util.LogicalRun(BuildModelLoadInstruction)
 
     return model_load_blob_objects["out_0"]
 
@@ -337,7 +337,7 @@ def _EagerRunModelSave(var_blobs, snapshot_path):
     model_save_op_conf = _GenModelSaveOpConf(var_blobs, path_lbi)
     model_save_blob_objects = {}
 
-    def BuildModeSaveInstruction(builder):
+    def BuildModelSaveInstruction(builder):
         path_blob_object = path_input_blob_objects["out"]
         model_save_blob_objects["path"] = path_blob_object
         for i, blob in enumerate(var_blobs):
@@ -355,7 +355,7 @@ def _EagerRunModelSave(var_blobs, snapshot_path):
     with sess.NewCurrentScope(sess.MakeScope(_BuildNotMirroredScope)):
         vm_util.LogicalRun(BuildModelIOPathInputInstruction)
         vm_util.LogicalRun(BuildFeedPathInstruction)
-        vm_util.LogicalRun(BuildModeSaveInstruction)
+        vm_util.LogicalRun(BuildModelSaveInstruction)
 
 
 def _GenModelInitOpConfAndRetLbi(var_op_conf):
