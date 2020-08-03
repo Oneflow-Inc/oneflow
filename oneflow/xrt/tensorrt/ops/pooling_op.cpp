@@ -32,7 +32,6 @@ class PoolingOp : public TrtOpKernel {
     CHECK_GE(in_shape.NumAxes(), 3);
     CHECK_LE(in_shape.NumAxes(), 5);
 
-    const std::string& padding = ctx->Attr<std::string>("padding");
     const auto& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
     const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
 
@@ -42,7 +41,29 @@ class PoolingOp : public TrtOpKernel {
     layer->setName(ctx->op_name().c_str());
 
     layer->setStride(nvinfer1::DimsHW(strides[0], strides[1]));
-    if (padding == "same") { layer->setPaddingMode(nvinfer1::PaddingMode::kSAME_LOWER); }
+
+    const std::string& padding = ctx->Attr<std::string>("padding");
+    // The default padding mode is valid for TensorRT.
+    if(padding != "valid") {
+        if(padding=="customized") {
+            const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
+            const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
+            const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
+            if(ceil_mode) {
+                layer->setPaddingMode(nvinfer1::PaddingMode::kEXPLICIT_ROUND_UP);
+            } else {
+                layer->setPaddingMode(nvinfer1::PaddingMode::kEXPLICIT_ROUND_DOWN);
+            }
+            layer->setPrePadding(nvinfer1::DimsHW(padding_before[0], padding_before[1]));
+            layer->setPostPadding(nvinfer1::DimsHW(padding_after[0], padding_after[1]));
+        } else if(padding == "same_lower") {
+            layer->setPaddingMode(nvinfer1::PaddingMode::kSAME_LOWER);
+        } else if(padding == "same_upper") {
+            layer->setPaddingMode(nvinfer1::PaddingMode::kSAME_UPPER);
+        } else {
+            UNIMPLEMENTED();
+        }
+    }
     ctx->SetSoleOutput(layer->getOutput(0));
   }
 };

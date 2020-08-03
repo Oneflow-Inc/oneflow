@@ -53,13 +53,11 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     np_type = type_name_to_np_type[type_name]
     flow_type = type_name_to_flow_type[type_name]
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def test_element_wise_mul_job(
         x: oft.Numpy.Placeholder(shape, dtype=flow.float),
         y: oft.Numpy.Placeholder(shape, dtype=flow.float),
@@ -81,7 +79,9 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
             y = flow.cast(y, dtype=flow_type)
             out = flow.math.multiply(x, y)
             out = flow.cast(out, dtype=flow.float)
-            flow.losses.add_loss(out)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(out)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))

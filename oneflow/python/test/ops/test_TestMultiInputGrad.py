@@ -39,15 +39,13 @@ def test_TestMultiInput_grad_mirrored_inplace(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     shape = (
         3,
         3,
     )
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def TestMultiInputJob():
         with flow.scope.placement("gpu", "0:0"):
             x1 = flow.get_variable(
@@ -65,7 +63,9 @@ def test_TestMultiInput_grad_mirrored_inplace(test_case):
                 trainable=True,
             )
             loss = TestMultiInput(x1, x2)
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x1, test_global_storage.Setter("x1"))
             flow.watch_diff(x1, test_global_storage.Setter("x1_diff"))

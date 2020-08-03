@@ -23,7 +23,7 @@ func_config.default_data_type(flow.float)
 
 
 def test_naive(test_case):
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AddJob(xs: Tuple[(oft.Numpy.Placeholder((5, 2)),) * 3]):
         return flow.math.add_n(xs)
 
@@ -97,7 +97,7 @@ def test_100_inputs(test_case):
 
 
 def GenerateTest(test_case, shape, num_inputs):
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AddJob(xs: Tuple[(oft.Numpy.Placeholder(shape),) * num_inputs]):
         return flow.math.add_n(xs)
 

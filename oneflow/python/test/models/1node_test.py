@@ -13,32 +13,34 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow as flow
+import env_1node
 import os
 
-import cnns_tests
-import env_1node
-import numpy
-import oneflow as flow
 from absl import app
 from absl.testing import absltest
 from test_1node_mixin import Test1NodeMixin
+from cnns_tests import (
+    TestAlexNetMixin,
+    TestResNet50Mixin,
+    TestVgg16Mixin,
+    TestInceptionV3Mixin,
+)
 
 
-class TestAlexNet(Test1NodeMixin, cnns_tests.TestAlexNetMixin, absltest.TestCase):
+class TestAlexNet(Test1NodeMixin, TestAlexNetMixin, absltest.TestCase):
     pass
 
 
-class TestResNet50(Test1NodeMixin, cnns_tests.TestResNet50Mixin, absltest.TestCase):
+class TestResNet50(Test1NodeMixin, TestResNet50Mixin, absltest.TestCase):
     pass
 
 
-class TestVgg16(Test1NodeMixin, cnns_tests.TestVgg16Mixin, absltest.TestCase):
+class TestVgg16(Test1NodeMixin, TestVgg16Mixin, absltest.TestCase):
     pass
 
 
-class TestInceptionV3(
-    Test1NodeMixin, cnns_tests.TestInceptionV3Mixin, absltest.TestCase
-):
+class TestInceptionV3(Test1NodeMixin, TestInceptionV3Mixin, absltest.TestCase):
     pass
 
 

@@ -48,10 +48,11 @@ class ConvolutionOp : public TrtOpKernel {
 
     layer->setStride(nvinfer1::DimsHW(strides[0], strides[1]));
     layer->setDilation(nvinfer1::DimsHW(dilation[0], dilation[1]));
-    // The default padding mode is valid for TensorRT.
-    if (ctx->Attr<std::string>("padding") == "same") {
-      layer->setPaddingMode(nvinfer1::PaddingMode::kSAME_LOWER);
-    }
+    
+    const auto& pads = ctx->Attr<std::vector<int32_t>>("padding_before");
+    layer->setPaddingMode(nvinfer1::PaddingMode::kEXPLICIT_ROUND_DOWN);
+    layer->setPrePadding(nvinfer1::DimsHW(pads[0], pads[1]));
+    layer->setPostPadding(nvinfer1::DimsHW(pads[0], pads[1]));
     ctx->SetOutput("out_0", layer->getOutput(0));
   }
 };

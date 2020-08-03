@@ -27,7 +27,7 @@ def test_eager_tensor_list_input(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo_job(
         input_def: oft.ListListNumpy.Placeholder(shape=(2, 5, 4), dtype=flow.float)
     ):
@@ -47,7 +47,7 @@ def test_tensor_list_input_output(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo_job(
         input_def: oft.ListListNumpy.Placeholder(shape=(2, 5, 4), dtype=flow.float)
     ):

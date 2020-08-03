@@ -172,7 +172,7 @@ def _of_poly_to_mask_pipline(
     func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def poly_to_mask_job(
         image_def: oft.ListListNumpy.Placeholder(
             shape=tuple(image_shape), dtype=flow.float
