@@ -59,7 +59,12 @@ ExternalProject_Add(protobuf
 )
 
 # put protobuf includes in the 'THIRD_PARTY_DIR'
-add_copy_headers_target(NAME protobuf SRC ${PROTOBUF_SRC_DIR} DST ${PROTOBUF_INCLUDE_DIR} DEPS protobuf INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/protobuf_headers.txt")
+if(WITH_XLA)
+  add_copy_headers_target(NAME protobuf SRC ${PROTOBUF_SRC_DIR} DST ${PROTOBUF_INCLUDE_DIR} DEPS protobuf INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/protobuf_xla_headers.txt")
+else()
+  add_copy_headers_target(NAME protobuf SRC ${PROTOBUF_SRC_DIR} DST ${PROTOBUF_INCLUDE_DIR} DEPS protobuf INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/protobuf_headers.txt")
+endif()
+
 
 # put protobuf librarys in the 'THIRD_PARTY_DIR'
 add_custom_target(protobuf_create_library_dir
