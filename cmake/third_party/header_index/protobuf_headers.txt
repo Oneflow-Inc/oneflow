@@ -291,3 +291,9 @@ google/protobuf/compiler/ruby/ruby_generated_pkg_explicit_legacy.proto
 google/protobuf/compiler/ruby/ruby_generated_code_proto2.proto
 google/protobuf/compiler/ruby/ruby_generated_pkg_explicit.proto
 google/protobuf/compiler/ruby/ruby_generated_code.proto
+google/protobuf/message_unittest.inc
+google/protobuf/port_undef.inc
+google/protobuf/test_util.inc
+google/protobuf/port_def.inc
+google/protobuf/proto3_lite_unittest.inc
+google/protobuf/compiler/cpp/cpp_unittest.inc
