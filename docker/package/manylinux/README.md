@@ -2,9 +2,9 @@
 
 ### 创建 docker 容器
 
-在 `docker/package/manylinux` 目录下运行:
+在 OneFlow 源码根目录下运行:
 ```
-docker build -t oneflow:manylinux2014-cuda10.2 .
+docker build -f docker/package/manylinux/Dockerfile --build-arg from=nvidia/cuda:10.2-cudnn7-devel-centos7 -t oneflow:manylinux2014-cuda10.2 .
 ```
 
 ### 打包 manylinux python wheel
@@ -12,7 +12,7 @@ docker build -t oneflow:manylinux2014-cuda10.2 .
 这里有 manylinux2014(centos7) + cuda10.2 的 Dockerfile，里面安装了编译 oneflow 所需的库，假设你已经用 Dockerfile build 了一个 docker 镜像，叫做 oneflow:manylinux2014-cuda10.2，那么只要在 oneflow 源码目录运行
 
 ```bash
-docker run --rm -it -v `pwd`:/oneflow-src oneflow:manylinux2014-cuda10.2
+docker run --rm -it -v `pwd`:/oneflow-src -w /oneflow-src oneflow:manylinux2014-cuda10.2
 ```
 
 就会在 docker 镜像里执行 build_wheel.sh 来编译生成 python 3.5 到 python 3.8 的 oneflow manylinux2014 wheel。生成的包在 oneflow 源码目录下的 wheelhouse/ 文件夹内

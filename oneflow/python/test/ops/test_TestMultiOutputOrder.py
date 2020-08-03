@@ -34,9 +34,9 @@ def TestMultiOutputOrder(x, name):
 def GenerateTest(test_case, shape):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def TestMultiOutputOrderJob(x: oft.Numpy.Placeholder(shape)):
         return TestMultiOutputOrder(x, "my_2_output_op")
 

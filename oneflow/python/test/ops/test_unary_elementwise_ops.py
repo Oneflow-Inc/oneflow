@@ -22,9 +22,9 @@ import oneflow.typing as oft
 def test_abs(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AbsJob(a: oft.Numpy.Placeholder((5, 2))):
         return flow.math.abs(a)
 
@@ -36,9 +36,10 @@ def test_abs(test_case):
 def test_1n2c_mirror_dynamic_abs(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AbsJob(a: oft.ListNumpy.Placeholder((5, 2))):
         return flow.math.abs(a)
 
@@ -52,9 +53,9 @@ def test_1n2c_mirror_dynamic_abs(test_case):
 def test_acos(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AcosJob(a: oft.Numpy.Placeholder((5, 2))):
         return flow.math.acos(a)
 
@@ -67,9 +68,9 @@ def test_acos_consistent_1n2c(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AcosJob(a: oft.Numpy.Placeholder((5, 2))):
         return flow.math.acos(a)
 
@@ -82,9 +83,9 @@ def test_acos_cpu(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_placement_scope(flow.scope.placement("cpu", "0:0"))
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AcosJob(a: oft.Numpy.Placeholder((5, 2))):
         return flow.math.acos(a)
 
@@ -96,9 +97,9 @@ def test_acos_cpu(test_case):
 def test_acos_double(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AcosJob(a: oft.Numpy.Placeholder((5, 2), dtype=flow.double)):
         return flow.math.acos(a)
 
@@ -110,9 +111,10 @@ def test_acos_double(test_case):
 def test_1n2c_mirror_dynamic_acos(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AcosJob(a: oft.ListNumpy.Placeholder((5, 2))):
         return flow.math.acos(a)
 
@@ -126,9 +128,9 @@ def test_1n2c_mirror_dynamic_acos(test_case):
 def test_acosh(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AcoshJob(a: oft.Numpy.Placeholder((7,))):
         return flow.math.acosh(a)
 
@@ -147,9 +149,9 @@ def test_acosh(test_case):
 def test_asin(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AsinJob(a: oft.Numpy.Placeholder((2,))):
         return flow.math.asin(a)
 
@@ -166,9 +168,9 @@ def test_asin(test_case):
 def test_asinh(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AsinhJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.asinh(a)
 
@@ -188,9 +190,9 @@ def test_asinh(test_case):
 def test_atan(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AtanJob(a: oft.Numpy.Placeholder((2,))):
         return flow.math.atan(a)
 
@@ -209,9 +211,9 @@ def test_atan(test_case):
 def test_atanh(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def AtanhJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.atanh(a)
 
@@ -231,9 +233,9 @@ def test_atanh(test_case):
 def test_ceil(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def CeilJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.ceil(a)
 
@@ -245,9 +247,9 @@ def test_ceil(test_case):
 def test_cos(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def CosJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.cos(a)
 
@@ -267,9 +269,9 @@ def test_cos(test_case):
 def test_cosh(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def CoshJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.cosh(a)
 
@@ -289,9 +291,9 @@ def test_cosh(test_case):
 def test_erf(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ErfJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.erf(a)
 
@@ -303,9 +305,9 @@ def test_erf(test_case):
 def test_erfc(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ErfcJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.erfc(a)
 
@@ -317,9 +319,9 @@ def test_erfc(test_case):
 def test_exp(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ExpJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.exp(a)
 
@@ -331,9 +333,9 @@ def test_exp(test_case):
 def test_expm1(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def Expm1Job(a: oft.Numpy.Placeholder((8,))):
         return flow.math.expm1(a)
 
@@ -345,9 +347,9 @@ def test_expm1(test_case):
 def test_floor(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def FloorJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.floor(a)
 
@@ -359,9 +361,9 @@ def test_floor(test_case):
 def test_lgamma(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def LgammaJob(a: oft.Numpy.Placeholder((6,))):
         return flow.math.lgamma(a)
 
@@ -375,9 +377,9 @@ def test_lgamma(test_case):
 def test_log(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def LogJob(a: oft.Numpy.Placeholder((4,))):
         return flow.math.log(a)
 
@@ -391,9 +393,9 @@ def test_log(test_case):
 def test_log1p(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def Log1pJob(a: oft.Numpy.Placeholder((4,))):
         return flow.math.log1p(a)
 
@@ -407,9 +409,9 @@ def test_log1p(test_case):
 def test_log_sigmoid(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def LogSigmoidJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.log_sigmoid(a)
 
@@ -422,9 +424,9 @@ def test_log_sigmoid(test_case):
 def test_negative(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def NegativeJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.negative(a)
 
@@ -436,9 +438,9 @@ def test_negative(test_case):
 def test_reciprocal(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ReciprocalJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.reciprocal(a)
 
@@ -450,9 +452,9 @@ def test_reciprocal(test_case):
 def test_reciprocal_no_nan(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ReciprocalNoNanJob(a: oft.Numpy.Placeholder((4,))):
         return flow.math.reciprocal_no_nan(a)
 
@@ -466,9 +468,9 @@ def test_reciprocal_no_nan(test_case):
 def test_rint(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def RintJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.rint(a)
 
@@ -480,9 +482,9 @@ def test_rint(test_case):
 def test_rint_special_value(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def RintJob(a: oft.Numpy.Placeholder((9,))):
         return flow.math.rint(a)
 
@@ -497,9 +499,9 @@ def test_rint_special_value(test_case):
 def test_round(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def RoundJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.round(a)
 
@@ -511,9 +513,9 @@ def test_round(test_case):
 def test_round_special_value(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def RoundJob(a: oft.Numpy.Placeholder((5,))):
         return flow.math.round(a)
 
@@ -526,9 +528,9 @@ def test_round_special_value(test_case):
 def test_rsqrt(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def RsqrtJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.rsqrt(a)
 
@@ -540,9 +542,9 @@ def test_rsqrt(test_case):
 def test_sigmoid_v2(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def SigmoidJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.sigmoid_v2(a)
 
@@ -554,9 +556,9 @@ def test_sigmoid_v2(test_case):
 def test_sign(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def SignJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.sign(a)
 
@@ -568,9 +570,9 @@ def test_sign(test_case):
 def test_sign_double(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def SignJob(a: oft.Numpy.Placeholder((8,), dtype=flow.double)):
         return flow.math.sign(a)
 
@@ -583,9 +585,9 @@ def test_sign_double_consistent_1n2c(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def SignJob(a: oft.Numpy.Placeholder((8,), dtype=flow.double)):
         return flow.math.sign(a)
 
@@ -597,9 +599,9 @@ def test_sign_double_consistent_1n2c(test_case):
 def test_sin(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def SinJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.sin(a)
 
@@ -618,9 +620,9 @@ def test_sin(test_case):
 def test_softplus(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def SoftplusJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.softplus(a)
 
@@ -632,9 +634,9 @@ def test_softplus(test_case):
 def test_sqrt(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def SqrtJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.sqrt(a)
 
@@ -646,9 +648,9 @@ def test_sqrt(test_case):
 def test_square(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def SquareJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.square(a)
 
@@ -660,9 +662,9 @@ def test_square(test_case):
 def test_tan(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def TanJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.tan(a)
 
@@ -681,9 +683,9 @@ def test_tan(test_case):
 def test_tanh_v2(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def TanhJob(a: oft.Numpy.Placeholder((8,))):
         return flow.math.tanh_v2(a)
 

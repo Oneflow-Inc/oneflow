@@ -29,8 +29,8 @@ class StreamDesc;
 // clang-format off
 OBJECT_MSG_BEGIN(StreamRtDesc);
   // methods
-  PUBLIC void __Init__(StreamDesc* stream_desc);
-  PUBLIC const StreamType& stream_type() const;
+  OF_PUBLIC void __Init__(StreamDesc* stream_desc);
+  OF_PUBLIC const StreamType& stream_type() const;
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(StreamDesc, stream_desc); 

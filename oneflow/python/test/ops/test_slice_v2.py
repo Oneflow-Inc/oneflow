@@ -33,9 +33,9 @@ def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=N
         return outputs
 
     if dynamic is True:
-        func_config.default_distribute_strategy(flow.scope.mirrored_view())
+        func_config.default_logical_view(flow.scope.mirrored_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(function_config=func_config)
         def slice(
             input_blob: oft.ListNumpy.Placeholder(shape=input_shape, dtype=dtype)
         ):
@@ -45,9 +45,9 @@ def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=N
         return map(lambda x: x.numpy_list()[0], outputs)
 
     else:
-        func_config.default_distribute_strategy(flow.scope.consistent_view())
+        func_config.default_logical_view(flow.scope.consistent_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(function_config=func_config)
         def slice(input_blob: oft.Numpy.Placeholder(shape=input_shape, dtype=dtype)):
             return do_slice(input_blob, index_args)
 
@@ -186,22 +186,22 @@ def test_slice_grad(test_case):
 
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
-    func_config.train.primary_lr(1e-3)
-    func_config.train.model_update_conf(dict(naive_conf={}))
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def slice(input_blob: oft.Numpy.Placeholder(shape=(2, 5, 4), dtype=flow.float)):
         x = flow.get_variable(
             shape=(2, 5, 4),
             dtype=flow.float,
-            initializer=flow.random_uniform_initializer(2),
+            initializer=flow.random_uniform_initializer(0, 2),
             name="variable",
         )
         x = flow.identity(x)
         flow.watch_diff(x, slice_grad_cb)
         y = flow.slice_v2(x, [(None, None, None), (2, -2, None)])
-        flow.losses.add_loss(y)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+        ).minimize(y)
         return y
 
     slice(input).get()

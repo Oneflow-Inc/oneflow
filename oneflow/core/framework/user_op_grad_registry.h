@@ -25,16 +25,21 @@ namespace user_op {
 
 using AddOpFn = std::function<void(const UserOpConfWrapper&)>;
 using GenBackwardOpConfFn = std::function<void(const UserOpWrapper&, AddOpFn)>;
+using BackwardOpConfGenFn = std::function<void(BackwardOpConfContext*)>;
 
 struct OpGradRegistryResult {
   std::string op_type_name;
   GenBackwardOpConfFn gen_bw_fn;
+  BackwardOpConfGenFn bw_gen_fn;
 };
 
 class OpGradRegistry final {
  public:
   OpGradRegistry& Name(const std::string& op_type_name);
+  // old
   OpGradRegistry& SetGenBackwardOpConfFn(GenBackwardOpConfFn fn);
+  // new
+  OpGradRegistry& SetBackwardOpConfGenFn(BackwardOpConfGenFn fn);
 
   OpGradRegistry& Finish();
   OpGradRegistryResult GetResult() { return result_; }

@@ -35,10 +35,8 @@ def compare_with_tensorflow(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def SparseSoftmaxCrossEntropyWithLogitsJob(
         labels: oft.Numpy.Placeholder(
             (batch_size,), dtype=type_name_to_flow_type[label_type]
@@ -55,7 +53,9 @@ def compare_with_tensorflow(
             prediction = flow.nn.softmax(logits=x)
             loss = flow.nn.sparse_cross_entropy(labels=labels, prediction=prediction)
             loss = flow.math.square(loss)
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))

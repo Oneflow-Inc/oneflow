@@ -47,7 +47,7 @@ ObjectMsgPtr<VirtualMachine> NewTestVirtualMachine(int64_t* object_id, size_t si
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
-  *object_id = TestUtil::NewObject(&list, "0:cpu:0");
+  *object_id = TestUtil::NewObject(&list, "cpu", "0:0");
   list.EmplaceBack(NewInstruction("Malloc")->add_mut_operand(*object_id)->add_int64_operand(size));
   vm->Receive(&list);
   return vm;

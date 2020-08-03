@@ -30,13 +30,11 @@ def compare_with_tensorflow(device_type, x_shape, axis):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     def check_grad(x_diff_blob):
         assert np.array_equal(x_diff_blob.numpy(), np.ones(x_shape))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def ExpandDimsJob():
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -48,7 +46,9 @@ def compare_with_tensorflow(device_type, x_shape, axis):
             )
             flow.watch_diff(x, check_grad)
             loss = flow.expand_dims(x, axis)
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
             return loss
 
     # # OneFlow

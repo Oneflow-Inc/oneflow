@@ -319,8 +319,8 @@ TEST(ObjectMsg, MoveTo) {
 // clang-format off
 OBJECT_MSG_BEGIN(SelfLoopContainer);
   // methods
-  PUBLIC void __Init__(bool* deleted) { set_deleted(deleted); }
-  PUBLIC void __Delete__() { *mut_deleted() = true; }
+  OF_PUBLIC void __Init__(bool* deleted) { set_deleted(deleted); }
+  OF_PUBLIC void __Delete__() { *mut_deleted() = true; }
   // fields
   OBJECT_MSG_DEFINE_PTR(bool, deleted);
   // links

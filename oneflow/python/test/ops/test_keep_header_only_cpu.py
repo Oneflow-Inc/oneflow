@@ -19,11 +19,11 @@ import oneflow.typing as oft
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
-func_config.default_distribute_strategy(flow.scope.consistent_view())
+func_config.default_logical_view(flow.scope.consistent_view())
 
 
 def test_keep_header_only_cpu(test_case):
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def job(x: oft.Numpy.Placeholder((2, 3, 4), dtype=flow.float)):
         with flow.scope.placement("cpu", "0:0"):
             x = flow.identity(x)

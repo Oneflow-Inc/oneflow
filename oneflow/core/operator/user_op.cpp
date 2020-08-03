@@ -320,7 +320,7 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(&infer_ctx);
   if (tmp_size > 0) {
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
-    CHECK(tmp_buffer_blob != nullptr);
+    CHECK_NOTNULL_OR_RETURN(tmp_buffer_blob);
     tmp_buffer_blob->set_data_type(DataType::kChar);
     tmp_buffer_blob->mut_shape() = Shape({static_cast<int64_t>(tmp_size)});
   }

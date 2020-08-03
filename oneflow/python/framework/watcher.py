@@ -24,6 +24,7 @@ import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.ofblob as ofblob
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.typing_util as oft_util
 from google.protobuf import text_format
 
 
@@ -50,7 +51,8 @@ def _WatcherHandler(handler_uuid, of_blob_ptr):
     blob_watched, handler = uuid2handler[handler_uuid]
     assert callable(handler)
     ndarray_lists = ofblob.OfBlob(of_blob_ptr).CopyToNdarrayLists()
-    handler(local_blob_util.MakeLocalBlob(ndarray_lists, blob_watched))
+    local_blob = local_blob_util.MakeLocalBlob(ndarray_lists, blob_watched)
+    handler(oft_util.TransformWatchedBlob(local_blob, handler))
 
 
 # static lifetime

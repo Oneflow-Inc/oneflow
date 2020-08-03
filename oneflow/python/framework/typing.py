@@ -24,8 +24,12 @@ import inspect
 import sys
 
 
+class PyStructCompatibleToBlob(object):
+    pass
+
+
 @oneflow_export("typing.Numpy")
-class Numpy:
+class Numpy(PyStructCompatibleToBlob):
     """`Numpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
@@ -65,7 +69,7 @@ class Numpy:
 
 
 @oneflow_export("typing.ListNumpy")
-class ListOfNumpy:
+class ListNumpy(PyStructCompatibleToBlob):
     """`ListNumpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
@@ -109,7 +113,7 @@ class ListOfNumpy:
 
 
 @oneflow_export("typing.ListListNumpy")
-class ListOfListOfNumpy:
+class ListListNumpy(PyStructCompatibleToBlob):
     """`ListListNumpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
@@ -183,22 +187,27 @@ class ListOfListOfNumpyDef(OneflowNumpyDef):
         )
 
 
+@oneflow_export("typing.Callback")
+class Callback(typing.Generic[typing.TypeVar("T")]):
+    pass
+
+
 def OriginFrom(parameterised, generic):
     if inspect.isclass(parameterised) and inspect.isclass(generic):
         return issubclass(parameterised, generic)
-    if inspect.isclass(parameterised) != inspect.isclass(generic):
+    if generic == OneflowNumpyDef:
+        assert not inspect.isclass(parameterised)
         return False
     if (sys.version_info.major, sys.version_info.minor) >= (3, 7):
         if not hasattr(parameterised, "__origin__"):
             return False
+        if generic == typing.Dict:
+            return parameterised.__origin__ is dict
         if generic == typing.Tuple:
-            return (
-                type(parameterised) is type(typing.Tuple[int])
-                and parameterised.__origin__ is tuple
-            )
+            return parameterised.__origin__ is tuple
         if generic == typing.List:
-            return (
-                type(parameterised) is type(typing.List[int])
-                and parameterised.__origin__ is list
-            )
+            return parameterised.__origin__ is list
+        if generic == Callback:
+            return parameterised.__origin__ is Callback
+
     raise NotImplementedError("python typing is a monster torturing everyone.")

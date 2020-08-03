@@ -59,7 +59,7 @@ def CurJobAddOp(op_conf, scope_symbol=None):
 
 def CurJobAddConsistentOp(op_conf, scope_symbol=None):
     if scope_symbol is None:
-        scope_symbol = oneflow.scope.current_scope()
+        scope_symbol = oneflow.current_scope()
     op_conf.scope_symbol_id = scope_symbol.symbol_id
     if not op_conf.HasField("device_type"):
         device_tag = scope_symbol.device_parallel_desc_symbol.device_tag
@@ -70,7 +70,7 @@ def CurJobAddConsistentOp(op_conf, scope_symbol=None):
 def CurJobAddMirroredOp(op_conf, scope_symbol=None):
     assert not hob.consistent_view_enabled(None)
     if scope_symbol is None:
-        scope_symbol = oneflow.scope.current_scope()
+        scope_symbol = oneflow.current_scope()
     op_conf.scope_symbol_id = scope_symbol.symbol_id
     if not op_conf.HasField("device_type"):
         device_tag = scope_symbol.device_parallel_desc_symbol.device_tag

@@ -86,10 +86,6 @@ def EnableEagerEnvironment(enable_eager_execution):
     return oneflow_internal.EnableEagerEnvironment(enable_eager_execution)
 
 
-def EnableEagerSession(enable_eager_execution):
-    return oneflow_internal.EnableEagerSession(enable_eager_execution)
-
-
 def EagerExecutionEnabled():
     return oneflow_internal.EagerExecutionEnabled()
 
@@ -191,6 +187,16 @@ def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
         raise JobBuildAndInferError(error)
 
 
+def CurJobBuildAndInferCtx_SetTrainConf(train_config_proto):
+    serialized_train_conf = str(text_format.MessageToString(train_config_proto))
+    error_str = oneflow_internal.CurJobBuildAndInferCtx_SetTrainConf(
+        serialized_train_conf
+    )
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+
+
 def CurJobBuildAndInferCtx_Complete():
     error_str = oneflow_internal.CurJobBuildAndInferCtx_Complete()
     error = text_format.Parse(error_str, error_util.ErrorProto())
@@ -210,15 +216,13 @@ def InferOpConf(op_conf_proto, upstream_signature):
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 
-def GetOpAttribute4OpConf(op_conf_proto):
+def GetOpParallelSymbolId(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    op_attribute_str, error_str = oneflow_internal.GetOpAttribute4OpConf(
-        serialized_op_conf
-    )
+    symbol_id, error_str = oneflow_internal.GetOpParallelSymbolId(serialized_op_conf)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
-    return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
+    return symbol_id
 
 
 def GetUserOpAttrType(op_type_name, attr_name):
@@ -634,3 +638,11 @@ def GetJobSet():
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     return text_format.Parse(job_set, job_set_pb.JobSet())
+
+
+def GetStructureGraph():
+    structure_graph, error_str = oneflow_internal.GetSerializedStructureGraph()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return structure_graph

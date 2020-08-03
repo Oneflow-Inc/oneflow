@@ -23,7 +23,6 @@ namespace oneflow {
 class ForSession {};
 class ForEnv {};
 
-template<typename T>
 class EagerExecution {};
 
 }  // namespace oneflow

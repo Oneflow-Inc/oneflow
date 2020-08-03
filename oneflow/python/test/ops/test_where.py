@@ -49,8 +49,7 @@ def _of_where(
     func_config.default_data_type(flow.float)
 
     if callable(dz_dx_watcher) and callable(dz_dy_watcher):
-        func_config.train.primary_lr(1e-3)
-        func_config.train.model_update_conf(dict(naive_conf={}))
+        func_config_type = "train"
 
         def do_where(condition, x, y):
             with flow.scope.placement(device_type, "0:0"):
@@ -60,6 +59,7 @@ def _of_where(
                     dtype=flow.float,
                     initializer=flow.constant_initializer(0),
                 )
+                x_var = flow.cast_to_current_logical_view(x_var)
                 x_var = x_var + x
                 y_var = flow.get_variable(
                     "y",
@@ -67,27 +67,31 @@ def _of_where(
                     dtype=flow.float,
                     initializer=flow.constant_initializer(0),
                 )
+                y_var = flow.cast_to_current_logical_view(y_var)
                 y_var = y_var + y
 
             z = flow.where(condition, x_var, y_var)
 
             with flow.scope.placement(device_type, "0:0"):
-                flow.losses.add_loss(z)
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+                ).minimize(z)
 
             flow.watch_diff(x_var, dz_dx_watcher)
             flow.watch_diff(y_var, dz_dy_watcher)
             return z
 
     else:
+        func_config_type = "predict"
 
         def do_where(condition, x, y):
             return flow.where(condition, x, y)
 
     if dynamic:
         func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
-        func_config.default_distribute_strategy(flow.scope.mirrored_view())
+        func_config.default_logical_view(flow.scope.mirrored_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(type=func_config_type, function_config=func_config)
         def where_fn(
             condition_def: oft.ListNumpy.Placeholder(condition.shape, dtype=flow.int32),
             x_def: oft.ListNumpy.Placeholder(x.shape, dtype=flow.float),
@@ -103,9 +107,9 @@ def _of_where(
         func_config.default_placement_scope(
             flow.scope.placement(device_type, machine_device_ids)
         )
-        func_config.default_distribute_strategy(flow.scope.consistent_view())
+        func_config.default_logical_view(flow.scope.consistent_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(type=func_config_type, function_config=func_config)
         def where_fn(
             condition_def: oft.Numpy.Placeholder(condition.shape, dtype=flow.int32),
             x_def: oft.Numpy.Placeholder(x.shape, dtype=flow.float),
@@ -197,16 +201,16 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
     func_config.default_data_type(flow.float)
 
     if input_shape is None:
-        func_config.default_distribute_strategy(flow.scope.consistent_view())
+        func_config.default_logical_view(flow.scope.consistent_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(function_config=func_config)
         def where_fn(input_def: oft.Numpy.Placeholder(input.shape, dtype=flow.float)):
             return flow.where(input_def)
 
     else:
-        func_config.default_distribute_strategy(flow.scope.mirrored_view())
+        func_config.default_logical_view(flow.scope.mirrored_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(function_config=func_config)
         def where_fn(
             input_def: oft.ListNumpy.Placeholder(input_shape, dtype=flow.float)
         ):

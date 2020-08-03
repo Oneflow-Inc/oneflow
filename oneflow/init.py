@@ -15,6 +15,7 @@ limitations under the License.
 """
 # __init__.py, rename to avoid being added to PYTHONPATH
 from __future__ import absolute_import
+from oneflow.python.version import __version__
 
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_conf_pb2 import JobConfigProto

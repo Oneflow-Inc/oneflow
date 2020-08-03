@@ -24,9 +24,9 @@ def _of_image_target_resize(images, image_static_shape, target_size, max_size):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def image_target_resize_job(
         images_def: oft.ListListNumpy.Placeholder(
             shape=image_static_shape, dtype=flow.float

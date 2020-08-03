@@ -20,8 +20,12 @@ limitations under the License.
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
+
+class ParallelDesc;
+
 namespace eager {
 
 class BlobObject : public vm::Object {
@@ -39,6 +43,8 @@ class BlobObject : public vm::Object {
   virtual Blob* mut_blob() { return blob_.get(); }
   virtual Maybe<void> TryInitBlob();
 
+  Maybe<void> CheckMemCase(const ParallelDesc& parallel_desc, int64_t machine_id) const;
+
   void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx);
 
  private:
@@ -49,6 +55,7 @@ class BlobObject : public vm::Object {
   std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
   std::size_t blob_body_bytes_;
+  MemoryAllocator non_pod_initer_;
 
  protected:
   BlobDesc blob_desc_;

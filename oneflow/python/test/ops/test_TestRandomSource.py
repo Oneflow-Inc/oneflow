@@ -32,9 +32,9 @@ def my_test_source(name, seed):
 def test_testsource(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def TestSourceJob():
         with flow.scope.placement("cpu", "0:0"):
             ret = my_test_source("my_cc_test_source_op", 0)

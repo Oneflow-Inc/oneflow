@@ -29,8 +29,14 @@ int32_t DecodeOFRecordKernel::NextRandomInt() const { return (*distribution_)(*r
 
 void DecodeOFRecordKernel::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(ctx.other);
-  auto status = static_cast<DecodeStatus*>(ctx.other);
+  DecodeStatus fake_status_for_eager;
+  DecodeStatus* status = nullptr;
+  if (ctx.other != nullptr) {
+    status = static_cast<DecodeStatus*>(ctx.other);
+  } else {
+    status = &fake_status_for_eager;
+    status->cur_col_id_ = 0;
+  }
   Blob* in_blob = BnInOp2Blob("in");
   const DecodeOFRecordOpConf& decode_conf = op_conf().decode_ofrecord_conf();
   CHECK_EQ(op_attribute().output_bns_size(), decode_conf.blob_size());

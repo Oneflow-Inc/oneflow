@@ -41,9 +41,10 @@ ObjectMsgPtr<VmResourceDesc> TestUtil::NewVmResourceDesc(int64_t device_num, int
   return ObjectMsgPtr<VmResourceDesc>::New(machine_num, map);
 }
 
-int64_t TestUtil::NewObject(InstructionMsgList* instr_msg_list, const std::string& device_name,
-                            int64_t* parallel_desc_symbol_id) {
+int64_t TestUtil::NewObject(InstructionMsgList* instr_msg_list, const std::string& device_tag,
+                            const std::string& device_name, int64_t* parallel_desc_symbol_id) {
   ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(device_tag);
   parallel_conf.add_device_name(device_name);
   *parallel_desc_symbol_id = IdUtil::NewLogicalSymbolId();
   Global<SymbolStorage<ParallelDesc>>::Get()->Add(*parallel_desc_symbol_id, parallel_conf);

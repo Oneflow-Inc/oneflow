@@ -29,7 +29,7 @@ namespace oneflow {
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
 
 Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
-                                std::string* device_tag, std::string* device_id_str);
+                                std::string* device_id_str);
 
 class ParallelContext;
 

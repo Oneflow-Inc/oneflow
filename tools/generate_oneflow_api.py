@@ -76,19 +76,29 @@ def include_export(api_name_base, symbol):
         else:
             return ["from {} import {} as {}".format(symbol.__module__, symbol.__name__, api_name_base)]    
 
-def collect_exports():
-    exports = {}
+def exported_symbols():
     for mod in sys.modules.values():
         if mod.__name__.startswith("oneflow.python"):
             for attr in dir(mod):
                 symbol = getattr(mod, attr)
                 if hasattr(symbol, "__force_no_export__"):
                     continue
-                if hasattr(symbol, "_ONEFLOW_API"):
+                if hasattr(symbol, "__dict__") and "_ONEFLOW_API" in vars(symbol):
                     for api_name in getattr(symbol, "_ONEFLOW_API"):
-                        is_existing = api_name in exports
-                        assert is_existing == False, "exported twice: {}, previous exported: {}".format(api_name, exports[api_name])
-                        exports[api_name] = symbol
+                        yield api_name, symbol, mod
+
+def collect_exports():
+    exports = {}
+    api_name2module = {}
+    for api_name, symbol, module in exported_symbols():
+        assert api_name not in exports, (
+            "exported twice: {}, previous exported: {} in {}, current: {} in {}".format(
+                api_name, exports[api_name], api_name2module[api_name].__file__,
+                symbol, module.__file__
+            )
+        )
+        exports[api_name] = symbol
+        api_name2module[api_name] = module
 
     root_virmod = VirtualModule()
     for api_name, symbol in exports.items():

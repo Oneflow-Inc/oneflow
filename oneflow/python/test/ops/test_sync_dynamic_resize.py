@@ -38,7 +38,7 @@ def test_sync_dynamic_resize(_):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
 
-        @flow.global_function(func_config)
+        @flow.global_function(function_config=func_config)
         def TestJob(
             x: oft.Numpy.Placeholder(x_shape, dtype=type_name_to_flow_type[data_type]),
             size: oft.Numpy.Placeholder((1,), dtype=type_name_to_flow_type[size_type]),

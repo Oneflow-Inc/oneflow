@@ -124,6 +124,7 @@ def reshape(
     Returns:
         A `Blob`, has the same type as `x`.
     """
+    x = flow.cast_to_current_logical_view(x)
     assert isinstance(shape, tuple) or isinstance(shape, list)
     shape = list(shape)
     assert all(dim == -1 or dim > 0 for dim in shape)
@@ -702,6 +703,7 @@ def generate_random_batch_permutation_indices(
     )
     if seed is not None:
         op.Attr("seed", seed)
+        assert name is not None
     else:
         op.Attr("seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1))
     return op.Build().InferAndTryRun().RemoteBlobList()[0]

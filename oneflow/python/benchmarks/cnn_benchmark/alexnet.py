@@ -46,30 +46,23 @@ args = parser.parse_args()
 
 
 def _data_load_layer(data_dir):
-    # load image from dataset and preprocess
-    image_blob_conf = flow.data.BlobConf(
-        "encoded",
-        shape=(227, 227, 3),
-        dtype=flow.float,
-        codec=flow.data.ImageCodec([flow.data.ImageResizePreprocessor(227, 227)]),
-        preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
+    rgb_mean = [123.68, 116.78, 103.94]
+    ofrecord = flow.data.ofrecord_reader(
+        data_dir, batch_size=12, data_part_num=8, name="decode",
     )
-
-    # load label from dataset
-    label_blob_conf = flow.data.BlobConf(
-        "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
+    image = flow.data.ofrecord_image_decoder(ofrecord, "encoded", color_space="RGB")
+    label = flow.data.ofrecord_raw_decoder(
+        ofrecord, "class/label", shape=(), dtype=flow.int32
     )
-
-    # decode
-    labels, images = flow.data.decode_ofrecord(
-        data_dir,
-        (label_blob_conf, image_blob_conf),
-        batch_size=12,
-        data_part_num=8,
-        name="decode",
+    rsz = flow.image.resize(image, resize_x=227, resize_y=227, color_space="RGB")
+    normal = flow.image.crop_mirror_normalize(
+        rsz,
+        color_space="RGB",
+        output_layout="NCHW",
+        mean=rgb_mean,
+        output_dtype=flow.float,
     )
-
-    return labels, images
+    return label, normal
 
 
 def _conv2d_layer(
@@ -115,11 +108,8 @@ def _conv2d_layer(
 
 
 def alexnet(images, labels):
-    # transpose, NHWC -> NCHW
-    transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
-
     conv1 = _conv2d_layer(
-        "conv1", transposed, filters=64, kernel_size=11, strides=4, padding="VALID"
+        "conv1", images, filters=64, kernel_size=11, strides=4, padding="VALID"
     )
 
     pool1 = flow.nn.avg_pool2d(conv1, 3, 2, "VALID", "NCHW", name="pool1")
