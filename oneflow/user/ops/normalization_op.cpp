@@ -320,7 +320,7 @@ REGISTER_USER_OP_GRAD("normalization")
 
       ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
                                 [&ctx, &is_training, &is_fp16, &grad_op_name, &dx_f2h_cast_op_name,
-                                 &dy_mul_inv_var_op_name]() {
+                                 &dy_mul_inv_var_op_name]() -> const std::string& {
                                   if (is_training) {
                                     return ctx->GetOp(grad_op_name).output("dx", 0);
                                   } else {
@@ -332,12 +332,14 @@ REGISTER_USER_OP_GRAD("normalization")
                                   }
                                 });
 
-      ctx->FwOp().InputGradBind(user_op::OpArg("gamma", 0), [&ctx, &gamma_identity_op_name]() {
-        return ctx->GetOp(gamma_identity_op_name).output("out", 0);
-      });
-      ctx->FwOp().InputGradBind(user_op::OpArg("beta", 0), [&ctx, &beta_identity_op_name]() {
-        return ctx->GetOp(beta_identity_op_name).output("out", 0);
-      });
+      ctx->FwOp().InputGradBind(user_op::OpArg("gamma", 0),
+                                [&ctx, &gamma_identity_op_name]() -> const std::string& {
+                                  return ctx->GetOp(gamma_identity_op_name).output("out", 0);
+                                });
+      ctx->FwOp().InputGradBind(user_op::OpArg("beta", 0),
+                                [&ctx, &beta_identity_op_name]() -> const std::string& {
+                                  return ctx->GetOp(beta_identity_op_name).output("out", 0);
+                                });
     });
 
 }  // namespace oneflow

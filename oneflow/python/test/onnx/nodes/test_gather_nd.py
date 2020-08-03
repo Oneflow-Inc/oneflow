@@ -15,7 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from util import convert_to_onnx_and_check
-import oneflow.core.common.data_type_pb2 as data_type_conf_util
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -34,9 +33,7 @@ def test_gather_nd(test_case):
             name="y",
             shape=(2, 3),
             dtype=flow.int64,
-            initializer=flow.random_uniform_initializer(
-                0, 1, data_type_conf_util.kInt64
-            ),
+            initializer=flow.random_uniform_initializer(0, 1, flow.int64),
         )
         return flow.gather_nd(x, y)
 

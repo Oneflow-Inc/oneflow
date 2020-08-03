@@ -302,10 +302,9 @@ class Node(object):
         """
         if not self.is_const():
             raise ValueError("get tensor value: {} must be Const".format(self.name))
-        if self.type == "Const":
-            t = self.get_attr("value")
-            if t:
-                t = numpy_helper.to_array(helper.get_attribute_value(t))
+        t = self.get_attr("value")
+        if t:
+            t = numpy_helper.to_array(helper.get_attribute_value(t))
         else:
             self._GraphCheck()
             t = self.graph.get_saved_tensor(self)
@@ -333,11 +332,14 @@ class Node(object):
         if not self.is_const():
             raise ValueError("set tensor value: {} must be Const".format(self.name))
         t = self.get_attr("value")
-        if not t:
-            raise ValueError("set tensor value: {} is None".format(self.name))
-        t = helper.get_attribute_value(t)
-        onnx_tensor = util.TensorProtoFromNumpy(new_val, t.name)
-        del t
+        if t is not None:
+            t = helper.get_attribute_value(t)
+            del t
+        if self.type == "Const":
+            tensor_name = t.name
+        else:
+            tensor_name = self.output[0]
+        onnx_tensor = util.TensorProtoFromNumpy(new_val, tensor_name)
         self.set_attr("value", onnx_tensor)
         # track shapes in _output_shapes
         self._GraphCheck()
