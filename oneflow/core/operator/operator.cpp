@@ -634,9 +634,11 @@ void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlo
 Maybe<void> Operator::InferBatchAxisIf(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4Ibn) {
+  // fill in bn_in_op2batch_axis_ in BatchAxisSignature
   auto* map = op_attribute_.mutable_batch_axis_signature()->mutable_bn_in_op2batch_axis();
   for (const auto& ibn : input_bns()) { (*map)[ibn] = *JUST(BatchAxis4Ibn(ibn)); }
   const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) { return &(*map)[bn_in_op]; };
+  // InferBatchAxis is unimplemented
   return InferBatchAxis(LogicalBlobDesc4Ibn, BatchAxis4BnInOp);
 }
 
@@ -722,10 +724,12 @@ Maybe<bool> ParseDisableBoxingFlag(const std::string& lbn_with_hint, bool* disab
   return true;
 }
 
+// get Sbp Signature for current op
 Maybe<void> InferOpSbpSignature(
     Operator* op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
     const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
     std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp) {
+  // a function to get SbpInferHint with input blob name
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
     auto it = ibn2sbp_infer_hint.find(ibn);
     if (it == ibn2sbp_infer_hint.end()) {
@@ -734,7 +738,9 @@ Maybe<void> InferOpSbpSignature(
     }
     return &(it->second);
   };
+  // functions to get order value, the most important value to decide SBP
   std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
+  // functions designed by ourselves
   auto OrderValue4HasBatchAxis = [&](const std::string& bn,
                                      const SbpParallel& sbp_parallel) -> int32_t {
     const auto& batch_axis = *CHECK_JUST(BatchAxis4BnInOp(bn));
@@ -750,11 +756,14 @@ Maybe<void> InferOpSbpSignature(
               && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
               && sbp_parallel.has_split_parallel() == false);
   };
+  // Give Sbp candidate highest priority if requested by user
   auto OrderValue4SbpHint = [&](const std::string& ibn,
                                 const SbpParallel& sbp_parallel) -> int32_t {
     return -3 * (CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel() == sbp_parallel);
   };
+  // Set the function to compute order value for different Sbp Signature
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
+    // It should be empty if sbp_sig_conf comes from InferOpOutSbpParallel() in operator.cpp
     CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
       int32_t order_value = 0;
       for (const auto& ibn : op->input_bns()) {
@@ -774,6 +783,7 @@ Maybe<void> InferOpSbpSignature(
   } else {
     CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
   }
+  // Get SBP signature for current op
   JUST(op->InferSbpSignatureIf(sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
                                parallel_desc));
   return Maybe<void>::Ok();
@@ -829,6 +839,7 @@ Maybe<void> InferOpOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
+// Get the best choice of Sbp Parallel for output blobs under current setting of input blobs
 Maybe<void> InferOpOutSbpParallel(
     Operator* op, const OpNodeSignature& upstream_signature,
     const std::function<const BlobDesc&(const std::string&)>& ConstBlobDesc4Ibn,
@@ -836,10 +847,12 @@ Maybe<void> InferOpOutSbpParallel(
   const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const OptInt64*> {
     return op->BatchAxis4BnInOp(bn_in_op);
   };
+  // get SbpParallel with input blob names provided
   const auto& SbpParallel4Ibn = [&](const std::string& ibn) -> const SbpParallel* {
     const auto& map = upstream_signature.sbp_signature().bn_in_op2sbp_parallel();
     return &map.at(ibn);
   };
+  // informations of parallelism device and upstream operators.
   HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
     const ParallelDesc* pd = &parallel_desc;
@@ -848,7 +861,7 @@ Maybe<void> InferOpOutSbpParallel(
     const OptInt64* batch_axis = JUST(BatchAxis4BnInOp(ibn));
     ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(pd, logical_blob_desc, sbp_parallel, batch_axis));
   }
-
+  // get Sbp Signature for current op
   JUST(InferOpSbpSignature(op, sbp_sig_conf, parallel_desc, ibn2sbp_infer_hint, BatchAxis4BnInOp));
   return Maybe<void>::Ok();
 }
@@ -903,27 +916,37 @@ Maybe<void> CheckOpInputSignature(const Operator& op, const OpNodeSignature& ups
 
 Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope) {
+  // parallel description, to describe how data scatter on machine
   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
+  // 
   bool is_mirrored = scope.opt_mirrored_parallel_conf().has_mirrored_parallel();
+  // current logical op
   const auto& op = ConstructOp(op_conf, JUST(scope.job_desc()));
   JUST(CheckOpInputSignature(*op, upstream_signature));
+  // mapping blob name to blob description
   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc;
   for (const auto& ibn : op->input_bns()) {
     const auto& map = upstream_signature.logical_blob_desc_signature().bn_in_op2blob_desc();
     bn_in_op2blob_desc[ibn].reset(new BlobDesc(map.at(ibn)));
   }
+  // a function which performs this mapping
   const auto& ConstBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc& {
     return *bn_in_op2blob_desc.at(ibn);
   };
+  // a function maps input blob name to batch axis
   const auto& BatchAxis4Ibn = [&](const std::string& ibn) -> Maybe<const OptInt64*> {
     const auto& map = upstream_signature.batch_axis_signature().bn_in_op2batch_axis();
     const auto& iter = map.find(ibn);
     CHECK_OR_RETURN(iter != map.end());
     return &iter->second;
   };
+  // fill in mapping from input blob name to batch axis
   JUST(op->InferBatchAxisIf(ConstBlobDesc4Ibn, BatchAxis4Ibn));
+  // 
   JUST(InferMirroredSignature(op.get(), upstream_signature, is_mirrored, parallel_desc));
+  // Empty Sbp Signature
   SbpSignature sbp_sig_conf;
+  // Set a SbpSignature for current op
   JUST(InferOpOutSbpParallel(op.get(), upstream_signature, ConstBlobDesc4Ibn, sbp_sig_conf,
                              parallel_desc));
   const auto& BlobDesc4BnInOp = [&](const std::string& bn_in_op) -> BlobDesc* {
