@@ -165,8 +165,8 @@ def compare_with_tensorflow(
 
 def test_padding_valid_NDHWC(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu"]
-    arg_dict["x_shape"] = [(10, 32, 10, 10, 10)]
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["x_shape"] = [(10, 32, 10, 10, 10), (10, 32, 10, 10, 11)]
     arg_dict["filters"] = [64]
     arg_dict["kernel_size"] = [3]
     arg_dict["groups"] = [1]

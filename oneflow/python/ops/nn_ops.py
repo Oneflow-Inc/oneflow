@@ -446,6 +446,14 @@ def conv3d(
         remote_blob_util.BlobDef: A `Blob` with the same type as `input` and the same outer batch shape.
     """
 
+    need_transpose = 0
+    if data_format.upper() == "NDHWC":  # NDHWC is not supported before cudnn 8.0
+        need_transpose = 1
+        data_format = "NCDHW"
+    if need_transpose:
+        input = flow.transpose(input, perm=[0, 4, 1, 2, 3])
+        filters = flow.transpose(filters, perm=[0, 4, 1, 2, 3])
+
     assert len(input.shape) == 5
     assert len(filters.shape) == 5
 
@@ -500,7 +508,7 @@ def conv3d(
     )
     assert len(pads_list) == len(inputs.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
-    return (
+    output = (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv3d_"))
         .Op("conv3d")
         .Input("in", [inputs])
@@ -517,6 +525,10 @@ def conv3d(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+    if need_transpose:
+        output = flow.transpose(output, perm=[0, 2, 3, 4, 1])
+    return output
 
 
 @oneflow_export("nn.batch_normalization")

@@ -509,6 +509,12 @@ def conv3d(
     Returns:
         remote_blob_util.BlobDef: A 5D `Blob` with the shape of (batch_size, filters, new_height, new_width).  
     """
+    need_transpose = 0
+    if data_format.upper() == "NDHWC":  # NDHWC is not supported before cudnn 8.0
+        need_transpose = 1
+        data_format = "NCDHW"
+    if need_transpose:
+        inputs = flow.transpose(inputs, perm=[0, 4, 1, 2, 3])
 
     if isinstance(kernel_size, int):
         kernel_size = (kernel_size, kernel_size, kernel_size)
@@ -612,6 +618,9 @@ def conv3d(
     if callable(activation):
         with flow.scope.namespace(name):
             output = activation(output, name="activation")
+
+    if need_transpose:
+        output = flow.transpose(output, perm=[0, 2, 3, 4, 1])
 
     return output
 
