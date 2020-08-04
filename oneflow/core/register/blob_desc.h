@@ -25,6 +25,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// Blob description including the shape, amount, type of data, etc.
 class BlobDesc final {
  public:
   BlobDesc() = delete;

@@ -33,6 +33,8 @@ Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id
 
 class ParallelContext;
 
+// Describe the information of devices used for parallel including device type, number of device,
+// etc.
 class ParallelDesc final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(ParallelDesc);
