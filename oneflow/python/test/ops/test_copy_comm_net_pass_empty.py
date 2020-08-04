@@ -37,7 +37,7 @@ def test_multi_node_comm_net(test_case):
     func_config.default_data_type(flow.float)
     flow.config.gpu_device_num(1)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ReluJob(x: oft.Numpy.Placeholder((10, 2))):
         with flow.scope.placement("gpu", "0:0"):
             out0 = ccrelu(x, "my_op_0_0")
@@ -73,7 +73,7 @@ def test_multi_node_comm_net_dynamic(test_case):
     flow.config.machine_num(2)
     flow.config.gpu_device_num(1)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ReluJob(x: oft.ListNumpy.Placeholder((10, 2))):
         with flow.scope.placement("gpu", "0:0"):
             out0 = flow.math.relu(x)
@@ -109,7 +109,7 @@ def test_multi_node_comm_net_dynamic_empty(test_case):
     flow.config.machine_num(2)
     flow.config.gpu_device_num(1)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ReluJob(x: oft.ListNumpy.Placeholder((10, 2))):
         with flow.scope.placement("cpu", "0:0"):
             out0 = flow.math.relu(x)

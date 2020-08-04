@@ -27,7 +27,7 @@ def _check(test_case, x, y):
 
 
 def _run_test(test_case, x, dtype, device):
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def SquareSum(x: oft.Numpy.Placeholder(x.shape, dtype=dtype)):
         with flow.scope.placement(device, "0:0"):
             return flow.experimental.square_sum(x)

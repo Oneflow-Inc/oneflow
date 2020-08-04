@@ -28,7 +28,7 @@ def _run_test(test_case, x, value, dtype=None, device="gpu"):
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ConstantLikeJob(x: oft.Numpy.Placeholder(x.shape)):
         return flow.constant_like(x, value=value, dtype=dtype)
 
