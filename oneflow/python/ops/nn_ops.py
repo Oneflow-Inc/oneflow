@@ -206,12 +206,12 @@ def conv1d(
     r"""Analogous to `tf.nn.conv1d <https://www.tensorflow.org/api_docs/python/tf/nn/conv1d>`_
 
     Args:
-        input (remote_blob_util.BlobDef): A `Blob` of rank at least 3.[batch_num, channel, width] 
+        input (remote_blob_util.BlobDef): A 3D input `Blob`. [batch_num, channel, width] 
         filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape [out_channels, in_channels//groups, filter_width] for NCW, or [out_channels, filter_width, in_channels//groups] for NWC`
         strides (Union[int, Tuple[int]]): An int or list of `ints` that has length `1`. The stride of the sliding window for each dimension of `input`. 
         padding (Union[str, Tuple[IntPair, IntPair, IntPair]]): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
         data_format (str, optional): `"NWC" or "NCW"`. Defaults to `"NCW"`.
-        dilations (Optional[Union[int, Tuple[int]]], optional):  The dilation factor for each dimension of`input`. Defaults to None.
+        dilations (Optional[Union[int, Tuple[int]]], optional): An int or list of `ints` that has length `1`. The dilation factor for each dimension of`input`. Defaults to None.
         groups (int, optional): int value greater than 0. Defaults to 1.
         name (Optional[str], optional): This operator's name. Defaults to None.
 
@@ -315,12 +315,12 @@ def conv2d(
     r"""Analogous to `tf.nn.conv2d <https://www.tensorflow.org/api_docs/python/tf/nn/conv2d>`_
 
     Args:
-        input (remote_blob_util.BlobDef): A `Blob` of rank at least 4.[batch_num, channel, height, width] 
+        input (remote_blob_util.BlobDef): A 4D input `Blob`. [batch_num, channel, height, width] 
         filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape `[out_channels, in_channels//groups, filter_height, filter_width] for NCHW, or [out_channels, filter_height, filter_width, in_channels//groups] for NHWC`
         strides (Union[int, IntPair]): An int or list of `ints` that has length `2`. The stride of the sliding window for each dimension of `input`. 
         padding (Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]]): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
         data_format (str, optional): `"NHWC" or "NCHW"`. Defaults to `"NCHW"`.
-        dilations (Optional[Union[int, IntPair]], optional):  The dilation factor for each dimension of`input`. Defaults to None.
+        dilations (Optional[Union[int, IntPair]], optional): An int or list of `ints` that has length `2`. The dilation factor for each dimension of`input`. Defaults to None.
         groups (int, optional): int value greater than 0. Defaults to 1.
         name (Optional[str], optional): This operator's name. Defaults to None.
 
@@ -424,12 +424,12 @@ def conv3d(
     r"""Analogous to `tf.nn.conv3d <https://www.tensorflow.org/api_docs/python/tf/nn/conv3d>`_
 
     Args:
-        input (remote_blob_util.BlobDef): A `Blob` of rank at least 5.[batch_num, channel, depth, height, width] 
+        input (remote_blob_util.BlobDef):  A 5D input `Blob`. [batch_num, channel, depth, height, width] 
         filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape `[out_channels, in_channels//groups, filter_depth, filter_height, filter_width] for NCDHW, or [out_channels, filter_depth, filter_height, filter_width, in_channels//groups] for NDHWC`
-        strides (Union[int, Sequence[int]]): An int or list of `ints` that has length `1` or `3`. The stride of the sliding window for each dimension of `input`. 
+        strides (Union[int, Sequence[int]]): An int or list of `ints` that has length `3`. The stride of the sliding window for each dimension of `input`. 
         padding (Union[str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]]): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
         data_format (str, optional): `"NHWC" or "NCHW"`. Defaults to `"NCHW"`.
-        dilations (Optional[Union[int, Sequence[int]]], optional):  The dilation factor for each dimension of`input`. Defaults to None.
+        dilations (Optional[Union[int, Sequence[int]]], optional): An int or list of `ints` that has length `3`. The dilation factor for each dimension of `input`. Defaults to None.
         groups (int, optional): int value greater than 0. Defaults to 1.
         name (Optional[str], optional): This operator's name. Defaults to None.
 
