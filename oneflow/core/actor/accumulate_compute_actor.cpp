@@ -49,8 +49,12 @@ void AccumulateCompActor::Act() {
       Memset<DeviceType::kCPU>(kernel_ctx.device_ctx, out_blob->mut_dptr(), 0,
                                out_blob->ByteSizeOfBlobBody());
     } else if (GetDeviceType() == DeviceType::kGPU) {
+#ifdef WITH_CUDA
       Memset<DeviceType::kGPU>(kernel_ctx.device_ctx, out_blob->mut_dptr(), 0,
                                out_blob->ByteSizeOfBlobBody());
+#else
+      UNIMPLEMENTED();
+#endif
     } else {
       UNIMPLEMENTED();
     }
