@@ -238,6 +238,7 @@ void CudaAsyncMemoryCopier::Copy3D(DeviceCtx* ctx, void* dst, const void* src,
   CudaCheck(cudaMemcpy3DAsync(&params, ctx->cuda_stream()));
 }
 
+#ifdef WITH_CUDA
 void CudaAsyncMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
                                    const MemoryCopyNdDesc& desc) const {
   const int32_t num_axes = desc.src_shape.NumAxes();
@@ -251,13 +252,11 @@ void CudaAsyncMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
     UNIMPLEMENTED();
   }
 }
+#endif
 
 REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kCPU, []() { return new HostMemoryCopier(); });
-
 #ifdef WITH_CUDA
-
 REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kGPU, []() { return new CudaAsyncMemoryCopier(); });
-
 #endif
 
 MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type) {
