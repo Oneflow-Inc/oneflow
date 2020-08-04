@@ -71,7 +71,11 @@ def CheckGlobalFunctionReturnAnnotation(cls):
         assert len(cls.__args__) == 1
         _CheckGlobalFunctionReturnAnnotation(cls.__args__[0])
     elif oft.OriginFrom(cls, oft.Container):
-        assert cls.__args__[0] in (oft.Numpy, oft.ListNumpy, oft.ListListNumpy), "T in oneflow.typing.Container[T] must be one of (oneflow.typing.Numpy, oneflow.typing.ListNumpy, oneflow.typing.ListListNumpy)"
+        assert cls.__args__[0] in (
+            oft.Numpy,
+            oft.ListNumpy,
+            oft.ListListNumpy,
+        ), "T in oneflow.typing.Container[T] must be one of (oneflow.typing.Numpy, oneflow.typing.ListNumpy, oneflow.typing.ListListNumpy)"
         assert len(cls.__args__) == 1
         _CheckGlobalFunctionReturnAnnotation(cls.__args__[0])
     else:
@@ -188,19 +192,19 @@ def TransformGlobalFunctionResult(future_blob, annotation):
             local_blob = future_blob.get()
         else:
             local_blob = future_blob
-        
+
         if isinstance(
             local_blob,
             (
                 local_blob_util.LocalMirroredTensor,
                 local_blob_util.LocalMirroredTensorList,
-            )
+            ),
         ):
             return TransformReturnedLocalBlob(local_blob, annotation.__args__[0])
         elif isinstance(local_blob, (list, tuple)):
             transfored_blob = list()
             for elem in local_blob:
-                 transfored_blob.append(TransformGlobalFunctionResult(elem, annotation))
+                transfored_blob.append(TransformGlobalFunctionResult(elem, annotation))
             return type(local_blob)(transfored_blob)
         elif type(local_blob) is dict:
             transfored_blob = dict()
