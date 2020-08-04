@@ -25,6 +25,7 @@ struct NewKernelUtil : public DnnIf<deivce_type>,
                        public BlasIf<deivce_type>,
                        public ArithemeticIf<deivce_type> {};
 
+#ifdef WITH_CUDA
 template<DeviceType device_type>
 struct GetCudaMemcpyKind;
 
@@ -41,6 +42,7 @@ struct GetCudaMemcpyKind<DeviceType::kGPU> {
 template<DeviceType device_type>
 void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,
             cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val);
+#endif  // WITH_CUDA
 
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);

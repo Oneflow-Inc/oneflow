@@ -31,8 +31,10 @@ class Blob;
 class InitializerConf;
 class MemoryCase;
 
+#ifdef WITH_CUDA
 template<cudaMemcpyKind cpy_kind>
 void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz);
+#endif  // WITH_CUDA
 
 size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num);
 
