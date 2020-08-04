@@ -70,8 +70,10 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
 
 REGISTER_MATMUL_KERNEL(DeviceType::kCPU, float);
 REGISTER_MATMUL_KERNEL(DeviceType::kCPU, double);
+#ifdef WITH_CUDA
 REGISTER_MATMUL_KERNEL(DeviceType::kGPU, float);
 REGISTER_MATMUL_KERNEL(DeviceType::kGPU, double);
+#endif
 
 class MatmulGpuHalfKernel final : public user_op::OpKernel {
  public:
@@ -104,9 +106,11 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
   }
 };
 
+#ifdef WITH_CUDA
 REGISTER_USER_KERNEL("matmul").SetCreateFn<MatmulGpuHalfKernel>().SetIsMatchedHob(
     (user_op::HobDeviceType() == DeviceType::kGPU)
     & (user_op::HobDataType("a", 0) == DataType::kFloat16));
+#endif
 
 template<DeviceType device_type, typename T>
 class BatchMatmulFloatingKernel final : public user_op::OpKernel {
@@ -152,8 +156,10 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
 
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, float);
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, double);
+#ifdef WITH_CUDA
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, float);
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, double);
+#endif
 
 class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
  public:
@@ -192,6 +198,7 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
   }
 };
 
+#ifdef WITH_CUDA
 REGISTER_USER_KERNEL("batch_matmul")
     .SetCreateFn<BatchMatmulGpuHalfKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
@@ -202,5 +209,6 @@ REGISTER_USER_KERNEL("batch_matmul")
       size_t batch_num = a->shape().Count(0, num_axes - 2);
       return sizeof(int64_t) * 3 * batch_num;
     });
+#endif
 
 }  // namespace oneflow
