@@ -129,7 +129,7 @@ namespace oneflow {
 
 enum class CudaWorkType {};
 
-inline size_t GetCudaWorkTypeSize() { UNIMPLEMENTED(); }
+inline size_t GetCudaWorkTypeSize() { return 0; }
 
 }  // namespace oneflow
 
