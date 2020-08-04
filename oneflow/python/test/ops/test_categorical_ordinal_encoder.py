@@ -28,7 +28,7 @@ def _test_categorical_ordinal_encoder(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def test_job(
         x: oft.Numpy.Placeholder(shape=(size,), dtype=dtype)
     ) -> typing.Tuple[oft.Numpy, oft.Numpy]:

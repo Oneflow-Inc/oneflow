@@ -82,7 +82,6 @@ parser.add_argument(
 parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
 parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
 
-g_output = []
 g_output_key = []
 g_trainable = True
 
@@ -221,7 +220,6 @@ def resnet_conv_x_body(input, on_stage_end=lambda x: x):
         )
         on_stage_end(output)
         g_output_key.append(stage_name)
-        g_output.append(output)
 
     return output
 
@@ -229,7 +227,6 @@ def resnet_conv_x_body(input, on_stage_end=lambda x: x):
 def resnet_stem(input):
     conv1 = _conv2d("conv1", input, 64, 7, 2)
     g_output_key.append("conv1")
-    g_output.append(conv1)
 
     # for test
     conv1_bn = conv1
@@ -238,7 +235,6 @@ def resnet_stem(input):
         conv1_bn, ksize=3, strides=2, padding="VALID", data_format="NCHW", name="pool1",
     )
     g_output_key.append("pool1")
-    g_output.append(pool1)
 
     return pool1
 
@@ -246,7 +242,6 @@ def resnet_stem(input):
 def resnet50(args, data_dir):
     (labels, images) = _data_load(args, data_dir)
     g_output_key.append("input_img")
-    g_output.append(images)
 
     with flow.scope.namespace("Resnet"):
         stem = resnet_stem(images)
@@ -255,7 +250,6 @@ def resnet50(args, data_dir):
             body, ksize=7, strides=1, padding="VALID", data_format="NCHW", name="pool5",
         )
         g_output_key.append("pool5")
-        g_output.append(pool5)
 
         fc1001 = flow.layers.dense(
             flow.reshape(pool5, (pool5.shape[0], -1)),
@@ -267,13 +261,11 @@ def resnet50(args, data_dir):
             name="fc1001",
         )
         g_output_key.append("fc1001")
-        g_output.append(fc1001)
 
         loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
             labels, fc1001, name="softmax_loss"
         )
         g_output_key.append("cross_entropy")
-        g_output.append(loss)
 
     return loss
 

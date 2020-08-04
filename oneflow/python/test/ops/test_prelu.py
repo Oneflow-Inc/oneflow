@@ -48,10 +48,8 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def PreluJob(
         x: oft.Numpy.Placeholder(x_shape, dtype=type_name_to_flow_type[dtype])
     ):
@@ -80,7 +78,9 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
                 dtype=type_name_to_flow_type[dtype],
                 initializer=flow.random_uniform_initializer(minval=0.1, maxval=0.9),
             )
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))

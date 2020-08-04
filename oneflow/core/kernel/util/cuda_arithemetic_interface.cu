@@ -315,6 +315,12 @@ FILL(int64_t)
 
 #undef FILL
 
+void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n, const float16 value,
+                                           float16* y) {
+  FillGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      n, float16_2half(value), reinterpret_cast<half*>(y));
+}
+
 #define COPY_COLS_REGION(T)                                                                    \
   void ArithemeticIf<DeviceType::kGPU>::CopyColsRegion(                                        \
       DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,                \

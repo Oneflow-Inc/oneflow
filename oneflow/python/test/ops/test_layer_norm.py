@@ -81,10 +81,8 @@ def test_layer_norm(_):
 
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
-        func_config.train.primary_lr(1e-4)
-        func_config.train.model_update_conf(dict(naive_conf={}))
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def test_job(x: oft.Numpy.Placeholder(x_shape, dtype=dtype)):
             v = flow.get_variable(
                 "x",
@@ -103,7 +101,9 @@ def test_layer_norm(_):
                     center=center,
                     scale=scale,
                 )
-            flow.losses.add_loss(y)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(y)
             return y
 
         check_point = flow.train.CheckPoint()

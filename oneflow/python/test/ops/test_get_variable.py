@@ -31,13 +31,13 @@ def test_get_variable_with_same_name(test_case):
             initializer=flow.random_uniform_initializer(),
         )
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def TestJob0():
         v1 = get_v()
         v2 = get_v()
         return v1, v2
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def TestJob1():
         return get_v()
 
@@ -62,15 +62,14 @@ def test_get_job_shared_variable(test_case):
         )
 
     learning_rate = 1e-2
-    train_func_config = flow.FunctionConfig()
-    train_func_config.train.primary_lr(learning_rate)
-    train_func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(train_func_config)
+    @flow.global_function(type="train", function_config=flow.FunctionConfig())
     def train(x_def: oft.Numpy.Placeholder(shape=(2, 5), dtype=flow.float)):
         var = get_var("var", trainable=True)
         loss = var + x_def
-        flow.losses.add_loss(loss)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]), momentum=0
+        ).minimize(loss)
         return var
 
     @flow.global_function()
@@ -112,15 +111,14 @@ def test_get_job_inter_and_intra_shared_variable(test_case):
         )
 
     learning_rate = 1e-2
-    train_func_config = flow.FunctionConfig()
-    train_func_config.train.primary_lr(learning_rate)
-    train_func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(train_func_config)
+    @flow.global_function(type="train", function_config=flow.FunctionConfig())
     def train(x_def: oft.Numpy.Placeholder(shape=variable_shape, dtype=flow.float)):
         var = get_var("var", trainable=True)
         loss = var + x_def
-        flow.losses.add_loss(loss)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]), momentum=0
+        ).minimize(loss)
         return var
 
     @flow.global_function()

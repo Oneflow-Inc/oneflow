@@ -27,7 +27,7 @@ def test_multi_node_dynamic_binary_split_concat_empty(test_case):
     flow.config.machine_num(2)
     flow.config.gpu_device_num(1)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def DynamicBinaryJob(x: oft.ListNumpy.Placeholder((20,))):
         print("in_shape: ", x.shape)
         with flow.scope.placement("cpu", "0:0"):

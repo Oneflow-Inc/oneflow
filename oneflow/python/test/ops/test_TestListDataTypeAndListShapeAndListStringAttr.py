@@ -46,7 +46,7 @@ def RunTest(out_shapes, out_types):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def TestListDataTypeAndListShapeAndListStringAttrJob(
         input: oft.Numpy.Placeholder((10, 10), dtype=flow.float)
     ):

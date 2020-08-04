@@ -26,9 +26,9 @@ def test_shape(test_case):
     flow.config.gpu_device_num(2)
 
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def foo_job(input: oft.Numpy.Placeholder(shape=(2, 5))):
         ret = flow.identity(input)
         test_case.assertTrue(ret.shape == (1, 5))

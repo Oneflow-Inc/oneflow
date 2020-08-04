@@ -49,8 +49,6 @@ def _make_gather_fn(
         func_config.default_logical_view(flow.scope.mirrored_view())
     else:
         func_config.default_logical_view(flow.scope.consistent_view())
-    func_config.train.primary_lr(1e-3)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     def do_gather(x_blob, i_blob):
         with flow.scope.placement(device_type, "0:0"):
@@ -62,13 +60,14 @@ def _make_gather_fn(
             )
             x = x + x_blob
             y = flow.gather(x, i_blob, axis=axis, batch_dims=batch_dims)
-            flow.losses.add_loss(y)
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [1e-3])
+            flow.optimizer.SGD(lr_scheduler, momentum=0).minimize(y)
         flow.watch_diff(x, compare_fn)
         return y
 
     if mirrored:
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def gather_fn(
             params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float32),
             indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
@@ -77,7 +76,7 @@ def _make_gather_fn(
 
     else:
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def gather_fn(
             params_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float32),
             indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),

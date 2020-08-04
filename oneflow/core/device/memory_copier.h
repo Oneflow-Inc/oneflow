@@ -33,6 +33,11 @@ struct MemoryCopyNdDesc {
   MemoryCopyNdDesc CreateDimReducedDesc() const;
 };
 
+template<int32_t NDIMS>
+void CopyNDCpuImpl(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc);
+template<int32_t NDIMS>
+void CopyNDGpuImpl(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc);
+
 class MemoryCopier {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MemoryCopier);
@@ -40,6 +45,9 @@ class MemoryCopier {
   virtual ~MemoryCopier() = default;
 
   virtual void Copy(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc) const;
+
+  template<typename T>
+  void CopyElem(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc) const;
 
  protected:
   virtual void Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const = 0;
@@ -59,6 +67,8 @@ class HostMemoryCopier final : public MemoryCopier {
 
  private:
   void Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const override;
+  void CopyND(DeviceCtx* ctx, void* dst, const void* src,
+              const MemoryCopyNdDesc& desc) const override;
 };
 
 #ifdef WITH_CUDA

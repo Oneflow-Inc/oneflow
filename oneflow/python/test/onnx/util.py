@@ -25,7 +25,7 @@ import shutil
 
 def convert_to_onnx_and_check(
     job_func,
-    print_rel_diff=False,
+    print_outlier=False,
     explicit_init=True,
     external_data=False,
     ort_optimize=True,
@@ -78,12 +78,11 @@ def convert_to_onnx_and_check(
 
     onnx_res = sess.run([], ipt_dict)[0]
     oneflow_res = job_func(*ipt_dict.values()).get().numpy()
-    if print_rel_diff:
+    rtol, atol = 1e-2, 1e-5
+    if print_outlier:
         a = onnx_res.flatten()
         b = oneflow_res.flatten()
-        max_idx = np.argmax(np.abs(a - b) / a)
-        print(
-            "max rel diff is {} at index {}".format(np.max(np.abs(a - b) / a), max_idx)
-        )
-        print("a[{}]={}, b[{}]={}".format(max_idx, a[max_idx], max_idx, b[max_idx]))
-    assert np.allclose(onnx_res, oneflow_res, rtol=1e-4, atol=1e-5)
+        for i in range(len(a)):
+            if np.abs(a[i] - b[i]) > atol + rtol * np.abs(b[i]):
+                print("a[{}]={}, b[{}]={}".format(i, a[i], i, b[i]))
+    assert np.allclose(onnx_res, oneflow_res, rtol=rtol, atol=atol)

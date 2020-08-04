@@ -34,7 +34,7 @@ struct ObjMsgMemBlock final {
 
   template<typename Enabled = void>
   static constexpr int MemPtrOffset() {
-    return (int)(long long)&((ObjMsgMemBlock*)nullptr)->mem_ptr_[0];
+    return offsetof(ObjMsgMemBlock, mem_ptr_);
   }
 
   ObjMsgChunk* chunk_;

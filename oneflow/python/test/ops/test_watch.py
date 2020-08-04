@@ -42,7 +42,7 @@ def test_two_device(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ReluJob(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.relu(x)
         flow.watch(y, EqOnes)

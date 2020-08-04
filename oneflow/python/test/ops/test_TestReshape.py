@@ -34,7 +34,7 @@ def TestReshape(x, shape, name):
 def fixed_tensor_def_test(test_case, func_config):
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ReshapeJob(x: oft.Numpy.Placeholder((10, 2))):
         return TestReshape(x, [5, 4], "xx_test_reshape")
 
@@ -48,7 +48,7 @@ def fixed_tensor_def_test(test_case, func_config):
 def mirrored_tensor_def_test(test_case, func_config):
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ReshapeJob(x: oft.ListNumpy.Placeholder((10, 2))):
         return TestReshape(x, [5, 4], "xx_test_reshape")
 
