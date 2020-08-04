@@ -38,6 +38,8 @@
 
     - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver to version 440.33 or above and install `oneflow_cu102` if possible.
 
+    - We are sorry that due to limits on bandwidth and other resources, we could only guarantee the efficiency and stability of `oneflow_cu102`. We will improve it ASAP.
+
   ### Install with Pip Package
 
   - To install latest release of OneFlow with CUDA support:
