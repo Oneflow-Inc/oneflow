@@ -73,7 +73,7 @@ class TensorToTensorBufferKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const ShapeView& in_shape = in->shape();
     const ShapeView& out_shape = out->shape();
-    const auto& instance_dims = ctx->Attr<int32_t>("instance_dims");
+    const auto instance_dims = ctx->Attr<int32_t>("instance_dims");
     CHECK_LT(instance_dims, in_shape.NumAxes());
     FOR_RANGE(int64_t, i, 0, in_shape.NumAxes() - instance_dims) {
       CHECK_EQ(out_shape.At(i), in_shape.At(i));
