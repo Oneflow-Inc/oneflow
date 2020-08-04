@@ -280,7 +280,7 @@ set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
 target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
 if (NOT BUILD_CUDA)
-target_link_libraries(oneflow_internal -ljpeg)
+target_link_libraries(oneflow_internal -ljpeg -lz)
 endif()
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
