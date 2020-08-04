@@ -127,7 +127,9 @@ class CudaCurrentDeviceGuard final {
 
 namespace oneflow {
 
-enum class CudaWorkType { kNotAvailable = -1 };
+enum class CudaWorkType {};
+
+inline size_t GetCudaWorkTypeSize() { UNIMPLEMENTED(); }
 
 }  // namespace oneflow
 
