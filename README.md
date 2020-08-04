@@ -24,7 +24,7 @@
   ### System Requirements
 
   - Python >= 3.5
-  - Nvidia Linux x86_64 driver version >= 440.33
+  - Nvidia Linux x86_64 driver version >= 440.33 for `oneflow_cu102`. For other versions, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
   ### Install with Pip Package
 
@@ -49,7 +49,7 @@
     ```
     For more information on this, please refer to [pypi 镜像使用帮助](https://mirror.tuna.tsinghua.edu.cn/help/pypi/)
 
-  - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver to version 440.33 or above and install `oneflow_cu102` if possible. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
+  - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver to version 440.33 or above and install `oneflow_cu102` if possible.
 
   - CPU-only OneFlow is not available for now.
 
