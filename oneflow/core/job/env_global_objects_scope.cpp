@@ -89,12 +89,16 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
   Global<EagerJobBuildAndInferCtxMgr>::New();
+#ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
+#endif
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+#ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::Delete();
+#endif
   Global<EagerJobBuildAndInferCtxMgr>::Delete();
   Global<vm::VirtualMachineScope>::Delete();
   Global<ThreadPool>::Delete();
