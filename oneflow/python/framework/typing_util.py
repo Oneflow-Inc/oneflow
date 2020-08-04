@@ -206,20 +206,6 @@ def TransformGlobalFunctionResult(future_blob, annotation):
             transfored_blob = dict()
             for key, val in local_blob.items():
                 transfored_blob[key] = TransformGlobalFunctionResult(val, annotation)
-                # if isinstance(
-                #     val,
-                #     (
-                #         local_blob_util.LocalMirroredTensor,
-                #         local_blob_util.LocalMirroredTensorList,
-                #     )
-                # ):
-                #     transfored_blob[key] = TransformReturnedLocalBlob(
-                #         val, annotation.__args__[0]
-                #     )
-                # else:
-                #     transfored_blob[key] = TransformGlobalFunctionResult(
-                #         val, annotation
-                #     )
             return transfored_blob
         else:
             raise NotImplementedError(
