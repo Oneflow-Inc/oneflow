@@ -214,6 +214,12 @@ def EagerInitVariableBlob(sess, var_op_conf, var_blob):
         _Assign(var_blob.blob_object, blob_object)
 
 
+def EagerSaveVariableBlob(snapshot_path):
+    var_blobs = session_ctx.GetDefaultSession().var_name2var_blob.values()
+    with oneflow.scope.placement("cpu", "0:0"):
+        _EagerRunModelSave(var_blobs, snapshot_path)
+
+
 def _Assign(var_blob_object, value_blob_object):
     def BuildAssignInstruction(builder):
         new_parallel_desc_symbol = boxing_util.TryReplaceDeviceTag(
@@ -232,27 +238,51 @@ def _Assign(var_blob_object, value_blob_object):
     vm_util.LogicalRun(BuildAssignInstruction)
 
 
+def _BuildNotMirroredScope(old_scope, builder):
+    return old_scope.BuildWithNewIsMirrored(builder, False)
+
+
 def _EagerRunModelInit(var_op_conf):
     op_conf, _ = _GenModelInitOpConfAndRetLbi(var_op_conf)
     bn_in_op2blob_object = {}
 
-    def BuildNotMirroredScope(old_scope, builder):
-        return old_scope.BuildWithNewIsMirrored(builder, False)
-
-    def BuildModeInitInstruction(builder):
+    def BuildModelInitInstruction(builder):
         upstream_signature = op_attribute_pb.OpNodeSignature()
-        parallel_conf = oneflow.placement.current_scope().default_parallel_conf
         op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
         op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
+        parallel_conf = (
+            oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
+        )
         builder.StatelessCall(
             op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
         )
 
     sess = session_ctx.GetDefaultSession()
-    with sess.NewCurrentScope(sess.MakeScope(BuildNotMirroredScope)):
-        vm_util.LogicalRun(BuildModeInitInstruction)
+    with sess.NewCurrentScope(sess.MakeScope(_BuildNotMirroredScope)):
+        vm_util.LogicalRun(BuildModelInitInstruction)
 
     return bn_in_op2blob_object["out_0"]
+
+
+def _MakeModelIOPathInputBuilds(op_conf, path, bn_in_op2blob_object):
+    def BuildModelIOPathInputInstruction(builder):
+        op_attribute = op_infer_util.Infer(op_conf, ibn2blob_object={})
+        parallel_conf = (
+            oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
+        )
+        builder.StatelessCall(
+            op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
+        )
+
+    def FeedPath(ofblob):
+        ofblob.CopyFromNdarray(np.frombuffer(path.encode("ascii"), dtype=np.int8))
+
+    def BuildFeedPathInstruction(builder):
+        blob_object = bn_in_op2blob_object["out"]
+        builder.FeedBlob(blob_object, FeedPath)
+        builder.InsertRemoveForeignCallbackInstruction(blob_object.object_id, FeedPath)
+
+    return BuildModelIOPathInputInstruction, BuildFeedPathInstruction
 
 
 def _EagerRunModelLoad(var_op_conf, snapshot_path):
@@ -262,32 +292,19 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
     assert os.path.basename(snapshot_path) == var_op_conf.name
     snapshot_path = os.path.dirname(snapshot_path)
 
-    path_input_op_conf, path_lbi = _GenModelLoadPathInputOpConfAndRetLbi()
-    model_load_op_conf, _ = _GenModelLoadOpConfAndRetLbi(var_op_conf, path_lbi)
+    path_input_op_conf, path_lbi = _GenModelIOPathInputOpConfAndRetLbi()
     path_input_blob_objects = {}
+    (
+        BuildModelIOPathInputInstruction,
+        BuildFeedPathInstruction,
+    ) = _MakeModelIOPathInputBuilds(
+        path_input_op_conf, snapshot_path, path_input_blob_objects
+    )
+
+    model_load_op_conf, _ = _GenModelLoadOpConfAndRetLbi(var_op_conf, path_lbi)
     model_load_blob_objects = {}
 
-    def BuildNotMirroredScope(old_scope, builder):
-        return old_scope.BuildWithNewIsMirrored(builder, False)
-
-    def BuildModelLoadPathInputInstruction(builder):
-        op_attribute = op_infer_util.Infer(path_input_op_conf, ibn2blob_object={})
-        parallel_conf = oneflow.placement.current_scope().default_parallel_conf
-        builder.StatelessCall(
-            op_attribute, parallel_conf, bn_in_op2blob_object=path_input_blob_objects
-        )
-
-    def FeedPath(ofblob):
-        ofblob.CopyFromNdarray(
-            np.frombuffer(snapshot_path.encode("ascii"), dtype=np.int8)
-        )
-
-    def BuildFeedPathInstruction(builder):
-        blob_object = path_input_blob_objects["out"]
-        builder.FeedBlob(blob_object, FeedPath)
-        builder.InsertRemoveForeignCallbackInstruction(blob_object.object_id, FeedPath)
-
-    def BuildModeLoadInstruction(builder):
+    def BuildModelLoadInstruction(builder):
         path_blob_object = path_input_blob_objects["out"]
         model_load_blob_objects["path"] = path_blob_object
         op_attribute = op_infer_util.Infer(
@@ -299,12 +316,46 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
         )
 
     sess = session_ctx.GetDefaultSession()
-    with sess.NewCurrentScope(sess.MakeScope(BuildNotMirroredScope)):
-        vm_util.LogicalRun(BuildModelLoadPathInputInstruction)
+    with sess.NewCurrentScope(sess.MakeScope(_BuildNotMirroredScope)):
+        vm_util.LogicalRun(BuildModelIOPathInputInstruction)
         vm_util.LogicalRun(BuildFeedPathInstruction)
-        vm_util.LogicalRun(BuildModeLoadInstruction)
+        vm_util.LogicalRun(BuildModelLoadInstruction)
 
     return model_load_blob_objects["out_0"]
+
+
+def _EagerRunModelSave(var_blobs, snapshot_path):
+    path_input_op_conf, path_lbi = _GenModelIOPathInputOpConfAndRetLbi()
+    path_input_blob_objects = {}
+    (
+        BuildModelIOPathInputInstruction,
+        BuildFeedPathInstruction,
+    ) = _MakeModelIOPathInputBuilds(
+        path_input_op_conf, snapshot_path, path_input_blob_objects
+    )
+
+    model_save_op_conf = _GenModelSaveOpConf(var_blobs, path_lbi)
+    model_save_blob_objects = {}
+
+    def BuildModelSaveInstruction(builder):
+        path_blob_object = path_input_blob_objects["out"]
+        model_save_blob_objects["path"] = path_blob_object
+        for i, blob in enumerate(var_blobs):
+            model_save_blob_objects["in_{}".format(i)] = blob.blob_object
+
+        op_attribute = op_infer_util.Infer(
+            model_save_op_conf, ibn2blob_object=model_save_blob_objects
+        )
+        parallel_conf = path_blob_object.parallel_desc_symbol.parallel_conf
+        builder.StatelessCall(
+            op_attribute, parallel_conf, bn_in_op2blob_object=model_save_blob_objects
+        )
+
+    sess = session_ctx.GetDefaultSession()
+    with sess.NewCurrentScope(sess.MakeScope(_BuildNotMirroredScope)):
+        vm_util.LogicalRun(BuildModelIOPathInputInstruction)
+        vm_util.LogicalRun(BuildFeedPathInstruction)
+        vm_util.LogicalRun(BuildModelSaveInstruction)
 
 
 def _GenModelInitOpConfAndRetLbi(var_op_conf):
@@ -340,9 +391,10 @@ def _GenModelLoadOpConfAndRetLbi(var_op_conf, path_lbi):
     return op_conf, lbi
 
 
-def _GenModelLoadPathInputOpConfAndRetLbi():
+def _GenModelIOPathInputOpConfAndRetLbi():
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = "model_load_path_input"
+    op_conf.name = "model_io_path_input"
+    op_conf.device_type = device_util.DeviceType4DeviceTag("cpu")
     op_conf.input_conf.out = "out"
 
     blob_conf = op_conf_util.InterfaceBlobConf()
@@ -356,3 +408,15 @@ def _GenModelLoadPathInputOpConfAndRetLbi():
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.input_conf.out
     return op_conf, lbi
+
+
+def _GenModelSaveOpConf(var_blobs, path_lbi):
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = "model_save"
+    op_conf.device_type = device_util.DeviceType4DeviceTag("cpu")
+    op_conf.model_save_conf.path = "{}/{}".format(path_lbi.op_name, path_lbi.blob_name)
+    for blob in var_blobs:
+        getattr(op_conf.model_save_conf, "in").append(blob.logical_blob_name)
+        getattr(op_conf.model_save_conf, "key").append(blob.logical_blob_name)
+
+    return op_conf
