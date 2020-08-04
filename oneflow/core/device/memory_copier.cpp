@@ -238,7 +238,6 @@ void CudaAsyncMemoryCopier::Copy3D(DeviceCtx* ctx, void* dst, const void* src,
   CudaCheck(cudaMemcpy3DAsync(&params, ctx->cuda_stream()));
 }
 
-#ifdef WITH_CUDA
 void CudaAsyncMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
                                    const MemoryCopyNdDesc& desc) const {
   const int32_t num_axes = desc.src_shape.NumAxes();
@@ -264,8 +263,6 @@ MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type) {
              NewObj<DefaultMemoryCopierCreator>(device_type))
       ->Create();
 }
-
-#endif
 
 #define SPECIALIZE_COPY_ELEM(dtype)                                                        \
   template void MemoryCopier::CopyElem<dtype>(DeviceCtx * ctx, void* dst, const void* src, \
