@@ -19,7 +19,7 @@ import typing
 import inspect
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.local_blob as local_blob_util
-import oneflow.python.framework.pull_util as pt
+import oneflow.python.framework.pull_util as pull_util
 import oneflow.python.framework.typing as oft
 import oneflow.python.experimental.enable_typing_check as enable_typing_check
 
@@ -70,10 +70,8 @@ def CheckGlobalFunctionReturnAnnotation(cls):
         ), "T in oneflow.typing.Callback[T] cannot be omitted"
         assert len(cls.__args__) == 1
         _CheckGlobalFunctionReturnAnnotation(cls.__args__[0])
-    elif oft.OriginFrom(cls, oft.Collection):
-        assert (
-            cls.__args__ is not None
-        ), "T in oneflow.typing.Collection[T] cannot be omitted"
+    elif oft.OriginFrom(cls, oft.Container):
+        assert cls.__args__[0] in (oft.Numpy, oft.ListNumpy, oft.ListListNumpy), "T in oneflow.typing.Container[T] must be one of (oneflow.typing.Numpy, oneflow.typing.ListNumpy, oneflow.typing.ListListNumpy)"
         assert len(cls.__args__) == 1
         _CheckGlobalFunctionReturnAnnotation(cls.__args__[0])
     else:
@@ -107,33 +105,20 @@ def CheckReturnByAnnotation(function_name, ret, annotation):
         assert ret is None, error_str
     elif oft.OriginFrom(annotation, oft.Callback):
         _CheckReturnByAnnotation(function_name, ret, annotation.__args__[0])
-    elif oft.OriginFrom(annotation, oft.Collection):
+    elif oft.OriginFrom(annotation, oft.Container):
         if isinstance(ret, remote_blob_util.BlobDef):
             _CheckReturnByAnnotation(function_name, ret, annotation.__args__[0])
-        elif type(ret) is list:
+        elif isinstance(ret, (list, tuple)):
             for elem in ret:
-                if isinstance(elem, remote_blob_util.BlobDef):
-                    _CheckReturnByAnnotation(
-                        function_name, ret[0], annotation.__args__[0]
-                    )
-                else:
-                    CheckReturnByAnnotation(function_name, elem, annotation)
+                CheckReturnByAnnotation(function_name, elem, annotation)
         elif type(ret) is dict:
             for val in ret.values():
                 if isinstance(val, remote_blob_util.BlobDef):
                     _CheckReturnByAnnotation(function_name, val, annotation.__args__[0])
                 else:
                     CheckReturnByAnnotation(function_name, val, annotation)
-        elif type(ret) is tuple:
-            for elem in ret:
-                if isinstance(elem, remote_blob_util.BlobDef):
-                    _CheckReturnByAnnotation(
-                        function_name, ret[0], annotation.__args__[0]
-                    )
-                else:
-                    CheckReturnByAnnotation(function_name, elem, annotation)
         else:
-            raise NotImplementedError("invalid return  %s found" % ret)
+            raise NotImplementedError("invalid return  %s found" % (type(ret)))
     else:
         _CheckReturnByAnnotation(function_name, ret, annotation)
 
@@ -198,74 +183,44 @@ def TransformGlobalFunctionResult(future_blob, annotation):
             return lambda x: f(TransformReturnedLocalBlob(x, annotation))
 
         return lambda f: future_blob.async_get(Transform(f))
-    elif oft.OriginFrom(annotation, oft.Collection):
-        local_blob = (
-            future_blob.get()
-            if isinstance(future_blob, pt.FutureRemoteBlobs)
-            else future_blob
-        )
+    elif oft.OriginFrom(annotation, oft.Container):
+        if isinstance(future_blob, pull_util.FutureRemoteBlobs):
+            local_blob = future_blob.get()
+        else:
+            local_blob = future_blob
+        
         if isinstance(
             local_blob,
             (
                 local_blob_util.LocalMirroredTensor,
                 local_blob_util.LocalMirroredTensorList,
-            ),
+            )
         ):
             return TransformReturnedLocalBlob(local_blob, annotation.__args__[0])
-        elif type(local_blob) is list:
+        elif isinstance(local_blob, (list, tuple)):
             transfored_blob = list()
             for elem in local_blob:
-                if isinstance(
-                    elem,
-                    (
-                        local_blob_util.LocalMirroredTensor,
-                        local_blob_util.LocalMirroredTensorList,
-                    ),
-                ):
-                    transfored_blob.append(
-                        TransformReturnedLocalBlob(elem, annotation.__args__[0])
-                    )
-                else:
-                    transfored_blob.append(
-                        TransformGlobalFunctionResult(elem, annotation)
-                    )
-            return transfored_blob
+                 transfored_blob.append(TransformGlobalFunctionResult(elem, annotation))
+            return type(local_blob)(transfored_blob)
         elif type(local_blob) is dict:
             transfored_blob = dict()
             for key, val in local_blob.items():
-                if isinstance(
-                    val,
-                    (
-                        local_blob_util.LocalMirroredTensor,
-                        local_blob_util.LocalMirroredTensorList,
-                    ),
-                ):
-                    transfored_blob[key] = TransformReturnedLocalBlob(
-                        val, annotation.__args__[0]
-                    )
-                else:
-                    transfored_blob[key] = TransformGlobalFunctionResult(
-                        val, annotation
-                    )
+                transfored_blob[key] = TransformGlobalFunctionResult(val, annotation)
+                # if isinstance(
+                #     val,
+                #     (
+                #         local_blob_util.LocalMirroredTensor,
+                #         local_blob_util.LocalMirroredTensorList,
+                #     )
+                # ):
+                #     transfored_blob[key] = TransformReturnedLocalBlob(
+                #         val, annotation.__args__[0]
+                #     )
+                # else:
+                #     transfored_blob[key] = TransformGlobalFunctionResult(
+                #         val, annotation
+                #     )
             return transfored_blob
-        elif type(local_blob) is tuple:
-            transfored_blob = list()
-            for elem in local_blob:
-                if isinstance(
-                    elem,
-                    (
-                        local_blob_util.LocalMirroredTensor,
-                        local_blob_util.LocalMirroredTensorList,
-                    ),
-                ):
-                    transfored_blob.append(
-                        TransformReturnedLocalBlob(elem, annotation.__args__[0])
-                    )
-                else:
-                    transfored_blob.append(
-                        TransformGlobalFunctionResult(elem, annotation)
-                    )
-            return tuple(transfored_blob)
         else:
             raise NotImplementedError(
                 "invalid return  %s : %s found" % (local_blob, type(local_blob))
