@@ -75,6 +75,7 @@ REGISTER_MATMUL_KERNEL(DeviceType::kGPU, float);
 REGISTER_MATMUL_KERNEL(DeviceType::kGPU, double);
 #endif
 
+#ifdef WITH_CUDA
 class MatmulGpuHalfKernel final : public user_op::OpKernel {
  public:
   MatmulGpuHalfKernel() = default;
@@ -105,6 +106,7 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
     }
   }
 };
+#endif
 
 #ifdef WITH_CUDA
 REGISTER_USER_KERNEL("matmul").SetCreateFn<MatmulGpuHalfKernel>().SetIsMatchedHob(
@@ -161,6 +163,7 @@ REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, float);
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, double);
 #endif
 
+#ifdef WITH_CUDA
 class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
  public:
   BatchMatmulGpuHalfKernel() = default;
@@ -198,7 +201,6 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
   }
 };
 
-#ifdef WITH_CUDA
 REGISTER_USER_KERNEL("batch_matmul")
     .SetCreateFn<BatchMatmulGpuHalfKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
