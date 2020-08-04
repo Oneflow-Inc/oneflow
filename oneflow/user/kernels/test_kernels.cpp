@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/random_generator.h"
@@ -356,3 +358,5 @@ REGISTER_USER_KERNEL("test_user_op_attr_auto_type")
     .SetIsMatchedHob(user_op::HobTrue());
 
 }  // namespace oneflow
+
+#endif
