@@ -135,13 +135,6 @@ void Kernel::ForwardShape(const KernelCtx& ctx,
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::ForwardPackedHeader(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyHeaderFrom);
-}
-
-template<DeviceType device_type>
 void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
                                       std::function<Blob*(const std::string&)> BnInOp2Blob,
                                       const Blob* from_blob, const PbRpf<std::string>& to_bns,

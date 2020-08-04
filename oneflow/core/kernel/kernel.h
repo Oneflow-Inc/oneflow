@@ -165,7 +165,10 @@ class KernelIf : public Kernel {
   KernelIf() = default;
 
   virtual void ForwardPackedHeader(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
+              &Blob::CopyHeaderFrom);
+  }
   void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const Blob* from_blob, const PbRpf<std::string>& to_bns,
                  void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
