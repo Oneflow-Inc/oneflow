@@ -87,12 +87,14 @@ class SamePaddingKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == dev) \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
+#ifdef WITH_CUDA
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, double)
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, float)
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, float16)
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, int32_t)
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, int64_t)
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kGPU, int8_t)
+#endif
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kCPU, double)
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kCPU, float)
 REGISTER_SAME_PADDING_KERNEL(DeviceType::kCPU, int32_t)
@@ -163,12 +165,14 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == dev) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+#ifdef WITH_CUDA
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, double)
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, float)
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, float16)
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, int32_t)
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, int64_t)
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kGPU, int8_t)
+#endif
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kCPU, double)
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kCPU, float)
 REGISTER_SAME_PADDING_GRAD_KERNEL(DeviceType::kCPU, int32_t)
