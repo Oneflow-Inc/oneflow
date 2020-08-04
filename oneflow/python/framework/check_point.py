@@ -21,6 +21,8 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.python.eager.op_executor as op_executor
+
 from oneflow.python.oneflow_export import oneflow_export
 from typing import List, Union
 
@@ -78,7 +80,7 @@ def lazy_checkpoint_load(path):
 
 @enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
 def eager_checkpoint_save(path):
-    raise NotImplementedError
+    op_executor.EagerSaveVariableBlob(path)
 
 
 @enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)

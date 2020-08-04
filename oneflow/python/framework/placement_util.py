@@ -27,6 +27,10 @@ import traceback
 
 @oneflow_export("placement.current_scope")
 def api_current_placement_scope() -> placement_ctx.PlacementScope:
+    print(
+        "WARNING: oneflow.placement.current_scope has been deprecated. "
+        "Please use oneflow.current_scope.device_parallel_desc_symbol instead."
+    )
     api = enable_if.unique(
         [global_mode_cur_placement_scope, normal_mode_cur_placement_scope]
     )

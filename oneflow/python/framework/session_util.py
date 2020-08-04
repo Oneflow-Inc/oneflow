@@ -131,6 +131,10 @@ class Session(object):
     def snapshot_mgr(self):
         return self.snapshot_mgr_
 
+    @property
+    def var_name2var_blob(self):
+        return self.var_name2var_blob_
+
     def InitNormalModeScope(self):
         job_conf = job_conf_pb.JobConfigProto()
         job_conf.predict_conf.SetInParent()
@@ -264,6 +268,7 @@ class Session(object):
             if remote_blobs is None:
                 return
             future_blob = EagerFutureRemoteBlobs().SetResult(remote_blobs).Inited()
+
         annotation = inspect.signature(function_desc.job_func).return_annotation
         return oft_util.TransformGlobalFunctionResult(future_blob, annotation)
 
