@@ -35,8 +35,10 @@ struct MemoryCopyNdDesc {
 
 template<int32_t NDIMS>
 void CopyNDCpuImpl(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc);
+#ifdef WITH_CUDA
 template<int32_t NDIMS>
 void CopyNDGpuImpl(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc);
+#endif
 
 class MemoryCopier {
  public:
