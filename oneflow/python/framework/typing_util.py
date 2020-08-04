@@ -117,10 +117,7 @@ def CheckReturnByAnnotation(function_name, ret, annotation):
                 CheckReturnByAnnotation(function_name, elem, annotation)
         elif type(ret) is dict:
             for val in ret.values():
-                if isinstance(val, remote_blob_util.BlobDef):
-                    _CheckReturnByAnnotation(function_name, val, annotation.__args__[0])
-                else:
-                    CheckReturnByAnnotation(function_name, val, annotation)
+                CheckReturnByAnnotation(function_name, val, annotation)
         else:
             raise NotImplementedError("invalid return  %s found" % (type(ret)))
     else:
