@@ -47,6 +47,6 @@ cached_build_ret=$?
 set -e
 if [ $cached_build_ret -ne 0 ] && [[ ! -t 1 ]]; then
     echo "retry after cleaning build dir"
-    docker run --rm -v $tmp_dir:/ci-tmp busybox rm -rf /ci-tmp/*
+    docker run --rm -v $tmp_dir:/ci-tmp busybox sh -c "rm -rf /ci-tmp/*"
     build
 fi
