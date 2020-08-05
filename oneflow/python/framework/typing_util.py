@@ -198,7 +198,7 @@ def TransformReturnedContainer(container_blob, annotation):
         return TransformReturnedLocalBlob(container_blob, annotation.__args__[0])
     elif isinstance(container_blob, (list, tuple)):
         return type(container_blob)(
-            [TransformReturnedContainer(elem, annotation) for elem in container_blob]
+            TransformReturnedContainer(elem, annotation) for elem in container_blob
         )
     elif type(container_blob) is dict:
         return {
