@@ -60,7 +60,6 @@ if [[ $SKIP_THIRD_PARTY != 1 ]]; then
         -DONEFLOW=OFF \
         $EXTRA_ONEFLOW_CMAKE_ARGS \
         $ONEFLOW_SRC_DIR
-    make -j nccl
     make -j`nproc` prepare_oneflow_third_party
 
     popd
