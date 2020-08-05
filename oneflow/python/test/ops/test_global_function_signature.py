@@ -480,9 +480,7 @@ def test_annotation_Bundle_ListListNumpy(test_case):
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(function_config=func_config)
-    def foo(
-        x: oft.ListListNumpy.Placeholder((10,))
-    ) -> oft.Bundle[oft.ListListNumpy]:
+    def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.Bundle[oft.ListListNumpy]:
         return x
 
     data = np.ones((10,), dtype=np.float32)
@@ -495,9 +493,7 @@ def test_annotation_Bundle_List_ListListNumpy(test_case):
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(function_config=func_config)
-    def foo(
-        x: oft.ListListNumpy.Placeholder((10,))
-    ) -> oft.Bundle[oft.ListListNumpy]:
+    def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.Bundle[oft.ListListNumpy]:
         return [x]
 
     data = np.ones((10,), dtype=np.float32)
@@ -510,9 +506,7 @@ def test_annotation_Bundle_Dict_ListListNumpy(test_case):
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(function_config=func_config)
-    def foo(
-        x: oft.ListListNumpy.Placeholder((10,))
-    ) -> oft.Bundle[oft.ListListNumpy]:
+    def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.Bundle[oft.ListListNumpy]:
         return {"x": x}
 
     data = np.ones((10,), dtype=np.float32)
@@ -525,9 +519,7 @@ def test_annotation_Bundle_Tuple_ListListNumpy(test_case):
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(function_config=func_config)
-    def foo(
-        x: oft.ListListNumpy.Placeholder((10,))
-    ) -> oft.Bundle[oft.ListListNumpy]:
+    def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.Bundle[oft.ListListNumpy]:
         return (x,)
 
     data = np.ones((10,), dtype=np.float32)
@@ -540,9 +532,7 @@ def test_annotation_Bundle_Mix_Nesting_ListListNumpy(test_case):
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(function_config=func_config)
-    def foo(
-        x: oft.ListListNumpy.Placeholder((10,))
-    ) -> oft.Bundle[oft.ListListNumpy]:
+    def foo(x: oft.ListListNumpy.Placeholder((10,))) -> oft.Bundle[oft.ListListNumpy]:
         return (x, (x,), [x, x, x], {"x": {256: x}})
 
     data = np.ones((10,), dtype=np.float32)
