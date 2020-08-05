@@ -43,6 +43,7 @@ jobs:
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
     - name: Build OneFlow
       run: |
+        ONEFLOW_CI_PACKAGE_APPENDIX="_cu102" \
         bash ci/build/make.sh
     - name: Build docker image for testing
       run: |
@@ -145,4 +146,5 @@ jobs:
     - name: Clean up files created by root
       if: ${{ always() }}
       run: |
+        ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-cpu \
         bash ci/build/clean.sh
