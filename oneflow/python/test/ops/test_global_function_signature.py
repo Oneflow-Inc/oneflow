@@ -344,55 +344,55 @@ def test_annotation_Callback_Tuple_ListListNumpy(test_case):
     foo([[data]])(Test)
 
 
-def test_annotation_Container_Numpy(test_case):
+def test_annotation_Bundle_Numpy(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function()
-    def foo(x: oft.Numpy.Placeholder((10,))) -> oft.Container[oft.Numpy]:
+    def foo(x: oft.Numpy.Placeholder((10,))) -> oft.Bundle[oft.Numpy]:
         return x
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo(data), data))
 
 
-def test_annotation_Container_List_Numpy(test_case):
+def test_annotation_Bundle_List_Numpy(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function()
-    def foo(x: oft.Numpy.Placeholder((10,))) -> oft.Container[oft.Numpy]:
+    def foo(x: oft.Numpy.Placeholder((10,))) -> oft.Bundle[oft.Numpy]:
         return [x]
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo(data)[0], data))
 
 
-def test_annotation_Container_Dict_Numpy(test_case):
+def test_annotation_Bundle_Dict_Numpy(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function()
-    def foo(x: oft.Numpy.Placeholder((10,))) -> oft.Container[oft.Numpy]:
+    def foo(x: oft.Numpy.Placeholder((10,))) -> oft.Bundle[oft.Numpy]:
         return {"x": x}
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo(data)["x"], data))
 
 
-def test_annotation_Container_Tuple_Numpy(test_case):
+def test_annotation_Bundle_Tuple_Numpy(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function()
-    def foo(x: oft.Numpy.Placeholder((10,))) -> oft.Container[oft.Numpy]:
+    def foo(x: oft.Numpy.Placeholder((10,))) -> oft.Bundle[oft.Numpy]:
         return (x,)
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo(data)[0], data))
 
 
-def test_annotation_Container_Mix_Nesting_Numpy(test_case):
+def test_annotation_Bundle_Mix_Nesting_Numpy(test_case):
     flow.config.gpu_device_num(1)
 
     @flow.global_function()
-    def foo(x: oft.Numpy.Placeholder((10,))) -> oft.Container[oft.Numpy]:
+    def foo(x: oft.Numpy.Placeholder((10,))) -> oft.Bundle[oft.Numpy]:
         return (x, (x,), [x, x, x], {"x": {256: x}})
 
     data = np.ones((10,), dtype=np.float32)
@@ -404,65 +404,65 @@ def test_annotation_Container_Mix_Nesting_Numpy(test_case):
     test_case.assertTrue(np.array_equal(foo(data)[3]["x"][256], data))
 
 
-def test_annotation_Container_ListNumpy(test_case):
+def test_annotation_Bundle_ListNumpy(test_case):
     flow.config.gpu_device_num(1)
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(function_config=func_config)
-    def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Container[oft.ListNumpy]:
+    def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Bundle[oft.ListNumpy]:
         return x
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo([data])[0], data))
 
 
-def test_annotation_Container_List_ListNumpy(test_case):
+def test_annotation_Bundle_List_ListNumpy(test_case):
     flow.config.gpu_device_num(1)
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(function_config=func_config)
-    def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Container[oft.ListNumpy]:
+    def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Bundle[oft.ListNumpy]:
         return [x]
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo([data])[0][0], data))
 
 
-def test_annotation_Container_Dict_ListNumpy(test_case):
+def test_annotation_Bundle_Dict_ListNumpy(test_case):
     flow.config.gpu_device_num(1)
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(function_config=func_config)
-    def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Container[oft.ListNumpy]:
+    def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Bundle[oft.ListNumpy]:
         return {"x": x}
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo([data])["x"][0], data))
 
 
-def test_annotation_Container_Tuple_ListNumpy(test_case):
+def test_annotation_Bundle_Tuple_ListNumpy(test_case):
     flow.config.gpu_device_num(1)
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(function_config=func_config)
-    def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Container[oft.ListNumpy]:
+    def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Bundle[oft.ListNumpy]:
         return (x,)
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo([data])[0][0], data))
 
 
-def test_annotation_Container_Mix_Nesting_ListNumpy(test_case):
+def test_annotation_Bundle_Mix_Nesting_ListNumpy(test_case):
     flow.config.gpu_device_num(1)
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(function_config=func_config)
-    def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Container[oft.ListNumpy]:
+    def foo(x: oft.ListNumpy.Placeholder((10,))) -> oft.Bundle[oft.ListNumpy]:
         return (x, (x,), [x, x, x], {"x": {256: x}})
 
     data = np.ones((10,), dtype=np.float32)
@@ -474,7 +474,7 @@ def test_annotation_Container_Mix_Nesting_ListNumpy(test_case):
     test_case.assertTrue(np.array_equal(foo([data])[3]["x"][256][0], data))
 
 
-def test_annotation_Container_ListListNumpy(test_case):
+def test_annotation_Bundle_ListListNumpy(test_case):
     flow.config.gpu_device_num(1)
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
@@ -482,14 +482,14 @@ def test_annotation_Container_ListListNumpy(test_case):
     @flow.global_function(function_config=func_config)
     def foo(
         x: oft.ListListNumpy.Placeholder((10,))
-    ) -> oft.Container[oft.ListListNumpy]:
+    ) -> oft.Bundle[oft.ListListNumpy]:
         return x
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo([[data]])[0][0], data))
 
 
-def test_annotation_Container_List_ListListNumpy(test_case):
+def test_annotation_Bundle_List_ListListNumpy(test_case):
     flow.config.gpu_device_num(1)
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
@@ -497,14 +497,14 @@ def test_annotation_Container_List_ListListNumpy(test_case):
     @flow.global_function(function_config=func_config)
     def foo(
         x: oft.ListListNumpy.Placeholder((10,))
-    ) -> oft.Container[oft.ListListNumpy]:
+    ) -> oft.Bundle[oft.ListListNumpy]:
         return [x]
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo([[data]])[0][0][0], data))
 
 
-def test_annotation_Container_Dict_ListListNumpy(test_case):
+def test_annotation_Bundle_Dict_ListListNumpy(test_case):
     flow.config.gpu_device_num(1)
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
@@ -512,14 +512,14 @@ def test_annotation_Container_Dict_ListListNumpy(test_case):
     @flow.global_function(function_config=func_config)
     def foo(
         x: oft.ListListNumpy.Placeholder((10,))
-    ) -> oft.Container[oft.ListListNumpy]:
+    ) -> oft.Bundle[oft.ListListNumpy]:
         return {"x": x}
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo([[data]])["x"][0][0], data))
 
 
-def test_annotation_Container_Tuple_ListListNumpy(test_case):
+def test_annotation_Bundle_Tuple_ListListNumpy(test_case):
     flow.config.gpu_device_num(1)
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
@@ -527,14 +527,14 @@ def test_annotation_Container_Tuple_ListListNumpy(test_case):
     @flow.global_function(function_config=func_config)
     def foo(
         x: oft.ListListNumpy.Placeholder((10,))
-    ) -> oft.Container[oft.ListListNumpy]:
+    ) -> oft.Bundle[oft.ListListNumpy]:
         return (x,)
 
     data = np.ones((10,), dtype=np.float32)
     test_case.assertTrue(np.array_equal(foo([[data]])[0][0][0], data))
 
 
-def test_annotation_Container_Mix_Nesting_ListListNumpy(test_case):
+def test_annotation_Bundle_Mix_Nesting_ListListNumpy(test_case):
     flow.config.gpu_device_num(1)
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
@@ -542,7 +542,7 @@ def test_annotation_Container_Mix_Nesting_ListListNumpy(test_case):
     @flow.global_function(function_config=func_config)
     def foo(
         x: oft.ListListNumpy.Placeholder((10,))
-    ) -> oft.Container[oft.ListListNumpy]:
+    ) -> oft.Bundle[oft.ListListNumpy]:
         return (x, (x,), [x, x, x], {"x": {256: x}})
 
     data = np.ones((10,), dtype=np.float32)

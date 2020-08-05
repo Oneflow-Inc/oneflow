@@ -70,12 +70,12 @@ def CheckGlobalFunctionReturnAnnotation(cls):
         ), "T in oneflow.typing.Callback[T] cannot be omitted"
         assert len(cls.__args__) == 1
         _CheckGlobalFunctionReturnAnnotation(cls.__args__[0])
-    elif oft.OriginFrom(cls, oft.Container):
+    elif oft.OriginFrom(cls, oft.Bundle):
         assert cls.__args__[0] in (
             oft.Numpy,
             oft.ListNumpy,
             oft.ListListNumpy,
-        ), "T in oneflow.typing.Container[T] must be one of (oneflow.typing.Numpy, oneflow.typing.ListNumpy, oneflow.typing.ListListNumpy)"
+        ), "T in oneflow.typing.Bundle[T] must be one of (oneflow.typing.Numpy, oneflow.typing.ListNumpy, oneflow.typing.ListListNumpy)"
         assert len(cls.__args__) == 1
         _CheckGlobalFunctionReturnAnnotation(cls.__args__[0])
     else:
@@ -109,7 +109,7 @@ def CheckReturnByAnnotation(function_name, ret, annotation):
         assert ret is None, error_str
     elif oft.OriginFrom(annotation, oft.Callback):
         _CheckReturnByAnnotation(function_name, ret, annotation.__args__[0])
-    elif oft.OriginFrom(annotation, oft.Container):
+    elif oft.OriginFrom(annotation, oft.Bundle):
         if isinstance(ret, remote_blob_util.BlobDef):
             _CheckReturnByAnnotation(function_name, ret, annotation.__args__[0])
         elif isinstance(ret, (list, tuple)):
@@ -184,30 +184,30 @@ def TransformGlobalFunctionResult(future_blob, annotation):
             return lambda x: f(TransformReturnedLocalBlob(x, annotation))
 
         return lambda f: future_blob.async_get(Transform(f))
-    elif oft.OriginFrom(annotation, oft.Container):
-        return TransformReturnedContainer(future_blob.get(), annotation)
+    elif oft.OriginFrom(annotation, oft.Bundle):
+        return TransformReturnedBundle(future_blob.get(), annotation)
     else:
         return TransformReturnedLocalBlob(future_blob.get(), annotation)
 
 
-def TransformReturnedContainer(container_blob, annotation):
+def TransformReturnedBundle(bundle_blob, annotation):
     if isinstance(
-        container_blob,
+        bundle_blob,
         (local_blob_util.LocalMirroredTensor, local_blob_util.LocalMirroredTensorList),
     ):
-        return TransformReturnedLocalBlob(container_blob, annotation.__args__[0])
-    elif isinstance(container_blob, (list, tuple)):
-        return type(container_blob)(
-            TransformReturnedContainer(elem, annotation) for elem in container_blob
+        return TransformReturnedLocalBlob(bundle_blob, annotation.__args__[0])
+    elif isinstance(bundle_blob, (list, tuple)):
+        return type(bundle_blob)(
+            TransformReturnedBundle(elem, annotation) for elem in bundle_blob
         )
-    elif type(container_blob) is dict:
+    elif type(bundle_blob) is dict:
         return {
-            key: TransformReturnedContainer(val, annotation)
-            for key, val in container_blob.items()
+            key: TransformReturnedBundle(val, annotation)
+            for key, val in bundle_blob.items()
         }
     else:
         raise NotImplementedError(
-            "invalid return  %s : %s found" % (container_blob, type(container_blob))
+            "invalid return  %s : %s found" % (bundle_blob, type(bundle_blob))
         )
 
 

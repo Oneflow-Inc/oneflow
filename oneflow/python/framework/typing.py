@@ -192,8 +192,8 @@ class Callback(typing.Generic[typing.TypeVar("T")]):
     pass
 
 
-@oneflow_export("typing.Container")
-class Container(typing.Generic[typing.TypeVar("T")]):
+@oneflow_export("typing.Bundle")
+class Bundle(typing.Generic[typing.TypeVar("T")]):
     pass
 
 
@@ -214,7 +214,7 @@ def OriginFrom(parameterised, generic):
             return parameterised.__origin__ is list
         if generic == Callback:
             return parameterised.__origin__ is Callback
-        if generic == Container:
-            return parameterised.__origin__ is Container
+        if generic == Bundle:
+            return parameterised.__origin__ is Bundle
 
     raise NotImplementedError("python typing is a monster torturing everyone.")
