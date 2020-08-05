@@ -185,34 +185,30 @@ def TransformGlobalFunctionResult(future_blob, annotation):
 
         return lambda f: future_blob.async_get(Transform(f))
     elif oft.OriginFrom(annotation, oft.Container):
-        if isinstance(future_blob, pull_util.FutureRemoteBlobs):
-            local_blob = future_blob.get()
-        else:
-            local_blob = future_blob
-
-        if isinstance(
-            local_blob,
-            (
-                local_blob_util.LocalMirroredTensor,
-                local_blob_util.LocalMirroredTensorList,
-            ),
-        ):
-            return TransformReturnedLocalBlob(local_blob, annotation.__args__[0])
-        elif isinstance(local_blob, (list, tuple)):
-            return type(local_blob)(
-                [TransformGlobalFunctionResult(elem, annotation) for elem in local_blob]
-            )
-        elif type(local_blob) is dict:
-            return {
-                key: TransformGlobalFunctionResult(val, annotation)
-                for key, val in local_blob.items()
-            }
-        else:
-            raise NotImplementedError(
-                "invalid return  %s : %s found" % (local_blob, type(local_blob))
-            )
+        return TransformReturnedContainer(future_blob.get(), annotation)
     else:
         return TransformReturnedLocalBlob(future_blob.get(), annotation)
+
+
+def TransformReturnedContainer(container_blob, annotation):
+    if isinstance(
+        container_blob,
+        (local_blob_util.LocalMirroredTensor, local_blob_util.LocalMirroredTensorList),
+    ):
+        return TransformReturnedLocalBlob(container_blob, annotation.__args__[0])
+    elif isinstance(container_blob, (list, tuple)):
+        return type(container_blob)(
+            [TransformReturnedContainer(elem, annotation) for elem in container_blob]
+        )
+    elif type(container_blob) is dict:
+        return {
+            key: TransformReturnedContainer(val, annotation)
+            for key, val in container_blob.items()
+        }
+    else:
+        raise NotImplementedError(
+            "invalid return  %s : %s found" % (container_blob, type(container_blob))
+        )
 
 
 def TransformReturnedLocalBlob(local_blob, annotation):
