@@ -30,6 +30,9 @@ def GenCartesianProduct(sets):
     assert isinstance(sets, Iterable)
     for set in sets:
         assert isinstance(set, Iterable)
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            if "gpu" in set:
+                set.remove("gpu")
     return itertools.product(*sets)
 
 
