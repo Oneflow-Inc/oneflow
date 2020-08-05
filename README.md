@@ -10,6 +10,7 @@
 - [Documentation](#documentation)
     - [Usage & Design Docs](#usage--design-docs)
     - [API Reference](#api-reference)
+    - [OneFlow System Design](#oneflow-system-design)
 - [Model Zoo and Benchmark](#model-zoo-and-benchmark)
   - [CNNs(ResNet-50, VGG-16, Inception-V3, AlexNet)](#cnnsresnet-50-vgg-16-inception-v3-alexnet)
   - [Wide&Deep](#widedeep)
@@ -161,6 +162,9 @@ More info on this demo, please refer to [doc on quick start](http://docs.oneflow
 * [link](http://docs.oneflow.org/)
 #### API Reference
 * [link](https://oneflow-api.readthedocs.io/en/latest/)
+#### OneFlow System Design
+For those who would like to understand the OneFlow internals, please read the document below:
+* [link](https://github.com/Oneflow-Inc/oneflow-documentation/blob/master/en/docs/basics_topics/essentials_of_oneflow.md)
 
 ## Model Zoo and Benchmark
 * [link](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
