@@ -58,6 +58,7 @@ if [[ $SKIP_THIRD_PARTY != 1 ]]; then
     cmake -DTHIRD_PARTY=ON \
         $COMMON_CMAKE_ARGS \
         -DONEFLOW=OFF \
+        $EXTRA_ONEFLOW_CMAKE_ARGS \
         $ONEFLOW_SRC_DIR
     make -j nccl
     make -j`nproc` prepare_oneflow_third_party
@@ -86,7 +87,7 @@ do
     cmake -DTHIRD_PARTY=OFF -DONEFLOW=ON\
         $COMMON_CMAKE_ARGS \
         -DPython3_ROOT_DIR=$PY_ROOT \
-        $EXTRA_ONEFLOW_CMAKE_ARGS   \
+        $EXTRA_ONEFLOW_CMAKE_ARGS \
         $ONEFLOW_SRC_DIR
     cmake --build . -j `nproc`
     popd
