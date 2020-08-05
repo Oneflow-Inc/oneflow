@@ -114,6 +114,7 @@ std::function<int32_t(const SbpSignature* sbp_sig)> MakeGetterOrderValue4SbpSig(
   };
 }
 
+// sort sbp_sig_list by copy cost and store them into sorted_sbp_signatures
 void SortSbpSignatureListByCopyCost(
     const SbpSignatureList& sbp_sig_list, const PbRpf<std::string>& ibns,
     const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,

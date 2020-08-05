@@ -201,6 +201,7 @@ Maybe<void> Operator::InferOutputBlobTimeShape(
   return Maybe<void>::Ok();
 }
 
+// generate sbp signature candidates and store them into sbp_sig_list
 Maybe<void> Operator::GetSbpSignaturesIf(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
@@ -225,13 +226,16 @@ Maybe<void> Operator::InferSbpSignatureIf(
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) {
   if (parallel_desc.parallel_num() == 1) {
+    // If we only have one machine and one device, we will choose it
     auto* bn2sbp = mut_sbp_signature()->mutable_bn_in_op2sbp_parallel();
     for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0); }
     for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0); }
   } else if (parallel_desc.parallel_num() > 1) {
+    // Pick the best one if we have multiple devices.
     return InferSbpSignature(mut_sbp_signature(), sbp_sig_conf, CalcOrderValue4SbpSig,
                              SbpInferHint4Ibn, parallel_desc);
   } else {
+    // If no choice left, don't do anything for now.
     UNIMPLEMENTED();
   }
   return Maybe<void>::Ok();
@@ -242,14 +246,14 @@ Maybe<void> Operator::InferSbpSignature(
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  // get op sbp signatures
+  // generate sbp signatures for op and store them into sbp_sig_list
   auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc*> {
     const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
     return Maybe<const BlobDesc*>(&(sbp_infer_hint->logical_blob_desc()));
   };
   SbpSignatureList sbp_sig_list;
   JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_list));
-  // filter sbp signatures by sbp signature conf
+  // filter out suitable sbp signatures from sbp_sig_list by sbp signature configure
   SbpSignatureList filtered_sbp_sigs_by_conf;
   FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
   CHECK_GT_OR_RETURN(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0);
@@ -257,7 +261,7 @@ Maybe<void> Operator::InferSbpSignature(
     *sbp_signature = *filtered_sbp_sigs_by_conf.sbp_signature().begin();
     return Maybe<void>::Ok();
   }
-  // sort sbp signatures by copy cost, then return the one with least cost
+  // sort sbp signatures by copy cost, then return the one with the least cost
   HashMap<std::string, const SbpParallel*> ibn2producer_sbp_parallel;
   for (const auto& ibn : input_bns()) {
     ibn2producer_sbp_parallel[ibn] = &(JUST(SbpInferHint4Ibn(ibn))->sbp_parallel());
@@ -918,7 +922,7 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope) {
   // parallel description, to describe how data scatter on machine
   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
-  // 
+  //
   bool is_mirrored = scope.opt_mirrored_parallel_conf().has_mirrored_parallel();
   // current logical op
   const auto& op = ConstructOp(op_conf, JUST(scope.job_desc()));
@@ -942,7 +946,7 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
   };
   // fill in mapping from input blob name to batch axis
   JUST(op->InferBatchAxisIf(ConstBlobDesc4Ibn, BatchAxis4Ibn));
-  // 
+  //
   JUST(InferMirroredSignature(op.get(), upstream_signature, is_mirrored, parallel_desc));
   // Empty Sbp Signature
   SbpSignature sbp_sig_conf;
