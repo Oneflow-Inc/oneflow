@@ -24,9 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 
-bool IsForwardTaskType(TaskType);
-bool IsMdUpdtTaskType(TaskType);
-
 RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
                                                   const std::string& regst_desc_name);
 RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
@@ -38,7 +35,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskNode);
   TaskNode();
-  virtual ~TaskNode() = default;
+  ~TaskNode() override = default;
 
   // Getters
   int64_t machine_id() const { return machine_id_; }
@@ -76,9 +73,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void ConsumeAllRegsts() = 0;
   void PinConsumedRegst();
   void InferTimeShapeIfMeaningful();
-  void ForEachProducedDataRegst(std::function<void(const std::string&, RegstDesc*)> Handler);
+  void ForEachProducedDataRegst(const std::function<void(const std::string&, RegstDesc*)>& Handler);
   void ForEachConsumedDataRegst(
-      std::function<void(const std::string&, const RegstDesc*)> Handler) const;
+      const std::function<void(const std::string&, const RegstDesc*)>& Handler) const;
   void Build();
   virtual bool IsReadyForBuild() { return IsAllConsumedDataRegstLocked(); }
 
@@ -89,12 +86,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   // Others
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
-  virtual std::string VisualStr() const override;
+  std::string VisualStr() const override;
   virtual bool IsMeaningLess();
   virtual void ToProto(TaskProto*);
   virtual bool IsIndependent() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
-  virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
+  virtual int64_t MemZoneId121() const;
   void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name);
@@ -125,7 +122,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void InitProducedRegstMemCase(MemoryCase*);
   virtual void PinConsumedRegstMemCase(MemoryCase*);
   void ConsumeRegst(const std::string& name);
-  void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
+  void ConsumeRegst(const std::string& name, const std::shared_ptr<RegstDesc>&);
   bool IsAllConsumedDataRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   void TryLockConsumedRegst(const std::string& name);
@@ -164,13 +161,13 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskEdge);
   TaskEdge() = default;
-  ~TaskEdge() = default;
+  ~TaskEdge() override = default;
 
   std::shared_ptr<RegstDesc> GetRegst(const std::string& name_in_producer) const;
   std::shared_ptr<RegstDesc> GetSoleRegst() const;
   std::vector<std::shared_ptr<RegstDesc>> GetRegsts() const;
 
-  void AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst);
+  void AddRegst(const std::string& name_in_producer, const std::shared_ptr<RegstDesc>& regst);
 
  private:
   HashMap<std::string, std::shared_ptr<RegstDesc>> name_in_producer2regst_;
