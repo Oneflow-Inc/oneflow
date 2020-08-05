@@ -449,7 +449,6 @@ def _TryCompleteConfigProto(config_proto):
 def _GetDefaultConfigProto():
     config_proto = job_set_util.ConfigProto()
     config_proto.resource.machine_num = 0
-    config_proto.resource.gpu_device_num = 0
     config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
     config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
     return config_proto
