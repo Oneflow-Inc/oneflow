@@ -64,6 +64,7 @@ void FilterSbpSignatureList(const SbpSignatureList& sbp_sig_list, const SbpSigna
   }
 }
 
+// compute copy cost
 double ComputCopyCostBetweenTwoSbpParallel(const SbpInferHint& producer_sbp_infer_hint,
                                            const SbpParallel& consumer_sbp_parallel) {
   if (producer_sbp_infer_hint.sbp_parallel() == consumer_sbp_parallel) { return 0.0; }
@@ -75,6 +76,7 @@ double ComputCopyCostBetweenTwoSbpParallel(const SbpInferHint& producer_sbp_infe
   return logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
 }
 
+// summerize copy cost for one sbp signature of current op node
 double ComputeIbnCopyCost4SbpSig(
     const PbRpf<std::string>& ibns,
     const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
@@ -88,6 +90,7 @@ double ComputeIbnCopyCost4SbpSig(
   return cost;
 }
 
+// store all cost for all sbp signature of current op node
 std::function<double(const SbpSignature*)> MakeGetterIbnCopyCost4SbpSig(
     const PbRpf<std::string>& ibns,
     const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,

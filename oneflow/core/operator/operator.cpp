@@ -241,6 +241,7 @@ Maybe<void> Operator::InferSbpSignatureIf(
   return Maybe<void>::Ok();
 }
 
+// With sbp signature fixed in upstream, determine a sbp signature for downstream
 Maybe<void> Operator::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -261,7 +262,7 @@ Maybe<void> Operator::InferSbpSignature(
     *sbp_signature = *filtered_sbp_sigs_by_conf.sbp_signature().begin();
     return Maybe<void>::Ok();
   }
-  // sort sbp signatures by copy cost, then return the one with the least cost
+  // compute copy cost for sbp signatures, sort them, then return the one with the least cost
   HashMap<std::string, const SbpParallel*> ibn2producer_sbp_parallel;
   for (const auto& ibn : input_bns()) {
     ibn2producer_sbp_parallel[ibn] = &(JUST(SbpInferHint4Ibn(ibn))->sbp_parallel());
