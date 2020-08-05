@@ -199,15 +199,14 @@ def TransformGlobalFunctionResult(future_blob, annotation):
         ):
             return TransformReturnedLocalBlob(local_blob, annotation.__args__[0])
         elif isinstance(local_blob, (list, tuple)):
-            transfored_blob = list()
-            for elem in local_blob:
-                transfored_blob.append(TransformGlobalFunctionResult(elem, annotation))
-            return type(local_blob)(transfored_blob)
+            return type(local_blob)(
+                [TransformGlobalFunctionResult(elem, annotation) for elem in local_blob]
+            )
         elif type(local_blob) is dict:
-            transfored_blob = dict()
-            for key, val in local_blob.items():
-                transfored_blob[key] = TransformGlobalFunctionResult(val, annotation)
-            return transfored_blob
+            return {
+                key: TransformGlobalFunctionResult(val, annotation)
+                for key, val in local_blob.items()
+            }
         else:
             raise NotImplementedError(
                 "invalid return  %s : %s found" % (local_blob, type(local_blob))
