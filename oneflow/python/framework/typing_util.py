@@ -191,6 +191,11 @@ def TransformGlobalFunctionResult(future_blob, annotation):
 
 
 def TransformReturnedBundle(bundle_blob, annotation):
+    """
+    Transform returned bundle blob from global_function,
+    the returned bundle blob could be the form like x,
+    [x], (x, ), {"key": x} or the mixed form of them.
+    """
     if isinstance(
         bundle_blob,
         (local_blob_util.LocalMirroredTensor, local_blob_util.LocalMirroredTensorList),
