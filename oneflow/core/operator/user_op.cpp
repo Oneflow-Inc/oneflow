@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/operator/user_op.h"
-#include "oneflow/core/operator/user_op_util.h"
-#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/framework/batch_axis_context.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/sbp_context.h"
-#include "oneflow/core/framework/batch_axis_context.h"
+#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/operator/user_op.h"
+#include "oneflow/core/operator/user_op_util.h"
 
 namespace oneflow {
 
@@ -53,7 +54,7 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
     const auto& op_conf = user_op->op_conf();
     CHECK(op_conf.has_user_conf());
 
-    device_type_ = op_conf.device_type();
+    device_type_ = CHECK_JUST(DeviceType4DeviceTag(op_conf.device_tag()));
     parallel_ctx_ = parallel_ctx;
 
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,

@@ -13,14 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/eager_kernel.h"
+#include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
-#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/framework/infer_util.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -61,8 +61,8 @@ class UserKernelBaseContext {
     };
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_);
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
-
-    device_type_ = kernel_conf.op_attribute().op_conf().device_type();
+    device_type_ =
+        CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag()));
     parallel_ctx_ = kernel_conf.user_conf().parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
       arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::TensorDesc(pair.second));

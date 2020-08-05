@@ -57,7 +57,7 @@ enum JobBuildAndInferError {
   kLogicalBlobNameInvalid = 402;
   
   kOpNameExist = 450;
-  kOpConfDeviceTypeNoSet = 460;
+  kOpConfDeviceTagNoSet = 460;
   kPlacementError = 470;
   kBlobSplitAxisInferError = 480;
   kUnknownJobBuildAndInferError = 500;

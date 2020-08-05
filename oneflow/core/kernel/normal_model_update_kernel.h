@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_KERNEL_NORMAL_MODEL_UPDATE_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_NORMAL_MODEL_UPDATE_KERNEL_H_
 
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -54,8 +55,9 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
     static const HashMap<std::string, std::function<Kernel*()>> creators = {             \
         OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (x##MdUpdateKernel), \
                                          DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};      \
-    return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),    \
-                                  kernel_conf.data_type()))();                           \
+    DeviceType device_type =                                                             \
+        DeviceTag2DeviceType(kernel_conf.op_attribute().op_conf().device_tag());         \
+    return creators.at(GetHashKey(device_type, kernel_conf.data_type()))();              \
   }
 
 }  // namespace oneflow

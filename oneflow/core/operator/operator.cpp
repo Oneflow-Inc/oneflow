@@ -13,14 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/job/sbp_signature_builder.h"
-#include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -39,7 +40,8 @@ DataType GetDataTypeFromBnInOpVec(
 std::shared_ptr<Operator> CheckAndConstructOp(const OperatorConf& op_conf,
                                               const JobDesc* job_desc) {
   Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
-  if (IsCpuOnly(op_conf)) { CHECK_EQ(op_conf.device_type(), DeviceType::kCPU); }
+  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf.device_tag()));
+  if (IsCpuOnly(op_conf)) { CHECK_EQ(device_type, DeviceType::kCPU); }
   rptr->Init(op_conf, job_desc);
   return std::shared_ptr<Operator>(rptr);
 }
@@ -70,6 +72,11 @@ LogicalBlobId* Operator::MutBnInOp2Lbi(const std::string& bn_in_op) {
   } else {
     return &(it->second);
   }
+}
+
+DeviceType Operator::device_type() const {
+  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_attribute_.op_conf().device_tag()));
+  return device_type;
 }
 
 const std::string& Operator::SoleIbn() const {
@@ -636,7 +643,8 @@ bool IsCpuOnly(const OperatorConf& op_conf) {
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type,
                                       const JobDesc* job_desc) {
   OperatorConf dev_op_conf = op_conf;
-  dev_op_conf.set_device_type(device_type);
+  const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(device_type));
+  dev_op_conf.set_device_tag(device_tag);
   return CheckAndConstructOp(dev_op_conf, job_desc);
 }
 

@@ -13,15 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/register/register_desc.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <mutex>
 #include <queue>
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/register/register_desc.h"
 
 namespace oneflow {
 
@@ -101,7 +103,7 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
 #define REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(stype)                                         \
   NEW_REGISTER_KERNEL(OperatorConf::kSyncDynamicResizeConf, SyncDynamicResizeGPUKernel<stype>) \
       .SetIsMatchedPred([](const KernelConf& kernel_conf) {                                    \
-        return (kernel_conf.op_attribute().op_conf().device_type() == DeviceType::kGPU         \
+        return (kernel_conf.op_attribute().op_conf().device_tag() == "gpu"                     \
                 && GetDataType<stype>::value                                                   \
                        == kernel_conf.sync_dynamic_resize_conf().size_data_type());            \
       })
@@ -139,7 +141,7 @@ class SyncDynamicResizeCPUKernel final : public KernelIf<DeviceType::kCPU> {
 #define REGISTER_SYNC_DYNAMIC_RESIZE_CPU_KERNEL(stype)                                         \
   NEW_REGISTER_KERNEL(OperatorConf::kSyncDynamicResizeConf, SyncDynamicResizeCPUKernel<stype>) \
       .SetIsMatchedPred([](const KernelConf& kernel_conf) {                                    \
-        return (kernel_conf.op_attribute().op_conf().device_type() == DeviceType::kCPU         \
+        return (kernel_conf.op_attribute().op_conf().device_tag() == "cpu"                     \
                 && GetDataType<stype>::value                                                   \
                        == kernel_conf.sync_dynamic_resize_conf().size_data_type());            \
       })

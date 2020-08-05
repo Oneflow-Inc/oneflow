@@ -33,6 +33,8 @@ std::string ExtractOpTypeAsString(const OperatorConf &conf);
 
 XrtDevice DeviceTypeToXrtDevice(const DeviceType &device_type);
 
+XrtDevice DeviceTagToXrtDevice(const std::string &device_tag);
+
 DeviceType XrtDeviceToDeviceType(const XrtDevice &device);
 
 XrtEngine StringToXrtEngine(const std::string &engine);

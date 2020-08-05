@@ -363,7 +363,7 @@ def _GenModelInitOpConfAndRetLbi(var_op_conf):
     variable_op_conf.CopyFrom(var_op_conf.variable_conf)
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = "model_init"
-    op_conf.device_type = device_util.DeviceType4DeviceTag("cpu")
+    op_conf.device_tag = "cpu"
     op_conf.model_init_conf.out.append("out_0")
     op_conf.model_init_conf.variable_op_name.append(var_op_conf.name)
     op_conf.model_init_conf.original_variable_conf.append(variable_op_conf)
@@ -379,7 +379,7 @@ def _GenModelLoadOpConfAndRetLbi(var_op_conf, path_lbi):
 
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = "model_load"
-    op_conf.device_type = device_util.DeviceType4DeviceTag("cpu")
+    op_conf.device_tag = "cpu"
     op_conf.model_load_conf.path = "{}/{}".format(path_lbi.op_name, path_lbi.blob_name)
     op_conf.model_load_conf.out.append("out_0")
     op_conf.model_load_conf.variable_op_name.append(var_op_conf.name)

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/indexed_slices_reduce_sum_kernel_util.h"
@@ -54,17 +55,17 @@ void IndexedSlicesReduceSumKernel<device_type, T, K>::ForwardDataContent(
       workspace_ptr, workspace_size_in_bytes);
 }
 
-#define MAKE_INDEXED_SLICES_REDUCE_SUM_KERNEL_ENTRY(device_type_v, data_type_pair,         \
-                                                    indices_type_pair)                     \
-  NEW_REGISTER_KERNEL(                                                                     \
-      OperatorConf::kIndexedSlicesReduceSumConf,                                           \
-      IndexedSlicesReduceSumKernel<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),        \
-                                   OF_PP_PAIR_FIRST(indices_type_pair)>)                   \
-      .SetIsMatchedPred([](const KernelConf& kernel_conf) -> bool {                        \
-        return ((kernel_conf.op_attribute().op_conf().device_type() == device_type_v)      \
-                && ((OF_PP_PAIR_SECOND(data_type_pair)) == kernel_conf.data_type())        \
-                && (OF_PP_PAIR_SECOND(indices_type_pair)                                   \
-                    == kernel_conf.indexed_slices_reduce_sum_conf().indices_data_type())); \
+#define MAKE_INDEXED_SLICES_REDUCE_SUM_KERNEL_ENTRY(device_type_v, data_type_pair,             \
+                                                    indices_type_pair)                         \
+  NEW_REGISTER_KERNEL(                                                                         \
+      OperatorConf::kIndexedSlicesReduceSumConf,                                               \
+      IndexedSlicesReduceSumKernel<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),            \
+                                   OF_PP_PAIR_FIRST(indices_type_pair)>)                       \
+      .SetIsMatchedPred([](const KernelConf& kernel_conf) -> bool {                            \
+        return ((kernel_conf.op_attribute().op_conf().device_tag() == ToString(device_type_v)) \
+                && ((OF_PP_PAIR_SECOND(data_type_pair)) == kernel_conf.data_type())            \
+                && (OF_PP_PAIR_SECOND(indices_type_pair)                                       \
+                    == kernel_conf.indexed_slices_reduce_sum_conf().indices_data_type()));     \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_INDEXED_SLICES_REDUCE_SUM_KERNEL_ENTRY, DEVICE_TYPE_SEQ,

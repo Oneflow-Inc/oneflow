@@ -25,6 +25,7 @@ namespace oneflow {
 
 Maybe<const char*> DeviceTag4DeviceType(DeviceType device_type);
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag);
+DeviceType DeviceTag2DeviceType(const std::string& device_tag);
 
 template<>
 inline std::string ToString(const DataType& data_type) {

@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/logical_graph.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf_util.h"
-#include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -63,7 +64,8 @@ void LogicalGraph::NaiveBuildFwStruct(
     auto parallel_desc_ptr_it = name2parallel_desc.find(cur_op_conf.name());
     CHECK(parallel_desc_ptr_it != name2parallel_desc.end());
     const std::shared_ptr<ParallelDesc>& parallel_desc_ptr = parallel_desc_ptr_it->second;
-    cur_op_conf.set_device_type(parallel_desc_ptr->device_type());
+    const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(parallel_desc_ptr->device_type()));
+    cur_op_conf.set_device_tag(device_tag);
     std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf, &GlobalJobDesc());
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();
     AddAllocatedNode(cur_node);

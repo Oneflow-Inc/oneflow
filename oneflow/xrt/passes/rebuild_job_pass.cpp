@@ -13,14 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/xrt/passes/pass.h"
-
-#include <string>
-#include <vector>
-#include "absl/strings/str_cat.h"
-#include "absl/strings/str_split.h"
-#include "glog/logging.h"
-
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/xrt/api.h"
@@ -28,8 +21,16 @@ limitations under the License.
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/kernel/op_kernel.h"
 #include "oneflow/xrt/node_util.h"
+#include "oneflow/xrt/passes/pass.h"
 #include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/stl.h"
+
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_split.h"
+#include "glog/logging.h"
+
+#include <string>
+#include <vector>
 
 namespace oneflow {
 namespace xrt {
@@ -222,7 +223,8 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
     OperatorConf op_conf;
     op_conf.set_name(node->name());
     DeviceType device_type = XrtDeviceToDeviceType(node->device());
-    op_conf.set_device_type(device_type);
+    const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(device_type));
+    op_conf.set_device_tag(device_tag);
 
     XrtLaunchOpConf *launch_conf = op_conf.mutable_xrt_launch_conf();
     // Add inputs and outputs in launch_conf

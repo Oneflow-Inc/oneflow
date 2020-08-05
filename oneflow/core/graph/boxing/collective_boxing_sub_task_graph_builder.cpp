@@ -13,10 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/collective_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/collective_boxing_task_node.h"
-#include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 
 namespace oneflow {
@@ -31,7 +32,8 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
                             const BlobDesc& logical_blob_desc, OpType op_type, int64_t root) {
   OperatorConf op_conf;
   op_conf.set_name(name);
-  op_conf.set_device_type(DeviceType::kGPU);
+  const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(DeviceType::kGPU));
+  op_conf.set_device_tag(device_tag);
   CollectiveBoxingGenericOpConf* conf = op_conf.mutable_collective_boxing_generic_conf();
   *conf->mutable_lbi() = lbi;
   RankDesc* rank_desc = conf->mutable_rank_desc();

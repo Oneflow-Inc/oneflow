@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 
 namespace oneflow {
@@ -102,7 +103,8 @@ void SliceBoxingTaskNode::SetOutShape(const Shape& shape) { out_shape_ = shape; 
 
 OperatorConf SliceBoxingTaskNode::GetBoxingOpConf() {
   OperatorConf op_conf{};
-  op_conf.set_device_type(device_type());
+  const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(device_type()));
+  op_conf.set_device_tag(device_tag);
   SliceBoxingConf boxing_conf{};
   *boxing_conf.mutable_lbi() = lbi_;
   out_slice_.ToProto(boxing_conf.mutable_out_slice());

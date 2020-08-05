@@ -13,17 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/job_build_and_infer_ctx.h"
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
-#include "oneflow/core/job_rewriter/autograd.h"
-#include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/job/mirrored_sig_infer_hint.h"
-#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/job/job_build_and_infer_ctx.h"
+#include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/job/scope.h"
-#include <google/protobuf/text_format.h>
+#include "oneflow/core/job_rewriter/autograd.h"
+#include "oneflow/core/job_rewriter/op_graph_pass.h"
 #include "oneflow/user/summary/summary_converter.h"
+
+#include <google/protobuf/text_format.h>
 #include <json.hpp>
 
 namespace oneflow {
@@ -505,9 +507,9 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   CHECK_OR_RETURN(op_name2op_.find(op_name) == op_name2op_.end())
       << JobBuildAndInferError::kOpNameExist << "op_name: " << op_name
       << " already exist in job: " << job_->job_conf().job_name();
-  CHECK_NE_OR_RETURN(op_conf.device_type(), DeviceType::kInvalidDevice)
-      << JobBuildAndInferError::kOpConfDeviceTypeNoSet << "op_name: " << op_name
-      << " not set device type";
+  CHECK_NE_OR_RETURN(op_conf.device_tag(), "invalid_device")
+      << JobBuildAndInferError::kOpConfDeviceTagNoSet << "op_name: " << op_name
+      << " not set device tag";
 
   op_name2op_.emplace(op_name, ConstructOp(op_conf, job_desc));
   Operator* op = op_name2op_.at(op_name).get();
@@ -836,7 +838,8 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompati
     lbi_vec->push_back(sub_lbi);
   };
   OperatorConf op_conf;
-  op_conf.set_device_type(parallel_desc.device_type());
+  const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
+  op_conf.set_device_tag(device_tag);
   if (sbp.has_broadcast_parallel()) {
     op_conf.set_name(kAutoMirroredBlobNamePrefix + "-DistributeClone-" + NewUniqueId());
     auto* distribute_clone = op_conf.mutable_distribute_clone_conf();
@@ -890,7 +893,8 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
     CHECK_OR_RETURN(producer_op_conf.has_scope_symbol_id());
     op_conf.set_scope_symbol_id(producer_op_conf.scope_symbol_id());
   }
-  op_conf.set_device_type(parallel_desc.device_type());
+  const char* device_tag = JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
+  op_conf.set_device_tag(device_tag);
   op_conf.set_name(kAutoMirroredBlobNamePrefix + "-CastToMirrored-" + NewUniqueId());
   auto* cast_to_mirrored_conf = op_conf.mutable_cast_to_mirrored_conf();
   cast_to_mirrored_conf->set_in(lbn);
