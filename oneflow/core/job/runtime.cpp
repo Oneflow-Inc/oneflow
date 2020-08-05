@@ -62,15 +62,12 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 
 Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
   NewAllGlobal(plan, total_piece_num, is_experiment_phase);
-  std::vector<const TaskProto*> mdupdt_tasks;
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
   int64_t this_machine_task_num = 0;
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != Global<MachineCtx>::Get()->this_machine_id()) { continue; }
-    if (IsMdUpdtTaskType(task.task_type())) {
-      mdupdt_tasks.push_back(&task);
-    } else if (!HasNonCtrlConsumedRegstDescId(task)) {
+    if (!HasNonCtrlConsumedRegstDescId(task)) {
       source_tasks.push_back(&task);
     } else {
       other_tasks.push_back(&task);
@@ -79,7 +76,6 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   }
   RuntimeCtx* runtime_ctx = Global<RuntimeCtx>::Get();
   runtime_ctx->NewCounter("constructing_actor_cnt", this_machine_task_num);
-  HandoutTasks(mdupdt_tasks);
   HandoutTasks(source_tasks);
   HandoutTasks(other_tasks);
   runtime_ctx->WaitUntilCntEqualZero("constructing_actor_cnt");
@@ -87,14 +83,8 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   OF_BARRIER();
   LOG(INFO) << "Actors on every machine constructed";
   if (Global<CommNet>::Get()) { Global<CommNet>::Get()->RegisterMemoryDone(); }
-  runtime_ctx->NewCounter("model_init_cnt", mdupdt_tasks.size());
-  SendCmdMsg(mdupdt_tasks, ActorCmd::kInitModel);
-  runtime_ctx->WaitUntilCntEqualZero("model_init_cnt");
-  LOG(INFO) << "InitModel on this machine done";
   OF_BARRIER();
-  LOG(INFO) << "InitModel on all machine done";
   runtime_ctx->NewCounter("running_actor_cnt", this_machine_task_num);
-  SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
 }
 
