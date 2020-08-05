@@ -66,12 +66,14 @@ def compare_with_tensorflow(
     @flow.global_function(type="train", function_config=func_config)
     def DynamicConvJob(x: oft.ListNumpy.Placeholder((10, 3, 100, 100))):
         with flow.scope.placement(device_type, "0:0"):
-            x += flow.get_variable(
+            x_var = flow.get_variable(
                 name="v1",
                 shape=(1,),
                 dtype=flow.float,
                 initializer=flow.zeros_initializer(),
             )
+            x_var = flow.cast_to_current_logical_view(x_var)
+            x += x_var
             if data_format == "NCHW":
                 weight_shape = (filters, x_shape[1] // groups, kernel_size, kernel_size)
             else:
@@ -82,6 +84,7 @@ def compare_with_tensorflow(
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(minval=0, maxval=100),
             )
+            weight = flow.cast_to_current_logical_view(weight)
             loss = flow.nn.conv2d(
                 x,
                 weight,
