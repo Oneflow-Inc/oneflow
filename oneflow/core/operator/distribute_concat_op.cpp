@@ -1,6 +1,25 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/job/scope.h"
 
 namespace oneflow {
 
@@ -19,6 +38,7 @@ class DistributeConcatOp final : public Operator {
   LogicalNode* NewProperLogicalNode() const override { return new DistributeConcatLogicalNode; }
 
  private:
+  Maybe<void> InferParallelSignature() override;
   Maybe<void> InferBatchAxis(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
@@ -83,6 +103,23 @@ Maybe<void> DistributeConcatOp::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *first_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_dim_vec);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DistributeConcatOp::InferParallelSignature() {
+  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope = *JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
+  int64_t op_parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
+  mut_parallel_signature()->set_op_parallel_desc_symbol_id(op_parallel_desc_symbol_id);
+  auto* map = mut_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
+  (*map)["out"] = op_parallel_desc_symbol_id;
+  const auto& op_parallel_desc = *JUST(scope.GetParallelDesc(op_conf()));
+  CHECK_EQ(op_parallel_desc.parallel_num(), input_bns().size());
+  FOR_RANGE(int, i, 0, input_bns().size()) {
+    const auto& in_parallel_conf = op_parallel_desc.GetParallelIdOnlyParallelConf(i);
+    (*map)[input_bns().Get(i)] =
+        Global<ForeignCallback>::Get()->MakeParallelDescSymbol(in_parallel_conf.DebugString());
+  }
   return Maybe<void>::Ok();
 }
 

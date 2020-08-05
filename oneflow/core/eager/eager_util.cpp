@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/eager/eager_util.h"
 #include "oneflow/core/eager/eager_symbol.pb.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -8,6 +23,7 @@
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 
@@ -28,9 +44,9 @@ void StorageAdd(const EagerSymbol& symbol) {
     Global<vm::SymbolStorage<ParallelDesc>>::Get()->Add(symbol_id, symbol.parallel_conf_symbol());
   } else if (symbol.has_op_conf_symbol()) {
     Global<vm::SymbolStorage<OperatorConf>>::Get()->Add(symbol_id, symbol.op_conf_symbol());
-  } else if (symbol.has_op_parallel_attribute_symbol()) {
-    Global<vm::SymbolStorage<OpParallelAttribute>>::Get()->Add(
-        symbol_id, symbol.op_parallel_attribute_symbol());
+  } else if (symbol.has_op_node_signature_symbol()) {
+    Global<vm::SymbolStorage<OpNodeSignatureDesc>>::Get()->Add(symbol_id,
+                                                               symbol.op_node_signature_symbol());
   } else {
     UNIMPLEMENTED();
   }

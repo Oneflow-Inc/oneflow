@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import unittest
 
 import numpy as np
@@ -12,7 +27,7 @@ def make_job(input_shape, dtype=flow.float32):
 
     @flow.global_function(config)
     def sigmoid_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.keras.activations.sigmoid(x)
+        return flow.math.sigmoid(x)
 
     return sigmoid_job
 
@@ -23,7 +38,7 @@ def make_xla_job(input_shape, dtype=flow.float32):
 
     @flow.global_function(config)
     def xla_sigmoid_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.keras.activations.sigmoid(x)
+        return flow.math.sigmoid(x)
 
     return xla_sigmoid_job
 
@@ -34,7 +49,7 @@ def make_trt_job(input_shape, dtype=flow.float32):
 
     @flow.global_function(config)
     def trt_sigmoid_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.keras.activations.sigmoid(x)
+        return flow.math.sigmoid(x)
 
     return trt_sigmoid_job
 

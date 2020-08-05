@@ -1,13 +1,32 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_VM_STORAGE_H_
 #define ONEFLOW_CORE_VM_STORAGE_H_
 
 #include <mutex>
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
 class ParallelDesc;
 class ParallelConf;
+
+class OpNodeSignatureDesc;
+class OpNodeSignature;
 
 namespace vm {
 
@@ -17,8 +36,8 @@ struct ConstructArgType4Symbol final {
 };
 
 template<>
-struct ConstructArgType4Symbol<ParallelDesc> final {
-  using type = ParallelConf;
+struct ConstructArgType4Symbol<OpNodeSignatureDesc> final {
+  using type = OpNodeSignature;
 };
 
 template<typename T>
@@ -35,7 +54,19 @@ class SymbolStorage final {
     return logical_object_id2data_.find(logical_object_id) != logical_object_id2data_.end();
   }
 
+  Maybe<const T*> MaybeGet(int64_t logical_object_id) const {
+    return JUST(MaybeGetPtr(logical_object_id)).get();
+  }
+
   const T& Get(int64_t logical_object_id) const { return *GetPtr(logical_object_id); }
+
+  Maybe<T> MaybeGetPtr(int64_t logical_object_id) const {
+    std::unique_lock<std::mutex> lock(mutex_);
+    const auto& iter = logical_object_id2data_.find(logical_object_id);
+    CHECK_OR_RETURN(iter != logical_object_id2data_.end())
+        << "logical_object_id: " << logical_object_id;
+    return iter->second;
+  }
 
   const std::shared_ptr<T>& GetPtr(int64_t logical_object_id) const {
     std::unique_lock<std::mutex> lock(mutex_);

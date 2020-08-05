@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_EAGER_OPKERNEL_INSTRUCTION_MSG_H_
 #define ONEFLOW_CORE_EAGER_OPKERNEL_INSTRUCTION_MSG_H_
 
@@ -21,7 +36,7 @@ FLAT_MSG_VIEW_END(DeleteOpKernelObjectInstrOperand);
 
 FLAT_MSG_VIEW_BEGIN(CallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, opkernel);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, op_parallel_attribute);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, op_node_signature);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_ibn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, ibn);
@@ -39,7 +54,7 @@ FLAT_MSG_VIEW_END(CallOpKernelInstrOperand);
 FLAT_MSG_VIEW_BEGIN(StatelessCallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, job_desc);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, op_conf);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, op_parallel_attribute);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, op_node_signature);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, shared_opkernel);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_ibn);
@@ -64,6 +79,11 @@ FLAT_MSG_VIEW_BEGIN(FeedBlobInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::Mut2Operand, blob);
   FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
 FLAT_MSG_VIEW_END(FeedBlobInstrOperand);
+
+FLAT_MSG_VIEW_BEGIN(RemoveForeignCallbackInstrOperand);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, object_id);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, unique_callback_id);
+FLAT_MSG_VIEW_END(RemoveForeignCallbackInstrOperand);
 // clang-format on
 
 }  // namespace eager

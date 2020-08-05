@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/customized/ops/nn_util.h"
 
@@ -21,11 +36,12 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
                   || ctx->SbpParallel4ArgNameAndIndex("weight", 0).has_broadcast_parallel());
 
   {
-    auto padding = ctx->Attr<std::string>("padding");
+    const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
     auto dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     auto strides = ctx->Attr<std::vector<int32_t>>("strides");
     CHECK_EQ_OR_RETURN(NDims, dilation_rate.size());
     CHECK_EQ_OR_RETURN(NDims, strides.size());
+    CHECK_EQ_OR_RETURN(NDims, padding_before.size());
 
     user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
     DimVector out_shape(NDims + 2);
@@ -33,8 +49,8 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
     out_shape.at(c_dim) = filters;
     for (int32_t i = 0; i < NDims; ++i) {
-      CalcOutAndPadding(in->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                        strides.at(i), padding, &out_shape.at(idx_offset + i), nullptr, nullptr);
+      CalcConvOut(in->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
+                  strides.at(i), padding_before.at(i), &out_shape.at(idx_offset + i));
     }
     *out = *in;
     *out->mut_shape() = Shape(out_shape);
@@ -116,13 +132,13 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
     is_checked = false;
   }
 
-  const auto& padding = conf.attr<std::string>("padding");
-  if (!(padding == "valid" || padding == "same")) {
-    err << " padding:" << padding;
-    is_checked = false;
-  }
-
   if (NDims != 0) {
+    const auto& padding_before = conf.attr<std::vector<int32_t>>("padding_before");
+    if (padding_before.size() != NDims) {
+      err << " padding_before: number of element is " << padding_before.size();
+      is_checked = false;
+    }
+
     const auto& kernel_size = conf.attr<std::vector<int32_t>>("kernel_size");
     if (kernel_size.size() != NDims) {
       err << " kernel_size: number of element is " << kernel_size.size();
@@ -150,7 +166,7 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
 }
 
 void GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-  std::string padding = op.attr<std::string>("padding");
+  const auto& padding_before = op.attr<std::vector<int32_t>>("padding_before");
   std::string data_format = op.attr<std::string>("data_format");
   std::vector<int32_t> kernel_size = op.attr<std::vector<int32_t>>("kernel_size");
   std::vector<int32_t> strides = op.attr<std::vector<int32_t>>("strides");
@@ -184,7 +200,7 @@ void GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddO
             .Input("x", op.input("in", 0))
             .Output("filter_diff")
             .Attr<int32_t>("num_spatial_dims", ndims)
-            .Attr<std::string>("padding", padding)
+            .Attr<std::vector<int32_t>>("padding_before", padding_before)
             .Attr<std::string>("data_format", data_format)
             .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
             .Attr<std::vector<int32_t>>("strides", strides)
@@ -204,7 +220,7 @@ void GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddO
             .Input("x_like", op.input("in", 0))
             .Output("dx")
             .Attr<int32_t>("num_spatial_dims", ndims)
-            .Attr<std::string>("padding", padding)
+            .Attr<std::vector<int32_t>>("padding_before", padding_before)
             .Attr<std::string>("data_format", data_format)
             .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
             .Attr<std::vector<int32_t>>("strides", strides)
@@ -225,7 +241,7 @@ REGISTER_USER_OP("conv1d")
     .OptionalInput("bias_multiplier")  // cudnn conv doesn't need this
     .Output("out")
     .Attr("filters", UserOpAttrType::kAtInt32)
-    .Attr<std::string>("padding", UserOpAttrType::kAtString, "valid")
+    .Attr("padding_before", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("kernel_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
@@ -243,7 +259,7 @@ REGISTER_USER_OP("conv2d")
     .OptionalInput("bias_multiplier")  // cudnn conv doesn't need this
     .Output("out")
     .Attr("filters", UserOpAttrType::kAtInt32)
-    .Attr<std::string>("padding", UserOpAttrType::kAtString, "valid")
+    .Attr("padding_before", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("kernel_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
@@ -261,7 +277,7 @@ REGISTER_USER_OP("conv3d")
     .OptionalInput("bias_multiplier")  // cudnn conv doesn't need this
     .Output("out")
     .Attr("filters", UserOpAttrType::kAtInt32)
-    .Attr<std::string>("padding", UserOpAttrType::kAtString, "valid")
+    .Attr("padding_before", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("kernel_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
@@ -282,7 +298,7 @@ REGISTER_USER_OP("conv_data_grad")
     .Input("x_like")
     .Output("dx")
     .Attr("num_spatial_dims", UserOpAttrType::kAtInt32)
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("padding_before", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("kernel_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)
@@ -333,7 +349,7 @@ REGISTER_USER_OP("conv_filter_grad")
     .Input("x")
     .Output("filter_diff")
     .Attr("num_spatial_dims", UserOpAttrType::kAtInt32)
-    .Attr("padding", UserOpAttrType::kAtString)
+    .Attr("padding_before", UserOpAttrType::kAtListInt32)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("kernel_size", UserOpAttrType::kAtListInt32)
     .Attr("strides", UserOpAttrType::kAtListInt32)

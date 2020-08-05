@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -53,38 +68,41 @@ REGISTER_USER_OP("where")
     })
     .SetGetSbpFn(GetWhereSbpSignatures);
 
-REGISTER_USER_OP_GRAD("where").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                         user_op::AddOpFn AddOp) {
-  bool need_grad_x = op.NeedGenGradTensor4OpInput("x", 0);
-  bool need_grad_y = op.NeedGenGradTensor4OpInput("y", 0);
-  if (need_grad_x || need_grad_y) {
-    user_op::UserOpConfWrapperBuilder zero_builder(op.op_name() + "_zero_grad");
-    user_op::UserOpConfWrapper zero_op =
-        zero_builder.Op("zero_like").Input("like", op.input("x", 0)).Output("out").Build();
-    AddOp(zero_op);
-    if (need_grad_x) {
-      user_op::UserOpConfWrapperBuilder x_grad_builder(op.op_name() + "_x_grad");
-      user_op::UserOpConfWrapper x_grad_op = x_grad_builder.Op("where")
-                                                 .Input("condition", op.input("condition", 0))
-                                                 .Input("x", op.GetGradTensorWithOpOutput("out", 0))
-                                                 .Input("y", zero_op.output("out", 0))
-                                                 .Output("out")
-                                                 .Build();
-      op.BindGradTensorWithOpInput(x_grad_op.output("out", 0), "x", 0);
-      AddOp(x_grad_op);
-    }
-    if (need_grad_y) {
-      user_op::UserOpConfWrapperBuilder y_grad_builder(op.op_name() + "_y_grad");
-      user_op::UserOpConfWrapper y_grad_op = y_grad_builder.Op("where")
-                                                 .Input("condition", op.input("condition", 0))
-                                                 .Input("x", zero_op.output("out", 0))
-                                                 .Input("y", op.GetGradTensorWithOpOutput("out", 0))
-                                                 .Output("out")
-                                                 .Build();
-      op.BindGradTensorWithOpInput(y_grad_op.output("out", 0), "y", 0);
-      AddOp(y_grad_op);
-    }
-  }
+REGISTER_USER_OP_GRAD("where").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+  const auto zero_op_name = ctx->FwOp().op_name() + "_zero_grad";
+  ctx->DefineOp(zero_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("zero_like")
+        .InputBind("like", ctx->FwOp().input("x", 0))
+        .Output("out")
+        .Build();
+  });
+
+  const auto x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
+  ctx->DefineOp(x_grad_op_name, [&ctx, &zero_op_name](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("where")
+        .InputBind("condition", ctx->FwOp().input("condition", 0))
+        .InputBind("x", ctx->FwOp().output_grad("out", 0))
+        .InputBind("y", ctx->GetOp(zero_op_name).output("out", 0))
+        .Output("out")
+        .Build();
+  });
+
+  const auto y_grad_op_name = ctx->FwOp().op_name() + "_y_grad";
+  ctx->DefineOp(y_grad_op_name, [&ctx, &zero_op_name](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("where")
+        .InputBind("condition", ctx->FwOp().input("condition", 0))
+        .InputBind("x", ctx->GetOp(zero_op_name).output("out", 0))
+        .InputBind("y", ctx->FwOp().output_grad("out", 0))
+        .Output("out")
+        .Build();
+  });
+
+  ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&ctx, &x_grad_op_name]() {
+    return ctx->GetOp(x_grad_op_name).output("out", 0);
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), [&ctx, &y_grad_op_name]() {
+    return ctx->GetOp(y_grad_op_name).output("out", 0);
+  });
 });
 
 }  // namespace oneflow

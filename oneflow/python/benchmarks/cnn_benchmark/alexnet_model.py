@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import, division, print_function
 
 import oneflow as flow
@@ -6,10 +21,8 @@ from model_util import conv2d_layer
 
 def alexnet(images, trainable=True):
 
-    transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
-
     conv1 = conv2d_layer(
-        "conv1", transposed, filters=64, kernel_size=11, strides=4, padding="VALID"
+        "conv1", images, filters=64, kernel_size=11, strides=4, padding="VALID"
     )
 
     pool1 = flow.nn.avg_pool2d(conv1, 3, 2, "VALID", "NCHW", name="pool1")
@@ -32,7 +45,7 @@ def alexnet(images, trainable=True):
     fc1 = flow.layers.dense(
         inputs=pool5,
         units=4096,
-        activation=flow.keras.activations.relu,
+        activation=flow.math.relu,
         use_bias=False,
         kernel_initializer=flow.random_uniform_initializer(),
         bias_initializer=False,
@@ -45,7 +58,7 @@ def alexnet(images, trainable=True):
     fc2 = flow.layers.dense(
         inputs=dropout1,
         units=4096,
-        activation=flow.keras.activations.relu,
+        activation=flow.math.relu,
         use_bias=False,
         kernel_initializer=flow.random_uniform_initializer(),
         bias_initializer=False,

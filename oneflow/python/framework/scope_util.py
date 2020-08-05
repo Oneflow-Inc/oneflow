@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 from oneflow.python.eager.symbol import Symbol
@@ -22,6 +37,11 @@ class ScopeSymbol(Symbol):
         self.host_parallel_desc_symbol_ = symbol_storage.GetSymbol4Id(
             scope_proto.host_parallel_desc_symbol_id
         )
+        self.auto_increment_id_ = 0
+
+    def auto_increment_id(self):
+        self.auto_increment_id_ = self.auto_increment_id_ + 1
+        return self.auto_increment_id_
 
     @property
     def job_desc_symbol(self):
@@ -98,9 +118,9 @@ def MakeParallelConf(device_tag, machine_device_ids):
         assert re.match("^\d+:\d+(-\d+)?$", machine_device_id) is not None, (
             "machine_device_id: %s is not valid" % machine_device_id
         )
-        pair = machine_device_id.split(":")
-        device_names.append("%s:%s:%s" % (pair[0], device_tag, pair[1]))
+        device_names.append(machine_device_id)
 
     parallel_conf = placement_pb.ParallelConf()
+    parallel_conf.device_tag = device_tag
     parallel_conf.device_name.extend(device_names)
     return parallel_conf

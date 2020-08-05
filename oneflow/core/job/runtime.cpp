@@ -1,10 +1,24 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
-#include "oneflow/core/job/nccl_comm_manager.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_job_descs.h"
@@ -14,6 +28,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/customized/summary/events_writer.h"
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 
@@ -113,19 +128,14 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
   Global<ThreadMgr>::New(plan);
-#ifdef WITH_CUDA
-  Global<NcclCommMgr>::New(plan);
-#endif  // WITH_CUDA
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
+  Global<summary::EventsWriter>::New();
 }
 
 void Runtime::DeleteAllGlobal() {
   Global<RuntimeJobDescs>::Delete();
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
-#ifdef WITH_CUDA
-  Global<NcclCommMgr>::Delete();
-#endif  // WITH_CUDA
   Global<ThreadMgr>::Delete();
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();
@@ -134,6 +144,7 @@ void Runtime::DeleteAllGlobal() {
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
+  Global<summary::EventsWriter>::Delete();
 }
 
 }  // namespace oneflow

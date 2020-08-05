@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/customized/ops/nn_util.h"
 
 namespace oneflow {
@@ -29,11 +44,46 @@ void CalcOutAndPadding(int64_t input_size, int32_t filter_size, int32_t dilation
   if (output_size) { CHECK_GE((*output_size), 0); }
 }
 
+void CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate, int32_t stride,
+                     int32_t* padding_small, int32_t* padding_large) {
+  CHECK_GT(stride, 0);
+  CHECK_GE(dilation_rate, 1);
+
+  int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
+  int64_t tmp_output_size = (input_size + stride - 1) / stride;
+  const int32_t padding_needed = std::max(
+      0, static_cast<int32_t>((tmp_output_size - 1) * stride + effective_filter_size - input_size));
+  if (padding_small) { *padding_small = padding_needed / 2; }
+  if (padding_large) { *padding_large = padding_needed - padding_needed / 2; }
+}
+
+void CalcConvOut(int64_t input_size, int32_t filter_size, int32_t dilation_rate, int32_t stride,
+                 int32_t padding_before, int64_t* output_size) {
+  CHECK_GT(stride, 0);
+  CHECK_GE(dilation_rate, 1);
+
+  int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
+  if (output_size) {
+    *output_size = (input_size + 2 * padding_before - effective_filter_size + stride) / stride;
+    CHECK_GE((*output_size), 0);
+  }
+}
+
 const size_t IdxOffset(const std::string& data_format) {
   if (data_format == "channels_first") {
     return 2;
   } else if (data_format == "channels_last") {
     return 1;
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+const int32_t ChannelIdx(const std::string& data_format, int32_t num_axes) {
+  if (data_format == "channels_first") {
+    return 1;
+  } else if (data_format == "channels_last") {
+    return num_axes - 1;
   } else {
     UNIMPLEMENTED();
   }

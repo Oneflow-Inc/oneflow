@@ -1,8 +1,24 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 import re
 import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.device_scope_stack as device_scope_stack
 import oneflow
@@ -27,21 +43,8 @@ def normal_mode_cur_placement_scope():
     return device_scope_stack.CurrentPlacement()
 
 
-def api_fixed_placement(
-    device_tag: str, machine_device_ids: str
-) -> placement_ctx.FixedPlacementScope:
-    return enable_if.unique([GetFixedPlacementScope])(device_tag, machine_device_ids)
-
-
-@enable_if.condition(
-    hob.in_global_mode
-    | (hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized)
-)
-def GetFixedPlacementScope(device_tag, machine_device_ids):
-    return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
-
-
 @oneflow_export("device_prior_placement", "fixed_placement")
+@oneflow_deprecate()
 def deprecated_placement(*args, **kwargs):
     print(
         "WARNING:",
@@ -57,18 +60,28 @@ def deprecated_placement(*args, **kwargs):
 @oneflow_export("scope.placement")
 def api_placement(
     device_tag: str, machine_device_ids: str
-) -> placement_ctx.DevicePriorPlacementScope:
-    return enable_if.unique([GetDevicePriorPlacementScope])(
-        device_tag, machine_device_ids
-    )
+) -> placement_ctx.PlacementScope:
+    func = enable_if.unique([GetPlacementScope, GetNormalModePlacementScope])
+    return func(device_tag, machine_device_ids)
 
 
 @enable_if.condition(
     hob.in_global_mode
     | (hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized)
 )
-def GetDevicePriorPlacementScope(device_tag, machine_device_ids):
-    return placement_ctx.DevicePriorPlacementScope(device_tag, machine_device_ids)
+def GetPlacementScope(device_tag, machine_device_ids):
+    return placement_ctx.PlacementScope(device_tag, machine_device_ids)
+
+
+@enable_if.condition(hob.in_normal_mode & hob.session_initialized)
+def GetNormalModePlacementScope(device_tag, machine_device_ids):
+    sess = session_ctx.GetDefaultSession()
+    scope = sess.MakeScope(
+        lambda old_scope, builder: old_scope.BuildWithNewParallelDesc(
+            builder, device_tag, machine_device_ids
+        )
+    )
+    return sess.NewCurrentScope(scope)
 
 
 def GetDefaultMachineDeviceIds(resource):

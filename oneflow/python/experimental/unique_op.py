@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 from typing import Optional, Tuple
@@ -10,12 +25,15 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("experimental.unique_with_counts")
 def unique_with_counts(
-    x: input_blob_util.ArgBlobDef, out_idx: int = flow.int32, name: Optional[str] = None
+    x: input_blob_util.ArgBlobDef,
+    out_idx: dtype_util.dtype = dtype_util.int32,
+    name: Optional[str] = None,
 ) -> Tuple[remote_blob_util.BlobDef]:
     op_conf = op_conf_util.OperatorConf()
     if name is None:
@@ -28,7 +46,7 @@ def unique_with_counts(
     op_conf.unique_with_counts_conf.idx = "idx"
     op_conf.unique_with_counts_conf.count = "count"
     op_conf.unique_with_counts_conf.num_unique = "num_unique"
-    op_conf.unique_with_counts_conf.out_idx = out_idx
+    op_conf.unique_with_counts_conf.out_idx = out_idx.oneflow_proto_dtype
 
     interpret_util.Forward(op_conf)
     y_lbi = logical_blob_id_util.LogicalBlobId()

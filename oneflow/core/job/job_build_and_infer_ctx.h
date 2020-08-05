@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CTX_H_
 #define ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CTX_H_
 
@@ -22,6 +37,7 @@ class JobBuildAndInferCtx {
   Maybe<OpAttribute> AddAndInferConsistentOp(const OperatorConf& op_conf);
   Maybe<OpAttribute> AddAndInferMirroredOp(const OperatorConf& op_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
+  Maybe<void> SetTrainConf(const TrainConf& train_conf);
 
   bool HasJobConf() const;
   Maybe<Shape> GetStaticShape(const std::string& lbn) const;
@@ -48,6 +64,7 @@ class JobBuildAndInferCtx {
 
   const Job& job() const;
   Maybe<void> CheckJob() const;
+  std::string GetJobStructureGraphJson(const std::string& job_name) const;
 
   virtual Maybe<void> Complete() = 0;
 
@@ -101,7 +118,7 @@ class JobBuildAndInferCtx {
                                      const ParallelDesc&);
   Maybe<void> InferOpOutSbpParallel(Operator*, const SbpSignature&, const ParallelDesc&);
   Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
-  Maybe<void> CheckOpBlobSplitability(Operator*, const SbpSignature&, int64_t parallel_num);
+  Maybe<void> CheckOpBlobSplitability(Operator*, int64_t parallel_num);
   Maybe<void> CheckPlacement() const;
   Maybe<void> CheckJobConf() const;
   Maybe<void> CheckLbnValidAndExist(const std::string& lbn) const;

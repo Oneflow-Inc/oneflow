@@ -15,7 +15,7 @@ message EagerSymbol {
     JobConfigProto job_conf_symbol = 4;
     ParallelConf parallel_conf_symbol = 5;
     OperatorConf op_conf_symbol = 6;
-    OpParallelAttribute op_parallel_attribute_symbol = 7;
+    OpNodeSignature op_node_signature_symbol = 7;
   }
 }
 

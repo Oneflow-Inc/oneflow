@@ -1,5 +1,21 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):
@@ -10,11 +26,11 @@ def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def broadcast_to_compatible_with_fn(
-        x_def=flow.MirroredTensorDef(shape=x_shape, dtype=flow.float)
+        x_def: oft.ListNumpy.Placeholder(shape=x_shape, dtype=flow.float)
     ):
         compatible_var = [
             flow.get_variable(
@@ -46,13 +62,13 @@ def _of_broadcast_to_compatible_with_dynamic(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def broadcast_to_compatible_with_fn(
-        x_def=flow.MirroredTensorDef(x_shape, dtype=flow.float),
-        a_def=flow.MirroredTensorDef(a_shape, dtype=flow.float),
-        b_def=flow.MirroredTensorDef(b_shape, dtype=flow.float),
+        x_def: oft.ListNumpy.Placeholder(x_shape, dtype=flow.float),
+        a_def: oft.ListNumpy.Placeholder(a_shape, dtype=flow.float),
+        b_def: oft.ListNumpy.Placeholder(b_shape, dtype=flow.float),
     ):
         return flow.broadcast_to_compatible_with(
             x_def, [flow.identity(a_def), flow.identity(b_def)]
@@ -68,13 +84,13 @@ def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_logical_view(flow.scope.consistent_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
     @flow.global_function(func_config)
     def broadcast_to_compatible_with_fn(
-        x_def=flow.FixedTensorDef(x.shape, dtype=flow.float)
+        x_def: oft.Numpy.Placeholder(x.shape, dtype=flow.float)
     ):
         x_var = flow.get_variable(
             "x_var",

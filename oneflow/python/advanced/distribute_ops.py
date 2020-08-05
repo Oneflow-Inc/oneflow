@@ -1,9 +1,24 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import oneflow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.hob as hob
@@ -20,7 +35,7 @@ def api_distribute_clone(
     return func(x, name=name)
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def distribute_clone(x, name=None):
     if name is None:
         name = id_util.UniqueStr("DistributeClone_")
@@ -31,7 +46,7 @@ def distribute_clone(x, name=None):
     op_conf.distribute_clone_conf.out.extend(
         ["out_%d" % i for i in range(parallel_size)]
     )
-    compile_context.CurJobAddConsistentOp(op_conf)
+    interpret_util.ConsistentForward(op_conf)
     ret = []
     for i in range(parallel_size):
         out = "out_%d" % i
@@ -50,7 +65,7 @@ def api_distribute_add(
     return func(xs, name=name)
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def distribute_add(xs, name=None):
     assert oneflow.placement.current_scope().parallel_size == len(xs)
     if name is None:
@@ -61,7 +76,7 @@ def distribute_add(xs, name=None):
         [_SoleConsistentLbn(x) for x in xs]
     )
     op_conf.distribute_add_conf.out = "out"
-    compile_context.CurJobAddConsistentOp(op_conf)
+    interpret_util.ConsistentForward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -76,7 +91,7 @@ def api_distribute_split(
     return func(x, axis=axis, name=name)
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def distribute_split(x, axis=0, name=None):
     if name is None:
         name = id_util.UniqueStr("DistributeSplit_")
@@ -88,7 +103,7 @@ def distribute_split(x, axis=0, name=None):
     op_conf.distribute_split_conf.out.extend(
         ["out_%d" % i for i in range(parallel_size)]
     )
-    compile_context.CurJobAddConsistentOp(op_conf)
+    interpret_util.ConsistentForward(op_conf)
     ret = []
     for i in range(parallel_size):
         out = "out_%d" % i
@@ -107,7 +122,7 @@ def api_distribute_concat(
     return func(xs, axis=axis, name=name)
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def distribute_concat(xs, axis=0, name=None):
     assert oneflow.placement.current_scope().parallel_size == len(xs)
     if name is None:
@@ -119,7 +134,7 @@ def distribute_concat(xs, axis=0, name=None):
     )
     op_conf.distribute_concat_conf.axis = axis
     op_conf.distribute_concat_conf.out = "out"
-    compile_context.CurJobAddConsistentOp(op_conf)
+    interpret_util.ConsistentForward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -138,7 +153,7 @@ def api_distribute_map(
     return func(xs, f, axis=axis)
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def distribute_map(xs, f, axis=0):
     _AssertInputOrOutput(xs)
     if isinstance(xs, (list, tuple)) == False:
@@ -153,6 +168,21 @@ def distribute_map(xs, f, axis=0):
     if output_is_not_container:
         return result[0]
     return tuple(result)
+
+
+@oneflow_export("cast_to_current_logical_view")
+def cast_to_current_logical_view(
+    x: remote_blob_util.BlobDef,
+) -> remote_blob_util.BlobDef:
+    if (
+        isinstance(x, remote_blob_util.ConsistentBlob)
+        and oneflow.scope.mirrored_view_enabled()
+    ) or (
+        isinstance(x, remote_blob_util.MirroredBlob)
+        and oneflow.scope.consistent_view_enabled()
+    ):
+        x = oneflow.identity(x)
+    return x
 
 
 def _SoleConsistentLbn(blob):
@@ -182,9 +212,7 @@ def _UnderSingleDevicePlacementScope(f, *args):
     current_scope = oneflow.placement.current_scope()
     for machine_id, device_id in _EachMachineIdAndDeviceId(current_scope):
         mch_dev_str = "%d:%d" % (machine_id, device_id)
-        with oneflow.device_prior_placement(
-            current_scope.default_device_tag, mch_dev_str
-        ):
+        with oneflow.scope.placement(current_scope.default_device_tag, mch_dev_str):
             return f(*args)
 
 

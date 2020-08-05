@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
@@ -26,9 +41,10 @@ ObjectMsgPtr<VmResourceDesc> TestUtil::NewVmResourceDesc(int64_t device_num, int
   return ObjectMsgPtr<VmResourceDesc>::New(machine_num, map);
 }
 
-int64_t TestUtil::NewObject(InstructionMsgList* instr_msg_list, const std::string& device_name,
-                            int64_t* parallel_desc_symbol_id) {
+int64_t TestUtil::NewObject(InstructionMsgList* instr_msg_list, const std::string& device_tag,
+                            const std::string& device_name, int64_t* parallel_desc_symbol_id) {
   ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(device_tag);
   parallel_conf.add_device_name(device_name);
   *parallel_desc_symbol_id = IdUtil::NewLogicalSymbolId();
   Global<SymbolStorage<ParallelDesc>>::Get()->Add(*parallel_desc_symbol_id, parallel_conf);

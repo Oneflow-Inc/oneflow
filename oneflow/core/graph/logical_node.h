@@ -1,10 +1,23 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_
 #define ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_
 
-#include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/reduce_rank_context.h"
 #include "oneflow/core/graph/pack_forward_task_node.h"
 #include "oneflow/core/graph/unpack_forward_task_node.h"
 #include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
@@ -63,12 +76,10 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
 
   // other
   virtual int64_t GetAreaId() const = 0;
-  virtual bool MayConsumeModelDiff() const { return false; }
 
  protected:
   LogicalNode() {}
   virtual CompTaskNode* NewCompTaskNode() const = 0;
-  virtual void FixCompTaskNode(CompTaskNode*) const {}
 
  private:
   bool HasOpWithCondition(std::function<bool(const Operator*)>) const;
@@ -113,12 +124,6 @@ class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
 };
 
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src, const LogicalNode* dst);
-
-using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
-    const LogicalBlobId& lbi, const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-    const LogicalNode* in_logical, const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-    const LogicalNode* out_logical, BoxingOpConf*);
-BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst);
 
 #define OVERRIDE_PURE_VIRTUAL_METHOD()            \
   std::string TypeName() const override;          \
@@ -189,45 +194,6 @@ DECLARE_NAIVE_LOGICAL_NODE(DecodeRandomLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DistributeConcatLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DistributeSplitLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
-
-class ReduceLogicalNode : public LogicalNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceLogicalNode);
-  ~ReduceLogicalNode() override = default;
-
-  ReduceRankCtx& mut_rank_ctx() { return rank_ctx_; }
-  const ReduceRankCtx& rank_ctx() const { return rank_ctx_; }
-
- protected:
-  ReduceLogicalNode() = default;
-
- private:
-  ReduceRankCtx rank_ctx_;
-  void FixCompTaskNode(CompTaskNode* task_node) const override {
-    task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_id(
-        rank_ctx().Rank4ParallelId(task_node->parallel_id()));
-    task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_num(rank_ctx().StageSegmentCount());
-    int64_t rank_set_id =
-        ((node_id() << 32) | rank_ctx().RankSet4ParallelId(task_node->parallel_id()));
-    task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_set_id(rank_set_id);
-  }
-};
-
-#define DECLARE_REDUCE_LOGICAL_NODE(name, may_consume_md_diff)                \
-  class name final : public ReduceLogicalNode {                               \
-   public:                                                                    \
-    LOGICAL_NODE_BOILERPLATE(name);                                           \
-    bool MayConsumeModelDiff() const override { return may_consume_md_diff; } \
-  }
-
-DECLARE_REDUCE_LOGICAL_NODE(ReduceConcatLogicalNode, true);
-DECLARE_REDUCE_LOGICAL_NODE(ReduceScatterLogicalNode, true);
-DECLARE_REDUCE_LOGICAL_NODE(ReduceGatherLogicalNode, false);
-DECLARE_REDUCE_LOGICAL_NODE(NcclAllReduceLogicalNode, true);
-DECLARE_REDUCE_LOGICAL_NODE(ReduceAddLogicalNode, false);
-DECLARE_REDUCE_LOGICAL_NODE(NcclAllGatherLogicalNode, false);
-DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode, true);
 
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(WaitAndSendIds);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ForeignInput);
@@ -242,36 +208,6 @@ DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Case);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Esac);
-
-#define DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(class_name, may_consume_md_diff) \
-  class class_name final : public ReduceLogicalNode {                                  \
-   public:                                                                             \
-    LOGICAL_NODE_BOILERPLATE(class_name);                                              \
-    void set_order_in_logical_graph(int32_t order_in_logical_graph) {                  \
-      order_in_logical_graph_ = order_in_logical_graph;                                \
-    }                                                                                  \
-    int32_t order_in_logical_graph() const;                                            \
-    bool MayConsumeModelDiff() const override { return may_consume_md_diff; }          \
-                                                                                       \
-   private:                                                                            \
-    int32_t order_in_logical_graph_;                                                   \
-  }
-
-DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceIdentityLogicalNode, true);
-DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceSplitLogicalNode, false);
-
-#define DECLARE_FACADE_LOGICAL_NODE(class_name)                         \
-  class class_name final : public LogicalNode {                         \
-   public:                                                              \
-    OF_DISALLOW_COPY_AND_MOVE(class_name);                              \
-    class_name() = default;                                             \
-    ~class_name() override = default;                                   \
-    std::string TypeName() const override { return #class_name; }       \
-    CompTaskNode* NewCompTaskNode() const override { UNIMPLEMENTED(); } \
-    int64_t GetAreaId() const override { UNIMPLEMENTED(); };            \
-  }
-
-DECLARE_FACADE_LOGICAL_NODE(AllReduceFacadeLogicalNode);
 
 }  // namespace oneflow
 

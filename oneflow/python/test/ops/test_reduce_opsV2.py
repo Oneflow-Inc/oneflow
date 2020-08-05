@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 from collections import OrderedDict
 
@@ -6,6 +21,7 @@ import oneflow as flow
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList
+import oneflow.typing as oft
 
 
 def compare_reduce_sum_with_tensorflow(
@@ -21,7 +37,7 @@ def compare_reduce_sum_with_tensorflow(
 
     @flow.global_function(func_config)
     def ReduceSumJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "in",
                 shape=input_shape,
@@ -97,10 +113,10 @@ def test_reduce_sum_scalar(test_case):
 def test_reduce_sum_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(func_config)
-    def Foo(x=flow.FixedTensorDef((10,))):
+    def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.reduce_sum(x)
         test_case.assertTrue(y.split_axis is None)
         test_case.assertTrue(y.batch_axis is None)

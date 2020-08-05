@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -7,19 +22,18 @@ REGISTER_USER_OP("add_n")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto* in_0 = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      CHECK_NOTNULL_OR_RETURN(in_0);
+      CHECK_NOTNULL_OR_RETURN(out);
       for (const auto& pair : ctx->inputs()) {
         const auto* cur_in = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
         CHECK_EQ_OR_RETURN(in_0->shape(), cur_in->shape());
         CHECK_EQ_OR_RETURN(in_0->data_type(), cur_in->data_type());
       }
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *in_0;
+      *out = *in_0;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      for (const auto& pair : ctx->inputs()) {
-        CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex(pair.first, pair.second)
-                        == *ctx->BatchAxis4ArgNameAndIndex("in", 0));
-      }
       return user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis(ctx);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) {

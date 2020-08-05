@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_CORE_H_
 #define ONEFLOW_CORE_OBJECT_MSG_OBJECT_MSG_CORE_H_
 
@@ -18,7 +33,7 @@ namespace oneflow {
    public:                                                \
     using self_type = class_name;                         \
     static const bool __is_object_message_type__ = true;  \
-    PRIVATE DEFINE_STATIC_COUNTER(field_counter);         \
+    OF_PRIVATE DEFINE_STATIC_COUNTER(field_counter);      \
     DSS_BEGIN(STATIC_COUNTER(field_counter), class_name); \
     OBJECT_MSG_DEFINE_DEFAULT(class_name);                \
     OBJECT_MSG_DEFINE_LINK_EDGES_GETTER();                \
@@ -29,8 +44,8 @@ namespace oneflow {
 
 #define OBJECT_MSG_END(class_name)                                                  \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);       \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                   \
+  OF_PUBLIC static const int __NumberOfFields__ = STATIC_COUNTER(field_counter);    \
+  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                \
   DSS_END(STATIC_COUNTER(field_counter), "object message", class_name);             \
   }                                                                                 \
   ;
@@ -42,7 +57,7 @@ namespace oneflow {
 
 #define OBJECT_MSG_DEFINE_ONEOF(oneof_name, type_and_field_name_seq)                \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                   \
+  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                \
   _OBJECT_MSG_DEFINE_ONEOF_FIELD(STATIC_COUNTER(field_counter), oneof_name,         \
                                  type_and_field_name_seq);
 
@@ -227,7 +242,7 @@ namespace oneflow {
                                                                                             \
  private:                                                                                   \
   ObjectMsgBase __object_msg_base__;                                                        \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                           \
+  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                        \
   DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "object message", ObjectMsgBase,          \
                    __object_msg_base__);
 

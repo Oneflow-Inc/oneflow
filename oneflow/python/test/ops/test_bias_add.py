@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 from collections import OrderedDict
 
@@ -6,6 +21,7 @@ import oneflow as flow
 import tensorflow as tf
 import test_global_storage
 from test_util import Args, GenArgDict
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -21,9 +37,10 @@ def RunOneflowBiasAdd(device_type, value, bias, flow_args):
 
     @flow.global_function(func_config)
     def FlowJob(
-        value=flow.FixedTensorDef(value.shape), bias=flow.FixedTensorDef(bias.shape)
+        value: oft.Numpy.Placeholder(value.shape),
+        bias: oft.Numpy.Placeholder(bias.shape),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             value += flow.get_variable(
                 name="v1",
                 shape=(1,),

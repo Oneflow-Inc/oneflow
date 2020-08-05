@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_ACTOR_INPUT_WISE_COMPUTE_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_INPUT_WISE_COMPUTE_ACTOR_H_
 
@@ -18,9 +33,6 @@ class InputWiseCompActor : public CompActor {
   int64_t RegstDescNum() const { return consumed_rs_.total_regst_desc_cnt(); }
   int64_t InBnId4RegstDescId(int64_t id) const { return regst_desc_id2in_bn_id_.at(id); }
   int64_t ActNumForEachOutput(int64_t regst_desc_id) const override;
-  bool EnableInplace() const {
-    return GetDeviceType() == DeviceType::kGPU && job_desc().enable_inplace_in_reduce_struct();
-  }
 
   bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override;
 

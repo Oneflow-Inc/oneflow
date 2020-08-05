@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 from collections import OrderedDict
 
@@ -23,7 +38,7 @@ def TestMultiInput(x1, x2):
 def test_TestMultiInput_grad_mirrored_inplace(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -34,7 +49,7 @@ def test_TestMultiInput_grad_mirrored_inplace(test_case):
 
     @flow.global_function(func_config)
     def TestMultiInputJob():
-        with flow.device_prior_placement("gpu", "0:0"):
+        with flow.scope.placement("gpu", "0:0"):
             x1 = flow.get_variable(
                 "x1",
                 shape=shape,

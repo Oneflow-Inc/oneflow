@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 from typing import Optional, Sequence, Tuple, Union, List
@@ -6,10 +21,12 @@ import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.record.image_pb2 as image_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
+import traceback
 
 
 @oneflow_export("data.ImagePreprocessor")
@@ -142,8 +159,8 @@ class BlobConf(object):
     def __init__(
         self,
         name: str,
-        shape: Union[List[int], Tuple[int]],
-        dtype: int,
+        shape: Sequence[int],
+        dtype: dtype_util.dtype,
         codec: Union[ImageCodec, RawCodec],
         preprocessors: Optional[
             Sequence[
@@ -172,13 +189,14 @@ class BlobConf(object):
         blob_conf = op_conf_util.BlobConf()
         blob_conf.name = self.name
         blob_conf.shape.dim.extend(self.shape)
-        blob_conf.data_type = self.dtype
+        blob_conf.data_type = self.dtype.oneflow_proto_dtype
         self.codec.to_proto(blob_conf.encode_case)
         blob_conf.preprocess.extend([p.to_proto() for p in self.preprocessors])
         return blob_conf
 
 
 @oneflow_export("data.decode_ofrecord")
+@oneflow_deprecate()
 def decode_ofrecord(
     ofrecord_dir: str,
     blobs: Sequence[BlobConf],
@@ -190,6 +208,16 @@ def decode_ofrecord(
     buffer_size: int = 1024,
     name: str = None,
 ) -> Tuple[remote_blob_util.BlobDef]:
+    print(
+        "WARNING:",
+        "oneflow.data.decode_ofrecord is deprecated, and NOT work in eager mode, please use: \n",
+        "    1)   ofrecord = oneflow.data.ofrecord_reader(...) to read ofrecord; \n",
+        "    2)   image = oneflow.data.ofrecord_image_decoder(...) to decode image; \n",
+        "    3)   raw = oneflow.data.ofrecord_raw_decoder(...) to decode raw data like label; \n",
+        traceback.format_stack()[-2],
+    )
+    assert not flow.eager_execution_enabled()
+
     if name is None:
         name = id_util.UniqueStr("Decode_")
 
@@ -269,14 +297,14 @@ def ofrecord_reader(
         flow.user_op_builder(name)
         .Op("OFRecordReader")
         .Output("out")
-        .Attr("data_dir", ofrecord_dir, "AttrTypeString")
-        .Attr("data_part_num", data_part_num, "AttrTypeInt32")
-        .Attr("batch_size", batch_size, "AttrTypeInt32")
-        .Attr("part_name_prefix", part_name_prefix, "AttrTypeString")
-        .Attr("random_shuffle", random_shuffle, "AttrTypeBool")
-        .Attr("shuffle_buffer_size", shuffle_buffer_size, "AttrTypeInt32")
-        .Attr("shuffle_after_epoch", shuffle_after_epoch, "AttrTypeBool")
-        .Attr("part_name_suffix_length", part_name_suffix_length, "AttrTypeInt32")
+        .Attr("data_dir", ofrecord_dir)
+        .Attr("data_part_num", data_part_num)
+        .Attr("batch_size", batch_size)
+        .Attr("part_name_prefix", part_name_prefix)
+        .Attr("random_shuffle", random_shuffle)
+        .Attr("shuffle_buffer_size", shuffle_buffer_size)
+        .Attr("shuffle_after_epoch", shuffle_after_epoch)
+        .Attr("part_name_suffix_length", part_name_suffix_length)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -285,8 +313,8 @@ def ofrecord_reader(
 
 @oneflow_export("data.decode_random")
 def decode_random(
-    shape: Union[list, tuple],
-    dtype: int,
+    shape: Sequence[int],
+    dtype: dtype_util.dtype,
     batch_size: int = 1,
     initializer: Optional[op_conf_util.InitializerConf] = None,
     tick: Optional[remote_blob_util.BlobDef] = None,
@@ -303,7 +331,7 @@ def decode_random(
     op_conf.decode_random_conf.shape.dim.extend(shape)
 
     assert dtype is not None
-    setattr(op_conf.decode_random_conf, "data_type", dtype)
+    setattr(op_conf.decode_random_conf, "data_type", dtype.oneflow_proto_dtype)
 
     op_conf.decode_random_conf.batch_size = batch_size
 

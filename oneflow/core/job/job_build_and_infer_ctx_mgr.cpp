@@ -1,5 +1,21 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/common/util.h"
+#include <json.hpp>
 
 namespace oneflow {
 
@@ -71,6 +87,19 @@ Maybe<void> JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
   CHECK_EQ_OR_RETURN(job_desc->job_id(), job_set_.job_size() - 1);
   Global<JobDesc>::Delete();
   return Maybe<void>::Ok();
+}
+
+std::string JobBuildAndInferCtxMgr::structure_graph() const {
+  nlohmann::json json_array;
+  for (const auto& pair : job_name2infer_ctx_) {
+    nlohmann::json json_pair;
+    json_pair["class_name"] = "Model";
+    std::string tmp_json = pair.second->GetJobStructureGraphJson(pair.first);
+    json_pair["config"] = nlohmann::json::parse(tmp_json);
+    json_pair["backend"] = "oneflow";
+    json_array.emplace_back(json_pair);
+  }
+  return json_array.dump();
 }
 
 void EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {

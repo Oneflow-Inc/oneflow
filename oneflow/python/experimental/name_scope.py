@@ -1,16 +1,32 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 from contextlib import contextmanager
 
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_context
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import traceback
 
 
 @oneflow_export(
     "name_scope", "experimental.name_scope", "deprecated.variable_scope",
 )
+@oneflow_deprecate()
 def deprecated_name_scope(*args, **kwargs):
     print(
         "WARNING:",
@@ -26,7 +42,7 @@ def deprecated_name_scope(*args, **kwargs):
 @oneflow_export("scope.namespace")
 @contextmanager
 def name_scope(name: str) -> None:
-    r"""Create a namespace. All variables within the namespace will have a prefix `[SCOPE NAME]-`. This is for convenience only and has no other effect on the system. 
+    r"""Create a namespace. All variables within the namespace will have a prefix `[SCOPE NAME]-`. This is for convenience only and has no other effect on the system.
     Usage::
 
         with oneflow.scope.namespace("scope1"):

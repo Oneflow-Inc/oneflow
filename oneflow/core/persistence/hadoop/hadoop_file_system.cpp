@@ -1,13 +1,21 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 #include <mutex>
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/persistence/windows/windows_file_system.h"
-
-#ifdef PLATFORM_WINDOWS
-
-#undef LoadLibrary
-
-#endif  // PLATFORM_WINDOWS
 
 #ifdef PLATFORM_POSIX
 
@@ -49,36 +57,6 @@ bool LoadLibrary(const char* library_filename, void** handle) {
 
 #endif  // PLATFORM_POSIX
 
-#ifdef PLATFORM_WINDOWS
-
-bool LoadLibrary(const char* library_filename, void** handle) {
-  std::string file_name = library_filename;
-  std::replace(file_name.begin(), file_name.end(), '/', '\\');
-
-  std::wstring ws_file_name(WindowsFileSystem::Utf8ToWideChar(file_name));
-
-  HMODULE hModule = LoadLibraryExW(ws_file_name.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-  if (!hModule) {
-    PLOG(WARNING) << file_name + "not found";
-    return false;
-  }
-  *handle = hModule;
-  return true;
-}
-
-bool GetSymbolFromLibrary(void* handle, const char* symbol_name, void** symbol) {
-  FARPROC found_symbol;
-  found_symbol = GetProcAddress((HMODULE)handle, symbol_name);
-  if (found_symbol == NULL) {
-    PLOG(WARNING) << std::string(symbol_name) + "not found";
-    return false;
-  }
-  *symbol = (void**)found_symbol;
-  return true;
-}
-
-#endif  // PLATFORM_WINDOWS
-
 }  // namespace internal
 
 template<typename R, typename... Args>
@@ -116,13 +94,9 @@ void LibHDFS::LoadAndBind() {
     return true;
   };
 
-// libhdfs.so won't be in the standard locations. Use the path as specified
-// in the libhdfs documentation.
-#if defined(PLATFORM_WINDOWS)
-  const char* kLibHdfsDso = "hdfs.dll";
-#else
+  // libhdfs.so won't be in the standard locations. Use the path as specified
+  // in the libhdfs documentation.
   const char* kLibHdfsDso = "libhdfs.so";
-#endif
   char* hdfs_home = getenv("HADOOP_HOME");
   if (hdfs_home == nullptr) {
     PLOG(WARNING) << "Environment variable HADOOP_HOME not set";

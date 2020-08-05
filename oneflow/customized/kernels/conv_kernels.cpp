@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/customized/ops/nn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -291,6 +306,22 @@ struct ConvOpKernelState final : public user_op::OpKernelState {
 
   enum CBLAS_TRANSPOSE is_out_diff_need_trans_;
   int32_t idx_offset_;
+  bool is_dynamic_;
+
+  void Update(const ShapeView& x_shape, const ShapeView& out_shape) {
+    auto Gen5DShape = [](const ShapeView& shape, int32_t idx_offset) -> Shape {
+      DimVector ret_vec;
+      shape.ToDimVector(&ret_vec);
+      int32_t ndims = ret_vec.size() - 2;
+      ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ndims, 1);
+      return Shape(ret_vec);
+    };
+    if (is_dynamic_) {
+      Shape in_shape;
+      in_5d_shape_ = Gen5DShape(x_shape, idx_offset_);
+      out_5d_shape_ = Gen5DShape(out_shape, idx_offset_);
+    }
+  }
 };
 
 template<typename T>
@@ -335,13 +366,15 @@ std::shared_ptr<user_op::OpKernelState> CreateConvOpKernelState(user_op::KernelI
   };
   state->strides_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("strides"));
   state->dilation_rate_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("dilation_rate"));
-
-  state->padding_before_3d_.resize(3);
-  const auto& padding = ctx->Attr<std::string>("padding");
-  for (int i = 0; i < 3; ++i) {
-    CalcOutAndPadding(state->in_5d_shape_.At(i), state->weight_5d_shape_.At(i),
-                      state->dilation_rate_3d_.at(i), state->strides_3d_.at(i), padding, nullptr,
-                      &(state->padding_before_3d_.at(i)), nullptr);
+  state->is_dynamic_ = ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->is_dynamic();
+  const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
+  FOR_RANGE(uint8_t, dim, 0, 3) {
+    int64_t index = static_cast<int64_t>(dim) - (3 - padding_before.size());
+    if (index < 0) {
+      state->padding_before_3d_.push_back(0);
+    } else {
+      state->padding_before_3d_.push_back(padding_before.at(index));
+    }
   }
 
   return std::move(state);
@@ -375,6 +408,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
     T* col_buf_dptr = tmp_buffer->mut_dptr<T>();
 
     auto* conv_state = dynamic_cast<ConvOpKernelState<T>*>(state);
+    conv_state->Update(in->shape(), out->shape());
     CHECK_NOTNULL(conv_state);
     bool is_bias_mul_inited = false;
     for (int64_t i = 0; i < in->shape().At(0); ++i) {
@@ -469,12 +503,11 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* conv_state = dynamic_cast<ConvOpKernelState<T>*>(state);
     CHECK_NOTNULL(conv_state);
-
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-
+    conv_state->Update(dx->shape(), dy->shape());
     Memset<DeviceType::kCPU>(ctx->device_ctx(), dx->mut_dptr<T>(), 0,
                              dx->shape().elem_cnt() * sizeof(T));
 
@@ -543,6 +576,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    conv_state->Update(x->shape(), dy->shape());
 
     Memset<DeviceType::kCPU>(ctx->device_ctx(), filter_diff->mut_dptr<T>(), 0,
                              filter_diff->shape().elem_cnt() * sizeof(T));

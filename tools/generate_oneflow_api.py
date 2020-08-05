@@ -1,8 +1,9 @@
-import oneflow
 import sys
 import os
 import argparse
 import inspect
+
+import oneflow
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -34,21 +35,31 @@ class VirtualModule(object):
             ret += "  * {}\n".format(k)
         return ret
 
-    def dump(self, dir_path):
-        os.mkdir(dir_path)
+    def dump(self, dir_path, is_root=False):
+        if os.path.isdir(dir_path) == False:
+            os.mkdir(dir_path)
         for k, v in self._submodule_dict.items():
             sub_dir_path = os.path.join(dir_path, k)
             v.dump(sub_dir_path)
         init_file_path = os.path.join(dir_path, "__init__.py")
-        with open(init_file_path, 'w') as f:
+        filemode = 'w'
+        if is_root:
+            filemode = 'a+'
+        with open(init_file_path, filemode) as f:
             mod_set = set()
             lines = []
+            if is_root:
+                lines = [""]
             for k in self._submodule_dict.keys():
                 mod_set.add(include_submodule(k))
             for k, v in self._func_or_class_dict.items():
                 lines += include_export(k, v)
             lines = list(mod_set) + lines
             f.write("\n".join(lines))
+
+    def submodule_names(self):
+        return self._submodule_dict.keys()
+
 
 def include_submodule(modname):
     return "from . import {}".format(modname)
@@ -65,19 +76,29 @@ def include_export(api_name_base, symbol):
         else:
             return ["from {} import {} as {}".format(symbol.__module__, symbol.__name__, api_name_base)]    
 
-def collect_exports():
-    exports = {}
+def exported_symbols():
     for mod in sys.modules.values():
-        if mod.__name__.startswith("oneflow"):
+        if mod.__name__.startswith("oneflow.python"):
             for attr in dir(mod):
                 symbol = getattr(mod, attr)
                 if hasattr(symbol, "__force_no_export__"):
                     continue
-                if hasattr(symbol, "_ONEFLOW_API"):
+                if hasattr(symbol, "__dict__") and "_ONEFLOW_API" in vars(symbol):
                     for api_name in getattr(symbol, "_ONEFLOW_API"):
-                        is_existing = api_name in exports
-                        assert is_existing == False, "exported twice: {}".format(api_name)
-                        exports[api_name] = symbol
+                        yield api_name, symbol, mod
+
+def collect_exports():
+    exports = {}
+    api_name2module = {}
+    for api_name, symbol, module in exported_symbols():
+        assert api_name not in exports, (
+            "exported twice: {}, previous exported: {} in {}, current: {} in {}".format(
+                api_name, exports[api_name], api_name2module[api_name].__file__,
+                symbol, module.__file__
+            )
+        )
+        exports[api_name] = symbol
+        api_name2module[api_name] = module
 
     root_virmod = VirtualModule()
     for api_name, symbol in exports.items():
@@ -91,7 +112,8 @@ def collect_exports():
 
 
 def main():
-    collect_exports().dump(args.root_path)
+    mod = collect_exports()
+    mod.dump(args.root_path, is_root=True)
 
 if __name__ == "__main__":
     main()
