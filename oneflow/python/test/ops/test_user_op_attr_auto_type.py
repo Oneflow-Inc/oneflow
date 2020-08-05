@@ -37,7 +37,7 @@ def test_user_op_attr_auto_type(test_case):
     function_config = flow.FunctionConfig()
     function_config.default_data_type(flow.float)
 
-    @flow.global_function(function_config)
+    @flow.global_function(function_config=function_config)
     def _test_user_op_attr_auto_type_job(
         input: oft.Numpy.Placeholder((1,), dtype=flow.float)
     ):
