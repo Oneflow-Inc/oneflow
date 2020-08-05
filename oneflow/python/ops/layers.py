@@ -126,6 +126,167 @@ def dense(
     return out
 
 
+@oneflow_export("layers.conv1d")
+def conv1d(
+    inputs: remote_blob_util.BlobDef,
+    filters: int,
+    kernel_size: Union[int, Tuple[int]] = 1,
+    strides: Union[int, Tuple[int]] = 1,
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair]] = "VALID",
+    data_format: str = "NCW",
+    dilation_rate: Optional[Union[int, Tuple[int]]] = None,
+    groups: int = 1,
+    activation: Optional[
+        Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef]
+    ] = None,
+    use_bias: bool = True,
+    kernel_initializer: Optional[op_conf_util.InitializerConf] = None,
+    bias_initializer: Optional[op_conf_util.InitializerConf] = None,
+    kernel_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    bias_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    trainable: bool = True,
+    name: str = "Conv1d",
+    weight_name: Optional[str] = None,
+    bias_name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""1D convolution layer.
+
+    Args:
+        inputs (remote_blob_util.BlobDef): A 3D input `Blob`.
+        filters (int): An integer specifies the dimensionality of the output space. 
+        kernel_size (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the height and width of the convolution window. 
+                        When it is an integer, a square window is applied to the input. Defaults to 1.
+        strides (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the strides of the convolution window along the height and width. 
+                        When it is an integer, the same value for the all spatial dimesions is applied. Defaults to 1.
+        padding (str, Tuple[IntPair, IntPair, IntPair], optional): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. Defaults to "VALID".
+        data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCW" or "NWC" (default: "NCW"). "NCW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, width). 
+                        "NWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, channels, width). Defaults to "NCW".
+        dilation_rate (Optional[Union[int, Tuple[int]]], optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
+        groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
+        activation (Optional[ Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef] ], optional): Activation function. Defaults to None.
+        use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
+        kernel_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
+        bias_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
+        kernel_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the kernel weights matrix. Defaults to None.
+        bias_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the bias vector . Defaults to None.
+        trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
+        name (Optional[str], optional): This layer's name. Defaults to None.
+
+    Raises:
+        ValueError: If the type of kernel_size is not one of integer, list, tuple. 
+        ValueError: The number of groups must be positive and number of filters must be divisible by it. 
+        ValueError: If data_format is not one of 'NCW', 'NWC'. 
+        ValueError: If number of input channels is not divisible by number of groups or less than number of groups.
+        ValueError: Number of group must be one when data_format is 'NWC'.
+
+    Returns:
+        remote_blob_util.BlobDef: A 3D `Blob` with the shape of (batch_size, filters, new_width).  
+    """
+
+    if isinstance(kernel_size, int):
+        kernel_size = (kernel_size,)
+    else:
+        assert isinstance(kernel_size, (list, tuple))
+        assert len(kernel_size) == 1
+        kernel_size = tuple(kernel_size)
+
+    assert isinstance(groups, int)
+    assert groups > 0
+    assert groups <= filters
+    assert filters % groups == 0
+
+    if data_format.upper() == "NCW":
+        assert groups <= inputs.shape[1]
+        assert inputs.shape[1] % groups == 0
+        weight_shape = (filters, inputs.shape[1] // groups) + kernel_size
+    elif data_format.upper() == "NWC":
+        assert groups == 1
+        assert groups <= inputs.shape[2]
+        assert inputs.shape[2] % groups == 0
+        weight_shape = (
+            filters,
+            kernel_size[0],
+            inputs.shape[2] // groups,
+        )
+    else:
+        raise ValueError("data_format must be in NCW or NWC")
+
+    if kernel_initializer is None:
+        kernel_initializer = flow.xavier_uniform_initializer(data_format=data_format)
+
+    if weight_name is None:
+        with flow.scope.namespace(name):
+            weight = flow.get_variable(
+                name="weight",
+                shape=weight_shape,
+                dtype=inputs.dtype,
+                initializer=kernel_initializer,
+                regularizer=kernel_regularizer,
+                trainable=trainable,
+                model_name="weight",
+                reuse=False,
+            )
+    else:
+        weight = flow.get_variable(
+            name=weight_name,
+            shape=weight_shape,
+            dtype=inputs.dtype,
+            initializer=kernel_initializer,
+            regularizer=kernel_regularizer,
+            trainable=trainable,
+            model_name="weight",
+            reuse=False,
+        )
+
+    output = flow.nn.conv1d(
+        inputs,
+        weight,
+        strides,
+        padding,
+        data_format,
+        dilation_rate,
+        groups=groups,
+        name=name,
+    )
+
+    if use_bias:
+        if bias_initializer is None:
+            bias_initializer = flow.constant_initializer(0)
+
+        if bias_name is None:
+            with flow.scope.namespace(name):
+                bias = flow.get_variable(
+                    name="bias",
+                    shape=(filters,),
+                    dtype=inputs.dtype,
+                    initializer=bias_initializer,
+                    regularizer=bias_regularizer,
+                    trainable=trainable,
+                    model_name="bias",
+                    reuse=False,
+                )
+        else:
+            bias = flow.get_variable(
+                name=bias_name,
+                shape=(filters,),
+                dtype=inputs.dtype,
+                initializer=bias_initializer,
+                regularizer=bias_regularizer,
+                trainable=trainable,
+                model_name="bias",
+                reuse=False,
+            )
+
+        with flow.scope.namespace(name):
+            output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
+
+    if callable(activation):
+        with flow.scope.namespace(name):
+            output = activation(output, name="activation")
+
+    return output
+
+
 @oneflow_export("layers.conv2d")
 def conv2d(
     inputs: remote_blob_util.BlobDef,
@@ -134,7 +295,7 @@ def conv2d(
     strides: Union[int, IntPair] = 1,
     padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]] = "VALID",
     data_format: str = "NCHW",
-    dilation_rate: int = 1,
+    dilation_rate: Optional[Union[int, IntPair]] = None,
     groups: int = 1,
     activation: Optional[
         Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef]
@@ -158,7 +319,7 @@ def conv2d(
                         When it is an integer, a square window is applied to the input. Defaults to 1.
         strides (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the strides of the convolution window along the height and width. 
                         When it is an integer, the same value for the all spatial dimesions is applied. Defaults to 1.
-        padding (str, optional): "VALID" or "SAME". Defaults to "VALID".
+        padding (str, Tuple[IntPair, IntPair, IntPair, IntPair], optional): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. Defaults to "VALID".
         data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCHW" or "NHWC" (default: "NCHW"). "NCHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, height, width). 
                         "NHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, height, width, channels). Defaults to "NCHW".
         dilation_rate (int, optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
@@ -215,7 +376,7 @@ def conv2d(
         raise ValueError("data_format must be in NCHW or NHWC")
 
     if kernel_initializer is None:
-        kernel_initializer = flow.constant_initializer(0)
+        kernel_initializer = flow.xavier_uniform_initializer(data_format=data_format)
 
     if weight_name is None:
         with flow.scope.namespace(name):
@@ -286,6 +447,180 @@ def conv2d(
     if callable(activation):
         with flow.scope.namespace(name):
             output = activation(output, name="activation")
+
+    return output
+
+
+@oneflow_export("layers.conv3d")
+def conv3d(
+    inputs: remote_blob_util.BlobDef,
+    filters: int,
+    kernel_size: Union[int, Sequence[int]] = 1,
+    strides: Union[int, Sequence[int]] = 1,
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]] = "VALID",
+    data_format: str = "NCDHW",
+    dilation_rate: Optional[Union[int, IntPair]] = None,
+    groups: int = 1,
+    activation: Optional[
+        Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef]
+    ] = None,
+    use_bias: bool = True,
+    kernel_initializer: Optional[op_conf_util.InitializerConf] = None,
+    bias_initializer: Optional[op_conf_util.InitializerConf] = None,
+    kernel_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    bias_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    trainable: bool = True,
+    name: str = "Conv3d",
+    weight_name: Optional[str] = None,
+    bias_name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""3D convolution layer.
+
+    Args:
+        inputs (remote_blob_util.BlobDef): A 5D input `Blob`.
+        filters (int): An integer specifies the dimensionality of the output space. 
+        kernel_size (Union[int, List[int], Sequence[int]], optional): An integer or tuple/list specifies the height and width of the convolution window. 
+                        When it is an integer, a square window is applied to the input. Defaults to 1.
+        strides (Union[int, List[int], Sequence[int]], optional): An integer or tuple/list specifies the strides of the convolution window along the height and width. 
+                        When it is an integer, the same value for the all spatial dimesions is applied. Defaults to 1.
+        padding (str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair], optional): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. Defaults to "VALID".
+        data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCDHW" or "NDHWC" (default: "NCDHW"). "NCDHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, depth, height, width). 
+                        "NDHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, channels, depth, height, width). Defaults to "NCDHW".
+        dilation_rate (int, optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
+        groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
+        activation (Optional[ Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef] ], optional): Activation function. Defaults to None.
+        use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
+        kernel_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
+        bias_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
+        kernel_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the kernel weights matrix. Defaults to None.
+        bias_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the bias vector . Defaults to None.
+        trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
+        name (Optional[str], optional): This layer's name. Defaults to None.
+        weight_name (Optional[str], optional): This weight's name. Defaults to None.
+        bias_name (Optional[str], optional):  This bias's name. Defaults to None.
+
+    Raises:
+        ValueError: If the type of kernel_size is not one of integer, list, tuple. 
+        ValueError: The number of groups must be positive and number of filters must be divisible by it. 
+        ValueError: If data_format is not one of 'NCDHW', 'NDHWC'. 
+        ValueError: If number of input channels is not divisible by number of groups or less than number of groups.
+        ValueError: Number of group must be one when data_format is 'NDHWC'.
+
+    Returns:
+        remote_blob_util.BlobDef: A 5D `Blob` with the shape of (batch_size, filters, new_height, new_width).  
+    """
+    need_transpose = 0
+    if data_format.upper() == "NDHWC":  # NDHWC is not supported before cudnn 8.0
+        need_transpose = 1
+        data_format = "NCDHW"
+    if need_transpose:
+        inputs = flow.transpose(inputs, perm=[0, 4, 1, 2, 3])
+
+    if isinstance(kernel_size, int):
+        kernel_size = (kernel_size, kernel_size, kernel_size)
+    else:
+        assert isinstance(kernel_size, (list, tuple))
+        assert len(kernel_size) == 3
+        kernel_size = tuple(kernel_size)
+
+    assert isinstance(groups, int)
+    assert groups > 0
+    assert groups <= filters
+    assert filters % groups == 0
+
+    if data_format.upper() == "NCDHW":
+        assert groups <= inputs.shape[1]
+        assert inputs.shape[1] % groups == 0
+        weight_shape = (filters, inputs.shape[1] // groups) + kernel_size
+    elif data_format.upper() == "NDHWC":
+        assert groups == 1
+        assert groups <= inputs.shape[3]
+        assert inputs.shape[3] % groups == 0
+        weight_shape = (
+            filters,
+            kernel_size[0],
+            kernel_size[1],
+            kernel_size[2],
+            inputs.shape[4] // groups,
+        )
+    else:
+        raise ValueError("data_format must be in NCHW or NHWC")
+
+    if kernel_initializer is None:
+        kernel_initializer = flow.xavier_uniform_initializer(data_format=data_format)
+
+    if weight_name is None:
+        with flow.scope.namespace(name):
+            weight = flow.get_variable(
+                name="weight",
+                shape=weight_shape,
+                dtype=inputs.dtype,
+                initializer=kernel_initializer,
+                regularizer=kernel_regularizer,
+                trainable=trainable,
+                model_name="weight",
+                reuse=False,
+            )
+    else:
+        weight = flow.get_variable(
+            name=weight_name,
+            shape=weight_shape,
+            dtype=inputs.dtype,
+            initializer=kernel_initializer,
+            regularizer=kernel_regularizer,
+            trainable=trainable,
+            model_name="weight",
+            reuse=False,
+        )
+
+    output = flow.nn.conv3d(
+        inputs,
+        weight,
+        strides,
+        padding,
+        data_format,
+        dilation_rate,
+        groups=groups,
+        name=name,
+    )
+
+    if use_bias:
+        if bias_initializer is None:
+            bias_initializer = flow.constant_initializer(0)
+
+        if bias_name is None:
+            with flow.scope.namespace(name):
+                bias = flow.get_variable(
+                    name="bias",
+                    shape=(filters,),
+                    dtype=inputs.dtype,
+                    initializer=bias_initializer,
+                    regularizer=bias_regularizer,
+                    trainable=trainable,
+                    model_name="bias",
+                    reuse=False,
+                )
+        else:
+            bias = flow.get_variable(
+                name=bias_name,
+                shape=(filters,),
+                dtype=inputs.dtype,
+                initializer=bias_initializer,
+                regularizer=bias_regularizer,
+                trainable=trainable,
+                model_name="bias",
+                reuse=False,
+            )
+
+        with flow.scope.namespace(name):
+            output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
+
+    if callable(activation):
+        with flow.scope.namespace(name):
+            output = activation(output, name="activation")
+
+    if need_transpose:
+        output = flow.transpose(output, perm=[0, 2, 3, 4, 1])
 
     return output
 
