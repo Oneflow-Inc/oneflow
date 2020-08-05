@@ -194,6 +194,11 @@ class Callback(typing.Generic[typing.TypeVar("T")]):
 
 @oneflow_export("typing.Bundle")
 class Bundle(typing.Generic[typing.TypeVar("T")]):
+    """
+    One or a collection of  typing.Numpy/typing.ListNumpy/typing.ListListNumpy,
+    such as x, [x], (x,), {"key": x} and the mixed form of them.
+    """
+
     pass
 
 
