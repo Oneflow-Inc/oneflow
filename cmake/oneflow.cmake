@@ -293,6 +293,14 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
 file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
+if (BUILD_CUDA)
+  add_custom_command(TARGET of_pyscript_copy POST_BUILD
+        COMMAND echo "with_cuda=True" >> "${of_pyscript_dir}/oneflow/python/compatibility.py")
+else()
+  add_custom_command(TARGET of_pyscript_copy POST_BUILD
+        COMMAND echo "with_cuda=False" >> "${of_pyscript_dir}/oneflow/python/compatibility.py")
+endif()
+
 copy_files("${oneflow_all_python_file}" "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}" of_pyscript_copy)
 
 file(WRITE ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags = []\n")
