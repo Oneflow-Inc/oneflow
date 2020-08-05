@@ -63,9 +63,9 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     if mirrored:
-        func_config.default_distribute_strategy(flow.scope.mirrored_view())
+        func_config.default_logical_view(flow.scope.mirrored_view())
     else:
-        func_config.default_distribute_strategy(flow.scope.consistent_view())
+        func_config.default_logical_view(flow.scope.consistent_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -77,6 +77,7 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(0),
             )
+            x = flow.cast_to_current_logical_view(x)
             x = x + updates_blob
             y = flow.scatter_nd(indices_blob, x, shape)
             flow.losses.add_loss(y)
@@ -193,7 +194,7 @@ def _compare_scatter_nd_update_with_tf(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -269,6 +270,10 @@ def _of_tensor_scatter_nd_add(
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(0),
             )
+            params_var = flow.cast_to_current_logical_view(params_var)
+            params_blob = flow.cast_to_current_logical_view(params_blob)
+            updates_blob = flow.cast_to_current_logical_view(updates_blob)
+            updates_var = flow.cast_to_current_logical_view(updates_var)
             params_var = params_var + params_blob
             updates_var = updates_var + updates_blob
             out = flow.tensor_scatter_nd_add(params_var, indices_blob, updates_var)
@@ -279,7 +284,7 @@ def _of_tensor_scatter_nd_add(
         return out
 
     if mirrored:
-        func_config.default_distribute_strategy(flow.scope.mirrored_view())
+        func_config.default_logical_view(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
         def tensor_scatter_nd_add_fn(
@@ -298,7 +303,7 @@ def _of_tensor_scatter_nd_add(
         )
 
     else:
-        func_config.default_distribute_strategy(flow.scope.consistent_view())
+        func_config.default_logical_view(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
         def tensor_scatter_nd_add_fn(
@@ -367,7 +372,7 @@ def _of_scatter_nd_dynamic_indices(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def scatter_nd_fn(
@@ -406,7 +411,7 @@ def _of_tensor_scatter_nd_update_dynamic_indices(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def tensor_scatter_nd_update_fn(
@@ -453,7 +458,7 @@ def _of_tensor_scatter_nd_add_dynamic_indices(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def tensor_scatter_nd_add_fn(

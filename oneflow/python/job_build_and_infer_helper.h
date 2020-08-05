@@ -24,10 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-bool EagerExecutionEnabled() {
-  return *Global<bool, EagerExecution<ForEnv>>::Get()
-         || *Global<bool, EagerExecution<ForSession>>::Get();
-}
+bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
 
 namespace {
 
@@ -74,6 +71,12 @@ Maybe<void> CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_
   JobConfigProto job_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(serialized_job_conf, &job_conf)) << "job conf parse failed";
   return JUST(GetCurInferCtx())->SetJobConf(job_conf);
+}
+
+Maybe<void> CurJobBuildAndInferCtx_SetTrainConf(const std::string& train_conf_str) {
+  TrainConf train_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(train_conf_str, &train_conf)) << "train conf parse failed";
+  return JUST(GetCurInferCtx())->SetTrainConf(train_conf);
 }
 
 Maybe<void> CurJobBuildAndInferCtx_Complete() { return JUST(GetCurInferCtx())->Complete(); }

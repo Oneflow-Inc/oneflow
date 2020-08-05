@@ -29,6 +29,21 @@ class CopyHdOp final : public Operator {
                              const ParallelContext* parallel_ctx) const;
 
  private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    const SbpParallel& sbp_parallel = JUST(SbpInferHint4Ibn(input_bns().Get(0)))->sbp_parallel();
+    (*bn2sbp)[input_bns().Get(0)] = sbp_parallel;
+    (*bn2sbp)[output_bns().Get(0)] = sbp_parallel;
+    return Maybe<void>::Ok();
+  }
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };

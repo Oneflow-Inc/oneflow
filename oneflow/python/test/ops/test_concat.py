@@ -33,7 +33,7 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, dtype, axis):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -55,6 +55,8 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, dtype, axis):
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
+            x = flow.cast_to_current_logical_view(x)
+            y = flow.cast_to_current_logical_view(y)
             loss = flow.concat([x, y], axis)
             flow.losses.add_loss(loss)
 
@@ -111,7 +113,7 @@ def _of_dynamic_concat(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -139,6 +141,10 @@ def _of_dynamic_concat(
             initializer=flow.constant_initializer(value=1, dtype=flow.float),
             trainable=True,
         )
+        var_0 = flow.cast_to_current_logical_view(var_0)
+        var_1 = flow.cast_to_current_logical_view(var_1)
+        input_0_def = flow.cast_to_current_logical_view(input_0_def)
+        input_1_def = flow.cast_to_current_logical_view(input_1_def)
         if callable(watch_cb):
             flow.watch(var_0, watch_cb)
             flow.watch(var_1, watch_cb)
@@ -306,7 +312,7 @@ def _test_hybrid_concat(
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -334,11 +340,11 @@ def _test_hybrid_concat(
             trainable=True,
         )
         constant = flow.constant(1.0, dtype=flow.float, shape=rand_sub_shape)
-        concated = flow.concat(
-            [var, input_0_def, input_1_def, constant],
-            axis=axis,
-            max_dim_size=max_dim_size,
-        )
+        inputs = [
+            flow.cast_to_current_logical_view(input)
+            for input in [var, input_0_def, input_1_def, constant]
+        ]
+        concated = flow.concat(inputs, axis=axis, max_dim_size=max_dim_size,)
         if verbose:
             print("concated static shape:", concated.shape)
 

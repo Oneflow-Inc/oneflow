@@ -18,11 +18,14 @@ import oneflow as flow
 import oneflow.typing as oft
 
 func_config = flow.FunctionConfig()
-func_config.default_distribute_strategy(flow.scope.mirrored_view())
+func_config.default_logical_view(flow.scope.mirrored_view())
 func_config.default_data_type(flow.float)
 
 
 def test_repeat_acc(test_case):
+    if flow.eager_execution_enabled():
+        return
+
     @flow.global_function(func_config)
     def RepeatAccJob(a: oft.Numpy.Placeholder((3, 4))):
         return flow.acc(flow.repeat(a, 3), 3)

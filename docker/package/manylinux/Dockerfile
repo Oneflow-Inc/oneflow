@@ -1,4 +1,5 @@
-FROM nvidia/cuda:10.2-cudnn7-devel-centos7
+ARG from
+FROM ${from}
 LABEL maintainer="OneFlow Maintainers"
 
 # manylinux2014
@@ -24,7 +25,7 @@ ENV SSL_CERT_FILE=/opt/_internal/certs.pem
 RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
     rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
     yum update -y && yum install -y epel-release && \
-    yum -y install intel-mkl-2020.0-088 nasm swig
+    yum install -y intel-mkl-64bit-2020.0-088 nasm swig rdma-core-devel
 
 ENV TUNA_INDEX="-i https://pypi.tuna.tsinghua.edu.cn/simple"
 RUN /opt/python/cp35-cp35m/bin/pip install $TUNA_INDEX -U cmake && ln -s /opt/_internal/cpython-3.5.9/bin/cmake /usr/bin/cmake

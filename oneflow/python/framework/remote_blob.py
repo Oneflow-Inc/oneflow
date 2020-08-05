@@ -32,6 +32,8 @@ import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.core.job.placement_pb2 as placement_pb
+import traceback
+import sys
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
 
@@ -118,8 +120,11 @@ class LazyConsistentBlob(ConsistentBlob):
         if oneflow.scope.mirrored_view_enabled():
             print(
                 "WARNING:",
-                "You access a consistent blob shape in mirrored view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+                "You access a consistent blob shape in mirrored view, there may be problems,",
+                "you should add 'x = flow.cast_to_current_logical_view(x)'.",
+                file=sys.stderr,
             )
+            print(traceback.format_stack()[-2])
         return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.lbn_)
 
     @property
@@ -199,8 +204,11 @@ class LazyMirroredBlob(MirroredBlob):
         if oneflow.scope.consistent_view_enabled():
             print(
                 "WARNING:",
-                "You access a mirrored blob shape in consistent view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+                "You access a mirrored blob shape in consistent view, there may be problems,"
+                "you should add 'x = flow.cast_to_current_logical_view(x)'.",
+                file=sys.stderr,
             )
+            print(traceback.format_stack()[-2])
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
             self.job_name_, self.lbn_
         )
@@ -308,6 +316,8 @@ class EagerBlobTrait(object):
             return sbp_parallel.split_parallel.axis
         elif sbp_parallel.HasField("broadcast_parallel"):
             return None
+        elif sbp_parallel.HasField("partial_sum_parallel"):
+            return None
         else:
             raise NotImplementedError
 
@@ -364,9 +374,12 @@ class EagerBlobTrait(object):
                     blob_object.op_arg_parallel_attr.sbp_parallel,
                     blob_object.op_arg_parallel_attr.opt_mirrored_parallel,
                 )
-                tmp_blob_object = boxing_util.BoxingTo(
-                    builder, blob_object, tmp_op_arg_parallel_attr
-                )
+                with oneflow.scope.placement(
+                    self.parallel_conf.device_tag, list(self.parallel_conf.device_name)
+                ):
+                    tmp_blob_object = boxing_util.BoxingTo(
+                        builder, blob_object, tmp_op_arg_parallel_attr
+                    )
                 nonlocal consistent_blob_name
                 consistent_blob_name = "{}-consistent".format(self.logical_blob_name)
                 if not blob_register.HasObject4BlobName(consistent_blob_name):

@@ -57,7 +57,3 @@ class BlobObject(Object):
         for release in self.release_:
             release(self)
         self.release_ = []
-
-    def InitOpArgBlobAttr(self, op_arg_blob_attr):
-        assert self.op_arg_blob_attr_ is None
-        self.op_arg_blob_attr_ = op_arg_blob_attr

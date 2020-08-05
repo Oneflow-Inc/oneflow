@@ -20,6 +20,7 @@ from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.vm.instruction_pb2 as instr_util
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.job_set_pb2 as job_set_util
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.config_util as config_util
@@ -39,8 +40,9 @@ from oneflow.python.framework.pull_util import (
     EagerFutureRemoteBlobs,
 )
 from oneflow.python.framework.session_context import SessionStatus
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
+from oneflow.python.framework.check_point import SnapshotManager
 import oneflow.python.eager.blob_register as blob_register_util
 from contextlib import contextmanager
 from typing import Callable
@@ -72,6 +74,8 @@ class Session(object):
         self.instruction_list_ = instr_util.InstructionListProto()
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
         self.backward_blob_register_ = blob_register_util.BlobRegister()
+        self.InitNormalModeNoneScope()
+        self.snapshot_mgr_ = SnapshotManager()
 
     @property
     def status(self):
@@ -123,6 +127,17 @@ class Session(object):
     def backward_blob_register(self):
         return self.backward_blob_register_
 
+    @property
+    def snapshot_mgr(self):
+        return self.snapshot_mgr_
+
+    def InitNormalModeScope(self):
+        job_conf = job_conf_pb.JobConfigProto()
+        job_conf.predict_conf.SetInParent()
+        job_conf.job_name = ""
+        scope = compiler.MakeInitialScope(job_conf, "cpu", ["0:0"], is_mirrored=False)
+        self.job_name2current_scope_[""] = scope
+
     def MakeScope(self, build_func):
         scope = None
         old_scope = oneflow.current_scope()
@@ -146,6 +161,9 @@ class Session(object):
         finally:
             assert self.GetCurrentScope(job_name) is scope
             self.job_name2current_scope_[job_name] = old_scope
+
+    def InitNormalModeNoneScope(self):
+        self.InitNoneScope("")
 
     def InitNoneScope(self, job_name):
         if job_name not in self.job_name2current_scope_:
@@ -373,43 +391,47 @@ def find_or_create_module(module_name, create, reuse=False):
     return module_name2module[module_name]
 
 
-@oneflow_export("enable_eager_execution")
-def api_enable_eager_execution(val: bool = True) -> None:
-    return enable_if.unique([enable_eager_execution])(val=val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
-def enable_eager_execution(val=True):
-    return c_api_util.EnableEagerSession(val)
-
-
 @oneflow_export("eager_execution_enabled")
 def api_eager_execution_enabled() -> bool:
+    """Get current setting of the job, if enable eager execution mode ,then return True
+
+    Returns:
+        bool: [description]
+    """
     return c_api_util.EagerExecutionEnabled()
 
 
 @oneflow_export("clear_default_session")
 def clear_default_session() -> None:
     r"""Clear the default session. All compiled OneFlow functions will be deleted.
-
     """
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
-    c_api_util.EnableEagerSession(False)
+    session_ctx.GetDefaultSession().InitNormalModeScope()
 
 
 @oneflow_export("current_scope")
-def current_scope():
+def api_current_scope():
     r""" Return current scope
     """
+    api = enable_if.unique([global_mode_current_scope, normal_mode_current_scope])
+    return api()
+
+
+@enable_if.condition(hob.in_global_mode)
+def global_mode_current_scope():
     job_name = oneflow.current_global_function_desc().job_config_proto.job_name
     return session_ctx.GetDefaultSession().GetCurrentScope(job_name)
+
+
+@enable_if.condition(hob.in_normal_mode)
+def normal_mode_current_scope():
+    return session_ctx.GetDefaultSession().GetCurrentScope("")
 
 
 @oneflow_export("sync_default_session")
 def sync_default_session() -> None:
     r"""Synchronize the default session. Block until every synchronous OneFlow function and its callback finishes running.
-
     """
     session_ctx.GetDefaultSession().Sync()
 
@@ -432,6 +454,7 @@ session_ctx.OpenDefaultSession(Session())
 
 
 @oneflow_export("scope.current_scope")
+@oneflow_deprecate()
 def deprecated_current_scope(*args, **kwargs):
     print(
         "WARNING:",

@@ -24,7 +24,7 @@ def test_dynamic_reshape(test_case):
     flow.config.gpu_device_num(num_gpus)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -38,6 +38,7 @@ def test_dynamic_reshape(test_case):
             initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
             trainable=True,
         )
+        my_model = flow.cast_to_current_logical_view(my_model)
         mm_out = flow.matmul(reshape_out1, my_model)
         reshape_out2 = flow.reshape(mm_out, (-1, 8, 4))
         flow.losses.add_loss(reshape_out2)

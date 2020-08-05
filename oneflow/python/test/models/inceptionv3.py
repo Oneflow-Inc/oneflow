@@ -126,25 +126,28 @@ def _conv2d_layer(
 
 
 def _data_load_layer(args, data_dir):
-    image_blob_conf = flow.data.BlobConf(
-        "encoded",
-        shape=(299, 299, 3),
-        dtype=flow.float,
-        codec=flow.data.ImageCodec([flow.data.ImagePreprocessor("bgr2rgb")]),
-        preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
-    )
-    label_blob_conf = flow.data.BlobConf(
-        "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
-    )
     node_num = args.num_nodes
     total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
-    return flow.data.decode_ofrecord(
+    rgb_mean = [123.68, 116.78, 103.94]
+    ofrecord = flow.data.ofrecord_reader(
         data_dir,
-        (image_blob_conf, label_blob_conf),
         batch_size=total_batch_size,
         data_part_num=args.data_part_num,
         name="decode",
     )
+    image = flow.data.ofrecord_image_decoder(ofrecord, "encoded", color_space="RGB")
+    label = flow.data.ofrecord_raw_decoder(
+        ofrecord, "class/label", shape=(), dtype=flow.int32
+    )
+    rsz = flow.image.resize(image, resize_x=299, resize_y=299, color_space="RGB")
+    normal = flow.image.crop_mirror_normalize(
+        rsz,
+        color_space="RGB",
+        output_layout="NCHW",
+        mean=rgb_mean,
+        output_dtype=flow.float,
+    )
+    return normal, label
 
 
 def InceptionA(in_blob, index):
@@ -517,8 +520,6 @@ def InceptionE(in_blob, index):
 
 
 def InceptionV3(images, labels, trainable=True):
-    images = flow.transpose(images, perm=[0, 3, 1, 2])
-
     conv0 = _conv2d_layer(
         "conv0", images, filters=32, kernel_size=3, strides=2, padding="VALID"
     )

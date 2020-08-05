@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/vm_resource_desc.msg.h"
+#include "oneflow/core/operator/op_node_signature_desc.h"
 
 namespace oneflow {
 namespace vm {

@@ -189,7 +189,7 @@ def test_pool(_):
 
         tensor_def = None
         if is_dynamic:
-            func_config.default_distribute_strategy(flow.scope.mirrored_view())
+            func_config.default_logical_view(flow.scope.mirrored_view())
             tensor_def = oft.ListNumpy.Placeholder
         else:
             tensor_def = oft.Numpy.Placeholder
@@ -203,6 +203,7 @@ def test_pool(_):
                 initializer=flow.constant_initializer(0),
                 trainable=True,
             )
+            v = flow.cast_to_current_logical_view(v)
             flow.watch_diff(v, assert_grad)
             x += v
             with flow.scope.placement(device_type, "0:0"):

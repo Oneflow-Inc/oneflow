@@ -44,10 +44,9 @@ def _test_two_stage_reduce(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
-    func_config.use_boxing_v2(True)
 
     @flow.global_function(func_config)
     def two_stage_reduce_job(x: oft.Numpy.Placeholder((4, 20, 20, 20))):

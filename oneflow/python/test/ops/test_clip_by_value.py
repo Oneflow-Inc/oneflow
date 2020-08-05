@@ -46,6 +46,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
                     dtype=data_type,
                     initializer=flow.constant_initializer(0),
                 )
+                x = flow.cast_to_current_logical_view(x)
                 x = x + values_blob
                 y = flow.clip_by_value(x, min, max)
                 flow.losses.add_loss(y)
@@ -67,7 +68,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
         func_config.train.model_update_conf(dict(naive_conf={}))
 
     if dynamic:
-        func_config.default_distribute_strategy(flow.scope.mirrored_view())
+        func_config.default_logical_view(flow.scope.mirrored_view())
 
         @flow.global_function(func_config)
         def clip_fn(
@@ -80,7 +81,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
         return clip_fn([values]).get().numpy_list()[0]
 
     else:
-        func_config.default_distribute_strategy(flow.scope.consistent_view())
+        func_config.default_logical_view(flow.scope.consistent_view())
 
         @flow.global_function(func_config)
         def clip_fn(values_def: oft.Numpy.Placeholder(values.shape, dtype=data_type)):

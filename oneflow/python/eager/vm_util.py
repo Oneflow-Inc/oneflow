@@ -25,7 +25,6 @@ import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.vm.instruction_pb2 as instr_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
-import oneflow.python.eager.job_conf_ctx as job_conf_ctx
 import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_storage as object_storage
 import oneflow.python.eager.symbol as symbol_util
@@ -429,9 +428,12 @@ class InstructionsBuilder(object):
                 bn_in_op2blob_object[ibn], op_arg_parallel_attr
             )
 
-        job_conf_sym = self.GetJobConfSymbol(job_conf_ctx.CurrentJobConf())
-        op_conf_sym = self._GetOpConfSymbol(op_attribute.op_conf)
-        op_parallel_attribute_sym = self._GetOpParallelAttributeSymbol(op_attribute)
+        op_conf = op_attribute.op_conf
+        assert op_conf.HasField("scope_symbol_id"), op_conf
+        scope_symbol = symbol_storage.GetSymbol4Id(op_conf.scope_symbol_id)
+        job_desc_sym = scope_symbol.job_desc_symbol
+        op_conf_sym = self._GetOpConfSymbol(op_conf)
+        op_node_signature_sym = self._GetOpNodeSignatureSymbol(op_attribute)
         opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(
             op_parallel_desc_sym
         )
@@ -453,9 +455,9 @@ class InstructionsBuilder(object):
         self._StatelessCallOpKernel(
             "%s.%sStatelessCallOpKernel" % (stream_tag, instruction_prefix),
             op_parallel_desc_sym,
-            job_conf_sym,
+            job_desc_sym,
             op_conf_sym,
-            op_parallel_attribute_sym,
+            op_node_signature_sym,
             opkernel_obj,
             const_operand_blob_objects,
             mut1_operand_blob_objects,
@@ -479,7 +481,7 @@ class InstructionsBuilder(object):
                 bn_in_op2blob_object[ibn], op_arg_parallel_attr
             )
 
-        op_parallel_attribute_sym = self._GetOpParallelAttributeSymbol(op_attribute)
+        op_node_signature_sym = self._GetOpNodeSignatureSymbol(op_attribute)
         const_operand_blob_objects = self._GetConstOperandBlobObjects(
             op_attribute, blob_object4ibn=DelegateBlobObject4Ibn
         )
@@ -500,7 +502,7 @@ class InstructionsBuilder(object):
             "%sCallOpKernel" % instruction_prefix,
             op_parallel_desc_sym,
             opkernel_object,
-            op_parallel_attribute_sym,
+            op_node_signature_sym,
             const_operand_blob_objects,
             mut1_operand_blob_objects,
             mut2_operand_blob_objects,
@@ -530,27 +532,33 @@ class InstructionsBuilder(object):
         symbol_storage.SetSymbol4SerializedOpConf(serialized_op_conf, symbol)
         return symbol
 
-    def _GetOpParallelAttributeSymbol(self, op_attribute):
-        new_op_parallel_attribute = op_attribute_pb.OpParallelAttribute()
-        new_op_parallel_attribute.sbp_signature.CopyFrom(op_attribute.sbp_signature)
-        new_op_parallel_attribute.mirrored_signature.CopyFrom(
+    def _GetOpNodeSignatureSymbol(self, op_attribute):
+        new_op_node_signature = op_attribute_pb.OpNodeSignature()
+        new_op_node_signature.sbp_signature.CopyFrom(op_attribute.sbp_signature)
+        new_op_node_signature.mirrored_signature.CopyFrom(
             op_attribute.mirrored_signature
         )
-        new_op_parallel_attribute.parallel_signature.CopyFrom(
+        new_op_node_signature.logical_blob_desc_signature.CopyFrom(
+            op_attribute.logical_blob_desc_signature
+        )
+        new_op_node_signature.batch_axis_signature.CopyFrom(
+            op_attribute.batch_axis_signature
+        )
+        new_op_node_signature.parallel_signature.CopyFrom(
             op_attribute.parallel_signature
         )
-        serialized_op_parallel_attribute = new_op_parallel_attribute.SerializeToString()
-        if symbol_storage.HasSymbol4SerializedOpParallelAttribute(
-            serialized_op_parallel_attribute
+        serialized_op_node_signature = new_op_node_signature.SerializeToString()
+        if symbol_storage.HasSymbol4SerializedOpNodeSignature(
+            serialized_op_node_signature
         ):
-            return symbol_storage.GetSymbol4SerializedOpParallelAttribute(
-                serialized_op_parallel_attribute
+            return symbol_storage.GetSymbol4SerializedOpNodeSignature(
+                serialized_op_node_signature
             )
-        symbol_id = self._NewSymbolId4OpParallelAttribute(new_op_parallel_attribute)
-        symbol = symbol_util.Symbol(symbol_id, new_op_parallel_attribute)
+        symbol_id = self._NewSymbolId4OpNodeSignature(new_op_node_signature)
+        symbol = symbol_util.Symbol(symbol_id, new_op_node_signature)
         symbol_storage.SetSymbol4Id(symbol_id, symbol)
-        symbol_storage.SetSymbol4SerializedOpParallelAttribute(
-            serialized_op_parallel_attribute, symbol
+        symbol_storage.SetSymbol4SerializedOpNodeSignature(
+            serialized_op_node_signature, symbol
         )
         return symbol
 
@@ -687,9 +695,9 @@ class InstructionsBuilder(object):
         self._InitOpConfSymbol(symbol_id, op_conf)
         return symbol_id
 
-    def _NewSymbolId4OpParallelAttribute(self, op_parallel_attribute):
+    def _NewSymbolId4OpNodeSignature(self, op_node_signature):
         symbol_id = self._NewSymbolId()
-        self._InitOpParallelAttributeSymbol(symbol_id, op_parallel_attribute)
+        self._InitOpNodeSignatureDescSymbol(symbol_id, op_node_signature)
         return symbol_id
 
     def _NewSharedOpKernelObjectId4ParallelConfSymbolId(self, parallel_desc_sym):
@@ -699,9 +707,9 @@ class InstructionsBuilder(object):
         self,
         instr_name,
         parallel_desc_sym,
-        job_conf_sym,
+        job_desc_sym,
         op_conf_sym,
-        op_parallel_attribute_sym,
+        op_node_signature_sym,
         shared_opkernel_obj,
         const_operand_blob_objects,
         mut1_operand_blob_objects,
@@ -713,9 +721,9 @@ class InstructionsBuilder(object):
             instr_name,
         )
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
-        instruction.operand.append(_SymbolOperand(job_conf_sym.symbol_id))
+        instruction.operand.append(_SymbolOperand(job_desc_sym.symbol_id))
         instruction.operand.append(_SymbolOperand(op_conf_sym.symbol_id))
-        instruction.operand.append(_SymbolOperand(op_parallel_attribute_sym.symbol_id))
+        instruction.operand.append(_SymbolOperand(op_node_signature_sym.symbol_id))
         instruction.operand.append(_MutOperand(shared_opkernel_obj.object_id))
         instruction.operand.append(_OperandSeparator())
         for ibn_sym, _ in const_operand_blob_objects:
@@ -739,7 +747,7 @@ class InstructionsBuilder(object):
         instr_name,
         parallel_desc_sym,
         opkernel_object,
-        op_parallel_attribute_sym,
+        op_node_signature_sym,
         const_operand_blob_objects,
         mut1_operand_blob_objects,
         mut2_operand_blob_objects,
@@ -751,7 +759,7 @@ class InstructionsBuilder(object):
         )
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
         instruction.operand.append(_MutOperand(opkernel_object.object_id))
-        instruction.operand.append(_SymbolOperand(op_parallel_attribute_sym.symbol_id))
+        instruction.operand.append(_SymbolOperand(op_node_signature_sym.symbol_id))
         instruction.operand.append(_OperandSeparator())
         for ibn_sym, _ in const_operand_blob_objects:
             instruction.operand.append(_SymbolOperand(ibn_sym.symbol_id))
@@ -846,14 +854,14 @@ class InstructionsBuilder(object):
         eager_symbol.op_conf_symbol.CopyFrom(op_conf)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
-    def _InitOpParallelAttributeSymbol(self, symbol_id, op_parallel_attribute):
+    def _InitOpNodeSignatureDescSymbol(self, symbol_id, op_node_signature):
         instruction = instr_util.InstructionProto()
-        instruction.instr_type_name = "InitOpParallelAttributeSymbol"
+        instruction.instr_type_name = "InitOpNodeSignatureDescSymbol"
         instruction.operand.append(_InitSymbolOperand(symbol_id))
         self.instruction_list_.instruction.append(instruction)
         eager_symbol = eager_symbol_util.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
-        eager_symbol.op_parallel_attribute_symbol.CopyFrom(op_parallel_attribute)
+        eager_symbol.op_node_signature_symbol.CopyFrom(op_node_signature)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _FetchBlob(self, instruction_name, blob_object, fetcher):

@@ -73,23 +73,23 @@ def SetSymbol4SerializedOpConf(serialized_op_conf, symbol):
 serialized_op_conf2symbol = {}
 
 
-def HasSymbol4SerializedOpParallelAttribute(serialized_op_parallel_attribute):
-    global serialized_op_parallel_attribute2symbol
-    return serialized_op_parallel_attribute in serialized_op_parallel_attribute2symbol
+def HasSymbol4SerializedOpNodeSignature(serialized_op_node_signature):
+    global serialized_op_node_signature2symbol
+    return serialized_op_node_signature in serialized_op_node_signature2symbol
 
 
-def GetSymbol4SerializedOpParallelAttribute(serialized_op_parallel_attribute):
-    global serialized_op_parallel_attribute2symbol
-    return serialized_op_parallel_attribute2symbol[serialized_op_parallel_attribute]
+def GetSymbol4SerializedOpNodeSignature(serialized_op_node_signature):
+    global serialized_op_node_signature2symbol
+    return serialized_op_node_signature2symbol[serialized_op_node_signature]
 
 
-def SetSymbol4SerializedOpParallelAttribute(serialized_op_parallel_attribute, symbol):
-    assert not HasSymbol4SerializedOpParallelAttribute(serialized_op_parallel_attribute)
-    global serialized_op_parallel_attribute2symbol
-    serialized_op_parallel_attribute2symbol[serialized_op_parallel_attribute] = symbol
+def SetSymbol4SerializedOpNodeSignature(serialized_op_node_signature, symbol):
+    assert not HasSymbol4SerializedOpNodeSignature(serialized_op_node_signature)
+    global serialized_op_node_signature2symbol
+    serialized_op_node_signature2symbol[serialized_op_node_signature] = symbol
 
 
-serialized_op_parallel_attribute2symbol = {}
+serialized_op_node_signature2symbol = {}
 
 
 def HasSymbol4JobConf(job_conf):

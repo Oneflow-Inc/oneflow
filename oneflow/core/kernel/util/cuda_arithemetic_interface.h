@@ -103,6 +103,7 @@ struct ArithemeticIf<DeviceType::kGPU> {
   static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t* y,
                              int64_t* z);
 
+  static void Fill(DeviceCtx* ctx, const int64_t n, const float16 value, float16* y);
   static void Fill(DeviceCtx* ctx, const int64_t n, const float value, float* y);
   static void Fill(DeviceCtx* ctx, const int64_t n, const double value, double* y);
   static void Fill(DeviceCtx* ctx, const int64_t n, const int8_t value, int8_t* y);

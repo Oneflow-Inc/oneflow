@@ -110,16 +110,21 @@ def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
     for i, physical_blob_object in enumerate(physical_blob_objects):
         feed_ctx.set_rank(i)
         _FeedValueToInputPhysicalBlob(feed_ctx, arg_blob_def, physical_blob_object)
-    blob_class = None
+    get_blob = None
     if isinstance(arg_blob_def, input_blob_def.FixedTensorDef):
-        blob_class = remote_blob_util.EagerConsistentBlob
+
+        def get_blob(lbi, blob_object):
+            blob = remote_blob_util.EagerConsistentBlob(lbi, blob_object)
+            with oneflow.scope.consistent_view():
+                return oneflow.identity(blob)
+
     elif isinstance(arg_blob_def, input_blob_def.MirroredTensorDef):
-        blob_class = remote_blob_util.EagerMirroredBlob
+        get_blob = remote_blob_util.EagerMirroredBlob
     elif isinstance(arg_blob_def, input_blob_def.MirroredTensorListDef):
-        blob_class = remote_blob_util.EagerMirroredBlob
+        get_blob = remote_blob_util.EagerMirroredBlob
     else:
         raise NotImplementedError
-    return blob_class(lbi, blob_object=arg_blob_object)
+    return get_blob(lbi, blob_object=arg_blob_object)
 
 
 def _MakeInputBlobObject(arg_blob_def):

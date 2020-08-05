@@ -41,9 +41,9 @@ def _make_gather_fn(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     if mirrored:
-        func_config.default_distribute_strategy(flow.scope.mirrored_view())
+        func_config.default_logical_view(flow.scope.mirrored_view())
     else:
-        func_config.default_distribute_strategy(flow.scope.consistent_view())
+        func_config.default_logical_view(flow.scope.consistent_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -55,6 +55,7 @@ def _make_gather_fn(
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(0),
             )
+            x = flow.cast_to_current_logical_view(x)
             x = x + x_blob
             y = flow.gather(x, i_blob, axis=axis, batch_dims=batch_dims)
             flow.losses.add_loss(y)

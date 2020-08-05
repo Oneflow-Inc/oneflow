@@ -45,9 +45,9 @@ def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     if mirrored:
-        func_config.default_distribute_strategy(flow.scope.mirrored_view())
+        func_config.default_logical_view(flow.scope.mirrored_view())
     else:
-        func_config.default_distribute_strategy(flow.scope.consistent_view())
+        func_config.default_logical_view(flow.scope.consistent_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -59,6 +59,7 @@ def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(0),
             )
+            x = flow.cast_to_current_logical_view(x)
             x = x + x_blob
             y = flow.gather_nd(x, i_blob)
             flow.losses.add_loss(y)
@@ -90,7 +91,7 @@ def _of_dynamic_params_gather_nd(params, indices, static_params_shape, compare_f
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.train.primary_lr(1e-3)
     func_config.train.model_update_conf(dict(naive_conf={}))
 
@@ -106,6 +107,7 @@ def _of_dynamic_params_gather_nd(params, indices, static_params_shape, compare_f
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(1),
             )
+            one_var = flow.cast_to_current_logical_view(one_var)
             params_var = params_def * one_var
             y = flow.gather_nd(params_var, indices_def)
             flow.losses.add_loss(y)
@@ -194,7 +196,7 @@ def _of_gather_nd_dynamic_indices(params, indices, indices_static_shape, device_
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(func_config)
     def gather_nd_fn(
