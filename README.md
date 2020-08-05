@@ -96,6 +96,8 @@
       sudo yum -y install openblas-devel
       ```
 
+    - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`. You might also need to install `zlib1g-dev` and `libjpeg-dev` if it is not shipped with your Linux distro.
+
 2. #### Clone Source Code
 
     Clone source code and submodules (faster, recommended)
