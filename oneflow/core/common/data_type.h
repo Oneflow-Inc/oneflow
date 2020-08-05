@@ -216,6 +216,7 @@ struct DevDType<DeviceType::kGPU, float16> {
 
 bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
+bool IsPODDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
 

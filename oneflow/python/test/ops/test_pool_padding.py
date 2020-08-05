@@ -201,6 +201,7 @@ def test_pool(_):
                 initializer=flow.constant_initializer(0),
                 trainable=True,
             )
+            v = flow.cast_to_current_logical_view(v)
             flow.watch_diff(v, assert_grad)
             x += v
             with flow.scope.placement(device_type, "0:0"):
