@@ -87,6 +87,7 @@ class ParallelDesc final {
   HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
   int64_t device_num_of_each_machine_;
+  // There is a one-to-one map between parallel_id and (machine_id, device_id) 
   HashMap<int64_t, int64_t> parallel_id2machine_id_;
   HashMap<int64_t, int64_t> parallel_id2device_id_;
   HashMap<int64_t, HashMap<int64_t, int64_t>> machine_id2device_id2parallel_id_;
