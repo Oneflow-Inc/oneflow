@@ -110,7 +110,7 @@ jobs:
 
   build_and_test_cpu:
 
-    runs-on: [self-hosted, linux, cpu]
+    runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
     - uses: actions/checkout@v2
