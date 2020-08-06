@@ -32,7 +32,7 @@ def ccrelu(x, name):
     )
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.num_nodes_required(2)
 def test_multi_node_comm_net(test_case):
     func_config = flow.FunctionConfig()
