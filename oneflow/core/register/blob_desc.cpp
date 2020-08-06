@@ -21,7 +21,6 @@ namespace oneflow {
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc) {
-  // TODO(niuchong) : remove PackedBlob
   int64_t body_byte_size = 0;
   StructPodDesc opaque_header_pod_desc;
   std::unique_ptr<BlobDesc> ret;
@@ -31,7 +30,6 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
       break;
     }
     RtBlobDesc rt_blob_desc(*(pair.second));
-    // CHECK(!rt_blob_desc.is_dynamic());
     CHECK(!rt_blob_desc.is_body_disabled());
     body_byte_size += rt_blob_desc.AlignedByteSizeOfBlobBody();
     *opaque_header_pod_desc.MutStructField(NewFieldId(pair.first)) = rt_blob_desc.header_pod_desc();
@@ -57,11 +55,6 @@ BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
 BlobDesc::BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
 
 BlobDesc::BlobDesc(const BlobDesc& other) {
-  // *body_.mut_shape() = other.body_.shape();
-  // body_.set_data_type(other.body_.data_type());
-  // header_ = other.header_;
-  // is_tensor_list_ = other.is_tensor_list_;
-  // is_body_disabled_ = other.is_body_disabled_;
   BlobDescProto proto;
   other.ToProto(&proto);
   InitFromProto(proto);
@@ -124,7 +117,6 @@ void BlobDesc::CopyFrom(const BlobDesc& other) {
   this->InitFromProto(proto);
 }
 
-// TODO(niuchong) : remove is_body_disabled from blob into register
 void BlobDesc::CopyMetaFrom(const BlobDesc& other) {
   bool tmp = is_body_disabled_;
   CopyFrom(other);
