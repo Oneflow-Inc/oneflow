@@ -566,6 +566,24 @@ def batch_normalization(
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
 
+    if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
+        nd_params_shape = [1] * len(x.shape)
+        (mean_dim,) = mean.shape
+        nd_params_shape[axis] = mean_dim
+        mean = flow.reshape(mean, nd_params_shape)
+        variance = flow.reshape(variance, nd_params_shape)
+        scale = flow.reshape(scale, nd_params_shape)
+        offset = flow.reshape(offset, nd_params_shape)
+
+        std_inv = flow.math.rsqrt(variance + variance_epsilon)
+        normalized = (x - mean) * std_inv
+
+        gamma = scale
+        beta = offset
+
+        affined = gamma * normalized + beta
+        return affined
+
     builder = (
         flow.user_op_builder(name)
         .Op("normalization")
