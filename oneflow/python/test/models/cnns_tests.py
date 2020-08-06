@@ -55,6 +55,8 @@ class TestNetMixin:
         spec = net_modudle.DLNetSpec(FLAGS.enable_auto_mixed_precision)
         spec.num_nodes = num_node
         spec.gpu_num_per_node = num_gpu_per_node
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            spec.iter_num = 3
         net_modudle.main(spec)
         return
         if num_node > 1:
