@@ -19,6 +19,7 @@ import numpy as np
 import oneflow as flow
 from test_util import GenArgDict
 import oneflow.typing as oft
+import os
 
 flow_to_np_dtype_dict = {
     flow.int32: np.int32,
@@ -39,7 +40,8 @@ def _random_input(shape, dtype):
 
 def _of_assign_and_relu(value, dtype, device_type):
     flow.clear_default_session()
-    flow.config.gpu_device_num(1)
+    if os.getenv("ONEFLOW_TEST_CPU_ONLY") is None:
+        flow.config.gpu_device_num(1)
     flow.config.cpu_device_num(1)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(dtype)
