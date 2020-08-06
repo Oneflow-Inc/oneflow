@@ -92,20 +92,20 @@ class MathBinaryElementwiseYGradCpuKernel final : public user_op::OpKernel {
       .SetCreateFn<                                                                             \
           MathBinaryElementwiseCpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor), \
                                          OF_PP_PAIR_FIRST(data_type_pair)>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));  \
                                                                                                 \
   REGISTER_USER_KERNEL((std::string("") + OF_PP_PAIR_FIRST(math_type_pair) + "_x_grad"))        \
       .SetCreateFn<MathBinaryElementwiseXGradCpuKernel<                                         \
           OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),                                \
           OF_PP_PAIR_FIRST(data_type_pair)>>()                                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));  \
   REGISTER_USER_KERNEL((std::string("") + OF_PP_PAIR_FIRST(math_type_pair) + "_y_grad"))        \
       .SetCreateFn<MathBinaryElementwiseYGradCpuKernel<                                         \
           OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),                                \
           OF_PP_PAIR_FIRST(data_type_pair)>>()                                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,

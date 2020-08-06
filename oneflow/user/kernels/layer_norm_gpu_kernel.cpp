@@ -121,7 +121,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
 #define REGISTER_LAYER_NORM_GPU_KERNEL(dtype, bn_param_dtype)                         \
   REGISTER_USER_KERNEL("layer_norm")                                                  \
       .SetCreateFn<LayerNormGpuKernel<dtype, bn_param_dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                 \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                    \
         user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);       \
@@ -174,7 +174,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
 #define REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(dtype, bn_param_dtype)                     \
   REGISTER_USER_KERNEL("layer_norm_grad")                                              \
       .SetCreateFn<LayerNormGradGpuKernel<dtype, bn_param_dtype>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                     \
         user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);        \
@@ -243,10 +243,10 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(dtype)              \
-  REGISTER_USER_KERNEL("layer_norm_param_grad")                       \
-      .SetCreateFn<LayerNormParamGradGpuKernel<dtype>>()              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(dtype)  \
+  REGISTER_USER_KERNEL("layer_norm_param_grad")           \
+      .SetCreateFn<LayerNormParamGradGpuKernel<dtype>>()  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)

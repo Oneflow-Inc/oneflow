@@ -93,7 +93,7 @@ class GatherKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("gather")                                                             \
       .SetCreateFn<                                                                          \
           GatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
                        & (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(in_type))       \
                        & (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_type)));
 

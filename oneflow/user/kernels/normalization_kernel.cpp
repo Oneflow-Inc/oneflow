@@ -185,7 +185,7 @@ class NormalizationInferenceKernel final : public user_op::OpKernel {
 #define REGISTER_BN_INFERENCE_KERNEL(dtype)                                          \
   REGISTER_USER_KERNEL("normalization")                                              \
       .SetCreateFn<NormalizationInferenceKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                            \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobAttr<bool>("training") == false));
 
@@ -353,7 +353,7 @@ class NormalizationGradUserKernel final : public user_op::OpKernel {
 #define REGISTER_BN_TRAIN_KERNEL(dtype)                                              \
   REGISTER_USER_KERNEL("normalization")                                              \
       .SetCreateFn<NormalizationTrainKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                            \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobAttr<bool>("training") == true))               \
       .SetInferTmpSizeFn(InferTrainTmpSize);
@@ -361,7 +361,7 @@ class NormalizationGradUserKernel final : public user_op::OpKernel {
 #define REGISTER_BN_GRAD_KERNEL(dtype)                                                 \
   REGISTER_USER_KERNEL("normalization_grad")                                           \
       .SetCreateFn<NormalizationGradUserKernel<dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferGradTmpSize);
 

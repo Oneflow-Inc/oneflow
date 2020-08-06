@@ -61,8 +61,8 @@ class UserKernelBaseContext {
     };
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_);
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
-    device_type_ =
-        CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag()));
+    device_tag_ = kernel_conf.op_attribute().op_conf().device_tag();
+    device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
     parallel_ctx_ = kernel_conf.user_conf().parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
       arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::TensorDesc(pair.second));
@@ -71,6 +71,7 @@ class UserKernelBaseContext {
   ~UserKernelBaseContext() = default;
 
   DeviceType device_type() const { return device_type_; }
+  const std::string& device_tag() const { return device_tag_; }
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
   const JobDesc& job_desc() const { return job_desc_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -87,6 +88,7 @@ class UserKernelBaseContext {
   ArgVec inputs_;
   ArgVec outputs_;
   DeviceType device_type_;
+  std::string device_tag_;
   ParallelContext parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
   const JobDesc& job_desc_;
@@ -378,6 +380,7 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   ~UserKernelRegContext() = default;
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
+  const std::string& device_tag() const override { return base_ctx_.device_tag(); }
   const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {

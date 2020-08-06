@@ -41,7 +41,7 @@ class WhereKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("where")                                                                  \
       .SetCreateFn<WhereKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                      \
                                OF_PP_PAIR_FIRST(ctype_pair)>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                               \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                \
                        & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 

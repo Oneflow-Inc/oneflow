@@ -85,7 +85,7 @@ class ResizeToStaticShapeKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("image_resize")
     .SetCreateFn<ResizeToStaticShapeKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("out", 0) == DataType::kUInt8));
 
@@ -137,7 +137,7 @@ class ResizeShorterToTensorBufferKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("image_resize")
     .SetCreateFn<ResizeShorterToTensorBufferKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
@@ -314,7 +314,7 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
 
 REGISTER_USER_KERNEL("crop_mirror_normalize_from_uint8")
     .SetCreateFn<CropMirrorNormalizeFromStaticShapeToFloatKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kUInt8)
                      & (user_op::HobDataType("out", 0) == DataType::kFloat));
 
@@ -404,7 +404,7 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
 
 REGISTER_USER_KERNEL("crop_mirror_normalize_from_tensorbuffer")
     .SetCreateFn<CropMirrorNormalizeFromTensorBufferToFloatKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("out", 0) == DataType::kFloat));
 
@@ -451,7 +451,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("coin_flip")
     .SetCreateFn<CoinFlipKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("out", 0) == DataType::kInt8));
 
 namespace {

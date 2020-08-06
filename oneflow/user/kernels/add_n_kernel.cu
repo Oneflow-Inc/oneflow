@@ -116,7 +116,7 @@ class GpuAddNKernel : public user_op::OpKernel {
 #define REGISTER_GPU_ADDN_KERNEL(cpp_type, dtype)                                               \
   REGISTER_USER_KERNEL("add_n")                                                                 \
       .SetCreateFn<GpuAddNKernel<cpp_type>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
                        & (user_op::HobDataType("in", 0) == dtype))                              \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -189,7 +189,7 @@ class GpuAddNHalfKernel : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("add_n")
     .SetCreateFn<GpuAddNHalfKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
                      & (user_op::HobDataType("in", 0) == DataType::kFloat16))
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {

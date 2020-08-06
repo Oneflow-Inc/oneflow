@@ -40,13 +40,6 @@ hob::BoolFunctorPtr<KernelRegContext> HobFalse() {
   return krbf_ptr;
 }
 
-hob::HobContextGetter<KernelRegContext, DeviceType> HobDeviceType() {
-  std::ostringstream string_stream;
-  string_stream << "device_type";
-  return hob::HobContextGetter<KernelRegContext, DeviceType>(
-      string_stream.str(), [](const KernelRegContext& ctx) { return ctx.device_type(); });
-}
-
 hob::HobContextGetter<KernelRegContext, DataType> HobDataType(const std::string& tensor_name,
                                                               int tensor_idx) {
   std::ostringstream string_stream;
@@ -56,6 +49,14 @@ hob::HobContextGetter<KernelRegContext, DataType> HobDataType(const std::string&
         const user_op::TensorDesc* desc = ctx.TensorDesc4ArgNameAndIndex(tensor_name, tensor_idx);
         return desc->data_type();
       });
+}
+
+HobStringContextGetter<KernelRegContext> HobDeviceTag() {
+  std::ostringstream string_stream;
+  string_stream << "device_tag";
+  return HobStringContextGetter<KernelRegContext>(
+      string_stream.str(),
+      [](const KernelRegContext& ctx) -> std::string { return ctx.device_tag(); });
 }
 
 }  // namespace user_op
