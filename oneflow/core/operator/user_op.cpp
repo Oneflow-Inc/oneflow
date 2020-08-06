@@ -480,8 +480,10 @@ Symbol<OperatorConf> UserOp::GetOpConfWithoutOpNameAndLbn() const {
 void UserOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
-    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
-  const UserOpCtx* user_op_ctx = static_cast<const UserOpCtx*>(op_ctx);
+    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
+    const ParallelDesc* parallel_desc) const {
+  const auto* user_op_ctx = dynamic_cast<const UserOpCtx*>(op_ctx);
+  CHECK_NOTNULL(user_op_ctx);
   auto user_conf = kernel_conf->mutable_user_conf();
   *(user_conf->mutable_parallel_ctx()) = *parallel_ctx;
   *(user_conf->mutable_sbp_sig()) = user_op_ctx->sbp_sig;
@@ -499,6 +501,8 @@ void UserOp::VirtualGenKernelConf(
   BLOB_DESCS_TO_PROTO(tmp, false)
 
 #undef BLOB_DESCS_TO_PROTO
+  CHECK_NOTNULL(parallel_desc);
+  *user_conf->mutable_parallel_conf() = parallel_desc->parallel_conf();
 }
 
 REGISTER_OP(OperatorConf::kUserConf, UserOp);
