@@ -365,8 +365,6 @@ if(BUILD_TESTING)
         target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
       endforeach()
     endif()
-  else()
-    message(ERROR "BUILD_TESTING=ON has no effect when BUILD_CUDA=OFF")
   endif()
 endif()
 
