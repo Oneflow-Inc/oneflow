@@ -70,8 +70,8 @@ OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, int64_t* nd_ind
 
 template<DeviceType device_type, typename T>
 struct SliceKernelUtil {
-  static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entired, T* sliced);
-  static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entired);
+  static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced);
+  static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire);
 };
 
 #define INSTANTIATE_SLICE_KERNEL_UTIL(device, dtype) template struct SliceKernelUtil<device, dtype>;
