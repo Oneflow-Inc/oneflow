@@ -21,7 +21,6 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.symbol_storage as symbol_storage
-import oneflow.python.framework.device_util as device_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.op_arg_util as op_arg_util
@@ -394,7 +393,7 @@ def _GenModelLoadOpConfAndRetLbi(var_op_conf, path_lbi):
 def _GenModelIOPathInputOpConfAndRetLbi():
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = "model_io_path_input"
-    op_conf.device_type = device_util.DeviceType4DeviceTag("cpu")
+    op_conf.device_tag = "cpu"
     op_conf.input_conf.out = "out"
 
     blob_conf = op_conf_util.InterfaceBlobConf()
@@ -413,7 +412,7 @@ def _GenModelIOPathInputOpConfAndRetLbi():
 def _GenModelSaveOpConf(var_blobs, path_lbi):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = "model_save"
-    op_conf.device_type = device_util.DeviceType4DeviceTag("cpu")
+    op_conf.device_tag = "cpu"
     op_conf.model_save_conf.path = "{}/{}".format(path_lbi.op_name, path_lbi.blob_name)
     for blob in var_blobs:
         getattr(op_conf.model_save_conf, "in").append(blob.logical_blob_name)
