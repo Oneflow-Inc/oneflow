@@ -15,6 +15,8 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import unittest
+import os
 
 
 def my_test_source(name):
@@ -28,6 +30,7 @@ def my_test_source(name):
     )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
 def test_test_dynamic_source(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)

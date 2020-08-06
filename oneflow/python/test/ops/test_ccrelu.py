@@ -16,6 +16,8 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import unittest
+import os
 
 
 def ccrelu(x, name):
@@ -54,18 +56,21 @@ def mirrored_tensor_def_test(test_case, func_config):
     test_case.assertTrue(np.array_equal(y, np.maximum(x, 0)))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
 def test_ccrelu(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.consistent_view())
     fixed_tensor_def_test(test_case, func_config)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
 def test_mirror_ccrelu(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
     mirrored_tensor_def_test(test_case, func_config)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
 def test_1n2c_mirror_dynamic_ccrelu(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()

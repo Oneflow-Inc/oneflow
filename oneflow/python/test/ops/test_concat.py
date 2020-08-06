@@ -20,6 +20,8 @@ import tensorflow as tf
 import test_global_storage
 import random
 import math
+import unittest
+import os
 
 from test_util import GenArgList, type_name_to_flow_type
 from collections import OrderedDict
@@ -242,6 +244,7 @@ def _test_dynamic_concat(test_case, shape, axis, device_type, verbose=False):
     test_case.assertTrue(np.array_equal(of_output, output))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
 def test_dynamic_concat_case_0(test_case):
     _test_dynamic_concat(test_case, (64, 4), 0, "gpu")
 
@@ -250,6 +253,7 @@ def test_dynamic_concat_case_1(test_case):
     _test_dynamic_concat(test_case, (2, 10), 1, "cpu")
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
 def test_dynamic_concat_case_2(test_case):
     _test_dynamic_concat(test_case, (4, 7, 128), 2, "gpu")
 

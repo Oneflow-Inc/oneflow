@@ -16,6 +16,8 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import unittest
+import os
 
 
 def _gen_random_input_list(input_static_shape):
@@ -52,6 +54,7 @@ def _of_tensor_list_split(input_tensor_list, input_static_shape, device_tag="gpu
     return [output.numpy_list()[0] for output in outputs]
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
 def test_tensor_list_input_output(test_case, verbose=False):
     input_shape = [2, 5, 4]
     input_list = _gen_random_input_list(input_shape)

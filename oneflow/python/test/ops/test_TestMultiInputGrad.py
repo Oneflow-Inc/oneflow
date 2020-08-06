@@ -36,7 +36,7 @@ def TestMultiInput(x1, x2):
     )
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
 def test_TestMultiInput_grad_mirrored_inplace(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)

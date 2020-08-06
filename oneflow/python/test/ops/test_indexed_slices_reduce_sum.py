@@ -16,6 +16,8 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import unittest
+import os
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -59,6 +61,7 @@ def _run_test(test_case, indices, values, indices_dtype, values_dtype, device):
     )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
 def test_indexed_slices_reduce_sum_gpu(test_case):
     indices = np.random.randint(0, 32, 1024).astype(np.int32)
     values = np.random.rand(1024, 8).astype(np.float32)
