@@ -67,7 +67,7 @@ def api_gpu_device_num(val: int) -> None:
 
     if with_cuda == False:
         print(
-            "WARNING: for CPU-only OneFlow, oneflow.config.gpu_device_num is equivalent to oneflow.config.cpu_device_num"
+            "INFO: for CPU-only OneFlow, oneflow.config.gpu_device_num is equivalent to oneflow.config.cpu_device_num"
         )
         return enable_if.unique([cpu_device_num, do_nothing])(val)
     else:
