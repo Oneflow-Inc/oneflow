@@ -41,6 +41,8 @@ class TestNetMixin:
         self.tf_loss_dir = ""
         self.of_loss_dir = ""
         self.num_iter = 10
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            self.num_iter = 3
         self.set_params()
         oneflow.clear_default_session()
 
