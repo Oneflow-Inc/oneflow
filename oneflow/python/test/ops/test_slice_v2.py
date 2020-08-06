@@ -16,6 +16,8 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import unittest
+import os
 
 
 def _run_slice(input, index_args, dynamic=False, dtype=flow.float, input_shape=None):
@@ -60,6 +62,7 @@ def _check(test_case, ref, out):
         test_case.assertTrue(np.allclose(_ref, _out))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_slice_into_two_parts(test_case):
     input = np.random.rand(2, 5, 4).astype(np.float32)
     results = [input[:, 0:2, :], input[:, 2:, :]]
@@ -71,6 +74,7 @@ def test_slice_into_two_parts(test_case):
     _check(test_case, results, outputs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_slice_at_first_dim(test_case):
     input = np.random.rand(4, 5, 4).astype(np.float32)
     results = [input[2:None, :, :]]
@@ -79,6 +83,7 @@ def test_slice_at_first_dim(test_case):
     _check(test_case, results, outputs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_slice_at_two_dims(test_case):
     input = np.random.rand(2, 5, 4).astype(np.float32)
     results = [input[:, 0:2, 2:]]
@@ -87,6 +92,7 @@ def test_slice_at_two_dims(test_case):
     _check(test_case, results, outputs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_slice_with_collapse_dims(test_case):
     input = np.random.rand(2, 5, 4, 4, 3).astype(np.float32)
     results = [input[:, 0:2, :, :, 1:None]]
@@ -103,6 +109,7 @@ def test_slice_with_collapse_dims(test_case):
     _check(test_case, results, outputs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_dynamic_slice(test_case):
     input = np.random.rand(2, 4, 4).astype(np.float32)
     results = [input[:, 1:, :]]
@@ -111,6 +118,7 @@ def test_dynamic_slice(test_case):
     _check(test_case, results, outputs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_dynamic_slice_case2(test_case):
     input = np.random.rand(2, 6, 3).astype(np.float32)
     results = [input[:, 1:, :]]
@@ -119,6 +127,7 @@ def test_dynamic_slice_case2(test_case):
     _check(test_case, results, outputs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_dynamic_slice_at_two_dims(test_case):
     input = np.random.rand(2, 3, 2, 2).astype(np.float32)
     results = [input[:, 2:, :, 1:]]
@@ -127,6 +136,7 @@ def test_dynamic_slice_at_two_dims(test_case):
     _check(test_case, results, outputs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_dynamic_slice_at_first_dim_and_anthor_dim(test_case):
     input = np.random.rand(3, 6, 3, 3).astype(np.float32)
     results = [input[1:, :, :, 1:]]
@@ -135,6 +145,7 @@ def test_dynamic_slice_at_first_dim_and_anthor_dim(test_case):
     _check(test_case, results, outputs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_slice_with_stride2(test_case):
     input = np.random.rand(2, 5, 4).astype(np.float32)
     results = [input[:, 1::2, :]]
@@ -143,6 +154,7 @@ def test_slice_with_stride2(test_case):
     _check(test_case, results, outputs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_slice_at_two_dim_with_stride_more_than_one(test_case):
     input = np.random.rand(2, 5, 4).astype(np.float32)
     results = [input[:, 1::3, ::2]]
@@ -151,6 +163,7 @@ def test_slice_at_two_dim_with_stride_more_than_one(test_case):
     _check(test_case, results, outputs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_slice_with_neg_index(test_case):
     input = np.random.rand(2, 5, 4).astype(np.float32)
     results = [input[:, 2:-2, :]]
@@ -159,6 +172,7 @@ def test_slice_with_neg_index(test_case):
     _check(test_case, results, outputs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_slice_with_neg_stride(test_case):
     input = np.random.rand(2, 5, 4).astype(np.float32)
     results = [input[:, 3:-4:-1, :]]
@@ -167,6 +181,7 @@ def test_slice_with_neg_stride(test_case):
     _check(test_case, results, outputs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_slice_with_neg_stride2(test_case):
     input = np.random.rand(2, 5, 4).astype(np.float32)
     results = [input[:, -1:1:-2, :]]
@@ -175,6 +190,7 @@ def test_slice_with_neg_stride2(test_case):
     _check(test_case, results, outputs)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_slice_grad(test_case):
     input = np.random.rand(2, 5, 4).astype(np.float32)
     ref = np.zeros(input.shape, dtype=np.float32)
