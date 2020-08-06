@@ -16,6 +16,8 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import unittest
+import os
 
 
 def TestReshape(x, shape, name):
@@ -58,12 +60,14 @@ def mirrored_tensor_def_test(test_case, func_config):
     test_case.assertTrue(np.array_equal(x.reshape(5, 4), y))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_fixed_TestReshape(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.consistent_view())
     fixed_tensor_def_test(test_case, func_config)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_mirrored_TestReshape(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())

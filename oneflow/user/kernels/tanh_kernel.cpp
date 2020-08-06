@@ -49,9 +49,11 @@ class TanHKernel final : public user_op::OpKernel {
 
 REGISTER_TANH_KERNEL(DeviceType::kCPU, float)
 REGISTER_TANH_KERNEL(DeviceType::kCPU, double)
+#ifdef WITH_CUDA
 REGISTER_TANH_KERNEL(DeviceType::kGPU, float)
 REGISTER_TANH_KERNEL(DeviceType::kGPU, double)
 REGISTER_TANH_KERNEL(DeviceType::kGPU, float16)
+#endif
 
 template<DeviceType device_type, typename T>
 class TanHGradKernel final : public user_op::OpKernel {
@@ -84,9 +86,11 @@ class TanHGradKernel final : public user_op::OpKernel {
 
 REGISTER_TANH_GRAD_KERNEL(DeviceType::kCPU, float)
 REGISTER_TANH_GRAD_KERNEL(DeviceType::kCPU, double)
+#ifdef WITH_CUDA
 REGISTER_TANH_GRAD_KERNEL(DeviceType::kGPU, float)
 REGISTER_TANH_GRAD_KERNEL(DeviceType::kGPU, double)
 REGISTER_TANH_GRAD_KERNEL(DeviceType::kGPU, float16)
+#endif
 
 }  // namespace
 

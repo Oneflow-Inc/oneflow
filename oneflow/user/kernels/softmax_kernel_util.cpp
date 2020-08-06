@@ -66,9 +66,11 @@ void SoftmaxKernelUtil<device_type, T>::ComputeDiff(DeviceCtx* ctx, const int64_
 
 #define INSTANTIATE_SOFTMAX_KERNEL_UTIL(device_type, data_type) \
   template struct SoftmaxKernelUtil<device_type, data_type>;
+#ifdef WITH_CUDA
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(DeviceType::kGPU, float16)
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(DeviceType::kGPU, float)
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(DeviceType::kGPU, double)
+#endif
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(DeviceType::kCPU, float)
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(DeviceType::kCPU, double)
 #undef INSTANTIATE_SOFTMAX_KERNEL_UTIL

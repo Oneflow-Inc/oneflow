@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/vm/cuda_instruction_status_querier.h"
 #include "oneflow/core/device/device_context.h"
 
@@ -33,3 +35,5 @@ void CudaInstrStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
 
 }  // namespace vm
 }  // namespace oneflow
+
+#endif

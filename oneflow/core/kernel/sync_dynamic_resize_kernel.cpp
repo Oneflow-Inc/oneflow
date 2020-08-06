@@ -25,6 +25,8 @@ limitations under the License.
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 namespace {
 
 class CudaHostMem {
@@ -106,6 +108,8 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
 REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int8_t);
 REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int32_t);
 REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int64_t);
+
+#endif  // WITH_CUDA
 
 template<typename SizeType>
 class SyncDynamicResizeCPUKernel final : public KernelIf<DeviceType::kCPU> {
