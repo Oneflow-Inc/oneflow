@@ -20,7 +20,7 @@ import numpy as np
 import oneflow as flow
 import test_global_storage
 from test_util import GenArgList
-
+import unittest
 
 def TestMultiInput(x1, x2):
     return (
@@ -34,7 +34,7 @@ def TestMultiInput(x1, x2):
         .RemoteBlobList()[0]
     )
 
-
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_TestMultiInput_grad_mirrored_inplace(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
