@@ -89,7 +89,7 @@ def GetNormalModePlacementScope(device_tag, machine_device_ids):
 
 
 def GetDefaultMachineDeviceIds(resource):
-    if resource.HasField("gpu_device_num"):
+    if resource.HasField("gpu_device_num") and resource.gpu_device_num > 0:
         return "gpu", placement_ctx.GetGpuMachineDeviceIds(resource)
     elif resource.HasField("cpu_device_num"):
         return "cpu", placement_ctx.GetCpuMachineDeviceIds(resource)
