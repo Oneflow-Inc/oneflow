@@ -85,6 +85,10 @@ class TestNetMixin:
         return of_loss[0 : self.num_iter]
 
     def print_and_check_result(self, result_name):
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            if self.net == "resnet50":
+                print("WARNING: skipping check for resnet50 cpu")
+                return
         loss_dict = {}
         loss_dict["tensorflow"] = self.load_tf_loss()
         loss_dict["oneflow"] = self.load_of_loss(result_name)
