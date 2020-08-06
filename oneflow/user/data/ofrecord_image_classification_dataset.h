@@ -34,6 +34,54 @@ namespace oneflow {
 
 namespace data {
 
+namespace {
+
+void DecodeImageFromOFRecord(const OFRecord& record, const std::string& feature_name,
+                             const std::string& color_space, TensorBuffer* out) {
+  auto image_feature_it = record.feature().find(feature_name);
+  CHECK(image_feature_it != record.feature().end());
+  const Feature& image_feature = image_feature_it->second;
+  CHECK(image_feature.has_bytes_list());
+  CHECK(image_feature.bytes_list().value_size() == 1);
+  const std::string& src_data = image_feature.bytes_list().value(0);
+  cv::Mat image = cv::imdecode(cv::Mat(1, src_data.size(), CV_8UC1, (void*)(src_data.data())),
+                               cv::IMREAD_COLOR);
+  int W = image.cols;
+  int H = image.rows;
+
+  // convert color space
+  if (ImageUtil::IsColor(color_space) && color_space != "BGR") {
+    ImageUtil::ConvertColor("BGR", image, color_space, image);
+  }
+
+  CHECK(image.isContinuous());
+  const int c = ImageUtil::IsColor(color_space) ? 3 : 1;
+  CHECK_EQ(c, image.channels());
+  Shape image_shape({H, W, c});
+  out->Resize(image_shape, DataType::kUInt8);
+  CHECK_EQ(image_shape.elem_cnt(), out->nbytes());
+  CHECK_EQ(image_shape.elem_cnt(), image.total() * image.elemSize());
+  memcpy(out->mut_data<uint8_t>(), image.ptr(), image_shape.elem_cnt());
+}
+
+void DecodeLabelFromFromOFRecord(const OFRecord& record, const std::string& feature_name,
+                                 TensorBuffer* out) {
+  auto label_feature_it = record.feature().find(feature_name);
+  CHECK(label_feature_it != record.feature().end());
+  const Feature& label_feature = label_feature_it->second;
+  out->Resize(Shape({1}), DataType::kInt32);
+  if (label_feature.has_int32_list()) {
+    CHECK_EQ(label_feature.int32_list().value_size(), 1);
+    *out->mut_data<int32_t>() = label_feature.int32_list().value(0);
+  } else if (label_feature.has_int64_list()) {
+    CHECK_EQ(label_feature.int64_list().value_size(), 1);
+    *out->mut_data<int32_t>() = label_feature.int64_list().value(0);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+}  // namespace
 struct ImageClassificationDataInstance {
   std::shared_ptr<TensorBuffer> label;
   std::shared_ptr<TensorBuffer> image;
@@ -67,55 +115,19 @@ class OFRecordImageClassificationDataset final : public Dataset<ImageClassificat
         auto& in_buffer = decode_in_buffers_.at(i);
         auto& out_buffer = decode_out_buffers_.at(i);
         while (true) {
-          OFRecordDataset::LoadTargetPtr tensor_buffer;
-          auto receive_status = in_buffer->Receive(&tensor_buffer);
+          OFRecordDataset::LoadTargetPtr serialized_record;
+          auto receive_status = in_buffer->Receive(&serialized_record);
           if (receive_status == kBufferStatusErrorClosed) { break; }
           CHECK(receive_status == kBufferStatusSuccess);
           OFRecord record;
-          CHECK(record.ParseFromArray(tensor_buffer->data<char>(),
-                                      tensor_buffer->shape().elem_cnt()));
+          CHECK(record.ParseFromArray(serialized_record->data<char>(),
+                                      serialized_record->shape().elem_cnt()));
           std::shared_ptr<ImageClassificationDataInstance> instance(
               new ImageClassificationDataInstance());
           instance->image.reset(new TensorBuffer());
-          auto image_feature_it = record.feature().find(image_feature_name);
-          CHECK(image_feature_it != record.feature().end());
-          const Feature& image_feature = image_feature_it->second;
-          CHECK(image_feature.has_bytes_list());
-          CHECK(image_feature.bytes_list().value_size() == 1);
-          const std::string& src_data = image_feature.bytes_list().value(0);
-          cv::Mat image = cv::imdecode(
-              cv::Mat(1, src_data.size(), CV_8UC1, (void*)(src_data.data())), cv::IMREAD_COLOR);
-          int W = image.cols;
-          int H = image.rows;
-
-          // convert color space
-          if (ImageUtil::IsColor(color_space) && color_space != "BGR") {
-            ImageUtil::ConvertColor("BGR", image, color_space, image);
-          }
-
-          CHECK(image.isContinuous());
-          const int c = ImageUtil::IsColor(color_space) ? 3 : 1;
-          CHECK_EQ(c, image.channels());
-          Shape image_shape({H, W, c});
-          instance->image->Resize(image_shape, DataType::kUInt8);
-          CHECK_EQ(image_shape.elem_cnt(), instance->image->nbytes());
-          CHECK_EQ(image_shape.elem_cnt(), image.total() * image.elemSize());
-          memcpy(instance->image->mut_data<uint8_t>(), image.ptr(), image_shape.elem_cnt());
-
-          auto label_feature_it = record.feature().find(label_feature_name);
-          CHECK(label_feature_it != record.feature().end());
-          const Feature& label_feature = label_feature_it->second;
+          DecodeImageFromOFRecord(record, image_feature_name, color_space, instance->image.get());
           instance->label.reset(new TensorBuffer());
-          instance->label->Resize(Shape({1}), DataType::kInt32);
-          if (label_feature.has_int32_list()) {
-            CHECK_EQ(label_feature.int32_list().value_size(), 1);
-            *instance->label->mut_data<int32_t>() = label_feature.int32_list().value(0);
-          } else if (label_feature.has_int64_list()) {
-            CHECK_EQ(label_feature.int64_list().value_size(), 1);
-            *instance->label->mut_data<int32_t>() = label_feature.int64_list().value(0);
-          } else {
-            UNIMPLEMENTED();
-          }
+          DecodeLabelFromFromOFRecord(record, label_feature_name, instance->label.get());
           auto send_status = out_buffer->Send(instance);
           if (send_status == kBufferStatusErrorClosed) { break; }
           CHECK(send_status == kBufferStatusSuccess);
