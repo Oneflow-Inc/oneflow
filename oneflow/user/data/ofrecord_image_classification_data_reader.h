@@ -33,15 +33,15 @@ class OFRecordImageClassificationDataReader final
  public:
   explicit OFRecordImageClassificationDataReader(user_op::KernelInitContext* ctx)
       : DataReader<ImageClassificationDataInstance>(ctx) {
-    loader_.reset(new OFRecordImageClassificationDataset(ctx));
-    parser_.reset(new OFRecordImageClassificationParser());
+    std::unique_ptr<Dataset<TensorBuffer>> base(new OFRecordDataset(ctx));
     if (ctx->Attr<bool>("random_shuffle")) {
-      loader_.reset(
-          new RandomShuffleDataset<ImageClassificationDataInstance>(ctx, std::move(loader_)));
+      base.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(base)));
     }
+    loader_.reset(new OFRecordImageClassificationDataset(ctx, std::move(base)));
     const int64_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
     loader_.reset(
         new BatchDataset<ImageClassificationDataInstance>(batch_size, std::move(loader_)));
+    parser_.reset(new OFRecordImageClassificationParser());
     StartLoadThread();
   }
   ~OFRecordImageClassificationDataReader() override = default;

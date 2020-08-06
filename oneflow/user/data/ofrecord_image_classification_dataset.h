@@ -39,6 +39,10 @@ struct ImageClassificationDataInstance {
   std::shared_ptr<TensorBuffer> image;
 };
 
+using BaseDataset = Dataset<TensorBuffer>;
+using BaseLoadTargetPtr = BaseDataset::LoadTargetPtr;
+using BaseLoadTargetPtrList = BaseDataset::LoadTargetPtrList;
+
 namespace {
 
 void DecodeImageFromOFRecord(const OFRecord& record, const std::string& feature_name,
@@ -86,17 +90,16 @@ void DecodeLabelFromFromOFRecord(const OFRecord& record, const std::string& feat
   }
 }
 
-void LoadWorker(
-    OFRecordDataset* underlying,
-    std::vector<std::unique_ptr<Buffer<OFRecordDataset::LoadTargetPtr>>>* decode_in_buffers) {
+void LoadWorker(BaseDataset* record_dataset,
+                std::vector<std::unique_ptr<Buffer<BaseLoadTargetPtr>>>* decode_in_buffers) {
   int64_t thread_idx = 0;
   bool shutdown = false;
   while (!shutdown) {
-    OFRecordDataset::LoadTargetPtrList buffers = underlying->Next();
-    for (const auto& buffer : buffers) {
+    BaseLoadTargetPtrList records = record_dataset->Next();
+    for (const auto& record : records) {
       auto& current_in_buffer = decode_in_buffers->at(thread_idx);
       thread_idx = (thread_idx + 1) % decode_in_buffers->size();
-      auto status = current_in_buffer->Send(buffer);
+      auto status = current_in_buffer->Send(record);
       if (status == kBufferStatusErrorClosed) {
         shutdown = true;
         break;
@@ -107,10 +110,10 @@ void LoadWorker(
 }
 
 void DecodeWorker(const std::string image_feature_name, const std::string label_feature_name,
-                  const std::string color_space, Buffer<OFRecordDataset::LoadTargetPtr>* in_buffer,
+                  const std::string color_space, Buffer<BaseLoadTargetPtr>* in_buffer,
                   Buffer<std::shared_ptr<ImageClassificationDataInstance>>* out_buffer) {
   while (true) {
-    OFRecordDataset::LoadTargetPtr serialized_record;
+    BaseLoadTargetPtr serialized_record;
     auto receive_status = in_buffer->Receive(&serialized_record);
     if (receive_status == kBufferStatusErrorClosed) { break; }
     CHECK(receive_status == kBufferStatusSuccess);
@@ -148,8 +151,9 @@ class OFRecordImageClassificationDataset final : public Dataset<ImageClassificat
   using LoadTargetPtr = std::shared_ptr<ImageClassificationDataInstance>;
   using LoadTargetPtrList = std::vector<LoadTargetPtr>;
   OF_DISALLOW_COPY_AND_MOVE(OFRecordImageClassificationDataset);
-  explicit OFRecordImageClassificationDataset(user_op::KernelInitContext* ctx)
-      : out_thread_idx_(0) {
+  OFRecordImageClassificationDataset(user_op::KernelInitContext* ctx,
+                                     std::unique_ptr<BaseDataset>&& base)
+      : base_(std::move(base)), out_thread_idx_(0) {
     const std::string& color_space = ctx->Attr<std::string>("color_space");
     const std::string& image_feature_name = ctx->Attr<std::string>("image_feature_name");
     const std::string& label_feature_name = ctx->Attr<std::string>("label_feature_name");
@@ -158,18 +162,16 @@ class OFRecordImageClassificationDataset final : public Dataset<ImageClassificat
     const auto decode_buffer_size_per_thread = ctx->Attr<int32_t>("decode_buffer_size_per_thread");
     const int32_t num_local_decode_threads = GetNumLocalDecodeThreads(
         num_decode_threads_per_machine, ctx->parallel_desc(), ctx->parallel_ctx());
-    underlying_.reset(new OFRecordDataset(ctx));
     decode_in_buffers_.resize(num_local_decode_threads);
     decode_out_buffers_.resize(num_local_decode_threads);
     for (int64_t i = 0; i < num_local_decode_threads; ++i) {
-      decode_in_buffers_.at(i).reset(
-          new Buffer<OFRecordDataset::LoadTargetPtr>(decode_buffer_size_per_thread));
+      decode_in_buffers_.at(i).reset(new Buffer<BaseLoadTargetPtr>(decode_buffer_size_per_thread));
       decode_out_buffers_.at(i).reset(new Buffer<LoadTargetPtr>(decode_buffer_size_per_thread));
       decode_threads_.emplace_back(
           std::thread(&DecodeWorker, image_feature_name, label_feature_name, color_space,
                       decode_in_buffers_.at(i).get(), decode_out_buffers_.at(i).get()));
     }
-    load_thread_ = std::thread(&LoadWorker, underlying_.get(), &decode_in_buffers_);
+    load_thread_ = std::thread(&LoadWorker, base_.get(), &decode_in_buffers_);
   }
   ~OFRecordImageClassificationDataset() override {
     for (auto& out_buffer : decode_out_buffers_) { out_buffer->Close(); }
@@ -190,10 +192,10 @@ class OFRecordImageClassificationDataset final : public Dataset<ImageClassificat
   }
 
  private:
-  std::unique_ptr<OFRecordDataset> underlying_;
+  std::unique_ptr<BaseDataset> base_;
   std::thread load_thread_;
   std::vector<std::thread> decode_threads_;
-  std::vector<std::unique_ptr<Buffer<OFRecordDataset::LoadTargetPtr>>> decode_in_buffers_;
+  std::vector<std::unique_ptr<Buffer<BaseLoadTargetPtr>>> decode_in_buffers_;
   std::vector<std::unique_ptr<Buffer<LoadTargetPtr>>> decode_out_buffers_;
   std::atomic<size_t> out_thread_idx_;
 };
