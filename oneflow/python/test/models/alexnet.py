@@ -128,6 +128,8 @@ def _data_load_layer(args, data_dir):
         data_dir,
         batch_size=total_batch_size,
         data_part_num=args.data_part_num,
+        image_feature_name="encoded",
+        label_feature_name="class/label",
         color_space="RGB",
         name="decode",
     )
