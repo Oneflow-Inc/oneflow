@@ -29,8 +29,6 @@ for gpu in gpus:
 
 
 def compare_with_tensorflow(device_type, activation_type, shape, data_type):
-    if os.getenv("ONEFLOW_TEST_CPU_ONLY") and device_type == "gpu":
-        return
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     flow.config.enable_debug_mode(True)
@@ -101,5 +99,6 @@ def test_activations(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
-    for act_type in arg_dict["activation_type"]:
-        compare_with_tensorflow("gpu", act_type, (1024, 1024), flow.float16)
+    if os.getenv("ONEFLOW_TEST_CPU_ONLY") is None:
+        for act_type in arg_dict["activation_type"]:
+            compare_with_tensorflow("gpu", act_type, (1024, 1024), flow.float16)
