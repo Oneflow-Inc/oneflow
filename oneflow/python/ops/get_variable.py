@@ -179,7 +179,6 @@ def get_lazy_variable(
         )
         job_var_blob, op_attr = _CreateVariableBlob(op_conf)
         assert isinstance(job_var_blob, remote_blob_util.LazyConsistentBlob)
-        sess.AddVarOpAttr(op_conf.name, op_attr)
         sess.StashVariableBlob4Job(job_name, op_conf.name, job_var_blob)
         if var_blob is not None:
             assert isinstance(var_blob, remote_blob_util.LazyConsistentBlob)

@@ -134,6 +134,10 @@ std::string InferOpConf(const std::string& serialized_op_conf,
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
+bool IsInterfaceOpTypeCase(int64_t op_type_case) {
+  return oneflow::IsClassRegistered<oneflow::IsInterfaceOpConf4OpTypeCase>(op_type_case);
+}
+
 long GetOpParallelSymbolId(const std::string& serialized_op_conf, std::string* error_str) {
   return oneflow::GetOpParallelSymbolId(serialized_op_conf)
       .GetDataAndSerializedErrorProto(error_str, 0LL);

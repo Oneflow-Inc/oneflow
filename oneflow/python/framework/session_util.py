@@ -67,7 +67,7 @@ class Session(object):
         self.job_name2module_name2module_ = {}
         self.existed_module_names_ = set()
         self.var_name2var_blob_ = {}
-        self.var_name2op_attr_ = {}
+        self.interface_op_name2op_attr_ = {}
         self.job_name2name_scope_stack_ = {}
         self.job_name2current_scope_ = {}
         self.eager_global_function_desc_stack_ = []
@@ -310,11 +310,12 @@ class Session(object):
         assert var_name not in self.job_name2var_name2var_blob_[job_name]
         self.job_name2var_name2var_blob_[job_name][var_name] = var_blob
 
-    def AddVarOpAttr(self, var_name, op_attribute):
-        self.var_name2op_attr_[var_name] = op_attribute
+    def AddOpAttribute4InterfaceOpName(self, interface_op_name, op_attribute):
+        print(interface_op_name)
+        self.interface_op_name2op_attr_[interface_op_name] = op_attribute
 
-    def GetOpAttrFromVarName(self, var_name):
-        return self.var_name2op_attr_[var_name]
+    def OpAttribute4InterfaceOpName(self, interface_op_name):
+        return self.interface_op_name2op_attr_[interface_op_name]
 
     # return global_variable_blob, job_variable_blob
     def TryGetVariableBlobOfJobFromStash(self, job_name, var_name):
