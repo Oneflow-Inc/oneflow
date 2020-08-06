@@ -50,9 +50,14 @@ class BroadcastLikeKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == device) \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
+#ifdef WITH_CUDA
 #define REGISTER_BROADCAST_LIKE_KERNEL(dtype)                 \
   REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCPU, dtype) \
   REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kGPU, dtype)
+#else
+#define REGISTER_BROADCAST_LIKE_KERNEL(dtype) \
+  REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCPU, dtype)
+#endif
 
 REGISTER_BROADCAST_LIKE_KERNEL(float)
 REGISTER_BROADCAST_LIKE_KERNEL(float16)

@@ -29,6 +29,8 @@ namespace oneflow {
       });
 
 REGISTER_SQUEEZE_KERNEL(kCPU)
+#ifdef WITH_CUDA
 REGISTER_SQUEEZE_KERNEL(kGPU)
+#endif
 
 }  // namespace oneflow

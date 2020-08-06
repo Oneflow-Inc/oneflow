@@ -89,7 +89,9 @@ class ConcatKernel final : public user_op::OpKernel {
   REGISTER_CONCAT_KERNEL(device, int64_t)
 
 REGISTER_CONCAT_KERNEL_WITH_DEVICE(DeviceType::kCPU)
+#ifdef WITH_CUDA
 REGISTER_CONCAT_KERNEL_WITH_DEVICE(DeviceType::kGPU)
 REGISTER_CONCAT_KERNEL(DeviceType::kGPU, float16)
+#endif
 
 }  // namespace oneflow

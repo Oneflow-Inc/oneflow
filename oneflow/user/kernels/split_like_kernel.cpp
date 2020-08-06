@@ -91,7 +91,9 @@ class SplitLikeKernel final : public user_op::OpKernel {
   REGISTER_SPLIT_LIKE_KERNEL(device, int64_t)
 
 REGISTER_SPLIT_LIKE_KERNEL_WITH_DEVICE(DeviceType::kCPU)
+#ifdef WITH_CUDA
 REGISTER_SPLIT_LIKE_KERNEL_WITH_DEVICE(DeviceType::kGPU)
 REGISTER_SPLIT_LIKE_KERNEL(DeviceType::kGPU, float16)
+#endif
 
 }  // namespace oneflow

@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
 
 namespace oneflow {
@@ -69,3 +71,5 @@ ObjectMsgPtr<StreamDesc> CudaCopyH2DStreamType::MakeStreamDesc(const Resource& r
 
 }  // namespace vm
 }  // namespace oneflow
+
+#endif

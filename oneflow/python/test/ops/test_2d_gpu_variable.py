@@ -14,8 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import os
+import unittest
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_2d_gpu_variable(test_case):
     flow.enable_eager_execution()
     flow.config.gpu_device_num(2)

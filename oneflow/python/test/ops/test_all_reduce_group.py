@@ -18,6 +18,8 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 from test_util import GenArgList
+import unittest
+import os
 
 
 def do_test(test_case, mirrored):
@@ -45,6 +47,7 @@ def do_test(test_case, mirrored):
     test_case.assertTrue(np.all(r2 == 0.5))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_variable_as_loss_on_two_device(test_case):
     arg_dict = OrderedDict()
     arg_dict["mirrored"] = [True, False]

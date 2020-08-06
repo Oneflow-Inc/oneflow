@@ -191,7 +191,7 @@ def GetCpuMachineDeviceIds(resource):
     assert resource.machine_num > 0
     assert resource.HasField("cpu_device_num")
     return [
-        "%s:0-%s" % (m_id, resource.gpu_device_num - 1)
+        "%s:0-%s" % (m_id, resource.cpu_device_num - 1)
         for m_id in range(resource.machine_num)
     ]
 

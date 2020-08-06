@@ -59,9 +59,11 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
                                  MATH_BINARY_BROADCAST_FUNC_SEQ, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ)
 // gpu half
+#ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
                                  MATH_BINARY_BROADCAST_FUNC_SEQ, (DeviceType::kGPU),
                                  FLOAT16_DATA_TYPE_SEQ)
+#endif
 
 #define REGISTER_MATH_BINARY_BROADCAST_LOGICAL_KERNEL(math_type_pair, device, data_type_pair) \
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                      \

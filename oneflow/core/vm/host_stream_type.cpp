@@ -30,6 +30,8 @@ namespace vm {
 
 namespace {
 
+#ifdef WITH_CUDA
+
 class CudaMallocHostInstructionType final : public InstructionType {
  public:
   CudaMallocHostInstructionType() = default;
@@ -70,6 +72,8 @@ class CudaMallocHostInstructionType final : public InstructionType {
 };
 COMMAND(RegisterInstructionType<CudaMallocHostInstructionType>("CudaMallocHost"));
 
+#endif  // WITH_CUDA
+
 class MallocInstructionType final : public InstructionType {
  public:
   MallocInstructionType() = default;
@@ -108,6 +112,8 @@ class MallocInstructionType final : public InstructionType {
 };
 COMMAND(RegisterInstructionType<MallocInstructionType>("Malloc"));
 
+#ifdef WITH_CUDA
+
 class CudaFreeHostInstructionType final : public InstructionType {
  public:
   CudaFreeHostInstructionType() = default;
@@ -141,6 +147,8 @@ class CudaFreeHostInstructionType final : public InstructionType {
   }
 };
 COMMAND(RegisterInstructionType<CudaFreeHostInstructionType>("CudaFreeHost"));
+
+#endif  // WITH_CUDA
 
 class FreeInstructionType final : public InstructionType {
  public:
