@@ -60,7 +60,8 @@ class OpKernelObject : public vm::Object {
 
   Maybe<void> ResetOpAndKernel(const OpNodeSignatureDesc& op_node_signature,
                                const ParallelContext* parallel_ctx,
-                               const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
+                               const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+                               const ParallelDesc* parallel_desc);
 
  private:
   Maybe<void> InferBlobDescs(const Operator& op,
@@ -70,7 +71,7 @@ class OpKernelObject : public vm::Object {
   void NewPartialInitializedKernel(
       const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
-      OpContext* op_ctx);
+      OpContext* op_ctx, const ParallelDesc* parallel_desc);
 
   OperatorConf op_conf_;
   std::shared_ptr<const JobDesc> job_desc_;
@@ -97,7 +98,8 @@ class SystemOpKernelObject : public vm::Object {
 
   Maybe<void> ResetKernel(const OpNodeSignatureDesc& op_node_signature,
                           const ParallelContext* parallel_ctx,
-                          const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
+                          const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+                          const ParallelDesc* parallel_desc);
 
  private:
   Maybe<void> InferBlobDescs(const Operator& op,
@@ -107,7 +109,8 @@ class SystemOpKernelObject : public vm::Object {
   void ResetKernel(const Operator& op,
                    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
                    const OpNodeSignatureDesc& op_node_signature,
-                   const ParallelContext* parallel_ctx, OpContext* op_ctx);
+                   const ParallelContext* parallel_ctx, OpContext* op_ctx,
+                   const ParallelDesc* parallel_desc);
 
   OperatorConf op_conf_;
   std::shared_ptr<const JobDesc> job_desc_;
