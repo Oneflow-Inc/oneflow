@@ -60,10 +60,18 @@ def api_gpu_device_num(val: int) -> None:
     r"""Set number of GPUs on each machine to run oneflow on.
 
     Args:
-        val (int): number of GPUs. It is identical on every machine. In other words, 
+        val (int): number of GPUs. It is identical on every machine. In other words,
         you can't specify different number of GPUs you would like to use on each machine.
     """
-    return enable_if.unique([gpu_device_num, do_nothing])(val)
+    from oneflow.python.compatibility import with_cuda
+
+    if with_cuda == False:
+        print(
+            "WARNING: for CPU-only OneFlow, oneflow.config.gpu_device_num is equivalent to oneflow.config.cpu_device_num"
+        )
+        return enable_if.unique([cpu_device_num, do_nothing])(val)
+    else:
+        return enable_if.unique([gpu_device_num, do_nothing])(val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
@@ -111,7 +119,7 @@ def comm_net_worker_num(val):
 @oneflow_export("config.max_mdsave_worker_num")
 def api_max_mdsave_worker_num(val: int) -> None:
     r"""Set up max number of workers for mdsave process.
-    
+
     Args:
         val (int):  max number of workers
     """
@@ -144,7 +152,7 @@ def enable_numa_aware_cuda_malloc_host(val):
 
 @oneflow_export("config.compute_thread_pool_size")
 def api_compute_thread_pool_size(val: int) -> None:
-    r"""Set up the size of compute thread pool 
+    r"""Set up the size of compute thread pool
 
     Args:
         val (int): size of  thread pool
@@ -247,7 +255,7 @@ def use_rdma(val=True):
 
 @oneflow_export("config.thread_enable_local_message_queue")
 def api_thread_enable_local_message_queue(val: bool) -> None:
-    """Whether or not enable thread using local  message queue. 
+    """Whether or not enable thread using local  message queue.
 
     Args:
         val (bool):  True or False
