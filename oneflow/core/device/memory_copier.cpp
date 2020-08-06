@@ -251,13 +251,11 @@ void CudaAsyncMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
     UNIMPLEMENTED();
   }
 }
+#endif
 
 REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kCPU, []() { return new HostMemoryCopier(); });
-
 #ifdef WITH_CUDA
-
 REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kGPU, []() { return new CudaAsyncMemoryCopier(); });
-
 #endif
 
 MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type) {
@@ -265,8 +263,6 @@ MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type) {
              NewObj<DefaultMemoryCopierCreator>(device_type))
       ->Create();
 }
-
-#endif
 
 #define SPECIALIZE_COPY_ELEM(dtype)                                                        \
   template void MemoryCopier::CopyElem<dtype>(DeviceCtx * ctx, void* dst, const void* src, \

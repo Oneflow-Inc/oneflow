@@ -10,6 +10,7 @@
 - [Documentation](#documentation)
     - [Usage & Design Docs](#usage--design-docs)
     - [API Reference](#api-reference)
+    - [OneFlow System Design](#oneflow-system-design)
 - [Model Zoo and Benchmark](#model-zoo-and-benchmark)
   - [CNNs(ResNet-50, VGG-16, Inception-V3, AlexNet)](#cnnsresnet-50-vgg-16-inception-v3-alexnet)
   - [Wide&Deep](#widedeep)
@@ -24,7 +25,21 @@
   ### System Requirements
 
   - Python >= 3.5
-  - Nvidia Linux x86_64 driver version >= 440.33
+  - CUDA Toolkit Linux x86_64 Driver
+    | OneFlow |CUDA Driver Version|
+    |---|---|
+    | oneflow_cu102  | >= 440.33  |
+    | oneflow_cu101  | >= 418.39  |
+    | oneflow_cu100  | >= 410.48  |
+    | oneflow_cu92  | >= 396.26  |
+    | oneflow_cu91  | >= 390.46  |
+    | oneflow_cu90  | >= 384.81  |
+
+    - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
+
+    - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver to version 440.33 or above and install `oneflow_cu102` if possible.
+
+    - We are sorry that due to limits on bandwidth and other resources, we could only guarantee the efficiency and stability of `oneflow_cu102`. We will improve it ASAP.
 
   ### Install with Pip Package
 
@@ -48,8 +63,6 @@
     python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
     ```
     For more information on this, please refer to [pypi 镜像使用帮助](https://mirror.tuna.tsinghua.edu.cn/help/pypi/)
-
-  - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver to version 440.33 or above and install `oneflow_cu102` if possible. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
   - CPU-only OneFlow is not available for now.
 
@@ -109,6 +122,8 @@
     make pip_install
     ```
 
+    - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
+
 ### Troubleshooting
 
 Please refer to [troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling and running OneFlow.
@@ -147,6 +162,9 @@ More info on this demo, please refer to [doc on quick start](http://docs.oneflow
 * [link](http://docs.oneflow.org/)
 #### API Reference
 * [link](https://oneflow-api.readthedocs.io/en/latest/)
+#### OneFlow System Design
+For those who would like to understand the OneFlow internals, please read the document below:
+* [link](https://github.com/Oneflow-Inc/oneflow-documentation/blob/master/en/docs/basics_topics/essentials_of_oneflow.md)
 
 ## Model Zoo and Benchmark
 * [link](https://github.com/Oneflow-Inc/OneFlow-Benchmark)

@@ -27,6 +27,11 @@ import traceback
 
 @oneflow_export("placement.current_scope")
 def api_current_placement_scope() -> placement_ctx.PlacementScope:
+    print(
+        "WARNING: oneflow.placement.current_scope has been deprecated. "
+        "Please use oneflow.current_scope.device_parallel_desc_symbol instead."
+    )
+    print(traceback.format_stack()[-2])
     api = enable_if.unique(
         [global_mode_cur_placement_scope, normal_mode_cur_placement_scope]
     )
@@ -85,7 +90,7 @@ def GetNormalModePlacementScope(device_tag, machine_device_ids):
 
 
 def GetDefaultMachineDeviceIds(resource):
-    if resource.HasField("gpu_device_num"):
+    if resource.HasField("gpu_device_num") and resource.gpu_device_num > 0:
         return "gpu", placement_ctx.GetGpuMachineDeviceIds(resource)
     elif resource.HasField("cpu_device_num"):
         return "cpu", placement_ctx.GetCpuMachineDeviceIds(resource)

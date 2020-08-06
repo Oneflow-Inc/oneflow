@@ -1,6 +1,8 @@
 # main cpp
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
-
+# TODO(tsai): skip for now, fail to link when building CPU only
+if (BUILD_CUDA)
+  list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
+endif()
 function(oneflow_add_executable)
   if (BUILD_CUDA)
     cuda_add_executable(${ARGV})
@@ -149,7 +151,7 @@ message(STATUS "Installing necessary Python packages...")
 set(requirements_txt ${PROJECT_SOURCE_DIR}/dev-requirements.txt)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${requirements_txt})
 execute_process(
-  COMMAND ${Python_EXECUTABLE} -m pip install -r ${requirements_txt}
+  COMMAND ${Python_EXECUTABLE} -m pip install -r ${requirements_txt} --user
 )
 message(STATUS "Python packages are installed.")
 
@@ -291,6 +293,14 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
 file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
+if (BUILD_CUDA)
+  add_custom_command(TARGET of_pyscript_copy POST_BUILD
+        COMMAND echo "with_cuda=True" >> "${of_pyscript_dir}/oneflow/python/compatibility.py")
+else()
+  add_custom_command(TARGET of_pyscript_copy POST_BUILD
+        COMMAND echo "with_cuda=False" >> "${of_pyscript_dir}/oneflow/python/compatibility.py")
+endif()
+
 copy_files("${oneflow_all_python_file}" "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}" of_pyscript_copy)
 
 file(WRITE ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags = []\n")
@@ -334,28 +344,29 @@ endforeach()
 
 # build test
 if(BUILD_TESTING)
-  if(NOT BUILD_CUDA)
-    message(FATAL_ERROR "BUILD_TESTING without BUILD_CUDA")
-  endif()
-  if (of_all_test_cc)
-    oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
-    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
-    set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-    add_test(NAME oneflow_test COMMAND oneflow_testexe)
-    #  foreach(cc ${of_all_test_cc})
-    #    get_filename_component(test_name ${cc} NAME_WE)
-    #    string(CONCAT test_exe_name ${test_name} exe)
-    #    oneflow_add_executable(${test_exe_name} ${cc})
-    #    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
-    #  endforeach()
-  endif()
-  if (of_separate_test_cc)
-    foreach(cc ${of_separate_test_cc})
-      get_filename_component(test_name ${cc} NAME_WE)
-      string(CONCAT test_exe_name ${test_name} exe)
-      oneflow_add_executable(${test_exe_name} ${cc})
-      target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
-    endforeach()
+  if(BUILD_CUDA)
+    if (of_all_test_cc)
+      oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
+      target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
+      set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+      add_test(NAME oneflow_test COMMAND oneflow_testexe)
+      #  foreach(cc ${of_all_test_cc})
+      #    get_filename_component(test_name ${cc} NAME_WE)
+      #    string(CONCAT test_exe_name ${test_name} exe)
+      #    oneflow_add_executable(${test_exe_name} ${cc})
+      #    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+      #  endforeach()
+    endif()
+    if (of_separate_test_cc)
+      foreach(cc ${of_separate_test_cc})
+        get_filename_component(test_name ${cc} NAME_WE)
+        string(CONCAT test_exe_name ${test_name} exe)
+        oneflow_add_executable(${test_exe_name} ${cc})
+        target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+      endforeach()
+    endif()
+  else()
+    message(ERROR "BUILD_TESTING=ON has no effect when BUILD_CUDA=OFF")
   endif()
 endif()
 

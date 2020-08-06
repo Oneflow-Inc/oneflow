@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#ifdef WITH_CUDA
+
 #include "oneflow/core/job_rewriter/auto_mixed_precision_lists.h"
 
 #include <algorithm>
@@ -389,3 +392,5 @@ REGISTER_NO_CAST_REGISTRY("normalization", "beta", 0)
 }  // namespace
 
 }  // namespace oneflow
+
+#endif  // WITH_CUDA

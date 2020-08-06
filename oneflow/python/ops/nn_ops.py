@@ -192,6 +192,115 @@ def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, str
         return inputs, return_pads_list
 
 
+@oneflow_export("nn.conv1d")
+def conv1d(
+    input: remote_blob_util.BlobDef,
+    filters: remote_blob_util.BlobDef,
+    strides: Union[int, Tuple[int]],
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair]],
+    data_format: str = "NCW",
+    dilations: Optional[Union[int, Tuple[int]]] = None,
+    groups: int = 1,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Analogous to `tf.nn.conv1d <https://www.tensorflow.org/api_docs/python/tf/nn/conv1d>`_
+
+    Args:
+        input (remote_blob_util.BlobDef): A 3D input `Blob`. [batch_num, channel, width] 
+        filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape [out_channels, in_channels//groups, filter_width] for NCW, or [out_channels, filter_width, in_channels//groups] for NWC`
+        strides (Union[int, Tuple[int]]): An int or list of `ints` that has length `1`. The stride of the sliding window for each dimension of `input`. 
+        padding (Union[str, Tuple[IntPair, IntPair, IntPair]]): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
+        data_format (str, optional): `"NWC" or "NCW"`. Defaults to `"NCW"`.
+        dilations (Optional[Union[int, Tuple[int]]], optional): An int or list of `ints` that has length `1`. The dilation factor for each dimension of`input`. Defaults to None.
+        groups (int, optional): int value greater than 0. Defaults to 1.
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
+    Raises:
+        ValueError: strides must be an int or a list.
+        ValueError: padding must be "SAME" or `"SAME_LOWER" or "SAME_UPPER" or "VALID" or Tuple[IntPair, IntPair, IntPair, IntPair].
+        ValueError: data_format must be "NWC" or "NCW".
+        ValueError: dilations must be an int or a list.
+        ValueError: invalid data_format.
+        ValueError: data_format NWC not support groups > 1
+        ValueError: invalid data_format.
+
+    Returns:
+        remote_blob_util.BlobDef: A `Blob` with the same type as `input` and the same outer batch shape.
+    """
+    assert len(input.shape) == 3
+    assert len(filters.shape) == 3
+
+    if isinstance(strides, (list, tuple)):
+        assert len(strides) == 1, ValueError(
+            "strides length must be 1 when passed as a list."
+        )
+    elif isinstance(strides, int):
+        strides = [strides]
+    else:
+        raise ValueError("strides must be an int or a list.")
+
+    if data_format.upper() != "NCW" and data_format.upper() != "NWC":
+        raise ValueError('data_format must be "NCW" or "NWC".')
+
+    channel_pos = "channels_first" if data_format == "NCW" else "channels_last"
+
+    if dilations is None:
+        dilations = [1]
+    else:
+        if isinstance(dilations, (list, tuple)):
+            assert len(dilations) == 1, ValueError(
+                "dilations length must be 1 when passed as a list."
+            )
+        elif isinstance(dilations, int):
+            dilations = [dilations]
+        else:
+            raise ValueError("dilations must be an int or a list.")
+
+    if channel_pos == "channels_first":
+        kernel_size_list = filters.shape[2:3]
+    elif channel_pos == "channels_last":
+        kernel_size_list = filters.shape[-2:-1]
+    else:
+        raise ValueError("invalid data_format")
+    assert isinstance(kernel_size_list, tuple)
+    assert isinstance(groups, int)
+    assert groups > 0
+    if groups > 1:
+        if data_format.upper() == "NCW":
+            assert groups <= filters.shape[0]
+            assert filters.shape[0] % groups == 0
+            assert groups <= input.shape[1]
+            assert input.shape[1] % groups == 0
+            assert filters.shape[1] == input.shape[1] // groups
+        elif data_format.upper() == "NWC":
+            raise ValueError("data_format NWC not support groups > 1")
+        else:
+            raise ValueError("invalid data_format")
+    inputs, pads_list = calc_conv_padding(
+        input, padding, data_format.upper(), kernel_size_list, dilations, strides,
+    )
+    assert len(pads_list) == len(inputs.shape) - 2
+    padding_before = [pad[0] for pad in pads_list]
+
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv1d_"))
+        .Op("conv1d")
+        .Input("in", [inputs])
+        .Input("weight", [filters])
+        .Output("out")
+        .Attr("filters", filters.shape[0])
+        .Attr("padding_before", padding_before)
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size_list)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilations)
+        .Attr("groups", groups)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("nn.conv2d")
 def conv2d(
     input: remote_blob_util.BlobDef,
@@ -206,12 +315,12 @@ def conv2d(
     r"""Analogous to `tf.nn.conv2d <https://www.tensorflow.org/api_docs/python/tf/nn/conv2d>`_
 
     Args:
-        input (remote_blob_util.BlobDef): A `Blob` of rank at least 4.[batch_num, height, width, channel] 
-        filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape `[filter_height, filter_width, in_channels, out_channels]`
-        strides (Union[int, IntPair]): An int or list of `ints` that has length `1`, `2` or `4`. The stride of the sliding window for each dimension of `input`. 
-        padding (str): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
+        input (remote_blob_util.BlobDef): A 4D input `Blob`. [batch_num, channel, height, width] 
+        filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape `[out_channels, in_channels//groups, filter_height, filter_width] for NCHW, or [out_channels, filter_height, filter_width, in_channels//groups] for NHWC`
+        strides (Union[int, IntPair]): An int or list of `ints` that has length `2`. The stride of the sliding window for each dimension of `input`. 
+        padding (Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]]): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
         data_format (str, optional): `"NHWC" or "NCHW"`. Defaults to `"NCHW"`.
-        dilations (Optional[Union[int, IntPair]], optional):  The dilation factor for each dimension of`input`. Defaults to None.
+        dilations (Optional[Union[int, IntPair]], optional): An int or list of `ints` that has length `2`. The dilation factor for each dimension of`input`. Defaults to None.
         groups (int, optional): int value greater than 0. Defaults to 1.
         name (Optional[str], optional): This operator's name. Defaults to None.
 
@@ -301,6 +410,127 @@ def conv2d(
     )
 
 
+@oneflow_export("nn.conv3d")
+def conv3d(
+    input: remote_blob_util.BlobDef,
+    filters: remote_blob_util.BlobDef,
+    strides: Union[int, Sequence[int]],
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]],
+    data_format: str = "NCDHW",
+    dilations: Optional[Union[int, Sequence[int]]] = None,
+    groups: int = 1,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Analogous to `tf.nn.conv3d <https://www.tensorflow.org/api_docs/python/tf/nn/conv3d>`_
+
+    Args:
+        input (remote_blob_util.BlobDef):  A 5D input `Blob`. [batch_num, channel, depth, height, width] 
+        filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape `[out_channels, in_channels//groups, filter_depth, filter_height, filter_width] for NCDHW, or [out_channels, filter_depth, filter_height, filter_width, in_channels//groups] for NDHWC`
+        strides (Union[int, Sequence[int]]): An int or list of `ints` that has length `3`. The stride of the sliding window for each dimension of `input`. 
+        padding (Union[str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]]): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
+        data_format (str, optional): `"NDHWC" or "NCDHW"`. Defaults to `"NCDHW"`.
+        dilations (Optional[Union[int, Sequence[int]]], optional): An int or list of `ints` that has length `3`. The dilation factor for each dimension of `input`. Defaults to None.
+        groups (int, optional): int value greater than 0. Defaults to 1.
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
+    Raises:
+        ValueError: strides must be an int or a list.
+        ValueError: padding must be "SAME" or `"SAME_LOWER" or "SAME_UPPER" or "VALID" or Tuple[IntPair, IntPair, IntPair, IntPair, IntPair].
+        ValueError: data_format must be "NDHWC" or "NCDHW".
+        ValueError: dilations must be an int or a list.
+        ValueError: invalid data_format.
+        ValueError: data_format NDHWC not support groups > 1
+        ValueError: invalid data_format.
+
+    Returns:
+        remote_blob_util.BlobDef: A `Blob` with the same type as `input` and the same outer batch shape.
+    """
+
+    need_transpose = 0
+    if data_format.upper() == "NDHWC":  # NDHWC is not supported before cudnn 8.0
+        need_transpose = 1
+        data_format = "NCDHW"
+    if need_transpose:
+        input = flow.transpose(input, perm=[0, 4, 1, 2, 3])
+        filters = flow.transpose(filters, perm=[0, 4, 1, 2, 3])
+
+    assert len(input.shape) == 5
+    assert len(filters.shape) == 5
+
+    if isinstance(strides, (list, tuple)):
+        assert len(strides) == 3, ValueError(
+            "strides length must be 3 when passed as a list."
+        )
+    elif isinstance(strides, int):
+        strides = [strides, strides, strides]
+    else:
+        raise ValueError("strides must be an int or a list.")
+
+    if data_format.upper() != "NCDHW" and data_format.upper() != "NDHWC":
+        raise ValueError('data_format must be "NDHWC" or "NCDHW".')
+
+    channel_pos = "channels_first" if data_format == "NCDHW" else "channels_last"
+
+    if dilations is None:
+        dilations = [1, 1, 1]
+    else:
+        if isinstance(dilations, (list, tuple)):
+            assert len(dilations) == 3, ValueError(
+                "dilations length must be 3 when passed as a list."
+            )
+        elif isinstance(dilations, int):
+            dilations = [dilations, dilations, dilations]
+        else:
+            raise ValueError("dilations must be an int or a list.")
+
+    if channel_pos == "channels_first":
+        kernel_size_list = filters.shape[2:5]
+    elif channel_pos == "channels_last":
+        kernel_size_list = filters.shape[-4:-1]
+    else:
+        raise ValueError("invalid data_format")
+    assert isinstance(kernel_size_list, tuple)
+    assert isinstance(groups, int)
+    assert groups > 0
+    if groups > 1:
+        if data_format.upper() == "NCDHW":
+            assert groups <= filters.shape[0]
+            assert filters.shape[0] % groups == 0
+            assert groups <= input.shape[1]
+            assert input.shape[1] % groups == 0
+            assert filters.shape[1] == input.shape[1] // groups
+        elif data_format.upper() == "NDHWC":
+            raise ValueError("data_format NHWC not support groups > 1")
+        else:
+            raise ValueError("invalid data_format")
+    inputs, pads_list = calc_conv_padding(
+        input, padding, data_format.upper(), kernel_size_list, dilations, strides,
+    )
+    assert len(pads_list) == len(inputs.shape) - 2
+    padding_before = [pad[0] for pad in pads_list]
+    output = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv3d_"))
+        .Op("conv3d")
+        .Input("in", [inputs])
+        .Input("weight", [filters])
+        .Output("out")
+        .Attr("filters", filters.shape[0])
+        .Attr("padding_before", padding_before)
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size_list)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilations)
+        .Attr("groups", groups)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+    if need_transpose:
+        output = flow.transpose(output, perm=[0, 2, 3, 4, 1])
+    return output
+
+
 @oneflow_export("nn.batch_normalization")
 def batch_normalization(
     x: remote_blob_util.BlobDef,
@@ -369,8 +599,8 @@ def tf_conv2d(
 
     Args:
         input (remote_blob_util.BlobDef): A `Blob` of rank at least 4. 
-        filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape `[filter_height, filter_width, in_channels, out_channels]`
-        strides (Union[int, Sequence[int]]): An int or list of `ints` that has length `1`, `2` or `4`. The stride of the sliding window for each dimension of `input`. 
+        filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape `[out_channels, in_channels//groups, filter_height, filter_width] for NCHW, or [out_channels, filter_height, filter_width, in_channels//groups] for NHWC`
+        strides (Union[int, Sequence[int]]): An int or list of `ints` that has length `1`, or `2`. The stride of the sliding window for each dimension of `input`. 
         padding (str): `"SAME"` or `"VALID"` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. 
         data_format (str, optional): `"NHWC"` or `"NCHW"`. Defaults to `"NCHW"`.
         dilations (Optional[Union[int, Sequence[int]]], optional): The dilation factor for each dimension of`input`. Defaults to None.

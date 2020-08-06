@@ -123,6 +123,16 @@ class CudaCurrentDeviceGuard final {
 
 }  // namespace oneflow
 
+#else
+
+namespace oneflow {
+
+enum class CudaWorkType {};
+
+inline size_t GetCudaWorkTypeSize() { return 0; }
+
+}  // namespace oneflow
+
 #endif  // WITH_CUDA
 
 #endif  // ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_

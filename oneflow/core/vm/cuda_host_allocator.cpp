@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/vm/cuda_host_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
 
@@ -29,3 +31,5 @@ void CudaHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {
 
 }  // namespace vm
 }  // namespace oneflow
+
+#endif

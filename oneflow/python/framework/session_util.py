@@ -132,6 +132,10 @@ class Session(object):
     def snapshot_mgr(self):
         return self.snapshot_mgr_
 
+    @property
+    def var_name2var_blob(self):
+        return self.var_name2var_blob_
+
     def InitNormalModeScope(self):
         job_conf = job_conf_pb.JobConfigProto()
         job_conf.predict_conf.SetInParent()
@@ -265,6 +269,7 @@ class Session(object):
             if remote_blobs is None:
                 return
             future_blob = EagerFutureRemoteBlobs().SetResult(remote_blobs).Inited()
+
         annotation = inspect.signature(function_desc.job_func).return_annotation
         return oft_util.TransformGlobalFunctionResult(future_blob, annotation)
 
@@ -450,9 +455,15 @@ def _TryCompleteConfigProto(config_proto):
 
 
 def _GetDefaultConfigProto():
+    from oneflow.python.compatibility import with_cuda
+
     config_proto = job_set_util.ConfigProto()
     config_proto.resource.machine_num = 0
-    config_proto.resource.gpu_device_num = 1
+    if with_cuda:
+        config_proto.resource.gpu_device_num = 1
+    else:
+        config_proto.resource.cpu_device_num = 1
+        config_proto.resource.gpu_device_num = 0
     config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
     config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
     return config_proto

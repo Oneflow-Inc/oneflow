@@ -16,6 +16,8 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import unittest
+import os
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -38,12 +40,14 @@ def _run_test(test_case, a, b, dtype, device):
     _check(test_case, a, b, out.numpy())
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_broadcast_maximum_random_gpu(test_case):
     a = np.random.rand(1024, 1024).astype(np.float32)
     b = np.random.rand(1024, 1024).astype(np.float32)
     _run_test(test_case, a, b, flow.float32, "gpu")
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_broadcast_maximum_broadcast_gpu(test_case):
     a = np.random.rand(1024, 1).astype(np.float32)
     b = np.random.rand(1, 1024).astype(np.float32)

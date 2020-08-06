@@ -13,12 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 
 namespace oneflow {
+
+#ifdef WITH_CUDA
 
 class ReluKernel final : public user_op::OpKernel {
  public:
@@ -54,22 +57,6 @@ class ReluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-class ReluCpuKernel final : public user_op::OpKernel {
- public:
-  ReluCpuKernel() = default;
-  ~ReluCpuKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    NewKernelUtil<DeviceType::kCPU>::Relu(ctx->device_ctx(), in->shape().elem_cnt(), in->dptr<T>(),
-                                          out->mut_dptr<T>());
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
 REGISTER_USER_KERNEL("ccrelu")
     .SetCreateFn<ReluKernel>()
     .SetIsMatchedHob(user_op::HobTrue())
@@ -79,11 +66,6 @@ REGISTER_USER_KERNEL("ccrelu")
       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));
       return Maybe<void>::Ok();
     });
-
-REGISTER_USER_KERNEL("cpu_only_relu_test")
-    .SetCreateFn<ReluCpuKernel<float>>()
-    .SetIsMatchedHob((user_op::HobDataType("in", 0) == DataType::kFloat)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 REGISTER_USER_KERNEL("ccrelu_grad")
     .SetCreateFn<ReluGradKernel>()
@@ -132,25 +114,6 @@ REGISTER_USER_KERNEL("TestReshapeLike4KeepHeaderOnly")
     .SetCreateFn<CopyIn2OutKernel>()
     .SetIsMatchedHob(user_op::HobTrue());
 
-class TestSourceKernel final : public user_op::OpKernel {
- public:
-  TestSourceKernel() = default;
-  ~TestSourceKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    for (int i = 0; i < 5; ++i) { *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i); }
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("TestSource")
-    .SetCreateFn<TestSourceKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat))
-    .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
-
 class TestSourceGpuKernel final : public user_op::OpKernel {
  public:
   TestSourceGpuKernel() = default;
@@ -189,26 +152,6 @@ REGISTER_USER_KERNEL("TestMultiOutputOrder")
     .SetCreateFn<TestMultiOutputOrderKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
                      & (user_op::HobDataType("in", 0) == DataType::kFloat));
-
-class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
- public:
-  TestSourceMultiGpuFixedOutNumKernel() = default;
-  ~TestSourceMultiGpuFixedOutNumKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    for (int i = 0; i < out_blob->shape().elem_cnt(); ++i) {
-      *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i);
-    }
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("TestSourceMultiGpuFixedOutNum")
-    .SetCreateFn<TestSourceMultiGpuFixedOutNumKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class TestMultiInputFwKernel final : public user_op::OpKernel {
  public:
@@ -251,6 +194,68 @@ REGISTER_USER_KERNEL("TestMultiInputGrad")
     .SetCreateFn<TestMultiInputBwKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
                      & (user_op::HobDataType("x1", 0) == DataType::kFloat));
+
+#endif
+
+template<typename T>
+class ReluCpuKernel final : public user_op::OpKernel {
+ public:
+  ReluCpuKernel() = default;
+  ~ReluCpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    NewKernelUtil<DeviceType::kCPU>::Relu(ctx->device_ctx(), in->shape().elem_cnt(), in->dptr<T>(),
+                                          out->mut_dptr<T>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("cpu_only_relu_test")
+    .SetCreateFn<ReluCpuKernel<float>>()
+    .SetIsMatchedHob((user_op::HobDataType("in", 0) == DataType::kFloat)
+                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
+
+class TestSourceKernel final : public user_op::OpKernel {
+ public:
+  TestSourceKernel() = default;
+  ~TestSourceKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    for (int i = 0; i < 5; ++i) { *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i); }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("TestSource")
+    .SetCreateFn<TestSourceKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("out", 0) == DataType::kFloat))
+    .SetInferTmpSizeFn([](user_op::InferContext*) { return 0; });
+
+class TestSourceMultiGpuFixedOutNumKernel final : public user_op::OpKernel {
+ public:
+  TestSourceMultiGpuFixedOutNumKernel() = default;
+  ~TestSourceMultiGpuFixedOutNumKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    for (int i = 0; i < out_blob->shape().elem_cnt(); ++i) {
+      *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i);
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("TestSourceMultiGpuFixedOutNum")
+    .SetCreateFn<TestSourceMultiGpuFixedOutNumKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("out", 0) == DataType::kFloat));
 
 class TestDynamicSourceKernel final : public user_op::OpKernel {
  public:

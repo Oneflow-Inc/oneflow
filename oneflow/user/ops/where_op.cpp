@@ -97,12 +97,14 @@ REGISTER_USER_OP_GRAD("where").SetBackwardOpConfGenFn([](user_op::BackwardOpConf
         .Build();
   });
 
-  ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&ctx, &x_grad_op_name]() {
-    return ctx->GetOp(x_grad_op_name).output("out", 0);
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), [&ctx, &y_grad_op_name]() {
-    return ctx->GetOp(y_grad_op_name).output("out", 0);
-  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
+                            [&ctx, &x_grad_op_name]() -> const std::string& {
+                              return ctx->GetOp(x_grad_op_name).output("out", 0);
+                            });
+  ctx->FwOp().InputGradBind(user_op::OpArg("y", 0),
+                            [&ctx, &y_grad_op_name]() -> const std::string& {
+                              return ctx->GetOp(y_grad_op_name).output("out", 0);
+                            });
 });
 
 }  // namespace oneflow

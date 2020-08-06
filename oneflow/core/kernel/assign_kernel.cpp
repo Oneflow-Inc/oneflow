@@ -38,7 +38,9 @@ void AssignKernel<device_type>::ForwardDataContent(
 
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kAssignConf, DeviceType::kCPU,
                             AssignKernel<DeviceType::kCPU>);
+#ifdef WITH_CUDA
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kAssignConf, DeviceType::kGPU,
                             AssignKernel<DeviceType::kGPU>);
+#endif
 
 }  // namespace oneflow

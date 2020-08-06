@@ -40,6 +40,7 @@ FLAT_MSG_VIEW_END(PinBlobInstruction);
 
 }  // namespace
 
+#ifdef WITH_CUDA
 class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
  public:
   CudaHostRegisterBlobInstructionType() = default;
@@ -89,6 +90,7 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
 };
 COMMAND(
     vm::RegisterInstructionType<CudaHostUnregisterBlobInstructionType>("CudaHostUnregisterBlob"));
+#endif
 
 Maybe<void> LazyReferenceInstructionType::Run(vm::Instruction* instruction) const {
   FlatMsgView<LazyReferenceInstruction> args(instruction->instr_msg().operand());

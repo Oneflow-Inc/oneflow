@@ -56,6 +56,9 @@ class ScopeSymbol(Symbol):
         return self.parent_scope_symbol_
 
     def BuildWithNewParallelDesc(self, builder, device_tag, machine_device_ids):
+        if isinstance(machine_device_ids, str):
+            machine_device_ids = [machine_device_ids]
+
         parallel_conf = MakeParallelConf(device_tag, machine_device_ids)
         device_parallel_desc_sym = builder.GetParallelDescSymbol(parallel_conf)
         parallel_conf = MakeParallelConf("cpu", machine_device_ids)
@@ -109,7 +112,7 @@ def BuildInitialScope(builder, job_conf, device_tag, machine_device_ids, is_mirr
 
 
 def MakeParallelConf(device_tag, machine_device_ids):
-    assert isinstance(machine_device_ids, collections.Sized)
+    assert isinstance(machine_device_ids, (list, tuple))
     device_names = []
     for machine_device_id in machine_device_ids:
         assert isinstance(

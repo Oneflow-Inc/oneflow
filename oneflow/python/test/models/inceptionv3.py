@@ -609,17 +609,17 @@ def main(args):
     flow.config.machine_num(args.num_nodes)
     flow.config.gpu_device_num(args.gpu_num_per_node)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(0.0001)
-    func_config.train.model_update_conf(dict(naive_conf={}))
     func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def TrainNet():
         (images, labels) = _data_load_layer(args, args.train_dir)
         loss = InceptionV3(images, labels)
-        flow.losses.add_loss(loss)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [0.0001]), momentum=0
+        ).minimize(loss)
         return loss
 
     check_point = flow.train.CheckPoint()

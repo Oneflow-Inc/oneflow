@@ -68,6 +68,22 @@ def test_max_pooling_2d_k2s2_same_nhwc(test_case):
     convert_to_onnx_and_check(max_pooling_2d_k2s2_same_nhwc)
 
 
+def test_max_pooling_2d_k2s2_same_nchw(test_case):
+    @flow.global_function(func_config)
+    def max_pooling_2d_k2s2_same_nchw(x=flow.FixedTensorDef((2, 3, 5, 4))):
+        x += flow.get_variable(
+            name="v1",
+            shape=(1, 1),
+            dtype=flow.float,
+            initializer=flow.zeros_initializer(),
+        )
+        return flow.nn.max_pool2d(
+            x, ksize=2, strides=2, padding="SAME", data_format="NCHW"
+        )
+
+    convert_to_onnx_and_check(max_pooling_2d_k2s2_same_nchw)
+
+
 def test_max_pooling_2d_k3s1_valid_nchw(test_case):
     @flow.global_function(func_config)
     def max_pooling_2d_k3s1_valid_nchw(x=flow.FixedTensorDef((2, 3, 5, 4))):
@@ -146,3 +162,19 @@ def test_avg_pooling_2d_k3s1_valid_nchw(test_case):
         )
 
     convert_to_onnx_and_check(avg_pooling_2d_k3s1_valid_nchw)
+
+
+def test_avg_pooling_2d_k2s2_same_nchw(test_case):
+    @flow.global_function(func_config)
+    def avg_pooling_2d_k2s2_same_nchw(x=flow.FixedTensorDef((2, 3, 5, 4))):
+        x += flow.get_variable(
+            name="v1",
+            shape=(1, 1),
+            dtype=flow.float,
+            initializer=flow.zeros_initializer(),
+        )
+        return flow.nn.avg_pool2d(
+            x, ksize=2, strides=2, padding="SAME", data_format="NCHW"
+        )
+
+    convert_to_onnx_and_check(avg_pooling_2d_k2s2_same_nchw)

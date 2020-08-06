@@ -32,14 +32,22 @@ namespace {
 
 static char* MallocThenCpyD2H(const char* gpu_src, size_t size) {
   char* cpu_dst = reinterpret_cast<char*>(malloc(size));
+#ifdef WITH_CUDA
   cudaMemcpy(cpu_dst, gpu_src, size, cudaMemcpyDeviceToHost);
+#else
+  UNIMPLEMENTED();
+#endif
   return cpu_dst;
 }
 
 static void CpyH2DThenFree(char* gpu_dst, char* cpu_src, size_t size) {
+#ifdef WITH_CUDA
   cudaMemcpy(gpu_dst, cpu_src, size, cudaMemcpyHostToDevice);
+#else
+  UNIMPLEMENTED();
+#endif
   free(cpu_src);
-}
+}  // namespace
 
 template<typename T>
 void LoadFromStrFile(T* buf, const std::string& file_name) {

@@ -29,5 +29,8 @@ namespace oneflow {
       });
 
 REGISTER_RESHAPE_KERNEL(DeviceType::kCPU)
+#ifdef WITH_CUDA
 REGISTER_RESHAPE_KERNEL(DeviceType::kGPU)
+#endif
+
 }  // namespace oneflow

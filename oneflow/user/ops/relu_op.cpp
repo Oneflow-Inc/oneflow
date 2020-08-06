@@ -81,9 +81,10 @@ REGISTER_USER_OP_GRAD("relu").SetBackwardOpConfGenFn([](user_op::BackwardOpConfC
         .Output("dx")
         .Build();
   });
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&ctx, &relu_grad_op_name]() {
-    return ctx->GetOp(relu_grad_op_name).output("dx", 0);
-  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
+                            [&ctx, &relu_grad_op_name]() -> const std::string& {
+                              return ctx->GetOp(relu_grad_op_name).output("dx", 0);
+                            });
 });
 
 }  // namespace
