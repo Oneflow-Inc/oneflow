@@ -19,6 +19,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
+import traceback
 
 
 @oneflow_export("config.load_library")
@@ -69,6 +70,7 @@ def api_gpu_device_num(val: int) -> None:
         print(
             "INFO: for CPU-only OneFlow, oneflow.config.gpu_device_num is equivalent to oneflow.config.cpu_device_num"
         )
+        print(traceback.format_stack()[-2])
         return enable_if.unique([cpu_device_num, do_nothing])(val)
     else:
         return enable_if.unique([gpu_device_num, do_nothing])(val)
