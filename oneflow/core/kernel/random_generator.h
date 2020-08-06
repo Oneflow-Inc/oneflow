@@ -54,7 +54,9 @@ class RandomGenerator<DeviceType::kGPU> final {
   void Uniform(const int64_t elem_cnt, T* dptr);
 
  private:
+#ifdef WITH_CUDA
   curandGenerator_t curand_generator_;
+#endif
 };
 
 }  // namespace oneflow

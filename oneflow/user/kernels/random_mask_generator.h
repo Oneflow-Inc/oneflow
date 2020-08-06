@@ -18,8 +18,10 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/device/device_context.h"
+#ifdef WITH_CUDA
 #include <curand.h>
 #include <curand_kernel.h>
+#endif
 
 namespace oneflow {
 
@@ -39,6 +41,7 @@ class RandomMaskGenerator<DeviceType::kCPU> final {
   std::mt19937 mt19937_generator_;
 };
 
+#ifdef WITH_CUDA
 template<>
 class RandomMaskGenerator<DeviceType::kGPU> final {
  public:
@@ -53,6 +56,7 @@ class RandomMaskGenerator<DeviceType::kGPU> final {
   int32_t block_num_;
   int32_t thread_num_;
 };
+#endif
 
 }  // namespace oneflow
 

@@ -15,6 +15,7 @@ limitations under the License.
 """
 from collections import OrderedDict
 
+import os
 import numpy as np
 import oneflow as flow
 import tensorflow as tf
@@ -74,7 +75,8 @@ def gen_arg_list():
 def test_squeeze(test_case):
     for arg in gen_arg_list():
         compare_with_tensorflow(*arg)
-    compare_with_tensorflow("gpu", (1, 1, 1), [0, 1, 2])
+    if os.getenv("ONEFLOW_TEST_CPU_ONLY") is None:
+        compare_with_tensorflow("gpu", (1, 1, 1), [0, 1, 2])
+        compare_with_tensorflow("gpu", (5, 6, 7), None)
     compare_with_tensorflow("cpu", (1, 1, 1), [0, 1, 2])
-    compare_with_tensorflow("gpu", (5, 6, 7), None)
     compare_with_tensorflow("cpu", (5, 6, 7), None)

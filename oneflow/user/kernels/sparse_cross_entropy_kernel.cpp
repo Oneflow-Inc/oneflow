@@ -84,17 +84,21 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCrossEntropyKernel),
                                  ("sparse_cross_entropy"), OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU),
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+#ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCrossEntropyKernel),
                                  ("sparse_cross_entropy"), OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+#endif
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCrossEntropyMsKernel),
                                  ("sparse_cross_entropy_ms"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
+#ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_KERNEL, (SparseCrossEntropyMsKernel),
                                  ("sparse_cross_entropy_ms"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+#endif
 
 template<DeviceType device_type, typename T, typename K>
 class SparseCrossEntropyGradKernel final : public user_op::OpKernel {
@@ -170,17 +174,22 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseCrossEntropyGradKernel), ("sparse_cross_entropy_grad"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
+#ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseCrossEntropyGradKernel), ("sparse_cross_entropy_grad"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+#endif
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseCrossEntropyMsGradKernel), ("sparse_cross_entropy_ms_grad"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
+#ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseCrossEntropyMsGradKernel), ("sparse_cross_entropy_ms_grad"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+#endif
+
 }  // namespace user_op
 }  // namespace oneflow

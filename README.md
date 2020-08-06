@@ -122,6 +122,8 @@
     make pip_install
     ```
 
+    - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
+
 ### Troubleshooting
 
 Please refer to [troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling and running OneFlow.

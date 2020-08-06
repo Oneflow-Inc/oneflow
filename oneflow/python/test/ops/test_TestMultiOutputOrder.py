@@ -16,8 +16,11 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import unittest
+import os
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def TestMultiOutputOrder(x, name):
     return (
         flow.user_op_builder(name)
