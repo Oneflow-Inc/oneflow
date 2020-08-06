@@ -626,7 +626,7 @@ def test_tensor_scatter_nd_add_case2(test_case):
         _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_scatter_nd_dynamic_indices(test_case):
     arg_dict = OrderedDict()
     arg_dict["indices_shape"] = [(12, 10, 2)]
@@ -638,7 +638,7 @@ def test_scatter_nd_dynamic_indices(test_case):
         _compare_scatter_nd_dynamic_indices_with_tf(test_case, *arg)
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_scatter_nd_empty_indices(test_case):
     arg_dict = OrderedDict()
     arg_dict["indices_shape"] = [(0, 1)]
@@ -650,7 +650,7 @@ def test_scatter_nd_empty_indices(test_case):
         _compare_scatter_nd_dynamic_indices_with_tf(test_case, *arg)
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_tensor_scatter_nd_update_dynamic_indices(test_case):
     arg_dict = OrderedDict()
     arg_dict["params_shape"] = [(32, 33, 4, 5)]
@@ -662,7 +662,7 @@ def test_tensor_scatter_nd_update_dynamic_indices(test_case):
         _compare_tensor_scatter_nd_update_dynamic_indices_with_tf(test_case, *arg)
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_tensor_scatter_nd_update_empty_indices(test_case):
     arg_dict = OrderedDict()
     arg_dict["params_shape"] = [(37, 14)]
@@ -674,7 +674,7 @@ def test_tensor_scatter_nd_update_empty_indices(test_case):
         _compare_tensor_scatter_nd_update_dynamic_indices_with_tf(test_case, *arg)
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_tensor_scatter_nd_add_dynamic_indices(test_case):
     arg_dict = OrderedDict()
     arg_dict["params_shape"] = [(2, 9, 7, 5, 4)]
@@ -686,7 +686,7 @@ def test_tensor_scatter_nd_add_dynamic_indices(test_case):
         _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(test_case, *arg)
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_tensor_scatter_nd_add_empty_indices(test_case):
     arg_dict = OrderedDict()
     arg_dict["params_shape"] = [(24, 30, 14)]

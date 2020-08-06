@@ -19,7 +19,7 @@ import unittest
 import os
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_deadlock(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()

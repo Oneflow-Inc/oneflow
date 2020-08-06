@@ -273,7 +273,7 @@ def test_gather_nd_case_4(test_case):
         _compare_gather_nd_with_tf(test_case, *arg)
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_dynamic_gather_nd(test_case):
     arg_dict = OrderedDict()
     arg_dict["params_shape"] = [(30, 15)]

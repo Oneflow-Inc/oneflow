@@ -20,7 +20,7 @@ import unittest
 import os
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def TestMultiOutputOrder(x, name):
     return (
         flow.user_op_builder(name)

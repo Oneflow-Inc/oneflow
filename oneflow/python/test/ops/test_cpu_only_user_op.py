@@ -70,6 +70,6 @@ def test_cpu_only_user_op(test_case):
     _check_cpu_only_relu_device(test_case)
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_non_cpu_only_user_op(test_case):
     _check_non_cpu_only_relu_device(test_case)

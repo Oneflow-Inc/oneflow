@@ -50,21 +50,21 @@ def _run_test(test_case, x, dtype, device):
     )
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_unique_with_counts_int(test_case):
     x = np.asarray(list(range(32)) * 2).astype(np.int32)
     np.random.shuffle(x)
     _run_test(test_case, x, flow.int32, "gpu")
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_unique_with_counts_float(test_case):
     x = np.asarray(list(range(32)) * 2).astype(np.float32)
     np.random.shuffle(x)
     _run_test(test_case, x, flow.float32, "gpu")
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY") == "True", "only test cpu cases")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_unique_with_counts_random_gpu(test_case):
     x = np.random.randint(0, 32, 1024).astype(np.int32)
     np.random.shuffle(x)
