@@ -53,6 +53,7 @@ message UserKernelConf {
   required ParallelContext parallel_ctx = 2;
   required SbpSignature sbp_sig = 3;
   map<string, BlobDescProto> bn_in_op2logical_blob_desc = 4;
+  required ParallelConf parallel_conf = 5;
 }
 
 message XrtLaunchKernelConf {
