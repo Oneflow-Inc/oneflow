@@ -67,6 +67,7 @@ def TODO_test_train(test_case):
     Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def CompareNnBnWithTensorFlow(
     input_shape,
     data_type,
