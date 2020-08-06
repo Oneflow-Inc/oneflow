@@ -20,6 +20,10 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
+    - name: Clean environment
+      run: |
+        rm -rf build/third_party
+        bash ci/build/clean.sh
     - uses: actions/checkout@v2
     - name: Check license (please run 'make of_format' if failed)
       run: |
@@ -33,8 +37,6 @@ jobs:
     - name: Setup environment
       run: |
         echo $HOSTNAME
-        rm -rf build/third_party
-        bash ci/build/clean.sh
         bash ci/setup_submodule.sh
     - name: Checkout submodules
       shell: bash
@@ -114,12 +116,14 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
+    - name: Clean environment
+      run: |
+        rm -rf build/third_party
+        bash ci/build/clean.sh
     - uses: actions/checkout@v2
     - name: Setup environment
       run: |
         echo $HOSTNAME
-        rm -rf build/third_party
-        bash ci/build/clean.sh
         bash ci/setup_submodule.sh
     - name: Checkout submodules
       shell: bash
