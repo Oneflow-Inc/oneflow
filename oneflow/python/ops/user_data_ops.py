@@ -650,7 +650,7 @@ def ofrecord_image_classification_reader(
     image_feature_name: str = "encoded",
     label_feature_name: str = "class/label",
     decode_buffer_size_per_thread: int = 64,
-    num_decode_threads: Optional[int] = None,
+    num_decode_threads_per_machine: Optional[int] = None,
     name: Optional[str] = None,
 ) -> BlobDef:
     if name is None:
@@ -672,7 +672,7 @@ def ofrecord_image_classification_reader(
         .Attr("image_feature_name", image_feature_name)
         .Attr("label_feature_name", label_feature_name)
         .Attr("decode_buffer_size_per_thread", decode_buffer_size_per_thread)
-        .Attr("num_decode_threads", num_decode_threads or 0)
+        .Attr("num_decode_threads_per_machine", num_decode_threads_per_machine or 0)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()

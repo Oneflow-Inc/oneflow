@@ -97,12 +97,17 @@ class OFRecordImageClassificationDataset final : public Dataset<ImageClassificat
     const std::string& color_space = ctx->Attr<std::string>("color_space");
     const std::string& image_feature_name = ctx->Attr<std::string>("image_feature_name");
     const std::string& label_feature_name = ctx->Attr<std::string>("label_feature_name");
-    auto num_decode_threads = ctx->Attr<int32_t>("num_decode_threads");
-    if (num_decode_threads == 0) {
-      num_decode_threads = Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize();
+    auto num_decode_threads_per_machine = ctx->Attr<int32_t>("num_decode_threads_per_machine");
+    if (num_decode_threads_per_machine == 0) {
+      num_decode_threads_per_machine =
+          Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize();
     }
+    const int64_t machine_id =
+        ctx->parallel_desc().MachineIdForParallelId(ctx->parallel_ctx().parallel_id());
+    const int64_t parallel_num_on_this_machine =
+        ctx->parallel_desc().sorted_dev_phy_ids(machine_id).size();
     num_local_decode_threads_ =
-        std::max<int32_t>(num_decode_threads / ctx->parallel_ctx().parallel_num(), 1);
+        std::max<int32_t>(num_decode_threads_per_machine / parallel_num_on_this_machine, 1);
     const auto decode_buffer_size_per_thread = ctx->Attr<int32_t>("decode_buffer_size_per_thread");
     underlying_.reset(new OFRecordDataset(ctx));
     decode_in_buffers_.resize(num_local_decode_threads_);

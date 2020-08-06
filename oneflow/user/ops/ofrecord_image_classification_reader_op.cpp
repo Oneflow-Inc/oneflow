@@ -33,7 +33,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
     .Attr<std::string>("image_feature_name", UserOpAttrType::kAtString, "encoded")
     .Attr<std::string>("label_feature_name", UserOpAttrType::kAtString, "class/label")
     .Attr<int32_t>("decode_buffer_size_per_thread", UserOpAttrType::kAtInt32, 8)
-    .Attr<int32_t>("num_decode_threads", UserOpAttrType::kAtInt32, 0)
+    .Attr<int32_t>("num_decode_threads_per_machine", UserOpAttrType::kAtInt32, 0)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* image_tensor = ctx->TensorDesc4ArgNameAndIndex("image", 0);
       user_op::TensorDesc* label_tensor = ctx->TensorDesc4ArgNameAndIndex("label", 0);
