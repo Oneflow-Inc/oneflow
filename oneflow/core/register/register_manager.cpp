@@ -114,6 +114,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     } else {
       UNIMPLEMENTED();
     }
+    //FIXME(daquexian): regst_desc_id2regst_id2regst_[rt_regst_desc->regst_desc_id()] sometimes crashes . thread safety?
     regst_desc_id2regst_id2regst_[rt_regst_desc->regst_desc_id()][i] = regst;
     OneRegstDone(regst);
   }
@@ -174,6 +175,27 @@ const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const 
 }
 
 Blob* RegstMgr::Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id) {
+  LOG(INFO) << "begin";
+  LOG(INFO) << "len: " << regst_desc_id2regst_id2regst_.size();
+  for (const auto& x : regst_desc_id2regst_id2regst_) {
+    LOG(INFO) << "sub len: " << x.second.size();
+    for (const auto& y : x.second) {
+      LOG(INFO) << "subsub len: " << y.second->lbi2blob().size();
+      for (const auto& z : y.second->lbi2blob()) {
+        if (z.first == lbi) {
+          const auto parallel_ctx_it = regst_desc_id2parallel_ctx_.find(x.first);
+          CHECK(parallel_ctx_it != regst_desc_id2parallel_ctx_.end());
+          const auto& parallel_ctx = parallel_ctx_it->second;
+          if (parallel_ctx.has_parallel_id() && parallel_ctx.parallel_id() == parallel_id) {
+            CHECK(x.second.size() == 1)
+                << "Only the blobs in regst_desc where regst_num == 1 is supported";
+            Blob* blob = z.second.get();
+          }
+        }
+      }
+    }
+  }
+  LOG(INFO) << "end";
   for (const auto& x : regst_desc_id2regst_id2regst_) {
     for (const auto& y : x.second) {
       for (const auto& z : y.second->lbi2blob()) {
@@ -184,6 +206,9 @@ Blob* RegstMgr::Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t pa
           if (parallel_ctx.has_parallel_id() && parallel_ctx.parallel_id() == parallel_id) {
             CHECK(x.second.size() == 1)
                 << "Only the blobs in regst_desc where regst_num == 1 is supported";
+            Blob* blob = z.second.get();
+            LOG(INFO) << "blob address: " << blob;
+            blob->blob_access_checker()->CheckBodyMutable();
             return z.second.get();
           }
         }
