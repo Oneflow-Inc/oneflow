@@ -87,7 +87,7 @@ class TestNetMixin:
     def print_and_check_result(self, result_name):
         if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             if self.net == "resnet50":
-                print("WARNING: skipping check for resnet50 cpu")
+                print("WARNING: skipping check for resnet50 cpu due to GEMM NaN")
                 return
         loss_dict = {}
         loss_dict["tensorflow"] = self.load_tf_loss()
