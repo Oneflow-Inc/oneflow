@@ -639,6 +639,8 @@ class COCOReader(module_util.Module):
 @oneflow_export("data.ofrecord_image_classification_reader")
 def ofrecord_image_classification_reader(
     ofrecord_dir: str,
+    image_feature_name: str,
+    label_feature_name: str,
     batch_size: int = 1,
     data_part_num: int = 1,
     part_name_prefix: str = "part-",
@@ -647,8 +649,6 @@ def ofrecord_image_classification_reader(
     shuffle_buffer_size: int = 1024,
     shuffle_after_epoch: bool = False,
     color_space: str = "BGR",
-    image_feature_name: str = "encoded",
-    label_feature_name: str = "class/label",
     decode_buffer_size_per_thread: int = 64,
     num_decode_threads_per_machine: Optional[int] = None,
     name: Optional[str] = None,
