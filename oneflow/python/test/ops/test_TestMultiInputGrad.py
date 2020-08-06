@@ -22,6 +22,7 @@ import test_global_storage
 from test_util import GenArgList
 import unittest
 
+
 def TestMultiInput(x1, x2):
     return (
         flow.user_op_builder("my_test_multi_input")
@@ -33,6 +34,7 @@ def TestMultiInput(x1, x2):
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_TestMultiInput_grad_mirrored_inplace(test_case):
