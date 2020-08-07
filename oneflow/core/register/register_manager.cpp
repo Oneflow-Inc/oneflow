@@ -114,10 +114,6 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     } else {
       UNIMPLEMENTED();
     }
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      regst_desc_id2regst_id2regst_[rt_regst_desc->regst_desc_id()][i] = regst;
-    }
     OneRegstDone(regst);
   }
 }
@@ -167,6 +163,15 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
           InitNonPODTypeBlobIfNeed(Global<MemoryAllocator>::Get(), blob_ptr.get());
         }
         CHECK(regst->lbi2blob_.emplace(lbi.lbi(), std::move(blob_ptr)).second);
+        const int64_t regst_desc_id = rt_regst_desc->regst_desc_id();
+        const auto& parallel_ctx = regst_desc_id2parallel_ctx_.at(regst_desc_id);
+        if (parallel_ctx.has_parallel_id()) {
+          const int64_t parallel_id = parallel_ctx.parallel_id();
+          {
+            std::lock_guard<std::mutex> lock(mutex_);
+            lbi2parallel_id2blob_[lbi.lbi()][parallel_id] = regst->GetBlobByLbi(lbi.lbi());
+          }
+        }
       });
 }
 
@@ -177,47 +182,7 @@ const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const 
 }
 
 Blob* RegstMgr::Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id) {
-  LOG(INFO) << "begin";
-  LOG(INFO) << "len: " << regst_desc_id2regst_id2regst_.size();
-  for (const auto& x : regst_desc_id2regst_id2regst_) {
-    LOG(INFO) << "sub len: " << x.second.size();
-    for (const auto& y : x.second) {
-      LOG(INFO) << "subsub len: " << y.second->lbi2blob().size();
-      for (const auto& z : y.second->lbi2blob()) {
-        if (z.first == lbi) {
-          const auto parallel_ctx_it = regst_desc_id2parallel_ctx_.find(x.first);
-          CHECK(parallel_ctx_it != regst_desc_id2parallel_ctx_.end());
-          const auto& parallel_ctx = parallel_ctx_it->second;
-          if (parallel_ctx.has_parallel_id() && parallel_ctx.parallel_id() == parallel_id) {
-            CHECK(x.second.size() == 1)
-                << "Only the blobs in regst_desc where regst_num == 1 is supported";
-            Blob* blob = z.second.get();
-          }
-        }
-      }
-    }
-  }
-  LOG(INFO) << "end";
-  for (const auto& x : regst_desc_id2regst_id2regst_) {
-    for (const auto& y : x.second) {
-      for (const auto& z : y.second->lbi2blob()) {
-        if (z.first == lbi) {
-          const auto parallel_ctx_it = regst_desc_id2parallel_ctx_.find(x.first);
-          CHECK(parallel_ctx_it != regst_desc_id2parallel_ctx_.end());
-          const auto& parallel_ctx = parallel_ctx_it->second;
-          if (parallel_ctx.has_parallel_id() && parallel_ctx.parallel_id() == parallel_id) {
-            CHECK(x.second.size() == 1)
-                << "Only the blobs in regst_desc where regst_num == 1 is supported";
-            Blob* blob = z.second.get();
-            LOG(INFO) << "blob address: " << blob;
-            blob->blob_access_checker()->CheckBodyMutable();
-            return z.second.get();
-          }
-        }
-      }
-    }
-  }
-  return nullptr;
+  return lbi2parallel_id2blob_.at(lbi).at(parallel_id);
 }
 
 }  // namespace oneflow
