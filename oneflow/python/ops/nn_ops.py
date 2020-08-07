@@ -531,14 +531,25 @@ def conv3d(
     return output
 
 
+@oneflow_export("nn.moments")
+def moments(x, axis, keepdims=False, name=None):
+    if name is None:
+        name = id_util.UniqueStr("Moments_")
+    with flow.scope.namespace(name):
+        return (
+            flow.math.reduce_mean(x, axis=axis, keepdims=keepdims),
+            flow.math.reduce_variance(x, axis=axis, keepdims=keepdims),
+        )
+
+
 @oneflow_export("nn.batch_normalization")
 def batch_normalization(
     x: remote_blob_util.BlobDef,
     mean: remote_blob_util.BlobDef,
     variance: remote_blob_util.BlobDef,
-    offset: remote_blob_util.BlobDef,
-    scale: remote_blob_util.BlobDef,
     variance_epsilon: float,
+    offset: Optional[remote_blob_util.BlobDef] = None,
+    scale: Optional[remote_blob_util.BlobDef] = None,
     axis: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -549,8 +560,8 @@ def batch_normalization(
         x (remote_blob_util.BlobDef): Input `Blob` of arbitrary dimensionality.
         mean (remote_blob_util.BlobDef): A 1D mean `Blob`.
         variance (remote_blob_util.BlobDef):   A 1D variance `Blob`.
-        offset (remote_blob_util.BlobDef): An 1D offset `Blob`, often denoted  in equations, or None. If present, will be added to the normalized `Blob`.
-        scale (remote_blob_util.BlobDef): A 1D scale `Blob`, often denoted  in equations, or None. If present, the scale is applied to the normalized `Blob`.
+        offset (Optional[remote_blob_util.BlobDef]): An 1D offset `Blob`, often denoted  in equations, or None. If present, will be added to the normalized `Blob`.
+        scale (Optional[remote_blob_util.BlobDef]): A 1D scale `Blob`, often denoted  in equations, or None. If present, the scale is applied to the normalized `Blob`.
         variance_epsilon (float):   A small float number to avoid dividing by 0.
         axis (int, optional): 1 for '`NCHW'` data format. Defaults to 1.
         name (Optional[str], optional): This operator's name.
@@ -572,8 +583,10 @@ def batch_normalization(
         nd_params_shape[axis] = mean_dim
         mean = flow.reshape(mean, nd_params_shape)
         variance = flow.reshape(variance, nd_params_shape)
-        scale = flow.reshape(scale, nd_params_shape)
-        offset = flow.reshape(offset, nd_params_shape)
+        if scale:
+            scale = flow.reshape(scale, nd_params_shape)
+        if offset:
+            offset = flow.reshape(offset, nd_params_shape)
 
         std_inv = flow.math.rsqrt(variance + variance_epsilon)
         normalized = (x - mean) * std_inv
@@ -581,25 +594,36 @@ def batch_normalization(
         gamma = scale
         beta = offset
 
-        affined = gamma * normalized + beta
+        if gamma:
+            affined *= gamma
+        if beta:
+            affined += beta
         return affined
-
-    builder = (
-        flow.user_op_builder(name)
-        .Op("normalization")
-        .Input("x", [x])
-        .Input("moving_mean", [mean])
-        .Input("moving_variance", [variance])
-        .Input("gamma", [scale])
-        .Input("beta", [offset])
-        .Output("y")
-        .Attr("axis", axis)
-        .Attr("epsilon", variance_epsilon)
-        .Attr("training", False)
-        # momentum is not used
-        .Attr("momentum", 0.0)
-    )
-    return builder.Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        params_shape = [inputs.shape[axis]]
+        params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
+        if scale is None:
+            gamma = flow.constant(
+                1, dtype=params_dtype, shape=params_shape, name="gamma"
+            )
+        if offset is None:
+            beta = flow.constant(0, dtype=params_dtype, shape=params_shape, name="beta")
+        builder = (
+            flow.user_op_builder(name)
+            .Op("normalization")
+            .Input("x", [x])
+            .Input("moving_mean", [mean])
+            .Input("moving_variance", [variance])
+            .Input("gamma", [scale])
+            .Input("beta", [offset])
+            .Output("y")
+            .Attr("axis", axis)
+            .Attr("epsilon", variance_epsilon)
+            .Attr("training", False)
+            # momentum is not used
+            .Attr("momentum", 0.0)
+        )
+        return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("nn.compat_conv2d")

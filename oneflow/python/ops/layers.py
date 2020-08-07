@@ -651,17 +651,11 @@ def layer_norm(
     Returns:
         remote_blob_util.BlobDef: A normalized `Blob` with same shape of input.
     """
-    op_builder = (
-        flow.user_op_builder(name)
-        .Op("layer_norm")
-        .Input("x", [inputs])
-        .Output("y")
-        .Output("mean")
-        .Output("inv_variance")
-    )
-
     if center is False and scale is False:
         trainable = False
+
+    beta = None
+    gamma = None
 
     param_shape = inputs.shape[begin_params_axis:]
     if center:
@@ -677,8 +671,6 @@ def layer_norm(
                 reuse=False,
             )
 
-        op_builder.Input("beta", [beta])
-
     if scale:
         with flow.scope.namespace(name):
             gamma = flow.get_variable(
@@ -692,16 +684,53 @@ def layer_norm(
                 reuse=False,
             )
 
-        op_builder.Input("gamma", [gamma])
+    if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
+        if begin_norm_axis < 0:
+            begin_norm_axis = begin_norm_axis + len(inputs.shape)
+
+        reduce_axis = []
+        for dim in range(len(inputs.shape)):
+            if begin_norm_axis != dim:
+                reduce_axis.append(dim)
+        assert len(reduce_axis) > 0
+        mean, variance = flow.nn.moments(inputs, reduce_axis)
+
+        axis = begin_norm_axis
+        return flow.nn.batch_normalization(
+            x=inputs,
+            mean=mean,
+            variance=variance,
+            offset=beta,
+            scale=gamma,
+            variance_epsilon=epsilon,
+            axis=axis,
+            name=name,
+        )
+    elif flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu":
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("layer_norm")
+            .Input("x", [inputs])
+            .Output("y")
+            .Output("mean")
+            .Output("inv_variance")
+        )
+
+        if beta is not None:
+            p_builder.Input("beta", [beta])
+        if gamma is not None:
+            op_builder.Input("gamma", [gamma])
+
         op_builder.Output("normalized")
+        op_builder.Attr("center", center)
+        op_builder.Attr("scale", scale)
+        op_builder.Attr("begin_norm_axis", begin_norm_axis)
+        op_builder.Attr("begin_params_axis", begin_params_axis)
+        op_builder.Attr("epsilon", epsilon)
 
-    op_builder.Attr("center", center)
-    op_builder.Attr("scale", scale)
-    op_builder.Attr("begin_norm_axis", begin_norm_axis)
-    op_builder.Attr("begin_params_axis", begin_params_axis)
-    op_builder.Attr("epsilon", epsilon)
-
-    return op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
+        return op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        raise NotImplementedError
 
 
 @oneflow_export("layers.layer_norm_grad")

@@ -29,9 +29,12 @@ for gpu in gpus:
 
 
 def test_layer_norm(_):
-    confs = [{"x_shape": (4, 5, 2, 6), "begin_norm_axis": -1, "begin_params_axis": -1}]
+    confs = [
+        {"x_shape": (4, 5, 2, 6), "begin_norm_axis": 1, "begin_params_axis": -1},
+        {"x_shape": (4, 5, 2, 6), "begin_norm_axis": -1, "begin_params_axis": -1},
+    ]
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["confs"] = confs
     arg_dict["data_type"] = ["float32"]
     arg_dict["trainable"] = [True, False]
