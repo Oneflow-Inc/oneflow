@@ -27,6 +27,8 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("experimental.get_interface_blob_value")
 def GetInterfaceBlobValue(op_name):
+    flow.sync_default_session()
+
     sess = session_ctx.GetDefaultSession()
     job_name = sess.JobName4InterfaceOpName(op_name)
 
