@@ -896,7 +896,7 @@ def batch_normalization(
         )
 
     if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
-        if trainable == False and training == False:
+        if training == False:
             mean = moving_mean
             variance = moving_variance
             return flow.nn.batch_normalization(
