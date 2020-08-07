@@ -696,16 +696,25 @@ def layer_norm(
         mean, variance = flow.nn.moments(inputs, reduce_axis)
 
         axis = begin_norm_axis
-        return flow.nn.batch_normalization(
+        normalized = flow.nn.batch_normalization(
             x=inputs,
             mean=mean,
             variance=variance,
-            offset=beta,
-            scale=gamma,
             variance_epsilon=epsilon,
             axis=axis,
             name=name,
         )
+        nd_params_shape = [1] * (len(inputs.shape) - len(param_shape)) + list(
+            param_shape
+        )
+        affined = normalized
+        if gamma:
+            gamma = flow.reshape(gamma, nd_params_shape)
+            affined *= scale
+        if beta:
+            beta = flow.reshape(beta, nd_params_shape)
+            affined += beta
+        return affined
     elif flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu":
         op_builder = (
             flow.user_op_builder(name)
