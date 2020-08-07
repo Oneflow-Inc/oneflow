@@ -41,7 +41,6 @@ import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.eager.opkernel_object import OpKernelObject
 import oneflow.python.vm.id_util as vm_id_util
-from oneflow.python.oneflow_export import oneflow_export
 
 
 def PhysicalRun(build):
@@ -60,24 +59,6 @@ def LogicalRun(build):
         c_api_util.RunLogicalInstruction,
         _ReleaseLogicalObject,
     )
-
-
-@session_ctx.try_init_default_session
-@oneflow_export("test")
-def GetOfBlobInRegst(var_name):
-    def temp(builder):
-        blob_object = builder.MakeLazyRefBlobObject(var_name)
-
-        def fetcher(ofblob):
-            print(ofblob.CopyToNdarray())
-
-        def feeder(ofblob):
-            ofblob.CopyFromNdarray(np.random.random(ofblob.shape).astype(np.float32))
-
-        builder.FeedBlob(blob_object, feeder)
-        builder.FetchBlobBody(blob_object, fetcher)
-
-    LogicalRun(temp)
 
 
 def _Run(build, id_generator, run_api, release_object):
