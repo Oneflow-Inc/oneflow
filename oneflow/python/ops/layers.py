@@ -726,7 +726,7 @@ def layer_norm(
         )
 
         if beta is not None:
-            p_builder.Input("beta", [beta])
+            op_builder.Input("beta", [beta])
         if gamma is not None:
             op_builder.Input("gamma", [gamma])
 
