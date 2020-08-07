@@ -594,14 +594,16 @@ def batch_normalization(
             affined += offset
         return affined
     else:
-        params_shape = [inputs.shape[axis]]
-        params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
+        params_shape = [x.shape[axis]]
+        params_dtype = flow.float32 if x.dtype == flow.float16 else x.dtype
         if scale is None:
-            gamma = flow.constant(
+            scale = flow.constant(
                 1, dtype=params_dtype, shape=params_shape, name="gamma"
             )
         if offset is None:
-            beta = flow.constant(0, dtype=params_dtype, shape=params_shape, name="beta")
+            offset = flow.constant(
+                0, dtype=params_dtype, shape=params_shape, name="beta"
+            )
         builder = (
             flow.user_op_builder(name)
             .Op("normalization")
