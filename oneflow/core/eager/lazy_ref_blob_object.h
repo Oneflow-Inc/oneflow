@@ -39,13 +39,9 @@ class LazyRefBlobObject : public BlobObject {
   virtual const Blob& blob() const override { return *ref_blob_; }
   virtual Blob* mut_blob() override { return ref_blob_; }
 
-  // is it legal?
-  // BlobDesc* mut_blob_desc() { return &blob_desc_; }
-
+  // TODO(daquexian): Separate LazyBlobObject and EagerBlobObject,
+  // remove "virtual xxx override { Unimplemented }"
   virtual Maybe<void> TryInitBlob() override { return Error::Unimplemented(); };
-
-  // TODO(daquexian):
-  // virtual void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
 
  private:
   Blob* ref_blob_ = nullptr;
