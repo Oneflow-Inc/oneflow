@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/slice_util.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
@@ -44,25 +45,14 @@ class SliceGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    size_t dx_byte_size = dx_tensor->shape().elem_cnt() * sizeof(T);
+    Memset<device_type>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0, dx_byte_size);
     SliceParams params = ConstructSliceParams(ctx, dx_tensor, dy_tensor);
     SliceKernelUtil<device_type, T>::Backward(ctx->device_ctx(), params, dy_tensor->dptr<T>(),
                                               dx_tensor->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-// template<>
-// struct SliceKernelUtil<DeviceType::kGPU, float16> {
-//   static void Forward(DeviceCtx* ctx, const SliceParams& params, const float16* entire,
-//                       float16* sliced) {
-//     // test
-//   }
-
-//   static void Backward(DeviceCtx* ctx, const SliceParams& params, const float16* sliced,
-//                        float16* entire) {
-//     // test
-//   }
-// };
 
 #define REGISTER_SLICE_KERNELS(device, dtype)                                              \
   REGISTER_USER_KERNEL("slice").SetCreateFn<SliceKernel<device, dtype>>().SetIsMatchedHob( \
