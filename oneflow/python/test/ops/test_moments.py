@@ -70,7 +70,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axes):
         tf_loss = of_out[0] + of_out[1]
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_loss, x, loss_diff)
-    for i in range(1):
+    for i in range(2):
         assert np.allclose(of_out[i].numpy(), tf_out[i].numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
