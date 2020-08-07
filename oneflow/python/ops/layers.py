@@ -690,10 +690,9 @@ def layer_norm(
 
         reduce_axis = []
         for dim in range(len(inputs.shape)):
-            if begin_norm_axis != dim:
+            if dim >= begin_norm_axis:
                 reduce_axis.append(dim)
-        assert len(reduce_axis) > 0
-        mean, variance = flow.nn.moments(inputs, reduce_axis)
+        mean, variance = flow.nn.moments(inputs, reduce_axis, keepdims=True)
 
         axis = begin_norm_axis
         normalized = flow.nn.batch_normalization(

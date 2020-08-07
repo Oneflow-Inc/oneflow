@@ -581,10 +581,17 @@ def batch_normalization(
     params_shape = [x.shape[axis]]
 
     if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
-        nd_params_shape = [1] * len(x.shape)
-        nd_params_shape[axis] = params_shape[0]
-        mean = flow.reshape(mean, nd_params_shape)
-        variance = flow.reshape(variance, nd_params_shape)
+        if len(mean.shape) == 1:
+            nd_params_shape = [1] * len(x.shape)
+            nd_params_shape[axis] = params_shape[0]
+            mean = flow.reshape(mean, nd_params_shape)
+            variance = flow.reshape(variance, nd_params_shape)
+        elif len(mean.shape) == len(x.shape):
+            pass
+        else:
+            raise ValueError(
+                "shape of mean and variance should be 1D or has number of axes and x's"
+            )
         variance += variance_epsilon
         std_inv = flow.math.rsqrt(variance)
         normalized = (x - mean) * std_inv
