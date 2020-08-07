@@ -44,8 +44,8 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
     const int64_t dim_size = x_shape->At(i);
     const int64_t step = step_vec.at(i);
     CHECK_NE_OR_RETURN(step, 0) << "slice step cannot be 0";
-    int64_t start = ClipSliceIndex(start_vec.at(i), dim_size);
-    int64_t stop = ClipSliceIndex(stop_vec.at(i), dim_size);
+    int64_t start = RegulateSliceStart(start_vec.at(i), dim_size);
+    int64_t stop = RegulateSliceStop(stop_vec.at(i), dim_size);
     if (step > 0) {
       CHECK_LT_OR_RETURN(start, stop) << "slice start must be less than stop when step > 0"
                                          ", otherwise empty result will be outputted.";
@@ -53,8 +53,8 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
       CHECK_GT_OR_RETURN(start, stop) << "slice start must be more than stop when step < 0"
                                          ", otherwise empty result will be outputted.";
     }
-    const int64_t diff = (step > 0) ? (stop - start - 1) : (start - stop - 1);
-    dim_vec[i] = diff / step + 1;
+    const int64_t abs_diff = (step > 0) ? (stop - start - 1) : (start - stop - 1);
+    dim_vec[i] = abs_diff / step + 1;
   }
   *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(dim_vec);
   *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);

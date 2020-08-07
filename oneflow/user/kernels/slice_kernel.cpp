@@ -17,8 +17,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
 template<DeviceType device_type, typename T>
 class SliceKernel final : public user_op::OpKernel {
  public:
@@ -53,7 +51,18 @@ class SliceGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-}  // namespace
+// template<>
+// struct SliceKernelUtil<DeviceType::kGPU, float16> {
+//   static void Forward(DeviceCtx* ctx, const SliceParams& params, const float16* entire,
+//                       float16* sliced) {
+//     // test
+//   }
+
+//   static void Backward(DeviceCtx* ctx, const SliceParams& params, const float16* sliced,
+//                        float16* entire) {
+//     // test
+//   }
+// };
 
 #define REGISTER_SLICE_KERNELS(device, dtype)                                              \
   REGISTER_USER_KERNEL("slice").SetCreateFn<SliceKernel<device, dtype>>().SetIsMatchedHob( \
@@ -74,6 +83,6 @@ REGISTER_SLICE_KERNELS_FOR_DEVICES(int32_t)
 REGISTER_SLICE_KERNELS_FOR_DEVICES(int64_t)
 REGISTER_SLICE_KERNELS_FOR_DEVICES(int8_t)
 REGISTER_SLICE_KERNELS_FOR_DEVICES(uint8_t)
-REGISTER_SLICE_KERNELS(DeviceType::kGPU, float16)
+REGISTER_SLICE_KERNELS(DeviceType::kGPU, float)
 
 }  // namespace oneflow

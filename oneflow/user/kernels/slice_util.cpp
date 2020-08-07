@@ -39,12 +39,12 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
     const int64_t slice_size = sliced->shape().At(i);
     const int64_t step = step_vec.at(i);
     CHECK_NE(step, 0);
-    const int64_t start = ClipSliceIndex(start_vec.at(i), dim_size);
-    const int64_t stop = ClipSliceIndex(stop_vec.at(i), dim_size);
+    const int64_t start = RegulateSliceStart(start_vec.at(i), dim_size);
+    const int64_t stop = RegulateSliceStop(stop_vec.at(i), dim_size);
     if (step > 0) {
-      CHECK_LT(start + step * slice_size, stop);
+      CHECK_LT(start + step * (slice_size - 1), stop);
     } else {
-      CHECK_GT(start + step * slice_size, stop);
+      CHECK_GT(start + step * (slice_size - 1), stop);
     }
     // full slice dim can be collapsed to prev full slice dim
     bool full_slice_on_cur_axis = IsFullSlice(start, stop, step, dim_size, false);

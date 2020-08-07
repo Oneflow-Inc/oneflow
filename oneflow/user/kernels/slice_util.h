@@ -34,8 +34,18 @@ inline bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size,
   return true;
 }
 
-inline int64_t ClipSliceIndex(int64_t index, int64_t size) {
-  return std::min(std::max<int64_t>(index, 0), size);
+inline int64_t RegulateSliceStart(int64_t start, int64_t size) {
+  // slice start must be in range [-size, size)
+  // after changing to positive order it should be in range [0, size)
+  start = std::min(std::max<int64_t>(start, 0), size - 1);
+  return (start < 0) ? (start + size) : start;
+}
+
+inline int64_t RegulateSliceStop(int64_t stop, int64_t size) {
+  // slice stop must be in range [-size-1, size]
+  // after changing to positive order it should be in range [-1, size]
+  stop = std::min(std::max(stop, -size - 1), size);
+  return (stop < 0) ? (stop + size) : stop;
 }
 
 constexpr size_t kSliceMaxDims = 8;
