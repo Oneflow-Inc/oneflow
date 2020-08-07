@@ -57,7 +57,7 @@ def dense(
         model_distribute (distribute_util.Distribute, optional): Define the way to ditribute the model. Defaults to distribute_util.broadcast().
 
     Returns:
-        remote_blob_util.BlobDef:  A N-D `Blob` with the shape of (batch_size, units).  
+        remote_blob_util.BlobDef:  A N-D `Blob` with the shape of (batch_size, units).
 
     Raises:
         ValueError: The dimension of input `Blob` must be less than 2.
@@ -153,13 +153,13 @@ def conv1d(
 
     Args:
         inputs (remote_blob_util.BlobDef): A 3D input `Blob`.
-        filters (int): An integer specifies the dimensionality of the output space. 
-        kernel_size (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the height and width of the convolution window. 
+        filters (int): An integer specifies the dimensionality of the output space.
+        kernel_size (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the height and width of the convolution window.
                         When it is an integer, a square window is applied to the input. Defaults to 1.
-        strides (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the strides of the convolution window along the height and width. 
+        strides (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the strides of the convolution window along the height and width.
                         When it is an integer, the same value for the all spatial dimesions is applied. Defaults to 1.
         padding (str, Tuple[IntPair, IntPair, IntPair], optional): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. Defaults to "VALID".
-        data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCW" or "NWC" (default: "NCW"). "NCW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, width). 
+        data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCW" or "NWC" (default: "NCW"). "NCW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, width).
                         "NWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, channels, width). Defaults to "NCW".
         dilation_rate (Optional[Union[int, Tuple[int]]], optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
         groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
@@ -173,14 +173,14 @@ def conv1d(
         name (Optional[str], optional): This layer's name. Defaults to None.
 
     Raises:
-        ValueError: If the type of kernel_size is not one of integer, list, tuple. 
-        ValueError: The number of groups must be positive and number of filters must be divisible by it. 
-        ValueError: If data_format is not one of 'NCW', 'NWC'. 
+        ValueError: If the type of kernel_size is not one of integer, list, tuple.
+        ValueError: The number of groups must be positive and number of filters must be divisible by it.
+        ValueError: If data_format is not one of 'NCW', 'NWC'.
         ValueError: If number of input channels is not divisible by number of groups or less than number of groups.
         ValueError: Number of group must be one when data_format is 'NWC'.
 
     Returns:
-        remote_blob_util.BlobDef: A 3D `Blob` with the shape of (batch_size, filters, new_width).  
+        remote_blob_util.BlobDef: A 3D `Blob` with the shape of (batch_size, filters, new_width).
     """
 
     if isinstance(kernel_size, int):
@@ -314,13 +314,13 @@ def conv2d(
 
     Args:
         inputs (remote_blob_util.BlobDef): A 4D input `Blob`.
-        filters (int): An integer specifies the dimensionality of the output space. 
-        kernel_size (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the height and width of the convolution window. 
+        filters (int): An integer specifies the dimensionality of the output space.
+        kernel_size (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the height and width of the convolution window.
                         When it is an integer, a square window is applied to the input. Defaults to 1.
-        strides (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the strides of the convolution window along the height and width. 
+        strides (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the strides of the convolution window along the height and width.
                         When it is an integer, the same value for the all spatial dimesions is applied. Defaults to 1.
         padding (str, Tuple[IntPair, IntPair, IntPair, IntPair], optional): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. Defaults to "VALID".
-        data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCHW" or "NHWC" (default: "NCHW"). "NCHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, height, width). 
+        data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCHW" or "NHWC" (default: "NCHW"). "NCHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, height, width).
                         "NHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, height, width, channels). Defaults to "NCHW".
         dilation_rate (int, optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
         groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
@@ -336,14 +336,14 @@ def conv2d(
         bias_name (Optional[str], optional):  This bias's name. Defaults to None.
 
     Raises:
-        ValueError: If the type of kernel_size is not one of integer, list, tuple. 
-        ValueError: The number of groups must be positive and number of filters must be divisible by it. 
-        ValueError: If data_format is not one of 'NCHW', 'NHWC'. 
+        ValueError: If the type of kernel_size is not one of integer, list, tuple.
+        ValueError: The number of groups must be positive and number of filters must be divisible by it.
+        ValueError: If data_format is not one of 'NCHW', 'NHWC'.
         ValueError: If number of input channels is not divisible by number of groups or less than number of groups.
         ValueError: Number of group must be one when data_format is 'NHWC'.
 
     Returns:
-        remote_blob_util.BlobDef: A 4D `Blob` with the shape of (batch_size, filters, new_height, new_width).  
+        remote_blob_util.BlobDef: A 4D `Blob` with the shape of (batch_size, filters, new_height, new_width).
     """
 
     if isinstance(kernel_size, int):
@@ -478,13 +478,13 @@ def conv3d(
 
     Args:
         inputs (remote_blob_util.BlobDef): A 5D input `Blob`.
-        filters (int): An integer specifies the dimensionality of the output space. 
-        kernel_size (Union[int, List[int], Sequence[int]], optional): An integer or tuple/list specifies the height and width of the convolution window. 
+        filters (int): An integer specifies the dimensionality of the output space.
+        kernel_size (Union[int, List[int], Sequence[int]], optional): An integer or tuple/list specifies the height and width of the convolution window.
                         When it is an integer, a square window is applied to the input. Defaults to 1.
-        strides (Union[int, List[int], Sequence[int]], optional): An integer or tuple/list specifies the strides of the convolution window along the height and width. 
+        strides (Union[int, List[int], Sequence[int]], optional): An integer or tuple/list specifies the strides of the convolution window along the height and width.
                         When it is an integer, the same value for the all spatial dimesions is applied. Defaults to 1.
         padding (str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair], optional): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. Defaults to "VALID".
-        data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCDHW" or "NDHWC" (default: "NCDHW"). "NCDHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, depth, height, width). 
+        data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCDHW" or "NDHWC" (default: "NCDHW"). "NCDHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, depth, height, width).
                         "NDHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, channels, depth, height, width). Defaults to "NCDHW".
         dilation_rate (int, optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
         groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
@@ -500,14 +500,14 @@ def conv3d(
         bias_name (Optional[str], optional):  This bias's name. Defaults to None.
 
     Raises:
-        ValueError: If the type of kernel_size is not one of integer, list, tuple. 
-        ValueError: The number of groups must be positive and number of filters must be divisible by it. 
-        ValueError: If data_format is not one of 'NCDHW', 'NDHWC'. 
+        ValueError: If the type of kernel_size is not one of integer, list, tuple.
+        ValueError: The number of groups must be positive and number of filters must be divisible by it.
+        ValueError: If data_format is not one of 'NCDHW', 'NDHWC'.
         ValueError: If number of input channels is not divisible by number of groups or less than number of groups.
         ValueError: Number of group must be one when data_format is 'NDHWC'.
 
     Returns:
-        remote_blob_util.BlobDef: A 5D `Blob` with the shape of (batch_size, filters, new_height, new_width).  
+        remote_blob_util.BlobDef: A 5D `Blob` with the shape of (batch_size, filters, new_height, new_width).
     """
     need_transpose = 0
     if data_format.upper() == "NDHWC":  # NDHWC is not supported before cudnn 8.0
@@ -649,7 +649,7 @@ def layer_norm(
         name (Optional[str], optional):  This layer's name. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A normalized `Blob` with same shape of input. 
+        remote_blob_util.BlobDef: A normalized `Blob` with same shape of input.
     """
     op_builder = (
         flow.user_op_builder(name)
@@ -724,7 +724,7 @@ def layer_norm_grad(
         name (Optional[str], optional): This layer's name. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: Gradient with respect to input `Blob`. 
+        remote_blob_util.BlobDef: Gradient with respect to input `Blob`.
     """
     op = (
         flow.user_op_builder(name)
@@ -755,13 +755,13 @@ def layer_norm_param_grad(
 
     Args:
         dy (remote_blob_util.BlobDef): Upstream derivstives.
-        norm (remote_blob_util.BlobDef): Normalized output. 
-        gamma (remote_blob_util.BlobDef): Scale parameter.  
+        norm (remote_blob_util.BlobDef): Normalized output.
+        gamma (remote_blob_util.BlobDef): Scale parameter.
         begin_params_axis (int, optional): From which parameters to begin with. Defaults to -1.
         name (Optional[str], optional): This layer's name. Defaults to 'LayerNormParamGrad'.
 
     Returns:
-        Tuple[remote_blob_util.BlobDef]: 
+        Tuple[remote_blob_util.BlobDef]:
                 normalized_diff: Gradient with respect to input `Blob`.
                 beta_diff: Gradient with respect to shift parameter beta.
                 gamma_diff: Gradient with respect to scale parameter gamma.
@@ -828,7 +828,7 @@ def batch_normalization(
         name (Optional[str], optional): This layer's name. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef:  A `Blob` with same shape of input. 
+        remote_blob_util.BlobDef:  A `Blob` with same shape of input.
 
     Raises:
         ValueError: If axis is out of dimension of input.
@@ -895,6 +895,23 @@ def batch_normalization(
             reuse=False,
         )
 
+    if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
+        if trainable == False and training == False:
+            mean = moving_mean
+            variance = moving_variance
+            return flow.nn.batch_normalization(
+                x=inputs,
+                mean=mean,
+                variance=variance,
+                offset=beta,
+                scale=gamma,
+                variance_epsilon=epsilon,
+                axis=axis,
+                name=name,
+            )
+        else:
+            raise NotImplementedError
+
     builder = (
         flow.user_op_builder(name)
         .Op("normalization")
@@ -928,7 +945,7 @@ def upsample(
     Args:
         x ([type]): Input `Blob`.
         size (tuple, optional): (height_scale,width_scale)  Defaults to (2, 2).
-        data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCHW" or "NHWC" (default: "NCHW"). "NCHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, height, width). 
+        data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCHW" or "NHWC" (default: "NCHW"). "NCHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, height, width).
                         "NHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, height, width, channels).. Defaults to "NCHW".
         interpolation (str, optional): Image interpolation algorithm to enlarge the image size. Defaults to "nearest".
         name ([type], optional): This layer's name. Defaults to None.
