@@ -104,60 +104,32 @@ struct SliceKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
-// template<>
-// struct SliceKernelUtil<DeviceType::kGPU, float16> {
-//   static void Forward(DeviceCtx* ctx, const SliceParams& params, const float16* entire,
-//                       float16* sliced) {
-//     int64_t elem_cnt = 1;
-//     FOR_RANGE(int, i, 0, params.ndim) { elem_cnt *= params.size[i]; }
-//     SliceIndexHelper entire_idx_cvtr(params.dims, params.ndim);
-//     SliceIndexHelper sliced_idx_cvtr(params.size, params.ndim);
-//     SliceForwardGpuHalf<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-//                           ctx->cuda_stream()>>>(elem_cnt, params, entire_idx_cvtr,
-//                           sliced_idx_cvtr,
-//                                                 reinterpret_cast<const half*>(entire),
-//                                                 reinterpret_cast<half*>(sliced));
-//   }
-
-//   static void Backward(DeviceCtx* ctx, const SliceParams& params, const float16* sliced,
-//                        float16* entire) {
-//     int64_t elem_cnt = 1;
-//     FOR_RANGE(int, i, 0, params.ndim) { elem_cnt *= params.size[i]; }
-//     SliceIndexHelper entire_idx_cvtr(params.dims, params.ndim);
-//     SliceIndexHelper sliced_idx_cvtr(params.size, params.ndim);
-//     SliceBackwardGpuHalf<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-//                            ctx->cuda_stream()>>>(elem_cnt, params, entire_idx_cvtr,
-//                            sliced_idx_cvtr,
-//                                                  reinterpret_cast<half*>(entire),
-//                                                  reinterpret_cast<const half*>(sliced));
-//   }
-// };
-
 template<>
-void SliceKernelUtil<DeviceType::kGPU, float16>::Forward(DeviceCtx* ctx, const SliceParams& params,
-                                                         const float16* entire, float16* sliced) {
-  int64_t elem_cnt = 1;
-  FOR_RANGE(int, i, 0, params.ndim) { elem_cnt *= params.size[i]; }
-  SliceIndexHelper entire_idx_cvtr(params.dims, params.ndim);
-  SliceIndexHelper sliced_idx_cvtr(params.size, params.ndim);
-  SliceForwardGpuHalf<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                        ctx->cuda_stream()>>>(elem_cnt, params, entire_idx_cvtr, sliced_idx_cvtr,
-                                              reinterpret_cast<const half*>(entire),
-                                              reinterpret_cast<half*>(sliced));
-}
+struct SliceKernelUtil<DeviceType::kGPU, float16> {
+  static void Forward(DeviceCtx* ctx, const SliceParams& params, const float16* entire,
+                      float16* sliced) {
+    int64_t elem_cnt = 1;
+    FOR_RANGE(int, i, 0, params.ndim) { elem_cnt *= params.size[i]; }
+    SliceIndexHelper entire_idx_cvtr(params.dims, params.ndim);
+    SliceIndexHelper sliced_idx_cvtr(params.size, params.ndim);
+    SliceForwardGpuHalf<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                          ctx->cuda_stream()>>>(elem_cnt, params, entire_idx_cvtr, sliced_idx_cvtr,
+                                                reinterpret_cast<const half*>(entire),
+                                                reinterpret_cast<half*>(sliced));
+  }
 
-template<>
-void SliceKernelUtil<DeviceType::kGPU, float16>::Backward(DeviceCtx* ctx, const SliceParams& params,
-                                                          const float16* sliced, float16* entire) {
-  int64_t elem_cnt = 1;
-  FOR_RANGE(int, i, 0, params.ndim) { elem_cnt *= params.size[i]; }
-  SliceIndexHelper entire_idx_cvtr(params.dims, params.ndim);
-  SliceIndexHelper sliced_idx_cvtr(params.size, params.ndim);
-  SliceBackwardGpuHalf<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                         ctx->cuda_stream()>>>(elem_cnt, params, entire_idx_cvtr, sliced_idx_cvtr,
-                                               reinterpret_cast<half*>(entire),
-                                               reinterpret_cast<const half*>(sliced));
-}
+  static void Backward(DeviceCtx* ctx, const SliceParams& params, const float16* sliced,
+                       float16* entire) {
+    int64_t elem_cnt = 1;
+    FOR_RANGE(int, i, 0, params.ndim) { elem_cnt *= params.size[i]; }
+    SliceIndexHelper entire_idx_cvtr(params.dims, params.ndim);
+    SliceIndexHelper sliced_idx_cvtr(params.size, params.ndim);
+    SliceBackwardGpuHalf<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                           ctx->cuda_stream()>>>(elem_cnt, params, entire_idx_cvtr, sliced_idx_cvtr,
+                                                 reinterpret_cast<half*>(entire),
+                                                 reinterpret_cast<const half*>(sliced));
+  }
+};
 
 INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(DeviceType::kGPU)
 INSTANTIATE_SLICE_KERNEL_UTIL(DeviceType::kGPU, float16)

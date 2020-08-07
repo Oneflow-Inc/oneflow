@@ -84,6 +84,9 @@ struct SliceKernelUtil {
   static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire);
 };
 
+template<>
+struct SliceKernelUtil<DeviceType::kGPU, float16>;
+
 #define INSTANTIATE_SLICE_KERNEL_UTIL(device, dtype) template struct SliceKernelUtil<device, dtype>;
 
 #define INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(device) \
