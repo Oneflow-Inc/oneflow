@@ -583,21 +583,15 @@ def batch_normalization(
         nd_params_shape[axis] = mean_dim
         mean = flow.reshape(mean, nd_params_shape)
         variance = flow.reshape(variance, nd_params_shape)
-        if scale:
-            scale = flow.reshape(scale, nd_params_shape)
-        if offset:
-            offset = flow.reshape(offset, nd_params_shape)
-
         std_inv = flow.math.rsqrt(variance + variance_epsilon)
         normalized = (x - mean) * std_inv
-
-        gamma = scale
-        beta = offset
-
-        if gamma:
-            affined *= gamma
-        if beta:
-            affined += beta
+        affined = normalized
+        if scale:
+            scale = flow.reshape(scale, nd_params_shape)
+            affined *= scale
+        if offset:
+            offset = flow.reshape(offset, nd_params_shape)
+            affined += offset
         return affined
     else:
         params_shape = [inputs.shape[axis]]
