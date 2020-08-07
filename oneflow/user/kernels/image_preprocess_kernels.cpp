@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/user/image/image_util.h"
-#include "oneflow/user/image/random_crop_attr.h"
+#include "oneflow/user/kernels/random_crop_kernel_state.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 
 namespace oneflow {
@@ -461,25 +461,20 @@ void ImageRandomCropImpl(const TensorBuffer* in_buffer, TensorBuffer* out_buffer
   cv::Mat image = GenCvMat4ImageBuffer(*in_buffer);
   int W = image.cols;
   int H = image.rows;
-
-  CHECK(random_crop_gen != nullptr);
-  CHECK(image.data != nullptr);
   cv::Mat image_roi;
   CropWindow crop;
   random_crop_gen->GenerateCropWindow({H, W}, &crop);
   const int y = crop.anchor.At(0);
   const int x = crop.anchor.At(1);
-  const int newH = crop.shape.At(0);
-  const int newW = crop.shape.At(1);
-  CHECK(newW > 0 && newW <= W);
-  CHECK(newH > 0 && newH <= H);
-  cv::Rect roi(x, y, newW, newH);
+  const int new_h = crop.shape.At(0);
+  const int new_w = crop.shape.At(1);
+  CHECK(new_w > 0 && new_w <= W);
+  CHECK(new_h > 0 && new_h <= H);
+  cv::Rect roi(x, y, new_w, new_h);
   image(roi).copyTo(image_roi);
   image = image_roi;
   W = image.cols;
   H = image.rows;
-  CHECK(W == newW);
-  CHECK(H == newH);
 
   CHECK(image.isContinuous());
   const int c = in_buffer->shape().At(2);
@@ -498,12 +493,12 @@ class ImageRandomCropKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return CreateRandomCropState(ctx);
+    return CreateRandomCropKernelState(ctx);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* crop_window_generators = dynamic_cast<RandCropGens*>(state);
+    auto* crop_window_generators = dynamic_cast<RandomCropKernelState*>(state);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t record_num = out_blob->shape().At(0);
     CHECK(record_num > 0);

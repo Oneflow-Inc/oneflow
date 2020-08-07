@@ -234,13 +234,17 @@ def api_image_random_crop(
     input_blob: BlobDef,
     num_attempts: int = 10,
     seed: Optional[int] = None,
-    random_area: Sequence[float] = [0.08, 1.0],
-    random_aspect_ratio: Sequence[float] = [0.75, 1.333333],
+    random_area: Sequence[float] = None,
+    random_aspect_ratio: Sequence[float] = None,
     name: str = "ImageRandomCrop",
 ) -> BlobDef:
     assert isinstance(name, str)
     if seed is not None:
         assert name is not None
+    if random_area is None:
+        random_area = [0.08, 1.0]
+    if random_aspect_ratio is None:
+        random_aspect_ratio = [0.75, 1.333333]
     module = flow.find_or_create_module(
         name,
         lambda: ImageRandomCropModule(

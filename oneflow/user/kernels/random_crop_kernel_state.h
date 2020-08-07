@@ -13,18 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_IMAGE_RANDOM_CROP_ATTR_H_
-#define ONEFLOW_USER_IMAGE_RANDOM_CROP_ATTR_H_
+#ifndef ONEFLOW_USER_KERNELS_RANDOM_CROP_KERNEL_STATE_H_
+#define ONEFLOW_USER_KERNELS_RANDOM_CROP_KERNEL_STATE_H_
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/image/random_crop_generator.h"
 
 namespace oneflow {
 
-class RandCropGens final : public user_op::OpKernelState {
+class RandomCropKernelState final : public user_op::OpKernelState {
  public:
-  explicit RandCropGens(int32_t size) : gens_(size) {}
-  ~RandCropGens() = default;
+  explicit RandomCropKernelState(int32_t size) : gens_(size) {}
+  ~RandomCropKernelState() = default;
 
   RandomCropGenerator* Get(int32_t idx) { return gens_.at(idx).get(); }
 
@@ -39,8 +39,8 @@ class RandCropGens final : public user_op::OpKernelState {
   std::vector<std::shared_ptr<RandomCropGenerator>> gens_;
 };
 
-std::shared_ptr<RandCropGens> CreateRandomCropState(user_op::KernelInitContext* ctx);
+std::shared_ptr<RandomCropKernelState> CreateRandomCropKernelState(user_op::KernelInitContext* ctx);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_IMAGE_RANDOM_CROP_ATTR_H_
+#endif  // ONEFLOW_USER_KERNELS_RANDOM_CROP_KERNEL_STATE_H_

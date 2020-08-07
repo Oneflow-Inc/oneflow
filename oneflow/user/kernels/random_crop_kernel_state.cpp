@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/image/random_crop_attr.h"
 #include "oneflow/user/kernels/random_seed_util.h"
+#include "oneflow/user/kernels/random_crop_kernel_state.h"
 
 namespace oneflow {
 
-std::shared_ptr<RandCropGens> CreateRandomCropState(user_op::KernelInitContext* ctx) {
+std::shared_ptr<RandomCropKernelState> CreateRandomCropKernelState(
+    user_op::KernelInitContext* ctx) {
   int32_t num_attempts = ctx->Attr<int32_t>("num_attempts");
   CHECK(num_attempts >= 1);
   const std::vector<float>& random_aspect_ratio =
@@ -36,7 +37,8 @@ std::shared_ptr<RandCropGens> CreateRandomCropState(user_op::KernelInitContext* 
   std::vector<int> seeds(batch_size);
   seq.generate(seeds.begin(), seeds.end());
 
-  std::shared_ptr<RandCropGens> crop_window_generators(new RandCropGens(batch_size));
+  std::shared_ptr<RandomCropKernelState> crop_window_generators(
+      new RandomCropKernelState(batch_size));
   for (int32_t i = 0; i < batch_size; ++i) {
     crop_window_generators->New(i, {random_aspect_ratio.at(0), random_aspect_ratio.at(1)},
                                 {random_area.at(0), random_area.at(1)}, seeds.at(i), num_attempts);

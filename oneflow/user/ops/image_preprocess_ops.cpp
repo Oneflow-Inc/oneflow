@@ -224,7 +224,6 @@ REGISTER_CPU_ONLY_USER_OP("image_random_crop")
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
-      CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().At(0) >= 1);
       *out_tensor = *in_tensor;
       return Maybe<void>::Ok();
     })
