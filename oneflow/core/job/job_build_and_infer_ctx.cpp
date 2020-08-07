@@ -100,6 +100,7 @@ JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), 
   has_job_conf_ = false;
 }
 
+// Set the job configure
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
   CHECK_OR_RETURN(!is_job_conf_frozen_) << JobBuildAndInferError::kJobConfFrozen;
   CHECK_OR_RETURN(!has_job_conf_) << JobBuildAndInferError::kJobConfRepeatedSet;
@@ -113,6 +114,7 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
   return Maybe<void>::Ok();
 }
 
+// Put op into corresponding placement group according to parallel configure
 Maybe<void> JobBuildAndInferCtx::AddOpNameParallelConf2Placement(
     const std::string& op_name, const ParallelConf& parallel_conf) {
   ParallelDesc parallel_desc(parallel_conf);
@@ -128,6 +130,8 @@ Maybe<void> JobBuildAndInferCtx::AddOpNameParallelConf2Placement(
   return Maybe<void>::Ok();
 }
 
+// Map output blob name to logical blob id, them place it into the blob placement group related to
+// the parallel description of the output blob
 Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
     const Operator* op, std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn) {
   for (const auto& obn : op->output_bns()) {
@@ -138,6 +142,7 @@ Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
       *blob_pg->mutable_parallel_conf() = parallel_desc.parallel_conf();
       iter = parallel_desc2blob_placement_group_.emplace(parallel_desc, blob_pg).first;
     }
+    // logical blob id
     const auto& lbi = op->BnInOp2Lbi(obn);
     CHECK_OR_RETURN(std::find(iter->second->lbi().begin(), iter->second->lbi().end(), lbi)
                     == iter->second->lbi().end());
@@ -908,7 +913,9 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   return mirrored_lbi;
 }
 
+// Complete initialization of job
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
+  // Check and delete job description because job configure and job id are already stored
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
   if (job().job_conf().has_train_conf()) {
