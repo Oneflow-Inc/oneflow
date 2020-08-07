@@ -328,7 +328,7 @@ def test_layer_batchnorm(test_case):
 
 def test_layer_batchnorm_inference(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["data_type"] = ["float32"]
     arg_dict["input_shape"] = [(1, 4, 1, 2)]
     arg_dict["op_args"] = [
