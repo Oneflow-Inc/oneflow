@@ -100,14 +100,13 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
             user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
-        sbp_signature_(&(kernel_conf.user_conf().sbp_sig())),
-        parallel_desc_(kernel_conf.user_conf().parallel_conf()) {
+        sbp_signature_(&(kernel_conf.user_conf().sbp_sig())) {
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2logical_blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
                                        user_op::TensorDesc(pair.second));
     }
   }
-  ~UserKernelInitContext() override = default;
+  ~UserKernelInitContext() = default;
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
 
@@ -136,14 +135,12 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   }
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
-  const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
 
  private:
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   const SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2logical_tensor_desc_;
-  ParallelDesc parallel_desc_;
 };
 
 class UserKernelOpInferContext : public user_op::InferContext {
