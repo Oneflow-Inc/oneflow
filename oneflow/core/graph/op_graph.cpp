@@ -415,6 +415,7 @@ void OpGraph::InitEdges() {
   HashMap<LogicalBlobId, OpNode*> lbi2producer;
   HashMap<std::string, std::shared_ptr<HashMap<LogicalBlobId, std::string>>>
       producer_op_name2lbi2obn;
+  // For each op node, build connection between output blob names and logical blob ids.
   ForEachNode([&](OpNode* op_node) {
     for (const auto& obn : op_node->op().output_bns()) {
       const auto& lbi = op_node->op().BnInOp2Lbi(obn);
@@ -424,6 +425,8 @@ void OpGraph::InitEdges() {
       CHECK(lbi2obn->emplace(lbi, obn).second);
     }
   });
+  // For each op node, build connection between op names and logical blob ids list, and build
+  // connection between logical blob ids and input blob names.
   ForEachNode([&](OpNode* op_node) {
     HashMap<std::string, HashSet<LogicalBlobId>> producer_op_name2lbis;
     std::shared_ptr<HashMap<LogicalBlobId, std::vector<std::string>>> consumer_lbi2ibns(
@@ -433,6 +436,7 @@ void OpGraph::InitEdges() {
       producer_op_name2lbis[lbi.op_name()].insert(lbi);
       (*consumer_lbi2ibns)[lbi].push_back(ibn);
     }
+    // Build edges use the connections computed above.
     for (const auto& pair : producer_op_name2lbis) {
       std::shared_ptr<std::vector<LogicalBlobId>> lbis(
           new std::vector<LogicalBlobId>({pair.second.begin(), pair.second.end()}));
@@ -440,6 +444,7 @@ void OpGraph::InitEdges() {
       CHECK(it != producer_op_name2lbi2obn.end()) << "producer_op_name: " << pair.first;
       const auto& lbi2obn = it->second;
       OpNode* producer = lbi2producer.at(lbis->at(0));
+      // Connect current node with an upstream node
       Connect(producer, NewEdge(lbis, lbi2obn, consumer_lbi2ibns), op_node);
     }
   });

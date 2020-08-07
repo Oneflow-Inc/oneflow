@@ -244,9 +244,11 @@ Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
   return PbMessage2TxtString(*JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
 }
 
+// Construct the next op
 Maybe<std::string> InferOpConf(const std::string& op_conf_str,
                                const std::string& upstream_signature_str) {
   OperatorConf op_conf;
+  // get op configure from op_conf_str
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
   OpNodeSignature upstream_signature;

@@ -105,6 +105,16 @@ class OpNode final : public Node<OpNode, OpEdge> {
 class OpEdge final : public Edge<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpEdge);
+  /* OpEdge Constructor.
+   * INPUT:
+   *    lbis      Logical blob ids for input blobs of downsteam
+   *    lbi2obn   A HaspMap defined on logical blob ids of output blob of upstream.
+   *              The image of this map is output blob names.
+   *              The key of lbi2obn contains lbis as a subset.
+   *    lbi2ibns  A HaspMap defined on logical blob ids of input blob of downstream.
+   *              The image of this map is input blob names.
+   *              The key of lbi2obn contains lbis as a subset as well.
+   */ 
   explicit OpEdge(std::shared_ptr<std::vector<LogicalBlobId>> lbis,
                   std::shared_ptr<HashMap<LogicalBlobId, std::string>> lbi2obn,
                   std::shared_ptr<HashMap<LogicalBlobId, std::vector<std::string>>> lbi2ibns)
