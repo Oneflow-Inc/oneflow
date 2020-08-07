@@ -593,7 +593,7 @@ def batch_normalization(
             offset = flow.reshape(offset, nd_params_shape)
             affined += offset
         return affined
-    else:
+    elif flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu":
         params_shape = [x.shape[axis]]
         params_dtype = flow.float32 if x.dtype == flow.float16 else x.dtype
         if scale is None:
@@ -620,6 +620,8 @@ def batch_normalization(
             .Attr("momentum", 0.0)
         )
         return builder.Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        raise NotImplementedError
 
 
 @oneflow_export("nn.compat_conv2d")
