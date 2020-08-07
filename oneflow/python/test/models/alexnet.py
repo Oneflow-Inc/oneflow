@@ -124,15 +124,14 @@ def _data_load_layer(args, data_dir):
     node_num = args.num_nodes
     total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
     rgb_mean = [123.68, 116.78, 103.94]
-    ofrecord = flow.data.ofrecord_reader(
+    (image, label) = flow.data.ofrecord_image_classification_reader(
         data_dir,
         batch_size=total_batch_size,
         data_part_num=args.data_part_num,
+        image_feature_name="encoded",
+        label_feature_name="class/label",
+        color_space="RGB",
         name="decode",
-    )
-    image = flow.data.ofrecord_image_decoder(ofrecord, "encoded", color_space="RGB")
-    label = flow.data.ofrecord_raw_decoder(
-        ofrecord, "class/label", shape=(), dtype=flow.int32
     )
     rsz = flow.image.resize(image, resize_x=227, resize_y=227, color_space="RGB")
     normal = flow.image.crop_mirror_normalize(

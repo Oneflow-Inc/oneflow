@@ -29,6 +29,8 @@ namespace oneflow {
       });
 
 REGISTER_EXPAND_DIMS_KERNEL(kCPU)
+#ifdef WITH_CUDA
 REGISTER_EXPAND_DIMS_KERNEL(kGPU)
+#endif
 
 }  // namespace oneflow

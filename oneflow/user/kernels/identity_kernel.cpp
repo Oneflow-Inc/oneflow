@@ -51,7 +51,9 @@ class IdentityKernel final : public user_op::OpKernel {
       });
 
 REGISTER_IDENTITY_KERNEL(DeviceType::kCPU)
+#ifdef WITH_CUDA
 REGISTER_IDENTITY_KERNEL(DeviceType::kGPU)
+#endif
 
 }  // namespace
 

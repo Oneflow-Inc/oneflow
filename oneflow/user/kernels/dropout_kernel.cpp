@@ -124,7 +124,9 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
       .SetIsMatchedHob(user_op::HobDeviceType() == device);
 
 REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCPU)
+#ifdef WITH_CUDA
 REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kGPU)
+#endif
 
 }  // namespace
 }  // namespace oneflow

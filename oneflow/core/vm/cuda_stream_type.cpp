@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.msg.h"
@@ -75,3 +77,5 @@ ObjectMsgPtr<StreamDesc> CudaStreamType::MakeStreamDesc(const Resource& resource
 
 }  // namespace vm
 }  // namespace oneflow
+
+#endif

@@ -17,13 +17,16 @@ import oneflow as flow
 import oneflow.typing as oft
 import numpy as np
 import os
+import unittest
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n1c(test_case):
     dcgan = DCGAN()
     dcgan.compare_with_tf(1)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n4c(test_case):
     dcgan = DCGAN()
     dcgan.compare_with_tf(4)

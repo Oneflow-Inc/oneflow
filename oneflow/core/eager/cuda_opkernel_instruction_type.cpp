@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/eager/opkernel_object.h"
@@ -143,3 +145,5 @@ COMMAND(vm::RegisterInstructionType<GpuFeedBlobInstructionType>("gpu.FeedBlob"))
 
 }  // namespace eager
 }  // namespace oneflow
+
+#endif

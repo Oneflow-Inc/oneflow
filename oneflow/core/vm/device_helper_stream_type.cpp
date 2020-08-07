@@ -27,6 +27,8 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+#ifdef WITH_CUDA
+
 namespace {
 
 class CudaMallocInstructionType final : public InstructionType {
@@ -104,6 +106,8 @@ class CudaFreeInstructionType final : public InstructionType {
 COMMAND(RegisterInstructionType<CudaFreeInstructionType>("CudaFree"));
 
 }  // namespace
+
+#endif
 
 void DeviceHelperStreamType::InitInstructionStatus(const Stream& stream,
                                                    InstructionStatusBuffer* status_buffer) const {

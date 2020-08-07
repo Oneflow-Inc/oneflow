@@ -263,6 +263,7 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
     func = &Memcpy<DeviceType::kCPU>;
     kind = cudaMemcpyKind::cudaMemcpyHostToHost;
   } else {
+#ifdef WITH_CUDA
     func = &Memcpy<DeviceType::kGPU>;
     if (src_mem_case.has_host_mem() && dst_mem_case.has_device_cuda_mem()) {
       kind = cudaMemcpyKind::cudaMemcpyHostToDevice;
@@ -273,6 +274,9 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
     } else {
       UNIMPLEMENTED();
     }
+#else
+    UNIMPLEMENTED();
+#endif  // WITH_CUDA
   }
   func(ctx, dst, src, sz, kind);
 }
@@ -281,7 +285,11 @@ void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                     const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
   AutoMemcpy(ctx, dst, src, sz, dst_mem_case, src_mem_case);
   if (src_mem_case.has_device_cuda_mem() || dst_mem_case.has_device_cuda_mem()) {
+#ifdef WITH_CUDA
     CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));
+#else
+    UNIMPLEMENTED();
+#endif  // WITH_CUDA
   }
 }
 

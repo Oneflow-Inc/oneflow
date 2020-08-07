@@ -20,6 +20,8 @@ import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList
 import oneflow.typing as oft
+import unittest
+import os
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -271,6 +273,7 @@ def test_gather_nd_case_4(test_case):
         _compare_gather_nd_with_tf(test_case, *arg)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_dynamic_gather_nd(test_case):
     arg_dict = OrderedDict()
     arg_dict["params_shape"] = [(30, 15)]
