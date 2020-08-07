@@ -18,6 +18,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.framework.input_blob_def as input_blob_def
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
@@ -55,7 +56,12 @@ def FeedValueToInterfaceBlob(op_name, ndarray):
             blob_object = builder.MakeLazyRefBlobObject(op_name)
             push_util.FeedValueToEagerBlob(
                 blob_object,
-                input_blob_def.FixedTensorDef(ndarray.shape, dtype=flow.float),
+                input_blob_def.FixedTensorDef(
+                    ndarray.shape,
+                    dtype=dtype_util.convert_numpy_dtype_to_oneflow_dtype(
+                        ndarray.dtype
+                    ),
+                ),
                 ndarray,
             )
             Yield()
