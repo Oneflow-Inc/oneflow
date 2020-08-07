@@ -18,13 +18,13 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
+
+class ResourceDesc;
 
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
 
@@ -35,7 +35,6 @@ class ParallelContext;
 
 class ParallelDesc final {
  public:
-  // OF_DISALLOW_COPY_AND_MOVE(ParallelDesc);
   ~ParallelDesc() = default;
 
   ParallelDesc(const ParallelDesc&) = default;

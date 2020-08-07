@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {
 namespace vm {
