@@ -31,10 +31,10 @@ for gpu in gpus:
 def test_layer_norm(_):
     confs = [
         {"x_shape": (4, 5, 2, 6), "begin_norm_axis": -1, "begin_params_axis": -1},
-        {"x_shape": (4, 5, 2, 6), "begin_norm_axis": 1, "begin_params_axis": -1},
+        {"x_shape": (4, 5, 2, 6), "begin_norm_axis": 1, "begin_params_axis": 1},
     ]
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["confs"] = confs
     arg_dict["data_type"] = ["float32"]
     arg_dict["trainable"] = [True, False]
@@ -48,7 +48,9 @@ def test_layer_norm(_):
         begin_norm_axis = confs["begin_norm_axis"]
         begin_params_axis = confs["begin_params_axis"]
         flow.clear_default_session()
-
+        assert (
+            begin_norm_axis == begin_params_axis
+        ), "tf doesn't support a dedicated begin_params_axis"
         # Random inputs
         x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
         dim = len(x.shape) - 2
