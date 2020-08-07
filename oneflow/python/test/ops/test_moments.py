@@ -33,7 +33,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axes):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    if max(axes) > len(x_shape):
+    if max(axes) >= len(x_shape):
         return
 
     @flow.global_function(type="train", function_config=func_config)
@@ -67,7 +67,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axes):
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(test_global_storage.Get("x"))
         tf_out = tf.nn.moments(x, axes)
-        tf_loss = of_out[0] + of_out[1]
+        tf_loss = tf_out[0] + tf_out[1]
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_loss, x, loss_diff)
     for i in range(2):
