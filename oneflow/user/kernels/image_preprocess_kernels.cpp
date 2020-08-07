@@ -516,7 +516,7 @@ class ImageRandomCropKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("image_random_crop")
     .SetCreateFn<ImageRandomCropKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
