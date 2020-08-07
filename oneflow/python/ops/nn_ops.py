@@ -547,9 +547,9 @@ def batch_normalization(
     x: remote_blob_util.BlobDef,
     mean: remote_blob_util.BlobDef,
     variance: remote_blob_util.BlobDef,
-    variance_epsilon: float,
     offset: Optional[remote_blob_util.BlobDef] = None,
     scale: Optional[remote_blob_util.BlobDef] = None,
+    variance_epsilon: Optional[float] = 1e-5,
     axis: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -577,13 +577,15 @@ def batch_normalization(
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
 
+    params_shape = [x.shape[axis]]
+
     if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
         nd_params_shape = [1] * len(x.shape)
-        (mean_dim,) = mean.shape
-        nd_params_shape[axis] = mean_dim
+        nd_params_shape[axis] = params_shape[0]
         mean = flow.reshape(mean, nd_params_shape)
         variance = flow.reshape(variance, nd_params_shape)
-        std_inv = flow.math.rsqrt(variance + variance_epsilon)
+        variance += variance_epsilon
+        std_inv = flow.math.rsqrt(variance)
         normalized = (x - mean) * std_inv
         affined = normalized
         if scale:
@@ -594,7 +596,6 @@ def batch_normalization(
             affined += offset
         return affined
     elif flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu":
-        params_shape = [x.shape[axis]]
         params_dtype = flow.float32 if x.dtype == flow.float16 else x.dtype
         if scale is None:
             scale = flow.constant(
