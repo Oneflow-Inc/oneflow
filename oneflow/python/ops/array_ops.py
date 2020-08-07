@@ -399,8 +399,6 @@ def reverse(
 
         slice_tup_list[a] = (None, None, -1)
 
-    print("reverse input shape:", input.shape)
-    print("reverse slice_tup_list:", slice_tup_list)
     return slice_v2(input, slice_tup_list, name)
 
 
