@@ -18,9 +18,6 @@ from __future__ import absolute_import
 import re
 from contextlib import contextmanager
 
-import numpy as np
-
-import oneflow as flow
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.placement_pb2 as placement_pb_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -823,8 +820,9 @@ class InstructionsBuilder(object):
         instruction.instr_type_name = "{}.LazyReference".format(device_tag)
         instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
         instruction.operand.append(_MutOperand(blob_object.object_id))
-        # TODO(daquexian):
-        interface_op_name_sym = self.GetSymbol4String(interface_op_name + "/out")
+        interface_op_name_sym = self.GetSymbol4String(
+            blob_object.op_arg_blob_attr.logical_blob_name
+        )
         instruction.operand.append(_SymbolOperand(interface_op_name_sym.symbol_id))
         self.instruction_list_.instruction.append(instruction)
 
