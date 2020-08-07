@@ -22,8 +22,10 @@ import tensorflow as tf
 import test_global_storage
 from test_util import Args, GenArgDict, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
+import unittest
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_no_watch_scope_consistent(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.consistent_view())
@@ -36,6 +38,7 @@ def test_no_watch_scope_consistent(test_case):
     Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_train_consistent(test_case):
     flow.config.enable_debug_mode(True)
     func_config = flow.FunctionConfig()
@@ -325,7 +328,7 @@ def test_layer_batchnorm(test_case):
 
 def test_layer_batchnorm_inference(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["data_type"] = ["float32"]
     arg_dict["input_shape"] = [(1, 4, 1, 2)]
     arg_dict["op_args"] = [
@@ -359,6 +362,7 @@ def test_layer_batchnorm_trainable_without_training(test_case):
         CompareBnWithTensorFlow(**arg, training=False, trainable=True)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_nn_batchnorm(test_case):
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [(2, 4, 3, 5)]

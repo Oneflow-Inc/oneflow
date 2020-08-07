@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/utils/pool_util.h"
 #include "oneflow/core/device/cudnn_util.h"
@@ -439,3 +441,5 @@ REGISTER_POOL_GPU_KERNEL(double)
 REGISTER_POOL_GPU_KERNEL(float16)
 
 }  // namespace oneflow
+
+#endif

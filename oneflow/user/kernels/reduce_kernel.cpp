@@ -69,15 +69,18 @@ class ReduceKernel final : public user_op::OpKernel {
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int64_t)
 
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCPU)
+#ifdef WITH_CUDA
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kGPU)
+#endif
 
 #define REGISTER_REDUCE_LOGICAL_KERNELS(device)                           \
   REGISTER_REDUCE_XPU_KERNEL("reduce_any", BinaryFuncAny, device, int8_t) \
   REGISTER_REDUCE_XPU_KERNEL("reduce_all", BinaryFuncAll, device, int8_t)
 
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kCPU)
+#ifdef WITH_CUDA
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kGPU)
-
 REGISTER_REDUCE_XPU_KERNEL("reduce_sum", BinaryFuncSum, DeviceType::kGPU, float16)
+#endif
 
 }  // namespace oneflow

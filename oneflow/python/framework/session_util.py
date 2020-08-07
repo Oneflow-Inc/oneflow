@@ -447,9 +447,15 @@ def _TryCompleteConfigProto(config_proto):
 
 
 def _GetDefaultConfigProto():
+    from oneflow.python.compatibility import with_cuda
+
     config_proto = job_set_util.ConfigProto()
     config_proto.resource.machine_num = 0
-    config_proto.resource.gpu_device_num = 1
+    if with_cuda:
+        config_proto.resource.gpu_device_num = 1
+    else:
+        config_proto.resource.cpu_device_num = 1
+        config_proto.resource.gpu_device_num = 0
     config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
     config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
     return config_proto

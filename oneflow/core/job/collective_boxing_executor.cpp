@@ -32,6 +32,7 @@ namespace collective {
 
 namespace {
 
+#ifdef WITH_CUDA
 ncclRedOp_t GetNcclReduceOp(ReduceMethod reduce_method) {
   if (reduce_method == kReduceMethodSum) {
     return ncclRedOp_t::ncclSum;
@@ -39,6 +40,7 @@ ncclRedOp_t GetNcclReduceOp(ReduceMethod reduce_method) {
     UNIMPLEMENTED();
   }
 }
+#endif
 
 void SortRequestsByOrder(std::vector<const RequestDesc*>* requests) {
   std::sort(requests->begin(), requests->end(),
@@ -69,6 +71,8 @@ int64_t GetAlignedRequestSize(const RequestDesc* request) {
 }
 
 }  // namespace
+
+#ifdef WITH_CUDA
 
 void CollectiveBoxingExecutorBackend::GroupRequests(
     const std::vector<const RequestDesc*>& requests,
@@ -466,13 +470,17 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
   }
 }
 
+#endif  // WITH_CUDA
+
 CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan)
     : collective_boxing_plan_(plan.collective_boxing_plan()) {
+#ifdef WITH_CUDA
   auto it =
       backends_
           .emplace(Backend::kBackendNCCL, std::make_unique<NcclCollectiveBoxingExecutorBackend>())
           .first;
   it->second->Init(collective_boxing_plan_);
+#endif
   Init();
   DumpSummary();
 }

@@ -39,6 +39,8 @@ class ZeroLikeKernel final : public user_op::OpKernel {
       .SetIsMatchedHob(user_op::HobDeviceType() == device_type_v);
 
 REGISTER_ZERO_LIKE_KERNEL(DeviceType::kCPU)
+#ifdef WITH_CUDA
 REGISTER_ZERO_LIKE_KERNEL(DeviceType::kGPU)
+#endif
 
 }  // namespace oneflow

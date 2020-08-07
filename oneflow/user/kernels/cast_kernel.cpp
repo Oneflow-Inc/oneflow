@@ -35,7 +35,11 @@ struct CopyTensor<DeviceType::kCPU, T, U> {
 template<typename T, typename U>
 struct CopyTensor<DeviceType::kGPU, T, U> {
   static void Call(DeviceCtx* ctx, const Tensor* src, Tensor* dst) {
+#ifdef WITH_CUDA
     CopyElemOnGpu(ctx, src->dptr<T>(), dst->mut_dptr<U>(), src->shape().elem_cnt());
+#else
+    UNIMPLEMENTED();
+#endif
   }
 };
 
