@@ -53,8 +53,8 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
       CHECK_GT_OR_RETURN(start, stop) << "slice start must be more than stop when step < 0"
                                          ", otherwise empty result will be outputted.";
     }
-    const int64_t abs_diff = (step > 0) ? (stop - start - 1) : (start - stop - 1);
-    dim_vec[i] = abs_diff / step + 1;
+    const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
+    dim_vec[i] = diff / step + 1;
   }
   *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(dim_vec);
   *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);

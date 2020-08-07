@@ -37,7 +37,7 @@ inline bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size,
 inline int64_t RegulateSliceStart(int64_t start, int64_t size) {
   // slice start must be in range [-size, size)
   // after changing to positive order it should be in range [0, size)
-  start = std::min(std::max<int64_t>(start, 0), size - 1);
+  start = std::min(std::max(start, -size), size - 1);
   return (start < 0) ? (start + size) : start;
 }
 
@@ -83,9 +83,6 @@ struct SliceKernelUtil {
   static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced);
   static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire);
 };
-
-template<>
-struct SliceKernelUtil<DeviceType::kGPU, float16>;
 
 #define INSTANTIATE_SLICE_KERNEL_UTIL(device, dtype) template struct SliceKernelUtil<device, dtype>;
 

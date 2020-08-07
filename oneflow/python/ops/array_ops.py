@@ -262,7 +262,7 @@ def slice(
             "begin must be a list/tuple with the same length as input tensor's number of dimensions"
         )
 
-    if not all(isinstance(b, (int, None)) for b in begin):
+    if not all(isinstance(b, int) or b is None for b in begin):
         raise ValueError("element of begin must be a int or None")
 
     if not isinstance(size, (list, tuple)) or len(size) != ndim:
@@ -270,7 +270,7 @@ def slice(
             "size must be a list/tuple with the same length as input tensor's number of dimensions."
         )
 
-    if not all(isinstance(s, (int, None)) for s in size):
+    if not all(isinstance(s, int) or s is None for s in size):
         raise ValueError("element of size must be a int or None")
 
     slice_tup_list = [(None, None, 1)] * ndim
@@ -333,7 +333,7 @@ def slice_v2(
                 "element of slice_tup_list must be a list or tuple with form (start, stop, step)"
             )
 
-        if not all(isinstance(idx, (int, None)) for idx in slice_tup):
+        if not all(isinstance(idx, int) or idx is None for idx in slice_tup):
             raise ValueError("element of slice tuple must int or None")
 
         (start, stop, step) = slice_tup
@@ -352,12 +352,6 @@ def slice_v2(
             stop = np.iinfo(np.int64).max if step > 0 else -1
         elif stop < -dim_size - 1 or stop > dim_size:
             raise ValueError("slice start must be in range [-size-1, size]")
-
-        if step > 0 and start >= stop:
-            raise ValueError("slice start must be less than stop when step > 0")
-
-        if step < 0 and start <= stop:
-            raise ValueError("slice start must be greater than stop when step < 0")
 
         start_list.append(start)
         stop_list.append(stop)
