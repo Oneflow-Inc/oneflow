@@ -240,17 +240,24 @@ def test_slice_at_two_dim_with_step_more_than_one(test_case):
     _test_slice(test_case, input, slice_args, outputs)
 
 
+def test_slice_with_neg_start(test_case):
+    input = np.random.rand(2, 5, 4)
+    slice_args = [[(None, None, None), (-4, None, None)]]
+    outputs = [input[:, -4:, :]]
+    _test_slice(test_case, input, slice_args, outputs)
+
+
 def test_slice_with_neg_stop(test_case):
     input = np.random.rand(2, 5, 4)
-    slice_args = [[(None, None, None), (2, -2, None)]]
-    outputs = [input[:, 2:-2, :]]
+    slice_args = [[(None, None, None), (None, -2, None)]]
+    outputs = [input[:, :-2, :]]
     _test_slice(test_case, input, slice_args, outputs)
 
 
 def test_slice_with_neg_step(test_case):
     input = np.random.rand(2, 5, 4)
-    slice_args = [[(None, None, None), (3, -4, -1)]]
-    outputs = [input[:, 3:-4:-1, :]]
+    slice_args = [[(None, None, None), (None, None, -1)]]
+    outputs = [input[:, ::-1, :]]
     _test_slice(test_case, input, slice_args, outputs)
 
 

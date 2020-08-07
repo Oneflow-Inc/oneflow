@@ -349,7 +349,7 @@ def slice_v2(
             raise ValueError("slice start must be in range [-size, size)")
 
         if stop is None:
-            stop = np.iinfo(np.int64).max if step > 0 else -1
+            stop = np.iinfo(np.int64).max if step > 0 else np.iinfo(np.int64).min
         elif stop < -dim_size - 1 or stop > dim_size:
             raise ValueError("slice start must be in range [-size-1, size]")
 
@@ -399,6 +399,8 @@ def reverse(
 
         slice_tup_list[a] = (None, None, -1)
 
+    print("reverse input shape:", input.shape)
+    print("reverse slice_tup_list:", slice_tup_list)
     return slice_v2(input, slice_tup_list, name)
 
 
