@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_REGISTER_REGISTER_MANAGER_H_
 #define ONEFLOW_CORE_REGISTER_REGISTER_MANAGER_H_
 
+#include <mutex>
+
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime_context.h"
@@ -45,6 +47,7 @@ class RegstMgr final {
   HashMap<int64_t, HashMap<int64_t, Regst*>> regst_desc_id2regst_id2regst_;
   HashMap<int64_t, char*> mem_block_id2ptr_;
   HashMap<int64_t, ParallelContext> regst_desc_id2parallel_ctx_;
+  std::mutex mutex_;
 };
 
 }  // namespace oneflow

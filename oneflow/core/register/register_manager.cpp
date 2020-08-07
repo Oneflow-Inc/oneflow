@@ -114,8 +114,10 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     } else {
       UNIMPLEMENTED();
     }
-    //FIXME(daquexian): regst_desc_id2regst_id2regst_[rt_regst_desc->regst_desc_id()] sometimes crashes . thread safety?
-    regst_desc_id2regst_id2regst_[rt_regst_desc->regst_desc_id()][i] = regst;
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      regst_desc_id2regst_id2regst_[rt_regst_desc->regst_desc_id()][i] = regst;
+    }
     OneRegstDone(regst);
   }
 }
