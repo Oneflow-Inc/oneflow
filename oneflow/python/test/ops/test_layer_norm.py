@@ -31,7 +31,6 @@ for gpu in gpus:
 def test_layer_norm(_):
     confs = [
         {"x_shape": (4, 5, 2, 6), "begin_norm_axis": -1, "begin_params_axis": -1},
-        {"x_shape": (4, 5, 2, 6), "begin_norm_axis": 1, "begin_params_axis": 1},
     ]
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
@@ -40,7 +39,7 @@ def test_layer_norm(_):
     arg_dict["trainable"] = [True, False]
     arg_dict["center"] = [True, False]
     arg_dict["scale"] = [True, False]
-    arg_dict["epsilon"] = [0.0, 1e-10]
+    arg_dict["epsilon"] = [1e-5, 1e-10]
 
     for case in GenArgList(arg_dict):
         (device_type, confs, data_type, trainable, center, scale, epsilon) = case
@@ -75,10 +74,11 @@ def test_layer_norm(_):
         dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
 
         def assert_grad(b):
+            diff = dx_tf.numpy() - b.numpy()
+            max_diff = np.max(np.abs(diff))
             assert np.allclose(dx_tf.numpy(), b.numpy(), rtol=1e-5, atol=1e-5), (
                 case,
-                dx_tf.numpy(),
-                b.numpy(),
+                max_diff,
             )
 
         # 1F results
