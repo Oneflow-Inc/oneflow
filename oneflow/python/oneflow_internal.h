@@ -14,10 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <stdint.h>
-#include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/python/oneflow_internal_helper.h"
 #include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/register/register_manager.h"
 
 void RegisterForeignCallbackOnlyOnce(oneflow::ForeignCallback* callback, std::string* error_str) {
   return oneflow::RegisterForeignCallbackOnlyOnce(callback).GetDataAndSerializedErrorProto(

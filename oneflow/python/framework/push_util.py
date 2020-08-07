@@ -22,8 +22,6 @@ import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.op_arg_util as op_arg_util
-import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.object as object_util

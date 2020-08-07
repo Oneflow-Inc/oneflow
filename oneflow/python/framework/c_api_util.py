@@ -31,9 +31,6 @@ import oneflow.oneflow_internal as oneflow_internal
 from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 from oneflow.python.framework.job_build_and_infer_error import JobBuildAndInferError
-from oneflow.python.framework.ofblob import OfBlob
-from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.framework.session_context as session_ctx
 
 
 def RegisterWatcherOnlyOnce(watcher):
