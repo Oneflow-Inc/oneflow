@@ -634,3 +634,49 @@ class COCOReader(module_util.Module):
             .InferAndTryRun()
             .RemoteBlobList()
         )
+
+
+@oneflow_export("data.ofrecord_image_classification_reader")
+def ofrecord_image_classification_reader(
+    ofrecord_dir: str,
+    image_feature_name: str,
+    label_feature_name: str,
+    batch_size: int = 1,
+    data_part_num: int = 1,
+    part_name_prefix: str = "part-",
+    part_name_suffix_length: int = -1,
+    random_shuffle: bool = False,
+    shuffle_buffer_size: int = 1024,
+    shuffle_after_epoch: bool = False,
+    color_space: str = "BGR",
+    decode_buffer_size_per_thread: int = 32,
+    num_decode_threads_per_machine: Optional[int] = None,
+    name: Optional[str] = None,
+) -> BlobDef:
+    if name is None:
+        name = id_util.UniqueStr("OFRecordImageClassificationReader_")
+    (image, label) = (
+        flow.user_op_builder(name)
+        .Op("ofrecord_image_classification_reader")
+        .Output("image")
+        .Output("label")
+        .Attr("data_dir", ofrecord_dir)
+        .Attr("data_part_num", data_part_num)
+        .Attr("batch_size", batch_size)
+        .Attr("part_name_prefix", part_name_prefix)
+        .Attr("random_shuffle", random_shuffle)
+        .Attr("shuffle_buffer_size", shuffle_buffer_size)
+        .Attr("shuffle_after_epoch", shuffle_after_epoch)
+        .Attr("part_name_suffix_length", part_name_suffix_length)
+        .Attr("color_space", color_space)
+        .Attr("image_feature_name", image_feature_name)
+        .Attr("label_feature_name", label_feature_name)
+        .Attr("decode_buffer_size_per_thread", decode_buffer_size_per_thread)
+        .Attr("num_decode_threads_per_machine", num_decode_threads_per_machine or 0)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    label = flow.tensor_buffer_to_tensor(label, dtype=flow.int32, instance_shape=[1])
+    label = flow.squeeze(label, axis=[-1])
+    return image, label
