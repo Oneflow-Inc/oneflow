@@ -649,7 +649,7 @@ def ofrecord_image_classification_reader(
     shuffle_buffer_size: int = 1024,
     shuffle_after_epoch: bool = False,
     color_space: str = "BGR",
-    decode_buffer_size_per_thread: int = 64,
+    decode_buffer_size_per_thread: int = 32,
     num_decode_threads_per_machine: Optional[int] = None,
     name: Optional[str] = None,
 ) -> BlobDef:
