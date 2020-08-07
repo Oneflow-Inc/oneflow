@@ -532,13 +532,14 @@ def conv3d(
 
 
 @oneflow_export("nn.moments")
-def moments(x, axis, keepdims=False, name=None):
+def moments(x, axes, keepdims=False, name=None):
+    assert isinstance(axes, list)
     if name is None:
         name = id_util.UniqueStr("Moments_")
     with flow.scope.namespace(name):
         return (
-            flow.math.reduce_mean(x, axis=axis, keepdims=keepdims),
-            flow.math.reduce_variance(x, axis=axis, keepdims=keepdims),
+            flow.math.reduce_mean(x, axis=axes, keepdims=keepdims),
+            flow.math.reduce_variance(x, axis=axes, keepdims=keepdims),
         )
 
 
