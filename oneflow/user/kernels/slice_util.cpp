@@ -72,7 +72,7 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     FOR_RANGE(int, i, 0, params.ndim) { elem_cnt *= params.size[i]; }
     SliceIndexHelper entire_idx_cvtr(params.dims, params.ndim);
     SliceIndexHelper sliced_idx_cvtr(params.size, params.ndim);
-    int64_t nd_index[kSliceMaxDims];
+    int64_t nd_index[kSliceMaxDims] = {0};
     FOR_RANGE(int, i, 0, elem_cnt) {
       int64_t offset =
           SliceOffsetToEntireOffset(i, nd_index, params, entire_idx_cvtr, sliced_idx_cvtr);
@@ -85,7 +85,7 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     FOR_RANGE(int, i, 0, params.ndim) { elem_cnt *= params.size[i]; }
     SliceIndexHelper entire_idx_cvtr(params.dims, params.ndim);
     SliceIndexHelper sliced_idx_cvtr(params.size, params.ndim);
-    int64_t nd_index[kSliceMaxDims];
+    int64_t nd_index[kSliceMaxDims] = {0};
     FOR_RANGE(int, i, 0, elem_cnt) {
       int64_t offset =
           SliceOffsetToEntireOffset(i, nd_index, params, entire_idx_cvtr, sliced_idx_cvtr);
