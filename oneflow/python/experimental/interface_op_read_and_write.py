@@ -17,7 +17,7 @@ import oneflow as flow
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.async_util as async_util
-import oneflow.python.framework.input_blob_def as input_blob_def
+import oneflow.python.framework.input_blob_def as input_blob_def_util
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.push_util as push_util
@@ -40,9 +40,20 @@ def GetInterfaceBlobValue(op_name):
             op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
             assert len(op_attribute.output_bns) == 1
             lbi.blob_name = op_attribute.output_bns[0]
-            Yield(
-                remote_blob_util.EagerConsistentBlob(lbi, blob_object, job_name).numpy()
-            )
+            if blob_object.op_arg_parallel_attr.is_mirrored():
+                remote_blob = remote_blob_util.EagerMirroredBlob(
+                    lbi, blob_object, job_name
+                )
+            else:
+                remote_blob = remote_blob_util.EagerConsistentBlob(
+                    lbi, blob_object, job_name
+                )
+            if blob_object.op_arg_blob_attr.is_tensor_list:
+                value = remote_blob.numpy_list()
+            else:
+                value = remote_blob.numpy()
+
+            Yield(value)
 
         vm_util.LogicalRun(build)
 
@@ -56,16 +67,28 @@ def FeedValueToInterfaceBlob(op_name, ndarray):
     def AsyncFeedValueToInterfaceBlob(Yield):
         def build(builder):
             blob_object = builder.MakeLazyRefBlobObject(op_name)
-            push_util.FeedValueToEagerBlob(
-                blob_object,
-                input_blob_def.FixedTensorDef(
+            if blob_object.op_arg_blob_attr.is_tensor_list:
+                input_blob_def = input_blob_def_util.MirroredTensorListDef(
+                    [x.shape for x in ndarray],
+                    dtype=dtype_util.convert_numpy_dtype_to_oneflow_dtype(
+                        ndarray.dtype
+                    ),
+                )
+            elif blob_object.op_arg_parallel_attr.is_mirrored():
+                input_blob_def = input_blob_def_util.MirroredTensorDef(
                     ndarray.shape,
                     dtype=dtype_util.convert_numpy_dtype_to_oneflow_dtype(
                         ndarray.dtype
                     ),
-                ),
-                ndarray,
-            )
+                )
+            else:
+                input_blob_def = input_blob_def_util.FixedTensorDef(
+                    ndarray.shape,
+                    dtype=dtype_util.convert_numpy_dtype_to_oneflow_dtype(
+                        ndarray.dtype
+                    ),
+                )
+            push_util.FeedValueToEagerBlob(blob_object, input_blob_def, ndarray)
             Yield()
 
         vm_util.LogicalRun(build)
