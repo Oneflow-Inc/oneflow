@@ -24,25 +24,25 @@ void RngUniformGpu(const curandGenerator_t& gen, int64_t n, T* ret);
 
 template<>
 void RngUniformGpu<float>(const curandGenerator_t& gen, int64_t n, float* ret) {
-  CudaCheck(curandGenerateUniform(gen, ret, n));
+  OF_CURAND_CHECK(curandGenerateUniform(gen, ret, n));
 }
 
 template<>
 void RngUniformGpu<double>(const curandGenerator_t& gen, int64_t n, double* ret) {
-  CudaCheck(curandGenerateUniformDouble(gen, ret, n));
+  OF_CURAND_CHECK(curandGenerateUniformDouble(gen, ret, n));
 }
 
 }  // namespace
 
 RandomGenerator<DeviceType::kGPU>::RandomGenerator(int64_t seed, DeviceCtx* device_ctx) {
   CHECK_NOTNULL(device_ctx);
-  CudaCheck(curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT));
-  CudaCheck(curandSetPseudoRandomGeneratorSeed(curand_generator_, seed));
-  CudaCheck(curandSetStream(curand_generator_, device_ctx->cuda_stream()));
+  OF_CURAND_CHECK(curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT));
+  OF_CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(curand_generator_, seed));
+  OF_CURAND_CHECK(curandSetStream(curand_generator_, device_ctx->cuda_stream()));
 }
 
 RandomGenerator<DeviceType::kGPU>::~RandomGenerator() {
-  CudaCheck(curandDestroyGenerator(curand_generator_));
+  OF_CURAND_CHECK(curandDestroyGenerator(curand_generator_));
 }
 
 template<typename T>

@@ -60,7 +60,7 @@ size_t InferTempStorageForSortPairsAscending(int32_t num_row, int32_t num_col) {
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ 0);
-  CudaCheck(err);
+  OF_CUDA_CHECK(err);
 
   return temp_storage_bytes;
 }
@@ -90,7 +90,7 @@ size_t InferTempStorageForSortPairsDescending(int32_t num_row, int32_t num_col) 
           /* begin_bit */ 0,
           /* end_bit */ sizeof(KeyType) * 8,
           /* stream */ 0);
-  CudaCheck(err);
+  OF_CUDA_CHECK(err);
 
   return temp_storage_bytes;
 }
@@ -117,7 +117,7 @@ size_t InferTempStorageForSortKeysAscending(int32_t num_row, int32_t num_col) {
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ 0);
-  CudaCheck(err);
+  OF_CUDA_CHECK(err);
 
   return temp_storage_bytes;
 }
@@ -144,7 +144,7 @@ size_t InferTempStorageForSortKeysDescending(int32_t num_row, int32_t num_col) {
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ 0);
-  CudaCheck(err);
+  OF_CUDA_CHECK(err);
 
   return temp_storage_bytes;
 }
@@ -179,7 +179,7 @@ void SortPairsAscending(const KeyType* keys_ptr, const ValueType* values_ptr, in
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ stream);
-  CudaCheck(err);
+  OF_CUDA_CHECK(err);
 }
 
 template<typename KeyType, typename ValueType>
@@ -212,7 +212,7 @@ void SortPairsDescending(const KeyType* keys_ptr, const ValueType* values_ptr, i
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ stream);
-  CudaCheck(err);
+  OF_CUDA_CHECK(err);
 }
 
 template<typename KeyType>
@@ -242,7 +242,7 @@ void SortKeysAscending(const KeyType* keys_ptr, int32_t num_row, int32_t num_col
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ stream);
-  CudaCheck(err);
+  OF_CUDA_CHECK(err);
 }
 
 template<typename KeyType>
@@ -272,7 +272,7 @@ void SortKeysDescending(const KeyType* keys_ptr, int32_t num_row, int32_t num_co
       /* begin_bit */ 0,
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ stream);
-  CudaCheck(err);
+  OF_CUDA_CHECK(err);
 }
 
 }  // namespace oneflow

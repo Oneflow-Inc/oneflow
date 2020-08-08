@@ -48,7 +48,7 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx {
   }
   const cudnnHandle_t& cudnn_handle() const override { return *(cuda_handler_->cudnn_handle()); }
 
-  void SyncDevice() override { CudaCheck(cudaStreamSynchronize(cuda_stream())); }
+  void SyncDevice() override { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream())); }
 
   void AddCallBack(std::function<void()> callback) const override {
     callback_msg_list_->EmplaceBack(ObjectMsgPtr<CallbackMsg>::New(callback));

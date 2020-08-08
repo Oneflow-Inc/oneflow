@@ -32,7 +32,7 @@ void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
       if (Global<ResourceDesc, ForSession>::Get()->enable_numa_aware_cuda_malloc_host()) {
         NumaAwareCudaMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &ptr, size);
       } else {
-        CudaCheck(cudaMallocHost(&ptr, size));
+        OF_CUDA_CHECK(cudaMallocHost(&ptr, size));
       }
 #else
       UNIMPLEMENTED();
@@ -44,7 +44,7 @@ void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
   } else if (mem_case.has_device_cuda_mem()) {
 #ifdef WITH_CUDA
     CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
-    CudaCheck(cudaMalloc(&ptr, size));
+    OF_CUDA_CHECK(cudaMalloc(&ptr, size));
 #else
     UNIMPLEMENTED();
 #endif
@@ -58,7 +58,7 @@ void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().has_cuda_pinned_mem()) {
 #ifdef WITH_CUDA
-      CudaCheck(cudaFreeHost(ptr));
+      OF_CUDA_CHECK(cudaFreeHost(ptr));
 #else
       UNIMPLEMENTED();
 #endif
@@ -68,7 +68,7 @@ void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
   } else if (mem_case.has_device_cuda_mem()) {
 #ifdef WITH_CUDA
     CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
-    CudaCheck(cudaFree(ptr));
+    OF_CUDA_CHECK(cudaFree(ptr));
 #else
     UNIMPLEMENTED();
 #endif
@@ -97,7 +97,7 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   } else if (mem_case.has_device_cuda_mem()) {
 #ifdef WITH_CUDA
     CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
-    CudaCheck(cudaMemset(dptr, memset_val, size));
+    OF_CUDA_CHECK(cudaMemset(dptr, memset_val, size));
 #else
     UNIMPLEMENTED();
 #endif
