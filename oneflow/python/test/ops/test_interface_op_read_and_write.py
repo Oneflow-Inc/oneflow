@@ -14,13 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import oneflow.typing as tp
 import numpy as np
 
 
 def test(test_case):
     flow.config.gpu_device_num(2)
+
     @flow.global_function()
-    def add():
+    def add() -> tp.Numpy:
         with flow.scope.placement("gpu", "0:0-1"):
             x = flow.get_variable(
                 name="x", shape=(2, 3), initializer=flow.random_uniform_initializer(),
@@ -42,4 +44,4 @@ def test(test_case):
     test_case.assertTrue(
         np.array_equal(y_value, flow.experimental.get_interface_blob_value("y"))
     )
-    test_case.assertTrue(np.array_equal(add().get().numpy(), x_value + y_value))
+    test_case.assertTrue(np.array_equal(add(), x_value + y_value))
