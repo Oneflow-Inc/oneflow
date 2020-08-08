@@ -19,6 +19,7 @@ import oneflow.typing as otp
 import test_util
 import typing as tp
 import collections
+import unittest
 import os
 
 DEFAULT_DEVICE_TAG = "gpu"
@@ -40,6 +41,18 @@ def _make_slice_func(slice_args, input_shape, dtype=flow.float32, func_cfg=None)
         x: otp.Numpy.Placeholder(shape=input_shape, dtype=dtype)
     ) -> tp.List[otp.Numpy]:
         return _do_slice(x, slice_args)
+
+    return slice_job
+
+
+def _make_slice_with_fp16_func(slice_args, input_shape, func_cfg=None):
+    @flow.global_function(type="predict", function_config=func_cfg)
+    def slice_job(
+        x: otp.Numpy.Placeholder(shape=input_shape, dtype=flow.float32)
+    ) -> tp.List[otp.Numpy]:
+        x = flow.cast(x, flow.float16)
+        y = _do_slice(x, slice_args)
+        return [flow.cast(y_i, flow.float32) for y_i in y]
 
     return slice_job
 
@@ -276,6 +289,21 @@ def test_slice_with_neg_step_two(test_case):
     slice_args = [[(None, None, None), (-1, 1, -2)]]
     outputs = [input[:, -1:1:-2, :]]
     _test_slice(test_case, input, slice_args, outputs)
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+def test_slice_with_float16(test_case):
+    input = np.random.rand(10).astype(np.float32)
+    slice_args = [[(2, 7, None)]]
+    outputs = [input[2:7]]
+
+    flow.clear_default_session()
+    flow.config.gpu_device_num(1)
+    slice_func = _make_slice_with_fp16_func(slice_args, input.shape)
+    of_outputs = slice_func(input)
+    print("outputs[0]:\n{}".format(outputs[0]))
+    print("of_outputs[0]:\n{}".format(of_outputs[0]))
+    test_case.assertTrue(np.allclose(outputs[0], of_outputs[0], rtol=1e-03, atol=1e-04))
 
 
 def test_slice_dynamic_base(test_case):
