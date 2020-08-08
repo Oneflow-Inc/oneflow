@@ -88,7 +88,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
     NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), mean->shape().elem_cnt(),
                                           static_cast<BNParamT>(0),
                                           reinterpret_cast<BNParamT*>(cudnn_bn_bias_zeros_dptr));
-    CudaCheck(cudnnBatchNormalizationForwardTraining(
+    OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTraining(
         ctx->device_ctx()->cudnn_handle(), bn_ctx.mode(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
         bn_ctx.data_tensor_desc(), x->dptr<T>(), bn_ctx.data_tensor_desc(),
         normalized->mut_dptr<T>(), bn_ctx.param_tensor_desc(),
@@ -160,7 +160,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
     const double epsilon = ctx->Attr<double>("epsilon");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
     LayerNormCudnnBnCtx bn_ctx(x->shape(), mean->shape(), x->data_type());
-    CudaCheck(cudnnBatchNormalizationBackward(
+    OF_CUDNN_CHECK(cudnnBatchNormalizationBackward(
         ctx->device_ctx()->cudnn_handle(), bn_ctx.mode(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
         CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), bn_ctx.data_tensor_desc(), x->dptr<T>(),
         bn_ctx.data_tensor_desc(), dy->dptr<T>(), bn_ctx.data_tensor_desc(), dx->mut_dptr<T>(),

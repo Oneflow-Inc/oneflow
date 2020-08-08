@@ -121,7 +121,7 @@ class DeConvGpuKernel final : public user_op::OpKernel {
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionBwdDataAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
 
-    CudaCheck(cudnnConvolutionBackwardData(
+    OF_CUDNN_CHECK(cudnnConvolutionBackwardData(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.wdesc.Get(), weight->dptr(),
         args.ydesc.Get(), in->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
         args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.xdesc.Get(), out->mut_dptr()));
