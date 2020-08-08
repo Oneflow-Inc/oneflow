@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/image/random_crop_generator.h"
-#include <iostream>
 
 namespace oneflow {
 

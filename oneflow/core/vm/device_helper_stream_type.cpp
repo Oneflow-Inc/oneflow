@@ -66,7 +66,7 @@ class CudaMallocInstructionType final : public InstructionType {
     }
     const auto& stream = instruction->stream();
     cudaSetDevice(stream.device_id());
-    CudaCheck(cudaMalloc(&dptr, buffer_type->size()));
+    OF_CUDA_CHECK(cudaMalloc(&dptr, buffer_type->size()));
     buffer_value->reset_data(dptr);
   }
 };
@@ -99,7 +99,7 @@ class CudaFreeInstructionType final : public InstructionType {
     }
     const auto& stream = instruction->stream();
     cudaSetDevice(stream.device_id());
-    CudaCheck(cudaFree(value_rw_mutexed_object->Mut<MemBufferObjectValue>()->mut_data()));
+    OF_CUDA_CHECK(cudaFree(value_rw_mutexed_object->Mut<MemBufferObjectValue>()->mut_data()));
     value_rw_mutexed_object->reset_object();
   }
 };

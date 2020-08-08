@@ -171,7 +171,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
 
-    CudaCheck(cudnnConvolutionForward(
+    OF_CUDNN_CHECK(cudnnConvolutionForward(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(), in->dptr(),
         args.wdesc.Get(), weight->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
         args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.ydesc.Get(), out->mut_dptr()));
@@ -180,9 +180,9 @@ class ConvGpuKernel final : public user_op::OpKernel {
     if (bias != nullptr) {
       ConvCudnnOpKernelState* conv_state = dynamic_cast<ConvCudnnOpKernelState*>(state);
       CHECK_NOTNULL(conv_state);
-      CudaCheck(cudnnAddTensor(ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(),
-                               conv_state->bias_desc->Get(), bias->dptr<T>(), CudnnSPOnePtr<T>(),
-                               args.ydesc.Get(), out->mut_dptr<T>()));
+      OF_CUDNN_CHECK(cudnnAddTensor(ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(),
+                                    conv_state->bias_desc->Get(), bias->dptr<T>(),
+                                    CudnnSPOnePtr<T>(), args.ydesc.Get(), out->mut_dptr<T>()));
     }
   }
 };
@@ -238,7 +238,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionBwdDataAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
 
-    CudaCheck(cudnnConvolutionBackwardData(
+    OF_CUDNN_CHECK(cudnnConvolutionBackwardData(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.wdesc.Get(), filter->dptr(),
         args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
         args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.xdesc.Get(), dx->mut_dptr()));
@@ -290,7 +290,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionBwdFilterAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
 
-    CudaCheck(cudnnConvolutionBackwardFilter(
+    OF_CUDNN_CHECK(cudnnConvolutionBackwardFilter(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(), x->dptr(),
         args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
         args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.wdesc.Get(), filter_diff->mut_dptr()));
@@ -365,7 +365,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
     dy_desc.reset(new CudnnTensorDesc(dy->data_type(), dy->shape(), data_format));
     auto* bias_grad_state = dynamic_cast<ConvBiasGradState*>(state);
     CHECK_NOTNULL(bias_grad_state);
-    CudaCheck(cudnnConvolutionBackwardBias(
+    OF_CUDNN_CHECK(cudnnConvolutionBackwardBias(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), dy_desc->Get(), dy->dptr<T>(),
         CudnnSPZeroPtr<T>(), bias_grad_state->bias_diff_desc->Get(), bias_diff->mut_dptr<T>()));
   }

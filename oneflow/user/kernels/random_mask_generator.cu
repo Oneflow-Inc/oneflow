@@ -77,15 +77,15 @@ __global__ void GenerateGpu(curandState* state, const int64_t n, const float rat
 
 RandomMaskGenerator<DeviceType::kGPU>::RandomMaskGenerator(int64_t seed) {
   cudaDeviceProp prop;
-  CudaCheck(cudaGetDeviceProperties(&prop, 0));
+  OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
   block_num_ = prop.multiProcessorCount;
   thread_num_ = GetThreadNum(prop);
-  CudaCheck(cudaMalloc(&curand_states_, block_num_ * thread_num_ * sizeof(curandState)));
+  OF_CUDA_CHECK(cudaMalloc(&curand_states_, block_num_ * thread_num_ * sizeof(curandState)));
   SetupKernel<<<block_num_, thread_num_>>>(seed, curand_states_);
 }
 
 RandomMaskGenerator<DeviceType::kGPU>::~RandomMaskGenerator() {
-  CudaCheck(cudaFree(curand_states_));
+  OF_CUDA_CHECK(cudaFree(curand_states_));
 }
 
 void RandomMaskGenerator<DeviceType::kGPU>::Generate(DeviceCtx* device_ctx, const int64_t n,

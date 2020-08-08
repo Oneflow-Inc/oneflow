@@ -66,7 +66,7 @@ class CudaMallocHostInstructionType final : public InstructionType {
       buffer_type = CHECK_JUST(instruction->mut_operand_type(operand)->Get<MemBufferObjectType>());
       buffer_value = instruction->mut_operand_value(operand)->Init<MemBufferObjectValue>();
     }
-    CudaCheck(cudaMallocHost(&dptr, buffer_type->size()));
+    OF_CUDA_CHECK(cudaMallocHost(&dptr, buffer_type->size()));
     buffer_value->reset_data(dptr);
   }
 };
@@ -142,7 +142,7 @@ class CudaFreeHostInstructionType final : public InstructionType {
       const auto& operand = view->mem_buffer();
       value_rw_mutexed_object = instruction->mut_operand_value(operand);
     }
-    CudaCheck(cudaFreeHost(value_rw_mutexed_object->Mut<MemBufferObjectValue>()->mut_data()));
+    OF_CUDA_CHECK(cudaFreeHost(value_rw_mutexed_object->Mut<MemBufferObjectValue>()->mut_data()));
     value_rw_mutexed_object->reset_object();
   }
 };
