@@ -58,6 +58,11 @@ const char* CurandGetErrorString(curandStatus_t error);
   LOG(FATAL) << "Check failed: " #condition " : " << CurandGetErrorString(_of_curand_check_status) \
              << " (" << _of_curand_check_status << ") "
 
+#define OF_NCCL_CHECK(condition)                                                                \
+  for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;) \
+  LOG(FATAL) << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status)  \
+             << " (" << _of_nccl_check_status << ") "
+
 template<typename T>
 void CudaCheck(T error);
 
