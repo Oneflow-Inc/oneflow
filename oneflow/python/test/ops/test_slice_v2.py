@@ -301,8 +301,8 @@ def test_slice_with_float16(test_case):
     flow.config.gpu_device_num(1)
     slice_func = _make_slice_with_fp16_func(slice_args, input.shape)
     of_outputs = slice_func(input)
-    print("outputs[0]:\n{}".format(outputs[0]))
-    print("of_outputs[0]:\n{}".format(of_outputs[0]))
+    # print("outputs[0]:\n{}".format(outputs[0]))
+    # print("of_outputs[0]:\n{}".format(of_outputs[0]))
     test_case.assertTrue(np.allclose(outputs[0], of_outputs[0], rtol=1e-03, atol=1e-04))
 
 
