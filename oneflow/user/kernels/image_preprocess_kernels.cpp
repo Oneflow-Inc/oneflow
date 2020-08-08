@@ -499,15 +499,16 @@ class ImageRandomCropKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* crop_window_generators = dynamic_cast<RandomCropKernelState*>(state);
+    CHECK_NOTNULL(crop_window_generators);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t record_num = out_blob->shape().At(0);
+    int64_t record_num = out_blob->shape().elem_cnt();
     CHECK(record_num > 0);
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK_EQ(out_blob->shape(), in_blob->shape());
     const TensorBuffer* in_buffers = in_blob->dptr<TensorBuffer>();
     TensorBuffer* out_buffers = out_blob->mut_dptr<TensorBuffer>();
     MultiThreadLoop(record_num, [&](size_t i) {
-      ImageRandomCropImpl(in_buffers + i, out_buffers + i, crop_window_generators->Get(i));
+      ImageRandomCropImpl(in_buffers + i, out_buffers + i, crop_window_generators->GetGenerator(i));
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

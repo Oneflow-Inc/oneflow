@@ -188,6 +188,7 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* crop_window_generators = dynamic_cast<RandomCropKernelState*>(state);
+    CHECK_NOTNULL(crop_window_generators);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t record_num = out_blob->shape().At(0);
     CHECK(record_num > 0);
@@ -201,7 +202,7 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
     MultiThreadLoop(record_num, [&](size_t i) {
       const OFRecord& record = *(records + i);
       TensorBuffer* buffer = buffers + i;
-      RandomCropGenerator* gen = crop_window_generators->Get(i);
+      RandomCropGenerator* gen = crop_window_generators->GetGenerator(i);
       DecodeRandomCropImageFromOneRecord(record, buffer, name, color_space, gen);
     });
   }

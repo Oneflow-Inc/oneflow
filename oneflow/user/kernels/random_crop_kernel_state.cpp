@@ -29,21 +29,10 @@ std::shared_ptr<RandomCropKernelState> CreateRandomCropKernelState(
   const std::vector<float>& random_area = ctx->Attr<std::vector<float>>("random_area");
   CHECK(random_area.size() == 2 && 0 < random_area.at(0) && random_area.at(0) <= random_area.at(1));
   const user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  CHECK(out_tensor_desc->shape().NumAxes() == 1);
-  int64_t batch_size = out_tensor_desc->shape().At(0);
-  CHECK(batch_size > 0);
-  int64_t seed = GetOpKernelRandomSeed(ctx);
-  std::seed_seq seq{seed};
-  std::vector<int> seeds(batch_size);
-  seq.generate(seeds.begin(), seeds.end());
-
-  std::shared_ptr<RandomCropKernelState> crop_window_generators(
-      new RandomCropKernelState(batch_size));
-  for (int32_t i = 0; i < batch_size; ++i) {
-    crop_window_generators->New(i, {random_aspect_ratio.at(0), random_aspect_ratio.at(1)},
-                                {random_area.at(0), random_area.at(1)}, seeds.at(i), num_attempts);
-  }
-  return crop_window_generators;
+  return std::shared_ptr<RandomCropKernelState>(
+      new RandomCropKernelState(out_tensor_desc->shape().elem_cnt(), GetOpKernelRandomSeed(ctx),
+                                {random_aspect_ratio.at(0), random_aspect_ratio.at(1)},
+                                {random_area.at(0), random_area.at(1)}, num_attempts));
 }
 
 }  // namespace oneflow
