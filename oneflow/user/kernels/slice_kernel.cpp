@@ -63,16 +63,18 @@ class SliceGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_SLICE_KERNELS_FOR_DEVICES(dtype) \
-  REGISTER_SLICE_KERNELS(DeviceType::kCPU, dtype) \
-  REGISTER_SLICE_KERNELS(DeviceType::kGPU, dtype)
+#define REGISTER_SLICE_KERNELS_WITH_DEVICE(device) \
+  REGISTER_SLICE_KERNELS(device, float)            \
+  REGISTER_SLICE_KERNELS(device, double)           \
+  REGISTER_SLICE_KERNELS(device, int32_t)          \
+  REGISTER_SLICE_KERNELS(device, int64_t)          \
+  REGISTER_SLICE_KERNELS(device, int8_t)           \
+  REGISTER_SLICE_KERNELS(device, uint8_t)
 
-REGISTER_SLICE_KERNELS_FOR_DEVICES(float)
-REGISTER_SLICE_KERNELS_FOR_DEVICES(double)
-REGISTER_SLICE_KERNELS_FOR_DEVICES(int32_t)
-REGISTER_SLICE_KERNELS_FOR_DEVICES(int64_t)
-REGISTER_SLICE_KERNELS_FOR_DEVICES(int8_t)
-REGISTER_SLICE_KERNELS_FOR_DEVICES(uint8_t)
+REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kCPU)
+#ifdef WITH_CUDA
+REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kGPU)
 REGISTER_SLICE_KERNELS(DeviceType::kGPU, float16)
+#endif
 
 }  // namespace oneflow
