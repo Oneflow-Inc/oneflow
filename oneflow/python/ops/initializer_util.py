@@ -82,6 +82,7 @@ def random_uniform_initializer(
     Returns:
         An InitializerConf object.
     """
+    assert minval <= maxval
     initializer = op_conf_util.InitializerConf()
     if dtype in [dtype_util.float, dtype_util.double]:
         setattr(initializer.random_uniform_conf, "min", float(minval))
@@ -118,6 +119,8 @@ def random_normal_initializer(
     """
     assert seed is None
     assert dtype is None
+    if seed is not None:
+        assert name is not None
     initializer = op_conf_util.InitializerConf()
     setattr(initializer.random_normal_conf, "mean", float(mean))
     setattr(initializer.random_normal_conf, "std", float(stddev))

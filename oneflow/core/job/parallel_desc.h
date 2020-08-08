@@ -18,24 +18,23 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 
+class ResourceDesc;
+
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
 
 Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
-                                std::string* device_tag, std::string* device_id_str);
+                                std::string* device_id_str);
 
 class ParallelContext;
 
 class ParallelDesc final {
  public:
-  // OF_DISALLOW_COPY_AND_MOVE(ParallelDesc);
   ~ParallelDesc() = default;
 
   ParallelDesc(const ParallelDesc&) = default;

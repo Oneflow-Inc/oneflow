@@ -103,7 +103,18 @@ class OfBlob(object):
         return ret_ndarray_list
 
     def CopyFromNdarray(self, src_ndarray):
-        return self._CopyFromNdarrayLists([[src_ndarray]])
+        if self.is_dynamic:
+            return self._CopyFromNdarrayLists([[src_ndarray]])
+        else:
+            return self._CopyBodyFromNdarray(src_ndarray)
+
+    def _CopyBodyFromNdarray(self, src_ndarray):
+        assert not self.is_dynamic
+        method_name = oneflow_api.Dtype_GetOfBlobStaticTensorCopyFromBufferFuncName(
+            self.dtype.oneflow_proto_dtype
+        )
+        copy_method = getattr(oneflow_api, method_name)
+        copy_method(self.of_blob_ptr_, src_ndarray)
 
     def CopyFromNdarrayList(self, src_ndarray_list):
         return self._CopyFromNdarrayLists([src_ndarray_list])

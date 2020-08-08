@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 namespace eager {
@@ -35,6 +37,26 @@ Maybe<void> BlobObject::InitBlob() {
     header_buffer_ = std::unique_ptr<char, std::function<void(char*)>>(ptr, FreeHeader);
   }
   blob_.reset(new Blob(*mem_case_, rt_blob_desc_.get(), header_buffer_.get(), nullptr));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> BlobObject::CheckMemCase(const ParallelDesc& parallel_desc, int64_t machine_id) const {
+  CHECK_OR_RETURN(parallel_desc.HasMachineId(machine_id))
+      << "ParallelDesc does not contain machine_id: " << machine_id;
+  const char* device_tag = JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
+  if (parallel_desc.device_type() == DeviceType::kCPU) {
+    CHECK_OR_RETURN(this->mem_case_->has_host_mem())
+        << "DeviceType: " << device_tag
+        << " not match MemoryCase: " << this->mem_case_->host_mem().DebugString();
+  } else if (parallel_desc.device_type() == DeviceType::kGPU) {
+    CHECK_OR_RETURN(this->mem_case_->has_device_cuda_mem())
+        << "DeviceType: " << device_tag
+        << " not match MemoryCase: " << this->mem_case_->device_cuda_mem().DebugString();
+    CHECK_OR_RETURN(
+        parallel_desc.Containing(machine_id, this->mem_case_->device_cuda_mem().device_id()));
+  } else {
+    OF_UNIMPLEMENTED();
+  }
   return Maybe<void>::Ok();
 }
 
@@ -62,6 +84,7 @@ void BlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     allocator->Allocate(&dptr, required_body_bytes);
     blob_dptr_ = std::unique_ptr<char, std::function<void(char*)>>(dptr, Free);
     blob->reset_dptr(dptr);
+    InitNonPODTypeBlobIfNeed(&non_pod_initer_, blob_.get());
   }
   blob_body_bytes_ = required_body_bytes;
 }

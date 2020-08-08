@@ -22,32 +22,35 @@ import tensorflow as tf
 import test_global_storage
 from test_util import Args, GenArgDict, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
+import unittest
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_no_watch_scope_consistent(test_case):
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow.float32)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def Foo(x: oft.Numpy.Placeholder((2, 8, 32, 32))):
         return flow.layers.batch_normalization(x)
 
     Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_train_consistent(test_case):
     flow.config.enable_debug_mode(True)
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow.float32)
-    func_config.train.primary_lr(0.001)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def Foo(x: oft.Numpy.Placeholder((2, 8, 32, 32))):
         y = flow.layers.batch_normalization(x, axis=1)
-        flow.losses.add_loss(flow.math.reduce_sum(y))
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
+        ).minimize(flow.math.reduce_sum(y))
 
     Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
 
@@ -56,13 +59,13 @@ def TODO_test_train(test_case):
     flow.config.enable_debug_mode(True)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
-    func_config.train.primary_lr(0.001)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def Foo(x: oft.Numpy.Placeholder((2, 8, 32, 32))):
         y = flow.layers.batch_normalization(x, axis=1)
-        flow.losses.add_loss(flow.math.reduce_sum(y))
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
+        ).minimize(flow.math.reduce_sum(y))
 
     Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
 
@@ -81,10 +84,8 @@ def CompareNnBnWithTensorFlow(
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow.float32)
-    func_config.train.primary_lr(0)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape).astype(
         np.float32
@@ -103,7 +104,7 @@ def CompareNnBnWithTensorFlow(
         low=input_minval, high=input_maxval, size=param_shape
     ).astype(np.float32)
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def FlowNnBnJob(
         x_full_precision: oft.Numpy.Placeholder(x.shape),
         mean: oft.Numpy.Placeholder(mean.shape),
@@ -126,7 +127,9 @@ def CompareNnBnWithTensorFlow(
                 x, mean, variance, offset, scale, epsilon, axis=axis
             )
             y = flow.cast(y, flow.float32)
-            flow.losses.add_loss(y)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0
+            ).minimize(y)
             flow.watch_diff(x_full_precision, test_global_storage.Setter("x_diff"))
             return y
 
@@ -177,7 +180,7 @@ def RunOneflowLayerBn(
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     if data_type == "float16":
         func_config.enable_auto_mixed_precision(True)
         dtype = flow.float
@@ -189,10 +192,11 @@ def RunOneflowLayerBn(
 
     func_config.default_data_type(dtype)
     if trainable:
-        func_config.train.primary_lr(0)
-        func_config.train.model_update_conf(dict(naive_conf={}))
+        func_config_type = "train"
+    else:
+        func_config_type = "predict"
 
-    @flow.global_function(func_config)
+    @flow.global_function(type=func_config_type, function_config=func_config)
     def FlowJob(x_full_precision: oft.Numpy.Placeholder(x.shape, dtype=dtype)):
         with flow.scope.placement(device_type, "0:0"):
             x_full_precision += flow.get_variable(
@@ -207,7 +211,9 @@ def RunOneflowLayerBn(
             )
             y = flow.cast(y, flow.float)
             if trainable:
-                flow.losses.add_loss(y)
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
+                ).minimize(y)
 
                 flow.watch_diff(x_full_precision, test_global_storage.Setter("x_diff"))
 
@@ -322,7 +328,7 @@ def test_layer_batchnorm(test_case):
 
 def test_layer_batchnorm_inference(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["data_type"] = ["float32"]
     arg_dict["input_shape"] = [(1, 4, 1, 2)]
     arg_dict["op_args"] = [
@@ -356,6 +362,7 @@ def test_layer_batchnorm_trainable_without_training(test_case):
         CompareBnWithTensorFlow(**arg, training=False, trainable=True)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_nn_batchnorm(test_case):
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [(2, 4, 3, 5)]

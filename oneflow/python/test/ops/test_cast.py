@@ -30,7 +30,7 @@ def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dt
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def cast_forward(
         input_def: oft.Numpy.Placeholder(
             shape=input_shape, dtype=type_name_to_flow_type[dtype]
@@ -52,10 +52,8 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
 
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def CastJob():
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -67,7 +65,9 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
             )
 
             loss = flow.cast(x, dtype=flow.float)
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
             flow.watch(loss, test_global_storage.Setter("loss"))

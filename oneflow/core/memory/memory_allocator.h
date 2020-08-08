@@ -24,6 +24,7 @@ namespace oneflow {
 class MemoryAllocator final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MemoryAllocator);
+  MemoryAllocator() = default;
   ~MemoryAllocator();
 
   char* Allocate(MemoryCase mem_case, std::size_t size);
@@ -31,14 +32,14 @@ class MemoryAllocator final {
   T* PlacementNew(T* mem_ptr);
 
  private:
-  friend class Global<MemoryAllocator>;
-
-  MemoryAllocator() = default;
   void Deallocate(char* dptr, MemoryCase mem_case);
 
   std::mutex deleters_mutex_;
   std::list<std::function<void()>> deleters_;
 };
+
+class Blob;
+void InitNonPODTypeBlobIfNeed(MemoryAllocator* allocator, Blob* blob_ptr);
 
 template<typename T>
 T* MemoryAllocator::PlacementNew(T* mem_ptr) {

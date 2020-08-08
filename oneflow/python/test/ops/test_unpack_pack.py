@@ -19,11 +19,15 @@ import oneflow.typing as oft
 
 
 func_config = flow.FunctionConfig()
+func_config.default_logical_view(flow.scope.mirrored_view())
 func_config.default_data_type(flow.float)
 
 
 def test_unpack_pack(test_case):
-    @flow.global_function(func_config)
+    if flow.eager_execution_enabled():
+        return
+
+    @flow.global_function(function_config=func_config)
     def UnpackPackJob(a: oft.Numpy.Placeholder((3, 4))):
         return flow.pack(flow.unpack(a, 3), 3)
 

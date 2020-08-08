@@ -37,6 +37,7 @@ class JobBuildAndInferCtxMgr {
   Maybe<void> AddLbiAndDiffWatcherUuidPair(const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) const;
 
   const JobSet& job_set() const { return job_set_; }
+  std::string structure_graph() const;
 
  protected:
   virtual JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const = 0;

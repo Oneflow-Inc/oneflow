@@ -25,6 +25,7 @@ import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.dtype as dtype_util
+import oneflow.python.framework.module as module_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
 from oneflow.python.oneflow_export import oneflow_export
 

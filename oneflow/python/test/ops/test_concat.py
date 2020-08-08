@@ -20,6 +20,8 @@ import tensorflow as tf
 import test_global_storage
 import random
 import math
+import unittest
+import os
 
 from test_util import GenArgList, type_name_to_flow_type
 from collections import OrderedDict
@@ -33,11 +35,10 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, dtype, axis):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def ConcatJob():
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -54,8 +55,12 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, dtype, axis):
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
+            x = flow.cast_to_current_logical_view(x)
+            y = flow.cast_to_current_logical_view(y)
             loss = flow.concat([x, y], axis)
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
@@ -110,11 +115,10 @@ def _of_dynamic_concat(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def dynamic_concat_job(
         input_0_def: oft.ListNumpy.Placeholder(
             shape=input_static_shape, dtype=flow.float
@@ -137,6 +141,10 @@ def _of_dynamic_concat(
             initializer=flow.constant_initializer(value=1, dtype=flow.float),
             trainable=True,
         )
+        var_0 = flow.cast_to_current_logical_view(var_0)
+        var_1 = flow.cast_to_current_logical_view(var_1)
+        input_0_def = flow.cast_to_current_logical_view(input_0_def)
+        input_1_def = flow.cast_to_current_logical_view(input_1_def)
         if callable(watch_cb):
             flow.watch(var_0, watch_cb)
             flow.watch(var_1, watch_cb)
@@ -152,7 +160,9 @@ def _of_dynamic_concat(
         result = flow.concat(
             [var_0, var_1], axis=axis, max_dim_size=input_static_shape[axis]
         )
-        flow.losses.add_loss(result)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+        ).minimize(result)
         flow.watch_diff(var_0, make_watch_diff_cb(0))
         flow.watch_diff(var_1, make_watch_diff_cb(1))
         return result
@@ -234,6 +244,7 @@ def _test_dynamic_concat(test_case, shape, axis, device_type, verbose=False):
     test_case.assertTrue(np.array_equal(of_output, output))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_dynamic_concat_case_0(test_case):
     _test_dynamic_concat(test_case, (64, 4), 0, "gpu")
 
@@ -242,6 +253,7 @@ def test_dynamic_concat_case_1(test_case):
     _test_dynamic_concat(test_case, (2, 10), 1, "cpu")
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_dynamic_concat_case_2(test_case):
     _test_dynamic_concat(test_case, (4, 7, 128), 2, "gpu")
 
@@ -253,15 +265,13 @@ def test_dynamic_concat_case_3(test_case):
 def _test_static_concat(test_case, shape, axis):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.train.primary_lr(1e-3)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     def compare_var_diff(var_blob):
         test_case.assertTrue(
             np.array_equal(var_blob.numpy(), np.ones(shape=shape, dtype=np.single))
         )
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def static_concat_job(
         input_0_def: oft.Numpy.Placeholder(shape=shape, dtype=flow.float),
         input_1_def: oft.Numpy.Placeholder(shape=shape, dtype=flow.float),
@@ -275,7 +285,9 @@ def _test_static_concat(test_case, shape, axis):
         )
         concated = flow.concat([input_0_def, input_1_def, var], axis=axis)
         test_case.assertTrue(not concated.is_dynamic)
-        flow.losses.add_loss(concated)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+        ).minimize(concated)
         flow.watch_diff(var, compare_var_diff)
         return var, concated
 
@@ -304,8 +316,7 @@ def _test_hybrid_concat(
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.train.primary_lr(1e-3)
-    func_config.train.model_update_conf(dict(naive_conf={}))
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     def compare_var_diff(var_blob):
         test_case.assertTrue(
@@ -318,7 +329,7 @@ def _test_hybrid_concat(
     rand_sub_shape[axis] = random.randrange(1, static_shape[axis])
     rand_sub_shape = tuple(rand_sub_shape)
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def hybrid_concat_job(
         input_0_def: oft.ListNumpy.Placeholder(shape=static_shape, dtype=flow.float),
         input_1_def: oft.ListNumpy.Placeholder(shape=static_shape, dtype=flow.float),
@@ -331,15 +342,17 @@ def _test_hybrid_concat(
             trainable=True,
         )
         constant = flow.constant(1.0, dtype=flow.float, shape=rand_sub_shape)
-        concated = flow.concat(
-            [var, input_0_def, input_1_def, constant],
-            axis=axis,
-            max_dim_size=max_dim_size,
-        )
+        inputs = [
+            flow.cast_to_current_logical_view(input)
+            for input in [var, input_0_def, input_1_def, constant]
+        ]
+        concated = flow.concat(inputs, axis=axis, max_dim_size=max_dim_size,)
         if verbose:
             print("concated static shape:", concated.shape)
 
-        flow.losses.add_loss(concated)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+        ).minimize(concated)
         flow.watch_diff(var, compare_var_diff)
 
         if max_dim_size is None:

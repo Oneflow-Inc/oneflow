@@ -24,12 +24,12 @@ namespace oneflow {
 
 #define OBJECT_MSG_DEFINE_LIST_LINK(field_name)                                     \
   static_assert(__is_object_message_type__, "this struct is not a object message"); \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                   \
+  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                \
   _OBJECT_MSG_DEFINE_LIST_LINK(STATIC_COUNTER(field_counter), field_name);
 
 #define OBJECT_MSG_DEFINE_LIST_HEAD(elem_type, elem_field_name, field_name)               \
   static_assert(__is_object_message_type__, "this struct is not a object message");       \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                         \
+  OF_PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                      \
   _OBJECT_MSG_DEFINE_LIST_HEAD(STATIC_COUNTER(field_counter), elem_type, elem_field_name, \
                                field_name);
 

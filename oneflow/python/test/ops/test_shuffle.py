@@ -40,7 +40,7 @@ def test_shuffle(_):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
 
-        @flow.global_function(flow.FunctionConfig())
+        @flow.global_function(function_config=flow.FunctionConfig())
         def TestJob(
             x: oft.Numpy.Placeholder(x_shape, dtype=type_name_to_flow_type[data_type])
         ):
@@ -60,7 +60,7 @@ def test_shuffle(_):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
 
-        @flow.global_function(flow.FunctionConfig())
+        @flow.global_function(function_config=flow.FunctionConfig())
         def TestJob1(
             x: oft.Numpy.Placeholder(x_shape, dtype=type_name_to_flow_type[data_type])
         ):

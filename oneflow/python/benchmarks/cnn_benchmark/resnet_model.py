@@ -135,8 +135,6 @@ def resnet_stem(input):
 
 def resnet50(images, trainable=True):
 
-    images = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
-
     with flow.scope.namespace("Resnet"):
         stem = resnet_stem(images)
         body = resnet_conv_x_body(stem, lambda x: x)

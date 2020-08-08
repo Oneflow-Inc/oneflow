@@ -22,14 +22,14 @@ flow.config.gpu_device_num(4)
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
-func_config.default_distribute_strategy(flow.scope.consistent_view())
+func_config.default_logical_view(flow.scope.consistent_view())
 
 if __name__ == "__main__":
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def test_job(x: oft.Numpy.Placeholder((10000,), dtype=flow.float)):
         return flow.eager_nccl_all_reduce(
-            x, parallel_conf=""" device_name: "0:gpu:0-3" """,
+            x, parallel_conf="""  device_tag: "gpu", device_name: "0:0-3" """,
         )
 
     for _ in range(10):

@@ -16,8 +16,9 @@ limitations under the License.
 from __future__ import absolute_import
 import re
 import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.device_scope_stack as device_scope_stack
 import oneflow
@@ -26,6 +27,11 @@ import traceback
 
 @oneflow_export("placement.current_scope")
 def api_current_placement_scope() -> placement_ctx.PlacementScope:
+    print(
+        "WARNING: oneflow.placement.current_scope has been deprecated. "
+        "Please use oneflow.current_scope.device_parallel_desc_symbol instead."
+    )
+    print(traceback.format_stack()[-2])
     api = enable_if.unique(
         [global_mode_cur_placement_scope, normal_mode_cur_placement_scope]
     )
@@ -43,6 +49,7 @@ def normal_mode_cur_placement_scope():
 
 
 @oneflow_export("device_prior_placement", "fixed_placement")
+@oneflow_deprecate()
 def deprecated_placement(*args, **kwargs):
     print(
         "WARNING:",
@@ -59,7 +66,8 @@ def deprecated_placement(*args, **kwargs):
 def api_placement(
     device_tag: str, machine_device_ids: str
 ) -> placement_ctx.PlacementScope:
-    return enable_if.unique([GetPlacementScope])(device_tag, machine_device_ids)
+    func = enable_if.unique([GetPlacementScope, GetNormalModePlacementScope])
+    return func(device_tag, machine_device_ids)
 
 
 @enable_if.condition(
@@ -70,8 +78,19 @@ def GetPlacementScope(device_tag, machine_device_ids):
     return placement_ctx.PlacementScope(device_tag, machine_device_ids)
 
 
+@enable_if.condition(hob.in_normal_mode & hob.session_initialized)
+def GetNormalModePlacementScope(device_tag, machine_device_ids):
+    sess = session_ctx.GetDefaultSession()
+    scope = sess.MakeScope(
+        lambda old_scope, builder: old_scope.BuildWithNewParallelDesc(
+            builder, device_tag, machine_device_ids
+        )
+    )
+    return sess.NewCurrentScope(scope)
+
+
 def GetDefaultMachineDeviceIds(resource):
-    if resource.HasField("gpu_device_num"):
+    if resource.HasField("gpu_device_num") and resource.gpu_device_num > 0:
         return "gpu", placement_ctx.GetGpuMachineDeviceIds(resource)
     elif resource.HasField("cpu_device_num"):
         return "cpu", placement_ctx.GetCpuMachineDeviceIds(resource)

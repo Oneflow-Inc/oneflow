@@ -47,8 +47,9 @@ void VmResourceDesc::GenerateParallelConf(const char* device_tag, ParallelConf* 
   CHECK(parallel_conf->device_name().empty());
   CHECK_GT(device_num_iter->second, 0);
   std::string device_num = std::to_string(device_num_iter->second - 1);
+  parallel_conf->set_device_tag(device_tag);
   FOR_RANGE(int, i, 0, machine_num()) {
-    parallel_conf->add_device_name(std::to_string(i) + ":" + device_tag + ":0-" + device_num);
+    parallel_conf->add_device_name(std::to_string(i) + ":0-" + device_num);
   }
 }
 

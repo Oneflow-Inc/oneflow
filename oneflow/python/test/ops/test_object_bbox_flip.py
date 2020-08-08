@@ -26,9 +26,9 @@ def _of_object_bbox_flip(bbox_list, image_size, flip_code):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def object_bbox_flip_job(
         bbox_def: oft.ListListNumpy.Placeholder(
             shape=tuple(bbox_shape), dtype=flow.float

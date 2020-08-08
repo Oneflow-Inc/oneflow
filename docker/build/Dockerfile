@@ -40,10 +40,12 @@ RUN if [ "${USE_PYTHON_3_OR_2}" -eq 2 ] ; then yum update -y \
     && rm get-pip.py \
     && pip install numpy==1.12.0 protobuf ; fi
 
+COPY dev-requirements.txt /workspace/dev-requirements.txt
+
 RUN if [ "${USE_PYTHON_3_OR_2}" -eq 3 ] ; then yum update -y \
     && yum install -y rh-python36 python36-devel.x86_64 python36-devel \
     && python3 -m ensurepip \
-    && pip3 install numpy protobuf ; fi
+    && pip3 install /workspace/dev-requirements.txt; fi
 
 WORKDIR /workspace/build
 

@@ -59,11 +59,11 @@ class StreamId final {
 // clang-format off
 OBJECT_MSG_BEGIN(StreamDesc);
   // methods
-  PUBLIC void __Init__() {}
-  PUBLIC void __Init__(const StreamTypeId& stream_type_id, int32_t num_machines, int32_t num_streams_per_machine,
+  OF_PUBLIC void __Init__() {}
+  OF_PUBLIC void __Init__(const StreamTypeId& stream_type_id, int32_t num_machines, int32_t num_streams_per_machine,
                        int32_t num_streams_per_thread);
-  PUBLIC int32_t num_threads() const;
-  PUBLIC int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
+  OF_PUBLIC int32_t num_threads() const;
+  OF_PUBLIC int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_machines);

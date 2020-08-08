@@ -150,9 +150,10 @@ def MakeParallelConf(device_tag, machine_device_ids):
             "machine_device_id: %s is not valid" % machine_device_id
         )
         pair = machine_device_id.split(":")
-        device_names.append("%s:%s:%s" % (pair[0], device_tag, pair[1]))
+        device_names.append("%s:%s" % (pair[0], pair[1]))
 
     parallel_conf = placement_pb.ParallelConf()
+    parallel_conf.device_tag = device_tag
     parallel_conf.device_name.extend(device_names)
     return parallel_conf
 
@@ -190,7 +191,7 @@ def GetCpuMachineDeviceIds(resource):
     assert resource.machine_num > 0
     assert resource.HasField("cpu_device_num")
     return [
-        "%s:0-%s" % (m_id, resource.gpu_device_num - 1)
+        "%s:0-%s" % (m_id, resource.cpu_device_num - 1)
         for m_id in range(resource.machine_num)
     ]
 

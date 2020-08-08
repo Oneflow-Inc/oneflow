@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/eager/blob_object.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/operator/op_node_signature_desc.h"
 
 namespace oneflow {
 
@@ -58,28 +58,23 @@ class OpKernelObject : public vm::Object {
     opkernel_state_ = opkernel_state;
   }
 
-  void ResetOpAndKernel(const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
-                        const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
-
-  const BlobObject& tmp_buffer_blob_object() const { return *tmp_buffer_blob_object_; }
-  BlobObject* mut_tmp_buffer_blob_object() { return tmp_buffer_blob_object_.get(); }
-
-  void reset_tmp_buffer_blob_object(BlobObject* blob_object) {
-    tmp_buffer_blob_object_.reset(blob_object);
-  }
+  Maybe<void> ResetOpAndKernel(const OpNodeSignatureDesc& op_node_signature,
+                               const ParallelContext* parallel_ctx,
+                               const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+                               const ParallelDesc* parallel_desc);
 
  private:
-  void InferBlobDescs(const Operator& op,
-                      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-                      const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
-                      std::unique_ptr<OpContext>* op_ctx);
+  Maybe<void> InferBlobDescs(const Operator& op,
+                             const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+                             const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
+                             std::unique_ptr<OpContext>* op_ctx);
   void NewPartialInitializedKernel(
       const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, OpContext* op_ctx);
+      const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
+      OpContext* op_ctx, const ParallelDesc* parallel_desc);
 
   OperatorConf op_conf_;
   std::shared_ptr<const JobDesc> job_desc_;
-  std::unique_ptr<BlobObject> tmp_buffer_blob_object_;
   DeviceType device_type_;
   std::unique_ptr<EagerKernel> kernel_;
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
@@ -101,17 +96,21 @@ class SystemOpKernelObject : public vm::Object {
 
   const Kernel& kernel() const { return *kernel_; }
 
-  void ResetKernel(const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
-                   const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
+  Maybe<void> ResetKernel(const OpNodeSignatureDesc& op_node_signature,
+                          const ParallelContext* parallel_ctx,
+                          const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+                          const ParallelDesc* parallel_desc);
 
  private:
-  void InferBlobDescs(const Operator& op,
-                      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-                      const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
-                      std::unique_ptr<OpContext>* op_ctx);
+  Maybe<void> InferBlobDescs(const Operator& op,
+                             const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+                             const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
+                             std::unique_ptr<OpContext>* op_ctx);
   void ResetKernel(const Operator& op,
                    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-                   const ParallelContext* parallel_ctx, OpContext* op_ctx);
+                   const OpNodeSignatureDesc& op_node_signature,
+                   const ParallelContext* parallel_ctx, OpContext* op_ctx,
+                   const ParallelDesc* parallel_desc);
 
   OperatorConf op_conf_;
   std::shared_ptr<const JobDesc> job_desc_;

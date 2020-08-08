@@ -37,6 +37,11 @@ class ScopeSymbol(Symbol):
         self.host_parallel_desc_symbol_ = symbol_storage.GetSymbol4Id(
             scope_proto.host_parallel_desc_symbol_id
         )
+        self.auto_increment_id_ = 0
+
+    def auto_increment_id(self):
+        self.auto_increment_id_ = self.auto_increment_id_ + 1
+        return self.auto_increment_id_
 
     @property
     def job_desc_symbol(self):
@@ -51,6 +56,9 @@ class ScopeSymbol(Symbol):
         return self.parent_scope_symbol_
 
     def BuildWithNewParallelDesc(self, builder, device_tag, machine_device_ids):
+        if isinstance(machine_device_ids, str):
+            machine_device_ids = [machine_device_ids]
+
         parallel_conf = MakeParallelConf(device_tag, machine_device_ids)
         device_parallel_desc_sym = builder.GetParallelDescSymbol(parallel_conf)
         parallel_conf = MakeParallelConf("cpu", machine_device_ids)
@@ -104,7 +112,7 @@ def BuildInitialScope(builder, job_conf, device_tag, machine_device_ids, is_mirr
 
 
 def MakeParallelConf(device_tag, machine_device_ids):
-    assert isinstance(machine_device_ids, collections.Sized)
+    assert isinstance(machine_device_ids, (list, tuple))
     device_names = []
     for machine_device_id in machine_device_ids:
         assert isinstance(
@@ -113,9 +121,9 @@ def MakeParallelConf(device_tag, machine_device_ids):
         assert re.match("^\d+:\d+(-\d+)?$", machine_device_id) is not None, (
             "machine_device_id: %s is not valid" % machine_device_id
         )
-        pair = machine_device_id.split(":")
-        device_names.append("%s:%s:%s" % (pair[0], device_tag, pair[1]))
+        device_names.append(machine_device_id)
 
     parallel_conf = placement_pb.ParallelConf()
+    parallel_conf.device_tag = device_tag
     parallel_conf.device_name.extend(device_names)
     return parallel_conf

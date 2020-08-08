@@ -30,13 +30,13 @@ namespace oneflow {
     using self_type = struct_name;                          \
     static const bool __is_flat_message_view_type__ = true; \
     FLAT_MSG_VIEW_DEFINE_BASIC_METHODS(struct_name);        \
-    PRIVATE DEFINE_STATIC_COUNTER(field_counter);           \
+    OF_PUBLIC DEFINE_STATIC_COUNTER(field_counter);         \
     DSS_BEGIN(STATIC_COUNTER(field_counter), struct_name);
 
 #define FLAT_MSG_VIEW_END(struct_name)                                                    \
   static_assert(__is_flat_message_view_type__, "this struct is not a flat message view"); \
-  PUBLIC static const int __LastFieldIndex__ = STATIC_COUNTER(field_counter);             \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                         \
+  OF_PUBLIC static const int __LastFieldIndex__ = STATIC_COUNTER(field_counter);          \
+  OF_PUBLIC INCREASE_STATIC_COUNTER(field_counter);                                       \
   DSS_END(STATIC_COUNTER(field_counter), "flat message view", struct_name);               \
   }                                                                                       \
   ;
@@ -44,7 +44,7 @@ namespace oneflow {
 #define FLAT_MSG_VIEW_DEFINE_PATTERN(flat_msg_field_type, field_name)                        \
   static_assert(__is_flat_message_view_type__, "this struct is not a flat message view");    \
   _FLAT_MSG_VIEW_DEFINE_PATTERN(FLAT_MSG_TYPE_CHECK(flat_msg_field_type), field_name);       \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                            \
+  OF_PUBLIC INCREASE_STATIC_COUNTER(field_counter);                                          \
   FLAT_MSG_VIEW_SPECIALIZE_FIELD_TYPE(STATIC_COUNTER(field_counter), flat_msg_field_type);   \
   FLAT_MSG_VIEW_CHECK_LAST_FIELD_TYPE(STATIC_COUNTER(field_counter), flat_msg_field_type);   \
   DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "flat message view", flat_msg_field_type*, \
@@ -53,7 +53,7 @@ namespace oneflow {
 #define FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(flat_msg_field_type, field_name)                  \
   static_assert(__is_flat_message_view_type__, "this struct is not a flat message view");       \
   _FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(FLAT_MSG_TYPE_CHECK(flat_msg_field_type), field_name); \
-  PRIVATE INCREASE_STATIC_COUNTER(field_counter);                                               \
+  OF_PUBLIC INCREASE_STATIC_COUNTER(field_counter);                                             \
   _SPECIALIZE_IS_REPEATED_PATTERN(STATIC_COUNTER(field_counter));                               \
   FLAT_MSG_VIEW_SPECIALIZE_FIELD_TYPE(STATIC_COUNTER(field_counter), flat_msg_field_type);      \
   FLAT_MSG_VIEW_CHECK_LAST_FIELD_TYPE(STATIC_COUNTER(field_counter), flat_msg_field_type);      \

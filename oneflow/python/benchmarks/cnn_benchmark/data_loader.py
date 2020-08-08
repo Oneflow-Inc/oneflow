@@ -19,31 +19,27 @@ import oneflow as flow
 
 
 def load_imagenet(data_dir, image_size, batch_size, data_part_num):
-    image_blob_conf = flow.data.BlobConf(
-        "encoded",
-        shape=(image_size, image_size, 3),
-        dtype=flow.float,
-        codec=flow.data.ImageCodec(
-            [flow.data.ImageResizePreprocessor(image_size, image_size)]
-        ),
-        preprocessors=[
-            flow.data.NormByChannelPreprocessor(
-                (123.68, 116.78, 103.94), (255.0, 255.0, 255.0)
-            )
-        ],
+    rgb_mean = [123.68, 116.78, 103.94]
+    rgb_std = [255.0, 255.0, 255.0]
+    ofrecord = flow.data.ofrecord_reader(
+        data_dir, batch_size=batch_size, data_part_num=data_part_num, name="decode",
     )
-
-    label_blob_conf = flow.data.BlobConf(
-        "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
+    image = flow.data.ofrecord_image_decoder(ofrecord, "encoded", color_space="RGB")
+    label = flow.data.ofrecord_raw_decoder(
+        ofrecord, "class/label", shape=(), dtype=flow.int32
     )
-
-    return flow.data.decode_ofrecord(
-        data_dir,
-        (label_blob_conf, image_blob_conf),
-        batch_size=batch_size,
-        data_part_num=data_part_num,
-        name="decode",
+    rsz = flow.image.resize(
+        image, resize_x=image_size, resize_y=image_size, color_space="RGB"
     )
+    normal = flow.image.crop_mirror_normalize(
+        rsz,
+        color_space="RGB",
+        output_layout="NCHW",
+        mean=rgb_mean,
+        std=rgb_std,
+        output_dtype=flow.float,
+    )
+    return label, normal
 
 
 def load_synthetic(image_size, batch_size):

@@ -74,6 +74,16 @@ class uint8(dtype):
     oneflow_proto_dtype = data_type_pb2.kUInt8
 
 
+@oneflow_export("record")
+class record(dtype):
+    oneflow_proto_dtype = data_type_pb2.kOFRecord
+
+
+@oneflow_export("tensor_buffer")
+class tensor_buffer(dtype):
+    oneflow_proto_dtype = data_type_pb2.kTensorBuffer
+
+
 _dtypes = [
     char,
     float,
@@ -85,6 +95,8 @@ _dtypes = [
     int32,
     int64,
     uint8,
+    record,
+    tensor_buffer,
 ]
 
 
@@ -102,19 +114,21 @@ _PROTO_DTYPE2ONEFLOW_DTYPE = {
     data_type_pb2.kDouble: double,
     data_type_pb2.kFloat16: float16,
     data_type_pb2.kChar: char,
+    data_type_pb2.kOFRecord: record,
+    data_type_pb2.kTensorBuffer: tensor_buffer,
 }
 
 
 def convert_proto_dtype_to_oneflow_dtype(proto_dtype):
     if proto_dtype not in _PROTO_DTYPE2ONEFLOW_DTYPE:
-        raise NotImplementedError
+        raise NotImplementedError("proto_dtype %s not found in dict" % proto_dtype)
     return _PROTO_DTYPE2ONEFLOW_DTYPE[proto_dtype]
 
 
 _ONEFLOW_DTYPE_TO_NUMPY_DTYPE = {
     # could be np.ubyte on some platform
     char: np.byte,
-    float: np.float,
+    float: np.float32,
     float16: np.float16,
     float32: np.float32,
     float64: np.double,

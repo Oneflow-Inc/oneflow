@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #ifndef ONEFLOW_CORE_KERNEL_UTIL_CUDA_ARITHEMETIC_INTERFACE_H_
 #define ONEFLOW_CORE_KERNEL_UTIL_CUDA_ARITHEMETIC_INTERFACE_H_
 
@@ -103,6 +105,7 @@ struct ArithemeticIf<DeviceType::kGPU> {
   static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t* y,
                              int64_t* z);
 
+  static void Fill(DeviceCtx* ctx, const int64_t n, const float16 value, float16* y);
   static void Fill(DeviceCtx* ctx, const int64_t n, const float value, float* y);
   static void Fill(DeviceCtx* ctx, const int64_t n, const double value, double* y);
   static void Fill(DeviceCtx* ctx, const int64_t n, const int8_t value, int8_t* y);
@@ -132,3 +135,5 @@ struct ArithemeticIf<DeviceType::kGPU> {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_UTIL_CUDA_ARITHEMETIC_INTERFACE_H_
+
+#endif

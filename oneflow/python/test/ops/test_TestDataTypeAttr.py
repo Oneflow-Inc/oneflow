@@ -19,6 +19,8 @@ import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+import unittest
+import os
 
 
 def TestDataTypeAttr(input, output_type):
@@ -40,7 +42,7 @@ def RunTest(data_type):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def TestDataTypeAttrJob(input: oft.Numpy.Placeholder((10, 10), dtype=flow.float)):
         return TestDataTypeAttr(input, type_name_to_flow_type[data_type])
 
@@ -49,6 +51,7 @@ def RunTest(data_type):
     assert output.dtype == type_name_to_np_type[data_type]
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_data_type_attr(test_case):
     # TODO: fix bugs in ForeignOutputKernel with "float16" and "char" dtype, do not test these two dtypes here
     for data_type in ["float32", "double", "int8", "int32", "int64", "uint8"]:

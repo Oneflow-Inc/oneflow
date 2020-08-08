@@ -46,12 +46,7 @@ std::string EnvResource(std::string* error_str) {
 
 void EnableEagerEnvironment(bool enable_eager_execution) {
   using namespace oneflow;
-  *Global<bool, EagerExecution<ForEnv>>::Get() = enable_eager_execution;
-}
-
-void EnableEagerSession(bool enable_eager_execution) {
-  using namespace oneflow;
-  *Global<bool, EagerExecution<ForSession>>::Get() = enable_eager_execution;
+  *Global<bool, EagerExecution>::Get() = enable_eager_execution;
 }
 
 bool EagerExecutionEnabled() { return oneflow::EagerExecutionEnabled(); }
@@ -100,6 +95,11 @@ std::string GetSerializedJobSet(std::string* error_str) {
   return oneflow::GetSerializedJobSet().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
+std::string GetSerializedStructureGraph(std::string* error_str) {
+  return oneflow::GetSerializedStructureGraph().GetDataAndSerializedErrorProto(error_str,
+                                                                               std::string(""));
+}
+
 std::string GetFunctionConfigDef(std::string* error_str) {
   return oneflow::GetFunctionConfigDef().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
@@ -132,9 +132,9 @@ std::string InferOpConf(const std::string& serialized_op_conf,
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
-std::string GetOpAttribute4OpConf(const std::string& serialized_op_conf, std::string* error_str) {
-  return oneflow::GetOpAttribute4OpConf(serialized_op_conf)
-      .GetDataAndSerializedErrorProto(error_str, std::string(""));
+long GetOpParallelSymbolId(const std::string& serialized_op_conf, std::string* error_str) {
+  return oneflow::GetOpParallelSymbolId(serialized_op_conf)
+      .GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
 std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
