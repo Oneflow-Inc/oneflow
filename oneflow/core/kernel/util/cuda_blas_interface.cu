@@ -75,7 +75,7 @@ void HGemmWithFloat(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRA
       PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
 
   cudaDataType_t data_type = GetCudaDataType(DataType::kFloat16);
-  CudaCheck(cublasSgemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a, n, m,
+  OF_CUBLAS_CHECK(cublasSgemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a, n, m,
                           k, alpha, b, data_type, ldb, a, data_type, lda, beta, c, data_type, ldc));
 }
 
