@@ -58,8 +58,7 @@ void BatchMemcpyKernelUtil<DeviceType::kGPU>::Copy(DeviceCtx* ctx,
   } else {
     int block_size = 0;
     int num_blocks = 0;
-    OF_CUDA_CHECK(cudaMemcpyAsync(params.front().dst, params.front().src, params.front().count,
-                                  (cudaOccupancyMaxPotentialBlockSize(&num_blocks, &block_size, GpuCopy));
+    OF_CUDA_CHECK(cudaOccupancyMaxPotentialBlockSize(&num_blocks, &block_size, GpuCopy));
     BatchMemcpyParam batch_memcpy_param{};
     batch_memcpy_param.batch_size = 0;
     for (const MemcpyParam& param : params) {
@@ -73,9 +72,8 @@ void BatchMemcpyKernelUtil<DeviceType::kGPU>::Copy(DeviceCtx* ctx,
           batch_memcpy_param.batch_size = 0;
         }
       } else {
-        OF_CUDA_CHECK(cudaMemcpyAsync(params.front().dst, params.front().src, params.front().count,
-                                      (cudaMemcpyAsync(param.dst, param.src, param.count, cudaMemcpyDefault,
-                                  ctx->cuda_stream()));
+        OF_CUDA_CHECK(cudaMemcpyAsync(param.dst, param.src, param.count, cudaMemcpyDefault,
+                                      ctx->cuda_stream()));
       }
     }
     if (batch_memcpy_param.batch_size != 0) {
