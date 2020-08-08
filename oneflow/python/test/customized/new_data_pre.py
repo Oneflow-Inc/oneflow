@@ -16,13 +16,14 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 
-DATA_DIR = "/dataset/imagenet_16_same_pics/ofrecord"
-
 # flow.enable_eager_execution(True)
 flow.config.gpu_device_num(1)
+
 func_config = flow.FunctionConfig()
 func_config.default_logical_view(flow.scope.consistent_view())
 func_config.default_data_type(flow.float)
+
+data_dir = "/dataset/imagenet_16_same_pics/ofrecord"
 
 
 @flow.global_function(func_config)
@@ -32,8 +33,9 @@ def DataLoaderJob():
     rgb_mean = [123.68, 116.779, 103.939]
     rgb_std = [58.393, 57.12, 57.375]
 
+    # ofrecord = flow.data.ofrecord_loader(data_dir, batch_size=batch_size)
     ofrecord = flow.data.ofrecord_reader(
-        DATA_DIR, batch_size=batch_size, random_shuffle=True
+        data_dir, batch_size=batch_size, random_shuffle=True
     )
     image = flow.data.OFRecordImageDecoderRandomCrop(
         ofrecord,
@@ -45,13 +47,7 @@ def DataLoaderJob():
     label = flow.data.OFRecordRawDecoder(
         ofrecord, "class/label", shape=(), dtype=flow.int32
     )
-    rsz, _, _ = flow.image.Resize(
-        image,
-        target_size=(224, 224),
-        keep_aspect_ratio=False,
-        channels=3,
-        interpolation_type="bilinear",
-    )
+    rsz = flow.image.Resize(image, resize_x=224, resize_y=224, color_space="RGB")
     print(rsz.shape)
     print(label.shape)
 
@@ -74,8 +70,15 @@ def DataLoaderEvalJob():
     rgb_mean = [123.68, 116.779, 103.939]
     rgb_std = [58.393, 57.12, 57.375]
 
+    # ofrecord = flow.data.ofrecord_loader(
+    #     data_dir,
+    #     batch_size=batch_size,
+    #     part_name_suffix_length=5,
+    #     data_part_num=1,
+    #     shuffle=False,
+    # )
     ofrecord = flow.data.ofrecord_reader(
-        DATA_DIR,
+        data_dir,
         batch_size=batch_size,
         part_name_suffix_length=5,
         data_part_num=1,
@@ -85,9 +88,7 @@ def DataLoaderEvalJob():
     label = flow.data.OFRecordRawDecoder(
         ofrecord, "class/label", shape=(), dtype=flow.int32
     )
-    rsz, _, _ = flow.image.Resize(
-        image, target_size=256, keep_aspect_ratio=True, resize_side="shorter"
-    )
+    rsz = flow.image.Resize(image, resize_shorter=256, color_space="RGB")
 
     normal = flow.image.CropMirrorNormalize(
         rsz,
