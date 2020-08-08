@@ -261,7 +261,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
           inv_variance->mut_dptr()));
     }
 #else
-    CudaCheck(cudnnBatchNormalizationForwardTraining(
+    OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTraining(
         ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, CudnnSPOnePtr<T>(),
         CudnnSPZeroPtr<T>(), desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
         desc_helper.param_desc(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
@@ -337,7 +337,7 @@ class NormalizationGradUserKernel final : public user_op::OpKernel {
           epsilon, mean->dptr(), inv_variance->dptr()));
     }
 #else
-    CudaCheck(cudnnBatchNormalizationBackward(
+    OF_CUDNN_CHECK(cudnnBatchNormalizationBackward(
         ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, CudnnSPOnePtr<T>(),
         CudnnSPZeroPtr<T>(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), desc_helper.xy_desc(),
         x->dptr(), desc_helper.xy_desc(), dy->dptr(), desc_helper.xy_desc(), dx->mut_dptr(),
