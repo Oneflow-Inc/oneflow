@@ -154,13 +154,13 @@ def OFRecordImageDecoder(
 @oneflow_export("image.Resize", "image.resize", "image_resize")
 def api_image_resize(
     image: BlobDef,
-    target_size: Union[int, Sequence[int]],
+    target_size: Union[int, Sequence[int]] = None,
     min_size: Optional[int] = None,
     max_size: Optional[int] = None,
     keep_aspect_ratio: bool = False,
     resize_side: str = "shorter",
     channels: int = 3,
-    dtype: dtype_util.dtype = dtype_util.float,
+    dtype: Optional[dtype_util.dtype] = None,
     interpolation_type: str = "auto",
     name: Optional[str] = None,
     # deprecated params, reserve for backward compatible
@@ -263,8 +263,10 @@ def api_image_resize(
                 "target_size must be a form like (width, height) when keep_aspect_ratio is False"
             )
 
-        target_w, target_h = target_size
+        if dtype is None:
+            dtype = flow.uint8
 
+        target_w, target_h = target_size
         op = (
             flow.user_op_builder(name)
             .Op("image_resize_to_fixed")
