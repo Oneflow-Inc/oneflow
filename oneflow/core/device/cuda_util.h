@@ -31,6 +31,38 @@ limitations under the License.
 
 namespace oneflow {
 
+const char* CublasGetErrorString(cublasStatus_t error);
+
+const char* CurandGetErrorString(curandStatus_t error);
+
+#define OF_CUDA_CHECK(condition)                                                               \
+  for (cudaError_t _of_cuda_check_status = (condition); _of_cuda_check_status != cudaSuccess;) \
+  LOG(FATAL) << "Check failed: " #condition " : " << cudaGetErrorString(_of_cuda_check_status) \
+             << " (" << _of_cuda_check_status << ") "
+
+#define OF_CUDNN_CHECK(condition)                                                                \
+  for (cudnnStatus_t _of_cudnn_check_status = (condition);                                       \
+       _of_cudnn_check_status != CUDNN_STATUS_SUCCESS;)                                          \
+  LOG(FATAL) << "Check failed: " #condition " : " << cudnnGetErrorString(_of_cudnn_check_status) \
+             << " (" << _of_cudnn_check_status << ") "
+
+#define OF_CUBLAS_CHECK(condition)                                                                 \
+  for (cublasStatus_t _of_cublas_check_status = (condition);                                       \
+       _of_cublas_check_status != CUBLAS_STATUS_SUCCESS;)                                          \
+  LOG(FATAL) << "Check failed: " #condition " : " << CublasGetErrorString(_of_cublas_check_status) \
+             << " (" << _of_cublas_check_status << ") "
+
+#define OF_CURAND_CHECK(condition)                                                                 \
+  for (curandStatus_t _of_curand_check_status = (condition);                                       \
+       _of_curand_check_status != CURAND_STATUS_SUCCESS;)                                          \
+  LOG(FATAL) << "Check failed: " #condition " : " << CurandGetErrorString(_of_curand_check_status) \
+             << " (" << _of_curand_check_status << ") "
+
+#define OF_NCCL_CHECK(condition)                                                                \
+  for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;) \
+  LOG(FATAL) << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status)  \
+             << " (" << _of_nccl_check_status << ") "
+
 template<typename T>
 void CudaCheck(T error);
 

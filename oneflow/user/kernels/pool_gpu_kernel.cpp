@@ -28,12 +28,12 @@ class CudnnPoolDesc final {
   OF_DISALLOW_COPY_AND_MOVE(CudnnPoolDesc);
   CudnnPoolDesc(cudnnPoolingMode_t pooling_mode, int dims, const int* window, const int* padding,
                 const int* stride) {
-    CudaCheck(cudnnCreatePoolingDescriptor(&val_));
-    CudaCheck(cudnnSetPoolingNdDescriptor(val_, pooling_mode, CUDNN_NOT_PROPAGATE_NAN, dims, window,
-                                          padding, stride));
+    OF_CUDNN_CHECK(cudnnCreatePoolingDescriptor(&val_));
+    OF_CUDNN_CHECK(cudnnSetPoolingNdDescriptor(val_, pooling_mode, CUDNN_NOT_PROPAGATE_NAN, dims,
+                                               window, padding, stride));
   }
 
-  ~CudnnPoolDesc() { CudaCheck(cudnnDestroyPoolingDescriptor(val_)); }
+  ~CudnnPoolDesc() { OF_CUDNN_CHECK(cudnnDestroyPoolingDescriptor(val_)); }
 
   const cudnnPoolingDescriptor_t& Get() const { return val_; }
 
@@ -145,7 +145,7 @@ struct PoolGpuKernelUtil {
     GPUPoolOpKernelState* gpu_pool_op_kernel_state = dynamic_cast<GPUPoolOpKernelState*>(state);
     gpu_pool_op_kernel_state->ResetIfDynamic(ctx);
     CHECK(gpu_pool_op_kernel_state != nullptr);
-    CudaCheck(cudnnPoolingForward(
+    OF_CUDNN_CHECK(cudnnPoolingForward(
         ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->cudnn_pooling_desc(),
         CudnnSPOnePtr<T>(), gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), x->dptr(),
         CudnnSPZeroPtr<T>(), gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->mut_dptr()));
@@ -159,7 +159,7 @@ struct PoolGpuKernelUtil {
     GPUPoolOpKernelState* gpu_pool_op_kernel_state = dynamic_cast<GPUPoolOpKernelState*>(state);
     gpu_pool_op_kernel_state->ResetIfDynamic(ctx);
     CHECK(gpu_pool_op_kernel_state != nullptr);
-    CudaCheck(cudnnPoolingBackward(
+    OF_CUDNN_CHECK(cudnnPoolingBackward(
         ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->cudnn_pooling_desc(),
         CudnnSPOnePtr<T>(), gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->dptr(),
         gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), dy->dptr(),
