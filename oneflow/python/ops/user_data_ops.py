@@ -171,8 +171,10 @@ def api_image_resize(
     resize_y: int = 0,
 ) -> BlobDef:
     # process deprecated params
+    deprecated_param_used = False
     if color_space is not None:
         print("WARNING: color_space has been deprecated. Please use channels instead.")
+        deprecated_param_used = True
         assert isinstance(color_space, str)
         if color_space.upper() == "RGB" or color_space.upper() == "BGR":
             channels = 3
@@ -185,6 +187,7 @@ def api_image_resize(
         print(
             "WARNING: interp_type has been deprecated. Please use interpolation_type instead."
         )
+        deprecated_param_used = True
         assert isinstance(interp_type, str)
         if interp_type == "Linear":
             interpolation_type = "bilinear"
@@ -199,6 +202,7 @@ def api_image_resize(
         print(
             "WARNING: resize_x and resize_y has been deprecated. Please use target_size instead."
         )
+        deprecated_param_used = True
         target_size = (resize_x, resize_y)
         keep_aspect_ratio = False
 
@@ -206,6 +210,7 @@ def api_image_resize(
         print(
             "WARNING: resize_shorter has been deprecated. Please use target_size instead."
         )
+        deprecated_param_used = True
         target_size = resize_shorter
         keep_aspect_ratio = True
         resize_side = "shorter"
@@ -275,6 +280,9 @@ def api_image_resize(
         )
         res_image, scale = op.InferAndTryRun().RemoteBlobList()
         new_size = None
+
+    if deprecated_param_used:
+        return res_image
 
     return res_image, scale, new_size
 
