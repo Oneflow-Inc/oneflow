@@ -21,8 +21,6 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-namespace {
-
 const char* CublasGetErrorString(cublasStatus_t error) {
   switch (error) {
     case CUBLAS_STATUS_SUCCESS: return "CUBLAS_STATUS_SUCCESS";
@@ -61,8 +59,6 @@ const char* CurandGetErrorString(curandStatus_t error) {
   }
   return "Unknown curand status";
 }
-
-}  // namespace
 
 void InitGlobalCudaDeviceProp() {
   CHECK(Global<cudaDeviceProp>::Get() == nullptr) << "initialized Global<cudaDeviceProp> twice";
