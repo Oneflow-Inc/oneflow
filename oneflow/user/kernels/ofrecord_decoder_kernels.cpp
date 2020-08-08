@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/user/image/random_crop_generator.h"
 #include "oneflow/user/image/image_util.h"
+#include "oneflow/user/kernels/random_crop_kernel_state.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 
@@ -172,24 +173,6 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
   memcpy(buffer->mut_data<uint8_t>(), image.ptr(), image_shape.elem_cnt());
 }
 
-class RandCropGens final : public user_op::OpKernelState {
- public:
-  explicit RandCropGens(int32_t size) : gens_(size) {}
-  ~RandCropGens() = default;
-
-  RandomCropGenerator* Get(int32_t idx) { return gens_.at(idx).get(); }
-
-  void New(int32_t idx, AspectRatioRange aspect_ratio_range, AreaRange area_range, int64_t seed,
-           int32_t num_attempts) {
-    CHECK_LT(idx, gens_.size());
-    gens_.at(idx).reset(
-        new RandomCropGenerator(aspect_ratio_range, area_range, seed, num_attempts));
-  }
-
- private:
-  std::vector<std::shared_ptr<RandomCropGenerator>> gens_;
-};
-
 }  // namespace
 
 class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
@@ -199,36 +182,13 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    int32_t num_attempts = ctx->Attr<int32_t>("num_attempts");
-    CHECK(num_attempts >= 1);
-    const std::vector<float>& random_aspect_ratio =
-        ctx->Attr<std::vector<float>>("random_aspect_ratio");
-    CHECK(random_aspect_ratio.size() == 2 && 0 < random_aspect_ratio.at(0)
-          && random_aspect_ratio.at(0) <= random_aspect_ratio.at(1));
-    const std::vector<float>& random_area = ctx->Attr<std::vector<float>>("random_area");
-    CHECK(random_area.size() == 2 && 0 < random_area.at(0)
-          && random_area.at(0) <= random_area.at(1));
-    const user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-    CHECK(out_tensor_desc->shape().NumAxes() == 1);
-    int64_t batch_size = out_tensor_desc->shape().At(0);
-    CHECK(batch_size > 0);
-    int64_t seed = GetOpKernelRandomSeed(ctx);
-    std::seed_seq seq{seed};
-    std::vector<int> seeds(batch_size);
-    seq.generate(seeds.begin(), seeds.end());
-
-    std::shared_ptr<RandCropGens> crop_window_generators(new RandCropGens(batch_size));
-    for (int32_t i = 0; i < batch_size; ++i) {
-      crop_window_generators->New(i, {random_aspect_ratio.at(0), random_aspect_ratio.at(1)},
-                                  {random_area.at(0), random_area.at(1)}, seeds.at(i),
-                                  num_attempts);
-    }
-    return crop_window_generators;
+    return CreateRandomCropKernelState(ctx);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* crop_window_generators = dynamic_cast<RandCropGens*>(state);
+    auto* crop_window_generators = dynamic_cast<RandomCropKernelState*>(state);
+    CHECK_NOTNULL(crop_window_generators);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t record_num = out_blob->shape().At(0);
     CHECK(record_num > 0);
@@ -242,7 +202,7 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
     MultiThreadLoop(record_num, [&](size_t i) {
       const OFRecord& record = *(records + i);
       TensorBuffer* buffer = buffers + i;
-      RandomCropGenerator* gen = crop_window_generators->Get(i);
+      RandomCropGenerator* gen = crop_window_generators->GetGenerator(i);
       DecodeRandomCropImageFromOneRecord(record, buffer, name, color_space, gen);
     });
   }
