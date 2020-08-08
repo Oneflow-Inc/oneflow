@@ -221,7 +221,7 @@ void CudaAsyncMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, s
 void CudaAsyncMemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
                                    size_t src_pitch, size_t width, size_t height) const {
   OF_CUDA_CHECK(cudaMemcpy2DAsync(dst, dst_pitch, src, src_pitch, width, height, cudaMemcpyDefault,
-                              ctx->cuda_stream()));
+                                  ctx->cuda_stream()));
 }
 
 void CudaAsyncMemoryCopier::Copy3D(DeviceCtx* ctx, void* dst, const void* src,

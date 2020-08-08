@@ -464,7 +464,7 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
       auto& device_ctx = device_id2device_ctx_.at(device_id);
       OF_CUDA_CHECK(cudaSetDevice(device_id));
       OF_CUDA_CHECK(cudaStreamCreateWithPriority(&device_ctx->stream, cudaStreamNonBlocking,
-                                             cuda_stream_greatest_priority));
+                                                 cuda_stream_greatest_priority));
       OF_CUDA_CHECK(cudaMalloc(&device_ctx->fusion_buffer, fusion_threshold_));
     }
   }

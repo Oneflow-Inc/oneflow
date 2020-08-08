@@ -54,7 +54,7 @@ void BatchMemcpyKernelUtil<DeviceType::kGPU>::Copy(DeviceCtx* ctx,
                                                    const std::vector<MemcpyParam>& params) {
   if (params.size() == 1) {
     OF_CUDA_CHECK(cudaMemcpyAsync(params.front().dst, params.front().src, params.front().count,
-                              cudaMemcpyDefault, ctx->cuda_stream()));
+                                  cudaMemcpyDefault, ctx->cuda_stream()));
   } else {
     int block_size = 0;
     int num_blocks = 0;

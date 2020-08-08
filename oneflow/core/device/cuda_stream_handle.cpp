@@ -66,12 +66,12 @@ const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
       OF_CUDA_CHECK(cudaGetLastError());
     }
     cudnn_handle_.reset(new cudnnHandle_t);
-    CudaCheck(cudnnCreate(cudnn_handle_.get()));
+    OF_CUDNN_CHECK(cudnnCreate(cudnn_handle_.get()));
     if (IsCuda9OnTuringDevice()) {
       OF_CUDA_CHECK(cudaDeviceSynchronize());
       cudaGetLastError();
     }
-    CudaCheck(cudnnSetStream(*cudnn_handle_, *cuda_stream()));
+    OF_CUDNN_CHECK(cudnnSetStream(*cudnn_handle_, *cuda_stream()));
   }
   return cudnn_handle_.get();
 }
@@ -85,7 +85,7 @@ void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
 }
 
 CudaStreamHandle::~CudaStreamHandle() {
-  if (cudnn_handle_) { CudaCheck(cudnnDestroy(*cudnn_handle_)); }
+  if (cudnn_handle_) { OF_CUDNN_CHECK(cudnnDestroy(*cudnn_handle_)); }
   if (cublas_pmh_handle_) { CudaCheck(cublasDestroy(*cublas_pmh_handle_)); }
   if (cublas_pmd_handle_) { CudaCheck(cublasDestroy(*cublas_pmd_handle_)); }
   if (cuda_stream_) { OF_CUDA_CHECK(cudaStreamDestroy(*cuda_stream_)); }

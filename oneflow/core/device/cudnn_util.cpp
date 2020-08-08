@@ -28,20 +28,20 @@ cudnnDataType_t GetCudnnDataType(DataType val) {
   UNIMPLEMENTED();
 }
 
-CudnnTensorDesc::CudnnTensorDesc() { CudaCheck(cudnnCreateTensorDescriptor(&val_)); }
-CudnnTensorDesc::~CudnnTensorDesc() { CudaCheck(cudnnDestroyTensorDescriptor(val_)); }
+CudnnTensorDesc::CudnnTensorDesc() { OF_CUDNN_CHECK(cudnnCreateTensorDescriptor(&val_)); }
+CudnnTensorDesc::~CudnnTensorDesc() { OF_CUDNN_CHECK(cudnnDestroyTensorDescriptor(val_)); }
 CudnnTensorDesc::CudnnTensorDesc(cudnnTensorFormat_t format, DataType data_type, int n, int c,
                                  int h, int w) {
-  CudaCheck(cudnnCreateTensorDescriptor(&val_));
-  CudaCheck(cudnnSetTensor4dDescriptor(val_, format, GetCudnnDataType(data_type), n, c, h, w));
+  OF_CUDNN_CHECK(cudnnCreateTensorDescriptor(&val_));
+  OF_CUDNN_CHECK(cudnnSetTensor4dDescriptor(val_, format, GetCudnnDataType(data_type), n, c, h, w));
 }
 CudnnTensorDesc::CudnnTensorDesc(DataType data_type, int dims, const int* dim, const int* stride) {
-  CudaCheck(cudnnCreateTensorDescriptor(&val_));
-  CudaCheck(cudnnSetTensorNdDescriptor(val_, GetCudnnDataType(data_type), dims, dim, stride));
+  OF_CUDNN_CHECK(cudnnCreateTensorDescriptor(&val_));
+  OF_CUDNN_CHECK(cudnnSetTensorNdDescriptor(val_, GetCudnnDataType(data_type), dims, dim, stride));
 }
 CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const ShapeView& shape,
                                  const std::string& data_format) {
-  CudaCheck(cudnnCreateTensorDescriptor(&val_));
+  OF_CUDNN_CHECK(cudnnCreateTensorDescriptor(&val_));
   cudnnTensorFormat_t cudnn_data_format;
   if (data_format == "channels_first") {
     cudnn_data_format = CUDNN_TENSOR_NCHW;
@@ -58,8 +58,8 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const ShapeView& shape,
     int kernel_h = data_format == "channels_first" ? static_cast<int>(shape.At(2))
                                                    : static_cast<int>(shape.At(1));
     int kernel_w = 1;
-    CudaCheck(cudnnSetTensor4dDescriptor(val_, cudnn_data_format, GetCudnnDataType(data_type),
-                                         data_num, channels, kernel_h, kernel_w));
+    OF_CUDNN_CHECK(cudnnSetTensor4dDescriptor(val_, cudnn_data_format, GetCudnnDataType(data_type),
+                                              data_num, channels, kernel_h, kernel_w));
   } else if (shape.NumAxes() == 4) {
     int data_num = static_cast<int>(shape.At(0));
     int channels = data_format == "channels_first" ? static_cast<int>(shape.At(1))
@@ -68,8 +68,8 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const ShapeView& shape,
                                                    : static_cast<int>(shape.At(1));
     int kernel_w = data_format == "channels_first" ? static_cast<int>(shape.At(3))
                                                    : static_cast<int>(shape.At(2));
-    CudaCheck(cudnnSetTensor4dDescriptor(val_, cudnn_data_format, GetCudnnDataType(data_type),
-                                         data_num, channels, kernel_h, kernel_w));
+    OF_CUDNN_CHECK(cudnnSetTensor4dDescriptor(val_, cudnn_data_format, GetCudnnDataType(data_type),
+                                              data_num, channels, kernel_h, kernel_w));
   } else {
     std::vector<int> tensor_dim({shape.ptr(), shape.ptr() + shape.NumAxes()});
     std::vector<int> stride_of_tensor(shape.NumAxes(), 1);
@@ -77,16 +77,16 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const ShapeView& shape,
       stride_of_tensor[i] = stride_of_tensor[i + 1] * shape.At(i + 1);
     }
 
-    CudaCheck(cudnnSetTensorNdDescriptor(val_, GetCudnnDataType(data_type), shape.NumAxes(),
-                                         tensor_dim.data(), stride_of_tensor.data()));
+    OF_CUDNN_CHECK(cudnnSetTensorNdDescriptor(val_, GetCudnnDataType(data_type), shape.NumAxes(),
+                                              tensor_dim.data(), stride_of_tensor.data()));
   }
 }
 
-CudnnFilterDesc::~CudnnFilterDesc() { CudaCheck(cudnnDestroyFilterDescriptor(val_)); }
+CudnnFilterDesc::~CudnnFilterDesc() { OF_CUDNN_CHECK(cudnnDestroyFilterDescriptor(val_)); }
 
 CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const ShapeView& shape,
                                  const std::string& data_format) {
-  CudaCheck(cudnnCreateFilterDescriptor(&val_));
+  OF_CUDNN_CHECK(cudnnCreateFilterDescriptor(&val_));
   cudnnTensorFormat_t cudnn_data_format;
   if (data_format == "channels_first") {
     cudnn_data_format = CUDNN_TENSOR_NCHW;
@@ -103,8 +103,8 @@ CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const ShapeView& shape,
     int kernel_h = data_format == "channels_first" ? static_cast<int>(shape.At(2))
                                                    : static_cast<int>(shape.At(1));
     int kernel_w = 1;
-    CudaCheck(cudnnSetFilter4dDescriptor(val_, GetCudnnDataType(data_type), cudnn_data_format,
-                                         filters, c, kernel_h, kernel_w));
+    OF_CUDNN_CHECK(cudnnSetFilter4dDescriptor(val_, GetCudnnDataType(data_type), cudnn_data_format,
+                                              filters, c, kernel_h, kernel_w));
   } else if (shape.NumAxes() == 4) {
     int filters = static_cast<int>(shape.At(0));
     int kernel_h = data_format == "channels_first" ? static_cast<int>(shape.At(2))
@@ -113,22 +113,24 @@ CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const ShapeView& shape,
                                                    : static_cast<int>(shape.At(2));
     int c = data_format == "channels_first" ? static_cast<int>(shape.At(1))
                                             : static_cast<int>(shape.At(3));
-    CudaCheck(cudnnSetFilter4dDescriptor(val_, GetCudnnDataType(data_type), cudnn_data_format,
-                                         filters, c, kernel_h, kernel_w));
+    OF_CUDNN_CHECK(cudnnSetFilter4dDescriptor(val_, GetCudnnDataType(data_type), cudnn_data_format,
+                                              filters, c, kernel_h, kernel_w));
   } else {
     std::vector<int> dims({shape.ptr(), shape.ptr() + shape.NumAxes()});
-    CudaCheck(cudnnSetFilterNdDescriptor(val_, GetCudnnDataType(data_type), cudnn_data_format,
-                                         dims.size(), dims.data()));
+    OF_CUDNN_CHECK(cudnnSetFilterNdDescriptor(val_, GetCudnnDataType(data_type), cudnn_data_format,
+                                              dims.size(), dims.data()));
   }
 }
 
 CudnnActivationDesc::CudnnActivationDesc(cudnnActivationMode_t mode,
                                          cudnnNanPropagation_t relu_nan_opt, double coef) {
-  CudaCheck(cudnnCreateActivationDescriptor(&val_));
-  CudaCheck(cudnnSetActivationDescriptor(val_, mode, relu_nan_opt, coef));
+  OF_CUDNN_CHECK(cudnnCreateActivationDescriptor(&val_));
+  OF_CUDNN_CHECK(cudnnSetActivationDescriptor(val_, mode, relu_nan_opt, coef));
 }
 
-CudnnActivationDesc::~CudnnActivationDesc() { CudaCheck(cudnnDestroyActivationDescriptor(val_)); }
+CudnnActivationDesc::~CudnnActivationDesc() {
+  OF_CUDNN_CHECK(cudnnDestroyActivationDescriptor(val_));
+}
 
 size_t GetCudnnDataTypeByteSize(cudnnDataType_t data_type) {
   size_t byte_size = 0;

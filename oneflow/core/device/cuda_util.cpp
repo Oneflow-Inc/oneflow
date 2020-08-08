@@ -143,8 +143,8 @@ void ParseCpuMask(const std::string& cpu_mask, cpu_set_t* cpu_set) {
 
 std::string CudaDeviceGetCpuMask(int32_t dev_id) {
   std::vector<char> pci_bus_id_buf(sizeof("0000:00:00.0"));
-  OF_CUDA_CHECK(cudaDeviceGetPCIBusId(pci_bus_id_buf.data(), static_cast<int>(pci_bus_id_buf.size()),
-                                  dev_id));
+  OF_CUDA_CHECK(cudaDeviceGetPCIBusId(pci_bus_id_buf.data(),
+                                      static_cast<int>(pci_bus_id_buf.size()), dev_id));
   for (int32_t i = 0; i < pci_bus_id_buf.size(); ++i) {
     pci_bus_id_buf[i] = std::tolower(pci_bus_id_buf[i]);
   }
