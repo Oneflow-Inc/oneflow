@@ -151,7 +151,7 @@ message(STATUS "Installing necessary Python packages...")
 set(requirements_txt ${PROJECT_SOURCE_DIR}/dev-requirements.txt)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${requirements_txt})
 execute_process(
-  COMMAND ${Python_EXECUTABLE} -m pip install -r ${requirements_txt}
+  COMMAND ${Python_EXECUTABLE} -m pip install -r ${requirements_txt} --user
 )
 message(STATUS "Python packages are installed.")
 
