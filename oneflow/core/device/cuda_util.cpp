@@ -143,7 +143,7 @@ void ParseCpuMask(const std::string& cpu_mask, cpu_set_t* cpu_set) {
 
 std::string CudaDeviceGetCpuMask(int32_t dev_id) {
   std::vector<char> pci_bus_id_buf(sizeof("0000:00:00.0"));
-  CudaCheck(cudaDeviceGetPCIBusId(pci_bus_id_buf.data(), static_cast<int>(pci_bus_id_buf.size()),
+  OF_CUDA_CHECK(cudaDeviceGetPCIBusId(pci_bus_id_buf.data(), static_cast<int>(pci_bus_id_buf.size()),
                                   dev_id));
   for (int32_t i = 0; i < pci_bus_id_buf.size(); ++i) {
     pci_bus_id_buf[i] = std::tolower(pci_bus_id_buf[i]);
@@ -178,7 +178,7 @@ void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
   cpu_set_t saved_cpu_set;
   CHECK_EQ(sched_getaffinity(0, sizeof(cpu_set_t), &saved_cpu_set), 0);
   CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &new_cpu_set), 0);
-  CudaCheck(cudaMallocHost(ptr, size));
+  OF_CUDA_CHECK(cudaMallocHost(ptr, size));
   CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &saved_cpu_set), 0);
 #else
   UNIMPLEMENTED();
@@ -194,13 +194,13 @@ cudaDataType_t GetCudaDataType(DataType val) {
 }
 
 CudaCurrentDeviceGuard::CudaCurrentDeviceGuard(int32_t dev_id) {
-  CudaCheck(cudaGetDevice(&saved_dev_id_));
-  CudaCheck(cudaSetDevice(dev_id));
+  OF_CUDA_CHECK(cudaGetDevice(&saved_dev_id_));
+  OF_CUDA_CHECK(cudaSetDevice(dev_id));
 }
 
-CudaCurrentDeviceGuard::CudaCurrentDeviceGuard() { CudaCheck(cudaGetDevice(&saved_dev_id_)); }
+CudaCurrentDeviceGuard::CudaCurrentDeviceGuard() { OF_CUDA_CHECK(cudaGetDevice(&saved_dev_id_)); }
 
-CudaCurrentDeviceGuard::~CudaCurrentDeviceGuard() { CudaCheck(cudaSetDevice(saved_dev_id_)); }
+CudaCurrentDeviceGuard::~CudaCurrentDeviceGuard() { OF_CUDA_CHECK(cudaSetDevice(saved_dev_id_)); }
 
 #endif  // WITH_CUDA
 

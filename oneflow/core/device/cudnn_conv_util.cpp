@@ -269,10 +269,10 @@ ManagedCudnnConvResource::ManagedCudnnConvResource(const CudnnConvArgs& args)
 
 ManagedCudnnConvResource::~ManagedCudnnConvResource() {
   if (handle_ != nullptr) { CudaCheck(cudnnDestroy(handle_)); }
-  if (x_dptr_ != nullptr) { CudaCheck(cudaFree(x_dptr_)); }
-  if (w_dptr_ != nullptr) { CudaCheck(cudaFree(w_dptr_)); }
-  if (y_dptr_ != nullptr) { CudaCheck(cudaFree(y_dptr_)); }
-  if (ws_dptr_ != nullptr) { CudaCheck(cudaFree(ws_dptr_)); }
+  if (x_dptr_ != nullptr) { OF_CUDA_CHECK(cudaFree(x_dptr_)); }
+  if (w_dptr_ != nullptr) { OF_CUDA_CHECK(cudaFree(w_dptr_)); }
+  if (y_dptr_ != nullptr) { OF_CUDA_CHECK(cudaFree(y_dptr_)); }
+  if (ws_dptr_ != nullptr) { OF_CUDA_CHECK(cudaFree(ws_dptr_)); }
 }
 
 cudnnHandle_t ManagedCudnnConvResource::cudnn_handle() {
@@ -281,17 +281,17 @@ cudnnHandle_t ManagedCudnnConvResource::cudnn_handle() {
 }
 
 void* ManagedCudnnConvResource::x_mut_dptr() {
-  if (x_dptr_ == nullptr) { CudaCheck(cudaMalloc(&x_dptr_, x_byte_size_)); }
+  if (x_dptr_ == nullptr) { OF_CUDA_CHECK(cudaMalloc(&x_dptr_, x_byte_size_)); }
   return x_dptr_;
 }
 
 void* ManagedCudnnConvResource::w_mut_dptr() {
-  if (w_dptr_ == nullptr) { CudaCheck(cudaMalloc(&w_dptr_, w_byte_size_)); }
+  if (w_dptr_ == nullptr) { OF_CUDA_CHECK(cudaMalloc(&w_dptr_, w_byte_size_)); }
   return w_dptr_;
 }
 
 void* ManagedCudnnConvResource::y_mut_dptr() {
-  if (y_dptr_ == nullptr) { CudaCheck(cudaMalloc(&y_dptr_, y_byte_size_)); }
+  if (y_dptr_ == nullptr) { OF_CUDA_CHECK(cudaMalloc(&y_dptr_, y_byte_size_)); }
   return y_dptr_;
 }
 
@@ -308,7 +308,7 @@ const void* ManagedCudnnConvResource::y_const_dptr() const {
 }
 
 void* ManagedCudnnConvResource::ws_dptr() {
-  if (ws_dptr_ == nullptr) { CudaCheck(cudaMalloc(&ws_dptr_, ws_byte_size_)); }
+  if (ws_dptr_ == nullptr) { OF_CUDA_CHECK(cudaMalloc(&ws_dptr_, ws_byte_size_)); }
   return ws_dptr_;
 }
 

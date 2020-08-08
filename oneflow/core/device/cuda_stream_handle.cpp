@@ -25,7 +25,7 @@ namespace oneflow {
 const cudaStream_t* CudaStreamHandle::cuda_stream() {
   if (!cuda_stream_) {
     cuda_stream_.reset(new cudaStream_t);
-    CudaCheck(cudaStreamCreate(cuda_stream_.get()));
+    OF_CUDA_CHECK(cudaStreamCreate(cuda_stream_.get()));
   }
   return cuda_stream_.get();
 }
@@ -62,13 +62,13 @@ const cublasHandle_t* CudaStreamHandle::cublas_tensor_op_math_handle() {
 const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
   if (!cudnn_handle_) {
     if (IsCuda9OnTuringDevice()) {
-      CudaCheck(cudaDeviceSynchronize());
-      CudaCheck(cudaGetLastError());
+      OF_CUDA_CHECK(cudaDeviceSynchronize());
+      OF_CUDA_CHECK(cudaGetLastError());
     }
     cudnn_handle_.reset(new cudnnHandle_t);
     CudaCheck(cudnnCreate(cudnn_handle_.get()));
     if (IsCuda9OnTuringDevice()) {
-      CudaCheck(cudaDeviceSynchronize());
+      OF_CUDA_CHECK(cudaDeviceSynchronize());
       cudaGetLastError();
     }
     CudaCheck(cudnnSetStream(*cudnn_handle_, *cuda_stream()));
@@ -79,8 +79,8 @@ const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
 void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
   CudaCBEvent cb_event;
   cb_event.callback = std::move(callback);
-  CudaCheck(cudaEventCreateWithFlags(&(cb_event.event), cudaEventDisableTiming));
-  CudaCheck(cudaEventRecord(cb_event.event, *cuda_stream()));
+  OF_CUDA_CHECK(cudaEventCreateWithFlags(&(cb_event.event), cudaEventDisableTiming));
+  OF_CUDA_CHECK(cudaEventRecord(cb_event.event, *cuda_stream()));
   cb_event_chan_->Send(cb_event);
 }
 
@@ -88,7 +88,7 @@ CudaStreamHandle::~CudaStreamHandle() {
   if (cudnn_handle_) { CudaCheck(cudnnDestroy(*cudnn_handle_)); }
   if (cublas_pmh_handle_) { CudaCheck(cublasDestroy(*cublas_pmh_handle_)); }
   if (cublas_pmd_handle_) { CudaCheck(cublasDestroy(*cublas_pmd_handle_)); }
-  if (cuda_stream_) { CudaCheck(cudaStreamDestroy(*cuda_stream_)); }
+  if (cuda_stream_) { OF_CUDA_CHECK(cudaStreamDestroy(*cuda_stream_)); }
 }
 
 #endif  // WITH_CUDA

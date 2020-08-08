@@ -45,7 +45,7 @@ EagerNcclCommMgr::~EagerNcclCommMgr() {
 ncclComm_t EagerNcclCommMgr::GetCommForDevice(
     const std::set<std::pair<int64_t, int64_t>>& device_set) {
   int dev;
-  CudaCheck(cudaGetDevice(&dev));
+  OF_CUDA_CHECK(cudaGetDevice(&dev));
   {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = device_set2device_id2comm_.find(device_set);
