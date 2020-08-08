@@ -17,108 +17,181 @@ import cv2
 import numpy as np
 import random
 import os
+import typing as tp
 import oneflow as flow
-import oneflow.typing as oft
-import oneflow.python.framework.local_blob as local_blob_util
+import oneflow.typing as otp
 
 global_coco_dict = dict()
 default_coco_anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
 default_coco_image_dir = "/dataset/mscoco_2017/val2017"
 
 
-def _of_image_resize(
-    image_list,
-    dtype=flow.float32,
-    target_size=None,
-    min_size=None,
-    max_size=None,
-    keep_aspect_ratio=False,
-    resize_side="shorter",
-    channels=3,
-    interpolation_type="bilinear",
+def _make_image_resize_to_fixed_func(
+    target_size,
+    image_static_shape,
+    dtype,
+    channels,
+    interpolation_type,
+    func_cfg=None,
     print_debug_info=False,
 ):
-    assert isinstance(image_list, (list, tuple))
-    assert all(isinstance(image, np.ndarray) for image in image_list)
-
-    image_static_shape, min_max_size = _infer_images_static_shape(image_list)
-    if print_debug_info:
-        print("image_static_shape: {}".format(image_static_shape))
-        print("min_max_size: {}".format(min_max_size))
-
-    flow.clear_default_session()
-
-    @flow.global_function()
-    def image_resize_job(
-        image_def: oft.ListListNumpy.Placeholder(shape=image_static_shape, dtype=dtype)
-    ):
-        image_buffer = flow.tensor_list_to_tensor_buffer(image_def)
-        res_image, scale, new_size = flow.image.resize(
+    @flow.global_function(type="predict", function_config=func_cfg)
+    def image_resize_to_fixed(
+        image_list: otp.ListListNumpy.Placeholder(shape=image_static_shape, dtype=dtype)
+    ) -> tp.Tuple[otp.ListNumpy, otp.ListNumpy]:
+        image_buffer = flow.tensor_list_to_tensor_buffer(image_list)
+        res_image, scale, _ = flow.image.resize(
             image_buffer,
             target_size=target_size,
-            min_size=min_size,
-            max_size=max_size,
-            keep_aspect_ratio=keep_aspect_ratio,
-            resize_side=resize_side,
+            keep_aspect_ratio=False,
             channels=channels,
             dtype=dtype,
             interpolation_type=interpolation_type,
         )
 
-        if keep_aspect_ratio:
-            out_shape = _infer_resize_static_shape(
-                min_max_size,
-                target_size,
-                keep_aspect_ratio,
-                resize_side,
-                image_static_shape[3],
-            )
+        return res_image, scale
 
-            if print_debug_info:
-                print("resized image_static_shape: {}".format(out_shape))
-
-            res_image = flow.tensor_buffer_to_tensor_list(
-                res_image, shape=out_shape, dtype=dtype,
-            )
-
-        if new_size is None:
-            return res_image, scale
-        else:
-            return res_image, scale, new_size
-
-    ret = image_resize_job([image_list]).get()
-    assert len(ret) >= 2
-    if len(ret) == 2:
-        res_image, scale = ret
-        scale = scale.numpy(0)
-        new_size = np.asarray([list(target_size)] * len(image_list))
-    elif len(ret) == 3:
-        res_image, scale, new_size = ret
-        scale = scale.numpy(0)
-        new_size = new_size.numpy(0)
-
-    if isinstance(res_image, local_blob_util.LocalMirroredTensorList):
-        res_images = res_image.numpy_list(0)
-    elif isinstance(res_image, local_blob_util.LocalMirroredTensor):
-        res_images = res_image.numpy(0)
-    else:
-        raise NotImplementedError
-
-    return (res_images, scale, new_size)
+    return image_resize_to_fixed
 
 
-def _infer_resize_static_shape(
-    min_max_size,
+def _make_image_resize_keep_aspect_ratio_func(
     target_size,
-    keep_aspect_ratio=True,
+    min_size,
+    max_size,
+    image_static_shape,
+    origin_image_size_range,
+    dtype,
+    channels,
+    resize_side,
+    interpolation_type,
+    func_cfg=None,
+    print_debug_info=False,
+):
+    @flow.global_function(type="predict", function_config=func_cfg)
+    def image_resize_keep_aspect_ratio(
+        image_list: otp.ListListNumpy.Placeholder(
+            shape=image_static_shape, dtype=dtype
+        ),
+    ) -> tp.Tuple[otp.ListListNumpy, otp.ListNumpy, otp.ListNumpy]:
+        image_buffer = flow.tensor_list_to_tensor_buffer(image_list)
+        res_image, scale, new_size = flow.image.resize(
+            image_buffer,
+            target_size=target_size,
+            min_size=min_size,
+            max_size=max_size,
+            keep_aspect_ratio=True,
+            resize_side=resize_side,
+            interpolation_type=interpolation_type,
+        )
+
+        out_shape = _infer_resized_image_static_shape(
+            target_size, origin_image_size_range, resize_side, channels,
+        )
+        if print_debug_info:
+            print("resized image_static_shape: {}".format(out_shape))
+
+        res_image = flow.tensor_buffer_to_tensor_list(
+            res_image, shape=out_shape, dtype=dtype,
+        )
+
+        return res_image, scale, new_size
+
+    return image_resize_keep_aspect_ratio
+
+
+def _of_image_resize(
+    image_list,
+    dtype=flow.float32,
+    channels=3,
+    keep_aspect_ratio=False,
+    target_size=None,
+    min_size=None,
+    max_size=None,
+    resize_side="shorter",
+    interpolation_type="bilinear",
+    print_debug_info=False,
+):
+    assert isinstance(image_list, (list, tuple))
+    assert all(isinstance(image, np.ndarray) for image in image_list)
+    assert all(image.ndim == 3 for image in image_list)
+    assert all(image.shape[2] == channels for image in image_list)
+
+    image_static_shape, image_size_range = _infer_images_static_shape(
+        image_list, channels
+    )
+    if print_debug_info:
+        print("image_static_shape: {}".format(image_static_shape))
+        print("image_size_range: {}".format(image_size_range))
+
+    flow.clear_default_session()
+    func_cfg = flow.FunctionConfig()
+    func_cfg.default_logical_view(flow.scope.mirrored_view())
+
+    image_list = [np.expand_dims(image, axis=0) for image in image_list]
+    if keep_aspect_ratio:
+        image_resize_func = _make_image_resize_keep_aspect_ratio_func(
+            target_size=target_size,
+            min_size=min_size,
+            max_size=max_size,
+            image_static_shape=image_static_shape,
+            origin_image_size_range=image_size_range,
+            dtype=dtype,
+            channels=channels,
+            resize_side=resize_side,
+            interpolation_type=interpolation_type,
+            func_cfg=func_cfg,
+            print_debug_info=print_debug_info,
+        )
+        res_image, scale, new_size = image_resize_func([image_list])
+        return (res_image[0], scale[0], new_size[0])
+    else:
+        image_resize_func = _make_image_resize_to_fixed_func(
+            target_size=target_size,
+            image_static_shape=image_static_shape,
+            dtype=dtype,
+            channels=channels,
+            interpolation_type=interpolation_type,
+            func_cfg=func_cfg,
+            print_debug_info=print_debug_info,
+        )
+        res_image, scale = image_resize_func([image_list])
+        new_size = np.asarray([(target_size, target_size)] * len(image_list))
+        return (res_image[0], scale[0], new_size)
+
+
+def _infer_images_static_shape(images, channels=3):
+    image_shapes = [image.shape for image in images]
+    assert all(image.ndim == 3 for image in images)
+    assert all(image.shape[2] == channels for image in images)
+    image_shapes = np.asarray(image_shapes)
+    max_h = np.max(image_shapes[:, 0]).item()
+    max_w = np.max(image_shapes[:, 1]).item()
+    image_static_shape = (len(images), max_h, max_w, channels)
+
+    group_ids = [int(image.shape[0] / image.shape[1]) for image in images]
+    min_h = np.min(image_shapes[:, 0]).item()
+    min_w = np.min(image_shapes[:, 1]).item()
+    assert all(group_id == group_ids[0] for group_id in group_ids)
+    if group_ids[0] == 0:
+        image_size_range = (min_h, max_h, min_w, max_w)
+    else:
+        image_size_range = (min_w, max_w, min_h, max_h)
+
+    return image_static_shape, image_size_range
+
+
+def _infer_resized_image_static_shape(
+    target_size,
+    origin_size_range=None,
     resize_side="shorter",
     channels=3,
+    keep_aspect_ratio=True,
 ):
-    assert isinstance(min_max_size, (list, tuple))
-    assert len(min_max_size) == 4
+    assert isinstance(origin_size_range, (list, tuple))
+    assert len(origin_size_range) == 4
 
-    min_aspect_ratio = min_max_size[0] / min_max_size[3]
-    max_aspect_ratio = min_max_size[1] / min_max_size[2]
+    min_aspect_ratio = origin_size_range[0] / origin_size_range[3]
+    max_aspect_ratio = origin_size_range[1] / origin_size_range[2]
 
     res_shape = None
     if keep_aspect_ratio:
@@ -141,7 +214,16 @@ def _infer_resize_static_shape(
     return res_shape
 
 
-def _infer_resize_info(
+def _cv_read_images_from_files(image_files, dtype):
+    np_dtype = flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+    images = [cv2.imread(image_file).astype(np_dtype) for image_file in image_files]
+    assert all(isinstance(image, np.ndarray) for image in images)
+    assert all(image.ndim == 3 for image in images)
+    assert all(image.shape[2] == 3 for image in images)
+    return images
+
+
+def _get_resize_size_and_scale(
     w,
     h,
     target_size,
@@ -192,43 +274,12 @@ def _infer_resize_info(
     return (res_w, res_h), (scale_w, scale_h)
 
 
-def _infer_images_static_shape(images):
-    image_shapes = [image.shape for image in images]
-    assert all(image.ndim == 4 for image in images)
-    assert all(image.shape[0] == 1 for image in images)
-    assert all(image.shape[3] == 3 for image in images)
-    image_shapes = np.asarray(image_shapes)
-    max_h = np.max(image_shapes[:, 1]).item()
-    max_w = np.max(image_shapes[:, 2]).item()
-    image_static_shape = (len(images), max_h, max_w, 3)
-
-    group_ids = [int(image.shape[1] / image.shape[2]) for image in images]
-    min_h = np.min(image_shapes[:, 1]).item()
-    min_w = np.min(image_shapes[:, 2]).item()
-    assert all(group_id == group_ids[0] for group_id in group_ids)
-    if group_ids[0] == 0:
-        min_max_size = (min_h, max_h, min_w, max_w)
-    else:
-        min_max_size = (min_w, max_w, min_h, max_h)
-
-    return image_static_shape, min_max_size
-
-
-def _cv_read_images_from_files(image_files, dtype):
-    np_dtype = flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-    images = [cv2.imread(image_file).astype(np_dtype) for image_file in image_files]
-    assert all(isinstance(image, np.ndarray) for image in images)
-    assert all(image.ndim == 3 for image in images)
-    assert all(image.shape[2] == 3 for image in images)
-    return [np.expand_dims(image, axis=0) for image in images]
-
-
 def _cv_image_resize(
     image_list,
     target_size,
+    keep_aspect_ratio=True,
     min_size=None,
     max_size=None,
-    keep_aspect_ratio=True,
     resize_side="shorter",
     interpolation=cv2.INTER_LINEAR,
 ):
@@ -237,8 +288,8 @@ def _cv_image_resize(
     res_scale_list = []
 
     for image in image_list:
-        h, w = image.shape[1:3]
-        new_size, scale = _infer_resize_info(
+        h, w = image.shape[:2]
+        new_size, scale = _get_resize_size_and_scale(
             w, h, target_size, min_size, max_size, keep_aspect_ratio, resize_side
         )
         res_image_list.append(
@@ -306,57 +357,61 @@ def _test_image_resize_with_cv(
     if print_debug_info:
         print("origin images shapes: {}".format([image.shape for image in image_list]))
         print(
-            "target_size: {}, min_size: {}, max_size: {}, keep_aspect_ratio: {}, resize_side: {}, dtype: {}:".format(
+            "target_size: {}, min_size: {}, max_size: {}, keep_aspect_ratio: {}, resize_side: {}, dtype: {}".format(
                 target_size, min_size, max_size, keep_aspect_ratio, resize_side, dtype
             )
         )
 
-    of_res_images, of_res_scales, of_res_sizes = _of_image_resize(
-        image_list,
-        dtype,
-        target_size,
-        min_size,
-        max_size,
-        keep_aspect_ratio,
-        resize_side,
+    of_res_images, of_scales, of_new_sizes = _of_image_resize(
+        image_list=image_list,
+        dtype=dtype,
+        keep_aspect_ratio=keep_aspect_ratio,
+        target_size=target_size,
+        min_size=min_size,
+        max_size=max_size,
+        resize_side=resize_side,
         print_debug_info=print_debug_info,
     )
 
-    cv_res_images, cv_res_scales, cv_res_sizes = _cv_image_resize(
-        image_list, target_size, min_size, max_size, keep_aspect_ratio, resize_side,
+    cv_res_images, cv_scales, cv_new_sizes = _cv_image_resize(
+        image_list=image_list,
+        target_size=target_size,
+        keep_aspect_ratio=keep_aspect_ratio,
+        min_size=min_size,
+        max_size=max_size,
+        resize_side=resize_side,
     )
 
-    for (
-        i,
-        (of_res_image, cv_res_image, of_scale, cv_scale, of_new_size, cv_new_size),
-    ) in enumerate(
-        zip(
-            of_res_images,
-            cv_res_images,
-            of_res_scales,
-            cv_res_scales,
-            of_res_sizes,
-            cv_res_sizes,
-        )
-    ):
-        if print_debug_info:
+    if print_debug_info:
+        print("comparing resized image between of and cv")
+        for i, (of_image, cv_image) in enumerate(zip(of_res_images, cv_res_images)):
+            print("    origin image shape: {}".format(image_list[i].shape))
             print(
-                "res_image shape comparison (of vs. cv): {} vs. {}".format(
-                    of_res_image.shape, cv_res_image.shape
+                "    resized image shape: {} vs. {}".format(
+                    of_image.shape, cv_image.shape
                 )
             )
-            print("origin image shape: {}".format(image_list[i].shape))
-            print("scale comparison (of vs. cv): {} vs. {}:".format(of_scale, cv_scale))
-            print(
-                "new_size comparison (of vs. cv): {} vs. {}".format(
-                    of_new_size, cv_new_size
-                )
-            )
-            # print("#" * 10, i, "#" * 10)
-            # print("of_res_image:\n{}".format(of_res_image))
-            # print("#" * 20)
-            # print("cv_res_image:\n{}".format(cv_res_image))
+            # print("    of_res_image:\n{}".format(of_res_image))
+            # print("    cv_res_image:\n{}".format(cv_res_image))
 
+        print("comparing resized image scale between of and cv")
+        for of_scale, cv_scale in zip(of_scales, cv_scales):
+            print("    scale: {} vs. {}:".format(of_scale, cv_scale))
+
+        print("comparing resized image new size between of and cv")
+        for of_new_size, cv_new_size in zip(of_new_sizes, cv_new_sizes):
+            print("    new_size: {} vs. {}:".format(of_new_size, cv_new_size))
+
+    for (
+        of_res_image,
+        cv_res_image,
+        of_scale,
+        cv_scale,
+        of_new_size,
+        cv_new_size,
+    ) in zip(
+        of_res_images, cv_res_images, of_scales, cv_scales, of_new_sizes, cv_new_sizes,
+    ):
         test_case.assertTrue(np.allclose(of_res_image, cv_res_image))
         test_case.assertTrue(np.allclose(of_scale, cv_scale))
         test_case.assertTrue(np.allclose(of_new_size, cv_new_size))

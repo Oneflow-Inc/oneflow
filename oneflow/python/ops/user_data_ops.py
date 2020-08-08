@@ -169,7 +169,7 @@ def api_image_resize(
     resize_shorter: int = 0,
     resize_x: int = 0,
     resize_y: int = 0,
-) -> BlobDef:
+) -> Sequence[BlobDef]:
     # process deprecated params
     deprecated_param_used = False
     if color_space is not None:
@@ -298,7 +298,7 @@ def api_image_target_resize(
     resize_side: str = "shorter",
     interpolation_type: str = "auto",
     name: Optional[str] = None,
-):
+) -> Sequence[BlobDef]:
     if name is None:
         name = id_util.UniqueStr("ImageTargetResize_")
 
@@ -329,7 +329,7 @@ def CropMirrorNormalize(
     std: Sequence[float] = [1.0],
     output_dtype: dtype_util.dtype = dtype_util.float,
     name: Optional[str] = None,
-):
+) -> BlobDef:
     if name is None:
         name = id_util.UniqueStr("CropMirrorNormalize_")
     op_type_name = ""
