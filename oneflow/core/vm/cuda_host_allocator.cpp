@@ -22,11 +22,11 @@ namespace oneflow {
 namespace vm {
 
 void CudaHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
-  CudaCheck(cudaMallocHost(mem_ptr, size));
+  OF_CUDA_CHECK(cudaMallocHost(mem_ptr, size));
 }
 
 void CudaHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {
-  CudaCheck(cudaFreeHost(mem_ptr));
+  OF_CUDA_CHECK(cudaFreeHost(mem_ptr));
 }
 
 }  // namespace vm
