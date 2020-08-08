@@ -17,6 +17,24 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+using SliceIndexHelper = NdIndexOffsetHelper<int64_t, kSliceMaxDims>;
+
+int64_t SliceOffsetToEntireOffset(int64_t offset, int64_t* nd_index, const SliceParams& params,
+                                  const SliceIndexHelper& entire_idx_cvtr,
+                                  const SliceIndexHelper& sliced_idx_cvtr) {
+  sliced_idx_cvtr.OffsetToNdIndex(offset, nd_index, params.ndim);
+  for (int64_t i = 0; i < params.ndim; ++i) {
+    nd_index[i] = params.start[i] + params.step[i] * nd_index[i];
+    assert(nd_index[i] >= 0);
+    assert(nd_index[i] < params.dims[i]);
+  }
+  return entire_idx_cvtr.NdIndexToOffset(nd_index, params.ndim);
+}
+
+}  // namespace
+
 SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_op::Tensor* entire,
                                  const user_op::Tensor* sliced) {
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");

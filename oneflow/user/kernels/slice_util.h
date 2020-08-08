@@ -49,7 +49,6 @@ inline int64_t RegulateSliceStop(int64_t stop, int64_t size) {
 }
 
 constexpr size_t kSliceMaxDims = 8;
-typedef NdIndexOffsetHelper<int64_t, kSliceMaxDims> SliceIndexHelper;
 
 struct SliceParams {
   int64_t ndim;
@@ -61,22 +60,6 @@ struct SliceParams {
 
 SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_op::Tensor* entire,
                                  const user_op::Tensor* sliced);
-
-OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, int64_t* nd_index,
-                                                 const SliceParams& params,
-                                                 const SliceIndexHelper& entire_idx_cvtr,
-                                                 const SliceIndexHelper& sliced_idx_cvtr) {
-  sliced_idx_cvtr.OffsetToNdIndex(offset, nd_index, params.ndim);
-#ifdef __CUDA_ARCH__
-#pragma unroll
-#endif
-  for (int64_t i = 0; i < params.ndim; ++i) {
-    nd_index[i] = params.start[i] + params.step[i] * nd_index[i];
-    assert(nd_index[i] >= 0);
-    assert(nd_index[i] < params.dims[i]);
-  }
-  return entire_idx_cvtr.NdIndexToOffset(nd_index, params.ndim);
-}
 
 template<DeviceType device_type, typename T>
 struct SliceKernelUtil {
