@@ -444,11 +444,11 @@ void CallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
       << instruction->parallel_desc()->parallel_conf().DebugString();
 }
 
-Maybe<const OperatorConf*> GetOpConf(vm::Instruction* instruction,
+Maybe<const OperatorConf&> GetOpConf(vm::Instruction* instruction,
                                      const StatelessCallOpKernelInstrOperand& args) {
   const auto* operand_op_conf = instruction->operand_type(args.op_conf());
   CHECK_NOTNULL_OR_RETURN(operand_op_conf);
-  return &JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConf>>())->Get();
+  return JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConf>>())->Get();
 }
 
 Maybe<void> UserStatelessCallOpKernelInstructionType::Infer(
@@ -469,7 +469,7 @@ void UserStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instructio
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString()
       << "\n============ op_conf ============\n"
-      << CHECK_JUST(GetOpConf(instruction, args.Get()))->DebugString();
+      << CHECK_JUST(GetOpConf(instruction, args.Get())).DebugString();
 }
 
 Maybe<void> UserStatelessCallOpKernelInstructionType::Compute(
@@ -487,7 +487,7 @@ void UserStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruct
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString()
       << "\n============ op_conf ============\n"
-      << CHECK_JUST(GetOpConf(instruction, args.Get()))->DebugString();
+      << CHECK_JUST(GetOpConf(instruction, args.Get())).DebugString();
 }
 
 std::shared_ptr<MemoryCase> SystemStatelessCallOpKernelInstructionType::GetOutBlobMemCase(
@@ -513,7 +513,7 @@ void SystemStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruct
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString()
       << "\n============ op_conf ============\n"
-      << CHECK_JUST(GetOpConf(instruction, args.Get()))->DebugString();
+      << CHECK_JUST(GetOpConf(instruction, args.Get())).DebugString();
 }
 
 Maybe<void> SystemStatelessCallOpKernelInstructionType::Compute(
@@ -532,7 +532,7 @@ void SystemStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instru
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString()
       << "\n============ op_conf ============\n"
-      << CHECK_JUST(GetOpConf(instruction, args.Get()))->DebugString();
+      << CHECK_JUST(GetOpConf(instruction, args.Get())).DebugString();
 }
 
 template<typename T>
