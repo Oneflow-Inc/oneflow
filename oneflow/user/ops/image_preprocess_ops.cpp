@@ -212,4 +212,28 @@ REGISTER_CPU_ONLY_USER_OP("coin_flip")
       return Maybe<void>::Ok();
     });
 
+REGISTER_CPU_ONLY_USER_OP("image_random_crop")
+    .Input("in")
+    .Output("out")
+    .Attr<int32_t>("num_attempts", UserOpAttrType::kAtInt32, 10)
+    .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
+    .Attr<bool>("has_seed", UserOpAttrType::kAtBool, false)
+    .Attr<std::vector<float>>("random_area", UserOpAttrType::kAtListFloat, {0.08, 1.0})
+    .Attr<std::vector<float>>("random_aspect_ratio", UserOpAttrType::kAtListFloat, {0.75, 1.333333})
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
+      *out_tensor = *in_tensor;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
+      CHECK_NOTNULL(in_modifier);
+      in_modifier->set_requires_grad(false);
+    })
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+
 }  // namespace oneflow
