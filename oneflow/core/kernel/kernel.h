@@ -211,19 +211,19 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
   {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)),               \
    []() { return new kernel_class<device_type, OF_PP_PAIR_FIRST(data_type_pair)>(); }},
 
-#define ADD_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq)       \
-  namespace {                                                                       \
-                                                                                    \
-  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {        \
-    static const HashMap<std::string, std::function<Kernel*()>> creators = {        \
-        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (kernel_class), \
-                                         DEVICE_TYPE_SEQ, data_type_seq)};          \
-    DeviceType device_type =                                                        \
-        DeviceTag2DeviceType(kernel_conf.op_attribute().op_conf().device_tag());    \
-    return creators.at(GetHashKey(device_type, kernel_conf.data_type()))();         \
-  }                                                                                 \
-                                                                                    \
-  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));         \
+#define ADD_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq)                \
+  namespace {                                                                                \
+                                                                                             \
+  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {                 \
+    static const HashMap<std::string, std::function<Kernel*()>> creators = {                 \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (kernel_class),          \
+                                         DEVICE_TYPE_SEQ, data_type_seq)};                   \
+    DeviceType device_type =                                                                 \
+        CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag())); \
+    return creators.at(GetHashKey(device_type, kernel_conf.data_type()))();                  \
+  }                                                                                          \
+                                                                                             \
+  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                  \
   }
 
 #define MAKE_DEVICE_TYPE_KERNEL_CREATOR_ENTRY(kernel_class, device_type) \
@@ -237,7 +237,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
         OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_DEVICE_TYPE_KERNEL_CREATOR_ENTRY, (kernel_class), \
                                          DEVICE_TYPE_SEQ)};                                     \
     DeviceType device_type =                                                                    \
-        DeviceTag2DeviceType(kernel_conf.op_attribute().op_conf().device_tag());                \
+        CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag()));    \
     return creators.at(device_type)();                                                          \
   }                                                                                             \
                                                                                                 \
@@ -261,21 +261,21 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
   REGISTER_KERNEL_CREATOR(op_type_case, CreateKernel);                                  \
   }
 
-#define ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(op_type_case, kernel_class, data_type_seq) \
-  namespace {                                                                               \
-                                                                                            \
-  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {                \
-    static const HashMap<std::string, std::function<Kernel*()>> creators = {                \
-        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (kernel_class),         \
-                                         DEVICE_TYPE_SEQ, data_type_seq)                    \
-            MAKE_KERNEL_CREATOR_ENTRY(kernel_class, DeviceType::kGPU,                       \
-                                      (float16, DataType::kFloat16))};                      \
-    DeviceType device_type =                                                                \
-        DeviceTag2DeviceType(kernel_conf.op_attribute().op_conf().device_tag());            \
-    return creators.at(GetHashKey(device_type, kernel_conf.data_type()))();                 \
-  }                                                                                         \
-                                                                                            \
-  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                 \
+#define ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(op_type_case, kernel_class, data_type_seq)  \
+  namespace {                                                                                \
+                                                                                             \
+  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {                 \
+    static const HashMap<std::string, std::function<Kernel*()>> creators = {                 \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (kernel_class),          \
+                                         DEVICE_TYPE_SEQ, data_type_seq)                     \
+            MAKE_KERNEL_CREATOR_ENTRY(kernel_class, DeviceType::kGPU,                        \
+                                      (float16, DataType::kFloat16))};                       \
+    DeviceType device_type =                                                                 \
+        CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag())); \
+    return creators.at(GetHashKey(device_type, kernel_conf.data_type()))();                  \
+  }                                                                                          \
+                                                                                             \
+  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                  \
   }
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_H_

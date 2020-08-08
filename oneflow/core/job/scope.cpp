@@ -43,8 +43,7 @@ Maybe<const JobDesc*> Scope::job_desc() const {
 }
 
 Maybe<int64_t> Scope::GetParallelDescSymbolId(const OperatorConf& op_conf) const {
-  DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf.device_tag()));
-  if (device_type == DeviceType::kCPU || IsCpuOnly(op_conf)) {
+  if (op_conf.device_tag() == "cpu" || IsCpuOnly(op_conf)) {
     return scope_proto_.host_parallel_desc_symbol_id();
   } else {
     return scope_proto_.device_parallel_desc_symbol_id();
@@ -52,8 +51,7 @@ Maybe<int64_t> Scope::GetParallelDescSymbolId(const OperatorConf& op_conf) const
 }
 
 Maybe<const ParallelDesc*> Scope::GetParallelDesc(const OperatorConf& op_conf) const {
-  DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf.device_tag()));
-  if (device_type == DeviceType::kCPU || IsCpuOnly(op_conf)) {
+  if (op_conf.device_tag() == "cpu" || IsCpuOnly(op_conf)) {
     return host_parallel_desc_.get();
   } else {
     return device_parallel_desc_.get();

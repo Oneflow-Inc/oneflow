@@ -80,8 +80,7 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
 OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_hd_" + NewUniqueId());
-  const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(device_type()));
-  conf.set_device_tag(device_tag);
+  conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type())));
   conf.mutable_copy_hd_conf()->set_type(copy_type_);
   auto in_regst = GetSoleConsumedRegst("copy_in");
   if (in_regst->NumOfLbi() == 1) {
@@ -143,8 +142,7 @@ void CopyCommNetTaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
 OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_comm_net_" + NewUniqueId());
-  const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(this->device_type()));
-  conf.set_device_tag(device_tag);
+  conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
   conf.mutable_copy_comm_net_conf();
   return conf;
 }

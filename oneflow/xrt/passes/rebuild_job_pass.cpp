@@ -223,8 +223,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
     OperatorConf op_conf;
     op_conf.set_name(node->name());
     DeviceType device_type = XrtDeviceToDeviceType(node->device());
-    const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(device_type));
-    op_conf.set_device_tag(device_tag);
+    op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type)));
 
     XrtLaunchOpConf *launch_conf = op_conf.mutable_xrt_launch_conf();
     // Add inputs and outputs in launch_conf

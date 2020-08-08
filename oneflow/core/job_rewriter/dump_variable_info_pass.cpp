@@ -36,7 +36,7 @@ Maybe<void> DumpVariableInfoPass::Apply(const OpGraph& op_graph, JobBuilder* job
   const std::string sep = "\t";
   auto log_stream =
       TeePersistentLogStream::Create("variable_table_" + std::to_string(GlobalJobDesc().job_id()));
-  (*log_stream) << "id" << sep << "name" << sep << "device_type" << sep << "parallel_num" << sep
+  (*log_stream) << "id" << sep << "name" << sep << "device_tag" << sep << "parallel_num" << sep
                 << "distribute" << sep << "data_type" << sep << "shape" << sep << "elem_cnt" << sep
                 << "size"
                 << "\n";
@@ -48,8 +48,7 @@ Maybe<void> DumpVariableInfoPass::Apply(const OpGraph& op_graph, JobBuilder* job
     (*log_stream) << sep;
     (*log_stream) << op_conf.name();
     (*log_stream) << sep;
-    DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf.device_tag()));
-    (*log_stream) << DeviceType_Name(device_type);
+    (*log_stream) << op_conf.device_tag();
     (*log_stream) << sep;
     (*log_stream) << std::to_string(node->parallel_desc().parallel_num());
     (*log_stream) << sep;

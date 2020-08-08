@@ -643,8 +643,7 @@ bool IsCpuOnly(const OperatorConf& op_conf) {
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type,
                                       const JobDesc* job_desc) {
   OperatorConf dev_op_conf = op_conf;
-  const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(device_type));
-  dev_op_conf.set_device_tag(device_tag);
+  dev_op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type)));
   return CheckAndConstructOp(dev_op_conf, job_desc);
 }
 

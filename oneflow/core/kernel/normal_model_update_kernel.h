@@ -50,14 +50,14 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
 
 #define DECLARE_MDUPDT_KERNEL_CREATOR(x) Kernel* Create##x##MdUpdtKernel(const KernelConf&);
 
-#define DEFINE_MDUPDT_KERNEL_CREATOR(x)                                                  \
-  Kernel* Create##x##MdUpdtKernel(const KernelConf& kernel_conf) {                       \
-    static const HashMap<std::string, std::function<Kernel*()>> creators = {             \
-        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (x##MdUpdateKernel), \
-                                         DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};      \
-    DeviceType device_type =                                                             \
-        DeviceTag2DeviceType(kernel_conf.op_attribute().op_conf().device_tag());         \
-    return creators.at(GetHashKey(device_type, kernel_conf.data_type()))();              \
+#define DEFINE_MDUPDT_KERNEL_CREATOR(x)                                                      \
+  Kernel* Create##x##MdUpdtKernel(const KernelConf& kernel_conf) {                           \
+    static const HashMap<std::string, std::function<Kernel*()>> creators = {                 \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (x##MdUpdateKernel),     \
+                                         DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};          \
+    DeviceType device_type =                                                                 \
+        CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag())); \
+    return creators.at(GetHashKey(device_type, kernel_conf.data_type()))();                  \
   }
 
 }  // namespace oneflow

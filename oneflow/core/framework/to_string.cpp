@@ -30,11 +30,4 @@ Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
   return Error::DeviceTagNotFound() << "device tag `" << device_tag << "' not found";
 }
 
-DeviceType DeviceTag2DeviceType(const std::string& device_tag) {
-  CHECK_NE(device_tag, "invalid_device");
-  if (device_tag == "cpu") { return DeviceType::kCPU; }
-  if (device_tag == "gpu") { return DeviceType::kGPU; }
-  UNIMPLEMENTED();
-}
-
 }  // namespace oneflow

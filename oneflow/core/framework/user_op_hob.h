@@ -52,18 +52,19 @@ class HobStringContextGetter final {
   HobStringContextGetter(const DeviceType& device_type) {
     std::string str = ToString(device_type);
     debug_str_ = str;
-    context_getter_ = [str](const ContextT&) { return str; };
+    context_getter_ = [str](const ContextT&) -> const std::string& { return str; };
   }
   HobStringContextGetter(const char* const_value) {
     std::string str(const_value);
     debug_str_ = str;
-    context_getter_ = [str](const ContextT&) { return str; };
+    context_getter_ = [str](const ContextT&) -> const std::string& { return str; };
   }
   HobStringContextGetter(const std::string& const_value)
       : debug_str_(const_value),
-        context_getter_([const_value](const ContextT&) { return const_value; }) {}
+        context_getter_(
+            [const_value](const ContextT&) -> const std::string& { return const_value; }) {}
   HobStringContextGetter(const std::string& debug_str,
-                         const std::function<std::string(const ContextT&)>& context_getter)
+                         const std::function<const std::string&(const ContextT&)>& context_getter)
       : debug_str_(debug_str), context_getter_(context_getter) {}
 
   hob::BoolFunctorPtr<ContextT> operator==(const HobStringContextGetter& other) const {
@@ -80,7 +81,7 @@ class HobStringContextGetter final {
 
  private:
   std::string debug_str_;
-  std::function<std::string(const ContextT&)> context_getter_;
+  std::function<const std::string&(const ContextT&)> context_getter_;
 };
 
 HobStringContextGetter<KernelRegContext> HobDeviceTag();

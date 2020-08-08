@@ -103,8 +103,7 @@ void SliceBoxingTaskNode::SetOutShape(const Shape& shape) { out_shape_ = shape; 
 
 OperatorConf SliceBoxingTaskNode::GetBoxingOpConf() {
   OperatorConf op_conf{};
-  const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(device_type()));
-  op_conf.set_device_tag(device_tag);
+  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type())));
   SliceBoxingConf boxing_conf{};
   *boxing_conf.mutable_lbi() = lbi_;
   out_slice_.ToProto(boxing_conf.mutable_out_slice());

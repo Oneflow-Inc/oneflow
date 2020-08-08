@@ -32,8 +32,7 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
                             const BlobDesc& logical_blob_desc, OpType op_type, int64_t root) {
   OperatorConf op_conf;
   op_conf.set_name(name);
-  const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(DeviceType::kGPU));
-  op_conf.set_device_tag(device_tag);
+  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(DeviceType::kGPU)));
   CollectiveBoxingGenericOpConf* conf = op_conf.mutable_collective_boxing_generic_conf();
   *conf->mutable_lbi() = lbi;
   RankDesc* rank_desc = conf->mutable_rank_desc();

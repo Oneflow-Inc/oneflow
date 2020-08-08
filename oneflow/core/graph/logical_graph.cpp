@@ -64,8 +64,7 @@ void LogicalGraph::NaiveBuildFwStruct(
     auto parallel_desc_ptr_it = name2parallel_desc.find(cur_op_conf.name());
     CHECK(parallel_desc_ptr_it != name2parallel_desc.end());
     const std::shared_ptr<ParallelDesc>& parallel_desc_ptr = parallel_desc_ptr_it->second;
-    const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(parallel_desc_ptr->device_type()));
-    cur_op_conf.set_device_tag(device_tag);
+    cur_op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(parallel_desc_ptr->device_type())));
     std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf, &GlobalJobDesc());
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();
     AddAllocatedNode(cur_node);
