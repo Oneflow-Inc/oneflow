@@ -947,26 +947,50 @@ def batch_normalization(
                 name=name,
             )
         else:
-            raise NotImplementedError
+            reduce_axis = []
+            for dim in range(len(inputs.shape)):
+                if dim != axis:
+                    reduce_axis.append(dim)
+            mean, variance = flow.nn.moments(inputs, reduce_axis, keepdims=False)
 
-    builder = (
-        flow.user_op_builder(name)
-        .Op("normalization")
-        .Input("x", [inputs])
-        .Input("moving_mean", [moving_mean])
-        .Input("moving_variance", [moving_variance])
-        .Input("gamma", [gamma])
-        .Input("beta", [beta])
-        .Output("y")
-        .Attr("axis", axis)
-        .Attr("epsilon", epsilon)
-        .Attr("training", training)
-        .Attr("momentum", momentum)
-    )
-    if trainable and training:
-        builder = builder.Output("mean").Output("inv_variance")
+            def update_moving(moving, this_batch):
+                moving_identity = flow.identity(moving)
+                flow.assign(
+                    moving, momentum * moving_identity + (1 - momentum) * this_batch
+                )
 
-    return builder.Build().InferAndTryRun().RemoteBlobList()[0]
+            update_moving(moving_mean, mean)
+            update_moving(moving_variance, variance)
+
+            return flow.nn.batch_normalization(
+                x=inputs,
+                mean=mean,
+                variance=variance,
+                offset=beta,
+                scale=gamma,
+                variance_epsilon=epsilon,
+                axis=axis,
+                name=name,
+            )
+    else:
+        builder = (
+            flow.user_op_builder(name)
+            .Op("normalization")
+            .Input("x", [inputs])
+            .Input("moving_mean", [moving_mean])
+            .Input("moving_variance", [moving_variance])
+            .Input("gamma", [gamma])
+            .Input("beta", [beta])
+            .Output("y")
+            .Attr("axis", axis)
+            .Attr("epsilon", epsilon)
+            .Attr("training", training)
+            .Attr("momentum", momentum)
+        )
+        if trainable and training:
+            builder = builder.Output("mean").Output("inv_variance")
+
+        return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("layers.upsample_2d")
