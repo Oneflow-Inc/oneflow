@@ -151,8 +151,8 @@ def OFRecordImageDecoder(
     )
 
 
-@oneflow_export("image.Resize", "image.resize")
-def image_resize(
+@oneflow_export("image.Resize", "image.resize", "image_resize")
+def api_image_resize(
     image: BlobDef,
     target_size: Union[int, Sequence[int]],
     min_size: Optional[int] = None,
@@ -162,17 +162,62 @@ def image_resize(
     channels: int = 3,
     dtype: dtype_util.dtype = dtype_util.float,
     interpolation_type: str = "auto",
-    name=None,
+    name: Optional[str] = None,
+    # deprecated params, reserve for backward compatible
+    color_space: Optional[str] = None,
+    interp_type: Optional[str] = None,
+    resize_shorter: int = 0,
+    resize_x: int = 0,
+    resize_y: int = 0,
 ) -> BlobDef:
+    # process deprecated params
+    if color_space is not None:
+        print("WARNING: color_space has been deprecated. Please use channels instead.")
+        assert isinstance(color_space, str)
+        if color_space.upper() == "RGB" or color_space.upper() == "BGR":
+            channels = 3
+        elif color_space.upper() == "GRAY":
+            channels = 1
+        else:
+            raise ValueError("invalid color_space")
+
+    if interp_type is not None:
+        print(
+            "WARNING: interp_type has been deprecated. Please use interpolation_type instead."
+        )
+        assert isinstance(interp_type, str)
+        if interp_type == "Linear":
+            interpolation_type = "bilinear"
+        elif interp_type == "NN":
+            interpolation_type = "nearest_neighbor"
+        elif interp_type == "Cubic":
+            interpolation_type = "bicubic"
+        else:
+            raise ValueError("invalid interp_type")
+
+    if resize_x > 0 and resize_y > 0:
+        print(
+            "WARNING: resize_x and resize_y has been deprecated. Please use target_size instead."
+        )
+        target_size = (resize_x, resize_y)
+        keep_aspect_ratio = False
+
+    if resize_shorter > 0:
+        print(
+            "WARNING: resize_shorter has been deprecated. Please use target_size instead."
+        )
+        target_size = resize_shorter
+        keep_aspect_ratio = True
+        resize_side = "shorter"
+
     if name is None:
         name = id_util.UniqueStr("ImageResize_")
 
     if keep_aspect_ratio:
-        assert isinstance(target_size, int)
-        assert resize_side in (
-            "shorter",
-            "longer",
-        ), 'resize_side must be "shorter" or "longer"'
+        if not isinstance(target_size, int):
+            raise ValueError(
+                "target_size must be an int when keep_aspect_ratio is True"
+            )
 
         if min_size is None:
             min_size = 0
@@ -185,7 +230,7 @@ def image_resize(
         elif resize_side == "longer":
             resize_longer = True
         else:
-            raise ValueError
+            raise ValueError('resize_side must be "shorter" or "longer"')
 
         op = (
             flow.user_op_builder(name)
@@ -204,8 +249,15 @@ def image_resize(
         res_image, new_size, scale = op.InferAndTryRun().RemoteBlobList()
 
     else:
-        assert isinstance(target_size, (list, tuple))
-        assert len(target_size) == 2
+        if (
+            not isinstance(target_size, (list, tuple))
+            or len(target_size) != 2
+            or not all(isinstance(size, int) for size in target_size)
+        ):
+            raise ValueError(
+                "target_size must be a form like (width, height) when keep_aspect_ratio is False"
+            )
+
         target_w, target_h = target_size
 
         op = (
@@ -228,7 +280,7 @@ def image_resize(
 
 
 @oneflow_export("image.target_resize", "image_target_resize")
-def image_target_resize(
+def api_image_target_resize(
     images: BlobDef,
     target_size: int,
     min_size: Optional[int] = None,
@@ -240,7 +292,7 @@ def image_target_resize(
     if name is None:
         name = id_util.UniqueStr("ImageTargetResize_")
 
-    res_image, scale, new_size = image_resize(
+    res_image, scale, new_size = api_image_resize(
         images,
         target_size=target_size,
         min_size=min_size,
