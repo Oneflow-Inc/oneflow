@@ -286,7 +286,7 @@ void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
   AutoMemcpy(ctx, dst, src, sz, dst_mem_case, src_mem_case);
   if (src_mem_case.has_device_cuda_mem() || dst_mem_case.has_device_cuda_mem()) {
 #ifdef WITH_CUDA
-    CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));
+    OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
 #else
     UNIMPLEMENTED();
 #endif  // WITH_CUDA

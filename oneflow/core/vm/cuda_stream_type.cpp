@@ -55,7 +55,7 @@ void CudaStreamType::Compute(Instruction* instruction) const {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
     instr_type_id.instruction_type().Compute(instruction);
-    CudaCheck(cudaGetLastError());
+    OF_CUDA_CHECK(cudaGetLastError());
   }
   stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
