@@ -78,7 +78,7 @@ size_t InferTempStorageForArgMax(int32_t num_row, int32_t num_col) {
           /* d_in */ nullptr, /* d_out */ nullptr, /* num_segments */ num_row,
           /* d_begin_offsets */ segment_offset_iter, /* d_end_offsets */ segment_offset_iter + 1,
           /* stream */ 0);
-  CudaCheck(err);
+  OF_CUDA_CHECK(err);
 
   return temp_storage_bytes;
 }
@@ -105,7 +105,7 @@ void ArgMax(const T* in_ptr, int32_t num_row, int32_t num_col, void* temp_storag
       /* d_begin_offsets */ segment_offset_iter,
       /* d_end_offsets */ segment_offset_iter + 1,
       /* stream */ stream);
-  CudaCheck(err);
+  OF_CUDA_CHECK(err);
 }
 
 template<typename T>

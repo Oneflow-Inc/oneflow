@@ -28,8 +28,8 @@ bool CudaInstrStatusQuerier::event_completed() const {
 
 void CudaInstrStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
   cudaSetDevice(device_id_);
-  CudaCheck(cudaEventCreateWithFlags(&event_, cudaEventBlockingSync | cudaEventDisableTiming));
-  CudaCheck(cudaEventRecord(event_, device_ctx->cuda_stream()));
+  OF_CUDA_CHECK(cudaEventCreateWithFlags(&event_, cudaEventBlockingSync | cudaEventDisableTiming));
+  OF_CUDA_CHECK(cudaEventRecord(event_, device_ctx->cuda_stream()));
   launched_ = true;
 }
 
