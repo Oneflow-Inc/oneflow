@@ -33,8 +33,8 @@ const cudaStream_t* CudaStreamHandle::cuda_stream() {
 const cublasHandle_t* CudaStreamHandle::cublas_pmh_handle() {
   if (!cublas_pmh_handle_) {
     cublas_pmh_handle_.reset(new cublasHandle_t);
-    CudaCheck(cublasCreate(cublas_pmh_handle_.get()));
-    CudaCheck(cublasSetStream(*cublas_pmh_handle_, *cuda_stream()));
+    OF_CUBLAS_CHECK(cublasCreate(cublas_pmh_handle_.get()));
+    OF_CUBLAS_CHECK(cublasSetStream(*cublas_pmh_handle_, *cuda_stream()));
   }
   return cublas_pmh_handle_.get();
 }
@@ -42,9 +42,9 @@ const cublasHandle_t* CudaStreamHandle::cublas_pmh_handle() {
 const cublasHandle_t* CudaStreamHandle::cublas_pmd_handle() {
   if (!cublas_pmd_handle_) {
     cublas_pmd_handle_.reset(new cublasHandle_t);
-    CudaCheck(cublasCreate(cublas_pmd_handle_.get()));
-    CudaCheck(cublasSetStream(*cublas_pmd_handle_, *cuda_stream()));
-    CudaCheck(cublasSetPointerMode(*cublas_pmd_handle_, CUBLAS_POINTER_MODE_DEVICE));
+    OF_CUBLAS_CHECK(cublasCreate(cublas_pmd_handle_.get()));
+    OF_CUBLAS_CHECK(cublasSetStream(*cublas_pmd_handle_, *cuda_stream()));
+    OF_CUBLAS_CHECK(cublasSetPointerMode(*cublas_pmd_handle_, CUBLAS_POINTER_MODE_DEVICE));
   }
   return cublas_pmd_handle_.get();
 }
@@ -52,9 +52,9 @@ const cublasHandle_t* CudaStreamHandle::cublas_pmd_handle() {
 const cublasHandle_t* CudaStreamHandle::cublas_tensor_op_math_handle() {
   if (!cublas_tensor_op_math_handle_) {
     cublas_tensor_op_math_handle_.reset(new cublasHandle_t);
-    CudaCheck(cublasCreate(cublas_tensor_op_math_handle_.get()));
-    CudaCheck(cublasSetStream(*cublas_tensor_op_math_handle_, *cuda_stream()));
-    CudaCheck(cublasSetMathMode(*cublas_tensor_op_math_handle_, CUBLAS_TENSOR_OP_MATH));
+    OF_CUBLAS_CHECK(cublasCreate(cublas_tensor_op_math_handle_.get()));
+    OF_CUBLAS_CHECK(cublasSetStream(*cublas_tensor_op_math_handle_, *cuda_stream()));
+    OF_CUBLAS_CHECK(cublasSetMathMode(*cublas_tensor_op_math_handle_, CUBLAS_TENSOR_OP_MATH));
   }
   return cublas_tensor_op_math_handle_.get();
 }
@@ -86,8 +86,8 @@ void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
 
 CudaStreamHandle::~CudaStreamHandle() {
   if (cudnn_handle_) { OF_CUDNN_CHECK(cudnnDestroy(*cudnn_handle_)); }
-  if (cublas_pmh_handle_) { CudaCheck(cublasDestroy(*cublas_pmh_handle_)); }
-  if (cublas_pmd_handle_) { CudaCheck(cublasDestroy(*cublas_pmd_handle_)); }
+  if (cublas_pmh_handle_) { OF_CUBLAS_CHECK(cublasDestroy(*cublas_pmh_handle_)); }
+  if (cublas_pmd_handle_) { OF_CUBLAS_CHECK(cublasDestroy(*cublas_pmd_handle_)); }
   if (cuda_stream_) { OF_CUDA_CHECK(cudaStreamDestroy(*cuda_stream_)); }
 }
 
