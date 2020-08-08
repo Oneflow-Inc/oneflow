@@ -19,6 +19,11 @@ import oneflow.typing as otp
 import test_util
 import typing as tp
 import collections
+import os
+
+DEFAULT_DEVICE_TAG = "gpu"
+if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+    DEFAULT_DEVICE_TAG = "cpu"
 
 
 def _do_slice(input, args, name=None):
@@ -82,7 +87,12 @@ def _make_slice_with_grad_func(
 
 
 def _test_slice(
-    test_case, input, slice_args, outputs, dtype=flow.float32, device_tag="gpu"
+    test_case,
+    input,
+    slice_args,
+    outputs,
+    dtype=flow.float32,
+    device_tag=DEFAULT_DEVICE_TAG,
 ):
     input = input.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
     outputs = [
@@ -107,7 +117,7 @@ def _test_slice_dynamic(
     outputs,
     static_shape=None,
     dtype=flow.float32,
-    device_tag="gpu",
+    device_tag=DEFAULT_DEVICE_TAG,
 ):
     input = input.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
     outputs = [
@@ -136,7 +146,7 @@ def _test_slice_with_grad(
     output,
     diff,
     dtype=flow.float32,
-    device_tag="gpu",
+    device_tag=DEFAULT_DEVICE_TAG,
     verbose=False,
 ):
     input = input.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
