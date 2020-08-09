@@ -230,6 +230,74 @@ def CropMirrorNormalize(
     )
 
 
+@oneflow_export("image.random_crop", "image_random_crop")
+def api_image_random_crop(
+    input_blob: BlobDef,
+    num_attempts: int = 10,
+    seed: Optional[int] = None,
+    random_area: Sequence[float] = None,
+    random_aspect_ratio: Sequence[float] = None,
+    name: str = "ImageRandomCrop",
+) -> BlobDef:
+    assert isinstance(name, str)
+    if seed is not None:
+        assert name is not None
+    if random_area is None:
+        random_area = [0.08, 1.0]
+    if random_aspect_ratio is None:
+        random_aspect_ratio = [0.75, 1.333333]
+    module = flow.find_or_create_module(
+        name,
+        lambda: ImageRandomCropModule(
+            num_attempts=num_attempts,
+            random_seed=seed,
+            random_area=random_area,
+            random_aspect_ratio=random_aspect_ratio,
+            name=name,
+        ),
+    )
+    return module(input_blob)
+
+
+class ImageRandomCropModule(module_util.Module):
+    def __init__(
+        self,
+        num_attempts: int,
+        random_seed: Optional[int],
+        random_area: Sequence[float],
+        random_aspect_ratio: Sequence[float],
+        name: str,
+    ):
+        module_util.Module.__init__(self, name)
+        seed, has_seed = flow.random.gen_seed(random_seed)
+        self.op_module_builder = (
+            flow.user_op_module_builder("image_random_crop")
+            .InputSize("in", 1)
+            .Output("out")
+            .Attr("num_attempts", num_attempts)
+            .Attr("random_area", random_area)
+            .Attr("random_aspect_ratio", random_aspect_ratio)
+            .Attr("has_seed", has_seed)
+            .Attr("seed", seed)
+            .CheckAndComplete()
+        )
+        self.op_module_builder.user_op_module.InitOpKernel()
+
+    def forward(self, input: BlobDef):
+        if self.call_seq_no == 0:
+            name = self.module_name
+        else:
+            name = id_util.UniqueStr("ImageRandomCrop_")
+
+        return (
+            self.op_module_builder.OpName(name)
+            .Input("in", [input])
+            .Build()
+            .InferAndTryRun()
+            .SoleOutputBlob()
+        )
+
+
 @oneflow_export("random.CoinFlip", "random.coin_flip")
 def api_coin_flip(
     batch_size: int = 1,
@@ -635,6 +703,52 @@ class COCOReader(module_util.Module):
             .InferAndTryRun()
             .RemoteBlobList()
         )
+
+
+@oneflow_export("data.ofrecord_image_classification_reader")
+def ofrecord_image_classification_reader(
+    ofrecord_dir: str,
+    image_feature_name: str,
+    label_feature_name: str,
+    batch_size: int = 1,
+    data_part_num: int = 1,
+    part_name_prefix: str = "part-",
+    part_name_suffix_length: int = -1,
+    random_shuffle: bool = False,
+    shuffle_buffer_size: int = 1024,
+    shuffle_after_epoch: bool = False,
+    color_space: str = "BGR",
+    decode_buffer_size_per_thread: int = 32,
+    num_decode_threads_per_machine: Optional[int] = None,
+    name: Optional[str] = None,
+) -> BlobDef:
+    if name is None:
+        name = id_util.UniqueStr("OFRecordImageClassificationReader_")
+    (image, label) = (
+        flow.user_op_builder(name)
+        .Op("ofrecord_image_classification_reader")
+        .Output("image")
+        .Output("label")
+        .Attr("data_dir", ofrecord_dir)
+        .Attr("data_part_num", data_part_num)
+        .Attr("batch_size", batch_size)
+        .Attr("part_name_prefix", part_name_prefix)
+        .Attr("random_shuffle", random_shuffle)
+        .Attr("shuffle_buffer_size", shuffle_buffer_size)
+        .Attr("shuffle_after_epoch", shuffle_after_epoch)
+        .Attr("part_name_suffix_length", part_name_suffix_length)
+        .Attr("color_space", color_space)
+        .Attr("image_feature_name", image_feature_name)
+        .Attr("label_feature_name", label_feature_name)
+        .Attr("decode_buffer_size_per_thread", decode_buffer_size_per_thread)
+        .Attr("num_decode_threads_per_machine", num_decode_threads_per_machine or 0)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    label = flow.tensor_buffer_to_tensor(label, dtype=flow.int32, instance_shape=[1])
+    label = flow.squeeze(label, axis=[-1])
+    return image, label
 
 
 @oneflow_export("ssd_random_crop")

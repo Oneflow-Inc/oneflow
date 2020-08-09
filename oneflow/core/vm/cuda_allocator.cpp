@@ -52,7 +52,7 @@ CudaAllocator::~CudaAllocator() {
     return;
   }
   cudaSetDevice(device_id_);
-  for (auto& pair : mem_ptr2block_) { CudaCheck(cudaFree(pair.first)); }
+  for (auto& pair : mem_ptr2block_) { OF_CUDA_CHECK(cudaFree(pair.first)); }
 }
 
 void CudaAllocator::InsertPiece2Bin(Piece* piece) {
@@ -164,7 +164,7 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   cudaSetDevice(device_id_);
   size_t free_bytes = -1;
   size_t total_bytes = -1;
-  CudaCheck(cudaMemGetInfo(&free_bytes, &total_bytes));
+  OF_CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
   const size_t remain_bytes = 50 * 1048576;
   const size_t available_bytes = free_bytes - remain_bytes;  // remain at least 50MiB memory
 
@@ -247,7 +247,7 @@ bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
       CHECK_EQ(block.size, piece_size_sum);
 
       mem_ptr2block_.erase(it);
-      CudaCheck(cudaFree(ptr));
+      OF_CUDA_CHECK(cudaFree(ptr));
     }
   }
 
