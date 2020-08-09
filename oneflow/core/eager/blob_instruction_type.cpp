@@ -56,7 +56,7 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
     size_t size = blob->AlignedByteSizeOfBlobBody();
     cudaError_t cuda_error = cudaHostRegister(dptr, size, cudaHostRegisterDefault);
     if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) { return; }
-    CudaCheck(cuda_error);
+    OF_CUDA_CHECK(cuda_error);
   }
 };
 COMMAND(vm::RegisterInstructionType<CudaHostRegisterBlobInstructionType>("CudaHostRegisterBlob"));
@@ -80,7 +80,7 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
     CHECK_NOTNULL(dptr);
     cudaError_t cuda_error = cudaHostUnregister(dptr);
     if (cuda_error == cudaErrorHostMemoryNotRegistered) { return; }
-    CudaCheck(cuda_error);
+    OF_CUDA_CHECK(cuda_error);
   }
 };
 COMMAND(

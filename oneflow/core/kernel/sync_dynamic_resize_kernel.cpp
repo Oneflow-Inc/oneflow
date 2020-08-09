@@ -32,8 +32,8 @@ namespace {
 class CudaHostMem {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaHostMem);
-  CudaHostMem(const size_t size) { CudaCheck(cudaMallocHost(&ptr_, size)); }
-  ~CudaHostMem() { CudaCheck(cudaFreeHost(ptr_)); }
+  CudaHostMem(const size_t size) { OF_CUDA_CHECK(cudaMallocHost(&ptr_, size)); }
+  ~CudaHostMem() { OF_CUDA_CHECK(cudaFreeHost(ptr_)); }
   void* Ptr() const { return ptr_; }
 
  private:
@@ -87,7 +87,7 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
       queue_.push(cuda_host_mem_ptr);
     };
     if (conf.eager()) {
-      CudaCheck(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()));
+      OF_CUDA_CHECK(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()));
       UpdateShape();
     } else {
       ctx.device_ctx->AddCallBack(UpdateShape);

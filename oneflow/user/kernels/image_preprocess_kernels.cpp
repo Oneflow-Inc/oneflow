@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/user/image/image_util.h"
+#include "oneflow/user/kernels/random_crop_kernel_state.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 
 namespace oneflow {
@@ -452,5 +453,71 @@ REGISTER_USER_KERNEL("coin_flip")
     .SetCreateFn<CoinFlipKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      & (user_op::HobDataType("out", 0) == DataType::kInt8));
+
+namespace {
+
+void ImageRandomCropImpl(const TensorBuffer* in_buffer, TensorBuffer* out_buffer,
+                         RandomCropGenerator* random_crop_gen) {
+  cv::Mat image = GenCvMat4ImageBuffer(*in_buffer);
+  int W = image.cols;
+  int H = image.rows;
+  cv::Mat image_roi;
+  CropWindow crop;
+  random_crop_gen->GenerateCropWindow({H, W}, &crop);
+  const int y = crop.anchor.At(0);
+  const int x = crop.anchor.At(1);
+  const int new_h = crop.shape.At(0);
+  const int new_w = crop.shape.At(1);
+  CHECK(new_w > 0 && new_w <= W);
+  CHECK(new_h > 0 && new_h <= H);
+  cv::Rect roi(x, y, new_w, new_h);
+  image(roi).copyTo(image_roi);
+  image = image_roi;
+  W = image.cols;
+  H = image.rows;
+
+  CHECK(image.isContinuous());
+  const int c = in_buffer->shape().At(2);
+  CHECK_EQ(c, image.channels());
+  Shape image_shape({H, W, c});
+  out_buffer->Resize(image_shape, in_buffer->data_type());
+  memcpy(out_buffer->mut_data<>(), image.ptr(), out_buffer->nbytes());
+}
+
+}  // namespace
+
+class ImageRandomCropKernel final : public user_op::OpKernel {
+ public:
+  ImageRandomCropKernel() = default;
+  ~ImageRandomCropKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return CreateRandomCropKernelState(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* crop_window_generators = dynamic_cast<RandomCropKernelState*>(state);
+    CHECK_NOTNULL(crop_window_generators);
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int64_t record_num = out_blob->shape().elem_cnt();
+    CHECK(record_num > 0);
+    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    CHECK_EQ(out_blob->shape(), in_blob->shape());
+    const TensorBuffer* in_buffers = in_blob->dptr<TensorBuffer>();
+    TensorBuffer* out_buffers = out_blob->mut_dptr<TensorBuffer>();
+    MultiThreadLoop(record_num, [&](size_t i) {
+      ImageRandomCropImpl(in_buffers + i, out_buffers + i, crop_window_generators->GetGenerator(i));
+    });
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("image_random_crop")
+    .SetCreateFn<ImageRandomCropKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 }  // namespace oneflow

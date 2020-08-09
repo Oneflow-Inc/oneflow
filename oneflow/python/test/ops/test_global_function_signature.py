@@ -16,7 +16,7 @@ limitations under the License.
 import oneflow as flow
 import oneflow.typing as oft
 import numpy as np
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List
 
 
 def test_annotation_return_None(test_case):
@@ -542,3 +542,67 @@ def test_annotation_Bundle_Mix_Nesting_ListListNumpy(test_case):
     test_case.assertTrue(np.array_equal(foo([[data]])[2][1][0][0], data))
     test_case.assertTrue(np.array_equal(foo([[data]])[2][2][0][0], data))
     test_case.assertTrue(np.array_equal(foo([[data]])[3]["x"][256][0][0], data))
+
+
+def test_annotation_return_List_Numpy(test_case):
+    data = np.ones((10,), dtype=np.float32)
+
+    flow.clear_default_session()
+    flow.config.gpu_device_num(1)
+
+    @flow.global_function()
+    def foo(x: oft.Numpy.Placeholder(shape=data.shape)) -> List[oft.Numpy]:
+        return [x, x, x]
+
+    x, y, z = foo(data)
+    test_case.assertTrue(np.array_equal(x, data))
+    test_case.assertTrue(np.array_equal(y, data))
+    test_case.assertTrue(np.array_equal(z, data))
+
+
+def test_annotation_return_List_ListNumpy(test_case):
+    data = np.ones((10,), dtype=np.float32)
+
+    flow.clear_default_session()
+
+    def foo(x: oft.ListNumpy.Placeholder(shape=data.shape)) -> List[oft.ListNumpy]:
+        return [x, x]
+
+    x, y = foo([data])
+    test_case.assertTrue(np.array_equal(x[0], data))
+    test_case.assertTrue(np.array_equal(y[0], data))
+
+
+def test_annotation_return_List_ListListNumpy(test_case):
+    data = np.ones((10,), dtype=np.float32)
+
+    flow.clear_default_session()
+
+    def foo(
+        x: oft.ListListNumpy.Placeholder(shape=data.shape),
+    ) -> List[oft.ListListNumpy]:
+        return [x, x]
+
+    x, y = foo([[data]])
+    test_case.assertTrue(np.array_equal(x[0][0], data))
+    test_case.assertTrue(np.array_equal(y[0][0], data))
+
+
+def test_annotation_return_List_Nesting_Tuple(test_case):
+    x = np.random.rand(5).astype(np.float32)
+    y = np.random.rand(10).astype(np.float32)
+
+    flow.clear_default_session()
+
+    def foo(
+        x: oft.Numpy.Placeholder(shape=x.shape),
+        y: oft.ListNumpy.Placeholder(shape=y.shape),
+    ) -> Tuple[List[oft.Numpy], List[oft.ListNumpy]]:
+        return ([x, x, x], [y, y])
+
+    x_list, y_list = foo(x, [y])
+    test_case.assertTrue(np.array_equal(x_list[0], x))
+    test_case.assertTrue(np.array_equal(x_list[1], x))
+    test_case.assertTrue(np.array_equal(x_list[2], x))
+    test_case.assertTrue(np.array_equal(y_list[0][0], y))
+    test_case.assertTrue(np.array_equal(y_list[1][0], y))

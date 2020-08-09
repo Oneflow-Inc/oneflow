@@ -81,12 +81,13 @@ struct ArgWhereKernelUtil<DeviceType::kGPU, T, I, NDims> {
     CHECK_LE(tmp_bytes, tmp_max_bytes);
 
     if (NDims == 1) {
-      CudaCheck(SelectTrue<T, I, I*>(ctx->cuda_stream(), in_shape.elem_cnt(), tmp, tmp_bytes,
-                                     in_ptr, out_ptr, out_size_ptr));
+      OF_CUDA_CHECK((SelectTrue<T, I, I*>(ctx->cuda_stream(), in_shape.elem_cnt(), tmp, tmp_bytes,
+                                          in_ptr, out_ptr, out_size_ptr)));
     } else {
       StrideIterator<I, NDims> out_iter(out_ptr, in_shape.elem_cnt());
-      CudaCheck(SelectTrue<T, I, StrideIterator<I, NDims>>(
-          ctx->cuda_stream(), in_shape.elem_cnt(), tmp, tmp_bytes, in_ptr, out_iter, out_size_ptr));
+      OF_CUDA_CHECK(
+          (SelectTrue<T, I, StrideIterator<I, NDims>>(ctx->cuda_stream(), in_shape.elem_cnt(), tmp,
+                                                      tmp_bytes, in_ptr, out_iter, out_size_ptr)));
 
       fixed_vector<I, NDims> dims(NDims);
       std::transform(in_shape.ptr(), in_shape.ptr() + in_shape.NumAxes(), dims.begin(),
@@ -102,11 +103,12 @@ struct ArgWhereKernelUtil<DeviceType::kGPU, T, I, NDims> {
     cudaStream_t stream = ctx ? ctx->cuda_stream() : 0;
     size_t tmp_bytes = 0;
     if (NDims == 1) {
-      CudaCheck(SelectTrue<T, I, I*>(stream, n, nullptr, tmp_bytes, nullptr, nullptr, nullptr));
+      OF_CUDA_CHECK(
+          (SelectTrue<T, I, I*>(stream, n, nullptr, tmp_bytes, nullptr, nullptr, nullptr)));
     } else {
       StrideIterator<I, NDims> out_iter(nullptr, n);
-      CudaCheck(SelectTrue<T, I, StrideIterator<I, NDims>>(stream, n, nullptr, tmp_bytes, nullptr,
-                                                           out_iter, nullptr));
+      OF_CUDA_CHECK((SelectTrue<T, I, StrideIterator<I, NDims>>(stream, n, nullptr, tmp_bytes,
+                                                                nullptr, out_iter, nullptr)));
     }
     return tmp_bytes;
   }
