@@ -40,9 +40,9 @@ auto SwitchCase(Args&&... args) -> decltype(std::make_tuple(std::forward<Args>(a
     return case_handlers.at(switch_tuple)(std::forward<Args>(args)...);                        \
   }
 
-  // CTRV: Compile-time Token and Runtime Value pair,
-  // CTRV example: (float, DataType::kFloat)
-  // TYPED_CTRV_SEQ example: (DataType, ((float, DataType::kFloat)))
+// CTRV: Compile-time Token and Runtime Value pair,
+// CTRV example: (float, DataType::kFloat)
+// TYPED_CTRV_SEQ example: (DataType, ((float, DataType::kFloat)))
 
 #define MAKE_DATA_TYPE_CTRV_SEQ(data_type_seq) MAKE_TYPED_CTRV_SEQ(DataType, data_type_seq)
 #define MAKE_DEVICE_TYPE_CTRV_SEQ(device_type_seq) \
@@ -58,7 +58,7 @@ auto SwitchCase(Args&&... args) -> decltype(std::make_tuple(std::forward<Args>(a
 
 #define MAKE_TYPED_CTRV_SEQ(runtime_value_type, ctrv_pair_seq) (runtime_value_type, ctrv_pair_seq)
 
-  //  internal preprocessor macros
+//  internal preprocessor macros
 
 #define OF_PP_I_MAKE_SWITCH_ENTRY_MAP_PAIR(switch_case, func_args_type, func) \
   {switch_case,                                                               \
