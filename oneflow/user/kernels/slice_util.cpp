@@ -19,11 +19,12 @@ namespace oneflow {
 
 namespace {
 
-using SliceIndexHelper = NdIndexOffsetHelper<int64_t, kSliceMaxDims>;
+using SliceIndexConverter = NdIndexOffsetHelper<int64_t, kSliceMaxDims>;
 
-int64_t SliceOffsetToEntireOffset(int64_t offset, int64_t* nd_index, const SliceParams& params,
-                                  const SliceIndexHelper& entire_idx_cvtr,
-                                  const SliceIndexHelper& sliced_idx_cvtr) {
+int64_t SliceOffsetToEntireOffset(int64_t offset, const SliceParams& params,
+                                  const SliceIndexConverter& entire_idx_cvtr,
+                                  const SliceIndexConverter& sliced_idx_cvtr) {
+  int64_t nd_index[kSliceMaxDims] = {0};
   sliced_idx_cvtr.OffsetToNdIndex(offset, nd_index, params.ndim);
   for (int64_t i = 0; i < params.ndim; ++i) {
     nd_index[i] = params.start[i] + params.step[i] * nd_index[i];
@@ -35,78 +36,44 @@ int64_t SliceOffsetToEntireOffset(int64_t offset, int64_t* nd_index, const Slice
 
 }  // namespace
 
-SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_op::Tensor* entire,
-                                 const user_op::Tensor* sliced) {
-  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
-  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
-  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
-  const int64_t ndim = entire->shape().NumAxes();
-  CHECK_LE(ndim, kSliceMaxDims);
-  CHECK_EQ(sliced->shape().NumAxes(), ndim);
-  CHECK_EQ(start_vec.size(), ndim);
-  CHECK_EQ(stop_vec.size(), ndim);
-  CHECK_EQ(step_vec.size(), ndim);
-
-  SliceParams params;
-  std::memset(&params, 0, sizeof(SliceParams));
-  // collapse contiguous dims who slice fully,
-  // that it can reduce params.ndim thus reduce loop numbers in cuda kernel
+void FoldContiguousFullSliceDimensions(SliceParams* params) {
+  int cur_dim = 0;
   bool full_slice_on_prev_axis = false;
-  FOR_RANGE(int, i, 0, ndim) {
-    const int64_t dim_size = entire->shape().At(i);
-    const int64_t slice_size = sliced->shape().At(i);
-    const int64_t step = step_vec.at(i);
-    CHECK_NE(step, 0);
-    const int64_t start = RegulateSliceStart(start_vec.at(i), dim_size);
-    const int64_t stop = RegulateSliceStop(stop_vec.at(i), dim_size);
-    if (step > 0) {
-      CHECK_LT(start + step * (slice_size - 1), stop);
+  FOR_RANGE(int, i, 0, params->ndim) {
+    bool full_slice_on_cur_axis = params->IsFullSlice(i);
+    if (full_slice_on_cur_axis && full_slice_on_prev_axis) {
+      params->dims[cur_dim] *= params->dims[i];
+      params->size[cur_dim] *= params->size[i];
     } else {
-      CHECK_GT(start + step * (slice_size - 1), stop);
-    }
-    // full slice dim can be collapsed to prev full slice dim
-    bool full_slice_on_cur_axis = IsFullSlice(start, stop, step, dim_size, false);
-    if (i != 0 && full_slice_on_cur_axis && full_slice_on_prev_axis) {
-      int cur_dim = params.ndim - 1;
-      params.dims[cur_dim] *= dim_size;
-      params.size[cur_dim] *= slice_size;
-    } else {
-      int cur_dim = params.ndim;
-      params.dims[cur_dim] = dim_size;
-      params.start[cur_dim] = start;
-      params.step[cur_dim] = step;
-      params.size[cur_dim] = slice_size;
-      params.ndim += 1;
+      cur_dim += 1;
+      params->dims[cur_dim] = params->dims[i];
+      params->start[cur_dim] = params->start[i];
+      params->step[cur_dim] = params->step[i];
+      params->size[cur_dim] = params->size[i];
     }
     full_slice_on_prev_axis = full_slice_on_cur_axis;
   }
-  return params;
+  params->ndim = cur_dim + 1;
 }
 
 template<typename T>
 struct SliceKernelUtil<DeviceType::kCPU, T> {
-  static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced) {
-    int64_t elem_cnt = 1;
-    FOR_RANGE(int, i, 0, params.ndim) { elem_cnt *= params.size[i]; }
-    SliceIndexHelper entire_idx_cvtr(params.dims, params.ndim);
-    SliceIndexHelper sliced_idx_cvtr(params.size, params.ndim);
-    int64_t nd_index[kSliceMaxDims] = {0};
+  static void Forward(DeviceCtx* ctx, SliceParams* params, const T* entire, T* sliced) {
+    int64_t elem_cnt = params->elem_cnt();
+    SliceIndexConverter entire_idx_cvtr(params->dims, params->ndim);
+    SliceIndexConverter sliced_idx_cvtr(params->size, params->ndim);
     FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t offset =
-          SliceOffsetToEntireOffset(i, nd_index, params, entire_idx_cvtr, sliced_idx_cvtr);
+      int64_t offset = SliceOffsetToEntireOffset(i, *params, entire_idx_cvtr, sliced_idx_cvtr);
       sliced[i] = entire[offset];
     }
   }
 
-  static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire) {
-    int64_t elem_cnt = 1;
-    FOR_RANGE(int, i, 0, params.ndim) { elem_cnt *= params.size[i]; }
-    SliceIndexHelper entire_idx_cvtr(params.dims, params.ndim);
-    SliceIndexHelper sliced_idx_cvtr(params.size, params.ndim);
-    int64_t nd_index[kSliceMaxDims] = {0};
+  static void Backward(DeviceCtx* ctx, SliceParams* params, const T* sliced, T* entire) {
+    int64_t elem_cnt = params->elem_cnt();
+    SliceIndexConverter entire_idx_cvtr(params->dims, params->ndim);
+    SliceIndexConverter sliced_idx_cvtr(params->size, params->ndim);
     FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t offset =
-          SliceOffsetToEntireOffset(i, nd_index, params, entire_idx_cvtr, sliced_idx_cvtr);
+      int64_t offset = SliceOffsetToEntireOffset(i, *params, entire_idx_cvtr, sliced_idx_cvtr);
       entire[offset] = sliced[i];
     }
   }

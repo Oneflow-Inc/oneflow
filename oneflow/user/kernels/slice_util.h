@@ -16,23 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 #define ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 
-#include "oneflow/core/framework/framework.h"
+// #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
-
-inline bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size,
-                        bool strict = true) {
-  if (step != 1) { return false; }
-  if (strict) {
-    if (start != 0) { return false; }
-    if (stop != std::numeric_limits<int64_t>::max()) { return false; }
-  } else {
-    if (start > 0) { return false; }
-    if (stop < size) { return false; }
-  }
-  return true;
-}
 
 inline int64_t RegulateSliceStart(int64_t start, int64_t size) {
   // slice start must be in range [-size, size)
@@ -56,15 +44,50 @@ struct SliceParams {
   int64_t start[kSliceMaxDims];
   int64_t step[kSliceMaxDims];
   int64_t size[kSliceMaxDims];
+
+  int64_t elem_cnt() const {
+    if (ndim == 0) { return 0; }
+    int64_t elem_cnt = 1;
+    FOR_RANGE(int, i, 0, ndim) { elem_cnt *= size[i]; }
+    return elem_cnt;
+  }
+
+  bool IsFullSlice(int dim) const {
+    CHECK_GE(dim, 0);
+    CHECK_LT(dim, ndim);
+    if (step[dim] != 1) { return false; }
+    if (start[dim] != 0) { return false; }
+    if (size[dim] != dims[dim]) { return false; }
+    return true;
+  }
 };
 
-SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_op::Tensor* entire,
-                                 const user_op::Tensor* sliced);
+void FoldContiguousFullSliceDimensions(SliceParams* params);
+
+template<int NDIM>
+using SliceIndexHelper = NdIndexOffsetHelper<int64_t, NDIM>;
+
+template<int NDIM>
+OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SliceParams& params,
+                                                 const SliceIndexHelper<NDIM>& entire_idx_cvtr,
+                                                 const SliceIndexHelper<NDIM>& sliced_idx_cvtr) {
+  int64_t nd_index[NDIM] = {0};
+  sliced_idx_cvtr.OffsetToNdIndex(offset, nd_index);
+#ifdef __CUDA_ARCH__
+#pragma unroll
+#endif
+  for (int64_t i = 0; i < NDIM; ++i) {
+    nd_index[i] = params.start[i] + params.step[i] * nd_index[i];
+    assert(nd_index[i] >= 0);
+    assert(nd_index[i] < params.dims[i]);
+  }
+  return entire_idx_cvtr.NdIndexToOffset(nd_index);
+}
 
 template<DeviceType device_type, typename T>
 struct SliceKernelUtil {
-  static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced);
-  static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire);
+  static void Forward(DeviceCtx* ctx, SliceParams* params, const T* entire, T* sliced);
+  static void Backward(DeviceCtx* ctx, SliceParams* params, const T* sliced, T* entire);
 };
 
 #define INSTANTIATE_SLICE_KERNEL_UTIL(device, dtype) template struct SliceKernelUtil<device, dtype>;

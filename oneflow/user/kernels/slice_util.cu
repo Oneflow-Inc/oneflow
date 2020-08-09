@@ -20,55 +20,15 @@ namespace oneflow {
 
 namespace {
 
-template<int NDIM>
-using SliceIndexHelper = NdIndexOffsetHelper<int64_t, NDIM>;
-
-template<int NDIM>
-__device__ __forceinline__ int64_t SliceOffsetToEntireOffset(
-    int64_t offset, int64_t* nd_index, const SliceParams& params,
-    const SliceIndexHelper<NDIM>& entire_idx_cvtr, const SliceIndexHelper<NDIM>& sliced_idx_cvtr) {
-  sliced_idx_cvtr.OffsetToNdIndex(offset, nd_index);
-#pragma unroll
-  for (int64_t i = 0; i < NDIM; ++i) {
-    nd_index[i] = params.start[i] + params.step[i] * nd_index[i];
-    assert(nd_index[i] >= 0);
-    assert(nd_index[i] < params.dims[i]);
-  }
-  return entire_idx_cvtr.NdIndexToOffset(nd_index);
-}
-
-template<typename T, int NDIM>
-__device__ __forceinline__ void SliceForward(const int n, const SliceParams& params,
-                                             const SliceIndexHelper<NDIM>& entire_idx_cvtr,
-                                             const SliceIndexHelper<NDIM>& sliced_idx_cvtr,
-                                             const T* entire, T* sliced) {
-  int64_t nd_index[NDIM];
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    int64_t offset =
-        SliceOffsetToEntireOffset<NDIM>(i, nd_index, params, entire_idx_cvtr, sliced_idx_cvtr);
-    sliced[i] = entire[offset];
-  }
-}
-
-template<typename T, int NDIM>
-__device__ __forceinline__ void SliceBackward(const int n, const SliceParams& params,
-                                              const SliceIndexHelper<NDIM>& entire_idx_cvtr,
-                                              const SliceIndexHelper<NDIM>& sliced_idx_cvtr,
-                                              T* entire, const T* sliced) {
-  int64_t nd_index[NDIM];
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    int64_t offset =
-        SliceOffsetToEntireOffset<NDIM>(i, nd_index, params, entire_idx_cvtr, sliced_idx_cvtr);
-    entire[offset] = sliced[i];
-  }
-}
-
 template<typename T, int NDIM>
 __global__ void SliceForwardGpu(const int n, SliceParams params,
                                 SliceIndexHelper<NDIM> entire_idx_cvtr,
                                 SliceIndexHelper<NDIM> sliced_idx_cvtr, const T* entire,
                                 T* sliced) {
-  SliceForward<T, NDIM>(n, params, entire_idx_cvtr, sliced_idx_cvtr, entire, sliced);
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+    sliced[i] = entire[offset];
+  }
 }
 
 template<typename T, int NDIM>
@@ -76,7 +36,10 @@ __global__ void SliceBackwardGpu(const int n, SliceParams params,
                                  SliceIndexHelper<NDIM> entire_idx_cvtr,
                                  SliceIndexHelper<NDIM> sliced_idx_cvtr, T* entire,
                                  const T* sliced) {
-  SliceBackward<T, NDIM>(n, params, entire_idx_cvtr, sliced_idx_cvtr, entire, sliced);
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+    entire[offset] = sliced[i];
+  }
 }
 
 template<int NDIM>
@@ -88,7 +51,10 @@ __global__ void SliceForwardGpuHalf(const int n, SliceParams params,
   printf("use half need nvcc arch >= 530");
   assert(false);
 #endif
-  SliceForward<half, NDIM>(n, params, entire_idx_cvtr, sliced_idx_cvtr, entire, sliced);
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+    sliced[i] = entire[offset];
+  }
 }
 
 template<int NDIM>
@@ -100,7 +66,10 @@ __global__ void SliceBackwardGpuHalf(const int n, SliceParams params,
   printf("use half need nvcc arch >= 530");
   assert(false);
 #endif
-  SliceBackward<half, NDIM>(n, params, entire_idx_cvtr, sliced_idx_cvtr, entire, sliced);
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+    entire[offset] = sliced[i];
+  }
 }
 
 template<typename T, int NDIM>
@@ -183,13 +152,15 @@ struct SliceSwitchUtil<float16> {
 
 template<typename T>
 struct SliceKernelUtil<DeviceType::kGPU, T> {
-  static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced) {
-    SliceSwitchUtil<T>::SwitchLaunchSliceForward(SwitchCase(params.ndim), ctx, params, entire,
+  static void Forward(DeviceCtx* ctx, SliceParams* params, const T* entire, T* sliced) {
+    FoldContiguousFullSliceDimensions(params);
+    SliceSwitchUtil<T>::SwitchLaunchSliceForward(SwitchCase(params->ndim), ctx, *params, entire,
                                                  sliced);
   }
 
-  static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire) {
-    SliceSwitchUtil<T>::SwitchLaunchSliceBackward(SwitchCase(params.ndim), ctx, params, sliced,
+  static void Backward(DeviceCtx* ctx, SliceParams* params, const T* sliced, T* entire) {
+    FoldContiguousFullSliceDimensions(params);
+    SliceSwitchUtil<T>::SwitchLaunchSliceBackward(SwitchCase(params->ndim), ctx, *params, sliced,
                                                   entire);
   }
 };

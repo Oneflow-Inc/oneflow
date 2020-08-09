@@ -13,11 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/slice_util.h"
 
 namespace oneflow {
 
 namespace {
+
+bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
+  if (step != 1) { return false; }
+  if (start != 0) { return false; }
+  if (stop != std::numeric_limits<int64_t>::max()) { return false; }
+  return true;
+}
 
 Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
   const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
