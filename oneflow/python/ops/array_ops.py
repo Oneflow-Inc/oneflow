@@ -273,7 +273,7 @@ def slice(
     if not all(isinstance(s, int) or s is None for s in size):
         raise ValueError("element of size must be a int or None")
 
-    slice_tup_list = [(None, None, 1)] * ndim
+    slice_tup_list = []
     for b, s, dim_size in zip(begin, size, x.shape):
         start, stop, step = (None, None, 1)
         if b is not None:
@@ -282,10 +282,13 @@ def slice(
             start = b
 
         if s is not None:
-            if s <= 0 or s > dim_size:
-                raise ValueError("element of size is invalid")
-            if b + s < dim_size:
-                stop = b + s
+            if s == -1:
+                stop = dim_size
+            else:
+                if s <= 0 or s > dim_size:
+                    raise ValueError("element of size is invalid")
+                if b + s < dim_size:
+                    stop = b + s
 
         slice_tup_list.append((start, stop, step))
 
