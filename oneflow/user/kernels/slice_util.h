@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 #define ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 
-// #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/device/device_context.h"
 

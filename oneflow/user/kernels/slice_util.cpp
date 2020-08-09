@@ -14,27 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/slice_util.h"
+#include "oneflow/core/common/switch_func.h"
 
 namespace oneflow {
-
-namespace {
-
-using SliceIndexConverter = NdIndexOffsetHelper<int64_t, kSliceMaxDims>;
-
-int64_t SliceOffsetToEntireOffset(int64_t offset, const SliceParams& params,
-                                  const SliceIndexConverter& entire_idx_cvtr,
-                                  const SliceIndexConverter& sliced_idx_cvtr) {
-  int64_t nd_index[kSliceMaxDims] = {0};
-  sliced_idx_cvtr.OffsetToNdIndex(offset, nd_index, params.ndim);
-  for (int64_t i = 0; i < params.ndim; ++i) {
-    nd_index[i] = params.start[i] + params.step[i] * nd_index[i];
-    assert(nd_index[i] >= 0);
-    assert(nd_index[i] < params.dims[i]);
-  }
-  return entire_idx_cvtr.NdIndexToOffset(nd_index, params.ndim);
-}
-
-}  // namespace
 
 void FoldContiguousFullSliceDimensions(SliceParams* params) {
   int cur_dim = 0;
@@ -62,25 +44,49 @@ template<typename T>
 struct SliceKernelUtil<DeviceType::kCPU, T> {
   static void Forward(DeviceCtx* ctx, SliceParams* params, const T* entire, T* sliced) {
     FoldContiguousFullSliceDimensions(params);
-    int64_t elem_cnt = params->elem_cnt();
-    SliceIndexConverter entire_idx_cvtr(params->dims, params->ndim);
-    SliceIndexConverter sliced_idx_cvtr(params->size, params->ndim);
-    FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t offset = SliceOffsetToEntireOffset(i, *params, entire_idx_cvtr, sliced_idx_cvtr);
-      sliced[i] = entire[offset];
-    }
+    SwitchDoForward(SwitchCase(params->ndim), ctx, *params, entire, sliced);
   }
 
   static void Backward(DeviceCtx* ctx, SliceParams* params, const T* sliced, T* entire) {
     FoldContiguousFullSliceDimensions(params);
-    int64_t elem_cnt = params->elem_cnt();
-    SliceIndexConverter entire_idx_cvtr(params->dims, params->ndim);
-    SliceIndexConverter sliced_idx_cvtr(params->size, params->ndim);
+    SwitchDoBackward(SwitchCase(params->ndim), ctx, *params, sliced, entire);
+  }
+
+ private:
+  template<int NDIM>
+  static void DoForward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced) {
+    CHECK_EQ(params.ndim, NDIM);
+    int64_t elem_cnt = params.elem_cnt();
+    SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
+    SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
     FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t offset = SliceOffsetToEntireOffset(i, *params, entire_idx_cvtr, sliced_idx_cvtr);
+      int64_t offset = SliceOffsetToEntireOffset(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+      sliced[i] = entire[offset];
+    }
+  }
+
+  template<int NDIM>
+  static void DoBackward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire) {
+    CHECK_EQ(params.ndim, NDIM);
+    int64_t elem_cnt = params.elem_cnt();
+    SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
+    SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
+    FOR_RANGE(int, i, 0, elem_cnt) {
+      int64_t offset = SliceOffsetToEntireOffset(i, params, entire_idx_cvtr, sliced_idx_cvtr);
       entire[offset] = sliced[i];
     }
   }
+
+#define MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY(func_name, N) \
+  SliceKernelUtil<DeviceType::kCPU, T>::func_name<N>
+#define DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD(func_name)                  \
+  DEFINE_STATIC_SWITCH_FUNC(void, func_name, MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY, \
+                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+
+  DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD(DoForward);
+  DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD(DoBackward);
+#undef DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD
+#undef MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY
 };
 
 INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(DeviceType::kCPU)
