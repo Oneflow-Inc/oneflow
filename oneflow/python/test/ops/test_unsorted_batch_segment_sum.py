@@ -1,13 +1,30 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
+
 import test_global_storage
 from test_util import GenArgList
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_logical_view(flow.scope.consistent_view())
 
 
 def _check(test_case, data, segment_ids, out_shape, out):
@@ -46,15 +63,13 @@ def _gen_data(out_shape, num_segments, segment_ids_shape):
 
 def _make_unsoted_segment_sum_fn(device, data, segment_ids, num_segments):
     flow.clear_default_session()
-    func_config.train.primary_lr(1e-3)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def unsorted_batch_segment_sum_job(
-        data=flow.FixedTensorDef(data.shape, dtype=flow.float),
-        segment_ids=flow.FixedTensorDef(segment_ids.shape, dtype=flow.int32),
+        data: oft.Numpy.Placeholder(data.shape, dtype=flow.float),
+        segment_ids: oft.Numpy.Placeholder(segment_ids.shape, dtype=flow.int32),
     ):
-        with flow.fixed_placement(device, "0:0"):
+        with flow.scope.placement(device, "0:0"):
             x = flow.get_variable(
                 "data",
                 shape=data.shape,
@@ -65,7 +80,9 @@ def _make_unsoted_segment_sum_fn(device, data, segment_ids, num_segments):
             res = flow.math.unsorted_batch_segment_sum(
                 data=data, segment_ids=segment_ids, num_segments=num_segments
             )
-            flow.losses.add_loss(res)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(res)
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
             flow.watch_diff(res, test_global_storage.Setter("loss_diff"))
             return res

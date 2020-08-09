@@ -1,8 +1,25 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
+
 from test_util import GenArgList
 
 
@@ -41,19 +58,19 @@ def _test_unsorted_segment_sum_model_parallel_fw(
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     data_arr, segment_ids_arr, out_arr = _gen_test_data(
         out_shape, segment_ids_shape, axis
     )
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def unsorted_segment_sum_job(
-        data=flow.FixedTensorDef(data_arr.shape, dtype=flow.float),
-        segment_ids=flow.FixedTensorDef(segment_ids_arr.shape, dtype=flow.int32),
-        like=flow.FixedTensorDef(out_arr.shape, dtype=flow.float),
+        data: oft.Numpy.Placeholder(data_arr.shape, dtype=flow.float),
+        segment_ids: oft.Numpy.Placeholder(segment_ids_arr.shape, dtype=flow.int32),
+        like: oft.Numpy.Placeholder(out_arr.shape, dtype=flow.float),
     ):
-        with flow.fixed_placement(device_type, "0:0-3"):
+        with flow.scope.placement(device_type, "0:0-3"):
             if split_axis < axis:
                 data = data.with_distribute(flow.distribute.split(split_axis))
             elif split_axis == axis:
@@ -84,8 +101,6 @@ def _test_unsorted_segment_sum_model_parallel_fw(
 
 
 def test_unsorted_segment_sum_model_parallel_fw(test_case):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        return
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["out_shape"] = [(96, 96, 96)]

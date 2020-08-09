@@ -1,6 +1,20 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/operator/user_op_util.h"
-#include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/sbp_context.h"
@@ -262,7 +276,8 @@ void UserOp::InitFromOpConf() {
     EnrollRepeatedOutputBn(pair.first, pair.second.s_size());
   }
   EnrollTmpBn(GenRepeatedBn("tmp_buffer", 0));
-  val_ = user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
+  val_ =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf().user_conf().op_type_name());
   if (val_ != nullptr) {
     user_op::UserOpConfWrapper user_conf_wrapper(op_conf());
     user_op::GetInputArgModifier GetInputArgModifierFn =
@@ -295,16 +310,17 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   // tmp buffer size must be inferred after out shape/dtype
   UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
                                GetBlobDesc4BnInOp);
-  const user_op::KernelRegistrationVal* kernel_reg_val = JUST(user_op::LookUpInKernelRegistry(
-      op_conf().user_conf().op_type_name(),
-      UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx)));
+  const user_op::OpKernelRegistryResult* kernel_reg_val =
+      JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+          op_conf().user_conf().op_type_name(),
+          UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx)));
   CHECK_OR_RETURN(kernel_reg_val != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry !";
 
   size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(&infer_ctx);
   if (tmp_size > 0) {
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
-    CHECK(tmp_buffer_blob != nullptr);
+    CHECK_NOTNULL_OR_RETURN(tmp_buffer_blob);
     tmp_buffer_blob->set_data_type(DataType::kChar);
     tmp_buffer_blob->mut_shape() = Shape({static_cast<int64_t>(tmp_size)});
   }
@@ -464,8 +480,10 @@ Symbol<OperatorConf> UserOp::GetOpConfWithoutOpNameAndLbn() const {
 void UserOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
-    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
-  const UserOpCtx* user_op_ctx = static_cast<const UserOpCtx*>(op_ctx);
+    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
+    const ParallelDesc* parallel_desc) const {
+  const auto* user_op_ctx = dynamic_cast<const UserOpCtx*>(op_ctx);
+  CHECK_NOTNULL(user_op_ctx);
   auto user_conf = kernel_conf->mutable_user_conf();
   *(user_conf->mutable_parallel_ctx()) = *parallel_ctx;
   *(user_conf->mutable_sbp_sig()) = user_op_ctx->sbp_sig;
@@ -483,6 +501,8 @@ void UserOp::VirtualGenKernelConf(
   BLOB_DESCS_TO_PROTO(tmp, false)
 
 #undef BLOB_DESCS_TO_PROTO
+  CHECK_NOTNULL(parallel_desc);
+  *user_conf->mutable_parallel_conf() = parallel_desc->parallel_conf();
 }
 
 REGISTER_OP(OperatorConf::kUserConf, UserOp);

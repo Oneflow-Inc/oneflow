@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/vm/vm_resource_desc.msg.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/common/util.h"
@@ -32,8 +47,9 @@ void VmResourceDesc::GenerateParallelConf(const char* device_tag, ParallelConf* 
   CHECK(parallel_conf->device_name().empty());
   CHECK_GT(device_num_iter->second, 0);
   std::string device_num = std::to_string(device_num_iter->second - 1);
+  parallel_conf->set_device_tag(device_tag);
   FOR_RANGE(int, i, 0, machine_num()) {
-    parallel_conf->add_device_name(std::to_string(i) + ":" + device_tag + ":0-" + device_num);
+    parallel_conf->add_device_name(std::to_string(i) + ":0-" + device_num);
   }
 }
 

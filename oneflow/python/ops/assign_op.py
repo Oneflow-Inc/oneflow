@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import os
@@ -23,21 +38,14 @@ def assign(ref, value, dtype=None, name=None):
     if name is None:
         name = id_util.UniqueStr("Assign_")
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        op = (
-            oneflow.consistent_user_op_builder(name)
-            .Op("assign")
-            .Input("ref", [ref])
-            .Input("value", [value])
-            .Build()
-        )
-        op.InferAndTryRun()
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(op_conf, "name", name)
-        op_conf.assign_conf.ref = ref.unique_name
-        op_conf.assign_conf.value = value.unique_name
-        interpret_util.ConsistentForward(op_conf)
+    op = (
+        oneflow.consistent_user_op_builder(name)
+        .Op("assign")
+        .Input("ref", [ref])
+        .Input("value", [value])
+        .Build()
+    )
+    op.InferAndTryRun()
 
 
 @oneflow_export("system.assign")
@@ -55,7 +63,7 @@ def lazy_system_assign(ref, value, validate_shape=None, use_locking=None, name=N
     device_tag, machine_device_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
         ref.parallel_conf
     )
-    with oneflow.fixed_placement(device_tag, machine_device_ids):
+    with oneflow.scope.placement(device_tag, machine_device_ids):
         interpret_util.Forward(op_conf)
     return ref
 

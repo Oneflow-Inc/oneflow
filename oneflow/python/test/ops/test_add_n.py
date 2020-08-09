@@ -1,16 +1,33 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
+from typing import Tuple
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 
 def test_naive(test_case):
-    @flow.global_function(func_config)
-    def AddJob(xs=[flow.FixedTensorDef((5, 2))] * 3):
+    @flow.global_function(function_config=func_config)
+    def AddJob(xs: Tuple[(oft.Numpy.Placeholder((5, 2)),) * 3]):
         return flow.math.add_n(xs)
 
-    inputs = [np.random.rand(5, 2).astype(np.float32) for i in range(3)]
+    inputs = tuple(np.random.rand(5, 2).astype(np.float32) for i in range(3))
     r = AddJob(inputs).get().numpy()
     test_case.assertTrue(np.allclose(r, sum(inputs)))
 
@@ -80,10 +97,10 @@ def test_100_inputs(test_case):
 
 
 def GenerateTest(test_case, shape, num_inputs):
-    @flow.global_function(func_config)
-    def AddJob(xs=[flow.FixedTensorDef(shape)] * num_inputs):
+    @flow.global_function(function_config=func_config)
+    def AddJob(xs: Tuple[(oft.Numpy.Placeholder(shape),) * num_inputs]):
         return flow.math.add_n(xs)
 
-    inputs = [np.random.rand(*shape).astype(np.float32) for i in range(num_inputs)]
+    inputs = tuple(np.random.rand(*shape).astype(np.float32) for i in range(num_inputs))
     r = AddJob(inputs).get().numpy()
     test_case.assertTrue(np.allclose(r, sum(inputs)))

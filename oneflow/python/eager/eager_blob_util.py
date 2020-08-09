@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import oneflow.python.eager.blob_cache as blob_cache_util
@@ -65,8 +80,14 @@ class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 def FetchTensorBlobAsNumpyList(parallel_size, blob_object):
     def AsyncFetchBlobBody(Yield):
         fetcher = _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield)
-        vm_util.PhysicalRun(lambda builder: builder.FetchBlobBody(blob_object, fetcher))
-        python_callback.DeleteRegisteredCallback(fetcher)
+
+        def BuildFetchBlobBodyInstruction(builder):
+            builder.FetchBlobBody(blob_object, fetcher)
+            builder.InsertRemoveForeignCallbackInstruction(
+                blob_object.object_id, fetcher
+            )
+
+        vm_util.PhysicalRun(BuildFetchBlobBodyInstruction)
 
     return async_util.Await(parallel_size, AsyncFetchBlobBody)
 
@@ -84,10 +105,14 @@ def _GetPhysicalBlobBodyCache(blob_object):
 def _FetchBlobHeader(blob_object):
     def AsyncFetchBlobHeader(Yield):
         fetcher = _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield)
-        vm_util.PhysicalRun(
-            lambda builder: builder.FetchBlobHeader(blob_object, fetcher)
-        )
-        python_callback.DeleteRegisteredCallback(fetcher)
+
+        def BuildFetchBlobHeaderInstruction(builder):
+            builder.FetchBlobHeader(blob_object, fetcher)
+            builder.InsertRemoveForeignCallbackInstruction(
+                blob_object.object_id, fetcher
+            )
+
+        vm_util.PhysicalRun(BuildFetchBlobHeaderInstruction)
 
     return async_util.Await(1, AsyncFetchBlobHeader)[0]
 

@@ -1,5 +1,20 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/framework/op_registration.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/framework/user_op_def.h"
@@ -134,8 +149,7 @@ bool UserOpWrapper::NeedGenGradTensor4OpInput(const std::string& input_arg_name,
   return diff_fn_(GenRepeatedBn(input_arg_name, index)) != nullptr;
 }
 
-std::string UserOpWrapper::GetGradTensorWithOpOutput(const std::string& output_arg_name,
-                                                     int32_t index) const {
+std::string UserOpWrapper::output_grad(const std::string& output_arg_name, int32_t index) const {
   auto it = op_conf().user_conf().output().find(output_arg_name);
   CHECK(it != op_conf().user_conf().output().end())
       << "arg_name: " << output_arg_name << ", index: " << index;
@@ -144,24 +158,45 @@ std::string UserOpWrapper::GetGradTensorWithOpOutput(const std::string& output_a
   return GenLogicalBlobName(*diff_fn_(GenRepeatedBn(output_arg_name, index)));
 }
 
-void UserOpWrapper::BindGradTensorWithOpInput(const std::string logical_grad_blob_name,
+std::string UserOpWrapper::GetGradTensorWithOpOutput(const std::string& output_arg_name,
+                                                     int32_t index) const {
+  return output_grad(output_arg_name, index);
+}
+
+void UserOpWrapper::BindGradTensorWithOpInput(const std::string& logical_grad_blob_name,
                                               const std::string& input_arg_name,
                                               int32_t index) const {
   CHECK(NeedGenGradTensor4OpInput(input_arg_name, index));
   *diff_fn_(GenRepeatedBn(input_arg_name, index)) = GenLogicalBlobId(logical_grad_blob_name);
 }
 
-const TensorDesc& UserOpWrapper::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                            int32_t index) const {
+const TensorDesc& UserOpWrapper::arg_tensor_desc(const std::string& arg_name, int32_t index) const {
   std::string bn = GenRepeatedBn(arg_name, index);
   CHECK(bn2tensor_desc_.find(bn) != bn2tensor_desc_.end());
   return bn2tensor_desc_.at(bn);
 }
 
-UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Input(const std::string& arg_name,
-                                                          const std::string& logical_blob_name) {
+const TensorDesc& UserOpWrapper::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                            int32_t index) const {
+  return arg_tensor_desc(arg_name, index);
+}
+
+void UserOpWrapper::InputGradBind(const user_op::OpArg& input,
+                                  const UserOpInputGradGetFn& grad_fn) {
+  if (NeedGenGradTensor4OpInput(input.name(), input.index())) {
+    BindGradTensorWithOpInput(grad_fn(), input.name(), input.index());
+  }
+}
+
+UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::InputBind(
+    const std::string& arg_name, const std::string& logical_blob_name) {
   input_[arg_name].push_back(logical_blob_name);
   return *this;
+}
+
+UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Input(const std::string& arg_name,
+                                                          const std::string& logical_blob_name) {
+  return InputBind(arg_name, logical_blob_name);
 }
 
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& arg_name) {
@@ -197,9 +232,35 @@ UserOpConfWrapper UserOpConfWrapperBuilder::Build() {
   return wrapper_;
 }
 
-}  // namespace user_op
+void BackwardOpConfContext::DefineOp(const std::string& op_name, const BackwardOpBuilderFn& fn) {
+  auto it = op_builder_fns_.find(op_name);
+  CHECK(it == op_builder_fns_.end()) << " op_name " << op_name << " has been defined.";
+  op_builder_fns_[op_name] = fn;
+}
 
-namespace {
+UserOpConfWrapper& BackwardOpConfContext::GetOp(const std::string& op_name) {
+  auto it = op_builder_results_.find(op_name);
+  if (it != op_builder_results_.end()) {
+    // return result from cache
+    return it->second;
+  } else {
+    // build and put result into cache
+    auto fn_it = op_builder_fns_.find(op_name);
+    CHECK(fn_it != op_builder_fns_.end()) << " op_name " << op_name << " has no builder function.";
+    CHECK(fn_it->second != nullptr) << " op_name " << op_name << " builder function is null.";
+    UserOpConfWrapperBuilder builder(op_name);
+    auto ret =
+        op_builder_results_.emplace(std::make_pair(op_name, std::move(fn_it->second(builder))));
+    CHECK(ret.second == true) << " op_name " << op_name << " build result insert failed.";
+
+    // add new op conf
+    bw_op_confs_->push_back(ret.first->second.op_conf());
+
+    return ret.first->second;
+  }
+}
+
+}  // namespace user_op
 
 Maybe<void> CheckArgDefIsValidInUserOpConf(
     const OperatorConf& op_conf, const PbMap<std::string, UserOpConf_ListString>& arg_name2lbns,
@@ -279,11 +340,10 @@ Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf*
   return Maybe<void>::Ok();
 }
 
-}  // namespace
-
 Maybe<long long> GetUserOpAttrTypeImpl(const std::string& op_type_name,
                                        const std::string& attr_name) {
-  const user_op::OpRegistrationVal* val = user_op::LookUpInOpRegistry(op_type_name);
+  const user_op::OpRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
   CHECK_OR_RETURN(val) << " Cannot find op " << op_type_name;
   const UserOpDef& op_def = val->op_def;
   for (int32_t i = 0; i < op_def.attr_size(); ++i) {
@@ -296,7 +356,8 @@ Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf) 
   CHECK_OR_RETURN(op_conf.has_user_conf()) << " Add default value only for user op";
   OperatorConf ret = op_conf;
   UserOpConf* user_conf = ret.mutable_user_conf();
-  const user_op::OpRegistrationVal* val = user_op::LookUpInOpRegistry(user_conf->op_type_name());
+  const user_op::OpRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_conf->op_type_name());
   CHECK_OR_RETURN(val) << " Cannot find op_type_name: " << user_conf->op_type_name();
   const UserOpDef& op_def = val->op_def;
 

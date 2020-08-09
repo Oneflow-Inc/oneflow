@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/vm/host_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
@@ -14,6 +29,8 @@ namespace oneflow {
 namespace vm {
 
 namespace {
+
+#ifdef WITH_CUDA
 
 class CudaMallocHostInstructionType final : public InstructionType {
  public:
@@ -55,6 +72,8 @@ class CudaMallocHostInstructionType final : public InstructionType {
 };
 COMMAND(RegisterInstructionType<CudaMallocHostInstructionType>("CudaMallocHost"));
 
+#endif  // WITH_CUDA
+
 class MallocInstructionType final : public InstructionType {
  public:
   MallocInstructionType() = default;
@@ -93,6 +112,8 @@ class MallocInstructionType final : public InstructionType {
 };
 COMMAND(RegisterInstructionType<MallocInstructionType>("Malloc"));
 
+#ifdef WITH_CUDA
+
 class CudaFreeHostInstructionType final : public InstructionType {
  public:
   CudaFreeHostInstructionType() = default;
@@ -126,6 +147,8 @@ class CudaFreeHostInstructionType final : public InstructionType {
   }
 };
 COMMAND(RegisterInstructionType<CudaFreeHostInstructionType>("CudaFreeHost"));
+
+#endif  // WITH_CUDA
 
 class FreeInstructionType final : public InstructionType {
  public:

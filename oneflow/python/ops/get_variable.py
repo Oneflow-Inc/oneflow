@@ -1,42 +1,53 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
+from typing import Optional, Sequence
+from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
-import oneflow.python.framework.device_util as device_util
-import oneflow.python.framework.op_arg_util as op_arg_util
-import oneflow.python.framework.id_util as id_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.dtype as dtype_util
-import oneflow.python.ops.user_op_builder as user_op_builder_util
 import oneflow.python.eager.vm_util as vm_util
-import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.lib.core.enable_if as enable_if
-from oneflow.python.oneflow_export import oneflow_export
 import oneflow
-
 import os
 
 
 @oneflow_export("get_variable")
 def api_get_variable(
-    name,
-    shape=None,
-    dtype=dtype_util.float32,
-    initializer=None,
-    regularizer=None,
-    trainable=None,
-    model_name=None,
-    random_seed=None,
-    distribute=distribute_util.broadcast(),
-):
+    name: str,
+    shape: Optional[Sequence[int]] = None,
+    dtype: Optional[dtype_util.dtype] = dtype_util.float32,
+    initializer: Optional[op_conf_util.InitializerConf] = None,
+    regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    trainable: Optional[bool] = None,
+    model_name: Optional[str] = None,
+    random_seed: Optional[int] = None,
+    distribute: distribute_util.Distribute = distribute_util.broadcast(),
+    reuse: bool = True,
+) -> remote_blob_util.BlobDef:
     r"""Create a variable or retrieve an existing one.
 
     Args:
@@ -47,7 +58,6 @@ def api_get_variable(
         trainable: A `bool` to indicate if this variable is trainable. `True` by defauilt
         model_name: A `string`. `'weight'` or `'bias'`. `None` by defauilt
         random_seed: Random seed for random initializers. `None` by defauilt
-
     """
     api = enable_if.unique([get_lazy_variable, get_eager_variable])
     return api(
@@ -60,6 +70,7 @@ def api_get_variable(
         model_name=model_name,
         random_seed=random_seed,
         distribute=distribute,
+        reuse=reuse,
     )
 
 
@@ -74,6 +85,7 @@ def get_eager_variable(
     model_name=None,
     random_seed=None,
     distribute=distribute_util.broadcast(),
+    reuse=True,
 ):
     assert isinstance(name, str)
     assert isinstance(
@@ -84,6 +96,13 @@ def get_eager_variable(
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_ctx.GetDefaultSession()
     var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
+
+    if reuse is False:
+        assert job_var_blob is None, (
+            "varaible '{}' already exists, "
+            "getting the same variable is not allowed "
+            "when reuse is False".format(name)
+        )
 
     if job_var_blob is None:
         op_conf = _GenerateVariableOpConf(
@@ -100,22 +119,18 @@ def get_eager_variable(
         op_attribute = compile_context.CurJobAddConsistentOp(op_conf)
         if var_blob is None:
             var_blob = _CreateEagerVariableBlob(op_attribute)
-            op_executor.EagerInitVariableBlob(op_conf, var_blob)
-        job_var_blob = var_blob
+            op_executor.EagerInitVariableBlob(sess, op_conf, var_blob)
+
+        assert isinstance(var_blob, remote_blob_util.EagerConsistentBlob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
     else:
-        assert var_blob is not None
+        assert isinstance(job_var_blob, remote_blob_util.EagerConsistentBlob)
+        assert isinstance(var_blob, remote_blob_util.EagerConsistentBlob)
+        assert var_blob.IdenticalTo(job_var_blob)
+
     bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
     bw_blob_register.TrySetObject4BlobName(
         var_blob.logical_blob_name, var_blob.blob_object
-    )
-    assert var_blob.shape == job_var_blob.shape, "%s v.s. %s" % (
-        var_blob.shape,
-        job_var_blob.shape,
-    )
-    assert var_blob.dtype == job_var_blob.dtype, "%s v.s. %s" % (
-        var_blob.dtype,
-        job_var_blob.dtype,
     )
     return var_blob
 
@@ -131,6 +146,7 @@ def get_lazy_variable(
     model_name=None,
     random_seed=None,
     distribute=distribute_util.broadcast(),
+    reuse=True,
 ):
     assert isinstance(name, str)
     assert isinstance(
@@ -141,6 +157,13 @@ def get_lazy_variable(
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_ctx.GetDefaultSession()
     var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
+
+    if reuse is False:
+        assert job_var_blob is None, (
+            "varaible '{}' already exists, "
+            "getting the same variable is not allowed "
+            "when param reuse is False".format(name)
+        )
 
     if job_var_blob is None:
         op_conf = _GenerateVariableOpConf(
@@ -155,19 +178,16 @@ def get_lazy_variable(
             distribute=distribute,
         )
         job_var_blob = _CreateVariableBlob(op_conf)
+        assert isinstance(job_var_blob, remote_blob_util.LazyConsistentBlob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, job_var_blob)
-        if var_blob is None:
-            var_blob = job_var_blob
+        if var_blob is not None:
+            assert isinstance(var_blob, remote_blob_util.LazyConsistentBlob)
+            assert var_blob.IdenticalTo(job_var_blob)
     else:
-        assert var_blob is not None
-    assert var_blob.shape == job_var_blob.shape, "%s v.s. %s" % (
-        var_blob.shape,
-        job_var_blob.shape,
-    )
-    assert var_blob.dtype == job_var_blob.dtype, "%s v.s. %s" % (
-        var_blob.dtype,
-        job_var_blob.dtype,
-    )
+        assert isinstance(job_var_blob, remote_blob_util.LazyConsistentBlob)
+        assert isinstance(var_blob, remote_blob_util.LazyConsistentBlob)
+        assert var_blob.IdenticalTo(job_var_blob)
+
     return job_var_blob
 
 
@@ -187,7 +207,7 @@ def _GenerateVariableOpConf(
     op_conf.variable_conf.shape.dim.extend(shape)
 
     assert dtype is not None
-    op_conf.variable_conf.data_type = dtype
+    op_conf.variable_conf.data_type = dtype.oneflow_proto_dtype
 
     root_path = (
         compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
@@ -236,7 +256,9 @@ def _CreateEagerVariableBlob(op_attribute):
     bn_in_op2blob_object = {}
 
     def BuildInstruction(builder):
-        parallel_conf = oneflow.placement.current_scope().default_parallel_conf
+        parallel_conf = (
+            oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
+        )
         builder.StatelessCall(
             op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
         )

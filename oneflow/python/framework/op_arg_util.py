@@ -1,7 +1,23 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow.core.job.mirrored_parallel_pb2 as mirrored_parallel_pb
+from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 
 
 class OpArgBlobAttribute(object):
@@ -11,13 +27,23 @@ class OpArgBlobAttribute(object):
         self.shape_ = tuple(self.blob_desc_.body.shape.dim)
         self.logical_blob_name_ = logical_blob_name
 
+    def __eq__(self, rhs):
+        return (
+            self.shape == rhs.shape
+            and self.dtype == rhs.dtype
+            and self.batch_axis == rhs.batch_axis
+            and self.is_tensor_list == rhs.is_tensor_list
+            and self.is_dynamic == rhs.is_dynamic
+            and self.logical_blob_name == rhs.logical_blob_name
+        )
+
     @property
     def shape(self):
         return self.shape_
 
     @property
     def dtype(self):
-        return self.blob_desc_.body.data_type
+        return convert_proto_dtype_to_oneflow_dtype(self.blob_desc_.body.data_type)
 
     @property
     def batch_axis(self):
@@ -34,6 +60,14 @@ class OpArgBlobAttribute(object):
     @property
     def logical_blob_name(self):
         return self.logical_blob_name_
+
+    def DumpToOpNodeSignature(self, bn_in_op, op_node_signature):
+        blob_sig = op_node_signature.logical_blob_desc_signature.bn_in_op2blob_desc
+        assert bn_in_op not in blob_sig
+        blob_sig[bn_in_op].CopyFrom(self.blob_desc_)
+        batch_axis_sig = op_node_signature.batch_axis_signature.bn_in_op2batch_axis
+        assert bn_in_op not in batch_axis_sig
+        batch_axis_sig[bn_in_op].CopyFrom(self.batch_axis_)
 
 
 class OpArgParallelAttribute(object):
@@ -62,6 +96,21 @@ class OpArgParallelAttribute(object):
         self.__init__(
             other.parallel_desc_symbol, other.sbp_parallel, other.opt_mirrored_parallel
         )
+
+    def DumpToOpNodeSignature(self, bn_in_op, op_node_signature):
+        sbp_sig = op_node_signature.sbp_signature.bn_in_op2sbp_parallel
+        assert bn_in_op not in sbp_sig
+        sbp_sig[bn_in_op].CopyFrom(self.sbp_parallel)
+        mirrored_sig = (
+            op_node_signature.mirrored_signature.bn_in_op2opt_mirrored_parallel
+        )
+        assert bn_in_op not in mirrored_sig
+        mirrored_sig[bn_in_op].CopyFrom(self.opt_mirrored_parallel)
+        parallel_sig = (
+            op_node_signature.parallel_signature.bn_in_op2parallel_desc_symbol_id
+        )
+        assert bn_in_op not in parallel_sig
+        parallel_sig[bn_in_op] = self.parallel_desc_symbol.symbol_id
 
     def __hash__(self):
         return self.hash_

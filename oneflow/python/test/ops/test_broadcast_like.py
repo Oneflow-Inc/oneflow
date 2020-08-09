@@ -1,11 +1,26 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-import oneflow.core.common.data_type_pb2 as data_type_util
 import tensorflow as tf
 from test_util import GenArgList
+import oneflow.typing as oft
 
 
 def compare_broadcast_like_with_tf(
@@ -16,12 +31,12 @@ def compare_broadcast_like_with_tf(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def broadcast_like_forward(
-        x=flow.FixedTensorDef(shape=input_shape, dtype=data_type_util.kFloat),
-        y=flow.FixedTensorDef(shape=like_shape, dtype=data_type_util.kFloat),
+        x: oft.Numpy.Placeholder(shape=input_shape, dtype=flow.float),
+        y: oft.Numpy.Placeholder(shape=like_shape, dtype=flow.float),
     ):
-        with flow.fixed_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.broadcast_like(x, y, broadcast_axes=broadcast_axes)
 
     x = np.random.rand(*input_shape).astype(np.float32)

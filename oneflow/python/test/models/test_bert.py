@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import copy
 import sys
 
@@ -5,6 +20,8 @@ import numpy as np
 import oneflow as flow
 from absl import flags
 from pretrain import PreTrain
+import unittest
+import os
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("data_dir", "/dataset/bert/bert_seq_len_128_repeat1024", "")
@@ -38,22 +55,45 @@ def _blob_conf(name, shape, dtype=flow.int32):
 def BertDecoder(
     data_dir, batch_size=1, data_part_num=1, seq_length=128, max_predictions_per_seq=20
 ):
-    blob_confs = []
-    blob_confs.append(_blob_conf("input_ids", [seq_length]))
-    blob_confs.append(_blob_conf("next_sentence_labels", [1]))
-    blob_confs.append(_blob_conf("input_mask", [seq_length]))
-    blob_confs.append(_blob_conf("segment_ids", [seq_length]))
-    blob_confs.append(_blob_conf("masked_lm_ids", [max_predictions_per_seq]))
-    blob_confs.append(_blob_conf("masked_lm_positions", [max_predictions_per_seq]))
-    blob_confs.append(
-        _blob_conf("masked_lm_weights", [max_predictions_per_seq], flow.float)
+    ofrecord = flow.data.ofrecord_reader(
+        data_dir, batch_size=batch_size, data_part_num=data_part_num, name="decode",
     )
-    return flow.data.decode_ofrecord(
-        data_dir,
-        blob_confs,
-        batch_size=batch_size,
-        name="decode",
-        data_part_num=data_part_num,
+    input_ids = flow.data.ofrecord_raw_decoder(
+        ofrecord, "input_ids", shape=(seq_length,), dtype=flow.int32
+    )
+    next_sentence_labels = flow.data.ofrecord_raw_decoder(
+        ofrecord, "next_sentence_labels", shape=(1,), dtype=flow.int32
+    )
+    input_mask = flow.data.ofrecord_raw_decoder(
+        ofrecord, "input_mask", shape=(seq_length,), dtype=flow.int32
+    )
+    segment_ids = flow.data.ofrecord_raw_decoder(
+        ofrecord, "segment_ids", shape=(seq_length,), dtype=flow.int32
+    )
+    masked_lm_ids = flow.data.ofrecord_raw_decoder(
+        ofrecord, "masked_lm_ids", shape=(max_predictions_per_seq,), dtype=flow.int32
+    )
+    masked_lm_positions = flow.data.ofrecord_raw_decoder(
+        ofrecord,
+        "masked_lm_positions",
+        shape=(max_predictions_per_seq,),
+        dtype=flow.int32,
+    )
+    masked_lm_weights = flow.data.ofrecord_raw_decoder(
+        ofrecord,
+        "masked_lm_weights",
+        shape=(max_predictions_per_seq,),
+        dtype=flow.float,
+    )
+
+    return (
+        input_ids,
+        next_sentence_labels,
+        input_mask,
+        segment_ids,
+        masked_lm_ids,
+        masked_lm_positions,
+        masked_lm_weights,
     )
 
 
@@ -73,10 +113,24 @@ def BuildPreTrainNet(
 
     hidden_size = 64 * num_attention_heads
     intermediate_size = hidden_size * 4
-
-    decoders = BertDecoder(
-        FLAGS.data_dir, batch_size, data_part_num, seq_length, max_predictions_per_seq
-    )
+    if data_part_num == 1:
+        with flow.scope.placement("cpu", "0:0"):
+            decoders = BertDecoder(
+                FLAGS.data_dir,
+                batch_size,
+                data_part_num,
+                seq_length,
+                max_predictions_per_seq,
+            )
+    else:
+        assert data_part_num > 1
+        decoders = BertDecoder(
+            FLAGS.data_dir,
+            batch_size,
+            data_part_num,
+            seq_length,
+            max_predictions_per_seq,
+        )
 
     input_ids = decoders[0]
     next_sentence_labels = decoders[1]
@@ -109,22 +163,22 @@ def BuildPreTrainNet(
     )
 
 
-_BERT_MODEL_UPDATE_CONF = dict(
-    learning_rate_decay=dict(
-        polynomial_conf=dict(decay_batches=100000, end_learning_rate=0.0)
-    ),
-    warmup_conf=dict(linear_conf=dict(warmup_batches=1000, start_multiplier=0)),
-    clip_conf=dict(clip_by_global_norm=dict(clip_norm=1.0)),
-    adam_conf=dict(epsilon=1e-6),
-    weight_decay_conf=dict(
-        weight_decay_rate=FLAGS.weight_decay_rate,
-        excludes=dict(pattern=["bias", "LayerNorm", "layer_norm"]),
-    ),
-)
+def CreateOptimizer():
+    lr_warmup = flow.optimizer.warmup.linear(1000, 0)
+    lr_scheduler = flow.optimizer.PolynomialSchduler(
+        FLAGS.lr, 100000, 0.0, warmup=lr_warmup
+    )
+    return flow.optimizer.AdamW(
+        lr_scheduler,
+        epsilon=1e-6,
+        weight_decay=FLAGS.weight_decay_rate,
+        weight_decay_excludes=["bias", "LayerNorm", "layer_norm"],
+        grad_clipping=flow.optimizer.grad_clipping.by_global_norm(1.0),
+    )
 
 
 def PretrainJob():
-    loss = BuildPreTrainNet(
+    total_loss = BuildPreTrainNet(
         batch_size=FLAGS.batch_size,
         data_part_num=FLAGS.data_part_num,
         seq_length=FLAGS.seq_length,
@@ -137,46 +191,55 @@ def PretrainJob():
         type_vocab_size=FLAGS.type_vocab_size,
         max_predictions_per_seq=FLAGS.max_predictions_per_seq,
     )
-    flow.losses.add_loss(loss)
-    return loss
+    opt = CreateOptimizer()
+    opt.minimize(total_loss)
+    return total_loss
 
 
 func_config = flow.FunctionConfig()
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-func_config.train.primary_lr(FLAGS.lr)
-func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
+func_config.default_logical_view(flow.scope.consistent_view())
 func_config.enable_auto_mixed_precision(FLAGS.enable_auto_mixed_precision)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n1c(test_case):
     flow.config.enable_debug_mode(True)
     flow.config.gpu_device_num(1)
-    pretrain_job = flow.global_function(func_config)(PretrainJob)
+    pretrain_job = flow.global_function(type="train", function_config=func_config)(
+        PretrainJob
+    )
     check_point = flow.train.CheckPoint()
     check_point.load(FLAGS.model_load_dir)
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n4c(test_case):
     flow.config.gpu_device_num(4)
-    pretrain_job = flow.global_function(func_config)(PretrainJob)
+    pretrain_job = flow.global_function(type="train", function_config=func_config)(
+        PretrainJob
+    )
     check_point = flow.train.CheckPoint()
     check_point.load(FLAGS.model_load_dir)
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.num_nodes_required(2)
 def test_2n8c(test_case):
     flow.config.gpu_device_num(4)
-    pretrain_job = flow.global_function(func_config)(PretrainJob)
+    pretrain_job = flow.global_function(type="train", function_config=func_config)(
+        PretrainJob
+    )
     check_point = flow.train.CheckPoint()
     check_point.load(FLAGS.model_load_dir)
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_inplace(test_case):
     test_case.assertTrue(
         np.allclose(GetSeveralLossesAsNumpy(True), GetSeveralLossesAsNumpy(False))
@@ -187,12 +250,10 @@ def GetSeveralLossesAsNumpy(enable_inplace, num_iters=10):
     flow.config.enable_debug_mode(True)
     flow.config.gpu_device_num(1)
     train_config = flow.FunctionConfig()
-    train_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    train_config.train.primary_lr(FLAGS.lr)
-    train_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
+    train_config.default_logical_view(flow.scope.consistent_view())
     train_config.enable_inplace(enable_inplace)
 
-    @flow.global_function(train_config)
+    @flow.global_function(type="train", function_config=train_config)
     def PretrainJob():
         loss = BuildPreTrainNet(
             batch_size=FLAGS.batch_size,
@@ -207,7 +268,7 @@ def GetSeveralLossesAsNumpy(enable_inplace, num_iters=10):
             type_vocab_size=FLAGS.type_vocab_size,
             max_predictions_per_seq=FLAGS.max_predictions_per_seq,
         )
-        flow.losses.add_loss(loss)
+        CreateOptimizer().minimize(loss)
         return loss
 
     check_point = flow.train.CheckPoint()

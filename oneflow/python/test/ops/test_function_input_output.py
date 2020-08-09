@@ -1,10 +1,27 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
+from typing import Tuple
 
 
 def test_FixedTensorDef(test_case):
     @flow.global_function()
-    def Foo(x=flow.FixedTensorDef((2, 5))):
+    def Foo(x: oft.Numpy.Placeholder((2, 5))):
         return x
 
     data = np.ones((2, 5), dtype=np.float32)
@@ -16,7 +33,7 @@ def test_FixedTensorDef(test_case):
 
 def test_FixedTensorDef_batch_axis(test_case):
     @flow.global_function()
-    def Foo(x=flow.FixedTensorDef((2, 5), batch_axis=1)):
+    def Foo(x: oft.Numpy.Placeholder((2, 5), batch_axis=1)):
         test_case.assertEqual(x.batch_axis, 1)
         return x
 
@@ -26,7 +43,7 @@ def test_FixedTensorDef_batch_axis(test_case):
 
 def test_FixedTensorDef_no_batch_axis(test_case):
     @flow.global_function()
-    def Foo(x=flow.FixedTensorDef((2, 5), batch_axis=None)):
+    def Foo(x: oft.Numpy.Placeholder((2, 5), batch_axis=None)):
         test_case.assertTrue(x.batch_axis is None)
         return x
 
@@ -38,7 +55,7 @@ def test_FixedTensorDef_2_device(test_case):
     flow.config.gpu_device_num(2)
 
     @flow.global_function()
-    def Foo(x=flow.FixedTensorDef((2, 5))):
+    def Foo(x: oft.Numpy.Placeholder((2, 5))):
         return x
 
     data = np.ones((2, 5), dtype=np.float32)
@@ -49,8 +66,11 @@ def test_FixedTensorDef_2_device(test_case):
 
 
 def test_MirroredTensorDef(test_case):
-    @flow.global_function()
-    def Foo(x=flow.MirroredTensorDef((2, 5))):
+    func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.mirrored_view())
+
+    @flow.global_function(function_config=func_config)
+    def Foo(x: oft.ListNumpy.Placeholder((2, 5))):
         return x
 
     data = np.ones((1, 5), dtype=np.float32)
@@ -60,8 +80,11 @@ def test_MirroredTensorDef(test_case):
 
 
 def test_MirroredTensorListDef(test_case):
-    @flow.global_function()
-    def Foo(x=flow.MirroredTensorListDef((2, 5))):
+    func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.mirrored_view())
+
+    @flow.global_function(function_config=func_config)
+    def Foo(x: oft.ListListNumpy.Placeholder((2, 5))):
         return x
 
     data = np.ones((1, 5), dtype=np.float32)
@@ -74,15 +97,17 @@ def test_MirroredTensorListDef(test_case):
 def test_MirroredTensorDef_4_device(test_case):
     num_gpus = 4
     flow.config.gpu_device_num(num_gpus)
+    func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     image_shape = (64, 3, 224, 224)
     label_shape = (64, 1)
 
-    @flow.global_function()
+    @flow.global_function(function_config=func_config)
     def Foo(
-        image_label=[
-            flow.MirroredTensorDef(image_shape),
-            flow.MirroredTensorDef(label_shape),
+        image_label: Tuple[
+            oft.ListNumpy.Placeholder(image_shape),
+            oft.ListNumpy.Placeholder(label_shape),
         ]
     ):
         return image_label
@@ -92,7 +117,7 @@ def test_MirroredTensorDef_4_device(test_case):
     ]
     images = ndarray_lst(image_shape)
     labels = ndarray_lst(label_shape)
-    inputs = [images, labels]
+    inputs = (images, labels)
 
     outputs = [output.numpy_list() for output in Foo(inputs).get()]
     test_case.assertEqual(len(outputs), len(inputs))

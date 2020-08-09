@@ -1,100 +1,163 @@
 name: Build and Test CI
 
 on:
-    pull_request:
-      types: [synchronize, opened, reopened, ready_for_review]
-      branches:
-        - develop
-      paths-ignore:
-        - '**.md'
-        - '.gitignore'
-
+  pull_request:
+    types: [synchronize, opened, reopened, ready_for_review]
+    branches:
+      - master
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+  workflow_dispatch:
+    inputs:
+      placeholder:
+        description: 'placeholder, no effect'
+        required: false
 jobs:
 
   build_and_test:
 
-    runs-on: [self-hosted, linux]
+    runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
+    - name: Clean environment
+      run: |
+        rm -rf build/third_party
+        bash ci/build/clean.sh
     - uses: actions/checkout@v2
-    - name: Check C++ format
+    - name: Check license (please run 'make of_format' if failed)
+      run: |
+        python3 ci/check/run_license_format.py -i oneflow -c
+    - name: Check C++ format (please run 'make of_format' if failed)
       run: |
         python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
-    - name: Check python format
+    - name: Check python format (please run 'make of_format' if failed)
       run: |
         docker run --rm -v $PWD:$PWD --entrypoint "/bin/sh" cytopia/black@sha256:ea649b81bf6a64aaa34f4abba803da83528135b5d12bed9b485bcabb37480d33 -c "python3 $PWD/ci/check/run_py_format.py --source_dir $PWD/oneflow/python"
     - name: Setup environment
       run: |
         echo $HOSTNAME
-        rm -rf ci_tmp
-        mkdir ci_tmp
-        rm -rf build/third_party
         bash ci/setup_submodule.sh
     - name: Checkout submodules
       shell: bash
       run: |
         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
-    - name: Build OneFlow base
-      run: |
-        git_hash=$(git rev-parse --short "$GITHUB_SHA")
-        git_branch=${GITHUB_REF##*/}
-        docker build --rm \
-          --build-arg http_proxy=${ONEFLOW_CI_HTTP_PROXY} --build-arg https_proxy=${ONEFLOW_CI_HTTPS_PROXY} \
-          -t oneflow-build-base:${git_branch} -t oneflow-build-base:${git_hash} \
-          -f docker/ci/base/Dockerfile .
-    - name: Build OneFlow third party
-      run: |
-        git_hash=$(git rev-parse --short "$GITHUB_SHA")
-        git_branch=${GITHUB_REF##*/}
-        docker build --rm \
-          --build-arg "from=oneflow-build-base:${git_hash}" \
-          --build-arg http_proxy=${ONEFLOW_CI_HTTP_PROXY} --build-arg https_proxy=${ONEFLOW_CI_HTTPS_PROXY} \
-          -t oneflow-build-third-party:${git_branch} -t oneflow-build-third-party:${git_hash} \
-          -f docker/ci/third_party/Dockerfile .
     - name: Build OneFlow
       run: |
-        git_hash=$(git rev-parse --short "$GITHUB_SHA")
-        git_branch=${GITHUB_REF##*/}
-        docker build --rm \
-          --build-arg "from=oneflow-build-third-party:${git_hash}" \
-          --build-arg http_proxy=${ONEFLOW_CI_HTTP_PROXY} --build-arg https_proxy=${ONEFLOW_CI_HTTPS_PROXY} \
-          -t oneflow-build-make:${git_hash} -f docker/ci/make/Dockerfile .
-        docker run -u $(id -u ${USER}):$(id -g ${USER}) --shm-size=8g --rm \
-          -v $PWD:$PWD oneflow-build-make:${git_hash} \
-          bash -c "cp /workspace/*.whl $PWD/ci_tmp/ && cp /workspace/oneflow_testexe $PWD/ci_tmp/"
-    - name: Teardown
-      run: |
-        git_hash=$(git rev-parse --short "$GITHUB_SHA")
-        git_branch=${GITHUB_REF##*/}
-        docker rmi oneflow-build-base:${git_hash}
-        docker rmi oneflow-build-third-party:${git_hash}
-        docker rmi oneflow-build-make:${git_hash}
+        ONEFLOW_CI_PACKAGE_APPENDIX="_cu102" \
+        bash ci/build/make.sh
     - name: Build docker image for testing
       run: |
         bash docker/ci/test/build.sh
     - name: Exe test
       run: |
         docker run --shm-size=8g --rm \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          oneflow-test bash ci/test/exe_test.sh
-    - name: Unit test with/without user op
+          -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+          -v $HOME/ci-tmp:/ci-tmp \
+          -w /ci-tmp/manylinux2014-build-cache/build-oneflow/bin \
+          oneflow-test \
+          ./oneflow_testexe
+    - name: Unit test
       run: |
         docker run --shm-size=8g --rm \
+          -v $HOME/ci-tmp:/ci-tmp \
           -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          oneflow-test bash -c "bash ci/test/try_install.sh && bash ci/test/parallel_1node_op_test.sh"
+          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+          oneflow-test \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
     - name: Integration test
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --env ENABLE_USER_OP=False oneflow-test bash ci/test/1node_model_test.sh
-    - name: Integration test with user op
+        docker run --shm-size=8g --rm \
+          -v $HOME/ci-tmp:/ci-tmp \
+          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+          oneflow-test \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
+    - name: Benchmark
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --env ENABLE_USER_OP=True oneflow-test bash ci/test/1node_model_test.sh
-    - name: Benchmark with user op
+        docker run --shm-size=8g --rm \
+          -v $HOME/ci-tmp:/ci-tmp \
+          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+          oneflow-test \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
+    - name: Benchmark FP16
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test bash ci/test/1node_benchmark_test.sh
-    - name: Benchmark with user op FP16
+        docker run --shm-size=8g --rm \
+          -v $HOME/ci-tmp:/ci-tmp \
+          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+          oneflow-test \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
+    - name: ONNX export test
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test bash ci/test/1node_benchmark_test_fp16.sh
+        docker run --shm-size=8g --rm \
+          -v $HOME/ci-tmp:/ci-tmp \
+          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+          oneflow-test \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/onnx_export_model_test.sh"
     - name: Build documentation
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD oneflow-test bash ci/test/build_docs.sh
+        docker run --shm-size=8g --rm \
+          -v $HOME/ci-tmp:/ci-tmp \
+          -w $PWD -v $PWD:$PWD \
+          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+          oneflow-test \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
+    - name: Clean up files created by root
+      if: ${{ always() }}
+      run: |
+        bash ci/build/clean.sh
+
+  build_and_test_cpu:
+
+    runs-on: [self-hosted, linux, gpu]
+    if: github.event.pull_request.draft == false
+    steps:
+    - name: Clean environment
+      run: |
+        rm -rf build/third_party
+        bash ci/build/clean.sh
+    - uses: actions/checkout@v2
+    - name: Setup environment
+      run: |
+        echo $HOSTNAME
+        bash ci/setup_submodule.sh
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
+    - name: Build OneFlow
+      run: |
+        export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DBUILD_CUDA=OFF"
+        export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-cpu
+        bash ci/build/make.sh
+    - name: Build docker image for testing
+      run: |
+        bash docker/ci/test/build.sh
+    - name: Unit test
+      run: |
+        docker run --shm-size=8g --rm \
+          -v $HOME/ci-tmp-cpu:/ci-tmp \
+          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+          --env ONEFLOW_TEST_CPU_ONLY=1 \
+          oneflow-test \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
+    - name: Integration test
+      run: |
+        docker run --shm-size=8g --rm \
+          -v $HOME/ci-tmp-cpu:/ci-tmp \
+          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+          --env ONEFLOW_TEST_CPU_ONLY=1 \
+          oneflow-test \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
+    - name: Clean up files created by root
+      if: ${{ always() }}
+      run: |
+        ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-cpu \
+        bash ci/build/clean.sh

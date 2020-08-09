@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include <iostream>
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/buffer_manager.h"
@@ -24,7 +39,7 @@
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/framework/op_registration.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -58,7 +73,8 @@ Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
 }
 
 Maybe<bool> IsOpTypeNameCpuSupportOnly(const std::string& op_type_name) {
-  const user_op::OpRegistrationVal* val = user_op::LookUpInOpRegistry(op_type_name);
+  const user_op::OpRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
   CHECK_OR_RETURN(val != nullptr) << "op_type_name " << op_type_name << " not register";
   return val->cpu_only_supported;
 }
@@ -138,6 +154,12 @@ Maybe<void> StartGlobalSession() {
   Global<Oneflow>::New();
   JUST(Global<Oneflow>::Get()->Init(job_set));
   return Maybe<void>::Ok();
+}
+
+Maybe<std::string> GetSerializedStructureGraph() {
+  const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
+  return job_ctx_mgr->structure_graph();
 }
 
 Maybe<void> StopGlobalSession() {
@@ -233,9 +255,9 @@ Maybe<std::string> InferOpConf(const std::string& op_conf_str,
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
-  UpstreamSignature upstream_signature;
+  OpNodeSignature upstream_signature;
   CHECK_OR_RETURN(TxtString2PbMessage(upstream_signature_str, &upstream_signature))
-      << "UpstreamSignature parse failed";
+      << "OpNodeSignature parse failed";
   const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
   const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
   const auto& op = JUST(ConstructAndInferOp(op_conf, upstream_signature, scope));
@@ -243,27 +265,12 @@ Maybe<std::string> InferOpConf(const std::string& op_conf_str,
   return PbMessage2TxtString(*op_attribute);
 }
 
-Maybe<std::string> GetOpAttribute4OpConf(const std::string& op_conf_str) {
+Maybe<long> GetOpParallelSymbolId(const std::string& op_conf_str) {
   OperatorConf op_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
-  const JobDesc* job_desc = nullptr;
-  if (op_conf.has_scope_symbol_id()) {
-    const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
-    const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
-    job_desc = JUST(scope.job_desc());
-  }
-  std::shared_ptr<Operator> op = ConstructOp(op_conf, job_desc);
-  std::shared_ptr<OpAttribute> op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
-  auto* mirrored_map =
-      op_attribute->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel();
-  auto* sbp_map = op_attribute->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
-  const auto SetSignature = [&](const std::string& bn_in_op) {
-    (*mirrored_map)[bn_in_op].mutable_mirrored_parallel();
-    (*sbp_map)[bn_in_op] = SbpParallel();  // nothing set
-  };
-  for (const auto& ibn : op_attribute->input_bns()) { SetSignature(ibn); }
-  for (const auto& obn : op_attribute->output_bns()) { SetSignature(obn); }
-  return PbMessage2TxtString(*op_attribute);
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
+  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
+  const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
+  return JUST(scope.GetParallelDescSymbolId(op_conf));
 }
 
 Maybe<void> RunLogicalInstruction(const std::string& instruction_list_str,

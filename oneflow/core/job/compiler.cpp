@@ -1,8 +1,23 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/job_completer/job_completer.h"
+#include "oneflow/core/job_rewriter/job_completer.h"
 
 namespace oneflow {
 
@@ -62,26 +77,14 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
-  task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
+  task_gph->TopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
-  // TODO: update method for fw bw split
-  // if (job_desc.IsTrain() && job_desc.enable_mem_sharing()) {
-  //   task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
-  // }
-  if (job_desc.enable_inplace_in_reduce_struct()) {
-    task_gph->EnableInplaceMemSharingInReduceStruct();
-  }
-
   if (job_desc.enable_inplace()) {
     auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
     task_gph->EnableInplaceMemSharing(IsReachable);
   }
-  // TODO: update method for fw bw split
-  // if (job_desc.IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
-  task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
-  // TODO: update method for fw bw split
-  // if (job_desc.IsTrain()) { task_gph->AddReduceNoBwForwardNodeOverlapingCtrlEdges(); }
+  task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
 
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
@@ -91,8 +94,6 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
     (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   }
-  // TODO: fix .dot generate
-  // GenNetTopo(plan);
   Global<OpGraph>::Delete();
 }
 

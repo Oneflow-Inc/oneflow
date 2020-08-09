@@ -1,5 +1,21 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def test_simple(test_case):
@@ -10,7 +26,7 @@ def test_simple(test_case):
         test_case.assertTrue(np.allclose(data, x.numpy()))
 
     @flow.global_function()
-    def ReluJob(x=flow.FixedTensorDef((10,))):
+    def ReluJob(x: oft.Numpy.Placeholder((10,))):
         flow.watch(x, EqOnes)
 
     ReluJob(data)
@@ -23,8 +39,11 @@ def test_two_device(test_case):
     def EqOnes(x):
         test_case.assertTrue(np.allclose(data, x.numpy()))
 
-    @flow.global_function()
-    def ReluJob(x=flow.FixedTensorDef((10,))):
+    func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.mirrored_view())
+
+    @flow.global_function(function_config=func_config)
+    def ReluJob(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.relu(x)
         flow.watch(y, EqOnes)
 

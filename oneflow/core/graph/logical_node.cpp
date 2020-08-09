@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/optimizer_compute_task_node.h"
@@ -7,16 +22,7 @@
 #include "oneflow/core/graph/distribute_concat_compute_task_node.h"
 #include "oneflow/core/graph/distribute_split_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
-#include "oneflow/core/graph/reduce_scatter_compute_task_node.h"
-#include "oneflow/core/graph/reduce_add_compute_task_node.h"
-#include "oneflow/core/graph/reduce_gather_compute_task_node.h"
-#include "oneflow/core/graph/reduce_concat_compute_task_node.h"
-#include "oneflow/core/graph/reduce_split_compute_task_node.h"
-#include "oneflow/core/graph/nccl_all_reduce_compute_task_node.h"
-#include "oneflow/core/graph/nccl_reduce_scatter_compute_task_node.h"
-#include "oneflow/core/graph/nccl_all_gather_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
@@ -54,29 +60,9 @@ static bool IsConnectedLbisAllSameSbpParallel(const LogicalNode* src_node,
   return *predicators.begin();
 }
 
-static bool IsProducedLbisAllBroadcastParallel(const LogicalNode* src_node,
-                                               const LogicalNode* dst_node) {
-  const LogicalEdge* connect_edge = GetConnectedEdge(src_node, dst_node);
-  CHECK_NOTNULL(connect_edge);
-  CHECK_GT(connect_edge->lbis().size(), 0);
-  const std::string& src_op_name = src_node->SoleOp()->op_name();
-  HashSet<bool> predicators;
-  for (const LogicalBlobId& lbi : connect_edge->lbis()) {
-    const auto& src_sbp = Global<OpGraph>::Get()->GetSbpParallel(src_op_name, lbi);
-    predicators.insert(src_sbp.has_broadcast_parallel());
-  }
-  CHECK_EQ(predicators.size(), 1);
-  return *predicators.begin();
-}
-
 bool HasSoleIdentityOp(const LogicalNode* logical_node) {
   const auto& op_conf = logical_node->SoleOp()->op_conf();
   return logical_node->op_vec().size() == 1 && op_conf.has_tuple_identity_conf();
-}
-
-BldBoxingOpConfMthd GetBldBoxingOpConfMethodByFwParallelPolicy(const LogicalNode* in_logical,
-                                                               const LogicalNode* out_logical) {
-  return &BoxingTaskNode::BldBoxingOpConfWithFwSbpParallel;
 }
 
 std::string ConcatTypeName(const LogicalNode* lhs, const LogicalNode* rhs) {
@@ -100,37 +86,6 @@ void AddFuncForFindBldSubTskGphMthd(const std::string& k, BldSubTskGphMthd v) {
 }
 #define REGISTER_BLD_SUB_TSK_GPH_MTHD(k, v) COMMAND(AddFuncForFindBldSubTskGphMthd(k, v))
 
-using FuncForFindBldBoxingOpConfMthd =
-    std::function<BldBoxingOpConfMthd(const LogicalNode* src, const LogicalNode* dst)>;
-DEFINE_STATIC_VAR(HashMap<std::string OF_COMMA FuncForFindBldBoxingOpConfMthd>,
-                  GetFuncForFindBldBoxingOpConfMthd);
-
-void AddFuncForFindBldBoxingOpConfMthd(const std::string& k, FuncForFindBldBoxingOpConfMthd v) {
-  CHECK(GetFuncForFindBldBoxingOpConfMthd()->emplace(k, v).second);
-}
-void AddFuncForFindBldBoxingOpConfMthd(const std::string& k,
-                                       std::function<BldBoxingOpConfMthd()> v) {
-  AddFuncForFindBldBoxingOpConfMthd(k, [v](const LogicalNode*, const LogicalNode*) { return v(); });
-}
-void AddFuncForFindBldBoxingOpConfMthd(const std::string& k, BldBoxingOpConfMthd v) {
-  AddFuncForFindBldBoxingOpConfMthd(k, [v](const LogicalNode*, const LogicalNode*) { return v; });
-}
-#define REGISTER_BLD_BOXING_OP_CONF_MTHD(k, v) COMMAND(AddFuncForFindBldBoxingOpConfMthd(k, v))
-
-BldSubTskGphMthd BldSubTskGphToNormalMdUpdt(const LogicalNode*, const LogicalNode* updt) {
-  TODO();  // outdate
-}
-
-using FuncForFindLbis =
-    std::function<std::vector<LogicalBlobId>(const LogicalNode* src, const LogicalNode* dst)>;
-DEFINE_STATIC_VAR(HashMap<std::string OF_COMMA FuncForFindLbis>, GetFuncForFindLbis);
-
-#define REGISTER_FUNC_FOR_FIND_LBIS(k, v) COMMAND(CHECK(GetFuncForFindLbis()->emplace(k, v).second))
-
-std::vector<LogicalBlobId> ReturnPackedLbi(const LogicalNode* src, const LogicalNode* dst) {
-  return {GenPackedLbi()};
-}
-
 }  // namespace
 
 std::shared_ptr<Operator> LogicalNode::SoleOp() const {
@@ -140,14 +95,8 @@ std::shared_ptr<Operator> LogicalNode::SoleOp() const {
 
 std::vector<LogicalBlobId> LogicalNode::GetLbisTo(const LogicalNode* dst) const {
   auto it = dst2data_lbis_.find(dst);
-  if (it != dst2data_lbis_.end()) {
-    return it->second;
-  } else {
-    std::string k = ConcatTypeName(this, dst);
-    auto func_it = GetFuncForFindLbis()->find(k);
-    CHECK(func_it != GetFuncForFindLbis()->end()) << k;
-    return func_it->second(this, dst);
-  }
+  CHECK(it != dst2data_lbis_.end());
+  return it->second;
 }
 
 void LogicalNode::SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>& lbis) {
@@ -185,6 +134,7 @@ void LogicalNode::GenSortedCompTaskNodes(
 
       const IDMgr* id_mgr = Global<IDMgr>::Get();
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
+#ifdef WITH_CUDA
         switch (comp_task_node->GetCudaWorkType()) {
           case CudaWorkType::kCompute: {
             comp_task_node->set_thrd_id(id_mgr->GetGpuComputeThrdId(dev_phy_id));
@@ -206,16 +156,15 @@ void LogicalNode::GenSortedCompTaskNodes(
             comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
             break;
           }
-          case CudaWorkType::kReduceCtrl: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuReduceCtrlThrdId(dev_phy_id));
-            break;
-          }
           case CudaWorkType::kMdUpdt: {
             comp_task_node->set_thrd_id(id_mgr->GetGpuMdUpdtThrdId(dev_phy_id));
             break;
           }
           default: UNIMPLEMENTED();
         }
+#else
+        UNIMPLEMENTED();
+#endif
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         if (comp_task_node->IsIndependent()) {
           nodes->push_back({machine_id, comp_task_node});
@@ -226,7 +175,6 @@ void LogicalNode::GenSortedCompTaskNodes(
         UNIMPLEMENTED();
       }
       comp_task_node->set_logical_node(this);
-      FixCompTaskNode(comp_task_node);
       Handler(comp_task_node);
     }
   }
@@ -283,60 +231,11 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       && IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
-  if (IsProducedLbisAllBroadcastParallel(src_node, dst_node) && !GlobalJobDesc().use_boxing_v2()) {
-    return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
-  } else {
-    return &TaskGraph::BldSubTskGphByBoxing;
-  }
+  return &TaskGraph::BldSubTskGphByBoxing;
 }
 
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"
-                              "NormalForward",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
-                              "ReduceConcat",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceConcat"
-                              "ReduceIdentity",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
-                              "ReduceIdentity",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceIdentity"
-                              "NcclAllReduce",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceIdentity"
-                              "ReduceScatter",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceIdentity"
-                              "NcclReduceScatter",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllReduce"
-                              "ReduceSplit",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceSplit"
-                              "NormalForward",
-                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("RecordLoad"
                               "Decode",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
-                              "ReduceAdd",
-                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceAdd);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
-                              "ReduceGather",
-                              &TaskGraph::BldSubTskGphByReduceAdd2ReduceGather);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
-                              "ReduceGather",
-                              &TaskGraph::BldSubTskGphByReduceGather2ReduceGather);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
-                              "ReduceSplit",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
-                              "ReduceSplit",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
-                              "ReduceScatter",
                               &TaskGraph::BldSubTskGphByOneToOne);
 
 REGISTER_BLD_SUB_TSK_GPH_MTHD("*"
@@ -347,17 +246,6 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("DistributeSplit"
                               "*",
                               &TaskGraph::BldSubTskGphByPartialOutLbiConnect);
 
-BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
-  std::string k = ConcatTypeName(src, dst);
-  auto it = GetFuncForFindBldBoxingOpConfMthd()->find(k);
-  if (it != GetFuncForFindBldBoxingOpConfMthd()->end()) { return it->second(src, dst); }
-  return GetBldBoxingOpConfMethodByFwParallelPolicy(src, dst);
-}
-
-REGISTER_BLD_BOXING_OP_CONF_MTHD("Tick"
-                                 "Tick",
-                                 &BoxingTaskNode::BldBoxingOpConfWithPartialTick2SinkTick);
-
 #define LOGICAL_TYPE_SEQ                                   \
   OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)    \
   OF_PP_MAKE_TUPLE_SEQ(DistributeConcat, kDataForwardArea) \
@@ -365,16 +253,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("Tick"
   OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)    \
   OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)        \
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)  \
-  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                  \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)          \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceIdentity, kMdUpdtArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)             \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)          \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)           \
-  OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)     \
-  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)
+  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \
@@ -391,26 +270,6 @@ int64_t OptimizerLogicalNode::GetAreaId() const { return kMdUpdtArea; }
 int64_t NewAreaId() {
   static int64_t next_area_id = AreaType_ARRAYSIZE;
   return ++next_area_id;
-}
-
-int32_t ReduceIdentityLogicalNode::order_in_logical_graph() const {
-  const auto& op_conf = SoleOp()->op_conf();
-  CHECK(op_conf.has_reduce_identity_conf());
-  if (op_conf.reduce_identity_conf().has_order_in_graph()) {
-    return op_conf.reduce_identity_conf().order_in_graph();
-  } else {
-    return order_in_logical_graph_;
-  }
-}
-
-int32_t ReduceSplitLogicalNode::order_in_logical_graph() const {
-  const auto& op_conf = SoleOp()->op_conf();
-  CHECK(op_conf.has_reduce_split_conf());
-  if (op_conf.reduce_split_conf().has_order_in_graph()) {
-    return op_conf.reduce_split_conf().order_in_graph();
-  } else {
-    return order_in_logical_graph_;
-  }
 }
 
 }  // namespace oneflow

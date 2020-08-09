@@ -1,9 +1,25 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 import random
 
 import cv2
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _random_sample_images(anno_file, image_dir, batch_size):
@@ -87,14 +103,16 @@ def _of_target_resize_bbox_scale(images, bbox_list, target_size, max_size):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def target_resize_bbox_scale_job(
-        image_def=flow.MirroredTensorListDef(
+        image_def: oft.ListListNumpy.Placeholder(
             shape=tuple(image_shape), dtype=flow.float
         ),
-        bbox_def=flow.MirroredTensorListDef(shape=tuple(bbox_shape), dtype=flow.float),
+        bbox_def: oft.ListListNumpy.Placeholder(
+            shape=tuple(bbox_shape), dtype=flow.float
+        ),
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(image_def)
         resized_images_buffer, new_size, scale = flow.image_target_resize(

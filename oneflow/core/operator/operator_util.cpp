@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/framework/user_op_conf.h"
 
@@ -42,6 +57,45 @@ int64_t GetInDim(const ShapeView& shape, const std::string& data_format, int32_t
   } else {
     return shape.At(index);
   }
+}
+
+void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
+                           int32_t stride, const std::string& padding_type, bool ceil_mode,
+                           int64_t* output_size, int32_t* padding_before, int32_t* padding_after) {
+  CHECK_GT(stride, 0);
+  CHECK_GE(dilation_rate, 1);
+
+  int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
+  if (padding_type == "customized") {
+    if (output_size) {
+      *output_size = (input_size + *padding_before + *padding_after - effective_filter_size + stride
+                      + (ceil_mode ? stride - 1 : 0))
+                     / stride;
+      CHECK_GE((*output_size), 0);
+    }
+  } else if (padding_type == "valid") {
+    if (output_size) { *output_size = (input_size - effective_filter_size + stride) / stride; }
+    if (padding_before) { *padding_before = 0; }
+    if (padding_after) { *padding_after = 0; }
+  } else {
+    int64_t tmp_output_size = (input_size + stride - 1) / stride;
+    if (output_size) { *output_size = tmp_output_size; }
+    const int32_t padding_needed = std::max(
+        0,
+        static_cast<int32_t>((tmp_output_size - 1) * stride + effective_filter_size - input_size));
+    const int32_t padding_small = padding_needed / 2;
+    const int32_t padding_large = padding_needed - padding_needed / 2;
+    if (padding_type == "same_upper") {
+      if (padding_before) { *padding_before = padding_small; }
+      if (padding_after) { *padding_after = padding_large; }
+    } else if (padding_type == "same_lower") {
+      if (padding_before) { *padding_before = padding_large; }
+      if (padding_after) { *padding_after = padding_small; }
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+  if (output_size) { CHECK_GE((*output_size), 0); }
 }
 
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
@@ -124,6 +178,26 @@ void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
     } else {
       GetWindowedOutputSize(in.at(i), pool_size.at(i), strides.at(i), padding_type, out_ptr,
                             padding_before_ptr, padding_after_ptr);
+    }
+  }
+}
+
+void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
+                     const std::vector<int32_t>& strides, const std::string& padding_type,
+                     const bool ceil_mode, std::vector<int32_t>* dilation_rate, DimVector* out,
+                     std::vector<int32_t>* padding_before, std::vector<int32_t>* padding_after) {
+  CHECK(out);
+  out->clear();
+  out->resize(3);
+  FOR_RANGE(size_t, i, 0, 3) {
+    int64_t* out_ptr = &(*out).at(i);
+    if (dilation_rate) {
+      GetWindowedOutputSize(in.at(i), pool_size.at(i), dilation_rate->at(i), strides.at(i),
+                            padding_type, ceil_mode, out_ptr, &(padding_before->at(i)),
+                            &(padding_after->at(i)));
+    } else {
+      GetWindowedOutputSize(in.at(i), pool_size.at(i), 1, strides.at(i), padding_type, ceil_mode,
+                            out_ptr, &(padding_before->at(i)), &(padding_after->at(i)));
     }
   }
 }

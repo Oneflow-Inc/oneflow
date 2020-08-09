@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 from google.protobuf import text_format
@@ -15,10 +30,8 @@ class JobBuildAndInferError(Exception):
         self.error_proto_.ClearField("error_summary")
         self.msg_ = self.error_proto_.msg
         self.error_proto_.ClearField("msg")
-        if (
-            session_ctx.GetDefaultSession().config_proto.resource.enable_debug_mode
-            == False
-        ):
+        resource = session_ctx.GetDefaultSession().config_proto.resource
+        if resource.enable_debug_mode == False:
             self.error_proto_.ClearField("stack_frame")
 
         def get_op_kernel_not_found_error_str(error_proto):

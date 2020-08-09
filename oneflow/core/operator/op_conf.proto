@@ -116,32 +116,6 @@ message RegularizerConf {
   }
 }
 
-message PReluOpConf {
-  required string in = 1;
-  required string out = 2;
-  required string data_format = 3;
-  optional bool channel_shared = 4 [default = false];
-  optional float alpha_init = 5 [default = 0.25];
-  required string alpha = 6;
-}
-
-message PReluDataGradOpConf {
-  required string dy = 1;
-  required string x = 2;
-  required string alpha = 3;
-  required string dx = 4;
-  required string data_format = 5;
-  required bool channel_shared = 6;
-}
-
-message PReluAlphaGradOpConf {
-  required string dy = 1;
-  required string x = 2;
-  required string alpha_grad = 3;
-  required string data_format = 4;
-  required bool channel_shared = 5;
-}
-
 message SigmoidCrossEntropyOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -457,11 +431,6 @@ message DynamicReshapeLikeOpConf {
   required string like = 3;
 }
 
-message AddOpConf {
-  repeated string in = 1;
-  required string out = 2;
-}
-
 message InterfaceBlobConf {
   required ShapeProto shape = 1;
   required DataType data_type = 2;
@@ -613,44 +582,6 @@ message DecodeRandomOpConf {
   required int64 batch_size = 8;
 }
 
-message ReduceConcatOpConf {
-  repeated string in = 1;
-  required string out = 2;
-  repeated int64 data_offset = 3;
-  required int64 out_size = 4;
-}
-
-message NcclAllReduceOpConf {
-  optional string in = 1;
-  optional string out = 2;
-}
-
-message NcclReduceScatterOpConf {
-}
-
-message NcclAllGatherOpConf {
-}
-
-message ReduceSplitOpConf {
-  required string in = 1;
-  repeated string out = 2;
-  repeated ShapeProto out_shape = 3;
-  repeated int64 data_offset = 4;
-  optional int32 order_in_graph = 5;
-}
-
-message ReduceScatterOpConf {
-  optional int32 out_num = 1 [default = 0];
-}
-
-message ReduceAddOpConf {
-  optional int32 in_num = 1 [default = 0];
-}
-
-message ReduceGatherOpConf {
-  optional int32 in_num = 1 [default = 0];
-}
-
 message PackOpConf {
   required string in = 1;
   required string out = 2;
@@ -667,20 +598,6 @@ message RepeatOpConf {
   required string in = 1;
   required string out = 2;
   required int32 repeat_num = 3;
-}
-
-message ConstantOpConf {
-  optional string tick = 1;
-  required string out = 2;
-  optional ShapeProto shape = 3;
-  optional DataType data_type = 4;
-  optional InitializerConf initializer = 5;
-}
-
-message ReduceIdentityOpConf {
-  optional string in = 1;
-  optional string out = 2;
-  optional int32 order_in_graph = 3;
 }
 
 message TickOpConf {
@@ -785,11 +702,6 @@ message ModelLoadOpConf {
   repeated string out = 2;
   repeated string variable_op_name = 3;
   repeated VariableOpConf original_variable_conf = 4;
-}
-
-message AllReduceFacadeOpConf {
-  required string in = 1;
-  required string out = 2;
 }
 
 message IdentityOpConf {
@@ -1056,6 +968,11 @@ message BoxingIdentityOpConf {
   required LogicalBlobId lbi = 1;
 }
 
+message CastToStaticShapeOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1072,18 +989,9 @@ message OperatorConf {
     CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     BoxingOpConf boxing_conf = 108;
-    ReduceScatterOpConf reduce_scatter_conf = 109;
-    ReduceAddOpConf reduce_add_conf = 110;
-    ReduceGatherOpConf reduce_gather_conf = 111;
-    ReduceConcatOpConf reduce_concat_conf = 112;
-    ReduceSplitOpConf reduce_split_conf = 113;
-    NcclAllReduceOpConf nccl_all_reduce_conf = 114;
-    NcclReduceScatterOpConf nccl_reduce_scatter_conf = 115;
-    NcclAllGatherOpConf nccl_all_gather_conf = 116;
     AccumulateOpConf accumulate_conf = 117;
     NormalModelUpdateOpConf normal_mdupdt_conf = 118;
     VariableOpConf variable_conf = 122;
-    ReduceIdentityOpConf reduce_identity_conf = 123;
     TickOpConf tick_conf = 124;
     KeepHeaderOnlyOpConf keep_header_only_conf = 125;
     TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
@@ -1094,7 +1002,6 @@ message OperatorConf {
     AdamModelUpdateOpConf adam_model_update_conf = 131;
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
     AccOpConf acc_conf = 133;
-    AllReduceFacadeOpConf all_reduce_facade_conf = 134;
     SourceTickOpConf source_tick_conf = 135;
     SinkTickOpConf sink_tick_conf = 136;
     InputOpConf input_conf = 137;
@@ -1127,18 +1034,16 @@ message OperatorConf {
     CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
     BoxingIdentityOpConf boxing_identity_conf = 171;
     TensorListSplitOpConf tensor_list_split_conf = 172;
+    CastToStaticShapeOpConf cast_to_static_shape_conf = 173;
     UserOpConf user_conf = 199;
     
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    AddOpConf add_conf = 220;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
-    ConstantOpConf constant_conf = 255;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
-    PReluOpConf prelu_conf = 265;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
@@ -1147,8 +1052,6 @@ message OperatorConf {
     AssignOpConf assign_conf = 296;
     ModelSaveOpConf model_save_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
-    PReluDataGradOpConf prelu_data_grad_conf = 299;
-    PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
     ModelLoadOpConf model_load_conf = 301;
     SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
     ParallelCastOpConf parallel_cast_conf = 336;

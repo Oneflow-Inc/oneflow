@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_COMMON_SWITCH_FUNC_H_
 #define ONEFLOW_CORE_COMMON_SWITCH_FUNC_H_
 
@@ -25,9 +40,9 @@ auto SwitchCase(Args&&... args) -> decltype(std::make_tuple(std::forward<Args>(a
     return case_handlers.at(switch_tuple)(std::forward<Args>(args)...);                        \
   }
 
-// CTRV: Compile-time Token and Runtime Value pair,
-// CTRV example: (float, DataType::kFloat)
-// TYPED_CTRV_SEQ example: (DataType, ((float, DataType::kFloat)))
+  // CTRV: Compile-time Token and Runtime Value pair,
+  // CTRV example: (float, DataType::kFloat)
+  // TYPED_CTRV_SEQ example: (DataType, ((float, DataType::kFloat)))
 
 #define MAKE_DATA_TYPE_CTRV_SEQ(data_type_seq) MAKE_TYPED_CTRV_SEQ(DataType, data_type_seq)
 #define MAKE_DEVICE_TYPE_CTRV_SEQ(device_type_seq) \
@@ -43,7 +58,7 @@ auto SwitchCase(Args&&... args) -> decltype(std::make_tuple(std::forward<Args>(a
 
 #define MAKE_TYPED_CTRV_SEQ(runtime_value_type, ctrv_pair_seq) (runtime_value_type, ctrv_pair_seq)
 
-//  internal preprocessor macros
+  //  internal preprocessor macros
 
 #define OF_PP_I_MAKE_SWITCH_ENTRY_MAP_PAIR(switch_case, func_args_type, func) \
   {switch_case,                                                               \

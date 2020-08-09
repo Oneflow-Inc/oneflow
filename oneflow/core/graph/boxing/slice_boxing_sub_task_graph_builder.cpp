@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/graph/boxing/slice_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -68,6 +83,7 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
     return Error::BoxingNotSupported();
   }
   const auto GetBoxingGpuThrdId = [](const int64_t dev_id, CudaWorkType work_type) -> int64_t {
+#ifdef WITH_CUDA
     if (work_type == CudaWorkType::kCopyH2D) {
       return Global<IDMgr>::Get()->GetGpuH2DThrdId(dev_id);
     } else if (work_type == CudaWorkType::kCopyD2H) {
@@ -75,7 +91,11 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
     } else {
       return Global<IDMgr>::Get()->GetGpuMixThrdId(dev_id);
     }
+#else
+    UNIMPLEMENTED();
+#endif
   };
+
   const auto NewEdge = [&ctx]() -> TaskEdge* { return ctx->task_graph()->NewEdge(); };
   const auto CreateBoxingNode121 = [&ctx, &lbi, &GetBoxingGpuThrdId](
                                        const ParallelDesc& pd, const int64_t parallel_id,
@@ -87,7 +107,11 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
     if (pd.device_type() == DeviceType::kCPU) {
       thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(machine_id);
     } else if (pd.device_type() == DeviceType::kGPU) {
+#ifdef WITH_CUDA
       thrd_id = GetBoxingGpuThrdId(pd.DeviceIdForParallelId(parallel_id), CudaWorkType::kCopyH2D);
+#else
+      UNIMPLEMENTED();
+#endif
     } else {
       UNIMPLEMENTED();
     }
@@ -103,7 +127,11 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
     if (src_node->device_type() == DeviceType::kCPU) {
       thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(src_node->machine_id());
     } else if (src_node->device_type() == DeviceType::kGPU) {
+#ifdef WITH_CUDA
       thrd_id = GetBoxingGpuThrdId(src_node->GpuPhyId(), CudaWorkType::kCopyD2H);
+#else
+      UNIMPLEMENTED();
+#endif
     } else {
       UNIMPLEMENTED();
     }
@@ -220,9 +248,13 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
           if (in_pd.device_type() == DeviceType::kCPU) {
             local_concat_thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id);
           } else if (in_pd.device_type() == DeviceType::kGPU) {
+#ifdef WITH_CUDA
             local_concat_thrd_id = GetBoxingGpuThrdId(
                 in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()))->GpuPhyId(),
                 CudaWorkType::kCopyD2H);
+#else
+            UNIMPLEMENTED();
+#endif
           }
           local_concat_node->Init(lbi, concat_slice, kSliceBoxingTaskModeCopy, in_machine_id,
                                   local_concat_thrd_id, Global<IDMgr>::Get()->CpuMemZoneId());
@@ -278,9 +310,13 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
               if (in_pd.device_type() == DeviceType::kCPU) {
                 local_add_thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id);
               } else if (in_pd.device_type() == DeviceType::kGPU) {
+#ifdef WITH_CUDA
                 local_add_thrd_id = GetBoxingGpuThrdId(
                     in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()))->GpuPhyId(),
                     CudaWorkType::kCopyD2H);
+#else
+                UNIMPLEMENTED();
+#endif
               }
               local_add_node->Init(lbi, out_slice, kSliceBoxingTaskModeAdd, in_machine_id,
                                    local_add_thrd_id, Global<IDMgr>::Get()->CpuMemZoneId());
@@ -322,8 +358,12 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
         if (in_pd.device_type() == DeviceType::kCPU) {
           local_add_thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id);
         } else if (in_pd.device_type() == DeviceType::kGPU) {
+#ifdef WITH_CUDA
           local_add_thrd_id = GetBoxingGpuThrdId(in_nodes.at(in_ids_on_machine.front())->GpuPhyId(),
                                                  CudaWorkType::kCopyH2D);
+#else
+          UNIMPLEMENTED();
+#endif
         }
         local_add_node->Init(lbi, slice, kSliceBoxingTaskModeAdd, in_machine_id, local_add_thrd_id);
         FOR_RANGE(int64_t, i, 0, in_ids_on_machine.size()) {

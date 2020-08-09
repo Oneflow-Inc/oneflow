@@ -1,9 +1,32 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_KERNEL_NEW_KERNEL_UTIL_H_
 #define ONEFLOW_CORE_KERNEL_NEW_KERNEL_UTIL_H_
 
 #include "oneflow/core/kernel/util/interface_bridge.h"
 
 namespace oneflow {
+
+#ifndef WITH_CUDA
+enum cudaMemcpyKind {
+  cudaMemcpyHostToHost = 0,
+  cudaMemcpyHostToDevice = 1,
+  cudaMemcpyDefault = 4,
+};
+#endif
 
 template<DeviceType deivce_type>
 struct NewKernelUtil : public DnnIf<deivce_type>,
@@ -18,10 +41,12 @@ struct GetCudaMemcpyKind<DeviceType::kCPU> {
   static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyHostToHost;
 };
 
+#ifdef WITH_CUDA
 template<>
 struct GetCudaMemcpyKind<DeviceType::kGPU> {
   static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
 };
+#endif  // WITH_CUDA
 
 template<DeviceType device_type>
 void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,

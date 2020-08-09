@@ -1,8 +1,24 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
 from test_util import GenArgList
+import oneflow.typing as oft
 
 
 def _np_dtype_to_of_dtype(np_dtype):
@@ -36,23 +52,23 @@ def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
     func_config.default_data_type(data_type)
 
     def do_argwhere(x_blob):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow.argwhere(x_blob, dtype=out_data_type)
 
     if dynamic is True:
-        func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+        func_config.default_logical_view(flow.scope.mirrored_view())
 
-        @flow.global_function(func_config)
-        def argwhere_fn(x_def=flow.MirroredTensorDef(x.shape, dtype=data_type)):
+        @flow.global_function(function_config=func_config)
+        def argwhere_fn(x_def: oft.ListNumpy.Placeholder(x.shape, dtype=data_type)):
             return do_argwhere(x_def)
 
         return argwhere_fn([x]).get().numpy_list()[0]
 
     else:
-        func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+        func_config.default_logical_view(flow.scope.consistent_view())
 
-        @flow.global_function(func_config)
-        def argwhere_fn(x_def=flow.FixedTensorDef(x.shape, dtype=data_type)):
+        @flow.global_function(function_config=func_config)
+        def argwhere_fn(x_def: oft.Numpy.Placeholder(x.shape, dtype=data_type)):
             return do_argwhere(x_def)
 
         return argwhere_fn(x).get().numpy_list()[0]

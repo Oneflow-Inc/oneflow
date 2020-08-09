@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
@@ -7,6 +22,7 @@
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/thread/thread_pool.h"
 
 namespace oneflow {
 
@@ -16,6 +32,7 @@ namespace collective {
 
 namespace {
 
+#ifdef WITH_CUDA
 ncclRedOp_t GetNcclReduceOp(ReduceMethod reduce_method) {
   if (reduce_method == kReduceMethodSum) {
     return ncclRedOp_t::ncclSum;
@@ -23,6 +40,7 @@ ncclRedOp_t GetNcclReduceOp(ReduceMethod reduce_method) {
     UNIMPLEMENTED();
   }
 }
+#endif
 
 void SortRequestsByOrder(std::vector<const RequestDesc*>* requests) {
   std::sort(requests->begin(), requests->end(),
@@ -53,6 +71,8 @@ int64_t GetAlignedRequestSize(const RequestDesc* request) {
 }
 
 }  // namespace
+
+#ifdef WITH_CUDA
 
 void CollectiveBoxingExecutorBackend::GroupRequests(
     const std::vector<const RequestDesc*>& requests,
@@ -90,6 +110,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
     char* fusion_buffer = nullptr;
   };
 
+  int32_t num_devices_;
   int64_t num_streams_;
   int64_t fusion_threshold_;
   const CollectiveBoxingConf collective_boxing_conf_;
@@ -103,6 +124,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
   std::condition_variable event_list_cond_;
   bool shutdown_;
   std::mutex mutex_;
+  std::shared_ptr<ThreadPool> callback_executor_pool_;
 
   int64_t current_stream_id_ = 0;
 };
@@ -110,6 +132,8 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
 NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
     : collective_boxing_conf_(Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf()),
       shutdown_(false) {
+  CudaCheck(cudaGetDeviceCount(&num_devices_));
+  callback_executor_pool_.reset(new ThreadPool(num_devices_));
   CHECK_GT(collective_boxing_conf_.nccl_num_streams(), 0);
   num_streams_ = collective_boxing_conf_.nccl_num_streams();
   CHECK_GE(collective_boxing_conf_.nccl_fusion_threshold_mb(), 0);
@@ -133,7 +157,10 @@ NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
           continue;
         } else if (err == cudaSuccess) {
           CudaCheck(cudaEventDestroy(it->cuda_event));
-          it->callback(Maybe<void>::Ok());
+          auto callback_ptr =
+              std::make_shared<std::function<void(Maybe<void>)>>(std::move(it->callback));
+          callback_executor_pool_->AddWork(
+              [callback_ptr]() { (*callback_ptr)(Maybe<void>::Ok()); });
           local_event_list.erase(it++);
         } else {
           CudaCheck(err);
@@ -151,6 +178,7 @@ NcclCollectiveBoxingExecutorBackend::~NcclCollectiveBoxingExecutorBackend() {
     event_list_cond_.notify_all();
   }
   event_list_poll_thread_.join();
+  callback_executor_pool_.reset();
   CudaCurrentDeviceGuard guard;
   for (auto& device_id2device_ctx : stream_id2device_id2device_ctx_) {
     for (auto& device_id7device_ctx : device_id2device_ctx) {
@@ -442,13 +470,17 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
   }
 }
 
+#endif  // WITH_CUDA
+
 CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan)
     : collective_boxing_plan_(plan.collective_boxing_plan()) {
+#ifdef WITH_CUDA
   auto it =
       backends_
           .emplace(Backend::kBackendNCCL, std::make_unique<NcclCollectiveBoxingExecutorBackend>())
           .first;
   it->second->Init(collective_boxing_plan_);
+#endif
   Init();
   DumpSummary();
 }

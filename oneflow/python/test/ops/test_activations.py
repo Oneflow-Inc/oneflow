@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import math
 import os
 from collections import OrderedDict
@@ -23,16 +38,11 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
         data_type = flow.float
 
     func_config.default_data_type(data_type)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     of_activation_map = {
-        # "relu": flow.keras.activations.relu,
         "relu": flow.nn.relu,
         "sigmoid": flow.math.sigmoid,
-        # "tanh": flow.keras.activations.tanh,
         "tanh": flow.math.tanh,
-        #        "gelu": flow.keras.activations.gelu,
     }
     tf_activation_map = {
         "relu": tf.nn.relu,
@@ -41,9 +51,9 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
         #        "gelu": tfa.activations.gelu,
     }
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def ActivationJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=shape,
@@ -52,7 +62,8 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
                 trainable=True,
             )
             loss = of_activation_map[activation_type](x)
-            flow.losses.add_loss(loss)
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [1e-4])
+            flow.optimizer.SGD(lr_scheduler, momentum=0).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
@@ -88,5 +99,6 @@ def test_activations(test_case):
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
 
-    for act_type in arg_dict["activation_type"]:
-        compare_with_tensorflow("gpu", act_type, (1024, 1024), flow.float16)
+    if os.getenv("ONEFLOW_TEST_CPU_ONLY") is None:
+        for act_type in arg_dict["activation_type"]:
+            compare_with_tensorflow("gpu", act_type, (1024, 1024), flow.float16)

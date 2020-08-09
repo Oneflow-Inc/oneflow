@@ -1,16 +1,32 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type
+import oneflow.typing as oft
 
 
 def test_naive(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
-    def ModJob(a=flow.FixedTensorDef((5, 2)), b=flow.FixedTensorDef((5, 2))):
+    @flow.global_function(function_config=func_config)
+    def ModJob(a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((5, 2))):
         return a == b
 
     x = np.random.rand(5, 2).astype(np.float32)
@@ -25,8 +41,8 @@ def test_broadcast(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
-    def ModJob(a=flow.FixedTensorDef((5, 2)), b=flow.FixedTensorDef((1, 2))):
+    @flow.global_function(function_config=func_config)
+    def ModJob(a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((1, 2))):
         return a == b
 
     x = np.random.rand(5, 2).astype(np.float32)
@@ -86,17 +102,17 @@ def GenerateTest(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(dtype)
 
-    @flow.global_function(func_config)
-    def ModJob1(a=flow.FixedTensorDef(a_shape, dtype=dtype)):
-        with flow.device_prior_placement(device_type, "0:0"):
+    @flow.global_function(function_config=func_config)
+    def ModJob1(a: oft.Numpy.Placeholder(a_shape, dtype=dtype)):
+        with flow.scope.placement(device_type, "0:0"):
             return func(a, a)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ModJob2(
-        a=flow.FixedTensorDef(a_shape, dtype=dtype),
-        b=flow.FixedTensorDef(b_shape, dtype=dtype),
+        a: oft.Numpy.Placeholder(a_shape, dtype=dtype),
+        b: oft.Numpy.Placeholder(b_shape, dtype=dtype),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return func(a, b)
 
     a = np_array(dtype, a_shape)

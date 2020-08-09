@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 from collections import OrderedDict
 
@@ -14,9 +29,9 @@ def compare_with_tensorflow(test_case, device_type, value, shape, rtol=1e-5, ato
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ConstantJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.constant(value, dtype=flow.float, shape=shape)
             y = flow.math.relu(x)
             z = flow.math.relu(y)

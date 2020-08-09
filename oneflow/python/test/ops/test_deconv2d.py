@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 from collections import OrderedDict
 
@@ -18,12 +33,10 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def DeconvJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=input_shape,
@@ -56,7 +69,9 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
                 padding=padding,
                 data_format=data_format,
             )
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
@@ -107,8 +122,8 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
         assert np.allclose(
             test_global_storage.Get("weight_diff").transpose(2, 3, 1, 0),
             tf_weight_diff.numpy(),
-            rtol=1e-5,
-            atol=1e-5,
+            rtol=1e-4,
+            atol=1e-4,
         )
     else:
         with tf.GradientTape(persistent=True) as tape:
@@ -135,20 +150,20 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
         assert np.allclose(
             test_global_storage.Get("weight_diff").transpose(1, 2, 3, 0),
             tf_weight_diff.numpy(),
-            rtol=1e-5,
-            atol=1e-5,
+            rtol=1e-2,
+            atol=1e-2,
         )
 
 
-def test_deconv2d_NHWC(test_case):
+def test_deconv2d_NHWC_1n1c(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     # params_case: (input_shape, output_shape, padding, stirdes, kernel_size)
     arg_dict["params_case"] = [
-        ((2, 3, 3, 4), (2, 3, 3, 8), "SAME", 1, 3),
-        ((2, 3, 3, 2), (2, 6, 6, 8), "SAME", 2, 4),
-        ((3, 2, 2, 1), (3, 5, 5, 2), "VALID", 2, 2),
-        ((3, 2, 2, 16), (3, 8, 8, 4), "VALID", 2, 5),
+        ((32, 3, 3, 4), (32, 3, 3, 8), "SAME", 1, 3),
+        ((32, 3, 3, 2), (32, 6, 6, 8), "SAME", 2, 4),
+        ((32, 2, 2, 1), (32, 5, 5, 2), "VALID", 2, 2),
+        ((32, 2, 2, 16), (32, 8, 8, 4), "VALID", 2, 5),
     ]
     arg_dict["dilations"] = [1]
     arg_dict["data_format"] = ["NHWC"]
@@ -156,15 +171,15 @@ def test_deconv2d_NHWC(test_case):
         compare_with_tensorflow(*arg)
 
 
-def test_deconv2d_NCHW(test_case):
+def test_deconv2d_NCHW_1n1c(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     # params_case: (input_shape, output_shape, padding, stirdes, kernel_size)
     arg_dict["params_case"] = [
-        ((2, 4, 3, 3), (2, 8, 3, 3), "SAME", 1, 3),
-        ((2, 4, 3, 3), (2, 8, 6, 6), "SAME", 2, 5),
-        ((3, 1, 2, 2), (3, 2, 5, 5), "VALID", 2, 2),
-        ((3, 16, 2, 2), (3, 4, 8, 8), "VALID", 2, 5),
+        ((32, 4, 3, 3), (32, 8, 3, 3), "SAME", 1, 3),
+        ((32, 4, 3, 3), (32, 8, 6, 6), "SAME", 2, 5),
+        ((32, 1, 2, 2), (32, 2, 5, 5), "VALID", 2, 2),
+        ((32, 16, 2, 2), (32, 4, 8, 8), "VALID", 2, 5),
     ]
     arg_dict["dilations"] = [1]
     arg_dict["data_format"] = ["NCHW"]

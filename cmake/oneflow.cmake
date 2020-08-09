@@ -1,6 +1,8 @@
 # main cpp
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
-
+# TODO(tsai): skip for now, fail to link when building CPU only
+if (BUILD_CUDA)
+  list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
+endif()
 function(oneflow_add_executable)
   if (BUILD_CUDA)
     cuda_add_executable(${ARGV})
@@ -45,7 +47,7 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
 endforeach()
 
 file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
- "${PROJECT_SOURCE_DIR}/oneflow/customized/*.*")
+ "${PROJECT_SOURCE_DIR}/oneflow/user/*.*")
 if (WITH_XLA OR WITH_TENSORRT)
   file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
   if (NOT WITH_XLA)
@@ -89,38 +91,38 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.h$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.h$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.hpp$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.hpp$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cuh$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cuh$")
     if(BUILD_CUDA)
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cu$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cu$")
     if(BUILD_CUDA)
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.proto$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.proto$")
     list(APPEND of_all_proto ${oneflow_single_file})
     #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cpp$")
-    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*_test\\.cpp$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cpp$")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     else()
@@ -140,38 +142,33 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 endforeach()
 
-if(PY3)
-  find_package(Python3 COMPONENTS Interpreter REQUIRED)
-  find_package(Python3 COMPONENTS Development NumPy)
-  if (Python3_Development_FOUND AND Python3_INCLUDE_DIRS)
-    set(Python_INCLUDE_DIRS ${Python3_INCLUDE_DIRS})
-  endif()
-  if (Python3_NumPy_FOUND AND Python3_NumPy_INCLUDE_DIRS)
-    set(Python_NumPy_INCLUDE_DIRS ${Python3_NumPy_INCLUDE_DIRS})
-  endif()
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+message(STATUS "Python3 specified. Version found: " ${Python3_VERSION})
+set(Python_EXECUTABLE ${Python3_EXECUTABLE})
+message(STATUS "Using Python executable: " ${Python_EXECUTABLE})
 
-  message("-- Python3 specified. Version found: " ${Python3_VERSION})
-  set(Python_EXECUTABLE ${Python3_EXECUTABLE})
-else()
-  find_package(Python2 COMPONENTS Interpreter REQUIRED)
-  find_package(Python2 COMPONENTS Development NumPy)
-  if (Python2_Development_FOUND AND Python2_INCLUDE_DIRS)
-    set(Python_INCLUDE_DIRS ${Python2_INCLUDE_DIRS})
-  endif()
-  if (Python2_NumPy_FOUND AND Python2_NumPy_INCLUDE_DIRS)
-    set(Python_NumPy_INCLUDE_DIRS ${Python2_NumPy_INCLUDE_DIRS})
-  endif()
-  message("-- Python2 specified. Version found: " ${Python2_VERSION})
-  set(Python_EXECUTABLE ${Python2_EXECUTABLE})
+message(STATUS "Installing necessary Python packages...")
+set(requirements_txt ${PROJECT_SOURCE_DIR}/dev-requirements.txt)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${requirements_txt})
+execute_process(
+  COMMAND ${Python_EXECUTABLE} -m pip install -r ${requirements_txt} --user
+)
+message(STATUS "Python packages are installed.")
+
+find_package(Python3 COMPONENTS Development NumPy)
+if (Python3_Development_FOUND AND Python3_INCLUDE_DIRS)
+  set(Python_INCLUDE_DIRS ${Python3_INCLUDE_DIRS})
 endif()
-message("-- Using Python executable: " ${Python_EXECUTABLE})
+if (Python3_NumPy_FOUND AND Python3_NumPy_INCLUDE_DIRS)
+  set(Python_NumPy_INCLUDE_DIRS ${Python3_NumPy_INCLUDE_DIRS})
+endif()
 if (NOT Python_INCLUDE_DIRS)
   message(STATUS "Getting python include directory from sysconfig..")
   execute_process(
     COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_paths()['include'])"
     OUTPUT_VARIABLE Python_INCLUDE_DIRS
     RESULT_VARIABLE ret_code)
-  string(STRIP ${Python_INCLUDE_DIRS} Python_INCLUDE_DIRS)
+  string(STRIP "${Python_INCLUDE_DIRS}" Python_INCLUDE_DIRS)
   if ((NOT (ret_code EQUAL "0")) OR (NOT IS_DIRECTORY ${Python_INCLUDE_DIRS})
     OR (NOT EXISTS ${Python_INCLUDE_DIRS}/Python.h))
     set(Python_INCLUDE_DIRS "")
@@ -188,7 +185,7 @@ if (NOT Python_NumPy_INCLUDE_DIRS)
     COMMAND ${Python_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
     OUTPUT_VARIABLE Python_NumPy_INCLUDE_DIRS
     RESULT_VARIABLE ret_code)
-  string(STRIP ${Python_NumPy_INCLUDE_DIRS} Python_NumPy_INCLUDE_DIRS)
+  string(STRIP "${Python_NumPy_INCLUDE_DIRS}" Python_NumPy_INCLUDE_DIRS)
   if ((NOT ret_code EQUAL 0) OR (NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS})
     OR (NOT EXISTS ${Python_NumPy_INCLUDE_DIRS}/numpy/arrayobject.h))
     set(Python_NumPy_INCLUDE_DIRS "")
@@ -201,8 +198,9 @@ message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
 
 # clang format
 add_custom_target(of_format
-  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
-  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow/python --fix
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix --quiet
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --python_bin ${Python_EXECUTABLE} --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow/python --fix
   )
 
 # generate version
@@ -225,12 +223,12 @@ if(BUILD_GIT_VERSION)
   add_definitions(-DWITH_GIT_VERSION)
 endif()
 
+set(of_proto_python_dir "${PROJECT_BINARY_DIR}/of_proto_python")
+
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
   COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow/core
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${of_proto_python_dir}
 	)
 add_dependencies(make_pyproto_dir prepare_oneflow_third_party)
 foreach(proto_name ${of_all_proto})
@@ -286,17 +284,25 @@ target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Pyt
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 file(REMOVE_RECURSE "${of_pyscript_dir}/oneflow/python")
 add_custom_target(of_pyscript_copy ALL
+    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/clean_generated_api.py --root_path=${of_pyscript_dir}/oneflow
     COMMAND "${CMAKE_COMMAND}" -E copy
         "${PROJECT_SOURCE_DIR}/oneflow/init.py" "${of_pyscript_dir}/oneflow/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
 file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
+if (BUILD_CUDA)
+  add_custom_command(TARGET of_pyscript_copy POST_BUILD
+        COMMAND echo "with_cuda=True" >> "${of_pyscript_dir}/oneflow/python/compatibility.py")
+else()
+  add_custom_command(TARGET of_pyscript_copy POST_BUILD
+        COMMAND echo "with_cuda=False" >> "${of_pyscript_dir}/oneflow/python/compatibility.py")
+endif()
+
 copy_files("${oneflow_all_python_file}" "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}" of_pyscript_copy)
+
 file(WRITE ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags = []\n")
 if (BUILD_CUDA)
   file(APPEND ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-DWITH_CUDA')\n")
@@ -310,7 +316,7 @@ endif()
 add_dependencies(of_pyscript_copy of_protoobj)
 add_custom_target(generate_api ALL
   COMMAND rm -rf ${of_pyscript_dir}/oneflow/generated
-  COMMAND export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH && ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow/generated)
+  COMMAND export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH && ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow)
 add_dependencies(generate_api of_pyscript_copy)
 add_dependencies(generate_api oneflow_internal)
 
@@ -338,28 +344,27 @@ endforeach()
 
 # build test
 if(BUILD_TESTING)
-  if(NOT BUILD_CUDA)
-    message(FATAL_ERROR "BUILD_TESTING without BUILD_CUDA")
-  endif()
-  if (of_all_test_cc)
-    oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
-    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
-    set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-    add_test(NAME oneflow_test COMMAND oneflow_testexe)
-    #  foreach(cc ${of_all_test_cc})
-    #    get_filename_component(test_name ${cc} NAME_WE)
-    #    string(CONCAT test_exe_name ${test_name} exe)
-    #    oneflow_add_executable(${test_exe_name} ${cc})
-    #    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
-    #  endforeach()
-  endif()
-  if (of_separate_test_cc)
-    foreach(cc ${of_separate_test_cc})
-      get_filename_component(test_name ${cc} NAME_WE)
-      string(CONCAT test_exe_name ${test_name} exe)
-      oneflow_add_executable(${test_exe_name} ${cc})
-      target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
-    endforeach()
+  if(BUILD_CUDA)
+    if (of_all_test_cc)
+      oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
+      target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
+      set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+      add_test(NAME oneflow_test COMMAND oneflow_testexe)
+      #  foreach(cc ${of_all_test_cc})
+      #    get_filename_component(test_name ${cc} NAME_WE)
+      #    string(CONCAT test_exe_name ${test_name} exe)
+      #    oneflow_add_executable(${test_exe_name} ${cc})
+      #    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+      #  endforeach()
+    endif()
+    if (of_separate_test_cc)
+      foreach(cc ${of_separate_test_cc})
+        get_filename_component(test_name ${cc} NAME_WE)
+        string(CONCAT test_exe_name ${test_name} exe)
+        oneflow_add_executable(${test_exe_name} ${cc})
+        target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+      endforeach()
+    endif()
   endif()
 endif()
 

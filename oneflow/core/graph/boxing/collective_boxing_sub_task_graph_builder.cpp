@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/graph/boxing/collective_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/collective_boxing_task_node.h"
@@ -206,8 +221,11 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
         NcclInitCollectiveNode(collective_node, src_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeReduce, root_parallel_id);
         Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), collective_node);
+        CompTaskNode* dst_node = sorted_dst_comp_tasks.front();
         if (i == root_parallel_id) {
-          CompTaskNode* dst_node = sorted_dst_comp_tasks.front();
+          Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
+        } else {
+          collective_node->BuildCtrlRegstDesc(dst_node);
           Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
         }
       }
@@ -323,6 +341,7 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
           Connect<TaskNode>(gpu_src_node, ctx->task_graph()->NewEdge(), collective_node);
         } else {
           gpu_src_node->BuildCtrlRegstDesc(collective_node);
+          Connect<TaskNode>(gpu_src_node, ctx->task_graph()->NewEdge(), collective_node);
         }
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
       }

@@ -1,13 +1,28 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import collections
 from functools import reduce
 
 import numpy as np
-import oneflow.core.common.data_type_pb2 as dtype_util
+import oneflow as flow
 import oneflow.oneflow_internal as oneflow_api
 from google.protobuf import text_format
-from oneflow.python.framework.dtype import convert_of_dtype_to_numpy_dtype
+from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 from oneflow.python.lib.core.box import Box
 
 
@@ -17,7 +32,9 @@ class OfBlob(object):
 
     @property
     def dtype(self):
-        return oneflow_api.Ofblob_GetDataType(self.of_blob_ptr_)
+        return convert_proto_dtype_to_oneflow_dtype(
+            oneflow_api.Ofblob_GetDataType(self.of_blob_ptr_)
+        )
 
     @property
     def static_shape(self):
@@ -86,7 +103,18 @@ class OfBlob(object):
         return ret_ndarray_list
 
     def CopyFromNdarray(self, src_ndarray):
-        return self._CopyFromNdarrayLists([[src_ndarray]])
+        if self.is_dynamic:
+            return self._CopyFromNdarrayLists([[src_ndarray]])
+        else:
+            return self._CopyBodyFromNdarray(src_ndarray)
+
+    def _CopyBodyFromNdarray(self, src_ndarray):
+        assert not self.is_dynamic
+        method_name = oneflow_api.Dtype_GetOfBlobStaticTensorCopyFromBufferFuncName(
+            self.dtype.oneflow_proto_dtype
+        )
+        copy_method = getattr(oneflow_api, method_name)
+        copy_method(self.of_blob_ptr_, src_ndarray)
 
     def CopyFromNdarrayList(self, src_ndarray_list):
         return self._CopyFromNdarrayLists([src_ndarray_list])
@@ -110,7 +138,7 @@ class OfBlob(object):
     def _CopyToNdarrayListAndIsNewSliceStartMask(self):
         # get tensor list
         method_name = oneflow_api.Dtype_GetOfBlobCurTensorCopyToBufferFuncName(
-            self.dtype
+            self.dtype.oneflow_proto_dtype
         )
         copy_method = getattr(oneflow_api, method_name)
         tensor_list = []
@@ -119,7 +147,9 @@ class OfBlob(object):
             shape_tensor = np.zeros(self.num_axes, dtype=np.int64)
             oneflow_api.OfBlob_CurTensorCopyShapeTo(self.of_blob_ptr_, shape_tensor)
             shape = tuple(shape_tensor.tolist())
-            tensor = np.zeros(shape, dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
+            tensor = np.zeros(
+                shape, dtype=flow.convert_oneflow_dtype_to_numpy_dtype(self.dtype)
+            )
             copy_method(self.of_blob_ptr_, tensor)
             tensor_list.append(tensor)
             oneflow_api.OfBlob_IncTensorIterator(self.of_blob_ptr_)
@@ -157,11 +187,12 @@ class OfBlob(object):
     ):
         assert len(tensor_list) == len(is_new_slice_start_mask)
         method_name = oneflow_api.Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName(
-            self.dtype
+            self.dtype.oneflow_proto_dtype
         )
         copy_method = getattr(oneflow_api, method_name)
         oneflow_api.OfBlob_ClearTensorLists(self.of_blob_ptr_)
         for i, tensor in enumerate(tensor_list):
+            assert tensor.data.contiguous
             if is_new_slice_start_mask[i]:
                 oneflow_api.OfBlob_AddTensorListSlice(self.of_blob_ptr_)
             oneflow_api.OfBlob_AddTensor(self.of_blob_ptr_)

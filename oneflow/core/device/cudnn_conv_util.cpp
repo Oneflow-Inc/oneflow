@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -152,22 +167,21 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob
                              const user_op::UserOpConfWrapper& conv_conf) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
-  std::vector<int32_t> pad_large_side;
-  GetConvOutAndPad(in_blob_shape, conv_conf, nullptr, nullptr, &pad_large_side);
+  const auto& padding_before = conv_conf.attr<std::vector<int32_t>>("padding_before");
   const auto& strides = conv_conf.attr<std::vector<int32_t>>("strides");
   const auto& dilation_rate = conv_conf.attr<std::vector<int32_t>>("dilation_rate");
   if (opkernel_dim == 2) {
-    CudaCheck(cudnnSetConvolution2dDescriptor(val_, pad_large_side[0], pad_large_side[1],
+    CudaCheck(cudnnSetConvolution2dDescriptor(val_, padding_before.at(0), padding_before.at(1),
                                               strides.at(0), strides.at(1), dilation_rate.at(0),
                                               dilation_rate.at(1), CUDNN_CROSS_CORRELATION,
                                               GetCudnnDataType(data_type)));
   } else if (opkernel_dim == 1) {
-    CudaCheck(cudnnSetConvolution2dDescriptor(val_, pad_large_side[0], 0, strides.at(0), 1,
+    CudaCheck(cudnnSetConvolution2dDescriptor(val_, padding_before.at(0), 0, strides.at(0), 1,
                                               dilation_rate.at(0), 1, CUDNN_CROSS_CORRELATION,
                                               GetCudnnDataType(data_type)));
   } else {
     CudaCheck(cudnnSetConvolutionNdDescriptor(
-        val_, opkernel_dim, pad_large_side.data(), strides.data(), dilation_rate.data(),
+        val_, opkernel_dim, padding_before.data(), strides.data(), dilation_rate.data(),
         CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
   }
   const int32_t groups = conv_conf.attr<int32_t>("groups");

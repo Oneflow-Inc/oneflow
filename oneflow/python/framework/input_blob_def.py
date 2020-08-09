@@ -1,13 +1,27 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import sys
 from functools import reduce
-from typing import Any, Optional, Sequence, Union, Tuple
+from typing import Any, Optional, Sequence, Union
 
 import numpy as np
 
 import oneflow
-import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as lbi_util
 import oneflow.python.framework.blob_desc as blob_desc
@@ -17,8 +31,10 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
 from functools import reduce
+import traceback
 
 
 class ArgBlobDef(blob_desc.BlobDesc):
@@ -95,35 +111,18 @@ class ArgBlobDef(blob_desc.BlobDesc):
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
-        interface_blob_conf.data_type = self.dtype_
+        interface_blob_conf.data_type = self.dtype_.oneflow_proto_dtype
         interface_blob_conf.is_dynamic = self.is_dynamic
         interface_blob_conf.is_tensor_list = self.is_tensor_list
         self.SetBatchAxisAndSplitAxis(interface_blob_conf)
         return interface_blob_conf
 
 
-@oneflow_export("FixedTensorDef")
 class FixedTensorDef(ArgBlobDef):
-    """`FixedTensorDef` is a placeholder for numpy input of a OneFlow function. 
-    A `numpy.ndarray` takes a `FixedTensorDef`'s place must have a identical shape.
-    For instance::
-        
-        @oneflow.global_function
-        def train(
-            image_blob=oneflow.FixedTensorDef(
-                shape=(2, 255, 255, 3), dtype=flow.float32
-            )
-        ):
-            # your network
-        
-        train(np.random.randn(2, 255, 255, 3).astype(np.float32))
-        
-    """
-
     def __init__(
         self,
-        shape: Tuple[int],
-        dtype: int = data_type_util.kFloat,
+        shape: Sequence[int],
+        dtype: dtype_util.dtype = dtype_util.float,
         batch_axis: int = 0,
         name: Optional[str] = None,
     ) -> None:
@@ -150,7 +149,7 @@ class FixedTensorDef(ArgBlobDef):
         return compile_context.CurJobAddConsistentOp(op_conf)
 
     def EagerAddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
-        parallel_symbol = oneflow.scope.current_scope().device_parallel_desc_symbol
+        parallel_symbol = oneflow.current_scope().device_parallel_desc_symbol
         if (
             parallel_symbol.device_tag == "gpu"
             and list(parallel_symbol.machine_id2device_id_list.keys()) == [0]
@@ -161,7 +160,7 @@ class FixedTensorDef(ArgBlobDef):
         else:
             device_tag = "cpu"
             device_ids = "0:0"
-        with oneflow.fixed_placement(device_tag, device_ids):
+        with oneflow.scope.placement(device_tag, device_ids):
             return compile_context.CurJobAddConsistentOp(op_conf)
 
     def SetBatchAxisAndSplitAxis(
@@ -183,31 +182,11 @@ class FixedTensorDef(ArgBlobDef):
         session.AsyncPush(self.op_name, _MakePushNdarrayCallback(arg_ndarray))
 
 
-@oneflow_export("MirroredTensorDef")
 class MirroredTensorDef(ArgBlobDef):
-    """`MirroredTensorDef` is a placeholder for numpy input of a OneFlow function. 
-    A `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
-    For instance::
-        
-        @oneflow.global_function
-        def train(
-            image_blob=oneflow.MirroredTensorDef(
-                shape=(2, 255, 255, 3), dtype=flow.float32
-            )
-        ):
-            # your network
-        
-        input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
-        input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
-        train([input1])
-        train([input2])
-
-    """
-
     def __init__(
         self,
-        shape: Tuple[int],
-        dtype: int = data_type_util.kFloat,
+        shape: Sequence[int],
+        dtype: dtype_util.dtype = dtype_util.float,
         batch_axis: int = 0,
         name: Optional[str] = None,
     ) -> None:
@@ -265,31 +244,11 @@ class MirroredTensorDef(ArgBlobDef):
             )
 
 
-@oneflow_export("MirroredTensorListDef")
 class MirroredTensorListDef(ArgBlobDef):
-    """`MirroredTensorListDef` is a placeholder for numpy input of a OneFlow function. 
-    A `list` of `list` of `numpy.ndarray` takes a `MirroredTensorDef`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
-    For instance::
-        
-        @oneflow.global_function
-        def train(
-            image_blob=oneflow.MirroredTensorListDef(
-                shape=(2, 255, 255, 3), dtype=flow.float32
-            )
-        ):
-            # your network
-        
-        input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
-        input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
-        train([[input1]])
-        train([[input2]])
-
-    """
-
     def __init__(
         self,
-        shape: Tuple[int],
-        dtype: int = data_type_util.kFloat,
+        shape: Sequence[int],
+        dtype: dtype_util.dtype = dtype_util.float,
         batch_axis: int = 0,
         name: Optional[str] = None,
     ) -> None:
@@ -379,3 +338,60 @@ def _MakePushNdarrayCallback(ndarray):
 def _MakePushNdarrayListCallback(ndarray_list):
     copied = [np.copy(ndarray) for ndarray in ndarray_list]
     return lambda ofblob: ofblob.CopyFromNdarrayList(copied)
+
+
+@oneflow_export("FixedTensorDef")
+class DeprecatedFixedTensorDef(FixedTensorDef):
+    def __init__(self, *args, **kwargs):
+        running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
+        if not running_script.endswith('input_blob_def.py"'):
+            print(
+                "WARNING: oneflow.FixedTensorDef has been deprecated. "
+                "Please use oneflow.typing.Numpy.Placeholder instead."
+            )
+            print(
+                """For instance:
+            - def job_func(images=oneflow.FixedTensorDef((32, 1, 28, 28), dtype=flow.float))
+            + def job_func(images:oneflow.typing.Numpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"""
+            )
+            print(traceback.format_stack()[-2])
+
+        super().__init__(*args, **kwargs)
+
+
+@oneflow_export("MirroredTensorDef")
+class DeprecatedMirroredTensorDef(MirroredTensorDef):
+    def __init__(self, *args, **kwargs):
+        running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
+        if not running_script.endswith('input_blob_def.py"'):
+            print(
+                "WARNING: oneflow.MirroredTensorDef has been deprecated. "
+                "Please use oneflow.typing.ListNumpy.Placeholder instead."
+            )
+            print(
+                """For instance:
+            - def job_func(images=oneflow.MirroredTensorDef((32, 1, 28, 28), dtype=flow.float))
+            + def job_func(images:oneflow.typing.ListNumpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"""
+            )
+            print(traceback.format_stack()[-2])
+
+        super().__init__(*args, **kwargs)
+
+
+@oneflow_export("MirroredTensorListDef")
+class DeprecatedTensorListDef(MirroredTensorListDef):
+    def __init__(self, *args, **kwargs):
+        running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
+        if not running_script.endswith('input_blob_def.py"'):
+            print(
+                "WARNING: oneflow.MirroredTensorListDef has been deprecated. "
+                "Please use oneflow.typing.ListListNumpy.Placeholder instead."
+            )
+            print(
+                """For instance:
+            - def job_func(images=oneflow.MirroredTensorListDef((32, 1, 28, 28), dtype=flow.float))
+            + def job_func(images:oneflow.typing.ListListNumpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"""
+            )
+            print(traceback.format_stack()[-2])
+
+        super().__init__(*args, **kwargs)

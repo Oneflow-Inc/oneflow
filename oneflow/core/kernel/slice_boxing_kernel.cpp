@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
 #include "oneflow/core/device/memory_copier.h"
@@ -106,12 +121,16 @@ void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(
     } else {
       bool can_direct_access =
           (device_type == kCPU)
+#ifdef WITH_CUDA
           || (device_type == DeviceType::kGPU && in_i->mem_case().has_host_mem()
               && in_i->mem_case().host_mem().has_cuda_pinned_mem())
           || (device_type == DeviceType::kGPU && in_i->mem_case().has_device_cuda_mem()
               && out->mem_case().has_device_cuda_mem()
               && out->mem_case().device_cuda_mem().device_id()
                      == in_i->mem_case().device_cuda_mem().device_id());
+#else
+          ;
+#endif
       if (in_i->shape() == out->shape() && can_direct_access) {
         SliceBoxingKernelUtil<device_type, T>::Add(ctx.device_ctx, out->shape().elem_cnt(),
                                                    in_i->dptr<T>(), out->dptr<T>(),

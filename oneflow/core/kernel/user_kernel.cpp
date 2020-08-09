@@ -1,9 +1,23 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
-#include "oneflow/core/framework/op_registration.h"
-#include "oneflow/core/framework/kernel_registration.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/infer_util.h"
@@ -86,13 +100,14 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
             user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
-        sbp_signature_(&(kernel_conf.user_conf().sbp_sig())) {
+        sbp_signature_(&(kernel_conf.user_conf().sbp_sig())),
+        parallel_desc_(kernel_conf.user_conf().parallel_conf()) {
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2logical_blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
                                        user_op::TensorDesc(pair.second));
     }
   }
-  ~UserKernelInitContext() = default;
+  ~UserKernelInitContext() override = default;
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
 
@@ -121,12 +136,14 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   }
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
+  const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
 
  private:
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   const SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2logical_tensor_desc_;
+  ParallelDesc parallel_desc_;
 };
 
 class UserKernelOpInferContext : public user_op::InferContext {
@@ -156,7 +173,9 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override {
-    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).get();
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; }
+    return it->second.get();
   }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
@@ -228,7 +247,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     InitArg2Blob(kernel_conf.op_attribute().op_conf().user_conf().input());
     InitArg2Blob(kernel_conf.op_attribute().op_conf().user_conf().output());
 
-    const auto* op_reg_val = user_op::LookUpInOpRegistry(
+    const auto* op_reg_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(
         kernel_conf.op_attribute().op_conf().user_conf().op_type_name());
     CHECK_NOTNULL(op_reg_val);
     tensor_desc_infer_fn_ = op_reg_val->tensor_desc_infer_fn;
@@ -312,6 +331,11 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   }
   ~UserKernelComputeContext() = default;
 
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
+    return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_.end()) { return nullptr; }
@@ -379,8 +403,8 @@ class UserKernel final : public Kernel {
     {
       const std::string& op_type_name =
           kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
-      const user_op::KernelRegistrationVal* kernel_reg_val =
-          CHECK_JUST(user_op::LookUpInKernelRegistry(
+      const user_op::OpKernelRegistryResult* kernel_reg_val =
+          CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
               op_type_name, UserKernelRegContext(kernel_conf(), job_desc())));
       CHECK_NOTNULL(kernel_reg_val);
       kernel_.reset(kernel_reg_val->create_fn());
@@ -418,6 +442,19 @@ class UserKernel final : public Kernel {
       CHECK_NOTNULL(op_infer_ctx);
       op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob);
       kernel_->InferShape(infer_ctx_.get());
+      for (const auto& out_arg_pair : infer_ctx_->outputs()) {
+        const Shape& static_shape =
+            infer_ctx_->TensorDesc4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second)
+                ->shape();
+        const ShapeView& shape_view =
+            infer_ctx_->ShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
+        CHECK_LE(shape_view.elem_cnt(), static_shape.elem_cnt())
+            << "InferShape of OpKernel (op_type_name: " << op_conf().user_conf().op_type_name()
+            << ", op_name: " << op_conf().name()
+            << ") raise error, output arg's (name: " << out_arg_pair.first
+            << ", index: " << out_arg_pair.second << ") runtime shape " << shape_view.ToString()
+            << " surpass the limit of static shape " << static_shape.ToString();
+      }
       infer_cache_->UpdateCacheValue(infer_ctx_.get());
     } else {
       std::shared_ptr<const OpInferCacheValue> cache_value_ptr = infer_cache_->GetCacheValue();
@@ -450,8 +487,8 @@ EagerKernel::EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf)
 
 void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
   const std::string& op_type_name = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
-  auto kernel_reg_val = CHECK_JUST(
-      user_op::LookUpInKernelRegistry(op_type_name, UserKernelRegContext(kernel_conf, job_desc())));
+  auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+      op_type_name, UserKernelRegContext(kernel_conf, job_desc())));
   CHECK_NOTNULL(kernel_reg_val);
   kernel_.reset(kernel_reg_val->create_fn());
 }
