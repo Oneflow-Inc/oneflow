@@ -312,7 +312,7 @@ def _coco(anno_file):
     return global_coco_dict[anno_file]
 
 
-def _cooc_random_sample_images(
+def _coco_random_sample_images(
     anno_file=default_coco_anno_file, image_dir=default_coco_image_dir, batch_size=2
 ):
     image_files = []
@@ -418,7 +418,7 @@ def _test_image_resize_with_cv(
 
 
 def test_image_resize_to_fixed_size(test_case):
-    image_files, _ = _cooc_random_sample_images()
+    image_files, _ = _coco_random_sample_images()
     _test_image_resize_with_cv(
         test_case,
         image_files,
@@ -429,7 +429,7 @@ def test_image_resize_to_fixed_size(test_case):
 
 
 def test_image_resize_shorter_to_target_size(test_case):
-    image_files, _ = _cooc_random_sample_images()
+    image_files, _ = _coco_random_sample_images()
     _test_image_resize_with_cv(
         test_case,
         image_files,
@@ -441,7 +441,7 @@ def test_image_resize_shorter_to_target_size(test_case):
 
 
 def test_image_resize_longer_to_target_size(test_case):
-    image_files, _ = _cooc_random_sample_images()
+    image_files, _ = _coco_random_sample_images()
     _test_image_resize_with_cv(
         test_case,
         image_files,
@@ -453,7 +453,7 @@ def test_image_resize_longer_to_target_size(test_case):
 
 
 def test_image_resize_shorter_to_target_size_with_max_size(test_case):
-    image_files, _ = _cooc_random_sample_images()
+    image_files, _ = _coco_random_sample_images()
     _test_image_resize_with_cv(
         test_case,
         image_files,
@@ -466,7 +466,7 @@ def test_image_resize_shorter_to_target_size_with_max_size(test_case):
 
 
 def test_image_resize_longer_to_target_size_with_min_size(test_case):
-    image_files, _ = _cooc_random_sample_images()
+    image_files, _ = _coco_random_sample_images()
     _test_image_resize_with_cv(
         test_case,
         image_files,
@@ -479,7 +479,7 @@ def test_image_resize_longer_to_target_size_with_min_size(test_case):
 
 
 def test_image_resize_to_fixed_size_with_dtype_uint8(test_case):
-    image_files, _ = _cooc_random_sample_images()
+    image_files, _ = _coco_random_sample_images()
     _test_image_resize_with_cv(
         test_case,
         image_files,
@@ -491,7 +491,7 @@ def test_image_resize_to_fixed_size_with_dtype_uint8(test_case):
 
 
 def test_image_resize_shorter_to_target_size_with_max_size_with_dtype_uint8(test_case):
-    image_files, _ = _cooc_random_sample_images()
+    image_files, _ = _coco_random_sample_images()
     _test_image_resize_with_cv(
         test_case,
         image_files,
