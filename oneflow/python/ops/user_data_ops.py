@@ -169,7 +169,7 @@ def api_image_resize(
     resize_shorter: int = 0,
     resize_x: int = 0,
     resize_y: int = 0,
-) -> Sequence[BlobDef]:
+) -> Union[BlobDef, Sequence[BlobDef]]:
     # process deprecated params
     deprecated_param_used = False
     if color_space is not None:
