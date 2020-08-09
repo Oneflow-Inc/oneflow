@@ -106,6 +106,7 @@ def _test_slice(
     outputs,
     dtype=flow.float32,
     device_tag=DEFAULT_DEVICE_TAG,
+    verbose=False,
 ):
     input = input.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
     outputs = [
@@ -119,7 +120,16 @@ def _test_slice(
     func_cfg.default_placement_scope(flow.scope.placement(device_tag, "0:0"))
     slice_func = _make_slice_func(slice_args, input.shape, dtype, func_cfg)
     of_outputs = slice_func(input)
+
+    if verbose:
+        print("input:\n{}".format(input))
+        print("slice_args:", slice_args)
+        print("dtype:", dtype)
+        print("device_tag:", device_tag)
+
     for out, of_out in zip(outputs, of_outputs):
+        if verbose:
+            print("output:\n{}\n{}".format(out, of_out))
         test_case.assertTrue(np.array_equal(out, of_out))
 
 
@@ -206,6 +216,7 @@ def test_slice_base(test_case):
         flow.float64,
     ]
     arg_dict["device_tag"] = ["cpu", "gpu"]
+    # arg_dict["verbose"] = [True]
     for kwarg in test_util.GenArgDict(arg_dict):
         _test_slice(test_case, input, slice_args, outputs, **kwarg)
 

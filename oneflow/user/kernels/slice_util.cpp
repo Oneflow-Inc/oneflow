@@ -41,15 +41,17 @@ void FoldContiguousFullSliceDimensions(SliceParams* params) {
   bool full_slice_on_prev_axis = false;
   FOR_RANGE(int, i, 0, params->ndim) {
     bool full_slice_on_cur_axis = params->IsFullSlice(i);
-    if (full_slice_on_cur_axis && full_slice_on_prev_axis) {
-      params->dims[cur_dim] *= params->dims[i];
-      params->size[cur_dim] *= params->size[i];
-    } else {
-      cur_dim += 1;
-      params->dims[cur_dim] = params->dims[i];
-      params->start[cur_dim] = params->start[i];
-      params->step[cur_dim] = params->step[i];
-      params->size[cur_dim] = params->size[i];
+    if (i != 0) {
+      if (full_slice_on_cur_axis && full_slice_on_prev_axis) {
+        params->dims[cur_dim] *= params->dims[i];
+        params->size[cur_dim] *= params->size[i];
+      } else {
+        cur_dim += 1;
+        params->dims[cur_dim] = params->dims[i];
+        params->start[cur_dim] = params->start[i];
+        params->step[cur_dim] = params->step[i];
+        params->size[cur_dim] = params->size[i];
+      }
     }
     full_slice_on_prev_axis = full_slice_on_cur_axis;
   }
@@ -59,6 +61,7 @@ void FoldContiguousFullSliceDimensions(SliceParams* params) {
 template<typename T>
 struct SliceKernelUtil<DeviceType::kCPU, T> {
   static void Forward(DeviceCtx* ctx, SliceParams* params, const T* entire, T* sliced) {
+    FoldContiguousFullSliceDimensions(params);
     int64_t elem_cnt = params->elem_cnt();
     SliceIndexConverter entire_idx_cvtr(params->dims, params->ndim);
     SliceIndexConverter sliced_idx_cvtr(params->size, params->ndim);
@@ -69,6 +72,7 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
   }
 
   static void Backward(DeviceCtx* ctx, SliceParams* params, const T* sliced, T* entire) {
+    FoldContiguousFullSliceDimensions(params);
     int64_t elem_cnt = params->elem_cnt();
     SliceIndexConverter entire_idx_cvtr(params->dims, params->ndim);
     SliceIndexConverter sliced_idx_cvtr(params->size, params->ndim);

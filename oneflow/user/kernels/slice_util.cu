@@ -75,8 +75,7 @@ __global__ void SliceBackwardGpuHalf(const int n, SliceParams params,
 template<typename T, int NDIM>
 void LaunchSliceForward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced) {
   CHECK_EQ(params.ndim, NDIM);
-  int64_t elem_cnt = 1;
-  FOR_RANGE(int, i, 0, NDIM) { elem_cnt *= params.size[i]; }
+  int64_t elem_cnt = params.elem_cnt();
   SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
   SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
   SliceForwardGpu<T, NDIM>
@@ -87,8 +86,7 @@ void LaunchSliceForward(DeviceCtx* ctx, const SliceParams& params, const T* enti
 template<typename T, int NDIM>
 void LaunchSliceBackward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire) {
   CHECK_EQ(params.ndim, NDIM);
-  int64_t elem_cnt = 1;
-  FOR_RANGE(int, i, 0, NDIM) { elem_cnt *= params.size[i]; }
+  int64_t elem_cnt = params.elem_cnt();
   SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
   SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
   SliceBackwardGpu<T, NDIM>
@@ -100,8 +98,7 @@ template<int NDIM>
 void LaunchSliceForward(DeviceCtx* ctx, const SliceParams& params, const float16* entire,
                         float16* sliced) {
   CHECK_EQ(params.ndim, NDIM);
-  int64_t elem_cnt = 1;
-  FOR_RANGE(int, i, 0, NDIM) { elem_cnt *= params.size[i]; }
+  int64_t elem_cnt = params.elem_cnt();
   SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
   SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
   SliceForwardGpuHalf<NDIM>
@@ -114,8 +111,7 @@ template<int NDIM>
 void LaunchSliceBackward(DeviceCtx* ctx, const SliceParams& params, const float16* sliced,
                          float16* entire) {
   CHECK_EQ(params.ndim, NDIM);
-  int64_t elem_cnt = 1;
-  FOR_RANGE(int, i, 0, NDIM) { elem_cnt *= params.size[i]; }
+  int64_t elem_cnt = params.elem_cnt();
   SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
   SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
   SliceBackwardGpuHalf<NDIM>
