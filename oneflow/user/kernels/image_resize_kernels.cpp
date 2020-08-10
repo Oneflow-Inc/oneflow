@@ -145,19 +145,27 @@ class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
       const int64_t origin_height = in_buffer.shape().At(0);
       const int64_t origin_width = in_buffer.shape().At(1);
       CHECK_EQ(in_buffer.shape().At(2), channels);
-      CHECK_EQ(in_buffer.data_type(), ctx->Attr<DataType>("data_type"));
-
-      const cv::Mat in_img_mat = GenCvMat4ImageBuffer(in_buffer);
-      cv::Mat res_img_mat = GenCvMat4ImageTensor(out_tensor, i);
+      DataType dtype = ctx->Attr<DataType>("data_type");
       int interp_flag = GetCvInterpolationFlag(ctx->Attr<std::string>("interpolation_type"),
                                                origin_width, origin_height, res_w, res_h);
-      cv::resize(in_img_mat, res_img_mat, cv::Size(res_w, res_h), 0, 0, interp_flag);
-      T* out_dptr = out_tensor->mut_dptr<T>() + i * elem_cnt_per_img;
-      CHECK(res_img_mat.isContinuous());
-      CHECK_EQ(res_img_mat.ptr<void>(), static_cast<void*>(out_dptr));
-      CHECK_EQ(res_img_mat.cols, res_w);
-      CHECK_EQ(res_img_mat.rows, res_h);
-      CHECK_EQ(res_img_mat.channels(), channels);
+
+      const cv::Mat in_img_mat = GenCvMat4ImageBuffer(in_buffer);
+      cv::Mat out_img_mat = GenCvMat4ImageTensor(out_tensor, i);
+      if (in_buffer.data_type() == dtype) {
+        cv::resize(in_img_mat, out_img_mat, cv::Size(res_w, res_h), 0, 0, interp_flag);
+      } else {
+        cv::Mat res_img_mat;
+        cv::resize(in_img_mat, res_img_mat, cv::Size(res_w, res_h), 0, 0, interp_flag);
+        CvMatConvertToDataType(res_img_mat, &out_img_mat, dtype);
+      }
+
+      char* cur_out_dptr =
+          out_tensor->mut_dptr<char>() + i * elem_cnt_per_img * GetSizeOfDataType(dtype);
+      CHECK(out_img_mat.isContinuous());
+      CHECK_EQ(out_img_mat.ptr<void>(), static_cast<void*>(cur_out_dptr));
+      CHECK_EQ(out_img_mat.cols, res_w);
+      CHECK_EQ(out_img_mat.rows, res_h);
+      CHECK_EQ(out_img_mat.channels(), channels);
 
       if (scale_tensor) {
         float* scale_dptr = scale_tensor->mut_dptr<float>() + i * 2;

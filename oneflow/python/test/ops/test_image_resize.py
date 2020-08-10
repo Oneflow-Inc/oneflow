@@ -30,14 +30,17 @@ def _make_image_resize_to_fixed_func(
     target_size,
     image_static_shape,
     dtype,
-    channels,
-    interpolation_type,
+    origin_dtype=flow.float32,
+    channels=3,
+    interpolation_type="bilinear",
     func_cfg=None,
     print_debug_info=False,
 ):
     @flow.global_function(type="predict", function_config=func_cfg)
     def image_resize_to_fixed(
-        image_list: otp.ListListNumpy.Placeholder(shape=image_static_shape, dtype=dtype)
+        image_list: otp.ListListNumpy.Placeholder(
+            shape=image_static_shape, dtype=origin_dtype
+        )
     ) -> tp.Tuple[otp.ListNumpy, otp.ListNumpy]:
         image_buffer = flow.tensor_list_to_tensor_buffer(image_list)
         res_image, scale, _ = flow.image.resize(
@@ -61,9 +64,9 @@ def _make_image_resize_keep_aspect_ratio_func(
     image_static_shape,
     origin_image_size_range,
     dtype,
-    channels,
-    resize_side,
-    interpolation_type,
+    channels=3,
+    resize_side="shorter",
+    interpolation_type="bilinear",
     func_cfg=None,
     print_debug_info=False,
 ):
@@ -102,6 +105,7 @@ def _make_image_resize_keep_aspect_ratio_func(
 def _of_image_resize(
     image_list,
     dtype=flow.float32,
+    origin_dtype=None,
     channels=3,
     keep_aspect_ratio=False,
     target_size=None,
@@ -145,10 +149,14 @@ def _of_image_resize(
         res_image, scale, new_size = image_resize_func([image_list])
         return (res_image[0], scale[0], new_size[0])
     else:
+        if origin_dtype is None:
+            origin_dtype = dtype
+
         image_resize_func = _make_image_resize_to_fixed_func(
             target_size=target_size,
             image_static_shape=image_static_shape,
             dtype=dtype,
+            origin_dtype=origin_dtype,
             channels=channels,
             interpolation_type=interpolation_type,
             func_cfg=func_cfg,
@@ -282,6 +290,7 @@ def _cv_image_resize(
     max_size=None,
     resize_side="shorter",
     interpolation=cv2.INTER_LINEAR,
+    dtype=np.float32,
 ):
     res_image_list = []
     res_size_list = []
@@ -293,7 +302,9 @@ def _cv_image_resize(
             w, h, target_size, min_size, max_size, keep_aspect_ratio, resize_side
         )
         res_image_list.append(
-            cv2.resize(image.squeeze(), new_size, interpolation=interpolation)
+            cv2.resize(image.squeeze(), new_size, interpolation=interpolation).astype(
+                dtype
+            )
         )
         res_size_list.append(new_size)
         res_scale_list.append(scale)
@@ -350,21 +361,32 @@ def _test_image_resize_with_cv(
     keep_aspect_ratio=True,
     resize_side="shorter",
     dtype=flow.float32,
+    origin_dtype=None,
     print_debug_info=False,
 ):
-    image_list = _cv_read_images_from_files(image_files, dtype)
+    if origin_dtype is None:
+        origin_dtype = dtype
+    image_list = _cv_read_images_from_files(image_files, origin_dtype)
 
     if print_debug_info:
         print("origin images shapes: {}".format([image.shape for image in image_list]))
         print(
-            "target_size: {}, min_size: {}, max_size: {}, keep_aspect_ratio: {}, resize_side: {}, dtype: {}".format(
-                target_size, min_size, max_size, keep_aspect_ratio, resize_side, dtype
+            "target_size: {}, min_size: {}, max_size: {}, keep_aspect_ratio: {}, \n"
+            "resize_side: {}, dtype: {}, origin_dtype: {}".format(
+                target_size,
+                min_size,
+                max_size,
+                keep_aspect_ratio,
+                resize_side,
+                dtype,
+                origin_dtype,
             )
         )
 
     of_res_images, of_scales, of_new_sizes = _of_image_resize(
         image_list=image_list,
         dtype=dtype,
+        origin_dtype=origin_dtype,
         keep_aspect_ratio=keep_aspect_ratio,
         target_size=target_size,
         min_size=min_size,
@@ -380,6 +402,7 @@ def _test_image_resize_with_cv(
         min_size=min_size,
         max_size=max_size,
         resize_side=resize_side,
+        dtype=flow.convert_oneflow_dtype_to_numpy_dtype(dtype),
     )
 
     if print_debug_info:
@@ -500,5 +523,18 @@ def test_image_resize_shorter_to_target_size_with_max_size_with_dtype_uint8(test
         keep_aspect_ratio=True,
         resize_side="shorter",
         dtype=flow.uint8,
+        # print_debug_info=True,
+    )
+
+
+def test_image_resize_uint8_to_float(test_case):
+    image_files, _ = _coco_random_sample_images()
+    _test_image_resize_with_cv(
+        test_case,
+        image_files,
+        target_size=(1000, 1000),
+        keep_aspect_ratio=False,
+        dtype=flow.float32,
+        origin_dtype=flow.uint8,
         # print_debug_info=True,
     )

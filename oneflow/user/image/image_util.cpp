@@ -89,6 +89,16 @@ cv::Mat GenCvMat4ImageTensor(const user_op::Tensor* image_tensor, int image_offs
   return cv::Mat();
 }
 
+void CvMatConvertToDataType(const cv::Mat& src, cv::Mat* dst, DataType dtype) {
+  if (dtype == DataType::kUInt8) {
+    src.convertTo(*dst, CV_8U);
+  } else if (dtype == DataType::kFloat) {
+    src.convertTo(*dst, CV_32F);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 int GetCvInterpolationFlag(const std::string& interp_type, int org_w, int org_h, int res_w,
                            int res_h) {
   if (interp_type == "bilinear") {
