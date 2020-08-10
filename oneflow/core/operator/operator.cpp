@@ -733,7 +733,8 @@ Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn, SbpParallel* sb
   } else if (split_hint[0] == 'B') {
     sbp->mutable_broadcast_parallel();
   } else {
-    return Error::CheckFailed() << "split hint only support 'S' or 'B', but get:" << split_hint[0];
+    return Error::CheckFailedError()
+           << "split hint only support 'S' or 'B', but get:" << split_hint[0];
   }
   return true;
 }
@@ -755,8 +756,8 @@ Maybe<void> InferOpSbpSignature(
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
     auto it = ibn2sbp_infer_hint.find(ibn);
     if (it == ibn2sbp_infer_hint.end()) {
-      return Error::CheckFailed() << "cannot find corresponding SbpInferHint for input_blob_name : "
-                                  << ibn;
+      return Error::CheckFailedError()
+             << "cannot find corresponding SbpInferHint for input_blob_name : " << ibn;
     }
     return &(it->second);
   };

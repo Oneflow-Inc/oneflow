@@ -75,7 +75,7 @@ REGISTER_USER_OP("batch_gather")
         std::shared_ptr<ErrorProto> err;
         err->set_msg("BatchGatherOp: indices_num_axes equals " + std::to_string(indices_num_axes)
                      + " (should be bigger than 1).");
-        err->mutable_check_failed();
+        err->mutable_check_failed_error();
         return err;
       }
 

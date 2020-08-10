@@ -56,7 +56,8 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
       } else if (output_layout == "NHWC") {
         *out_tensor->mut_shape() = Shape({N, H, W, C});
       } else {
-        return Error::CheckFailed() << "output_layout: " << output_layout << " is not supported";
+        return Error::CheckFailedError()
+               << "output_layout: " << output_layout << " is not supported";
       }
       DataType output_dtype = ctx->Attr<DataType>("output_dtype");
       CHECK_EQ_OR_RETURN(output_dtype,
@@ -117,7 +118,8 @@ REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
       } else if (output_layout == "NHWC") {
         *out_tensor->mut_shape() = Shape({N, H, W, C});
       } else {
-        return Error::CheckFailed() << "output_layout: " << output_layout << " is not supported";
+        return Error::CheckFailedError()
+               << "output_layout: " << output_layout << " is not supported";
       }
       DataType output_dtype = ctx->Attr<DataType>("output_dtype");
       CHECK_EQ_OR_RETURN(output_dtype,
