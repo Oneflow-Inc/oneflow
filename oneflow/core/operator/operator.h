@@ -193,7 +193,7 @@ class Operator {
   Maybe<const OptMirroredParallel*> OptMirroredParallel4BnInOp(const std::string& bn_in_op) const;
 
   Maybe<void> GetSbpSignaturesIf(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const;
 
   const JobDesc& job_desc() const { return *job_desc_; }
@@ -214,17 +214,17 @@ class Operator {
     return op_attribute_.mutable_blob_backward_used_signature();
   }
   Maybe<void> FillLogicalBlobDescSignature(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& BlobDesc4BnInOp);
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& BlobDesc4BnInOp);
 
  protected:
   virtual Maybe<void> InferParallelSignature();
   virtual Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
     return GetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list);
   }
   virtual Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const {
     return GetSbpSignatures(sbp_sig_list);
   }

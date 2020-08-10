@@ -185,14 +185,14 @@ class UserOpSbpContext : public user_op::SbpContext {
 
   UserOpSbpContext(const OperatorConf& op_conf, SbpSignatureList* sbp_sig_list,
                    DeviceType device_type, int64_t parallel_num,
-                   std::function<Maybe<const BlobDesc*>(const std::string&)> LogicalBlobDesc4Ibn)
+                   std::function<Maybe<const BlobDesc&>(const std::string&)> LogicalBlobDesc4Ibn)
       : user_op::SbpContext(user_op::UserOpConfWrapper(op_conf), sbp_sig_list, device_type,
                             parallel_num) {
     const auto& user_op_conf = op_conf.user_conf();
     for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
       const std::string& arg_name = it->first;
       for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        const BlobDesc* blob = CHECK_JUST(LogicalBlobDesc4Ibn(GenRepeatedBn(arg_name, i)));
+        const BlobDesc* blob = &CHECK_JUST(LogicalBlobDesc4Ibn(GenRepeatedBn(arg_name, i)));
         arg2tensor_desc_.emplace(std::make_pair(arg_name, i), GenTensorDescFromBlobDesc(blob));
         inputs_.emplace_back(std::make_pair(arg_name, i));
       }
@@ -416,7 +416,7 @@ Maybe<void> UserOp::InferBatchAxis(
 }
 
 Maybe<void> UserOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";

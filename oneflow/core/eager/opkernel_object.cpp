@@ -46,7 +46,7 @@ void OpKernelObject::NewPartialInitializedKernel(
     OpContext* op_ctx, const ParallelDesc* parallel_desc) {
   KernelConf kernel_conf;
   auto LogicalBlobDesc4BnInOp = [&](const std::string& bn_in_op) -> const BlobDesc& {
-    return *CHECK_JUST(op_node_signature.LogicalBlobDesc4BnInOp(bn_in_op));
+    return CHECK_JUST(op_node_signature.LogicalBlobDesc4BnInOp(bn_in_op));
   };
   op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf, op_ctx, LogicalBlobDesc4BnInOp,
                    parallel_desc);
@@ -80,7 +80,7 @@ void SystemOpKernelObject::ResetKernel(
     OpContext* op_ctx, const ParallelDesc* parallel_desc) {
   KernelConf kernel_conf;
   auto LogicalBlobDesc4BnInOp = [&](const std::string& bn_in_op) -> const BlobDesc& {
-    return *CHECK_JUST(op_node_signature.LogicalBlobDesc4BnInOp(bn_in_op));
+    return CHECK_JUST(op_node_signature.LogicalBlobDesc4BnInOp(bn_in_op));
   };
   op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf, op_ctx, LogicalBlobDesc4BnInOp,
                    parallel_desc);
