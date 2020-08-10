@@ -396,7 +396,8 @@ Maybe<void> JobBuildAndInferCtx::CheckAllInputsConvertableToMirroredBlob(const O
     if (sbp.has_broadcast_parallel()) { continue; }
     if (sbp.has_split_parallel() && sbp.split_parallel().axis() == 0) { continue; }
     const std::string& lbn = GenLogicalBlobName(lbi);
-    return Error::CheckFailed() << "input lbn: " << lbn << " is not convertable to mirrored blob";
+    return Error::CheckFailedError()
+           << "input lbn: " << lbn << " is not convertable to mirrored blob";
   }
   return Maybe<void>::Ok();
 }
@@ -665,7 +666,7 @@ Maybe<void> JobBuildAndInferCtx::AddLossMirroredBlobName(const std::string& lbn)
 Maybe<LogicalBlobId> JobBuildAndInferCtx::GetMirroredLbi(const std::string& lbn_with_hint) const {
   const LogicalBlobId& lbi = GenLogicalBlobId(lbn_with_hint);
   if (mirrored_lbi2sub_lbis_.find(lbi) != mirrored_lbi2sub_lbis_.end()) { return lbi; }
-  return Error::CheckFailed() << lbn_with_hint << " is not a mirrored blob name";
+  return Error::CheckFailedError() << lbn_with_hint << " is not a mirrored blob name";
 }
 
 Maybe<int> JobBuildAndInferCtx::MirroredBlobGetNumSubLbi(const std::string& lbn_with_hint) const {

@@ -38,7 +38,7 @@ REGISTER_CPU_ONLY_USER_OP("image_decode")
         err << ", data_type: " << data_type << " (only support kUInt8 and kFloat for now)";
         check_failed = true;
       }
-      if (check_failed) { return oneflow::Error::CheckFailed() << err.str(); }
+      if (check_failed) { return oneflow::Error::CheckFailedError() << err.str(); }
       return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
