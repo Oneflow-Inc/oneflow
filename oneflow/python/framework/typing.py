@@ -192,6 +192,16 @@ class Callback(typing.Generic[typing.TypeVar("T")]):
     pass
 
 
+@oneflow_export("typing.Bundle")
+class Bundle(typing.Generic[typing.TypeVar("T")]):
+    """
+    One or a collection of  typing.Numpy/typing.ListNumpy/typing.ListListNumpy,
+    such as x, [x], (x,), {"key": x} and the mixed form of them.
+    """
+
+    pass
+
+
 def OriginFrom(parameterised, generic):
     if inspect.isclass(parameterised) and inspect.isclass(generic):
         return issubclass(parameterised, generic)
@@ -209,5 +219,7 @@ def OriginFrom(parameterised, generic):
             return parameterised.__origin__ is list
         if generic == Callback:
             return parameterised.__origin__ is Callback
+        if generic == Bundle:
+            return parameterised.__origin__ is Bundle
 
     raise NotImplementedError("python typing is a monster torturing everyone.")
