@@ -47,9 +47,9 @@ Maybe<void> KeepHeaderOnlyOp::InferBatchAxis(
 }
 
 Maybe<void> KeepHeaderOnlyOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  int64_t num_axes = JUST(LogicalBlobDesc4Ibn(SoleIbn()))->shape().NumAxes();
+  int64_t num_axes = JUST(LogicalBlobDesc4Ibn(SoleIbn())).shape().NumAxes();
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)

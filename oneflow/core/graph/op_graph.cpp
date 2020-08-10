@@ -605,8 +605,8 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     JUST(InferOpNodeLogicalBlobDesc(op_node));
     // Fill logical blob_desc signature.
     JUST(op_node->mut_op()->FillLogicalBlobDescSignature(
-        [&](const std::string& bn_in_op) -> Maybe<const BlobDesc*> {
-          return &op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
+        [&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
+          return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
         }));
     return Maybe<void>::Ok();
   }));

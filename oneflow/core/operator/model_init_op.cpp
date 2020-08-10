@@ -30,7 +30,7 @@ class ModelInitOp : public Operator {
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 };
 
@@ -63,13 +63,13 @@ Maybe<void> ModelInitOp::InferBatchAxis(
 }
 
 Maybe<void> ModelInitOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Split(output_bns(), 0)
       .MakeSplitSignatureListBuilder(
-          JUST(LogicalBlobDesc4Ibn(output_bns().Get(0)))->shape().NumAxes())
+          JUST(LogicalBlobDesc4Ibn(output_bns().Get(0))).shape().NumAxes())
       .Build(sbp_sig_list);
   return Maybe<void>::Ok();
 }

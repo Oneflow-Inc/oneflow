@@ -33,7 +33,7 @@ class L1L2RegularizeGradientOp final : public Operator {
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 };
 
@@ -67,13 +67,13 @@ Maybe<void> L1L2RegularizeGradientOp::InferBatchAxis(
 }
 
 Maybe<void> L1L2RegularizeGradientOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .MakeSplitSignatureListBuilder(
-          JUST(LogicalBlobDesc4Ibn(input_bns().Get(0)))->shape().NumAxes())
+          JUST(LogicalBlobDesc4Ibn(input_bns().Get(0))).shape().NumAxes())
       .Build(sbp_sig_list);
   return Maybe<void>::Ok();
 }
