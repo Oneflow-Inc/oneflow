@@ -169,10 +169,6 @@ class HobContextGetter(object):
 
         return HobHob
 
-    @property
-    def __force_no_export__(self):
-        return True
-
 
 class HobContextConstant(HobContextGetter):
     def __init__(self, value):
