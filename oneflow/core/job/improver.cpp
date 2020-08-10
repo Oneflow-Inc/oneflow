@@ -572,7 +572,8 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
         const auto* id_mgr = Global<IDMgr>::Get();
         const char* device_tag = JUST(DeviceTag4DeviceType(
             id_mgr->IsGpuMemZone(mem_zone_id) ? DeviceType::kGPU : DeviceType::kCPU));
-        return Error::MemoryZoneOutOfMemory(machine_id, mem_zone_id, calc, available, device_tag)
+        return Error::MemoryZoneOutOfMemoryError(machine_id, mem_zone_id, calc, available,
+                                                 device_tag)
                << "OOM detected at compile time. ";
       }
     }
@@ -615,7 +616,7 @@ Maybe<double> Improver::BinarySearchII(
 
     if (oom_status.IsOk()) {
       r = mid;
-    } else if (oom_status.error()->has_memory_zone_out_of_memory()) {
+    } else if (oom_status.error()->has_memory_zone_out_of_memory_error()) {
       l = mid;
     } else {
       return oom_status.error();

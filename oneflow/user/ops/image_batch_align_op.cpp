@@ -57,7 +57,7 @@ REGISTER_CPU_ONLY_USER_OP("image_batch_align")
             << " (alignment must be power of 2 when it's not equal to 0)";
         check_failed = true;
       }
-      if (check_failed) { return oneflow::Error::CheckFailed() << err.str(); }
+      if (check_failed) { return oneflow::Error::CheckFailedError() << err.str(); }
       return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
