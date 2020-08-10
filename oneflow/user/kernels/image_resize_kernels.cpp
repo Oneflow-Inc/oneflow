@@ -113,7 +113,6 @@ void ImageTargetResize(const TensorBuffer& image_buffer, TensorBuffer* resized_i
   CHECK(CheckMatSizeMatch(res_image_mat, resize_longer, target_size, min_size, max_size));
 }
 
-template<typename T>
 class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
  public:
   ImageResizeToFixedSizeKernel() = default;
@@ -225,12 +224,11 @@ class ImageResizeKeepAspectRatioKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_IMAGE_RESIZE_KERNEL(dtype)                                            \
-  REGISTER_USER_KERNEL("image_resize_to_fixed")                                        \
-      .SetCreateFn<ImageResizeToFixedSizeKernel<dtype>>()                              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
-                       & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)    \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value) \
+#define REGISTER_IMAGE_RESIZE_KERNEL(dtype)                                         \
+  REGISTER_USER_KERNEL("image_resize_to_fixed")                                     \
+      .SetCreateFn<ImageResizeToFixedSizeKernel>()                                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)               \
+                       & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer) \
                        & (user_op::HobAttr<DataType>("data_type") == GetDataType<dtype>::value));
 
 REGISTER_IMAGE_RESIZE_KERNEL(float)
