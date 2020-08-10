@@ -25,6 +25,7 @@ from oneflow.python.framework.remote_blob import BlobDef
 from typing import Optional, Sequence, Union
 import random
 import sys
+import traceback
 
 
 @oneflow_export("data.OFRecordRawDecoder", "data.ofrecord_raw_decoder")
@@ -170,31 +171,31 @@ def api_image_resize(
     resize_x: int = 0,
     resize_y: int = 0,
 ) -> Union[BlobDef, Sequence[BlobDef]]:
-    r"""Resize images to target size with fixed width and height or keeping aspect ratio.
+    r"""Resize images to target size.
 
     Args:
-        image: A `Blob` which indicates the tensor of images to be resized.
+        image: A `Tensor` consists of images to be resized.
         target_size: A list or tuple when `keep_aspect_ratio` is false or an int when
             `keep_aspect_ratio` is true. When `keep_aspect_ratio` is false, `target_size` has
             a form of `(target_width, target_height)` that image will resize to. When
             `keep_aspect_ratio` is true, the longer side or shorter side of the image
             will be resized to target size.
-        min_size: A int, optional. Only works when `keep_aspect_ratio` is true and `resize_side`
+        min_size: An int, optional. Only works when `keep_aspect_ratio` is true and `resize_side`
             is "longer". If `min_size` is not None, the shorter side must be greater than or
             equal to `min_size`. Default is None.
-        max_size: A int, optional. Only works when `keep_aspect_ratio` is true and `resize_side`
+        max_size: An int, optional. Only works when `keep_aspect_ratio` is true and `resize_side`
             is "shorter". If `max_size` is not None, the longer side must be less than or equal
             to `max_size`. Default is None.
         keep_aspect_ratio: A bool. If is false, indicate that image will be resized to fixed
-            new width and new height, otherwise image will be resized with keeping aspect ratio.
+            width and height, otherwise image will be resized keeping aspect ratio.
         resize_side: A str of "longer" or "shorter". Only works when `keep_aspect_ratio` is True.
-            If `resize_side` is "longer", the longer side of image will be resized to `target_size`,
-            else if `resize_side` is "shorter", the shorter side of image will be resized to
+            If `resize_side` is "longer", the longer side of image will be resized to `target_size`.
+            If `resize_side` is "shorter", the shorter side of image will be resized to
             `target_size`.
-        channels: A int. Indicate image channels in `image` tensor.
+        channels: An int. how many channels an image has
         dtype: `oneflow.dtype`. Indicate output resized image data type.
         interpolation_type: A str of "auto", "bilinear", "nearest_neighbor", "bicubic" or "area".
-            Indicate interpolation method when image resize.
+            Indicate interpolation method used to resize image.
         name: A str, optional. Name for the operation.
         color_space: Deprecated, a str of "RGB", "BGR" or "GRAY". Please use `channels` instead.
         interp_type: Deprecated, s str of "Linear", "Cubic" or "NN". Please use `interpolation_type`
@@ -215,6 +216,7 @@ def api_image_resize(
     deprecated_param_used = False
     if color_space is not None:
         print("WARNING: color_space has been deprecated. Please use channels instead.")
+        print(traceback.format_stack()[-2])
         deprecated_param_used = True
         assert isinstance(color_space, str)
         if color_space.upper() == "RGB" or color_space.upper() == "BGR":
@@ -228,6 +230,7 @@ def api_image_resize(
         print(
             "WARNING: interp_type has been deprecated. Please use interpolation_type instead."
         )
+        print(traceback.format_stack()[-2])
         deprecated_param_used = True
         assert isinstance(interp_type, str)
         if interp_type == "Linear":
@@ -243,6 +246,7 @@ def api_image_resize(
         print(
             "WARNING: resize_x and resize_y has been deprecated. Please use target_size instead."
         )
+        print(traceback.format_stack()[-2])
         deprecated_param_used = True
         target_size = (resize_x, resize_y)
         keep_aspect_ratio = False
@@ -251,6 +255,7 @@ def api_image_resize(
         print(
             "WARNING: resize_shorter has been deprecated. Please use target_size instead."
         )
+        print(traceback.format_stack()[-2])
         deprecated_param_used = True
         target_size = resize_shorter
         keep_aspect_ratio = True

@@ -50,7 +50,7 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_to_fixed")
       }
       const std::string& interp_type = conf.attr<std::string>("interpolation_type");
       if (!CheckInterpolationValid(interp_type, err)) { check_failed = true; }
-      if (check_failed) { return oneflow::Error::CheckFailed() << err.str(); }
+      if (check_failed) { return oneflow::Error::CheckFailedError() << err.str(); }
       return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -113,7 +113,7 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
       }
       const std::string& interp_type = conf.attr<std::string>("interpolation_type");
       if (!CheckInterpolationValid(interp_type, err)) { check_failed = true; }
-      if (check_failed) { return oneflow::Error::CheckFailed() << err.str(); }
+      if (check_failed) { return oneflow::Error::CheckFailedError() << err.str(); }
       return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
