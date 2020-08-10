@@ -170,6 +170,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
         job_desc.job_conf().cudnn_conv_force_fwd_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
+    OF_CUDNN_CHECK(cudnnSetConvolutionMathType(args.cdesc.Get(), algo_perf.mathType));
 
     OF_CUDNN_CHECK(cudnnConvolutionForward(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(), in->dptr(),
@@ -237,6 +238,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
         job_desc.job_conf().cudnn_conv_force_bwd_data_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionBwdDataAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
+    OF_CUDNN_CHECK(cudnnSetConvolutionMathType(args.cdesc.Get(), algo_perf.mathType));
 
     OF_CUDNN_CHECK(cudnnConvolutionBackwardData(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.wdesc.Get(), filter->dptr(),
@@ -289,6 +291,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
         job_desc.job_conf().cudnn_conv_force_bwd_filter_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionBwdFilterAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
+    OF_CUDNN_CHECK(cudnnSetConvolutionMathType(args.cdesc.Get(), algo_perf.mathType));
 
     OF_CUDNN_CHECK(cudnnConvolutionBackwardFilter(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(), x->dptr(),
