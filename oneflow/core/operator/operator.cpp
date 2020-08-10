@@ -99,7 +99,7 @@ Maybe<void> Operator::InferParallelSignatureIf() {
 
 Maybe<void> Operator::InferParallelSignature() {
   const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
-  const auto& scope = *JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
+  const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
   int64_t parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
   auto* parallel_signature = op_attribute_.mutable_parallel_signature();
   parallel_signature->set_op_parallel_desc_symbol_id(parallel_desc_symbol_id);
@@ -168,10 +168,10 @@ Maybe<void> Operator::InferOutBlobDescs(
 }
 
 Maybe<void> Operator::FillLogicalBlobDescSignature(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& BlobDesc4BnInOp) {
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& BlobDesc4BnInOp) {
   auto* map = op_attribute_.mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc();
-  for (const auto& ibn : input_bns()) { JUST(BlobDesc4BnInOp(ibn))->ToProto(&(*map)[ibn]); }
-  for (const auto& obn : output_bns()) { JUST(BlobDesc4BnInOp(obn))->ToProto(&(*map)[obn]); }
+  for (const auto& ibn : input_bns()) { JUST(BlobDesc4BnInOp(ibn)).ToProto(&(*map)[ibn]); }
+  for (const auto& obn : output_bns()) { JUST(BlobDesc4BnInOp(obn)).ToProto(&(*map)[obn]); }
   return Maybe<void>::Ok();
 }
 
@@ -218,7 +218,7 @@ Maybe<void> Operator::InferOutputBlobTimeShape(
 }
 
 Maybe<void> Operator::GetSbpSignaturesIf(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
   JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, sbp_sig_list));
   SbpSignatureBuilder()
@@ -259,9 +259,9 @@ Maybe<void> Operator::InferSbpSignature(
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   // get op sbp signatures
-  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc*> {
+  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
     const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
-    return Maybe<const BlobDesc*>(&(sbp_infer_hint->logical_blob_desc()));
+    return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());
   };
   SbpSignatureList sbp_sig_list;
   JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_list));
@@ -954,9 +954,9 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
   };
   // infer logical blob_desc
   JUST(op->InferLogicalOutBlobDescsIf(BlobDesc4BnInOp, BatchAxis4Ibn, parallel_desc));
-  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc*> {
+  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
     CHECK_OR_RETURN(bn_in_op2blob_desc.find(bn_in_op) != bn_in_op2blob_desc.end());
-    return bn_in_op2blob_desc[bn_in_op].get();
+    return *bn_in_op2blob_desc[bn_in_op];
   }));
   return op;
 }
