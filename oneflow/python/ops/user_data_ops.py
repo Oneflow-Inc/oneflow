@@ -170,6 +170,47 @@ def api_image_resize(
     resize_x: int = 0,
     resize_y: int = 0,
 ) -> Union[BlobDef, Sequence[BlobDef]]:
+    r"""Resize images to target size with fixed width and height or keeping aspect ratio.
+
+    Args:
+        image: A `Blob` which indicates the tensor of images to be resized.
+        target_size: A list or tuple when `keep_aspect_ratio` is false or an int when
+            `keep_aspect_ratio` is true. When `keep_aspect_ratio` is false, `target_size` has
+            a form of `(target_width, target_height)` that image will resize to. When
+            `keep_aspect_ratio` is true, the longer side or shorter side of the image
+            will be resized to target size.
+        min_size: A int, optional. Only works when `keep_aspect_ratio` is true and `resize_side`
+            is "longer". If `min_size` is not None, the shorter side must be greater than or
+            equal to `min_size`. Default is None.
+        max_size: A int, optional. Only works when `keep_aspect_ratio` is true and `resize_side`
+            is "shorter". If `max_size` is not None, the longer side must be less than or equal
+            to `max_size`. Default is None.
+        keep_aspect_ratio: A bool. If is false, indicate that image will be resized to fixed
+            new width and new height, otherwise image will be resized with keeping aspect ratio.
+        resize_side: A str of "longer" or "shorter". Only works when `keep_aspect_ratio` is True.
+            If `resize_side` is "longer", the longer side of image will be resized to `target_size`,
+            else if `resize_side` is "shorter", the shorter side of image will be resized to
+            `target_size`.
+        channels: A int. Indicate image channels in `image` tensor.
+        dtype: `oneflow.dtype`. Indicate output resized image data type.
+        interpolation_type: A str of "auto", "bilinear", "nearest_neighbor", "bicubic" or "area".
+            Indicate interpolation method when image resize.
+        name: A str, optional. Name for the operation.
+        color_space: Deprecated, a str of "RGB", "BGR" or "GRAY". Please use `channels` instead.
+        interp_type: Deprecated, s str of "Linear", "Cubic" or "NN". Please use `interpolation_type`
+            instead.
+        resize_shorter: Deprecated, a int. Indicate target size that the shorter side of image will
+            resize to. Please use `target_size` and `resize_side` instead.
+        resize_x: Deprecated, a int. Indicate the target size that the width of image will resize to.
+            Please use `target_size` instead.
+        resize_y: Deprecated, a int. Indicate the target size that the height of image will resize to.
+            Please use `target_size` instead.
+
+    Returns:
+        Tuple of resized images `Blob`, width and height scales `Blob` and new width and height `Blob`
+        (new width and height `Blob` will be None when keep_aspect_ratio is false).
+        If deprecated params are used, a single resized images `Blob` will be returned.
+    """
     # process deprecated params
     deprecated_param_used = False
     if color_space is not None:
