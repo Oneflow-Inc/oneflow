@@ -45,7 +45,7 @@ class NormalModelUpdtOp : public Operator {
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
