@@ -34,3 +34,6 @@
 [submodule "build/third_party/re2/src/re2"]
 	path = build/third_party/re2/src/re2
 	url = https://github.com/google/re2.git
+[submodule "oneflow/core/auto_prallel"]
+	path = oneflow/core/auto_prallel
+	url = git@github.com:Oneflow-Inc/Algorithms.git
