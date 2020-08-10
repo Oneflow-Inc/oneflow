@@ -161,7 +161,7 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
   if (is_checked) {
     return Maybe<void>::Ok();
   } else {
-    return oneflow::Error::CheckFailed() << err.str();
+    return oneflow::Error::CheckFailedError() << err.str();
   }
 }
 
@@ -425,8 +425,9 @@ REGISTER_USER_OP("conv_bias_grad")
       if (data_format == "channels_first" || data_format == "channels_last") {
         return Maybe<void>::Ok();
       }
-      return oneflow::Error::CheckFailed() << "Illegal value for " << conf.op_type_name() << " op "
-                                           << conf.op_name() << ": data_format:" << data_format;
+      return oneflow::Error::CheckFailedError()
+             << "Illegal value for " << conf.op_type_name() << " op " << conf.op_name()
+             << ": data_format:" << data_format;
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);

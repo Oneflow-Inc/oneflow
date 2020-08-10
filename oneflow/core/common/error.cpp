@@ -56,9 +56,9 @@ Error Error::JobTypeNotSet() {
   return error;
 }
 
-Error Error::CheckFailed() {
+Error Error::CheckFailedError() {
   auto error = std::make_shared<ErrorProto>();
-  error->mutable_check_failed();
+  error->mutable_check_failed_error();
   return error;
 }
 
@@ -102,15 +102,15 @@ Error Error::MultipleOpKernelsMatchedError(const std::string& error_summary,
   return error;
 }
 
-Error Error::MemoryZoneOutOfMemory(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
-                                   uint64_t available, const std::string& device_tag) {
+Error Error::MemoryZoneOutOfMemoryError(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
+                                        uint64_t available, const std::string& device_tag) {
   auto error = std::make_shared<ErrorProto>();
-  auto* memory_zone_out_of_memory = error->mutable_memory_zone_out_of_memory();
-  memory_zone_out_of_memory->add_machine_id(std::to_string(machine_id));
-  memory_zone_out_of_memory->add_mem_zone_id(std::to_string(mem_zone_id));
-  memory_zone_out_of_memory->add_device_tag(device_tag);
-  memory_zone_out_of_memory->add_available(std::to_string(available) + " bytes");
-  memory_zone_out_of_memory->add_required(std::to_string(calc) + " bytes");
+  auto* memory_zone_out_of_memory_error = error->mutable_memory_zone_out_of_memory_error();
+  memory_zone_out_of_memory_error->add_machine_id(std::to_string(machine_id));
+  memory_zone_out_of_memory_error->add_mem_zone_id(std::to_string(mem_zone_id));
+  memory_zone_out_of_memory_error->add_device_tag(device_tag);
+  memory_zone_out_of_memory_error->add_available(std::to_string(available) + " bytes");
+  memory_zone_out_of_memory_error->add_required(std::to_string(calc) + " bytes");
   return error;
 }
 
