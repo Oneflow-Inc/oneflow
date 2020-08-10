@@ -149,13 +149,15 @@ struct SliceSwitchUtil<float16> {
 template<typename T>
 struct SliceKernelUtil<DeviceType::kGPU, T> {
   static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced) {
-    SliceSwitchUtil<T>::SwitchLaunchSliceForward(
-        SwitchCase(params.ndim), ctx, FoldContiguousFullSliceDimensions(params), entire, sliced);
+    SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
+    SliceSwitchUtil<T>::SwitchLaunchSliceForward(SwitchCase(fold_slice_paramss.ndim), ctx,
+                                                 fold_slice_params, entire, sliced);
   }
 
   static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire) {
-    SliceSwitchUtil<T>::SwitchLaunchSliceBackward(
-        SwitchCase(params.ndim), ctx, FoldContiguousFullSliceDimensions(params), sliced, entire);
+    SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
+    SliceSwitchUtil<T>::SwitchLaunchSliceBackward(SwitchCase(fold_slice_params.ndim), ctx,
+                                                  fold_slice_params, sliced, entire);
   }
 };
 

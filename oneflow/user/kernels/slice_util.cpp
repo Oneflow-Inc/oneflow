@@ -44,13 +44,13 @@ SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params) {
 template<typename T>
 struct SliceKernelUtil<DeviceType::kCPU, T> {
   static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced) {
-    SwitchDoForward(SwitchCase(params.ndim), ctx, FoldContiguousFullSliceDimensions(params), entire,
-                    sliced);
+    SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
+    SwitchDoForward(SwitchCase(fold_slice_params.ndim), ctx, fold_slice_params, entire, sliced);
   }
 
   static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire) {
-    SwitchDoBackward(SwitchCase(params.ndim), ctx, FoldContiguousFullSliceDimensions(params),
-                     sliced, entire);
+    SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
+    SwitchDoBackward(SwitchCase(fold_slice_params.ndim), ctx, fold_slice_params, sliced, entire);
   }
 
  private:
