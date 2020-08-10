@@ -208,7 +208,7 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 #define CHECK_OR_RETURN(expr)                                                \
   if (!(expr))                                                               \
   return std::pair<std::string, std::string>(MAYBE_FAILED_LOC, __FUNCTION__) \
-         <= Error::CheckFailed() << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
+         <= Error::CheckFailedError() << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
 
 #define CHECK_EQ_OR_RETURN(lhs, rhs) \
   CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "

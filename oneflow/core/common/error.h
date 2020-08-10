@@ -33,12 +33,12 @@ class Error final {
   static Error JobSetEmpty();
   static Error DeviceTagNotFound();
   static Error JobTypeNotSet();
-  static Error CheckFailed();
+  static Error CheckFailedError();
   static Error Todo();
   static Error Unimplemented();
   static Error BoxingNotSupported();
-  static Error MemoryZoneOutOfMemory(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
-                                     uint64_t available, const std::string& device_type);
+  static Error MemoryZoneOutOfMemoryError(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
+                                          uint64_t available, const std::string& device_type);
   static Error OpKernelNotFoundError(const std::string& error_summary,
                                      const std::vector<std::string>& error_msgs);
   static Error MultipleOpKernelsMatchedError(const std::string& error_summary,
