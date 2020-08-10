@@ -81,8 +81,6 @@ def exported_symbols():
         if mod.__name__.startswith("oneflow.python"):
             for attr in dir(mod):
                 symbol = getattr(mod, attr)
-                if hasattr(symbol, "__force_no_export__"):
-                    continue
                 if hasattr(symbol, "__dict__") and "_ONEFLOW_API" in vars(symbol):
                     for api_name in getattr(symbol, "_ONEFLOW_API"):
                         yield api_name, symbol, mod
