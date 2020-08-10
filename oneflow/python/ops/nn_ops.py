@@ -586,6 +586,10 @@ def batch_normalization(
             nd_params_shape[axis] = params_shape[0]
             mean = flow.reshape(mean, nd_params_shape)
             variance = flow.reshape(variance, nd_params_shape)
+            if scale:
+                scale = flow.reshape(scale, nd_params_shape)
+            if offset:
+                offset = flow.reshape(offset, nd_params_shape)
         elif len(mean.shape) == len(x.shape):
             pass
         else:
@@ -597,10 +601,8 @@ def batch_normalization(
         normalized = (x - mean) * std_inv
         affined = normalized
         if scale:
-            scale = flow.reshape(scale, nd_params_shape)
             affined *= scale
         if offset:
-            offset = flow.reshape(offset, nd_params_shape)
             affined += offset
         return affined
     elif flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu":

@@ -933,20 +933,7 @@ def batch_normalization(
         )
 
     if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
-        if training == False:
-            mean = moving_mean
-            variance = moving_variance
-            return flow.nn.batch_normalization(
-                x=inputs,
-                mean=mean,
-                variance=variance,
-                offset=beta,
-                scale=gamma,
-                variance_epsilon=epsilon,
-                axis=axis,
-                name=name,
-            )
-        else:
+        if training:
             reduce_axis = []
             for dim in range(len(inputs.shape)):
                 if dim != axis:
@@ -962,6 +949,19 @@ def batch_normalization(
             update_moving(moving_mean, mean)
             update_moving(moving_variance, variance)
 
+            return flow.nn.batch_normalization(
+                x=inputs,
+                mean=mean,
+                variance=variance,
+                offset=beta,
+                scale=gamma,
+                variance_epsilon=epsilon,
+                axis=axis,
+                name=name,
+            )
+        else:
+            mean = moving_mean
+            variance = moving_variance
             return flow.nn.batch_normalization(
                 x=inputs,
                 mean=mean,
