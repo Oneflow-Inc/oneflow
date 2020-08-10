@@ -121,7 +121,7 @@ Maybe<void> Operator::InferLogicalOutBlobDescs(
   auto* map = sbp_signature.mutable_bn_in_op2sbp_parallel();
   for (const auto& ibn : input_bns()) { (*map)[ibn].mutable_split_parallel()->set_axis(0); }
   for (const auto& obn : output_bns()) { (*map)[obn].mutable_split_parallel()->set_axis(0); }
-  return InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &sbp_signature, [](OpContext*) {});
+  return InferOutBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &sbp_signature, [](OpContext*) {});
 }
 
 Maybe<void> Operator::InferBlobDescsIf(

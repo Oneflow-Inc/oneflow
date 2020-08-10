@@ -41,9 +41,9 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
                                         parallel_desc.DeviceIdForParallelId(parallel_id)));
     }
     ncclComm_t comm = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
-    NcclCheck(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
-                            GetNcclDataType(in->data_type()), ncclSum, comm,
-                            ctx->device_ctx()->cuda_stream()));
+    OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+                                GetNcclDataType(in->data_type()), ncclSum, comm,
+                                ctx->device_ctx()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
