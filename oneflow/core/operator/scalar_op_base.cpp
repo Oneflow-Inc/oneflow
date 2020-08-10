@@ -38,9 +38,9 @@ Maybe<void> ScalarOpBase::InferBlobDescs(
 }
 
 Maybe<void> ScalarOpBase::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  const Shape& in_shape = JUST(LogicalBlobDesc4Ibn("in"))->shape();
+  const Shape& in_shape = JUST(LogicalBlobDesc4Ibn("in")).shape();
   FOR_RANGE(int64_t, i, 0, in_shape.NumAxes()) {
     SbpSignatureBuilder().Split("in", i).Broadcast("scalar").Split("out", i).Build(
         sbp_sig_list->mutable_sbp_signature()->Add());

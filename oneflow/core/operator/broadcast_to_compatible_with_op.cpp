@@ -93,18 +93,18 @@ class BroadcastToCompatibleWithOp final : public Operator {
   }
 
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
     Shape broadcasted_shape{1};
     for (const std::string ibn : input_bns()) {
-      const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(ibn))->shape();
+      const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(ibn)).shape();
       GetBroadcastShape(broadcasted_shape, input_shape, &broadcasted_shape);
     }
 
     const int64_t broadcast_num_axes = broadcasted_shape.NumAxes();
     HashMap<std::string, Shape> ibn2extend_shape;
     for (const std::string ibn : input_bns()) {
-      const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(ibn))->shape();
+      const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(ibn)).shape();
       CHECK_OR_RETURN(
           ibn2extend_shape
               .emplace(ibn, CreateLeftExtendedShape(ShapeView(input_shape), broadcast_num_axes))
