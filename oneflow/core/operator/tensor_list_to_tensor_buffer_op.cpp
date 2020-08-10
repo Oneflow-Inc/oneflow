@@ -49,7 +49,7 @@ class TensorListToTensorBufferOp final : public Operator {
 
  private:
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder()
         .Split(input_bns(), 0)
