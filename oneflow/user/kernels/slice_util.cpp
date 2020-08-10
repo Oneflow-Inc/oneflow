@@ -18,38 +18,39 @@ limitations under the License.
 
 namespace oneflow {
 
-void FoldContiguousFullSliceDimensions(SliceParams* params) {
-  int cur_dim = 0;
+SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params) {
+  SliceParams fold_slice_params;
+  std::memset(&fold_slice_params, 0, sizeof(SliceParams));
   bool full_slice_on_prev_axis = false;
-  FOR_RANGE(int, i, 0, params->ndim) {
-    bool full_slice_on_cur_axis = params->IsFullSlice(i);
-    if (i != 0) {
-      if (full_slice_on_cur_axis && full_slice_on_prev_axis) {
-        params->dims[cur_dim] *= params->dims[i];
-        params->size[cur_dim] *= params->size[i];
-      } else {
-        cur_dim += 1;
-        params->dims[cur_dim] = params->dims[i];
-        params->start[cur_dim] = params->start[i];
-        params->step[cur_dim] = params->step[i];
-        params->size[cur_dim] = params->size[i];
-      }
+  FOR_RANGE(int, i, 0, params.ndim) {
+    bool full_slice_on_cur_axis = params.IsFullSlice(i);
+    if (full_slice_on_cur_axis && full_slice_on_prev_axis) {
+      int cur_dim = fold_slice_params.ndim - 1;
+      fold_slice_params.dims[cur_dim] *= params.dims[i];
+      fold_slice_params.size[cur_dim] *= params.size[i];
+    } else {
+      int cur_dim = fold_slice_params.ndim;
+      fold_slice_params.dims[cur_dim] = params.dims[i];
+      fold_slice_params.start[cur_dim] = params.start[i];
+      fold_slice_params.step[cur_dim] = params.step[i];
+      fold_slice_params.size[cur_dim] = params.size[i];
+      fold_slice_params.ndim += 1;
     }
     full_slice_on_prev_axis = full_slice_on_cur_axis;
   }
-  params->ndim = cur_dim + 1;
+  return fold_slice_params;
 }
 
 template<typename T>
 struct SliceKernelUtil<DeviceType::kCPU, T> {
-  static void Forward(DeviceCtx* ctx, SliceParams* params, const T* entire, T* sliced) {
-    FoldContiguousFullSliceDimensions(params);
-    SwitchDoForward(SwitchCase(params->ndim), ctx, *params, entire, sliced);
+  static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced) {
+    SwitchDoForward(SwitchCase(params.ndim), ctx, FoldContiguousFullSliceDimensions(params), entire,
+                    sliced);
   }
 
-  static void Backward(DeviceCtx* ctx, SliceParams* params, const T* sliced, T* entire) {
-    FoldContiguousFullSliceDimensions(params);
-    SwitchDoBackward(SwitchCase(params->ndim), ctx, *params, sliced, entire);
+  static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire) {
+    SwitchDoBackward(SwitchCase(params.ndim), ctx, FoldContiguousFullSliceDimensions(params),
+                     sliced, entire);
   }
 
  private:
@@ -60,7 +61,7 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
     FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t offset = SliceOffsetToEntireOffset(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+      int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
       sliced[i] = entire[offset];
     }
   }
@@ -72,7 +73,7 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
     FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t offset = SliceOffsetToEntireOffset(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+      int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
       entire[offset] = sliced[i];
     }
   }
