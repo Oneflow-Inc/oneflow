@@ -36,7 +36,7 @@ class IndexedSlicesNaiveMdUpdateOp final : public Operator {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
@@ -82,11 +82,11 @@ Maybe<void> IndexedSlicesNaiveMdUpdateOp::InferBlobDescs(
 }
 
 Maybe<void> IndexedSlicesNaiveMdUpdateOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const int64_t num_indices_axes =
-      JUST(LogicalBlobDesc4Ibn("model_diff_indices"))->shape().NumAxes();
-  const int64_t num_model_axes = JUST(LogicalBlobDesc4Ibn("model"))->shape().NumAxes();
+      JUST(LogicalBlobDesc4Ibn("model_diff_indices")).shape().NumAxes();
+  const int64_t num_model_axes = JUST(LogicalBlobDesc4Ibn("model")).shape().NumAxes();
   SbpSignatureBuilder()
       .Broadcast("learning_rate")
       .Broadcast("model_diff_indices")

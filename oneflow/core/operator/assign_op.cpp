@@ -35,7 +35,7 @@ class AssignOp final : public Operator {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 };
 
@@ -63,12 +63,12 @@ Maybe<void> AssignOp::InferBlobDescs(
 }
 
 Maybe<void> AssignOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .MakeSplitSignatureListBuilder(
-          JUST(LogicalBlobDesc4Ibn(input_bns().Get(0)))->shape().NumAxes())
+          JUST(LogicalBlobDesc4Ibn(input_bns().Get(0))).shape().NumAxes())
       .Build(sbp_sig_list);
   return Maybe<void>::Ok();
 }

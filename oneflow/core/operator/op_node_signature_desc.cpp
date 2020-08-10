@@ -26,11 +26,11 @@ OpNodeSignatureDesc::OpNodeSignatureDesc(const OpNodeSignature& op_node_signatur
   }
 }
 
-Maybe<const BlobDesc*> OpNodeSignatureDesc::LogicalBlobDesc4BnInOp(
+Maybe<const BlobDesc&> OpNodeSignatureDesc::LogicalBlobDesc4BnInOp(
     const std::string& bn_in_op) const {
   const auto& iter = bn_in_op2blob_desc_.find(bn_in_op);
   CHECK_OR_RETURN(iter != bn_in_op2blob_desc_.end());
-  return iter->second.get();
+  return *iter->second;
 }
 
 }  // namespace oneflow

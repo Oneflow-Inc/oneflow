@@ -54,8 +54,8 @@ class SymbolStorage final {
     return logical_object_id2data_.find(logical_object_id) != logical_object_id2data_.end();
   }
 
-  Maybe<const T*> MaybeGet(int64_t logical_object_id) const {
-    return JUST(MaybeGetPtr(logical_object_id)).get();
+  Maybe<const T&> MaybeGet(int64_t logical_object_id) const {
+    return *JUST(MaybeGetPtr(logical_object_id));
   }
 
   const T& Get(int64_t logical_object_id) const { return *GetPtr(logical_object_id); }

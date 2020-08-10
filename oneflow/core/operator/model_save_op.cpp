@@ -38,7 +38,7 @@ class ModelSaveOp final : public Operator {
     return Maybe<void>::Ok();
   }
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
     return Maybe<void>::Ok();
   };
