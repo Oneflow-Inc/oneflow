@@ -293,10 +293,10 @@ def CompareBnWithTensorFlow(
 
     x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape)
     if device_type == "cpu":
-        y_rtol *= 10
-        y_atol *= 10
-        x_diff_rtol *= 10
-        x_diff_atol *= 10
+        y_rtol *= 100
+        y_atol *= 100
+        x_diff_rtol *= 100
+        x_diff_atol *= 100
     if trainable:
         of_y, of_x_diff = RunOneflowLayerBn(
             device_type, x, data_type, flow_args, training=training, trainable=trainable

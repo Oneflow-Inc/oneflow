@@ -276,6 +276,7 @@ def test_where_grad(test_case):
 
 
 def test_where_grad_case_1(test_case):
+    # TODO(tsai): FIX bug cycle in graph detected
     arg_dict = OrderedDict()
     arg_dict["cond_shape"] = [[3, 7, 10]]
     arg_dict["x_shape"] = [[3, 1, 10]]
