@@ -150,8 +150,9 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   logical_gph_ = std::move(logical_gph);
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    boxing_logging_lines_.reset(new std::string("src_op_name,src_parallel_conf,src_sbp_conf,boxing_type,"
-                                          "dst_op_name,dst_parallel_conf,dst_sbp_conf\n"));
+    boxing_logging_lines_.reset(
+        new std::string("src_op_name,src_parallel_conf,src_sbp_conf,boxing_type,"
+                        "dst_op_name,dst_parallel_conf,dst_sbp_conf\n"));
   }
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new ToInterfaceSubTskGphBuilder());
@@ -482,8 +483,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     CHECK(boxing_info.IsOk());
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       CHECK_NOTNULL(boxing_logging_lines_);
-      *boxing_logging_lines_ =
-          *boxing_logging_lines_ + *boxing_info.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+      *boxing_logging_lines_ = *boxing_logging_lines_
+                               + *boxing_info.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
     }
   }
 }
