@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
+#include <string>
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
@@ -147,6 +149,10 @@ bool IsInplaceAllowed(
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   logical_gph_ = std::move(logical_gph);
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    boxing_logging_.reset(new std::string("src_op_name,src_parallel_conf,src_sbp_conf,boxing_type,"
+                                          "dst_op_name,dst_parallel_conf,dst_sbp_conf\n"));
+  }
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new ToInterfaceSubTskGphBuilder());
   builders.emplace_back(new OneToOneSubTskGphBuilder());
@@ -205,7 +211,13 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
       });
 
   MergeChainAndSetOrderInGraphForEachNode();
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    ToDotWithAutoFilePath();
+    CHECK_NOTNULL(boxing_logging_);
+    TeePersistentLogStream::Create(
+        JoinPath("boxing_info", "boxing_logging_" + NewUniqueId() + ".csv"))
+        ->Write(*boxing_logging_);
+  }
 }
 
 void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
@@ -464,10 +476,14 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const std::shared_ptr<const ParallelDesc>& src_parallel_desc = src_logical->parallel_desc();
     const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
-    Maybe<std::string> status = TRY(sub_tsk_gph_builder_->Build(
+    auto boxing_info = TRY(sub_tsk_gph_builder_->Build(
         sub_tsk_gph_builder_ctx_.get(), src_nodes, sorted_dst_comp_tasks, *src_parallel_desc,
         *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
-    CHECK(status.IsOk());
+    CHECK(boxing_info.IsOk());
+    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+      *boxing_logging_ =
+          *boxing_logging_ + *boxing_info.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+    }
   }
 }
 

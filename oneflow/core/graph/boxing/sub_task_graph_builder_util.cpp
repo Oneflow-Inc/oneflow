@@ -139,7 +139,7 @@ Maybe<std::string> SubTskGphBuilderUtil::BuildBoxingInfo(const CompTaskNode* src
   std::string sbp_parallel_info = PbMessage2TxtString(src_sbp_parallel);
   StringReplace(&sbp_parallel_info, '\n', ' ');
   sbp_parallel_info.pop_back();
-  boxing_info += boxing_info + ",";
+  boxing_info += sbp_parallel_info + ",";
 
   boxing_info += boxing_type + ",";
 
@@ -153,7 +153,7 @@ Maybe<std::string> SubTskGphBuilderUtil::BuildBoxingInfo(const CompTaskNode* src
   sbp_parallel_info = PbMessage2TxtString(dst_sbp_parallel);
   StringReplace(&sbp_parallel_info, '\n', ' ');
   sbp_parallel_info.pop_back();
-  boxing_info += boxing_info + "\n";
+  boxing_info += sbp_parallel_info + "\n";
 
   return boxing_info;
 }

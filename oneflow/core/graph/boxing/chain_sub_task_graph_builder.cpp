@@ -25,10 +25,11 @@ Maybe<std::string> ChainSubTskGphBuilder::Build(
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
   for (const auto& builder : builders_) {
-    Maybe<std::string> boxing_info = TRY(builder->Build(ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks,
-                                            src_parallel_desc, dst_parallel_desc, lbi,
-                                            logical_blob_desc, src_sbp_parallel, dst_sbp_parallel));
-    if (!boxing_info.IsOk() && SubTskGphBuilderUtil::IsErrorBoxingNotSupported(*boxing_info.error())) {
+    Maybe<std::string> boxing_info = TRY(builder->Build(
+        ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, src_parallel_desc, dst_parallel_desc,
+        lbi, logical_blob_desc, src_sbp_parallel, dst_sbp_parallel));
+    if (!boxing_info.IsOk()
+        && SubTskGphBuilderUtil::IsErrorBoxingNotSupported(*boxing_info.error())) {
       continue;
     } else {
       return boxing_info;

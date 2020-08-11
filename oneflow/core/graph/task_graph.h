@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 
+#include <string>
 #include "oneflow/core/graph/logical_graph.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -99,6 +100,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::vector<TaskNode*> ordered_task_nodes_;
   std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
   std::shared_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
+  std::shared_ptr<std::string> boxing_logging_;
 };
 
 bool IsBackEdge(TaskNode* src, TaskNode* dst);

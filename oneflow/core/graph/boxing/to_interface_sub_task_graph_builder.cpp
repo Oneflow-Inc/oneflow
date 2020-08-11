@@ -49,7 +49,8 @@ Maybe<std::string> ToInterfaceSubTskGphBuilder::Build(
     }
     return TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
         sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, "ToInterfaceSubTskGphBuilder: BuildSubTaskGphB2B"));
+        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
+        "ToInterfaceSubTskGphBuilder: BuildSubTaskGphB2B"));
   } else if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
              && (dst_parallel_desc.parallel_num() > 1 || dst_sbp_parallel.has_split_parallel())) {
     const TensorSliceView in_slice =
@@ -82,7 +83,8 @@ Maybe<std::string> ToInterfaceSubTskGphBuilder::Build(
     }
     return TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
         sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, "ToInterfaceSubTskGphBuilder: BuildSubTaskGphB2S"));
+        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
+        "ToInterfaceSubTskGphBuilder: BuildSubTaskGphB2S"));
   } else {
     return Error::BoxingNotSupported();
   }
