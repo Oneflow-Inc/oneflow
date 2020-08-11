@@ -96,11 +96,11 @@ class SliceGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_SLICE_KERNELS(device, dtype)                                              \
   REGISTER_USER_KERNEL("slice").SetCreateFn<SliceKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == device)                                                 \
+      (user_op::HobDeviceTag() == device)                                                  \
       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));                      \
   REGISTER_USER_KERNEL("slice_grad")                                                       \
       .SetCreateFn<SliceGradKernel<device, dtype>>()                                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                 \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_SLICE_KERNELS_WITH_DEVICE(device) \
