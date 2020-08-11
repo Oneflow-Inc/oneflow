@@ -50,6 +50,8 @@ class UserOp(object):
         self.op_conf_.name = op_name
         if op_type_name is not None:
             self.op_conf_.user_conf.op_type_name = op_type_name
+        device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
+        self.op_conf_.device_tag = device_tag
         self.output_arg_key_list_ = []
 
     @property

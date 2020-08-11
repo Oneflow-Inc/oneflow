@@ -46,7 +46,7 @@ class BatchGatherKernel final : public user_op::OpKernel {
       .SetCreateFn<BatchGatherKernel<device, OF_PP_PAIR_FIRST(out_dtype),    \
                                      OF_PP_PAIR_FIRST(indices_dtype)>>()     \
       .SetIsMatchedHob(                                                      \
-          (user_op::HobDeviceType() == device)                               \
+          (user_op::HobDeviceTag() == device)                                \
           & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype)) \
           & (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_dtype)));
 

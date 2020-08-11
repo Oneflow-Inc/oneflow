@@ -46,7 +46,7 @@ class MultiplyKernel final : public user_op::OpKernel {
 #define REGISTER_MULTIPLY_KERNEL(device, dtype_pair)                                            \
   REGISTER_USER_KERNEL("multiply")                                                              \
       .SetCreateFn<MultiplyKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair)))       \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \

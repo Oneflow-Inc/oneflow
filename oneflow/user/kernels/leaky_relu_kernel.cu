@@ -50,10 +50,10 @@ class GpuLeakyReluKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_LEAKY_RELU_KERNEL(dtype)                         \
-  REGISTER_USER_KERNEL("leaky_relu")                                  \
-      .SetCreateFn<GpuLeakyReluKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_GPU_LEAKY_RELU_KERNEL(dtype)             \
+  REGISTER_USER_KERNEL("leaky_relu")                      \
+      .SetCreateFn<GpuLeakyReluKernel<dtype>>()           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_LEAKY_RELU_KERNEL(float)
@@ -78,10 +78,10 @@ class GpuLeakyReluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_LEAKY_RELU_GRAD_KERNEL(dtype)                    \
-  REGISTER_USER_KERNEL("leaky_relu_grad")                             \
-      .SetCreateFn<GpuLeakyReluGradKernel<dtype>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_GPU_LEAKY_RELU_GRAD_KERNEL(dtype)        \
+  REGISTER_USER_KERNEL("leaky_relu_grad")                 \
+      .SetCreateFn<GpuLeakyReluGradKernel<dtype>>()       \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_LEAKY_RELU_GRAD_KERNEL(float)

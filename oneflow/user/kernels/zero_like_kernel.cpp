@@ -36,7 +36,7 @@ class ZeroLikeKernel final : public user_op::OpKernel {
 #define REGISTER_ZERO_LIKE_KERNEL(device_type_v)    \
   REGISTER_USER_KERNEL("zero_like")                 \
       .SetCreateFn<ZeroLikeKernel<device_type_v>>() \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device_type_v);
+      .SetIsMatchedHob(user_op::HobDeviceTag() == device_type_v);
 
 REGISTER_ZERO_LIKE_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA

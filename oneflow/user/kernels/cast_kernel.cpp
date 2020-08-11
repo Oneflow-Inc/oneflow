@@ -86,10 +86,10 @@ class CastKernel final : public OpKernel {
 
 #define REGISTER_CAST_KERNEL(device)                                              \
   REGISTER_USER_KERNEL("cast").SetCreateFn<CastKernel<device>>().SetIsMatchedHob( \
-      user_op::HobDeviceType() == device);                                        \
+      user_op::HobDeviceTag() == device);                                         \
   REGISTER_USER_KERNEL("cast_like")                                               \
       .SetCreateFn<CastKernel<device>>()                                          \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device);
+      .SetIsMatchedHob(user_op::HobDeviceTag() == device);
 
 REGISTER_CAST_KERNEL(DeviceType::kCPU)
 REGISTER_CAST_KERNEL(DeviceType::kGPU)

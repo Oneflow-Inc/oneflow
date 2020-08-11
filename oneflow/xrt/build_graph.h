@@ -53,7 +53,7 @@ class GraphBuilder {
   void SetupXrtNode(XrtNode *node, const OperatorConf &node_conf) const {
     node->set_name(node_conf.name());
     node->set_type(ExtractOpTypeAsString(node_conf));
-    node->set_device(DeviceTypeToXrtDevice(node_conf.device_type()));
+    node->set_device(DeviceTagToXrtDevice(node_conf.device_tag()));
   }
 
   void SetupXrtNode(XrtNode *node, const XrtLaunchOpConf::Argument &arg_conf) const {
