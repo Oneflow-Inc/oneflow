@@ -48,7 +48,7 @@ class DropoutKernelCPU final : public user_op::OpKernel {
 #define REGISTER_DROPOUT_KERNEL_CPU(dtype)                                                      \
   REGISTER_USER_KERNEL("dropout")                                                               \
       .SetCreateFn<DropoutKernelCPU<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -80,7 +80,7 @@ class DropoutGradKernelCPU final : public user_op::OpKernel {
 #define REGISTER_DROPOUT_GRAD_KERNEL_CPU(dtype)                                                 \
   REGISTER_USER_KERNEL("dropout_grad")                                                          \
       .SetCreateFn<DropoutGradKernelCPU<dtype>>()                                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -121,7 +121,7 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
 #define REGISTER_RANDOM_MASK_LIKE_KERNEL(device)   \
   REGISTER_USER_KERNEL("random_mask_like")         \
       .SetCreateFn<RandomMaskLikeKernel<device>>() \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device);
+      .SetIsMatchedHob(user_op::HobDeviceTag() == device);
 
 REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA

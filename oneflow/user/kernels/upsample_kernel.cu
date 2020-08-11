@@ -190,13 +190,13 @@ class UpsampleNearestGradGPUKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("upsample")                                                       \
       .SetCreateFn<UpsampleNearestGPUKernel<dtype>>()                                    \
       .SetIsMatchedHob(                                                                  \
-          (user_op::HobDeviceType() == DeviceType::kGPU)                                 \
+          (user_op::HobDeviceTag() == "gpu")                                             \
           & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                  \
           & (user_op::HobAttr<std::string>("interpolation") == std::string("nearest"))); \
   REGISTER_USER_KERNEL("upsample_grad")                                                  \
       .SetCreateFn<UpsampleNearestGradGPUKernel<dtype>>()                                \
       .SetIsMatchedHob(                                                                  \
-          (user_op::HobDeviceType() == DeviceType::kGPU)                                 \
+          (user_op::HobDeviceTag() == "gpu")                                             \
           & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                 \
           & (user_op::HobAttr<std::string>("interpolation") == std::string("nearest")));
 
@@ -262,13 +262,13 @@ class UpsampleBilinearGradGPUKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("upsample")                                                        \
       .SetCreateFn<UpsampleBilinearGPUKernel<dtype>>()                                    \
       .SetIsMatchedHob(                                                                   \
-          (user_op::HobDeviceType() == DeviceType::kGPU)                                  \
+          (user_op::HobDeviceTag() == "gpu")                                              \
           & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                   \
           & (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear"))); \
   REGISTER_USER_KERNEL("upsample_grad")                                                   \
       .SetCreateFn<UpsampleBilinearGradGPUKernel<dtype>>()                                \
       .SetIsMatchedHob(                                                                   \
-          (user_op::HobDeviceType() == DeviceType::kGPU)                                  \
+          (user_op::HobDeviceTag() == "gpu")                                              \
           & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                  \
           & (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear")));
 

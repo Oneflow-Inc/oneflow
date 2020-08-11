@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/tensor_buffer.h"
@@ -81,12 +82,12 @@ void TensorBufferToTensorListKernel<T>::ForwardDataContent(
   CHECK_EQ(out_blob->total_num_of_tensors(), in_blob->shape().elem_cnt());
 }
 
-#define REGISTER_TENSOR_BUFFER_TO_TENSOR_LIST_KERNEL(dtype)                      \
-  NEW_REGISTER_KERNEL(OperatorConf::kTensorBufferToTensorListConf,               \
-                      TensorBufferToTensorListKernel<dtype>)                     \
-      .SetIsMatchedPred([](const KernelConf& conf) {                             \
-        return (conf.op_attribute().op_conf().device_type() == DeviceType::kCPU) \
-               && (conf.data_type() == GetDataType<dtype>::value);               \
+#define REGISTER_TENSOR_BUFFER_TO_TENSOR_LIST_KERNEL(dtype)          \
+  NEW_REGISTER_KERNEL(OperatorConf::kTensorBufferToTensorListConf,   \
+                      TensorBufferToTensorListKernel<dtype>)         \
+      .SetIsMatchedPred([](const KernelConf& conf) {                 \
+        return (conf.op_attribute().op_conf().device_tag() == "cpu") \
+               && (conf.data_type() == GetDataType<dtype>::value);   \
       });
 
 REGISTER_TENSOR_BUFFER_TO_TENSOR_LIST_KERNEL(char)

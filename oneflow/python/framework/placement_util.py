@@ -66,6 +66,10 @@ def deprecated_placement(*args, **kwargs):
 def api_placement(
     device_tag: str, machine_device_ids: str
 ) -> placement_ctx.PlacementScope:
+    from oneflow.python.compatibility import with_cuda
+
+    if with_cuda == False:
+        device_tag = "cpu"
     func = enable_if.unique([GetPlacementScope, GetNormalModePlacementScope])
     return func(device_tag, machine_device_ids)
 

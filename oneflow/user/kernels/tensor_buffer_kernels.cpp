@@ -59,7 +59,7 @@ class TensorBufferToTensorKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("tensor_buffer_to_tensor")
     .SetCreateFn<TensorBufferToTensorKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer));
 
 class TensorToTensorBufferKernel final : public user_op::OpKernel {
@@ -101,7 +101,7 @@ class TensorToTensorBufferKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("tensor_to_tensor_buffer")
     .SetCreateFn<TensorToTensorBufferKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 }  // namespace

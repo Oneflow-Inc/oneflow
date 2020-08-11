@@ -58,7 +58,7 @@ class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel {
       .SetCreateFn<UnsortedBatchSegmentSumKernel<device, OF_PP_PAIR_FIRST(out_dtype),        \
                                                  OF_PP_PAIR_FIRST(segment_ids_dtype)>>()     \
       .SetIsMatchedHob(                                                                      \
-          (user_op::HobDeviceType() == device)                                               \
+          (user_op::HobDeviceTag() == device)                                                \
           & (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_dtype)) \
           & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype)));
 

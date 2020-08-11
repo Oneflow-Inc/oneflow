@@ -57,7 +57,7 @@ enum JobBuildAndInferError {
   kLogicalBlobNameInvalid = 402;
   
   kOpNameExist = 450;
-  kOpConfDeviceTypeNoSet = 460;
+  kOpConfDeviceTagNoSet = 460;
   kPlacementError = 470;
   kBlobSplitAxisInferError = 480;
   kUnknownJobBuildAndInferError = 500;
@@ -65,7 +65,7 @@ enum JobBuildAndInferError {
 
 message ProtoParseFailedError { }
 
-message CheckFailed { }
+message CheckFailedError { }
 
 message TodoError { }
 
@@ -85,7 +85,7 @@ message MultipleOpKernelsMatchedError {
   repeated string matched_op_kernels_debug_str = 1;
 }
 
-message MemoryZoneOutOfMemory {
+message MemoryZoneOutOfMemoryError {
   repeated string machine_id = 1;
   repeated string mem_zone_id = 2;
   repeated string device_tag = 3;
@@ -111,14 +111,14 @@ message ErrorProto {
     ConfigResourceUnavailableError config_resource_unavailable_error = 13;
     JobBuildAndInferError job_build_and_infer_error = 14;
     ProtoParseFailedError proto_parse_failed_error = 15;
-    CheckFailed check_failed = 16;
+    CheckFailedError check_failed_error = 16;
     TodoError todo_error = 17;
     UnimplementedError unimplemented_error = 18;
     BoxingError boxing_error = 19;
     GradientFunctionNotFoundError gradient_function_not_found_error = 20;
     OpKernelNotFoundError op_kernel_not_found_error = 21;
     MultipleOpKernelsMatchedError multiple_op_kernels_matched_error = 22;
-    MemoryZoneOutOfMemory memory_zone_out_of_memory = 23;
+    MemoryZoneOutOfMemoryError memory_zone_out_of_memory_error = 23;
     LossBlobNotFoundError loss_blob_not_found_error = 24;
     UnkownError unknown_error = 100;
   }

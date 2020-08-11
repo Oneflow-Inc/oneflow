@@ -457,7 +457,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
 #define REGISTER_CONV_KERNEL(op_name, dtype, ndims)                                         \
   REGISTER_USER_KERNEL(#op_name)                                                            \
       .SetCreateFn<ConvCpuKernel<dtype, ndims>>()                                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                       \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                   \
                        & (user_op::HobAttr<int32_t>("groups") == 1)                         \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
@@ -536,7 +536,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
 #define REGISTER_CONV_DATA_GRAD_KERNEL(op_name, dtype)                                     \
   REGISTER_USER_KERNEL(#op_name)                                                           \
       .SetCreateFn<ConvDataGradCpuKernel<dtype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                      \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                  \
                        & (user_op::HobAttr<int32_t>("groups") == 1)                        \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))     \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
@@ -604,7 +604,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
 #define REGISTER_CONV_FILTER_GRAD_KERNEL(op_name, dtype)                                        \
   REGISTER_USER_KERNEL(#op_name)                                                                \
       .SetCreateFn<ConvFilterGradCpuKernel<dtype>>()                                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
                        & (user_op::HobAttr<int32_t>("groups") == 1)                             \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))          \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
@@ -672,7 +672,7 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
 #define REGISTER_CONV_BIAS_GRAD_KERNEL(op_name, dtype)                                         \
   REGISTER_USER_KERNEL(#op_name)                                                               \
       .SetCreateFn<ConvBiasGradCpuKernel<dtype>>()                                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                          \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                      \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))         \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                            \
         const auto& out_diff_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();        \
