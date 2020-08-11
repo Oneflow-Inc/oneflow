@@ -14,173 +14,186 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/ops/slice_util.h"
+#include "oneflow/user/kernels/slice_util.h"
 
 namespace oneflow {
 
-REGISTER_USER_OP("slice_v2")
+namespace {
+
+bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
+  if (step != 1) { return false; }
+  if (start != 0) { return false; }
+  if (stop != std::numeric_limits<int64_t>::max()) { return false; }
+  return true;
+}
+
+Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
+  const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+  const int64_t ndim = x_shape->NumAxes();
+  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
+  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
+  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
+  CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
+
+  const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
+  if (ctx->parallel_ctx().parallel_num() != 1 && out_sbp.has_split_parallel()) {
+    FOR_RANGE(int, i, 0, ndim) {
+      if (out_sbp.split_parallel().axis() == i) {
+        CHECK_OR_RETURN(
+            IsFullSlice(start_vec.at(i), stop_vec.at(i), step_vec.at(i), x_shape->At(i)));
+      }
+    }
+  }
+
+  DimVector dim_vec(ndim);
+  FOR_RANGE(size_t, i, 0, dim_vec.size()) {
+    const int64_t dim_size = x_shape->At(i);
+    const int64_t step = step_vec.at(i);
+    CHECK_NE_OR_RETURN(step, 0) << "slice step cannot be 0";
+    int64_t start = RegulateSliceStart(start_vec.at(i), dim_size);
+    int64_t stop = RegulateSliceStop(stop_vec.at(i), dim_size);
+    if (step > 0) {
+      CHECK_LT_OR_RETURN(start, stop) << "slice start must be less than stop when step > 0"
+                                         ", otherwise empty result will be outputted.";
+    } else {
+      CHECK_GT_OR_RETURN(start, stop) << "slice start must be more than stop when step < 0"
+                                         ", otherwise empty result will be outputted.";
+    }
+    const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
+    dim_vec[i] = diff / step + 1;
+  }
+  *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(dim_vec);
+  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GetSliceOpSbpSignature(user_op::SbpContext* ctx) {
+  const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
+  const int64_t ndim = x_shape.NumAxes();
+  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
+  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
+  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
+  CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
+
+  FOR_RANGE(int, i, 0, ndim) {
+    if (IsFullSlice(start_vec.at(i), stop_vec.at(i), step_vec.at(i), x_shape.At(i))) {
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    }
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
+  const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
+  const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
+  const int64_t ndim = dy_shape->NumAxes();
+  CHECK_EQ_OR_RETURN(like_shape->NumAxes(), ndim);
+
+  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
+  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
+  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
+  CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
+
+  const SbpParallel& dx_sbp = ctx->SbpParallel4ArgNameAndIndex("dx", 0);
+  if (ctx->parallel_ctx().parallel_num() != 1 && dx_sbp.has_split_parallel()) {
+    FOR_RANGE(int, i, 0, ndim) {
+      if (dx_sbp.split_parallel().axis() == i) {
+        CHECK_OR_RETURN(
+            IsFullSlice(start_vec.at(i), stop_vec.at(i), step_vec.at(i), like_shape->At(i)));
+      }
+    }
+  }
+
+  *ctx->Shape4ArgNameAndIndex("dx", 0) = *like_shape;
+  *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GetSliceGradOpSbpSignature(user_op::SbpContext* ctx) {
+  const Shape& like_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
+  const int64_t ndim = like_shape.NumAxes();
+  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
+  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
+  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
+  CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
+
+  FOR_RANGE(int, i, 0, ndim) {
+    if (IsFullSlice(start_vec.at(i), stop_vec.at(i), step_vec.at(i), like_shape.At(i))) {
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    }
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("dy", 0))
+      .Broadcast(user_op::OpArg("like", 0))
+      .PartialSum(user_op::OpArg("dx", 0))
+      .Build();
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("dy", 0))
+      .PartialSum(user_op::OpArg("like", 0))
+      .Broadcast(user_op::OpArg("dx", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+void InferSliceGradInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
+                                    const user_op::UserOpConfWrapper& conf) {
+  user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
+  CHECK_NOTNULL(dy_modifier);
+  dy_modifier->set_requires_grad(false);
+  user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
+  CHECK_NOTNULL(like_modifier);
+  like_modifier->set_use_header_only(true);
+  like_modifier->set_requires_grad(false);
+}
+
+void GenSliceGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+  if (op.NeedGenGradTensor4OpInput("x", 0)) {
+    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    user_op::UserOpConfWrapper grad_op = builder.Op("slice_grad")
+                                             .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                                             .Input("like", op.input("x", 0))
+                                             .Attr("start", op.attr<std::vector<int64_t>>("start"))
+                                             .Attr("stop", op.attr<std::vector<int64_t>>("stop"))
+                                             .Attr("step", op.attr<std::vector<int64_t>>("step"))
+                                             .Output("dx")
+                                             .Build();
+    op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+    AddOp(grad_op);
+  }
+}
+
+}  // namespace
+
+REGISTER_USER_OP("slice")
     .Input("x")
     .Output("y")
-    .Attr("begin", UserOpAttrType::kAtListInt64)
-    .Attr("end", UserOpAttrType::kAtListInt64)
-    .Attr("stride", UserOpAttrType::kAtListInt64)
-    .Attr("has_begin", UserOpAttrType::kAtListInt64)
-    .Attr("has_end", UserOpAttrType::kAtListInt64)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      const auto& begin_vec = ctx->Attr<std::vector<int64_t>>("begin");
-      const auto& end_vec = ctx->Attr<std::vector<int64_t>>("end");
-      const auto& stride_vec = ctx->Attr<std::vector<int64_t>>("stride");
-      const auto& has_begin_vec = ctx->Attr<std::vector<int64_t>>("has_begin");
-      const auto& has_end_vec = ctx->Attr<std::vector<int64_t>>("has_end");
-      CHECK_EQ_OR_RETURN(in_shape->NumAxes(), begin_vec.size());
-      CHECK_EQ_OR_RETURN(in_shape->NumAxes(), end_vec.size());
-      CHECK_EQ_OR_RETURN(in_shape->NumAxes(), stride_vec.size());
-      CHECK_EQ_OR_RETURN(begin_vec.size(), has_begin_vec.size());
-      CHECK_EQ_OR_RETURN(end_vec.size(), has_end_vec.size());
+    .Attr("start", UserOpAttrType::kAtListInt64)
+    .Attr("stop", UserOpAttrType::kAtListInt64)
+    .Attr("step", UserOpAttrType::kAtListInt64)
+    .SetTensorDescInferFn(InferSliceOpTensorDesc)
+    .SetGetSbpFn(GetSliceOpSbpSignature);
 
-      const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
-      if (ctx->parallel_ctx().parallel_num() != 1 && out_sbp.has_split_parallel()
-          && out_sbp.split_parallel().axis() == 0) {
-        CHECK_EQ_OR_RETURN(has_begin_vec[0], 0);
-        CHECK_EQ_OR_RETURN(has_end_vec[0], 0);
-        CHECK_EQ_OR_RETURN(stride_vec[0], 1);
-      }
-
-      DimVector dim_vec(in_shape->NumAxes());
-      FOR_RANGE(size_t, i, 0, dim_vec.size()) {
-        int64_t begin = has_begin_vec[i] ? RegulateSliceIndex(begin_vec[i], in_shape->At(i)) : 0;
-        int64_t end =
-            has_end_vec[i] ? RegulateSliceIndex(end_vec[i], in_shape->At(i)) : in_shape->At(i);
-        int64_t stride = stride_vec[i];
-        CHECK_NE_OR_RETURN(stride, 0) << "slice stride cannot be 0";
-        if (stride > 0) {
-          CHECK_LT_OR_RETURN(begin, end)
-              << "If begin is not less than end when stride > 0, slice will output "
-                 "empty result that it is not support";
-        } else {
-          CHECK_GT_OR_RETURN(begin, end)
-              << "If begin is not more than end when stride < 0, slice will output "
-                 "empty result that it is not support";
-        }
-        int64_t align = (begin > end) ? 1 : -1;
-        dim_vec[i] = (end - begin + align) / stride + 1;
-      }
-      *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(dim_vec);
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      const auto& stride_vec = ctx->Attr<std::vector<int64_t>>("stride");
-      const auto& has_begin_vec = ctx->Attr<std::vector<int64_t>>("has_begin");
-      const auto& has_end_vec = ctx->Attr<std::vector<int64_t>>("has_end");
-      FOR_RANGE(int64_t, axis, 0, x_tensor.shape().NumAxes()) {
-        if (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1) {
-          ctx->NewBuilder()
-              .Split(user_op::OpArg("x", 0), axis)
-              .Split(user_op::OpArg("y", 0), axis)
-              .Build();
-        }
-      }
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("x", 0))
-          .PartialSum(user_op::OpArg("y", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP("slice_grad_v2")
+REGISTER_USER_OP("slice_grad")
     .Input("dy")
     .Input("like")
     .Output("dx")
-    .Attr("begin", UserOpAttrType::kAtListInt64)
-    .Attr("end", UserOpAttrType::kAtListInt64)
-    .Attr("stride", UserOpAttrType::kAtListInt64)
-    .Attr("has_begin", UserOpAttrType::kAtListInt64)
-    .Attr("has_end", UserOpAttrType::kAtListInt64)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
-      const auto& begin_vec = ctx->Attr<std::vector<int64_t>>("begin");
-      const auto& end_vec = ctx->Attr<std::vector<int64_t>>("end");
-      const auto& stride_vec = ctx->Attr<std::vector<int64_t>>("stride");
-      const auto& has_begin_vec = ctx->Attr<std::vector<int64_t>>("has_begin");
-      const auto& has_end_vec = ctx->Attr<std::vector<int64_t>>("has_end");
-      CHECK_EQ_OR_RETURN(like_shape->NumAxes(), begin_vec.size());
-      CHECK_EQ_OR_RETURN(like_shape->NumAxes(), end_vec.size());
-      CHECK_EQ_OR_RETURN(like_shape->NumAxes(), stride_vec.size());
-      CHECK_EQ_OR_RETURN(begin_vec.size(), has_begin_vec.size());
-      CHECK_EQ_OR_RETURN(end_vec.size(), has_end_vec.size());
-      const SbpParallel& dx_sbp = ctx->SbpParallel4ArgNameAndIndex("dx", 0);
-      if (ctx->parallel_ctx().parallel_num() != 1 && dx_sbp.has_split_parallel()
-          && dx_sbp.split_parallel().axis() == 0) {
-        CHECK_EQ_OR_RETURN(has_begin_vec[0], 0);
-        CHECK_EQ_OR_RETURN(has_end_vec[0], 0);
-        CHECK_EQ_OR_RETURN(stride_vec[0], 1);
-      }
-      *ctx->Shape4ArgNameAndIndex("dx", 0) = *like_shape;
-      DataType* like_data_type = ctx->Dtype4ArgNameAndIndex("like", 0);
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("dy", 0), *like_data_type);
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *like_data_type;
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
-      CHECK_NOTNULL(dy_modifier);
-      dy_modifier->set_requires_grad(false);
-      user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-      CHECK_NOTNULL(like_modifier);
-      like_modifier->set_use_header_only(true);
-      like_modifier->set_requires_grad(false);
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& like_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0);
-      const auto& stride_vec = ctx->Attr<std::vector<int64_t>>("stride");
-      const auto& has_begin_vec = ctx->Attr<std::vector<int64_t>>("has_begin");
-      const auto& has_end_vec = ctx->Attr<std::vector<int64_t>>("has_end");
-      FOR_RANGE(int64_t, axis, 0, like_tensor.shape().NumAxes()) {
-        if (has_begin_vec[axis] == 0 && has_end_vec[axis] == 0 && stride_vec[axis] == 1) {
-          ctx->NewBuilder()
-              .Split(user_op::OpArg("dy", 0), axis)
-              .Split(user_op::OpArg("like", 0), axis)
-              .Split(user_op::OpArg("dx", 0), axis)
-              .Build();
-        }
-      }
-      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("dy", 0))
-          .Broadcast(user_op::OpArg("like", 0))
-          .PartialSum(user_op::OpArg("dx", 0))
-          .Build();
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("dy", 0))
-          .PartialSum(user_op::OpArg("like", 0))
-          .Broadcast(user_op::OpArg("dx", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    });
+    .Attr("start", UserOpAttrType::kAtListInt64)
+    .Attr("stop", UserOpAttrType::kAtListInt64)
+    .Attr("step", UserOpAttrType::kAtListInt64)
+    .SetTensorDescInferFn(InferSliceGradOpTensorDesc)
+    .SetGetSbpFn(GetSliceGradOpSbpSignature)
+    .SetInputArgModifyFn(InferSliceGradInputArgModifier);
 
-REGISTER_USER_OP_GRAD("slice_v2")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("slice_grad_v2")
-                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                .Input("like", op.input("x", 0))
-                .Attr("begin", op.attr<std::vector<int64_t>>("begin"))
-                .Attr("end", op.attr<std::vector<int64_t>>("end"))
-                .Attr("stride", op.attr<std::vector<int64_t>>("stride"))
-                .Attr("has_begin", op.attr<std::vector<int64_t>>("has_begin"))
-                .Attr("has_end", op.attr<std::vector<int64_t>>("has_end"))
-                .Output("dx")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-    });
+REGISTER_USER_OP_GRAD("slice").SetGenBackwardOpConfFn(GenSliceGradOp);
 
 }  // namespace oneflow
