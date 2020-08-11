@@ -141,13 +141,16 @@ def compare_with_tensorflow(
     rtol = 1e-4
     atol = 1e-4
     if device_type == "cpu":
-        rtol *= 10
-        atol *= 10
+        rtol *= 100
+        atol *= 100
     assert np.allclose(
         global_storage["x_diff"].numpy_list()[0].transpose(xy_data_transpose),
         tf_x_diff.numpy(),
         rtol=rtol,
         atol=atol,
+    ), (
+        global_storage["x_diff"].numpy_list()[0].transpose(xy_data_transpose)
+        - tf_x_diff.numpy()
     )
     assert np.allclose(
         global_storage["weight_diff"].numpy().transpose(weight_data_transpose),
