@@ -47,7 +47,7 @@ Maybe<std::string> ToInterfaceSubTskGphBuilder::Build(
         Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
       }
     }
-    return TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+    return TRY(SubTskGphBuilderUtil::BuildBoxingLogInfo(
         sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
         dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
         "ToInterfaceSubTskGphBuilder: BuildSubTaskGphB2B"));
@@ -81,7 +81,7 @@ Maybe<std::string> ToInterfaceSubTskGphBuilder::Build(
                             Global<IDMgr>::Get()->CpuMemZoneId());
       Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
     }
-    return TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+    return TRY(SubTskGphBuilderUtil::BuildBoxingLogInfo(
         sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
         dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
         "ToInterfaceSubTskGphBuilder: BuildSubTaskGphB2S"));

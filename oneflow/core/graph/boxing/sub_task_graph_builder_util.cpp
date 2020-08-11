@@ -121,7 +121,7 @@ int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* d
   }
 }
 
-Maybe<std::string> SubTskGphBuilderUtil::BuildBoxingInfo(const CompTaskNode* src_node,
+Maybe<std::string> SubTskGphBuilderUtil::BuildBoxingLogInfo(const CompTaskNode* src_node,
                                                          const CompTaskNode* dst_node,
                                                          const ParallelDesc& src_parallel_desc,
                                                          const ParallelDesc& dst_parallel_desc,

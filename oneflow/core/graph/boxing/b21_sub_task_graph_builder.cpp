@@ -34,7 +34,7 @@ Maybe<std::string> B21SubTskGphBuilder::Build(
     TaskNode* proxy = ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
                                         dst_node->machine_id(), dst_node->MemZoneId121());
     Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
-    return TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+    return TRY(SubTskGphBuilderUtil::BuildBoxingLogInfo(
         sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
         dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, "B21SubTskGphBuilder"));
   } else {

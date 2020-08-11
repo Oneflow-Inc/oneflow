@@ -485,7 +485,7 @@ Maybe<std::string> SliceBoxingSubTskGphBuilder::Build(
     UNIMPLEMENTED();
   }
   ctx->ConnectAll121(out_nodes, sorted_dst_comp_tasks);
-  return TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+  return TRY(SubTskGphBuilderUtil::BuildBoxingLogInfo(
       sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
       dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, boxing_type));
 }

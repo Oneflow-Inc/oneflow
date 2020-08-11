@@ -51,7 +51,7 @@ struct SubTskGphBuilderUtil {
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
   static bool IsErrorBoxingNotSupported(const ErrorProto& error);
   static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
-  static Maybe<std::string> BuildBoxingInfo(const CompTaskNode* src_node,
+  static Maybe<std::string> BuildBoxingLogInfo(const CompTaskNode* src_node,
                                             const CompTaskNode* dst_node,
                                             const ParallelDesc& src_parallel_desc,
                                             const ParallelDesc& dst_parallel_desc,

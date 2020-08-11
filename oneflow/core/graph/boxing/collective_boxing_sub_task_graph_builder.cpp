@@ -109,7 +109,7 @@ class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuil
         Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), collective_node);
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
       }
-      return TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+      return TRY(SubTskGphBuilderUtil::BuildBoxingLogInfo(
           sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
           "NcclCollectiveBoxingAllReduceSubTskGphBuilder"));
@@ -150,7 +150,7 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
         Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), collective_node);
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
       }
-      return TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+      return TRY(SubTskGphBuilderUtil::BuildBoxingLogInfo(
           sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
           "NcclCollectiveBoxingReduceScatterSubTskGphBuilder"));
@@ -193,7 +193,7 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
         Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), collective_node);
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
       }
-      return TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+      return TRY(SubTskGphBuilderUtil::BuildBoxingLogInfo(
           sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
           "NcclCollectiveBoxingReduceScatterSubTskGphBuilder"));
@@ -239,7 +239,7 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
           Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
         }
       }
-      return TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+      return TRY(SubTskGphBuilderUtil::BuildBoxingLogInfo(
           sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
           "NcclCollectiveBoxingReduceScatterSubTskGphBuilder"));
@@ -299,7 +299,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         Connect<TaskNode>(slice_node_proxy, ctx->task_graph()->NewEdge(), collective_node);
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
       }
-      return TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+      return TRY(SubTskGphBuilderUtil::BuildBoxingLogInfo(
           sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
           "NcclCollectiveBoxingReduceScatterSubTskGphBuilder"));
@@ -361,7 +361,7 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
         }
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
       }
-      return TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+      return TRY(SubTskGphBuilderUtil::BuildBoxingLogInfo(
           sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
           "NcclCollectiveBoxingReduceScatterSubTskGphBuilder"));
