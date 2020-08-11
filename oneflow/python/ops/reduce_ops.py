@@ -44,7 +44,9 @@ def _check_axis(axis, shape):
     for x in axis:
         if x < 0:
             x += len(shape)
-        assert x >= 0 and x < len(shape), "Invalid axis {}".format(axis)
+        assert x >= 0 and x < len(shape), "Invalid axis {}, len(shape): {}".format(
+            axis, len(shape)
+        )
 
     return axis
 
