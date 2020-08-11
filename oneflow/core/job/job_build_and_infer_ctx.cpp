@@ -302,7 +302,9 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
     int64_t num_axes = logical_blob_desc.shape().NumAxes();
     if (axis < 0) { axis += num_axes; }
     CHECK_GE_OR_RETURN(axis, 0);
-    CHECK_LT_OR_RETURN(axis, num_axes);
+    CHECK_LT_OR_RETURN(axis, num_axes)
+        << "op: " << op->op_name() << ", blob: " << pair.first << ", axis: " << axis
+        << ", shape: " << logical_blob_desc.shape();
     CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
         << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
         << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
@@ -396,7 +398,8 @@ Maybe<void> JobBuildAndInferCtx::CheckAllInputsConvertableToMirroredBlob(const O
     if (sbp.has_broadcast_parallel()) { continue; }
     if (sbp.has_split_parallel() && sbp.split_parallel().axis() == 0) { continue; }
     const std::string& lbn = GenLogicalBlobName(lbi);
-    return Error::CheckFailed() << "input lbn: " << lbn << " is not convertable to mirrored blob";
+    return Error::CheckFailedError()
+           << "input lbn: " << lbn << " is not convertable to mirrored blob";
   }
   return Maybe<void>::Ok();
 }
@@ -546,10 +549,10 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   };
   JUST(op->InferLogicalOutBlobDescsIf(GetBlobDesc4BnInOp, BatchAxis4Ibn, parallel_desc));
   // Fill logical blob_desc signature.
-  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc*> {
+  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
     const auto* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
     CHECK_NOTNULL_OR_RETURN(blob_desc);
-    return blob_desc;
+    return *blob_desc;
   }));
   // Infer ParallelDesc for output blobs.
   auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
@@ -665,7 +668,7 @@ Maybe<void> JobBuildAndInferCtx::AddLossMirroredBlobName(const std::string& lbn)
 Maybe<LogicalBlobId> JobBuildAndInferCtx::GetMirroredLbi(const std::string& lbn_with_hint) const {
   const LogicalBlobId& lbi = GenLogicalBlobId(lbn_with_hint);
   if (mirrored_lbi2sub_lbis_.find(lbi) != mirrored_lbi2sub_lbis_.end()) { return lbi; }
-  return Error::CheckFailed() << lbn_with_hint << " is not a mirrored blob name";
+  return Error::CheckFailedError() << lbn_with_hint << " is not a mirrored blob name";
 }
 
 Maybe<int> JobBuildAndInferCtx::MirroredBlobGetNumSubLbi(const std::string& lbn_with_hint) const {

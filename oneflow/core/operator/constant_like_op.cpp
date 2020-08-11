@@ -50,12 +50,12 @@ class ConstantLikeOp final : public Operator {
   }
 
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const {
     SbpSignatureBuilder()
         .Split("like", 0)
         .Split("out", 0)
-        .MakeSplitSignatureListBuilder(JUST(LogicalBlobDesc4Ibn("like"))->shape().NumAxes())
+        .MakeSplitSignatureListBuilder(JUST(LogicalBlobDesc4Ibn("like")).shape().NumAxes())
         .Build(sbp_sig_list);
     SbpSignatureBuilder().PartialSum("like").Broadcast("out").Build(
         sbp_sig_list->mutable_sbp_signature()->Add());
