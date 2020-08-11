@@ -484,7 +484,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       CHECK_NOTNULL(boxing_log_lines_);
       *boxing_log_lines_ = *boxing_log_lines_
-                               + *boxing_log_line.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+                           + *boxing_log_line.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
     }
   }
 }
