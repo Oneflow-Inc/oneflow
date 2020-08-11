@@ -150,7 +150,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   logical_gph_ = std::move(logical_gph);
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    boxing_logging_.reset(new std::string("src_op_name,src_parallel_conf,src_sbp_conf,boxing_type,"
+    boxing_logging_lines_.reset(new std::string("src_op_name,src_parallel_conf,src_sbp_conf,boxing_type,"
                                           "dst_op_name,dst_parallel_conf,dst_sbp_conf\n"));
   }
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
@@ -213,10 +213,10 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   MergeChainAndSetOrderInGraphForEachNode();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     ToDotWithAutoFilePath();
-    CHECK_NOTNULL(boxing_logging_);
+    CHECK_NOTNULL(boxing_logging_lines_);
     TeePersistentLogStream::Create(
         JoinPath("boxing_info", "boxing_logging_" + NewUniqueId() + ".csv"))
-        ->Write(*boxing_logging_);
+        ->Write(*boxing_logging_lines_);
   }
 }
 
@@ -481,9 +481,9 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
         *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
     CHECK(boxing_info.IsOk());
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      CHECK_NOTNULL(boxing_logging_);
-      *boxing_logging_ =
-          *boxing_logging_ + *boxing_info.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+      CHECK_NOTNULL(boxing_logging_lines_);
+      *boxing_logging_lines_ =
+          *boxing_logging_lines_ + *boxing_info.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
     }
   }
 }
