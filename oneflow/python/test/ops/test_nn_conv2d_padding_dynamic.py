@@ -138,11 +138,16 @@ def compare_with_tensorflow(
     loss_diff = global_storage["loss_diff"].numpy_list()[0].transpose(xy_data_transpose)
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
+    rtol = 1e-4
+    atol = 1e-4
+    if device_type == "cpu":
+        rtol *= 10
+        atol *= 10
     assert np.allclose(
         global_storage["x_diff"].numpy_list()[0].transpose(xy_data_transpose),
         tf_x_diff.numpy(),
-        rtol=1e-4,
-        atol=1e-4,
+        rtol=rtol,
+        atol=atol,
     )
     assert np.allclose(
         global_storage["weight_diff"].numpy().transpose(weight_data_transpose),
