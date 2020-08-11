@@ -976,7 +976,7 @@ message CastToStaticShapeOpConf {
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
-  optional DeviceType device_type = 4 [default = kInvalidDevice];
+  optional string device_tag = 4 [default = "invalid_device"];
   optional bool enable_cudnn = 5;
   optional int64 cudnn_buf_limit_mbyte = 6;
   repeated string ctrl_in_op_name = 7;

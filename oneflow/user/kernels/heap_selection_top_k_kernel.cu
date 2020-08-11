@@ -216,7 +216,7 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
 
 #define REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("top_k").SetCreateFn<GpuHeapSelectionTopKKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kGPU) & (user_op::HobAttr<int32_t>("k") <= 128)    \
+      (user_op::HobDeviceTag() == "gpu") & (user_op::HobAttr<int32_t>("k") <= 128)                \
       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_HEAP_SELECTION_TOP_K_KERNEL(float)

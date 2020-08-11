@@ -61,7 +61,7 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel {
 #define REGISTER_REDUCE_SUM_LIKE_KERNEL(device, data_type_pair)                               \
   REGISTER_USER_KERNEL("reduce_sum_like")                                                     \
       .SetCreateFn<ReduceSumLikeOpKernel<device, OF_PP_PAIR_FIRST(data_type_pair)>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                    \
                        & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair))) \
       .SetInferTmpSizeFn(ReduceSumLikeInferTmpSize);
 

@@ -51,10 +51,10 @@ class SummaryWriteScalar final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_SCALAR_USER_KERNEL(dtype)                            \
-  REGISTER_USER_KERNEL("summary_write_scalar")                        \
-      .SetCreateFn<SummaryWriteScalar<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+#define REGISTER_SCALAR_USER_KERNEL(dtype)                \
+  REGISTER_USER_KERNEL("summary_write_scalar")            \
+      .SetCreateFn<SummaryWriteScalar<dtype>>()           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_SCALAR_USER_KERNEL(double)
@@ -77,7 +77,7 @@ class CreateSummaryWriter final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("create_summary_writer")
     .SetCreateFn<CreateSummaryWriter>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu"));
 
 class FlushSummaryWriter final : public user_op::OpKernel {
  public:
@@ -93,7 +93,7 @@ class FlushSummaryWriter final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("flush_summary_writer")
     .SetCreateFn<FlushSummaryWriter>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu"));
 
 template<typename T>
 class SummaryWriteHistogram final : public user_op::OpKernel {
@@ -117,10 +117,10 @@ class SummaryWriteHistogram final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_HISTOGRAM_USER_KERNEL(dtype)                         \
-  REGISTER_USER_KERNEL("summary_write_histogram")                     \
-      .SetCreateFn<SummaryWriteHistogram<dtype>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+#define REGISTER_HISTOGRAM_USER_KERNEL(dtype)             \
+  REGISTER_USER_KERNEL("summary_write_histogram")         \
+      .SetCreateFn<SummaryWriteHistogram<dtype>>()        \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_HISTOGRAM_USER_KERNEL(double)
@@ -152,7 +152,7 @@ class SummaryWritePb final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("summary_write_pb")
     .SetCreateFn<SummaryWritePb<int8_t>>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == GetDataType<int8_t>::value));
 
 template<typename T>
@@ -179,7 +179,7 @@ class SummaryWriteImage final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("summary_write_image")
     .SetCreateFn<SummaryWriteImage<uint8_t>>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == GetDataType<uint8_t>::value));
 
 }  // namespace summary

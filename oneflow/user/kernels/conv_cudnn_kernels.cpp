@@ -190,7 +190,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
 #define REGISTER_CONV_KERNEL(op_name, dtype, ndims)                                    \
   REGISTER_USER_KERNEL(#op_name)                                                       \
       .SetCreateFn<ConvGpuKernel<dtype, ndims>>()                                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                    \
         const JobDesc& job_desc = ctx->job_desc();                                     \
@@ -248,7 +248,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
 #define REGISTER_CONV_DATA_GRAD_FLOATING_KERNEL(dtype)                                 \
   REGISTER_USER_KERNEL("conv_data_grad")                                               \
       .SetCreateFn<ConvDataGradGpuKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                    \
         const JobDesc& job_desc = ctx->job_desc();                                     \
@@ -300,7 +300,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
 #define REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(dtype)                               \
   REGISTER_USER_KERNEL("conv_filter_grad")                                             \
       .SetCreateFn<ConvFilterGradGpuKernel<dtype>>()                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                    \
         const JobDesc& job_desc = ctx->job_desc();                                     \
@@ -371,10 +371,10 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(dtype)                \
-  REGISTER_USER_KERNEL("conv_bias_grad")                              \
-      .SetCreateFn<ConvBiasGradGpuKernel<dtype>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(dtype)    \
+  REGISTER_USER_KERNEL("conv_bias_grad")                  \
+      .SetCreateFn<ConvBiasGradGpuKernel<dtype>>()        \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
 REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(float);

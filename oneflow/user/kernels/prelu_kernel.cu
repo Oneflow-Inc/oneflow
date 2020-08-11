@@ -67,7 +67,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_PRELU_KERNEL(dtype)                                              \
   REGISTER_USER_KERNEL("prelu")                                                       \
       .SetCreateFn<GpuPReluKernel<dtype>>()                                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                 \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);                   \
@@ -106,7 +106,7 @@ class GpuPReluXGradKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_PRELU_X_GRAD_KERNEL(dtype)                                        \
   REGISTER_USER_KERNEL("prelu_x_grad")                                                 \
       .SetCreateFn<GpuPReluXGradKernel<dtype>>()                                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);                    \
@@ -148,7 +148,7 @@ class GpuPReluAlphaGradKernel final : public user_op::OpKernel {
 #define REGISTER_GPU_PRELU_ALPHA_GRAD_KERNEL(dtype)                                            \
   REGISTER_USER_KERNEL("prelu_alpha_grad")                                                     \
       .SetCreateFn<GpuPReluAlphaGradKernel<dtype>>()                                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                          \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                      \
                        & (user_op::HobDataType("alpha_diff", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                      \
         const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);                            \
