@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/job_rewriter/xrt_compilation.h"
+#include "oneflow/core/auto_prallel/include/SbpConstructor.h"
 
 namespace oneflow {
 
@@ -88,9 +89,14 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
   }
 }
 
+
+
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
+  std::cout << "test job complete. \n";
+  SbpConstructor sbp_constructor;
+  sbp_constructor.constructSbpGraph(job);
   FunctionPass("DumpTimeShapeAndBlobParallelConfPass")(job);
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
   if (GlobalJobDesc().enable_keep_header_only()) {
