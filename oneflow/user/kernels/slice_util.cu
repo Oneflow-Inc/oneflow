@@ -150,7 +150,7 @@ template<typename T>
 struct SliceKernelUtil<DeviceType::kGPU, T> {
   static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced) {
     SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
-    SliceSwitchUtil<T>::SwitchLaunchSliceForward(SwitchCase(fold_slice_paramss.ndim), ctx,
+    SliceSwitchUtil<T>::SwitchLaunchSliceForward(SwitchCase(fold_slice_params.ndim), ctx,
                                                  fold_slice_params, entire, sliced);
   }
 
