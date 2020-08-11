@@ -481,6 +481,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
         *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
     CHECK(boxing_info.IsOk());
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+      CHECK_NOTNULL(boxing_logging_);
       *boxing_logging_ =
           *boxing_logging_ + *boxing_info.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
     }
