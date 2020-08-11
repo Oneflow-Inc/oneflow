@@ -531,14 +531,26 @@ def conv3d(
     return output
 
 
+@oneflow_export("nn.moments")
+def moments(x, axes, keepdims=False, name=None):
+    assert isinstance(axes, list)
+    if name is None:
+        name = id_util.UniqueStr("Moments_")
+    with flow.scope.namespace(name):
+        return (
+            flow.math.reduce_mean(x, axis=axes, keepdims=keepdims),
+            flow.math.reduce_variance(x, axis=axes, keepdims=keepdims),
+        )
+
+
 @oneflow_export("nn.batch_normalization")
 def batch_normalization(
     x: remote_blob_util.BlobDef,
     mean: remote_blob_util.BlobDef,
     variance: remote_blob_util.BlobDef,
-    offset: remote_blob_util.BlobDef,
-    scale: remote_blob_util.BlobDef,
-    variance_epsilon: float,
+    offset: Optional[remote_blob_util.BlobDef] = None,
+    scale: Optional[remote_blob_util.BlobDef] = None,
+    variance_epsilon: Optional[float] = 1e-5,
     axis: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -549,8 +561,8 @@ def batch_normalization(
         x (remote_blob_util.BlobDef): Input `Blob` of arbitrary dimensionality.
         mean (remote_blob_util.BlobDef): A 1D mean `Blob`.
         variance (remote_blob_util.BlobDef):   A 1D variance `Blob`.
-        offset (remote_blob_util.BlobDef): An 1D offset `Blob`, often denoted  in equations, or None. If present, will be added to the normalized `Blob`.
-        scale (remote_blob_util.BlobDef): A 1D scale `Blob`, often denoted  in equations, or None. If present, the scale is applied to the normalized `Blob`.
+        offset (Optional[remote_blob_util.BlobDef]): An 1D offset `Blob`, often denoted  in equations, or None. If present, will be added to the normalized `Blob`.
+        scale (Optional[remote_blob_util.BlobDef]): A 1D scale `Blob`, often denoted  in equations, or None. If present, the scale is applied to the normalized `Blob`.
         variance_epsilon (float):   A small float number to avoid dividing by 0.
         axis (int, optional): 1 for '`NCHW'` data format. Defaults to 1.
         name (Optional[str], optional): This operator's name.
@@ -566,40 +578,61 @@ def batch_normalization(
     if name is None:
         name = id_util.UniqueStr("BatchNorm_")
 
+    params_shape = [x.shape[axis]]
+
     if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
-        nd_params_shape = [1] * len(x.shape)
-        (mean_dim,) = mean.shape
-        nd_params_shape[axis] = mean_dim
-        mean = flow.reshape(mean, nd_params_shape)
-        variance = flow.reshape(variance, nd_params_shape)
-        scale = flow.reshape(scale, nd_params_shape)
-        offset = flow.reshape(offset, nd_params_shape)
-
-        std_inv = flow.math.rsqrt(variance + variance_epsilon)
+        if len(mean.shape) == 1:
+            nd_params_shape = [1] * len(x.shape)
+            nd_params_shape[axis] = params_shape[0]
+            mean = flow.reshape(mean, nd_params_shape)
+            variance = flow.reshape(variance, nd_params_shape)
+            if scale:
+                scale = flow.reshape(scale, nd_params_shape)
+            if offset:
+                offset = flow.reshape(offset, nd_params_shape)
+        elif len(mean.shape) == len(x.shape):
+            pass
+        else:
+            raise ValueError(
+                "shape of mean and variance should be 1D or has number of axes and x's"
+            )
+        variance += variance_epsilon
+        std_inv = flow.math.rsqrt(variance)
         normalized = (x - mean) * std_inv
-
-        gamma = scale
-        beta = offset
-
-        affined = gamma * normalized + beta
+        affined = normalized
+        if scale:
+            affined *= scale
+        if offset:
+            affined += offset
         return affined
-
-    builder = (
-        flow.user_op_builder(name)
-        .Op("normalization")
-        .Input("x", [x])
-        .Input("moving_mean", [mean])
-        .Input("moving_variance", [variance])
-        .Input("gamma", [scale])
-        .Input("beta", [offset])
-        .Output("y")
-        .Attr("axis", axis)
-        .Attr("epsilon", variance_epsilon)
-        .Attr("training", False)
-        # momentum is not used
-        .Attr("momentum", 0.0)
-    )
-    return builder.Build().InferAndTryRun().RemoteBlobList()[0]
+    elif flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu":
+        params_dtype = flow.float32 if x.dtype == flow.float16 else x.dtype
+        if scale is None:
+            scale = flow.constant(
+                1, dtype=params_dtype, shape=params_shape, name="gamma"
+            )
+        if offset is None:
+            offset = flow.constant(
+                0, dtype=params_dtype, shape=params_shape, name="beta"
+            )
+        builder = (
+            flow.user_op_builder(name)
+            .Op("normalization")
+            .Input("x", [x])
+            .Input("moving_mean", [mean])
+            .Input("moving_variance", [variance])
+            .Input("gamma", [scale])
+            .Input("beta", [offset])
+            .Output("y")
+            .Attr("axis", axis)
+            .Attr("epsilon", variance_epsilon)
+            .Attr("training", False)
+            # momentum is not used
+            .Attr("momentum", 0.0)
+        )
+        return builder.Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        raise NotImplementedError
 
 
 @oneflow_export("nn.compat_conv2d")

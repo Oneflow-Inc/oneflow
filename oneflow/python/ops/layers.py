@@ -651,17 +651,11 @@ def layer_norm(
     Returns:
         remote_blob_util.BlobDef: A normalized `Blob` with same shape of input.
     """
-    op_builder = (
-        flow.user_op_builder(name)
-        .Op("layer_norm")
-        .Input("x", [inputs])
-        .Output("y")
-        .Output("mean")
-        .Output("inv_variance")
-    )
-
     if center is False and scale is False:
         trainable = False
+
+    beta = None
+    gamma = None
 
     param_shape = inputs.shape[begin_params_axis:]
     if center:
@@ -677,8 +671,6 @@ def layer_norm(
                 reuse=False,
             )
 
-        op_builder.Input("beta", [beta])
-
     if scale:
         with flow.scope.namespace(name):
             gamma = flow.get_variable(
@@ -692,16 +684,60 @@ def layer_norm(
                 reuse=False,
             )
 
-        op_builder.Input("gamma", [gamma])
-        op_builder.Output("normalized")
+    if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
+        if begin_norm_axis < 0:
+            begin_norm_axis = begin_norm_axis + len(inputs.shape)
 
-    op_builder.Attr("center", center)
-    op_builder.Attr("scale", scale)
-    op_builder.Attr("begin_norm_axis", begin_norm_axis)
-    op_builder.Attr("begin_params_axis", begin_params_axis)
-    op_builder.Attr("epsilon", epsilon)
+        reduce_axis = []
+        for dim in range(len(inputs.shape)):
+            if dim >= begin_norm_axis:
+                reduce_axis.append(dim)
+        mean, variance = flow.nn.moments(inputs, reduce_axis, keepdims=True)
 
-    return op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
+        axis = begin_norm_axis
+        normalized = flow.nn.batch_normalization(
+            x=inputs,
+            mean=mean,
+            variance=variance,
+            variance_epsilon=epsilon,
+            axis=axis,
+            name=name,
+        )
+        nd_params_shape = [1] * (len(inputs.shape) - len(param_shape)) + list(
+            param_shape
+        )
+        affined = normalized
+        if gamma:
+            gamma = flow.reshape(gamma, nd_params_shape)
+            affined *= scale
+        if beta:
+            beta = flow.reshape(beta, nd_params_shape)
+            affined += beta
+        return affined
+    elif flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu":
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("layer_norm")
+            .Input("x", [inputs])
+            .Output("y")
+            .Output("mean")
+            .Output("inv_variance")
+        )
+
+        if beta is not None:
+            op_builder.Input("beta", [beta])
+        if gamma is not None:
+            op_builder.Input("gamma", [gamma])
+            op_builder.Output("normalized")
+        op_builder.Attr("center", center)
+        op_builder.Attr("scale", scale)
+        op_builder.Attr("begin_norm_axis", begin_norm_axis)
+        op_builder.Attr("begin_params_axis", begin_params_axis)
+        op_builder.Attr("epsilon", epsilon)
+
+        return op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        raise NotImplementedError
 
 
 @oneflow_export("layers.layer_norm_grad")
@@ -896,7 +932,33 @@ def batch_normalization(
         )
 
     if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
-        if trainable == False and training == False:
+        if training:
+            reduce_axis = []
+            for dim in range(len(inputs.shape)):
+                if dim != axis:
+                    reduce_axis.append(dim)
+            mean, variance = flow.nn.moments(inputs, reduce_axis, keepdims=False)
+
+            def update_moving(moving, this_batch):
+                moving_identity = flow.identity(moving)
+                flow.assign(
+                    moving, momentum * moving_identity + (1 - momentum) * this_batch
+                )
+
+            update_moving(moving_mean, mean)
+            update_moving(moving_variance, variance)
+
+            return flow.nn.batch_normalization(
+                x=inputs,
+                mean=mean,
+                variance=variance,
+                offset=beta,
+                scale=gamma,
+                variance_epsilon=epsilon,
+                axis=axis,
+                name=name,
+            )
+        else:
             mean = moving_mean
             variance = moving_variance
             return flow.nn.batch_normalization(
@@ -909,27 +971,25 @@ def batch_normalization(
                 axis=axis,
                 name=name,
             )
-        else:
-            raise NotImplementedError
+    else:
+        builder = (
+            flow.user_op_builder(name)
+            .Op("normalization")
+            .Input("x", [inputs])
+            .Input("moving_mean", [moving_mean])
+            .Input("moving_variance", [moving_variance])
+            .Input("gamma", [gamma])
+            .Input("beta", [beta])
+            .Output("y")
+            .Attr("axis", axis)
+            .Attr("epsilon", epsilon)
+            .Attr("training", training)
+            .Attr("momentum", momentum)
+        )
+        if trainable and training:
+            builder = builder.Output("mean").Output("inv_variance")
 
-    builder = (
-        flow.user_op_builder(name)
-        .Op("normalization")
-        .Input("x", [inputs])
-        .Input("moving_mean", [moving_mean])
-        .Input("moving_variance", [moving_variance])
-        .Input("gamma", [gamma])
-        .Input("beta", [beta])
-        .Output("y")
-        .Attr("axis", axis)
-        .Attr("epsilon", epsilon)
-        .Attr("training", training)
-        .Attr("momentum", momentum)
-    )
-    if trainable and training:
-        builder = builder.Output("mean").Output("inv_variance")
-
-    return builder.Build().InferAndTryRun().RemoteBlobList()[0]
+        return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("layers.upsample_2d")
