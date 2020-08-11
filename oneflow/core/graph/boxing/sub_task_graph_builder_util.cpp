@@ -122,12 +122,12 @@ int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* d
 }
 
 Maybe<std::string> SubTskGphBuilderUtil::BuildBoxingLogInfo(const CompTaskNode* src_node,
-                                                         const CompTaskNode* dst_node,
-                                                         const ParallelDesc& src_parallel_desc,
-                                                         const ParallelDesc& dst_parallel_desc,
-                                                         const SbpParallel& src_sbp_parallel,
-                                                         const SbpParallel& dst_sbp_parallel,
-                                                         const std::string& boxing_type) {
+                                                            const CompTaskNode* dst_node,
+                                                            const ParallelDesc& src_parallel_desc,
+                                                            const ParallelDesc& dst_parallel_desc,
+                                                            const SbpParallel& src_sbp_parallel,
+                                                            const SbpParallel& dst_sbp_parallel,
+                                                            const std::string& boxing_type) {
   std::string boxing_info = "";
   boxing_info += src_node->logical_node()->op_vec().at(0)->op_name() + ",";
 

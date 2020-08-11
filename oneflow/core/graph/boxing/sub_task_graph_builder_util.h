@@ -52,12 +52,12 @@ struct SubTskGphBuilderUtil {
   static bool IsErrorBoxingNotSupported(const ErrorProto& error);
   static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
   static Maybe<std::string> BuildBoxingLogInfo(const CompTaskNode* src_node,
-                                            const CompTaskNode* dst_node,
-                                            const ParallelDesc& src_parallel_desc,
-                                            const ParallelDesc& dst_parallel_desc,
-                                            const SbpParallel& src_sbp_parallel,
-                                            const SbpParallel& dst_sbp_parallel,
-                                            const std::string& boxing_type);
+                                               const CompTaskNode* dst_node,
+                                               const ParallelDesc& src_parallel_desc,
+                                               const ParallelDesc& dst_parallel_desc,
+                                               const SbpParallel& src_sbp_parallel,
+                                               const SbpParallel& dst_sbp_parallel,
+                                               const std::string& boxing_type);
 
   template<typename NodeType>
   static int64_t FindNearestNodeIndex(const std::vector<NodeType*> from_nodes,
