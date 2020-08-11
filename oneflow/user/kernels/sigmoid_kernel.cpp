@@ -39,7 +39,7 @@ class SigmoidKernel final : public user_op::OpKernel {
 #define REGISTER_SIGMOID_KERNEL(device, dtype)                                                  \
   REGISTER_USER_KERNEL("sigmoid")                                                               \
       .SetCreateFn<SigmoidKernel<device, dtype>>()                                              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -76,7 +76,7 @@ class SigmoidGradKernel final : public user_op::OpKernel {
 #define REGISTER_SIGMOID_GRAD_KERNEL(device, dtype)                                             \
   REGISTER_USER_KERNEL("sigmoid_grad")                                                          \
       .SetCreateFn<SigmoidGradKernel<device, dtype>>()                                          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \

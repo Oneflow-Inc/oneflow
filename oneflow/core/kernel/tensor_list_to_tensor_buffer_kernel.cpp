@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/tensor_buffer.h"
+#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
@@ -59,7 +60,7 @@ void TensorListToTensorBufferKernel::ForwardHeader(
 
 NEW_REGISTER_KERNEL(OperatorConf::kTensorListToTensorBufferConf, TensorListToTensorBufferKernel)
     .SetIsMatchedPred([](const KernelConf& conf) {
-      return (conf.op_attribute().op_conf().device_type() == DeviceType::kCPU)
+      return (conf.op_attribute().op_conf().device_tag() == "cpu")
              && (conf.data_type() == DataType::kTensorBuffer);
     });
 

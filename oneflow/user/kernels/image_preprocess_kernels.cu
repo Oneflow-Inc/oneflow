@@ -188,7 +188,7 @@ class CropMirrorNormalizeGpuKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("crop_mirror_normalize_from_uint8")
     .SetCreateFn<CropMirrorNormalizeGpuKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
                      & (user_op::HobDataType("in", 0) == DataType::kUInt8)
                      & (user_op::HobDataType("out", 0) == DataType::kFloat));
 

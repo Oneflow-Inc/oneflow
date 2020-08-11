@@ -41,7 +41,7 @@ class CpuGeluKernel final : public user_op::OpKernel {
 
 #define REGISTER_CPU_GELU_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("gelu").SetCreateFn<CpuGeluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)                                \
+      (user_op::HobDeviceTag() == "cpu")                                            \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_GELU_KERNEL(float)
@@ -75,10 +75,10 @@ class CpuGeluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_GELU_GRAD_KERNEL(dtype)                          \
-  REGISTER_USER_KERNEL("gelu_grad")                                   \
-      .SetCreateFn<CpuGeluGradKernel<dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+#define REGISTER_CPU_GELU_GRAD_KERNEL(dtype)              \
+  REGISTER_USER_KERNEL("gelu_grad")                       \
+      .SetCreateFn<CpuGeluGradKernel<dtype>>()            \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_GELU_GRAD_KERNEL(float)

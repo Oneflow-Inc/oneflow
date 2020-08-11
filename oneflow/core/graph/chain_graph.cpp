@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
@@ -180,10 +181,8 @@ void CollectIgnoreTaskEdgesInFirstMergedChains(const std::vector<std::vector<Tas
       if (fw_node == nullptr) { continue; }
       if (fw_node->logical_node()->op_vec().size() != 1) { continue; }
       const auto& src_op = *fw_node->logical_node()->SoleOp();
-      if (src_op.op_conf().has_variable_conf()
-          && src_op.op_conf().device_type() == DeviceType::kGPU) {
-        return true;
-      }
+      DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(src_op.op_conf().device_tag()));
+      if (src_op.op_conf().has_variable_conf() && device_type == DeviceType::kGPU) { return true; }
     }
     return false;
   };

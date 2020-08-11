@@ -39,7 +39,7 @@ class TanHKernel final : public user_op::OpKernel {
 #define REGISTER_TANH_KERNEL(device, dtype)                                                     \
   REGISTER_USER_KERNEL("tanh")                                                                  \
       .SetCreateFn<TanHKernel<device, dtype>>()                                                 \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -76,7 +76,7 @@ class TanHGradKernel final : public user_op::OpKernel {
 #define REGISTER_TANH_GRAD_KERNEL(device, dtype)                                                \
   REGISTER_USER_KERNEL("tanh_grad")                                                             \
       .SetCreateFn<TanHGradKernel<device, dtype>>()                                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \

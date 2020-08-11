@@ -81,10 +81,10 @@ class SamePaddingKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SAME_PADDING_KERNEL(dev, dtype)         \
-  REGISTER_USER_KERNEL("same_padding")                   \
-      .SetCreateFn<SamePaddingKernel<dev, dtype>>()      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == dev) \
+#define REGISTER_SAME_PADDING_KERNEL(dev, dtype)        \
+  REGISTER_USER_KERNEL("same_padding")                  \
+      .SetCreateFn<SamePaddingKernel<dev, dtype>>()     \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == dev) \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 #ifdef WITH_CUDA
@@ -159,10 +159,10 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SAME_PADDING_GRAD_KERNEL(dev, dtype)    \
-  REGISTER_USER_KERNEL("same_padding_grad")              \
-      .SetCreateFn<SamePaddingGradKernel<dev, dtype>>()  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == dev) \
+#define REGISTER_SAME_PADDING_GRAD_KERNEL(dev, dtype)   \
+  REGISTER_USER_KERNEL("same_padding_grad")             \
+      .SetCreateFn<SamePaddingGradKernel<dev, dtype>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == dev) \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #ifdef WITH_CUDA

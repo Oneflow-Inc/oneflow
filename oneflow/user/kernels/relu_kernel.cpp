@@ -39,7 +39,7 @@ class ReluKernel final : public user_op::OpKernel {
 #define REGISTER_RELU_KERNEL(device, dtype)                                                     \
   REGISTER_USER_KERNEL("relu")                                                                  \
       .SetCreateFn<ReluKernel<device, dtype>>()                                                 \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -76,7 +76,7 @@ class ReluGradKernel final : public user_op::OpKernel {
 #define REGISTER_RELU_GRAD_KERNEL(device, dtype)                                                \
   REGISTER_USER_KERNEL("relu_grad")                                                             \
       .SetCreateFn<ReluGradKernel<device, dtype>>()                                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \

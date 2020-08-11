@@ -84,7 +84,7 @@ class ScalarAddByTensorKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(scalar_by_tensor_pair))                                 \
       .SetCreateFn<ScalarAddByTensorKernel<OF_PP_PAIR_SECOND(scalar_by_tensor_pair), device,    \
                                            OF_PP_PAIR_FIRST(dtype_pair)>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair)))       \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
