@@ -48,7 +48,7 @@ class ScalarAddUserKernel final : public user_op::OpKernel {
 #define REGISTER_KERNEL(kernel_device_type, dtype)                                              \
   REGISTER_USER_KERNEL("scalar_add")                                                            \
       .SetCreateFn<ScalarAddUserKernel<DeviceType::k##kernel_device_type, dtype>>()             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::k##kernel_device_type)          \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::k##kernel_device_type)           \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \

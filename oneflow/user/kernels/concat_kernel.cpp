@@ -78,7 +78,7 @@ class ConcatKernel final : public user_op::OpKernel {
 
 #define REGISTER_CONCAT_KERNEL(device, dtype)                                                \
   REGISTER_USER_KERNEL("concat").SetCreateFn<ConcatKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == device)                                                   \
+      (user_op::HobDeviceTag() == device)                                                    \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_CONCAT_KERNEL_WITH_DEVICE(device) \

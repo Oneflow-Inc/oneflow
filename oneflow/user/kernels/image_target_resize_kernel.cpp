@@ -121,7 +121,7 @@ class ImageTargetResizeKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("image_target_resize")
     .SetCreateFn<ImageTargetResizeKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("size", 0) == DataType::kInt32)

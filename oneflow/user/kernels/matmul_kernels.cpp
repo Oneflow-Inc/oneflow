@@ -62,10 +62,10 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_MATMUL_KERNEL(device, dtype)               \
-  REGISTER_USER_KERNEL("matmul")                            \
-      .SetCreateFn<MatmulFloatingKernel<device, dtype>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+#define REGISTER_MATMUL_KERNEL(device, dtype)              \
+  REGISTER_USER_KERNEL("matmul")                           \
+      .SetCreateFn<MatmulFloatingKernel<device, dtype>>()  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device) \
                        & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value));
 
 REGISTER_MATMUL_KERNEL(DeviceType::kCPU, float);
@@ -110,8 +110,7 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
 
 #ifdef WITH_CUDA
 REGISTER_USER_KERNEL("matmul").SetCreateFn<MatmulGpuHalfKernel>().SetIsMatchedHob(
-    (user_op::HobDeviceType() == DeviceType::kGPU)
-    & (user_op::HobDataType("a", 0) == DataType::kFloat16));
+    (user_op::HobDeviceTag() == "gpu") & (user_op::HobDataType("a", 0) == DataType::kFloat16));
 #endif
 
 template<DeviceType device_type, typename T>
@@ -147,7 +146,7 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
 #define REGISTER_BATCH_MATMUL_KERNEL(device, dtype)                                   \
   REGISTER_USER_KERNEL("batch_matmul")                                                \
       .SetCreateFn<BatchMatmulFloatingKernel<device, dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                            \
                        & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
         user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);             \
@@ -203,7 +202,7 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("batch_matmul")
     .SetCreateFn<BatchMatmulGpuHalfKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
                      & (user_op::HobDataType("a", 0) == DataType::kFloat16))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);

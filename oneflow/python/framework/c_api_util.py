@@ -554,15 +554,6 @@ def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
     return text_format.Parse(ofrecord, record_util.OFRecord())
 
 
-def DeviceType4DeviceTag(device_tag):
-    device_tag = str(device_tag)
-    device_type, error_str = oneflow_internal.DeviceType4DeviceTag(device_tag)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
-    return device_type
-
-
 def GetFunctionConfigDef():
     func_config_def, error_str = oneflow_internal.GetFunctionConfigDef()
     error = text_format.Parse(error_str, error_util.ErrorProto())

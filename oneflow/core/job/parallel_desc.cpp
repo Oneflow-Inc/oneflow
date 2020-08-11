@@ -157,10 +157,9 @@ Maybe<void> ParallelDesc::CheckWithResourceDesc(const ResourceDesc& resource_des
 
 ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) const {
   ParallelConf parallel_conf;
-  const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(device_type()));
   std::string machine_id = std::to_string(MachineIdForParallelId(parallel_id));
   std::string device_id = std::to_string(DeviceIdForParallelId(parallel_id));
-  parallel_conf.set_device_tag(device_tag);
+  parallel_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type())));
   parallel_conf.add_device_name(machine_id + ":" + device_id);
   return parallel_conf;
 }
