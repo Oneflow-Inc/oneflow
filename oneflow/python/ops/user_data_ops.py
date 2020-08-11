@@ -298,6 +298,12 @@ def api_image_resize(
             .Build()
         )
         res_image, new_size, scale = op.InferAndTryRun().RemoteBlobList()
+        scale = flow.tensor_buffer_to_tensor(
+            scale, dtype=flow.float32, instance_shape=(2,)
+        )
+        new_size = flow.tensor_buffer_to_tensor(
+            new_size, dtype=flow.int32, instance_shape=(2,)
+        )
 
     else:
         if (
