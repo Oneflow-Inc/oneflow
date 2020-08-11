@@ -18,20 +18,20 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> ChainSubTskGphBuilder::Build(
+Maybe<std::string> ChainSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
     const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
   for (const auto& builder : builders_) {
-    Maybe<void> status = TRY(builder->Build(ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks,
+    Maybe<std::string> boxing_info = TRY(builder->Build(ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks,
                                             src_parallel_desc, dst_parallel_desc, lbi,
                                             logical_blob_desc, src_sbp_parallel, dst_sbp_parallel));
-    if (!status.IsOk() && SubTskGphBuilderUtil::IsErrorBoxingNotSupported(*status.error())) {
+    if (!boxing_info.IsOk() && SubTskGphBuilderUtil::IsErrorBoxingNotSupported(*boxing_info.error())) {
       continue;
     } else {
-      return status;
+      return boxing_info;
     }
   }
   return Error::BoxingNotSupported();

@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> OneToOneSubTskGphBuilder::Build(
+Maybe<std::string> OneToOneSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
     const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
@@ -35,10 +35,9 @@ Maybe<void> OneToOneSubTskGphBuilder::Build(
                                           dst_node->machine_id(), dst_node->MemZoneId121());
       Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
     }
-    auto boxing_info = TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+    return TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
         sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
         dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, "OneToOneSubTskGphBuilder"));
-    return Maybe<void>::Ok();
   } else {
     return Error::BoxingNotSupported();
   }

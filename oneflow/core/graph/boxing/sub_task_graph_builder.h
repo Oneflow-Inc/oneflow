@@ -27,7 +27,7 @@ class SubTskGphBuilder {
   SubTskGphBuilder() = default;
   virtual ~SubTskGphBuilder() = default;
 
-  virtual Maybe<void> Build(SubTskGphBuilderCtx* ctx,
+  virtual Maybe<std::string> Build(SubTskGphBuilderCtx* ctx,
                             const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
                             const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
                             const ParallelDesc& src_parallel_desc,

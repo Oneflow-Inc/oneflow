@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_BOXING_B21_SUB_TASK_GRAPH_BUILDER_H_
 #define ONEFLOW_CORE_GRAPH_BOXING_B21_SUB_TASK_GRAPH_BUILDER_H_
 
+#include <string>
 #include "oneflow/core/graph/boxing/sub_task_graph_builder.h"
 
 namespace oneflow {
@@ -26,7 +27,7 @@ class B21SubTskGphBuilder final : public SubTskGphBuilder {
   B21SubTskGphBuilder() = default;
   ~B21SubTskGphBuilder() override = default;
 
-  Maybe<void> Build(SubTskGphBuilderCtx* ctx,
+  Maybe<std::string> Build(SubTskGphBuilderCtx* ctx,
                     const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
                     const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
                     const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
