@@ -43,7 +43,7 @@ class TransposeKernel final : public OpKernel {
 #define REGISTER_TRANSPOSE_KERNEL(device, dtype)                                         \
   REGISTER_USER_KERNEL("transpose")                                                      \
       .SetCreateFn<TransposeKernel<device, dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                              \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
                        & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("output", 0) == GetDataType<dtype>::value));
 

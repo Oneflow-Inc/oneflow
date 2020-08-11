@@ -77,10 +77,10 @@ class SplitLikeKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_SPLIT_LIKE_KERNEL(device, dtype)           \
-  REGISTER_USER_KERNEL("split_like")                        \
-      .SetCreateFn<SplitLikeKernel<device, dtype>>()        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+#define REGISTER_SPLIT_LIKE_KERNEL(device, dtype)          \
+  REGISTER_USER_KERNEL("split_like")                       \
+      .SetCreateFn<SplitLikeKernel<device, dtype>>()       \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device) \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_SPLIT_LIKE_KERNEL_WITH_DEVICE(device) \

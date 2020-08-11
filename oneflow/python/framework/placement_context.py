@@ -20,7 +20,6 @@ import re
 
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.device_util as device_util
 import oneflow.python.framework.op_util as op_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
@@ -77,9 +76,6 @@ class PlacementScope(object):
             self.GetDeviceTag4OpConf(op_conf), self.machine_device_ids_
         )
 
-    def GetDeviceType4OpConf(self, op_conf):
-        return device_util.DeviceType4DeviceTag(self.GetDeviceTag4OpConf(op_conf))
-
     def GetDeviceTag4OpConf(self, op_conf):
         return self.default_device_tag
 
@@ -107,15 +103,6 @@ def PlacementScopeStackTop():
         len(session_ctx.GetDefaultSession().placement_scope_stack) > 0
     ), "no placement scope found"
     return session_ctx.GetDefaultSession().placement_scope_stack[0]
-
-
-def CurPlacementGroupGetDeviceType(op_conf):
-    assert len(session_ctx.GetDefaultSession().placement_scope_stack) > 0
-    return (
-        session_ctx.GetDefaultSession()
-        .placement_scope_stack[0]
-        .GetDeviceType4OpConf(op_conf)
-    )
 
 
 def ParallelConf4OpConf(op_conf):

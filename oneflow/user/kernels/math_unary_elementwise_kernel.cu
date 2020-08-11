@@ -82,7 +82,7 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
       .SetCreateFn<                                                                                \
           MathUnaryElementwiseGpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),     \
                                         OF_PP_PAIR_FIRST(data_type_pair)>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))       \
                        & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair)));     \
                                                                                                    \
@@ -90,7 +90,7 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
       .SetCreateFn<                                                                                \
           MathUnaryElementwiseGradGpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor), \
                                             OF_PP_PAIR_FIRST(data_type_pair)>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD,
@@ -144,13 +144,13 @@ class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel {
 #define REGISTER_MATH_UNARY_ELEMENTWISE_GPU_HALF_KERNEL_AND_GRAD(math_type_str, math_func_prefix) \
   REGISTER_USER_KERNEL(math_type_str)                                                             \
       .SetCreateFn<MathUnaryElementwiseGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                             \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                         \
                        & (user_op::HobDataType("x", 0) == DataType::kFloat16)                     \
                        & (user_op::HobDataType("y", 0) == DataType::kFloat16));                   \
                                                                                                   \
   REGISTER_USER_KERNEL((std::string("") + math_type_str + "_grad"))                               \
       .SetCreateFn<MathUnaryElementwiseGradGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                             \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                         \
                        & (user_op::HobDataType("x", 0) == DataType::kFloat16));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GPU_HALF_KERNEL_AND_GRAD,

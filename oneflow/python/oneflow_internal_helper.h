@@ -209,10 +209,6 @@ Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   return Maybe<void>::Ok();
 }
 
-Maybe<long long> GetDeviceType4DeviceTag(const std::string& device_tag) {
-  return JUST(DeviceType4DeviceTag(device_tag));
-}
-
 Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
     const std::string& parallel_conf_str) {
   ParallelConf parallel_conf;

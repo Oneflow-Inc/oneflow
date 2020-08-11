@@ -54,7 +54,7 @@ class COCOReaderKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("COCOReader")
     .SetCreateFn<COCOReaderKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("image", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("image_id", 0) == DataType::kInt64)
                      & (user_op::HobDataType("image_size", 0) == DataType::kInt32)
