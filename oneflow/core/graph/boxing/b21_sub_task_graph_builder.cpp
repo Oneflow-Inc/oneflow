@@ -31,7 +31,6 @@ Maybe<std::string> B21SubTskGphBuilder::Build(
     CompTaskNode* nearest_src_node =
         SubTskGphBuilderUtil::FindNearestNode(sorted_src_comp_tasks, dst_node);
     CHECK_NOTNULL(nearest_src_node);
-
     TaskNode* proxy = ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
                                         dst_node->machine_id(), dst_node->MemZoneId121());
     Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
