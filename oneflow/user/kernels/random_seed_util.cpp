@@ -22,7 +22,8 @@ int64_t GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
   if (!ctx->Attr<bool>("has_seed")) { seed = NewRandomSeed(); }
   int64_t parallel_num = ctx->parallel_ctx().parallel_num();
   const auto& outputs = ctx->outputs();
-  CHECK_EQ(outputs.size(), 1);
+  // NOTE (shijie wang) : it's a hack for ssd_random_crop op.
+  // CHECK_EQ(outputs.size(), 1);
   if (parallel_num > 1) {
     const SbpParallel& out_sbp =
         ctx->SbpParallel4ArgNameAndIndex(outputs.at(0).first, outputs.at(0).second);

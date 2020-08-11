@@ -25,6 +25,7 @@ from oneflow.python.framework.remote_blob import BlobDef
 from typing import Optional, Sequence, Union
 import random
 import sys
+import numpy
 
 
 @oneflow_export("data.OFRecordRawDecoder", "data.ofrecord_raw_decoder")
@@ -748,3 +749,80 @@ def ofrecord_image_classification_reader(
     label = flow.tensor_buffer_to_tensor(label, dtype=flow.int32, instance_shape=[1])
     label = flow.squeeze(label, axis=[-1])
     return image, label
+
+
+@oneflow_export("ssd_random_crop")
+def ssd_random_crop(
+    image: BlobDef,
+    bbox: Optional[BlobDef] = None,
+    label: Optional[BlobDef] = None,
+    iou_overlap_ranges: Optional[Sequence[Optional[Sequence[Optional[float]]]]] = None,
+    size_shrink_rates: Optional[Sequence[Sequence[float]]] = None,
+    aspect_ratio_range: Optional[Sequence[float]] = None,
+    random_seed: Optional[int] = None,
+    max_num_attempts: Optional[int] = None,
+    name: Optional[str] = None,
+):
+    if name is None:
+        name = id_util.UniqueStr("SSDRandomCrop_")
+
+    op = flow.user_op_builder(name).Op("ssd_random_crop")
+    op.Input("image", [image]).Output("out_image")
+
+    if bbox is not None:
+        op.Input("bbox", [bbox]).Output("out_bbox")
+
+    if label is not None:
+        op.Input("label", [label]).Output("out_label")
+
+    if iou_overlap_ranges is not None:
+        min_ious = []
+        max_ious = []
+        assert len(iou_overlap_ranges) > 0
+        for iou_range in iou_overlap_ranges:
+            if iou_range is None:
+                min_ious.append(-1.0)
+                max_ious.append(-1.0)
+            else:
+                assert len(iou_range) == 2
+                min_iou = 0.0
+                max_iou = 1.0
+                if iou_range[0] is not None:
+                    min_iou = iou_range[0]
+                if iou_range[1] is not None:
+                    max_iou = iou_range[1]
+                assert 0.0 <= min_iou <= 1.0
+                assert 0.0 <= max_iou <= 1.0
+                assert min_iou < max_iou
+                min_ious.append(min_iou)
+                max_ious.append(max_iou)
+
+        op.Attr("min_iou_overlaps", min_ious).Attr("max_iou_overlaps", max_ious)
+
+    if size_shrink_rates is not None:
+        shrink_rate_array = numpy.array(size_shrink_rates)
+        assert shrink_rate_array.shape == (2, 2)
+        assert numpy.all(shrink_rate_array[0, :] > 0.0)
+        assert numpy.all(shrink_rate_array[1, :] <= 1.0)
+        assert numpy.all(shrink_rate_array[0, :] <= shrink_rate_array[1, :])
+        op.Attr("min_width_shrink_rate", shrink_rate_array[0][0]).Attr(
+            "max_width_shrink_rate", shrink_rate_array[0][1]
+        ).Attr("min_height_shrink_rate", shrink_rate_array[1][0]).Attr(
+            "max_height_shrink_rate", shrink_rate_array[1][1]
+        )
+
+    if aspect_ratio_range is not None:
+        assert len(aspect_ratio_range) == 2
+        assert all(a > 0.0 for a in aspect_ratio_range)
+        assert aspect_ratio_range[0] < aspect_ratio_range[1]
+        op.Attr("min_crop_aspect_ratio", aspect_ratio_range[0]).Attr(
+            "max_crop_aspect_ratio", aspect_ratio_range[1]
+        )
+
+    if random_seed is not None:
+        op.Attr("has_seed", True).Attr("seed", random_seed)
+
+    if max_num_attempts is not None:
+        op.Attr("max_num_attempts", max_num_attempts)
+
+    return op.Build().InferAndTryRun().RemoteBlobList()
