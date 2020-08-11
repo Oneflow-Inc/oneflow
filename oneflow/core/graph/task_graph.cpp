@@ -150,7 +150,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   logical_gph_ = std::move(logical_gph);
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    boxing_logging_lines_.reset(
+    boxing_log_lines_.reset(
         new std::string("src_op_name,src_parallel_conf,src_sbp_conf,boxing_type,"
                         "dst_op_name,dst_parallel_conf,dst_sbp_conf\n"));
   }
@@ -214,10 +214,10 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   MergeChainAndSetOrderInGraphForEachNode();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     ToDotWithAutoFilePath();
-    CHECK_NOTNULL(boxing_logging_lines_);
+    CHECK_NOTNULL(boxing_log_lines_);
     TeePersistentLogStream::Create(
-        JoinPath("boxing_info", "boxing_logging_" + NewUniqueId() + ".csv"))
-        ->Write(*boxing_logging_lines_);
+        JoinPath("boxing_log", "boxing_logging_" + NewUniqueId() + ".csv"))
+        ->Write(*boxing_log_lines_);
   }
 }
 
@@ -477,14 +477,14 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const std::shared_ptr<const ParallelDesc>& src_parallel_desc = src_logical->parallel_desc();
     const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
-    auto boxing_info = TRY(sub_tsk_gph_builder_->Build(
+    auto boxing_log_line = TRY(sub_tsk_gph_builder_->Build(
         sub_tsk_gph_builder_ctx_.get(), src_nodes, sorted_dst_comp_tasks, *src_parallel_desc,
         *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
-    CHECK(boxing_info.IsOk());
+    CHECK(boxing_log_line.IsOk());
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      CHECK_NOTNULL(boxing_logging_lines_);
-      *boxing_logging_lines_ = *boxing_logging_lines_
-                               + *boxing_info.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+      CHECK_NOTNULL(boxing_log_lines_);
+      *boxing_log_lines_ = *boxing_log_lines_
+                               + *boxing_log_line.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
     }
   }
 }

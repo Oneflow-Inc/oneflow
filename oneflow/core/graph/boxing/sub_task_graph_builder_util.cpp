@@ -128,34 +128,34 @@ Maybe<std::string> SubTskGphBuilderUtil::BuildBoxingLogInfo(const CompTaskNode* 
                                                             const SbpParallel& src_sbp_parallel,
                                                             const SbpParallel& dst_sbp_parallel,
                                                             const std::string& boxing_type) {
-  std::string boxing_info = "";
-  boxing_info += src_node->logical_node()->op_vec().at(0)->op_name() + ",";
+  std::string boxing_log_line = "";
+  boxing_log_line += src_node->logical_node()->op_vec().at(0)->op_name() + ",";
 
   std::string parallel_desc_info = PbMessage2TxtString(src_parallel_desc.parallel_conf());
   StringReplace(&parallel_desc_info, '\n', ' ');
   parallel_desc_info.pop_back();
-  boxing_info += parallel_desc_info + ",";
+  boxing_log_line += parallel_desc_info + ",";
 
   std::string sbp_parallel_info = PbMessage2TxtString(src_sbp_parallel);
   StringReplace(&sbp_parallel_info, '\n', ' ');
   sbp_parallel_info.pop_back();
-  boxing_info += sbp_parallel_info + ",";
+  boxing_log_line += sbp_parallel_info + ",";
 
-  boxing_info += boxing_type + ",";
+  boxing_log_line += boxing_type + ",";
 
-  boxing_info += dst_node->logical_node()->op_vec().at(0)->op_name() + ",";
+  boxing_log_line += dst_node->logical_node()->op_vec().at(0)->op_name() + ",";
 
   parallel_desc_info = PbMessage2TxtString(dst_parallel_desc.parallel_conf());
   StringReplace(&parallel_desc_info, '\n', ' ');
   parallel_desc_info.pop_back();
-  boxing_info += parallel_desc_info + ",";
+  boxing_log_line += parallel_desc_info + ",";
 
   sbp_parallel_info = PbMessage2TxtString(dst_sbp_parallel);
   StringReplace(&sbp_parallel_info, '\n', ' ');
   sbp_parallel_info.pop_back();
-  boxing_info += sbp_parallel_info + "\n";
+  boxing_log_line += sbp_parallel_info + "\n";
 
-  return boxing_info;
+  return boxing_log_line;
 }
 
 }  // namespace oneflow
