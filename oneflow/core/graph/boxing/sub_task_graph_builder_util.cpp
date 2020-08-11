@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+#include <string>
+#include <regex>
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
 
@@ -116,6 +119,43 @@ int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* d
       return kDistanceSameMachine;
     }
   }
+}
+
+Maybe<std::string> SubTskGphBuilderUtil::BuildBoxingInfo(const CompTaskNode* src_node,
+                                                         const CompTaskNode* dst_node,
+                                                         const ParallelDesc& src_parallel_desc,
+                                                         const ParallelDesc& dst_parallel_desc,
+                                                         const SbpParallel& src_sbp_parallel,
+                                                         const SbpParallel& dst_sbp_parallel,
+                                                         const std::string& boxing_type) {
+  std::string boxing_info = "";
+  boxing_info += src_node->logical_node()->op_vec().at(0)->op_name() + ",";
+
+  std::string parallel_desc_info = PbMessage2TxtString(src_parallel_desc.parallel_conf());
+  StringReplace(&parallel_desc_info, '\n', ' ');
+  parallel_desc_info.pop_back();
+  boxing_info += parallel_desc_info + ",";
+
+  std::string sbp_parallel_info = PbMessage2TxtString(src_sbp_parallel);
+  StringReplace(&sbp_parallel_info, '\n', ' ');
+  sbp_parallel_info.pop_back();
+  boxing_info += boxing_info + ",";
+
+  boxing_info += boxing_type + ",";
+
+  boxing_info += dst_node->logical_node()->op_vec().at(0)->op_name() + ",";
+
+  parallel_desc_info = PbMessage2TxtString(dst_parallel_desc.parallel_conf());
+  StringReplace(&parallel_desc_info, '\n', ' ');
+  parallel_desc_info.pop_back();
+  boxing_info += parallel_desc_info + ",";
+
+  sbp_parallel_info = PbMessage2TxtString(dst_sbp_parallel);
+  StringReplace(&sbp_parallel_info, '\n', ' ');
+  sbp_parallel_info.pop_back();
+  boxing_info += boxing_info + "\n";
+
+  return boxing_info;
 }
 
 }  // namespace oneflow

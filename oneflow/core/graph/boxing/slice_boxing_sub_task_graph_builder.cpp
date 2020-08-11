@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/boxing/slice_boxing_sub_task_graph_builder.h"
+#include <string>
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
@@ -439,19 +441,24 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
   std::vector<TaskNode*> in_nodes;
   in_nodes.assign(sorted_src_comp_tasks.begin(), sorted_src_comp_tasks.end());
   std::vector<TaskNode*> out_nodes;
+  std::string boxing_type = "";
   if (SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)) {
     BuildSubTaskGphS2B(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
                        logical_blob_desc, in_nodes, &out_nodes);
+    boxing_type = "SliceBoxingSubTskGphBuilder: BuildSubTaskGphS2B";
   } else if (SubTskGphBuilderUtil::IsBoxingS2S(src_sbp_parallel, dst_sbp_parallel)) {
     BuildSubTaskGphS2S(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
                        logical_blob_desc, in_nodes, &out_nodes);
+    boxing_type = "SliceBoxingSubTskGphBuilder: BuildSubTaskGphS2S";
   } else if (SubTskGphBuilderUtil::IsBoxingP2S(src_sbp_parallel, dst_sbp_parallel)) {
     BuildSubTaskGphP2S(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
                        logical_blob_desc, in_nodes, &out_nodes);
+    boxing_type = "SliceBoxingSubTskGphBuilder: BuildSubTaskGphP2S";
   } else if (SubTskGphBuilderUtil::IsBoxingP2B(src_sbp_parallel, dst_sbp_parallel)) {
     if (logical_blob_desc.shape().elem_cnt() < dst_parallel_desc.parallel_num()) {
       BuildSubTaskGphP2B(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
                          logical_blob_desc, in_nodes, &out_nodes);
+      boxing_type = "SliceBoxingSubTskGphBuilder: BuildSubTaskGphP2B";
     } else {
       BlobDesc flat_blob_desc(logical_blob_desc.data_type());
       flat_blob_desc.mut_shape() = Shape({logical_blob_desc.shape().elem_cnt()});
@@ -462,19 +469,25 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
                          flat_blob_desc, in_nodes, &middle_nodes);
       BuildSubTaskGphS2B(dst_parallel_desc, dst_parallel_desc, middle_sbp, dst_sbp_parallel,
                          flat_blob_desc, middle_nodes, &out_nodes);
+      boxing_type = "SliceBoxingSubTskGphBuilder: BuildSubTaskGphP2S->BuildSubTaskGphS2B";
       for (TaskNode* out_node : out_nodes) {
         auto* slice_boxing_node = dynamic_cast<SliceBoxingTaskNode*>(out_node);
         CHECK_NOTNULL(slice_boxing_node);
         slice_boxing_node->SetOutShape(logical_blob_desc.shape());
       }
     }
+
   } else if (SubTskGphBuilderUtil::IsBoxingB2S(src_sbp_parallel, dst_sbp_parallel)) {
     BuildSubTaskGphB2S(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
                        logical_blob_desc, in_nodes, &out_nodes);
+    boxing_type = "SliceBoxingSubTskGphBuilder: BuildSubTaskGphB2S";
   } else {
     UNIMPLEMENTED();
   }
   ctx->ConnectAll121(out_nodes, sorted_dst_comp_tasks);
+  auto boxing_info = TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+      sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
+      dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, boxing_type));
   return Maybe<void>::Ok();
 }
 

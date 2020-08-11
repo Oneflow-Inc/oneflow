@@ -16,10 +16,15 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_UTIL_H_
 #define ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_UTIL_H_
 
+#include <string>
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -46,6 +51,13 @@ struct SubTskGphBuilderUtil {
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
   static bool IsErrorBoxingNotSupported(const ErrorProto& error);
   static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
+  static Maybe<std::string> BuildBoxingInfo(const CompTaskNode* src_node,
+                                            const CompTaskNode* dst_node,
+                                            const ParallelDesc& src_parallel_desc,
+                                            const ParallelDesc& dst_parallel_desc,
+                                            const SbpParallel& src_sbp_parallel,
+                                            const SbpParallel& dst_sbp_parallel,
+                                            const std::string& boxing_type);
 
   template<typename NodeType>
   static int64_t FindNearestNodeIndex(const std::vector<NodeType*> from_nodes,

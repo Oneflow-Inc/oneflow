@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/boxing/b21_sub_task_graph_builder.h"
+#include <string>
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 
 namespace oneflow {
@@ -32,9 +33,13 @@ Maybe<void> B21SubTskGphBuilder::Build(SubTskGphBuilderCtx* ctx,
     CompTaskNode* nearest_src_node =
         SubTskGphBuilderUtil::FindNearestNode(sorted_src_comp_tasks, dst_node);
     CHECK_NOTNULL(nearest_src_node);
+
     TaskNode* proxy = ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
                                         dst_node->machine_id(), dst_node->MemZoneId121());
     Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
+    auto boxing_info = TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+        sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
+        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, "B21SubTskGphBuilder"));
     return Maybe<void>::Ok();
   } else {
     return Error::BoxingNotSupported();

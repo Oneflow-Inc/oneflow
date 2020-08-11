@@ -35,6 +35,9 @@ Maybe<void> NaiveB2BSubTskGphBuilder::Build(
                                           dst_node->machine_id(), dst_node->MemZoneId121());
       Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
     }
+    auto boxing_info = TRY(SubTskGphBuilderUtil::BuildBoxingInfo(
+        sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
+        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, "NaiveB2BSubTskGphBuilder"));
     return Maybe<void>::Ok();
   } else {
     return Error::BoxingNotSupported();
