@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+#include <string>
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/str_util.h"
@@ -177,7 +178,8 @@ std::string SubTskGphBuilderUtil::SubTskGphBuilderStatus2String(
   serialized_status += status.boxing_type_ + ",";
   serialized_status += status.dst_op_name_ + ",";
   serialized_status += status.dst_parallel_conf_ + ",";
-  serialized_status += status.dst_sbp_parallel_ + "\n";
+  serialized_status += status.dst_sbp_parallel_;
+  serialized_status += std::string("\n");
   return serialized_status;
 }
 

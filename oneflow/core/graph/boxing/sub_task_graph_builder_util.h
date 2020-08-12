@@ -99,6 +99,10 @@ struct SubTskGphBuilderStatus {
   std::string boxing_type_;
 };
 
+#define OF_BOXING_LOGGER_COLNUM_NAME_FIELD                            \
+  "src_op_name,src_parallel_conf,src_sbp_conf,lbi,logical_blob_desc," \
+  "boxing_type,dst_op_name,dst_parallel_conf,dst_sbp_conf\n"
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_UTIL_H_

@@ -151,14 +151,10 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     boxing_logger_->SetLogStream(
         JoinPath("boxing_log", "boxing_logging_" + NewUniqueId() + ".csv"));
-    boxing_logger_->BoxingLoggerSave(
-        std::string("src_op_name,src_parallel_conf,src_sbp_conf,lbi,logical_blob_desc,"
-                    "boxing_type,dst_op_name,dst_parallel_conf,dst_sbp_conf\n"));
+    boxing_logger_->BoxingLoggerSave(std::string(OF_BOXING_LOGGER_COLNUM_NAME_FIELD));
     // boxing_log_list_.reset(new std::list<std::string>);
     // CHECK_NOTNULL(boxing_log_list_);
-    // boxing_log_list_->emplace_back(
-    //     std::string("src_op_name,src_parallel_conf,src_sbp_conf,lbi,logical_blob_desc,"
-    //                 "boxing_type,dst_op_name,dst_parallel_conf,dst_sbp_conf\n"));
+    // boxing_log_list_->emplace_back(std::string(OF_BOXING_LOGGER_COLNUM_NAME_FIELD));
   }
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new ToInterfaceSubTskGphBuilder());
