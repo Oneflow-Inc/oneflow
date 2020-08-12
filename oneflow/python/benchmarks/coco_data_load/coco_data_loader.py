@@ -65,7 +65,7 @@ def coco_data_load(cfg, machine_id, nrank):
         aligned_target_size = roundup(cfg.target_size, cfg.image_align_size)
         aligned_max_size = roundup(cfg.max_size, cfg.image_align_size)
         image, new_size, scale = flow.image.target_resize(
-            image, aligned_target_size, aligned_max_size
+            image, target_size=aligned_target_size, max_size=aligned_max_size
         )
         bbox = flow.detection.object_bbox_scale(bbox, scale)
         segm_poly = flow.detection.object_segmentation_polygon_scale(segm_poly, scale)
