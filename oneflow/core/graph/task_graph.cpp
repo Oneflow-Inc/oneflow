@@ -147,12 +147,18 @@ bool IsInplaceAllowed(
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   logical_gph_ = std::move(logical_gph);
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
+  boxing_logger_ = CreateBoxingLogger();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    boxing_log_list_.reset(new std::list<std::string>);
-    CHECK_NOTNULL(boxing_log_list_);
-    boxing_log_list_->emplace_back(
+    boxing_logger_->SetLogStream(
+        JoinPath("boxing_log", "boxing_logging_" + NewUniqueId() + ".csv"));
+    boxing_logger_->BoxingLoggerSave(
         std::string("src_op_name,src_parallel_conf,src_sbp_conf,lbi,logical_blob_desc,"
                     "boxing_type,dst_op_name,dst_parallel_conf,dst_sbp_conf\n"));
+    // boxing_log_list_.reset(new std::list<std::string>);
+    // CHECK_NOTNULL(boxing_log_list_);
+    // boxing_log_list_->emplace_back(
+    //     std::string("src_op_name,src_parallel_conf,src_sbp_conf,lbi,logical_blob_desc,"
+    //                 "boxing_type,dst_op_name,dst_parallel_conf,dst_sbp_conf\n"));
   }
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new ToInterfaceSubTskGphBuilder());
@@ -214,11 +220,11 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   MergeChainAndSetOrderInGraphForEachNode();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     ToDotWithAutoFilePath();
-    CHECK_NOTNULL(boxing_log_list_);
-    auto log_stream = TeePersistentLogStream::Create(
-        JoinPath("boxing_log", "boxing_logging_" + NewUniqueId() + ".csv"));
-    for (std::string log_line : *boxing_log_list_) { log_stream << log_line; }
-    log_stream->Flush();
+    // CHECK_NOTNULL(boxing_log_list_);
+    // auto log_stream = TeePersistentLogStream::Create(
+    //     JoinPath("boxing_log", "boxing_logging_" + NewUniqueId() + ".csv"));
+    // for (std::string log_line : *boxing_log_list_) { log_stream << log_line; }
+    // log_stream->Flush();
   }
 }
 
@@ -482,8 +488,10 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
         sub_tsk_gph_builder_ctx_.get(), src_nodes, sorted_dst_comp_tasks, *src_parallel_desc,
         *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      CHECK_NOTNULL(boxing_log_list_);
-      boxing_log_list_->emplace_back(SubTskGphBuilderUtil::SubTskGphBuilderStatus2String(*status));
+      // CHECK_NOTNULL(boxing_log_list_);
+      // boxing_log_list_->emplace_back(SubTskGphBuilderUtil::SubTskGphBuilderStatus2String(*status));
+      boxing_logger_->BoxingLoggerSave(
+          SubTskGphBuilderUtil::SubTskGphBuilderStatus2String(*status));
     }
   }
 }
