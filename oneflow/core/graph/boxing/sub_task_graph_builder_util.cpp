@@ -15,9 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include <string>
-#include <regex>
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -121,41 +122,100 @@ int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* d
   }
 }
 
-Maybe<std::string> SubTskGphBuilderUtil::BuildBoxingLogInfo(const CompTaskNode* src_node,
-                                                            const CompTaskNode* dst_node,
-                                                            const ParallelDesc& src_parallel_desc,
-                                                            const ParallelDesc& dst_parallel_desc,
-                                                            const SbpParallel& src_sbp_parallel,
-                                                            const SbpParallel& dst_sbp_parallel,
-                                                            const std::string& boxing_type) {
-  std::string boxing_log_line = "";
-  boxing_log_line += src_node->logical_node()->op_vec().at(0)->op_name() + ",";
+std::string SubTskGphBuilderUtil::SerializeSbpParallel(const SbpParallel& sbp_parallel) {
+  std::string Serialized_sbp_parallel = "";
+  if (sbp_parallel.has_broadcast_parallel()) {
+    Serialized_sbp_parallel = "B";
+  } else if (sbp_parallel.has_partial_sum_parallel()) {
+    Serialized_sbp_parallel = "P";
 
-  std::string parallel_desc_info = PbMessage2TxtString(src_parallel_desc.parallel_conf());
-  StringReplace(&parallel_desc_info, '\n', ' ');
-  parallel_desc_info.pop_back();
-  boxing_log_line += parallel_desc_info + ",";
+  } else if (sbp_parallel.has_split_parallel()) {
+    Serialized_sbp_parallel = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
+  } else {
+    UNIMPLEMENTED();
+  }
+  return Serialized_sbp_parallel;
+}
 
-  std::string sbp_parallel_info = PbMessage2TxtString(src_sbp_parallel);
+std::string SubTskGphBuilderUtil::SerializeParallelDesc(const ParallelDesc& parallel_desc) {
+  std::string Serialized_parallel_desc;
+  Serialized_parallel_desc = PbMessage2TxtString(parallel_desc.parallel_conf());
+  StringReplace(&Serialized_parallel_desc, '\n', ' ');
+  Serialized_parallel_desc.pop_back();
+  return Serialized_parallel_desc;
+}
+
+std::string SubTskGphBuilderUtil::SerializeLogicalBlobId(const LogicalBlobId& lbi) {
+  std::string lbi_info = "";
+  CHECK(lbi.has_op_name());
+  lbi_info += "op_name: " + lbi.op_name() + " ";
+  CHECK(lbi.has_blob_name());
+  lbi_info += "blob_name: " + lbi.blob_name();
+  if (lbi.has_is_packed_id()) {
+    std::string is_packed_id = lbi.is_packed_id() ? "true" : "false";
+    lbi_info += "is_packed_id: " + is_packed_id;
+  }
+  return lbi_info;
+}
+
+std::string SubTskGphBuilderUtil::GetBlobInfo4LogicalBlobDesc(const BlobDesc& logical_blob_desc) {
+  std::string blob_desc_info = "dtype: TODO";
+
+  auto dtype = logical_blob_desc.data_type();
+  // blob_desc_info = blob_desc_info + dtype;
+
+  auto shape_info = logical_blob_desc.shape().ToString();
+  StringReplace(&shape_info, ',', ' ');
+  blob_desc_info += " shape: " + shape_info;
+  return blob_desc_info;
+}
+
+std::string SubTskGphBuilderUtil::SubTskGphBuilderStatus2String(
+    const SubTskGphBuilderStatus& status) {
+  std::string serialized_status("");
+  serialized_status += status.src_op_name_ + ",";
+  serialized_status += status.src_parallel_conf_ + ",";
+  serialized_status += status.src_spb_parallel_ + ",";
+  serialized_status += status.lbi_info_ + ",";
+  serialized_status += status.logical_blob_desc_info_ + ",";
+  serialized_status += status.boxing_type_ + ",";
+  serialized_status += status.dst_op_name_ + ",";
+  serialized_status += status.dst_parallel_conf_ + ",";
+  serialized_status += status.dst_sbp_parallel_ + "\n";
+  return serialized_status;
+}
+
+Maybe<SubTskGphBuilderStatus> SubTskGphBuilderUtil::BuildBoxingLogInfo(
+    const CompTaskNode* src_node, const CompTaskNode* dst_node,
+    const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
+    const SbpParallel& src_sbp_parallel, const SbpParallel& dst_sbp_parallel,
+    const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc, const std::string& boxing_type) {
+  SubTskGphBuilderStatus status;
+
+  status.src_op_name_ = src_node->logical_node()->op_vec().at(0)->op_name();
+
+  std::string parallel_desc_info = SubTskGphBuilderUtil::SerializeParallelDesc(src_parallel_desc);
+  status.src_parallel_conf_ = parallel_desc_info;
+
+  std::string sbp_parallel_info = SubTskGphBuilderUtil::SerializeSbpParallel(src_sbp_parallel);
   StringReplace(&sbp_parallel_info, '\n', ' ');
-  sbp_parallel_info.pop_back();
-  boxing_log_line += sbp_parallel_info + ",";
+  status.src_spb_parallel_ = sbp_parallel_info;
 
-  boxing_log_line += boxing_type + ",";
+  status.lbi_info_ = SerializeLogicalBlobId(lbi);
 
-  boxing_log_line += dst_node->logical_node()->op_vec().at(0)->op_name() + ",";
+  status.logical_blob_desc_info_ = GetBlobInfo4LogicalBlobDesc(logical_blob_desc);
 
-  parallel_desc_info = PbMessage2TxtString(dst_parallel_desc.parallel_conf());
-  StringReplace(&parallel_desc_info, '\n', ' ');
-  parallel_desc_info.pop_back();
-  boxing_log_line += parallel_desc_info + ",";
+  status.boxing_type_ = boxing_type;
 
-  sbp_parallel_info = PbMessage2TxtString(dst_sbp_parallel);
-  StringReplace(&sbp_parallel_info, '\n', ' ');
-  sbp_parallel_info.pop_back();
-  boxing_log_line += sbp_parallel_info + "\n";
+  status.dst_op_name_ = dst_node->logical_node()->op_vec().at(0)->op_name() + ",";
 
-  return boxing_log_line;
+  parallel_desc_info = SubTskGphBuilderUtil::SerializeParallelDesc(dst_parallel_desc);
+  status.dst_parallel_conf_ = parallel_desc_info;
+
+  sbp_parallel_info = SubTskGphBuilderUtil::SerializeSbpParallel(dst_sbp_parallel);
+  status.dst_sbp_parallel_ = sbp_parallel_info;
+
+  return status;
 }
 
 }  // namespace oneflow

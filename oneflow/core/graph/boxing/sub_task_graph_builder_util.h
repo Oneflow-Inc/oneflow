@@ -28,6 +28,8 @@ limitations under the License.
 
 namespace oneflow {
 
+struct SubTskGphBuilderStatus;
+
 struct SubTskGphBuilderUtil {
   static constexpr int64_t kDistanceSameDevice = 0;
   static constexpr int64_t kDistanceSameMachine = 1;
@@ -51,14 +53,16 @@ struct SubTskGphBuilderUtil {
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
   static bool IsErrorBoxingNotSupported(const ErrorProto& error);
   static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
-  static Maybe<std::string> BuildBoxingLogInfo(const CompTaskNode* src_node,
-                                               const CompTaskNode* dst_node,
-                                               const ParallelDesc& src_parallel_desc,
-                                               const ParallelDesc& dst_parallel_desc,
-                                               const SbpParallel& src_sbp_parallel,
-                                               const SbpParallel& dst_sbp_parallel,
-                                               const std::string& boxing_type);
-
+  static std::string SerializeSbpParallel(const SbpParallel& sbp_parallel);
+  static std::string SerializeParallelDesc(const ParallelDesc& parallel_desc);
+  static std::string SerializeLogicalBlobId(const LogicalBlobId& lbi);
+  static std::string GetBlobInfo4LogicalBlobDesc(const BlobDesc& blob_desc);
+  static std::string SubTskGphBuilderStatus2String(const SubTskGphBuilderStatus& status);
+  static Maybe<SubTskGphBuilderStatus> BuildBoxingLogInfo(
+      const CompTaskNode* src_node, const CompTaskNode* dst_node,
+      const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
+      const SbpParallel& src_sbp_parallel, const SbpParallel& dst_sbp_parallel,
+      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc, const std::string& boxing_type);
   template<typename NodeType>
   static int64_t FindNearestNodeIndex(const std::vector<NodeType*> from_nodes,
                                       const NodeType* to_node) {
@@ -82,6 +86,18 @@ struct SubTskGphBuilderUtil {
     const int64_t idx = FindNearestNodeIndex<NodeType>(from_nodes, to_node);
     return from_nodes.at(idx);
   }
+};
+
+struct SubTskGphBuilderStatus {
+  std::string src_op_name_;
+  std::string dst_op_name_;
+  std::string src_parallel_conf_;
+  std::string dst_parallel_conf_;
+  std::string src_spb_parallel_;
+  std::string dst_sbp_parallel_;
+  std::string lbi_info_;
+  std::string logical_blob_desc_info_;
+  std::string boxing_type_;
 };
 
 }  // namespace oneflow

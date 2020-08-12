@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<std::string> ToInterfaceSubTskGphBuilder::Build(
+Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
     const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
@@ -49,7 +49,7 @@ Maybe<std::string> ToInterfaceSubTskGphBuilder::Build(
     }
     return TRY(SubTskGphBuilderUtil::BuildBoxingLogInfo(
         sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
+        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
         "ToInterfaceSubTskGphBuilder: BuildSubTaskGphB2B"));
   } else if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
              && (dst_parallel_desc.parallel_num() > 1 || dst_sbp_parallel.has_split_parallel())) {
@@ -83,7 +83,7 @@ Maybe<std::string> ToInterfaceSubTskGphBuilder::Build(
     }
     return TRY(SubTskGphBuilderUtil::BuildBoxingLogInfo(
         sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
+        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
         "ToInterfaceSubTskGphBuilder: BuildSubTaskGphB2S"));
   } else {
     return Error::BoxingNotSupported();
