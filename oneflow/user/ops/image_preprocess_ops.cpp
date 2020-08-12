@@ -19,54 +19,6 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("image_resize")
-    .Input("in")
-    .Output("out")
-    .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
-    .Attr<std::string>("interp_type", UserOpAttrType::kAtString, "Linear")          /*not use*/
-    .Attr<std::string>("mag_filter", UserOpAttrType::kAtString, "Linear")           /*not use*/
-    .Attr<std::string>("min_filter", UserOpAttrType::kAtString, "Linear")           /*not use*/
-    .Attr<std::vector<float>>("max_size", UserOpAttrType::kAtListFloat, {0.0, 0.0}) /*not use*/
-    .Attr<int64_t>("resize_longer", UserOpAttrType::kAtInt64, 0)                    /*not use*/
-    .Attr<int64_t>("resize_shorter", UserOpAttrType::kAtInt64, 0)
-    .Attr<int64_t>("resize_x", UserOpAttrType::kAtInt64, 0)
-    .Attr<int64_t>("resize_y", UserOpAttrType::kAtInt64, 0)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
-      CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().At(0) >= 1);
-      int64_t batch_size = in_tensor->shape().At(0);
-      int64_t resize_x = ctx->Attr<int64_t>("resize_x");
-      int64_t resize_y = ctx->Attr<int64_t>("resize_y");
-      if (resize_x != 0 && resize_y != 0) {
-        // resize_x -> W
-        // resize_y -> H
-        // shape = {H, W, c}
-        std::string color_space = ctx->Attr<std::string>("color_space");
-        int64_t c = ImageUtil::IsColor(color_space) ? 3 : 1;
-        *out_tensor->mut_data_type() = DataType::kUInt8;
-        *out_tensor->mut_shape() = Shape({batch_size, resize_y, resize_x, c});
-      } else {
-        CHECK_OR_RETURN(ctx->Attr<int64_t>("resize_shorter") != 0);
-        *out_tensor->mut_data_type() = DataType::kTensorBuffer;
-        *out_tensor->mut_shape() = Shape({batch_size});
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("in", 0), 0)
-          .Split(user_op::OpArg("out", 0), 0)
-          .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
-      return Maybe<void>::Ok();
-    });
-
 REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
     .Input("in")
     .OptionalInput("mirror")
