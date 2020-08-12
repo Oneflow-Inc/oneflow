@@ -158,11 +158,8 @@ std::string SubTskGphBuilderUtil::SerializeLogicalBlobId(const LogicalBlobId& lb
 }
 
 std::string SubTskGphBuilderUtil::GetBlobInfo4LogicalBlobDesc(const BlobDesc& logical_blob_desc) {
-  std::string blob_desc_info = "dtype: TODO";
-
-  auto dtype = logical_blob_desc.data_type();
-  // blob_desc_info = blob_desc_info + dtype;
-
+  std::string blob_desc_info = "dtype: ";
+  blob_desc_info += DataType_Name(logical_blob_desc.data_type()) + " ";
   auto shape_info = logical_blob_desc.shape().ToString();
   StringReplace(&shape_info, ',', ' ');
   blob_desc_info += " shape: " + shape_info;
