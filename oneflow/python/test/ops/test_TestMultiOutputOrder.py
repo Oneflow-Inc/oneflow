@@ -1,73 +1,71 @@
-"""
-Copyright 2020 The OneFlow Authors. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
-import unittest
-import os
+
+BATCH_SIZE = 100
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def TestMultiOutputOrder(x, name):
-    return (
-        flow.user_op_builder(name)
-        .Op("TestMultiOutputOrder")
-        .Input("in", [x])
-        .Output("out1")
-        .Output("out2")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()
+def lenet(data, train=False):
+    initializer = flow.truncated_normal(0.1)
+    conv1 = flow.layers.conv2d(
+        data,
+        32,
+        5,
+        padding="SAME",
+        activation=flow.nn.relu,
+        kernel_initializer=initializer,
+        name="conv1",
+    )
+    pool1 = flow.nn.max_pool2d(conv1, ksize=2, strides=2, padding="SAME", name="pool1")
+    conv2 = flow.layers.conv2d(
+        pool1,
+        64,
+        5,
+        padding="SAME",
+        activation=flow.nn.relu,
+        kernel_initializer=initializer,
+        name="conv2",
+    )
+    pool2 = flow.nn.max_pool2d(conv2, ksize=2, strides=2, padding="SAME", name="pool2")
+    reshape = flow.reshape(pool2, [pool2.shape[0], -1])
+    hidden = flow.layers.dense(
+        reshape,
+        512,
+        activation=flow.nn.relu,
+        kernel_initializer=initializer,
+        name="hidden",
+    )
+    if train:
+        hidden = flow.nn.dropout(hidden, rate=0.5)
+    return flow.layers.dense(
+        hidden, 10, kernel_initializer=initializer, name="outlayer"
     )
 
 
-def GenerateTest(test_case, shape):
-    func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
-    func_config.default_logical_view(flow.scope.consistent_view())
+@flow.global_function(type="train")
+def train_job(
+    images: oft.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+    labels: oft.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+) -> oft.Numpy:
+    logits = lenet(images, train=True)
+    loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+        labels, logits, name="softmax_loss"
+    )
+    lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
+    flow.optimizer.SGD(lr_scheduler, momentum=0).minimize(loss)
+    return loss
 
-    @flow.global_function(function_config=func_config)
-    def TestMultiOutputOrderJob(x: oft.Numpy.Placeholder(shape)):
-        return TestMultiOutputOrder(x, "my_2_output_op")
 
-    x = np.random.rand(*shape).astype(np.float32)
-    # print("x", x)
-    out1, out2 = TestMultiOutputOrderJob(x).get()
-    out1_ndarray = out1.numpy()
-    out2_ndarray = out2.numpy()
-    # print("out1", out1_ndarray)
-    # print("out2", out2_ndarray)
-    out2_shape = list(shape)
-    out2_shape[-1] = out2_shape[-1] * 2
-    out2_shape = tuple(out2_shape)
-    test_case.assertTrue(shape == out1_ndarray.shape)
-    test_case.assertTrue(out2_shape == out2_ndarray.shape)
-    test_case.assertTrue(np.allclose(x, out1_ndarray))
-    test_case.assertTrue(
-        np.allclose(np.zeros(out2_shape, dtype=np.float32), out2_ndarray)
+if __name__ == "__main__":
+    flow.config.gpu_device_num(2)
+    check_point = flow.train.CheckPoint()
+    check_point.init()
+    (train_images, train_labels), (test_images, test_labels) = flow.data.load_mnist(
+        BATCH_SIZE
     )
 
-
-def test_TestMultiOutputOrder_example_1(test_case):
-    GenerateTest(test_case, (7,))
-
-
-def test_TestMultiOutputOrder_example_2(test_case):
-    GenerateTest(test_case, (2, 5,))
-
-
-def test_TestMultiOutputOrder_example_3(test_case):
-    GenerateTest(test_case, (3, 3, 2,))
+    for epoch in range(50):
+        for i, (images, labels) in enumerate(zip(train_images, train_labels)):
+            loss = train_job(images, labels)
+            if i % 20 == 0:
+                print(loss.mean())
