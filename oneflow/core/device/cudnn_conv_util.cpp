@@ -134,8 +134,8 @@ perf_t GetBestAlgorithm(const CudnnConvArgs& args, CudnnConvResource* res,
 
 CudnnConvDesc::~CudnnConvDesc() { OF_CUDNN_CHECK(cudnnDestroyConvolutionDescriptor(val_)); }
 
-CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
-                             const PbMessage& conv_conf) {
+CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_type,
+                             const ShapeView& in_blob_shape, const PbMessage& conv_conf) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   OF_CUDNN_CHECK(cudnnCreateConvolutionDescriptor(&val_));
   std::vector<int32_t> pad_large_side;
@@ -146,15 +146,15 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob
     OF_CUDNN_CHECK(
         cudnnSetConvolution2dDescriptor(val_, pad_large_side[0], pad_large_side[1], strides.Get(0),
                                         strides.Get(1), dilation_rate.Get(0), dilation_rate.Get(1),
-                                        CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
+                                        CUDNN_CROSS_CORRELATION, GetCudnnDataType(compute_type)));
   } else if (opkernel_dim == 1) {
     OF_CUDNN_CHECK(cudnnSetConvolution2dDescriptor(val_, pad_large_side[0], 0, strides.Get(0), 1,
                                                    dilation_rate.Get(0), 1, CUDNN_CROSS_CORRELATION,
-                                                   GetCudnnDataType(data_type)));
+                                                   GetCudnnDataType(compute_type)));
   } else {
     OF_CUDNN_CHECK(cudnnSetConvolutionNdDescriptor(
         val_, opkernel_dim, pad_large_side.data(), strides.data(), dilation_rate.data(),
-        CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
+        CUDNN_CROSS_CORRELATION, GetCudnnDataType(compute_type)));
   }
   const int32_t groups = GetValFromPbMessage<int32_t>(conv_conf, "groups");
   if (groups != 1) { OF_CUDNN_CHECK(cudnnSetConvolutionGroupCount(val_, groups)); }
@@ -163,7 +163,8 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob
   }
 }
 
-CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
+CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_type,
+                             const ShapeView& in_blob_shape,
                              const user_op::UserOpConfWrapper& conv_conf) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   OF_CUDNN_CHECK(cudnnCreateConvolutionDescriptor(&val_));
@@ -174,15 +175,15 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob
     OF_CUDNN_CHECK(cudnnSetConvolution2dDescriptor(
         val_, padding_before.at(0), padding_before.at(1), strides.at(0), strides.at(1),
         dilation_rate.at(0), dilation_rate.at(1), CUDNN_CROSS_CORRELATION,
-        GetCudnnDataType(data_type)));
+        GetCudnnDataType(compute_type)));
   } else if (opkernel_dim == 1) {
     OF_CUDNN_CHECK(cudnnSetConvolution2dDescriptor(val_, padding_before.at(0), 0, strides.at(0), 1,
                                                    dilation_rate.at(0), 1, CUDNN_CROSS_CORRELATION,
-                                                   GetCudnnDataType(data_type)));
+                                                   GetCudnnDataType(compute_type)));
   } else {
     OF_CUDNN_CHECK(cudnnSetConvolutionNdDescriptor(
         val_, opkernel_dim, padding_before.data(), strides.data(), dilation_rate.data(),
-        CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
+        CUDNN_CROSS_CORRELATION, GetCudnnDataType(compute_type)));
   }
   const int32_t groups = conv_conf.attr<int32_t>("groups");
   if (groups != 1) { OF_CUDNN_CHECK(cudnnSetConvolutionGroupCount(val_, groups)); }
@@ -200,7 +201,7 @@ CudnnConvArgs::CudnnConvArgs(const PbMessage& conv_conf, DataType x_data_type,
     : xdesc(x_data_type, x_shape, data_format),
       ydesc(y_data_type, y_shape, data_format),
       wdesc(w_data_type, w_shape, data_format),
-      cdesc(GetConvDescDataType(x_data_type, enable_pseudo_half), x_shape, conv_conf),
+      cdesc(GetConvDescDataType(x_data_type, enable_pseudo_half), x_data_type, x_shape, conv_conf),
       heuristic(heuristic_search),
       deterministic(use_deterministic_algo_only) {
   std::memset(&params, 0, sizeof(CudnnConvParams));
@@ -234,7 +235,7 @@ CudnnConvArgs::CudnnConvArgs(const user_op::UserOpConfWrapper& conv_conf, DataTy
     : xdesc(x_data_type, x_shape, data_format),
       ydesc(y_data_type, y_shape, data_format),
       wdesc(w_data_type, w_shape, data_format),
-      cdesc(GetConvDescDataType(x_data_type, enable_pseudo_half), x_shape, conv_conf),
+      cdesc(GetConvDescDataType(x_data_type, enable_pseudo_half), x_data_type, x_shape, conv_conf),
       heuristic(heuristic_search),
       deterministic(use_deterministic_algo_only) {
   std::memset(&params, 0, sizeof(CudnnConvParams));
