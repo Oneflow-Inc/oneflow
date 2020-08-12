@@ -18,18 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-void cpu_add(const int64_t n, T* out, const std::vector<const T*>& in) {
-  for (int64_t i = 0; i != n; ++i) {
-    out[i] = in.at(0)[i];
-    for (int32_t j = 1; j < in.size(); ++j) { out[i] += in.at(j)[i]; }
-  }
-}
-
-}  // namespace
-
 template<typename T>
 class PyKernel : public user_op::OpKernel {
  public:
@@ -50,22 +38,37 @@ class PyKernel : public user_op::OpKernel {
     for (int32_t i = 0; i < in_num; ++i) {
       in_dptrs.at(i) = ctx->Tensor4ArgNameAndIndex("in", i)->dptr<T>();
     }
-
-    cpu_add<T>(n, out_dptr, in_dptrs);
+    // TODO(strint) : compute forward with py
   }
 };
 
-#define REGISTER_CPU_ADDN_KERNEL(cpp_type, dtype)                                               \
-  REGISTER_USER_KERNEL("py_op")                                                                 \
-      .SetCreateFn<CpuAddNKernel<cpp_type>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
-                       & (user_op::HobDataType("in", 0) == dtype))                              \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
-        return Maybe<void>::Ok();                                                               \
-      });
+#define REGISTER_PY_KERNEL(cpp_type, dtype)                                     \
+  REGISTER_USER_KERNEL("py").SetCreateFn<PyKernel<cpp_type>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == "cpu") & (user_op::HobDataType("in", 0) == dtype));
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_CPU_ADDN_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(REGISTER_PY_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
+
+template<typename T>
+class PyGradKernel final : public user_op::OpKernel {
+ public:
+  PyGradKernel() = default;
+  ~PyGradKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    // TODO(strint) : compute backward with py
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_PY_GRAD_KERNEL(cpp_type, dtype)                                         \
+  REGISTER_USER_KERNEL("py_grad").SetCreateFn<PyGradKernel<cpp_type>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == "cpu") & (user_op::HobDataType("dx", 0) == dtype));
+
+OF_PP_FOR_EACH_TUPLE(REGISTER_PY_GRAD_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

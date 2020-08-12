@@ -18,11 +18,12 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("py_op")
+// py op is a general op which using python compute as kernel
+REGISTER_USER_OP("py")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      // TODO(strint):out tensor infer
+      // TODO(strint) : out tensor infer
       const auto* in_0 = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_NOTNULL_OR_RETURN(in_0);
@@ -42,10 +43,40 @@ REGISTER_USER_OP("py_op")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("py_op").SetBackwardOpConGenfFn([](user_op::BackwardOpConfContext* ctx) {
-  const auto py_op_grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(py_op_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("py_op_grad")
+REGISTER_USER_OP("py_grad")
+    .Input("x")
+    .Input("y")
+    .Input("dy")
+    .Output("dx")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+      const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
+      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
+      CHECK(*dy_shape == *y_shape);
+      // TODO(strint) : *dx_shape = *dy_shape;
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("y", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
+      FOR_RANGE(int64_t, i, 0, y_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("y", 0), i)
+            .Split(user_op::OpArg("dy", 0), i)
+            .Split(user_op::OpArg("dx", 0), i)
+            .Build();
+      }
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP_GRAD("py").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+  const auto py_grad_op_name = ctx->FwOp().op_name() + "_grad";
+  ctx->DefineOp(py_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("py_grad")
         .InputBind("x", ctx->FwOp().input("in", 0))
         .InputBind("y", ctx->FwOp().output("out", 0))
         .InputBind("dy", ctx->FwOp().output_grad("out", 0))
@@ -53,8 +84,8 @@ REGISTER_USER_OP_GRAD("py_op").SetBackwardOpConGenfFn([](user_op::BackwardOpConf
         .Build();
   });
   ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                            [&ctx, &py_op_grad_op_name]() -> const std::string& {
-                              return ctx->GetOp(py_op_grad_op_name).output("dx", 0);
+                            [&ctx, &py_grad_op_name]() -> const std::string& {
+                              return ctx->GetOp(py_grad_op_name).output("dx", 0);
                             });
 });
 
