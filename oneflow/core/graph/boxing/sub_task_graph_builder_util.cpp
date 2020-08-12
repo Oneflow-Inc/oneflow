@@ -198,7 +198,6 @@ Maybe<SubTskGphBuilderStatus> SubTskGphBuilderUtil::BuildBoxingLogInfo(
   status.src_parallel_conf_ = parallel_desc_info;
 
   std::string sbp_parallel_info = SubTskGphBuilderUtil::SerializeSbpParallel(src_sbp_parallel);
-  StringReplace(&sbp_parallel_info, '\n', ' ');
   status.src_spb_parallel_ = sbp_parallel_info;
 
   status.lbi_info_ = SerializeLogicalBlobId(lbi);
