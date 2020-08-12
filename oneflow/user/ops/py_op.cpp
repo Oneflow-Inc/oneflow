@@ -19,18 +19,14 @@ limitations under the License.
 namespace oneflow {
 
 REGISTER_USER_OP("py_op")
-    .InputWithMinimum("in", 2)
+    .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      // TODO(strint):out tensor infer
       const auto* in_0 = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_NOTNULL_OR_RETURN(in_0);
       CHECK_NOTNULL_OR_RETURN(out);
-      for (const auto& pair : ctx->inputs()) {
-        const auto* cur_in = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
-        CHECK_EQ_OR_RETURN(in_0->shape(), cur_in->shape());
-        CHECK_EQ_OR_RETURN(in_0->data_type(), cur_in->data_type());
-      }
       *out = *in_0;
       return Maybe<void>::Ok();
     })
@@ -46,14 +42,20 @@ REGISTER_USER_OP("py_op")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("py_op").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                         user_op::AddOpFn AddOp) {
-  int32_t in_size = op.input_size("in");
-  for (int i = 0; i < in_size; ++i) {
-    if (op.NeedGenGradTensor4OpInput("in", i)) {
-      op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "in", i);
-    }
-  }
+REGISTER_USER_OP_GRAD("py_op").SetBackwardOpConGenfFn([](user_op::BackwardOpConfContext* ctx) {
+  const auto py_op_grad_op_name = ctx->FwOp().op_name() + "_grad";
+  ctx->DefineOp(py_op_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("py_op_grad")
+        .InputBind("x", ctx->FwOp().input("in", 0))
+        .InputBind("y", ctx->FwOp().output("out", 0))
+        .InputBind("dy", ctx->FwOp().output_grad("out", 0))
+        .Output("dx")
+        .Build();
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
+                            [&ctx, &py_op_grad_op_name]() -> const std::string& {
+                              return ctx->GetOp(py_op_grad_op_name).output("dx", 0);
+                            });
 });
 
 }  // namespace oneflow
