@@ -59,6 +59,7 @@ struct CudnnConvArgsAndAlgo final {
         << "op (" << user_op_conf.op_name() << ") find algorithm " << algo_perf.algo
         << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
         << byte_size_of_buf;
+    OF_CUDNN_CHECK(cudnnSetConvolutionMathType(args.cdesc.Get(), algo_perf.mathType));
   }
   CudnnConvArgsAndAlgo() = delete;
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvArgsAndAlgo);
