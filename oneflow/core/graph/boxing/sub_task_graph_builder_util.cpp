@@ -153,7 +153,7 @@ std::string SubTskGphBuilderUtil::SerializeLogicalBlobId(const LogicalBlobId& lb
   lbi_info += "blob_name: " + lbi.blob_name();
   if (lbi.has_is_packed_id()) {
     std::string is_packed_id = lbi.is_packed_id() ? "true" : "false";
-    lbi_info += "is_packed_id: " + is_packed_id;
+    lbi_info += " is_packed_id: " + is_packed_id;
   }
   return lbi_info;
 }
@@ -200,9 +200,10 @@ Maybe<SubTskGphBuilderStatus> SubTskGphBuilderUtil::BuildBoxingLogInfo(
   std::string sbp_parallel_info = SubTskGphBuilderUtil::SerializeSbpParallel(src_sbp_parallel);
   status.src_spb_parallel_ = sbp_parallel_info;
 
-  status.lbi_info_ = SerializeLogicalBlobId(lbi);
+  status.lbi_info_ = SubTskGphBuilderUtil::SerializeLogicalBlobId(lbi);
 
-  status.logical_blob_desc_info_ = GetBlobInfo4LogicalBlobDesc(logical_blob_desc);
+  status.logical_blob_desc_info_ =
+      SubTskGphBuilderUtil::GetBlobInfo4LogicalBlobDesc(logical_blob_desc);
 
   status.boxing_type_ = boxing_type;
 
