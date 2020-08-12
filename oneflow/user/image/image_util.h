@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/tensor_buffer.h"
+#include "oneflow/core/framework/tensor.h"
 #include <opencv2/opencv.hpp>
 
 namespace oneflow {
@@ -36,6 +37,14 @@ inline cv::Mat CreateMatWithPtr(int H, int W, int type, const T* ptr,
 }
 
 cv::Mat GenCvMat4ImageBuffer(const TensorBuffer& image_buffer);
+
+cv::Mat GenCvMat4ImageTensor(const user_op::Tensor* image_tensor, int image_offset);
+
+void CvMatConvertToDataType(const cv::Mat& src, cv::Mat* dst, DataType dtype);
+
+int GetCvInterpolationFlag(const std::string& inter_type, int org_w, int org_h, int res_w,
+                           int res_h);
+bool CheckInterpolationValid(const std::string& interp_type, std::ostringstream& ss);
 
 }  // namespace oneflow
 
