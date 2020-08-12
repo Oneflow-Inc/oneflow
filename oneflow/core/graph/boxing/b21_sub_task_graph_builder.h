@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_BOXING_B21_SUB_TASK_GRAPH_BUILDER_H_
 #define ONEFLOW_CORE_GRAPH_BOXING_B21_SUB_TASK_GRAPH_BUILDER_H_
 
-#include <string>
 #include "oneflow/core/graph/boxing/sub_task_graph_builder.h"
 
 namespace oneflow {
