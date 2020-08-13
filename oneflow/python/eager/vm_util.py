@@ -300,6 +300,25 @@ class InstructionsBuilder(object):
         self._ReplaceMirrored(parallel_desc_symbol, [ref_blob_object], [blob_object])
         return ref_blob_object
 
+    def MakeLazyRefBlobObject(self, interface_op_name):
+        sess = session_ctx.GetDefaultSession()
+        op_attribute = sess.OpAttribute4InterfaceOpName(interface_op_name)
+        assert len(op_attribute.output_bns) == 1
+        obn = op_attribute.output_bns[0]
+
+        blob_parallel_desc_sym_id = op_attribute.parallel_signature.bn_in_op2parallel_desc_symbol_id[
+            obn
+        ]
+        blob_parallel_desc_sym = symbol_storage.GetSymbol4Id(blob_parallel_desc_sym_id)
+        op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
+            blob_parallel_desc_sym, op_attribute, obn
+        )
+        op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
+
+        blob_object = self._NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
+        self._LazyReference(blob_object, interface_op_name)
+        return blob_object
+
     def GetSymbol4String(self, string):
         if symbol_storage.HasSymbol4String(string):
             return symbol_storage.GetSymbol4String(string)
@@ -794,6 +813,18 @@ class InstructionsBuilder(object):
         instruction.operand.append(_Int64Operand(object_id))
         self.instruction_list_.instruction.append(instruction)
         return object_id
+
+    def _LazyReference(self, blob_object, interface_op_name):
+        instruction = instr_util.InstructionProto()
+        device_tag = blob_object.parallel_desc_symbol.device_tag
+        instruction.instr_type_name = "{}.LazyReference".format(device_tag)
+        instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
+        instruction.operand.append(_MutOperand(blob_object.object_id))
+        interface_op_name_sym = self.GetSymbol4String(
+            blob_object.op_arg_blob_attr.logical_blob_name
+        )
+        instruction.operand.append(_SymbolOperand(interface_op_name_sym.symbol_id))
+        self.instruction_list_.instruction.append(instruction)
 
     def _BroadcastObjectReference(self, sole_mirrored_object, parallel_desc_sym):
         object_id = self.id_generator_.NewObjectId()
