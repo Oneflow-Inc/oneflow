@@ -17,7 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_BOXING_LOGGER_H_
 
 #include <memory>
+#include "glog/logging.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/graph/boxing/sub_task_graph_builder_status_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
@@ -31,15 +33,8 @@ class BoxingLogger {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingLogger);
   BoxingLogger() = default;
-  virtual ~BoxingLogger() {
-    if (log_stream_ != nullptr) log_stream_->Flush();
-  }
-  virtual Maybe<void> SetLogStream(std::string path);
-  Maybe<void> OutputLogStream(std::string log_line);
-  virtual Maybe<void> BoxingLoggerSave(std::string log_line) = 0;
-
- private:
-  std::unique_ptr<TeePersistentLogStream> log_stream_;
+  virtual ~BoxingLogger() = default;
+  virtual void Log(const SubTskGphBuilderStatus& status) = 0;
 };
 
 class NullBoxingLogger final : public BoxingLogger {
@@ -47,18 +42,27 @@ class NullBoxingLogger final : public BoxingLogger {
   OF_DISALLOW_COPY_AND_MOVE(NullBoxingLogger);
   NullBoxingLogger() = default;
   ~NullBoxingLogger() override = default;
-  Maybe<void> SetLogStream(std::string path) override { return Maybe<void>::Ok(); }
-  Maybe<void> BoxingLoggerSave(std::string log_line) override { return Maybe<void>::Ok(); }
+  void Log(const SubTskGphBuilderStatus& status) override{};
 };
 
 class CsvBoxingLogger final : public BoxingLogger {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CsvBoxingLogger);
-  CsvBoxingLogger() = default;
-  ~CsvBoxingLogger() override = default;
-  Maybe<void> SetLogStream(std::string path) override;
-  Maybe<void> BoxingLoggerSave(std::string log_line) override;
+  CsvBoxingLogger() = delete;
+  CsvBoxingLogger(std::string path);
+  ~CsvBoxingLogger() override {
+    CHECK_NOTNULL(log_stream_);
+    log_stream_->Flush();
+  };
+  void Log(const SubTskGphBuilderStatus& status) override;
+
+ private:
+  std::unique_ptr<TeePersistentLogStream> log_stream_;
 };
+
+#define OF_BOXING_LOGGER_COLNUM_NAME_FIELD                            \
+  "src_op_name,src_parallel_conf,src_sbp_conf,lbi,logical_blob_desc," \
+  "boxing_type,dst_op_name,dst_parallel_conf,dst_sbp_conf\n"
 
 }  // namespace oneflow
 

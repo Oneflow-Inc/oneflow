@@ -148,15 +148,6 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   logical_gph_ = std::move(logical_gph);
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    CHECK_NOTNULL(boxing_logger_);
-    CHECK_JUST(boxing_logger_->SetLogStream(
-        JoinPath("boxing_log", "boxing_logging_" + NewUniqueId() + ".csv")));
-    CHECK_JUST(boxing_logger_->BoxingLoggerSave(std::string(OF_BOXING_LOGGER_COLNUM_NAME_FIELD)));
-    // boxing_log_list_.reset(new std::list<std::string>);
-    // CHECK_NOTNULL(boxing_log_list_);
-    // boxing_log_list_->emplace_back(std::string(OF_BOXING_LOGGER_COLNUM_NAME_FIELD));
-  }
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new ToInterfaceSubTskGphBuilder());
   builders.emplace_back(new OneToOneSubTskGphBuilder());
@@ -215,14 +206,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
       });
 
   MergeChainAndSetOrderInGraphForEachNode();
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    ToDotWithAutoFilePath();
-    // CHECK_NOTNULL(boxing_log_list_);
-    // auto log_stream = TeePersistentLogStream::Create(
-    //     JoinPath("boxing_log", "boxing_logging_" + NewUniqueId() + ".csv"));
-    // for (std::string log_line : *boxing_log_list_) { log_stream << log_line; }
-    // log_stream->Flush();
-  }
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
 void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
@@ -484,13 +468,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     auto status = CHECK_JUST(sub_tsk_gph_builder_->Build(
         sub_tsk_gph_builder_ctx_.get(), src_nodes, sorted_dst_comp_tasks, *src_parallel_desc,
         *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
-    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      // CHECK_NOTNULL(boxing_log_list_);
-      // boxing_log_list_->emplace_back(SubTskGphBuilderUtil::SubTskGphBuilderStatus2String(*status));
-      CHECK_NOTNULL(boxing_logger_);
-      CHECK_JUST(boxing_logger_->BoxingLoggerSave(
-          SubTskGphBuilderUtil::SubTskGphBuilderStatus2String(*status)));
-    }
+    CHECK_NOTNULL(boxing_logger_);
+    boxing_logger_->Log(*status);
   }
 }
 

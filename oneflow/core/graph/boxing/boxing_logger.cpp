@@ -14,33 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/boxing/boxing_logger.h"
+#include "oneflow/core/common/str_util.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
 std::unique_ptr<BoxingLogger> CreateBoxingLogger() {
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    return std::unique_ptr<BoxingLogger>(new CsvBoxingLogger());
+    return std::unique_ptr<BoxingLogger>(
+        new CsvBoxingLogger(StrCat("boxing/logger/", GlobalJobDesc().job_id()) + ".csv"));
   } else {
     return std::unique_ptr<BoxingLogger>(new NullBoxingLogger());
   }
 }
 
-Maybe<void> BoxingLogger::SetLogStream(std::string path) {
+CsvBoxingLogger::CsvBoxingLogger(std::string path) {
   log_stream_ = TeePersistentLogStream::Create(path);
-  return Maybe<void>::Ok();
+  log_stream_ << OF_BOXING_LOGGER_COLNUM_NAME_FIELD;
 }
 
-Maybe<void> BoxingLogger::OutputLogStream(std::string log_line) {
-  log_stream_ << log_line;
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CsvBoxingLogger::SetLogStream(std::string path) {
-  return TRY(BoxingLogger::SetLogStream(path));
-}
-
-Maybe<void> CsvBoxingLogger::BoxingLoggerSave(std::string log_line) {
-  return TRY(OutputLogStream(log_line));
+void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status) { 
+  log_stream_ << status.ToString();
 }
 
 }  // namespace oneflow

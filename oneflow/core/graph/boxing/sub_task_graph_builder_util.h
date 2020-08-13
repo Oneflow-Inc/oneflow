@@ -20,11 +20,8 @@ limitations under the License.
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/graph/task_node.h"
-#include "oneflow/core/graph/compute_task_node.h"
 
 namespace oneflow {
-
-struct SubTskGphBuilderStatus;
 
 struct SubTskGphBuilderUtil {
   static constexpr int64_t kDistanceSameDevice = 0;
@@ -49,16 +46,6 @@ struct SubTskGphBuilderUtil {
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
   static bool IsErrorBoxingNotSupported(const ErrorProto& error);
   static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
-  static std::string SerializeSbpParallel(const SbpParallel& sbp_parallel);
-  static std::string SerializeParallelDesc(const ParallelDesc& parallel_desc);
-  static std::string SerializeLogicalBlobId(const LogicalBlobId& lbi);
-  static std::string GetBlobInfo4LogicalBlobDesc(const BlobDesc& blob_desc);
-  static std::string SubTskGphBuilderStatus2String(const SubTskGphBuilderStatus& status);
-  static Maybe<SubTskGphBuilderStatus> BuildBoxingLogInfo(
-      const CompTaskNode* src_node, const CompTaskNode* dst_node,
-      const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
-      const SbpParallel& src_sbp_parallel, const SbpParallel& dst_sbp_parallel,
-      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc, const std::string& boxing_type);
   template<typename NodeType>
   static int64_t FindNearestNodeIndex(const std::vector<NodeType*> from_nodes,
                                       const NodeType* to_node) {
@@ -83,22 +70,6 @@ struct SubTskGphBuilderUtil {
     return from_nodes.at(idx);
   }
 };
-
-struct SubTskGphBuilderStatus {
-  std::string src_op_name_;
-  std::string dst_op_name_;
-  std::string src_parallel_conf_;
-  std::string dst_parallel_conf_;
-  std::string src_spb_parallel_;
-  std::string dst_sbp_parallel_;
-  std::string lbi_info_;
-  std::string logical_blob_desc_info_;
-  std::string boxing_type_;
-};
-
-#define OF_BOXING_LOGGER_COLNUM_NAME_FIELD                            \
-  "src_op_name,src_parallel_conf,src_sbp_conf,lbi,logical_blob_desc," \
-  "boxing_type,dst_op_name,dst_parallel_conf,dst_sbp_conf\n"
 
 }  // namespace oneflow
 

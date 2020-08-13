@@ -25,14 +25,14 @@ Maybe<SubTskGphBuilderStatus> ChainSubTskGphBuilder::Build(
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
   for (const auto& builder : builders_) {
-    Maybe<SubTskGphBuilderStatus> boxingbuilderstatus = TRY(builder->Build(
+    Maybe<SubTskGphBuilderStatus> boxing_builder_status = TRY(builder->Build(
         ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, src_parallel_desc, dst_parallel_desc,
         lbi, logical_blob_desc, src_sbp_parallel, dst_sbp_parallel));
-    if (!boxingbuilderstatus.IsOk()
-        && SubTskGphBuilderUtil::IsErrorBoxingNotSupported(*boxingbuilderstatus.error())) {
+    if (!boxing_builder_status.IsOk()
+        && SubTskGphBuilderUtil::IsErrorBoxingNotSupported(*boxing_builder_status.error())) {
       continue;
     } else {
-      return boxingbuilderstatus;
+      return boxing_builder_status;
     }
   }
   return Error::BoxingNotSupported();
