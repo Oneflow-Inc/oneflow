@@ -66,9 +66,11 @@ def LazyRemoteBlob(lbi, **kw):
 class BlobDef(
     blob_desc.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 ):
-    def __init__(self, lbi, **kw):
+    def __init__(self, lbi, job_name=None, **kw):
         blob_desc.BlobDesc.__init__(self, lbi, **kw)
-        self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        if job_name is None:
+            job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        self.job_name_ = job_name
         self.parallel_size_ = 0
 
     @property
@@ -430,8 +432,8 @@ class EagerBlobTrait(object):
 
 
 class EagerConsistentBlob(EagerBlobTrait, ConsistentBlob):
-    def __init__(self, lbi, blob_object=None, **kw):
-        ConsistentBlob.__init__(self, lbi, **kw)
+    def __init__(self, lbi, blob_object=None, job_name=None, **kw):
+        ConsistentBlob.__init__(self, lbi, job_name=job_name, **kw)
         self._Init(blob_object)
 
 
