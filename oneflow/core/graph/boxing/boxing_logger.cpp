@@ -35,6 +35,10 @@ Maybe<void> BoxingLogger::OutputLogStream(std::string log_line) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> CsvBoxingLogger::SetLogStream(std::string path) {
+  return BoxingLogger::SetLogStream(path);
+}
+
 Maybe<void> CsvBoxingLogger::BoxingLoggerSave(std::string log_line) {
   return OutputLogStream(log_line);
 }

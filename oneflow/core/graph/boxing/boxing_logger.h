@@ -34,7 +34,7 @@ class BoxingLogger {
   virtual ~BoxingLogger() {
     if (log_stream_ != nullptr) log_stream_->Flush();
   }
-  Maybe<void> SetLogStream(std::string path);
+  virtual Maybe<void> SetLogStream(std::string path);
   Maybe<void> OutputLogStream(std::string log_line);
   virtual Maybe<void> BoxingLoggerSave(std::string log_line) = 0;
 
@@ -47,6 +47,7 @@ class NullBoxingLogger final : public BoxingLogger {
   OF_DISALLOW_COPY_AND_MOVE(NullBoxingLogger);
   NullBoxingLogger() = default;
   ~NullBoxingLogger() override = default;
+  Maybe<void> SetLogStream(std::string path) override { return Maybe<void>::Ok(); }
   Maybe<void> BoxingLoggerSave(std::string log_line) override { return Maybe<void>::Ok(); }
 };
 
@@ -55,6 +56,7 @@ class CsvBoxingLogger final : public BoxingLogger {
   OF_DISALLOW_COPY_AND_MOVE(CsvBoxingLogger);
   CsvBoxingLogger() = default;
   ~CsvBoxingLogger() override = default;
+  Maybe<void> SetLogStream(std::string path) override;
   Maybe<void> BoxingLoggerSave(std::string log_line) override;
 };
 
