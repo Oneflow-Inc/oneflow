@@ -485,7 +485,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
   ctx->ConnectAll121(out_nodes, sorted_dst_comp_tasks);
   return TRY(BuildSubTskGphBuilderStatus(
       sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-      dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc, "SliceBoxingSubTskGphBuilder", boxing_type));
+      dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
+      "SliceBoxingSubTskGphBuilder", boxing_type));
 }
 
 }  // namespace oneflow

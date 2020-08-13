@@ -61,13 +61,13 @@ Maybe<SubTskGphBuilderStatus> BuildSubTskGphBuilderStatus(
     const CompTaskNode* src_node, const CompTaskNode* dst_node,
     const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
     const SbpParallel& src_sbp_parallel, const SbpParallel& dst_sbp_parallel,
-    const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc, const std::string& builder_name, const std::string& boxing_type) {
-
+    const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc, const std::string& builder_name,
+    const std::string& boxing_type) {
   std::string src_op_name = src_node->logical_node()->op_vec().at(0)->op_name();
   std::string dst_op_name = dst_node->logical_node()->op_vec().at(0)->op_name();
   SubTskGphBuilderStatus status(src_op_name, dst_op_name, src_parallel_desc, dst_parallel_desc,
-                            src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-                            builder_name, boxing_type);
+                                src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
+                                builder_name, boxing_type);
 
   return status;
 }
@@ -84,11 +84,11 @@ std::string SubTskGphBuilderStatus::ToString() const {
   } else {
     serialized_status += builder_name_ + ":" + boxing_type_ + ",";
   }
-  
+
   serialized_status += dst_op_name_ + ",";
   serialized_status += SerializeParallelDesc(dst_parallel_desc_) + ",";
   serialized_status += SerializeSbpParallel(dst_sbp_parallel_) + "\n";
   return serialized_status;
 }
 
-} // namespace oneflow
+}  // namespace oneflow

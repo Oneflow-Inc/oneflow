@@ -33,7 +33,7 @@ CsvBoxingLogger::CsvBoxingLogger(std::string path) {
   log_stream_ << OF_BOXING_LOGGER_COLNUM_NAME_FIELD;
 }
 
-void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status) { 
+void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status) {
   log_stream_ << status.ToString();
 }
 
