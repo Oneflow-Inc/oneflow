@@ -149,6 +149,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    CHECK_NOTNULL(boxing_logger_);
     boxing_logger_->SetLogStream(
         JoinPath("boxing_log", "boxing_logging_" + NewUniqueId() + ".csv"));
     boxing_logger_->BoxingLoggerSave(std::string(OF_BOXING_LOGGER_COLNUM_NAME_FIELD));
@@ -486,6 +487,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       // CHECK_NOTNULL(boxing_log_list_);
       // boxing_log_list_->emplace_back(SubTskGphBuilderUtil::SubTskGphBuilderStatus2String(*status));
+      CHECK_NOTNULL(boxing_logger_);
       boxing_logger_->BoxingLoggerSave(
           SubTskGphBuilderUtil::SubTskGphBuilderStatus2String(*status));
     }
