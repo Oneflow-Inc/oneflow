@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_context.h"
-#include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_status_util.h"
 
 namespace oneflow {
