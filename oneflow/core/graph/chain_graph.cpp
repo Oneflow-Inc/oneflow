@@ -272,6 +272,27 @@ void ChainGraph::CheckNoCycle() const {
     auto OnCycle = [ptr](ChainNode* chain_node) { return ptr->find(chain_node) != ptr->end(); };
     const auto& filename = "job" + job_id + "_cycle_chain_graph.dot";
     ToDotWithFilePath(OnCycle, [](ChainEdge*) { return true; }, filename);
+
+    std::set<std::string> op_names_in_cycle = {};
+    for (ChainNode* chain_node : *ptr) {
+      for (TaskNode* task_node : chain_node->TaskNodes()) {
+        auto ct = reinterpret_cast<CompTaskNode*>(task_node);
+        if (ct != nullptr) {
+          for (auto op : ct->logical_node()->op_vec()) { op_names_in_cycle.insert(op->op_name()); }
+        }
+      }
+    }
+    const std::function<std::string(OpNode*)> ColorNode = [&](OpNode* o) {
+      if (op_names_in_cycle.find(o->op().op_name()) != op_names_in_cycle.end()) {
+        return ", style=filled, colorscheme=set312, fillcolor=5";
+      } else {
+        return "";
+      }
+    };
+    const std::function<std::string(OpEdge*)> ColorEdge = [&](OpEdge* task) { return "1"; };
+    Global<OpGraph>::Get()->ToDotWithFilePath(
+        ColorNode, ColorEdge, "optimized_dlnet_" + job_id + "_op_graph_colored_nodes_in_cycle.dot");
+
     HashSet<const TaskNode*> tasks;
     for (const auto* chain_node : *scc) {
       for (const TaskNode* task_node : chain_node->TaskNodes()) {
@@ -281,13 +302,6 @@ void ChainGraph::CheckNoCycle() const {
     auto TaskOnCycle = [&](TaskNode* task) { return tasks.find(task) != tasks.end(); };
     const auto& task_gph_filename = "job" + job_id + "_cycle_task_graph.dot";
     task_gph_.ToDotWithFilePath(TaskOnCycle, [](TaskEdge*) { return true; }, task_gph_filename);
-    const std::function<std::string(OpNode*)> ColorNode = [&](OpNode* task) {
-      if
-        return "1";
-    };
-    const std::function<std::string(OpEdge*)> ColorEdge = [&](OpEdge* task) { return "1"; };
-    Global<OpGraph>::Get()->ToDotWithFilePath(
-        ColorNode, ColorEdge, "optimized_dlnet_" + job_id + "_op_graph_colored_nodes_in_cycle.dot");
     LOG(FATAL) << "cycle in graph detected";
   }
 }
