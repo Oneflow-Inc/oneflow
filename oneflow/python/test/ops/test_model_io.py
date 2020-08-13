@@ -63,7 +63,12 @@ def _test_model_io(test_case, shape, dtype, lr, num_iters):
     flow.clear_default_session()
     gen_var = _make_gen_var_func(shape, dtype, lr)
 
-    snapshot_path = "./snapshot-{}".format(time.strftime("%Y%m%d-%H:%M:%S"))
+    model_save_root_dir = "./log/snapshot/"
+    if not os.path.exists(model_save_root_dir):
+        os.makedirs(model_save_root_dir)
+    snapshot_path = model_save_root_dir + "snapshot-{}".format(
+        time.strftime("%Y%m%d-%H:%M:%S")
+    )
     checkpoint = flow.train.CheckPoint()
     checkpoint.init()
 
