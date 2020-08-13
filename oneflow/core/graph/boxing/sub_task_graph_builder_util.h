@@ -16,14 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_UTIL_H_
 #define ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_UTIL_H_
 
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
