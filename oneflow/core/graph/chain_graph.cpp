@@ -98,38 +98,13 @@ void ChainMerger::InitChains() {
   }
 }
 
-// TODO(tsai): debug code, delete later
-std::string OpNamesStr4Chain(ChainIt chains_it) {
-  std::string node_names_str = "";
-  for (auto n : chains_it->nodes) {
-    // if (n->exec_gph().node_num() == 1) {
-    //   node_names_str += n->exec_gph().SoleNode()->op()->op_name();
-    // }
-    auto ct = reinterpret_cast<CompTaskNode*>(n);
-    if (ct != nullptr) {
-      for (auto op : ct->logical_node()->op_vec()) {
-        if (node_names_str != "") { node_names_str += ", "; }
-        node_names_str += op->op_name();
-      }
-    }
-  }
-  return node_names_str;
-}
-
 bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
-  // TODO(tsai): debug code, delete later
   CHECK_EQ(rhs->nodes.size(), 1);
   // rm kMdUpdtArea chain merge
   if (rhs->nodes.front()->AreaId4ChainMerge() == kMdUpdtArea) { return false; }
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
     if (IsSubset(lhs, rhs)) {
-      std::string lhs_str = OpNamesStr4Chain(lhs);
-      std::string rhs_str = OpNamesStr4Chain(rhs);
-      if (lhs_str != "" && rhs_str != "") {
-        std::string log_str = lhs_str + " <<merge<< " + rhs_str + "\n";
-        LOG(ERROR) << log_str;
-      }
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
         CarefullySetBitset(&(lhs->ancestors_and_this), GetTaskUid(node));
