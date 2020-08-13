@@ -239,7 +239,6 @@ def test_2n8c(test_case):
     print(of_loss)
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_inplace(test_case):
     test_case.assertTrue(
         np.allclose(GetSeveralLossesAsNumpy(True), GetSeveralLossesAsNumpy(False))
