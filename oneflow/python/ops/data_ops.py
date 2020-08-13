@@ -25,7 +25,7 @@ import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import traceback
 
 
@@ -196,6 +196,7 @@ class BlobConf(object):
 
 
 @oneflow_export("data.decode_ofrecord")
+@oneflow_deprecate()
 def decode_ofrecord(
     ofrecord_dir: str,
     blobs: Sequence[BlobConf],

@@ -32,6 +32,8 @@ import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.core.job.placement_pb2 as placement_pb
+import traceback
+import sys
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
 
@@ -118,8 +120,11 @@ class LazyConsistentBlob(ConsistentBlob):
         if oneflow.scope.mirrored_view_enabled():
             print(
                 "WARNING:",
-                "You access a consistent blob shape in mirrored view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+                "You access a consistent blob shape in mirrored view, there may be problems,",
+                "you should add 'x = flow.cast_to_current_logical_view(x)'.",
+                file=sys.stderr,
             )
+            print(traceback.format_stack()[-2])
         return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.lbn_)
 
     @property
@@ -199,8 +204,11 @@ class LazyMirroredBlob(MirroredBlob):
         if oneflow.scope.consistent_view_enabled():
             print(
                 "WARNING:",
-                "You access a mirrored blob shape in consistent view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+                "You access a mirrored blob shape in consistent view, there may be problems,"
+                "you should add 'x = flow.cast_to_current_logical_view(x)'.",
+                file=sys.stderr,
             )
+            print(traceback.format_stack()[-2])
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
             self.job_name_, self.lbn_
         )

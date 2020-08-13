@@ -18,7 +18,7 @@ import re
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.device_scope_stack as device_scope_stack
 import oneflow
@@ -54,6 +54,7 @@ def normal_mode_cur_placement_scope():
 
 
 @oneflow_export("device_prior_placement", "fixed_placement")
+@oneflow_deprecate()
 def deprecated_placement(*args, **kwargs):
     print(
         "WARNING:",

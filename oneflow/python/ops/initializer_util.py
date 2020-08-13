@@ -142,6 +142,8 @@ def random_normal_initializer(
     """
     assert seed is None
     assert dtype is None
+    if seed is not None:
+        assert name is not None
     initializer = op_conf_util.InitializerConf()
     setattr(initializer.random_normal_conf, "mean", float(mean))
     setattr(initializer.random_normal_conf, "std", float(stddev))

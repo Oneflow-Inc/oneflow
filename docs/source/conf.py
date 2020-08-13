@@ -200,3 +200,14 @@ autodoc_default_options = {
     'undoc-members': True,
     'exclude-members': '__weakref__'
 }
+
+def should_skip_member(app, what, name, obj, skip, options):
+    import collections
+    is_deprecated = oneflow.is_deprecated(obj)
+    if is_deprecated:
+        print("skipping deprecated", what, name, obj)
+    magical = name in ['__weakref__', '__doc__', '__module__', '__dict__']
+    return skip or is_deprecated or magical
+
+def setup(app):
+    app.connect('autodoc-skip-member', should_skip_member)

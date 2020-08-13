@@ -38,7 +38,11 @@ def DataLoaderJob():
         data_dir, batch_size=batch_size, random_shuffle=True
     )
     image = flow.data.OFRecordImageDecoderRandomCrop(
-        ofrecord, "encoded", seed=seed, color_space="RGB"
+        ofrecord,
+        "encoded",
+        seed=seed,
+        color_space="RGB",
+        name="of_record_iamge_decoder_random_crop",
     )
     label = flow.data.OFRecordRawDecoder(
         ofrecord, "class/label", shape=(), dtype=flow.int32
@@ -47,7 +51,7 @@ def DataLoaderJob():
     print(rsz.shape)
     print(label.shape)
 
-    rng = flow.random.CoinFlip(batch_size=batch_size, seed=seed)
+    rng = flow.random.CoinFlip(batch_size=batch_size, seed=seed, name="coin_flip")
     normal = flow.image.CropMirrorNormalize(
         rsz,
         mirror_blob=rng,
