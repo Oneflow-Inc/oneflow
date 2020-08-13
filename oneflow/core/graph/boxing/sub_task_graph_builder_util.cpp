@@ -123,26 +123,26 @@ int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* d
 }
 
 std::string SubTskGphBuilderUtil::SerializeSbpParallel(const SbpParallel& sbp_parallel) {
-  std::string Serialized_sbp_parallel = "";
+  std::string serialized_sbp_parallel = "";
   if (sbp_parallel.has_broadcast_parallel()) {
-    Serialized_sbp_parallel = "B";
+    serialized_sbp_parallel = "B";
   } else if (sbp_parallel.has_partial_sum_parallel()) {
-    Serialized_sbp_parallel = "P";
+    serialized_sbp_parallel = "P";
 
   } else if (sbp_parallel.has_split_parallel()) {
-    Serialized_sbp_parallel = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
+    serialized_sbp_parallel = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
   } else {
     UNIMPLEMENTED();
   }
-  return Serialized_sbp_parallel;
+  return serialized_sbp_parallel;
 }
 
 std::string SubTskGphBuilderUtil::SerializeParallelDesc(const ParallelDesc& parallel_desc) {
-  std::string Serialized_parallel_desc;
-  Serialized_parallel_desc = PbMessage2TxtString(parallel_desc.parallel_conf());
-  StringReplace(&Serialized_parallel_desc, '\n', ' ');
-  Serialized_parallel_desc.pop_back();
-  return Serialized_parallel_desc;
+  std::string serialized_parallel_desc;
+  serialized_parallel_desc = PbMessage2TxtString(parallel_desc.parallel_conf());
+  StringReplace(&serialized_parallel_desc, '\n', ' ');
+  serialized_parallel_desc.pop_back();
+  return serialized_parallel_desc;
 }
 
 std::string SubTskGphBuilderUtil::SerializeLogicalBlobId(const LogicalBlobId& lbi) {
