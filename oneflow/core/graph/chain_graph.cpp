@@ -273,20 +273,25 @@ void ChainGraph::CheckNoCycle() const {
     const auto& filename = "job" + job_id + "_cycle_chain_graph.dot";
     ToDotWithFilePath(OnCycle, [](ChainEdge*) { return true; }, filename);
 
-    std::set<std::string> op_names_in_cycle = {};
+    HashMap<std::string, int32_t> op_name2color = {};
+    int32_t chain_node_cnt = 0;
     for (ChainNode* chain_node : *ptr) {
+      chain_node_cnt++;
       for (TaskNode* task_node : chain_node->TaskNodes()) {
         auto ct = reinterpret_cast<CompTaskNode*>(task_node);
         if (ct != nullptr) {
-          for (auto op : ct->logical_node()->op_vec()) { op_names_in_cycle.insert(op->op_name()); }
+          for (auto op : ct->logical_node()->op_vec()) {
+            op_name2color.emplace(op->op_name(), chain_node_cnt);
+          }
         }
       }
     }
     const std::function<std::string(OpNode*)> ColorNode = [&](OpNode* o) {
-      if (op_names_in_cycle.find(o->op().op_name()) != op_names_in_cycle.end()) {
-        return ", style=filled, colorscheme=set312, fillcolor=5";
+      auto color_it = op_name2color.find(o->op().op_name());
+      if (color_it != op_name2color.end()) {
+        return ", style=filled, colorscheme=set312, fillcolor=" + std::to_string(color_it->second);
       } else {
-        return "";
+        return std::string("");
       }
     };
     const std::function<std::string(OpEdge*)> ColorEdge = [&](OpEdge* task) { return ""; };
