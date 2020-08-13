@@ -13,11 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-import oneflow.typing as tp
+import os
+import unittest
+
 import numpy as np
 
+import oneflow as flow
+import oneflow.typing as tp
 
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test(test_case):
     flow.config.gpu_device_num(2)
 
