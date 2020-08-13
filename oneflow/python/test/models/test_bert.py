@@ -201,6 +201,7 @@ func_config.default_logical_view(flow.scope.consistent_view())
 func_config.enable_auto_mixed_precision(FLAGS.enable_auto_mixed_precision)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n1c(test_case):
     flow.config.enable_debug_mode(True)
     flow.config.gpu_device_num(1)
@@ -213,6 +214,7 @@ def test_1n1c(test_case):
     print(of_loss)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n4c(test_case):
     flow.config.gpu_device_num(4)
     pretrain_job = flow.global_function(type="train", function_config=func_config)(
@@ -224,6 +226,7 @@ def test_1n4c(test_case):
     print(of_loss)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.num_nodes_required(2)
 def test_2n8c(test_case):
     flow.config.gpu_device_num(4)
@@ -236,6 +239,7 @@ def test_2n8c(test_case):
     print(of_loss)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_inplace(test_case):
     test_case.assertTrue(
         np.allclose(GetSeveralLossesAsNumpy(True), GetSeveralLossesAsNumpy(False))
