@@ -136,7 +136,7 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
   if (is_checked) {
     return Maybe<void>::Ok();
   } else {
-    return oneflow::Error::CheckFailed() << err.str();
+    return oneflow::Error::CheckFailedError() << err.str();
   }
 }
 

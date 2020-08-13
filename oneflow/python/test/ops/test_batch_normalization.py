@@ -71,6 +71,7 @@ def TODO_test_train(test_case):
 
 
 def CompareNnBnWithTensorFlow(
+    device_type,
     input_shape,
     data_type,
     axis,
@@ -112,7 +113,7 @@ def CompareNnBnWithTensorFlow(
         offset: oft.Numpy.Placeholder(offset.shape),
         scale: oft.Numpy.Placeholder(scale.shape),
     ):
-        with flow.scope.placement("gpu", "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x_full_precision += flow.get_variable(
                 name="v1",
                 shape=(1,),
@@ -291,6 +292,11 @@ def CompareBnWithTensorFlow(
         flow_args, tf_args = op_args.flow_args, op_args.tf_args
 
     x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape)
+    if device_type == "cpu":
+        y_rtol *= 10
+        y_atol *= 10
+        x_diff_rtol *= 10
+        x_diff_atol *= 10
     if trainable:
         of_y, of_x_diff = RunOneflowLayerBn(
             device_type, x, data_type, flow_args, training=training, trainable=trainable
@@ -298,7 +304,7 @@ def CompareBnWithTensorFlow(
         tf_y, tf_x_diff = RunTensorFlowBn(
             x, tf_args, training=training, trainable=trainable
         )
-        assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
+        assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol), of_y - tf_y
         assert np.allclose(of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol)
     else:
         of_y = RunOneflowLayerBn(
@@ -310,7 +316,7 @@ def CompareBnWithTensorFlow(
 
 def test_layer_batchnorm(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["data_type"] = ["float32"]
     arg_dict["input_shape"] = [(1, 4, 1, 2)]
     arg_dict["op_args"] = [
@@ -346,7 +352,7 @@ def test_layer_batchnorm_inference(test_case):
 
 def test_layer_batchnorm_trainable_without_training(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["data_type"] = ["float32"]
     arg_dict["input_shape"] = [(2, 4, 3, 5)]
     arg_dict["op_args"] = [
@@ -362,9 +368,9 @@ def test_layer_batchnorm_trainable_without_training(test_case):
         CompareBnWithTensorFlow(**arg, training=False, trainable=True)
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_nn_batchnorm(test_case):
     arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["input_shape"] = [(2, 4, 3, 5)]
     arg_dict["data_type"] = ["float32"]
     arg_dict["axis"] = [1, -1]

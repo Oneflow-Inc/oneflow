@@ -32,7 +32,7 @@ class ScalarOpBase : public Operator {
 
  protected:
   virtual Maybe<void> VirtualGetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const {
     return Maybe<void>::Ok();
   }
@@ -43,7 +43,7 @@ class ScalarOpBase : public Operator {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 };
 

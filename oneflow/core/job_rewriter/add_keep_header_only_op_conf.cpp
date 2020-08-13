@@ -72,7 +72,8 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, JobBuilder* job_builder) {
 
         OperatorConf op_conf;
         op_conf.set_name("SrcOp-" + src_node->op().op_name() + "-SrcBlob-" + cur_lbi.blob_name()
-                         + "-DstOp-" + node->op().op_name() + "-keep_header_only");
+                         + "-DstOp-" + node->op().op_name() + "-DstBlob-" + ibn
+                         + "-keep_header_only");
         KeepHeaderOnlyOpConf* kho_conf = op_conf.mutable_keep_header_only_conf();
 
         *(kho_conf->mutable_in()->Add()) = GenLogicalBlobName(cur_lbi);

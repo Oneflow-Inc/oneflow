@@ -33,7 +33,7 @@ class SquareSumOp final : public Operator {
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 };
 
@@ -62,9 +62,9 @@ Maybe<void> SquareSumOp::InferBatchAxis(
 }
 
 Maybe<void> SquareSumOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  const int64_t num_x_axes = JUST(LogicalBlobDesc4Ibn("x"))->shape().NumAxes();
+  const int64_t num_x_axes = JUST(LogicalBlobDesc4Ibn("x")).shape().NumAxes();
   FOR_RANGE(int64_t, i, 0, num_x_axes) {
     SbpSignatureBuilder().Split("x", i).PartialSum("y").Build(
         sbp_sig_list->mutable_sbp_signature()->Add());
