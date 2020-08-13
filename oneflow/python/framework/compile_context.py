@@ -64,7 +64,11 @@ def CurJobAddConsistentOp(op_conf, scope_symbol=None):
     if not op_conf.HasField("device_tag"):
         device_tag = scope_symbol.device_parallel_desc_symbol.device_tag
         op_conf.device_tag = device_tag
-    return c_api_util.CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf)
+    op_attr = c_api_util.CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf)
+    if c_api_util.IsInterfaceOpConf(op_conf):
+        sess = session_ctx.GetDefaultSession()
+        sess.AddInfo4InterfaceOpName(op_conf.name, op_attr)
+    return op_attr
 
 
 def CurJobAddMirroredOp(op_conf, scope_symbol=None):
@@ -75,4 +79,8 @@ def CurJobAddMirroredOp(op_conf, scope_symbol=None):
     if not op_conf.HasField("device_tag"):
         device_tag = scope_symbol.device_parallel_desc_symbol.device_tag
         op_conf.device_tag = device_tag
-    return c_api_util.CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf)
+    op_attr = c_api_util.CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf)
+    if c_api_util.IsInterfaceOpConf(op_conf):
+        sess = session_ctx.GetDefaultSession()
+        sess.AddInfo4InterfaceOpName(op_conf.name, op_attr)
+    return op_attr
