@@ -289,7 +289,7 @@ void ChainGraph::CheckNoCycle() const {
         return "";
       }
     };
-    const std::function<std::string(OpEdge*)> ColorEdge = [&](OpEdge* task) { return "1"; };
+    const std::function<std::string(OpEdge*)> ColorEdge = [&](OpEdge* task) { return ""; };
     Global<OpGraph>::Get()->ToDotWithFilePath(
         ColorNode, ColorEdge, "optimized_dlnet_" + job_id + "_op_graph_colored_nodes_in_cycle.dot");
 

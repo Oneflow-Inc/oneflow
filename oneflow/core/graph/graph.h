@@ -294,7 +294,8 @@ void Graph<NodeType, EdgeType>::ToDotWithStream(
   out_stream << "digraph {\n";
   this->ForEachNode([&](NodeType* node) {
     if (IsNodeAllowed(node) == false) { return; }
-    out_stream << "\"" << node->node_id_str() << "\" [label=\"" << node->VisualStr() << "\"]\n";
+    out_stream << "\"" << node->node_id_str() << "\" [label=\"" << node->VisualStr() << "\""
+               << AddNodeAttribute(node) << "]\n";
   });
   this->ForEachEdge([&](EdgeType* edge) {
     if (IsEdgeAllowed(edge) == false) { return; }
@@ -302,7 +303,7 @@ void Graph<NodeType, EdgeType>::ToDotWithStream(
     if (IsNodeAllowed(edge->dst_node()) == false) { return; }
     out_stream << "\"" << edge->src_node()->node_id_str() << "\" -> "
                << "\"" << edge->dst_node()->node_id_str() << "\""
-               << "[label=\"" << edge->VisualStr() << "\"];\n";
+               << "[label=\"" << edge->VisualStr() << "\"" << AddEdgeAttribute(edge) << "];\n";
   });
   out_stream << "}\n";
 }
