@@ -67,6 +67,8 @@ class Session(object):
         self.job_name2module_name2module_ = {}
         self.existed_module_names_ = set()
         self.var_name2var_blob_ = {}
+        self.interface_op_name2op_attr_ = {}
+        self.interface_op_name2job_name_ = {}
         self.job_name2name_scope_stack_ = {}
         self.job_name2current_scope_ = {}
         self.eager_global_function_desc_stack_ = []
@@ -313,6 +315,18 @@ class Session(object):
             self.job_name2var_name2var_blob_[job_name] = dict()
         assert var_name not in self.job_name2var_name2var_blob_[job_name]
         self.job_name2var_name2var_blob_[job_name][var_name] = var_blob
+
+    def AddInfo4InterfaceOpName(self, interface_op_name, op_attribute):
+        self.interface_op_name2op_attr_[interface_op_name] = op_attribute
+        self.interface_op_name2job_name_[
+            interface_op_name
+        ] = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+
+    def OpAttribute4InterfaceOpName(self, interface_op_name):
+        return self.interface_op_name2op_attr_[interface_op_name]
+
+    def JobName4InterfaceOpName(self, interface_op_name):
+        return self.interface_op_name2job_name_[interface_op_name]
 
     # return global_variable_blob, job_variable_blob
     def TryGetVariableBlobOfJobFromStash(self, job_name, var_name):
