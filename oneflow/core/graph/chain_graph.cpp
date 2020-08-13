@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/chain_graph.h"
+#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
@@ -97,13 +98,38 @@ void ChainMerger::InitChains() {
   }
 }
 
+// TODO(tsai): debug code, delete later
+std::string OpNamesStr4Chain(ChainIt chains_it) {
+  std::string node_names_str = "";
+  for (auto n : chains_it->nodes) {
+    // if (n->exec_gph().node_num() == 1) {
+    //   node_names_str += n->exec_gph().SoleNode()->op()->op_name();
+    // }
+    auto ct = reinterpret_cast<CompTaskNode*>(n);
+    if (ct != nullptr) {
+      for (auto op : ct->logical_node()->op_vec()) {
+        if (node_names_str != "") { node_names_str += ", "; }
+        node_names_str += op->op_name();
+      }
+    }
+  }
+  return node_names_str;
+}
+
 bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
+  // TODO(tsai): debug code, delete later
   CHECK_EQ(rhs->nodes.size(), 1);
   // rm kMdUpdtArea chain merge
   if (rhs->nodes.front()->AreaId4ChainMerge() == kMdUpdtArea) { return false; }
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
     if (IsSubset(lhs, rhs)) {
+      std::string lhs_str = OpNamesStr4Chain(lhs);
+      std::string rhs_str = OpNamesStr4Chain(rhs);
+      if (lhs_str != "" && rhs_str != "") {
+        std::string log_str = lhs_str + " <<merge<< " + rhs_str + "\n";
+        LOG(ERROR) << log_str;
+      }
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
         CarefullySetBitset(&(lhs->ancestors_and_this), GetTaskUid(node));
@@ -255,6 +281,13 @@ void ChainGraph::CheckNoCycle() const {
     auto TaskOnCycle = [&](TaskNode* task) { return tasks.find(task) != tasks.end(); };
     const auto& task_gph_filename = "job" + job_id + "_cycle_task_graph.dot";
     task_gph_.ToDotWithFilePath(TaskOnCycle, [](TaskEdge*) { return true; }, task_gph_filename);
+    const std::function<std::string(OpNode*)> ColorNode = [&](OpNode* task) {
+      if
+        return "1";
+    };
+    const std::function<std::string(OpEdge*)> ColorEdge = [&](OpEdge* task) { return "1"; };
+    Global<OpGraph>::Get()->ToDotWithFilePath(
+        ColorNode, ColorEdge, "optimized_dlnet_" + job_id + "_op_graph_colored_nodes_in_cycle.dot");
     LOG(FATAL) << "cycle in graph detected";
   }
 }
