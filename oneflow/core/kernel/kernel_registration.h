@@ -16,13 +16,14 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_REGISTRATION_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_REGISTRATION_H_
 
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/device_type.pb.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/operator/op_conf_util.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/kernel/kernel.pb.h"
+#include "oneflow/core/operator/op_conf_util.h"
 
 namespace oneflow {
 
@@ -79,20 +80,20 @@ Kernel* CreateKernel(const KernelConf& kernel_conf);
       kernel_registration::KernelRegistrarBuilder(op_type).SetCreateFn(             \
           []() { return new __VA_ARGS__(); })
 
-#define REGISTER_KERNEL_WITH_NOTHING(op_type, ...)                                   \
-  NEW_REGISTER_KERNEL(op_type, __VA_ARGS__).SetIsMatchedPred([](const KernelConf&) { \
-    return true;                                                                     \
+#define REGISTER_KERNEL_WITH_NOTHING(op_type, ...)                                           \
+  NEW_REGISTER_KERNEL(op_type, __VA_ARGS__).SetIsMatchedPred([](const KernelConf&) -> bool { \
+    return true;                                                                             \
   });
 
-#define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, device, dtype, ...)                \
-  NEW_REGISTER_KERNEL(op_type, __VA_ARGS__).SetIsMatchedPred([](const KernelConf& conf) { \
-    return (device == conf.op_attribute().op_conf().device_type())                        \
-           && (GetDataType<dtype>::value == conf.data_type());                            \
+#define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, device, dtype, ...)                        \
+  NEW_REGISTER_KERNEL(op_type, __VA_ARGS__).SetIsMatchedPred([](const KernelConf& conf) -> bool { \
+    return (ToString(device) == conf.op_attribute().op_conf().device_tag())                       \
+           && (GetDataType<dtype>::value == conf.data_type());                                    \
   });
 
-#define REGISTER_KERNEL_WITH_DEVICE(op_type, device, ...)                                 \
-  NEW_REGISTER_KERNEL(op_type, __VA_ARGS__).SetIsMatchedPred([](const KernelConf& conf) { \
-    return (device == conf.op_attribute().op_conf().device_type());                       \
+#define REGISTER_KERNEL_WITH_DEVICE(op_type, device, ...)                                         \
+  NEW_REGISTER_KERNEL(op_type, __VA_ARGS__).SetIsMatchedPred([](const KernelConf& conf) -> bool { \
+    return (ToString(device) == conf.op_attribute().op_conf().device_tag());                      \
   });
 
 #define REGISTER_KERNEL_HELPER_CPU_FLOATING(op_type, kernel)               \

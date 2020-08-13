@@ -13,9 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/arg_where_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/kernel/arg_where_kernel_util.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
@@ -40,14 +41,14 @@ class ArgWhereKernel : public KernelIf<DeviceType::kCPU> {
   }
 };
 
-#define REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, ndims)                 \
-  NEW_REGISTER_KERNEL(OperatorConf::kArgWhereConf,                                    \
-                      ArgWhereKernel<device_type_v, dtype, itype, ndims>)             \
-      .SetIsMatchedPred([](const KernelConf& conf) {                                  \
-        return (device_type_v == conf.op_attribute().op_conf().device_type())         \
-               && (GetDataType<itype>::value == conf.data_type())                     \
-               && (GetDataType<dtype>::value == conf.arg_where_conf().in_data_type()) \
-               && (ndims == conf.arg_where_conf().num_axes());                        \
+#define REGISTER_ARG_WHERE_KERNEL(device_type_v, dtype, itype, ndims)                  \
+  NEW_REGISTER_KERNEL(OperatorConf::kArgWhereConf,                                     \
+                      ArgWhereKernel<device_type_v, dtype, itype, ndims>)              \
+      .SetIsMatchedPred([](const KernelConf& conf) -> bool {                           \
+        return (conf.op_attribute().op_conf().device_tag() == ToString(device_type_v)) \
+               && (GetDataType<itype>::value == conf.data_type())                      \
+               && (GetDataType<dtype>::value == conf.arg_where_conf().in_data_type())  \
+               && (ndims == conf.arg_where_conf().num_axes());                         \
       });
 
 #define REGISTER_ARG_WHERE_KERNELS_AT_NDIMS(device_type_v, dtype, itype) \

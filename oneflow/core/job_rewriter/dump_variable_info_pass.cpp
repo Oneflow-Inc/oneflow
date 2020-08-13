@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job_rewriter/op_graph_pass.h"
 
 namespace oneflow {
 
@@ -35,19 +36,19 @@ Maybe<void> DumpVariableInfoPass::Apply(const OpGraph& op_graph, JobBuilder* job
   const std::string sep = "\t";
   auto log_stream =
       TeePersistentLogStream::Create("variable_table_" + std::to_string(GlobalJobDesc().job_id()));
-  (*log_stream) << "id" << sep << "name" << sep << "device_type" << sep << "parallel_num" << sep
+  (*log_stream) << "id" << sep << "name" << sep << "device_tag" << sep << "parallel_num" << sep
                 << "distribute" << sep << "data_type" << sep << "shape" << sep << "elem_cnt" << sep
                 << "size"
                 << "\n";
-  op_graph.TopoForEachNode([&](const OpNode* node) {
+  JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](const OpNode* node) -> Maybe<void> {
     const OperatorConf& op_conf = node->op().op_conf();
-    if (!op_conf.has_variable_conf()) { return; }
+    if (!op_conf.has_variable_conf()) { return Maybe<void>::Ok(); }
     const VariableOpConf& conf = op_conf.variable_conf();
     (*log_stream) << std::to_string(cnt);
     (*log_stream) << sep;
     (*log_stream) << op_conf.name();
     (*log_stream) << sep;
-    (*log_stream) << DeviceType_Name(op_conf.device_type());
+    (*log_stream) << op_conf.device_tag();
     (*log_stream) << sep;
     (*log_stream) << std::to_string(node->parallel_desc().parallel_num());
     (*log_stream) << sep;
@@ -67,7 +68,8 @@ Maybe<void> DumpVariableInfoPass::Apply(const OpGraph& op_graph, JobBuilder* job
     (*log_stream) << std::to_string(shape.elem_cnt() * GetSizeOfDataType(conf.data_type()));
     (*log_stream) << "\n";
     cnt += 1;
-  });
+    return Maybe<void>::Ok();
+  }));
   return Maybe<void>::Ok();
 }
 

@@ -58,4 +58,77 @@ cv::Mat GenCvMat4ImageBuffer(const TensorBuffer& image_buffer) {
   return cv::Mat();
 }
 
+cv::Mat GenCvMat4ImageTensor(const user_op::Tensor* image_tensor, int image_offset) {
+  int has_batch_dim = 0;
+  if (image_tensor->shape().NumAxes() == 3) {
+    has_batch_dim = 0;
+    image_offset = 0;
+  } else if (image_tensor->shape().NumAxes() == 4) {
+    has_batch_dim = 1;
+    CHECK_GE(image_offset, 0);
+    CHECK_LT(image_offset, image_tensor->shape().At(0));
+  } else {
+    UNIMPLEMENTED();
+  }
+  int h = image_tensor->shape().At(0 + has_batch_dim);
+  int w = image_tensor->shape().At(1 + has_batch_dim);
+  int c = image_tensor->shape().At(2 + has_batch_dim);
+  int elem_offset = image_offset * h * w * c;
+  DataType data_type = image_tensor->data_type();
+  if (c == 1 && data_type == DataType::kUInt8) {
+    return CreateMatWithPtr(h, w, CV_8UC1, image_tensor->dptr<uint8_t>() + elem_offset);
+  } else if (c == 1 && data_type == DataType::kFloat) {
+    return CreateMatWithPtr(h, w, CV_32FC1, image_tensor->dptr<float>() + elem_offset);
+  } else if (c == 3 && data_type == DataType::kUInt8) {
+    return CreateMatWithPtr(h, w, CV_8UC3, image_tensor->dptr<uint8_t>() + elem_offset);
+  } else if (c == 3 && data_type == DataType::kFloat) {
+    return CreateMatWithPtr(h, w, CV_32FC3, image_tensor->dptr<float>() + elem_offset);
+  } else {
+    UNIMPLEMENTED();
+  }
+  return cv::Mat();
+}
+
+void CvMatConvertToDataType(const cv::Mat& src, cv::Mat* dst, DataType dtype) {
+  if (dtype == DataType::kUInt8) {
+    src.convertTo(*dst, CV_8U);
+  } else if (dtype == DataType::kFloat) {
+    src.convertTo(*dst, CV_32F);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+int GetCvInterpolationFlag(const std::string& interp_type, int org_w, int org_h, int res_w,
+                           int res_h) {
+  if (interp_type == "bilinear") {
+    return cv::INTER_LINEAR;
+  } else if (interp_type == "nearest_neighbor" || interp_type == "nn") {
+    return cv::INTER_NEAREST;
+  } else if (interp_type == "bicubic") {
+    return cv::INTER_CUBIC;
+  } else if (interp_type == "area") {
+    return cv::INTER_AREA;
+  } else if (interp_type == "auto") {
+    if (res_w * res_h >= org_w * org_h) {
+      return cv::INTER_LINEAR;
+    } else {
+      return cv::INTER_AREA;
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+bool CheckInterpolationValid(const std::string& interp_type, std::ostringstream& err) {
+  if (interp_type != "bilinear" && interp_type != "nearest_neighbor" && interp_type != "nn"
+      && interp_type != "bicubic" && interp_type != "area" && interp_type != "auto") {
+    err << ", interpolation_type: " << interp_type
+        << " (interpolation_type must be one of bilinear, nearest_neighbor(nn), bicubic, area and "
+           "auto)";
+    return false;
+  }
+  return true;
+}
+
 }  // namespace oneflow

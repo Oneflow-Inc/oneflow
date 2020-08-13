@@ -50,6 +50,6 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_all_reduce")
     .SetCreateFn<EagerNcclAllReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 
 }  // namespace oneflow

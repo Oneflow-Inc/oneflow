@@ -108,12 +108,6 @@ void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb, std::stri
   return oneflow::LaunchJob(cb).GetDataAndSerializedErrorProto(error_str);
 }
 
-long DeviceType4DeviceTag(const std::string& device_tag, std::string* error_str) {
-  return oneflow::GetDeviceType4DeviceTag(device_tag)
-      .GetDataAndSerializedErrorProto(error_str,
-                                      static_cast<long>(oneflow::DeviceType::kInvalidDevice));
-}
-
 std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& parallel_conf,
                                                             std::string* error_str) {
   return oneflow::GetSerializedMachineId2DeviceIdListOFRecord(parallel_conf)

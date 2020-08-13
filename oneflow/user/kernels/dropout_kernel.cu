@@ -85,7 +85,7 @@ class DropoutKernelGPU final : public user_op::OpKernel {
 #define REGISTER_DROPOUT_KERNEL_GPU(dtype)                                                      \
   REGISTER_USER_KERNEL("dropout")                                                               \
       .SetCreateFn<DropoutKernelGPU<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -118,7 +118,7 @@ class DropoutGradKernelGPU final : public user_op::OpKernel {
 #define REGISTER_DROPOUT_GRAD_KERNEL_GPU(dtype)                                                 \
   REGISTER_USER_KERNEL("dropout_grad")                                                          \
       .SetCreateFn<DropoutGradKernelGPU<dtype>>()                                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \

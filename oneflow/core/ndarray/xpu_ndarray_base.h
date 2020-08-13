@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_NDARRAY_XPU_NDARRAY_BASE_H_
 #define ONEFLOW_CORE_NDARRAY_XPU_NDARRAY_BASE_H_
 
+#include "oneflow/core/ndarray/xpu_shape.h"
+
 namespace oneflow {
 
 template<typename T, template<typename> class unary_func, typename X>

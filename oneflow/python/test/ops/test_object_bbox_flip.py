@@ -82,14 +82,14 @@ def _compare_bbox_flip(
         )
         bbox_list.append(bbox_array)
         image_size_list.append(
-            [coco.imgs[rand_img_id]["height"], coco.imgs[rand_img_id]["width"]]
+            [coco.imgs[rand_img_id]["width"], coco.imgs[rand_img_id]["height"]]
         )
         sample_cnt += 1
 
     image_size_array = np.array(image_size_list, dtype=np.int32)
     of_bbox_list = _of_object_bbox_flip(bbox_list, image_size_array, flip_code)
     for of_bbox, bbox, image_size in zip(of_bbox_list, bbox_list, image_size_list):
-        h, w = image_size
+        w, h = image_size
         if flip_code == 1:
             xmin = bbox[:, 0].copy()
             xmax = bbox[:, 2].copy()

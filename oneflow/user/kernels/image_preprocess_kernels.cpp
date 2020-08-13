@@ -27,122 +27,6 @@ namespace oneflow {
 
 namespace {
 
-int GetOpencvInterp(const std::string& interp_type) {
-  if (interp_type == "Linear") {
-    return cv::INTER_LINEAR;
-  } else if (interp_type == "NN") {
-    return cv::INTER_NEAREST;
-  } else if (interp_type == "Cubic") {
-    return cv::INTER_CUBIC;
-  } else {
-    UNIMPLEMENTED();
-    return -1;
-  }
-}
-
-}  // namespace
-
-class ResizeToStaticShapeKernel final : public user_op::OpKernel {
- public:
-  ResizeToStaticShapeKernel() = default;
-  ~ResizeToStaticShapeKernel() override = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t record_num = in_blob->shape().At(0);
-    CHECK_GT(record_num, 0);
-
-    const TensorBuffer* buffers = in_blob->dptr<TensorBuffer>();
-    uint8_t* out_dptr = out_blob->mut_dptr<uint8_t>();
-    const ShapeView& out_shape = out_blob->shape();
-    CHECK(out_shape.NumAxes() == 4);  // {N, H, W, C}
-    int rsz_h = out_shape.At(1);
-    int rsz_w = out_shape.At(2);
-    int C = out_shape.At(3);
-    CHECK(C == 3 || C == 1);
-    int channel_flag = C == 3 ? CV_8UC3 : CV_8UC1;
-    const std::string& interp_type = ctx->Attr<std::string>("interp_type");
-    int64_t one_sample_elem_cnt = rsz_h * rsz_w * C;
-    int opencv_inter_type = GetOpencvInterp(interp_type);
-
-    MultiThreadLoop(record_num, [&](size_t i) {
-      const TensorBuffer* buffer = buffers + i;
-      uint8_t* dptr = out_dptr + one_sample_elem_cnt * i;
-      const Shape& in_shape = buffer->shape();
-      CHECK(in_shape.NumAxes() == 3);  // {H, W, C}
-      int H = in_shape.At(0);
-      int W = in_shape.At(1);
-      CHECK_EQ(C, in_shape.At(2));
-      const cv::Mat image = CreateMatWithPtr(H, W, channel_flag, buffer->data<uint8_t>());
-      cv::Mat rsz_image = CreateMatWithPtr(rsz_h, rsz_w, channel_flag, dptr);
-      cv::resize(image, rsz_image, cv::Size(rsz_w, rsz_h), 0, 0, opencv_inter_type);
-    });
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("image_resize")
-    .SetCreateFn<ResizeToStaticShapeKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("out", 0) == DataType::kUInt8));
-
-class ResizeShorterToTensorBufferKernel final : public user_op::OpKernel {
- public:
-  ResizeShorterToTensorBufferKernel() = default;
-  ~ResizeShorterToTensorBufferKernel() override = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t record_num = in_blob->shape().At(0);
-    CHECK_GT(record_num, 0);
-
-    const TensorBuffer* in_buffers = in_blob->dptr<TensorBuffer>();
-    TensorBuffer* out_buffers = out_blob->mut_dptr<TensorBuffer>();
-    int64_t resize_shorter = ctx->Attr<int64_t>("resize_shorter");
-
-    MultiThreadLoop(record_num, [&](size_t i) {
-      const TensorBuffer* in_buffer = in_buffers + i;
-      TensorBuffer* out_buffer = out_buffers + i;
-      const Shape& in_shape = in_buffer->shape();
-      CHECK_EQ(in_shape.NumAxes(), 3);  // {H, W, C}
-      int64_t H = in_shape.At(0);
-      int64_t W = in_shape.At(1);
-      int64_t C = in_shape.At(2);
-      CHECK(C == 3 || C == 1);
-      int64_t rsz_h = resize_shorter;
-      int64_t rsz_w = resize_shorter;
-      if (H < W) {
-        rsz_w = resize_shorter * (static_cast<float>(W) / static_cast<float>(H));
-      } else {
-        rsz_h = resize_shorter * (static_cast<float>(H) / static_cast<float>(W));
-      }
-      Shape out_shape({rsz_h, rsz_w, C});
-      out_buffer->Resize(out_shape, DataType::kUInt8);
-      int channel_flag = C == 3 ? CV_8UC3 : CV_8UC1;
-      const std::string& interp_type = ctx->Attr<std::string>("interp_type");
-      int opencv_inter_type = GetOpencvInterp(interp_type);
-
-      const cv::Mat image = CreateMatWithPtr(H, W, channel_flag, in_buffer->data<uint8_t>());
-      cv::Mat rsz_image = CreateMatWithPtr(rsz_h, rsz_w, channel_flag, out_buffer->data<uint8_t>());
-      cv::resize(image, rsz_image, cv::Size(rsz_w, rsz_h), 0, 0, opencv_inter_type);
-    });
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("image_resize")
-    .SetCreateFn<ResizeShorterToTensorBufferKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
-                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
-
-namespace {
-
 enum TensorLayout {
   kNCHW = 0,
   kNHWC = 1,
@@ -314,7 +198,7 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
 
 REGISTER_USER_KERNEL("crop_mirror_normalize_from_uint8")
     .SetCreateFn<CropMirrorNormalizeFromStaticShapeToFloatKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kUInt8)
                      & (user_op::HobDataType("out", 0) == DataType::kFloat));
 
@@ -404,7 +288,7 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
 
 REGISTER_USER_KERNEL("crop_mirror_normalize_from_tensorbuffer")
     .SetCreateFn<CropMirrorNormalizeFromTensorBufferToFloatKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("out", 0) == DataType::kFloat));
 
@@ -451,7 +335,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("coin_flip")
     .SetCreateFn<CoinFlipKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("out", 0) == DataType::kInt8));
 
 namespace {
@@ -516,7 +400,7 @@ class ImageRandomCropKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("image_random_crop")
     .SetCreateFn<ImageRandomCropKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 

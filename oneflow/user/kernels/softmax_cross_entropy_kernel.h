@@ -57,7 +57,7 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
 #define REGISTER_SOFTMAX_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair)                     \
   REGISTER_USER_KERNEL("softmax_cross_entropy")                                              \
       .SetCreateFn<SoftmaxCrossEntropyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                            \
                        & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))  \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                    \
@@ -92,7 +92,7 @@ class SoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("softmax_cross_entropy_grad")                                             \
       .SetCreateFn<SoftmaxCrossEntropyGradKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>() \
       .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceType() == device_type_v)                                            \
+          (user_op::HobDeviceTag() == device_type_v)                                             \
           & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair))                  \
           & (user_op::HobDataType("prediction_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)))       \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                     \

@@ -17,6 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_SWITCH_FUNC_H_
 
 #include "oneflow/core/common/preprocessor.h"
+#include <tuple>
+#include <utility>
 
 template<typename... Args>
 auto SwitchCase(Args&&... args) -> decltype(std::make_tuple(std::forward<Args>(args)...)) {

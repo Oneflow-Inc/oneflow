@@ -13,14 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/operator/operator.h"  // GenLogicalBlobName, GenLogicalBlobId
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/xrt/api.h"
+#include "oneflow/xrt/build_graph.h"
+#include "oneflow/xrt/utility/env.h"
 
 #include "absl/strings/str_cat.h"
 #include "glog/logging.h"
-
-#include "oneflow/core/operator/operator.h"  // GenLogicalBlobName, GenLogicalBlobId
-#include "oneflow/xrt/build_graph.h"
-#include "oneflow/xrt/utility/env.h"
 
 #include <fstream>
 #include <mutex>
@@ -120,6 +120,11 @@ std::string ExtractOpTypeAsString(const OperatorConf &conf) {
       return std::string("");
     }
   }
+}
+
+XrtDevice DeviceTagToXrtDevice(const std::string &device_tag) {
+  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(device_tag));
+  return DeviceTypeToXrtDevice(device_type);
 }
 
 XrtDevice DeviceTypeToXrtDevice(const DeviceType &device_type) {

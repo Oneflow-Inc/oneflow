@@ -53,7 +53,7 @@ void FlipImage(TensorBuffer* image_buffer, FlipCode flip_code) {
 }
 
 template<typename T>
-void FlipBoxes(TensorBuffer* boxes_buffer, int32_t image_height, int32_t image_width,
+void FlipBoxes(TensorBuffer* boxes_buffer, int32_t image_width, int32_t image_height,
                FlipCode flip_code) {
   int num_boxes = boxes_buffer->shape().At(0);
   FOR_RANGE(int, i, 0, num_boxes) {
@@ -80,7 +80,7 @@ DEFINE_STATIC_SWITCH_FUNC(void, FlipBoxes, MAKE_FLIP_BOXES_SWITCH_ENTRY,
 #undef MAKE_FLIP_BOXES_SWITCH_ENTRY
 
 template<typename T>
-void ScaleBoxes(TensorBuffer* boxes_buffer, T scale_h, T scale_w) {
+void ScaleBoxes(TensorBuffer* boxes_buffer, T scale_w, T scale_h) {
   int num_boxes = boxes_buffer->shape().At(0);
   FOR_RANGE(int, i, 0, num_boxes) {
     T* cur_box_ptr = boxes_buffer->mut_data<T>() + i * 4;
@@ -98,7 +98,7 @@ DEFINE_STATIC_SWITCH_FUNC(void, ScaleBoxes, MAKE_SCALE_BOXES_SWITCH_ENTRY,
 #undef MAKE_SCALE_BOXES_SWITCH_ENTRY
 
 template<typename T>
-void FlipPolygons(TensorBuffer* polygons_buffer, int32_t image_height, int32_t image_width,
+void FlipPolygons(TensorBuffer* polygons_buffer, int32_t image_width, int32_t image_height,
                   FlipCode flip_code) {
   int num_points = polygons_buffer->shape().At(0);
   FOR_RANGE(int, i, 0, num_points) {
@@ -115,7 +115,7 @@ DEFINE_STATIC_SWITCH_FUNC(void, FlipPolygons, MAKE_FLIP_POLYGONS_SWITCH_ENTRY,
 #undef MAKE_FLIP_POLYGONS_SWITCH_ENTRY
 
 template<typename T>
-void ScalePolygons(TensorBuffer* poly_buffer, T scale_h, T scale_w) {
+void ScalePolygons(TensorBuffer* poly_buffer, T scale_w, T scale_h) {
   int num_pts = poly_buffer->shape().At(0);
   FOR_RANGE(int, i, 0, num_pts) {
     T* cur_pt = poly_buffer->mut_data<T>() + i * 2;
@@ -153,7 +153,7 @@ DEFINE_STATIC_SWITCH_FUNC(void, ImageNormalizeByChannel, MAKE_IMAGE_NORMALIZE_SW
 
 template<typename T, typename I>
 void PolygonsToMask(const TensorBuffer& polys, const TensorBuffer& polys_nd_index,
-                    TensorBuffer* masks, int32_t im_h, int32_t im_w) {
+                    TensorBuffer* masks, int32_t im_w, int32_t im_h) {
   CHECK_EQ(polys.shape().NumAxes(), 2);
   CHECK_EQ(polys.shape().At(1), 2);
   CHECK_EQ(polys_nd_index.shape().NumAxes(), 2);
@@ -264,11 +264,11 @@ class ObjectBboxFlipKernel final : public user_op::OpKernel {
       CHECK_EQ(bbox_buffer.shape().At(1), 4);
       TensorBuffer* out_bbox_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
       out_bbox_buffer->CopyFrom(bbox_buffer);
-      int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
-      int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
+      int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
+      int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
-      SwitchFlipBoxes(SwitchCase(out_bbox_buffer->data_type()), out_bbox_buffer, image_height,
-                      image_width, flip_code);
+      SwitchFlipBoxes(SwitchCase(out_bbox_buffer->data_type()), out_bbox_buffer, image_width,
+                      image_height, flip_code);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -296,9 +296,9 @@ class ObjectBboxScaleKernel final : public user_op::OpKernel {
       CHECK_EQ(bbox_buffer.shape().At(1), 4);
       TensorBuffer* out_bbox_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
       out_bbox_buffer->CopyFrom(bbox_buffer);
-      float scale_h = scale_tensor->dptr<float>()[i * 2 + 0];
-      float scale_w = scale_tensor->dptr<float>()[i * 2 + 1];
-      SwitchScaleBoxes(SwitchCase(out_bbox_buffer->data_type()), out_bbox_buffer, scale_h, scale_w);
+      float scale_w = scale_tensor->dptr<float>()[i * 2 + 0];
+      float scale_h = scale_tensor->dptr<float>()[i * 2 + 1];
+      SwitchScaleBoxes(SwitchCase(out_bbox_buffer->data_type()), out_bbox_buffer, scale_w, scale_h);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -328,11 +328,11 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
       CHECK_EQ(polygons_buffer.shape().At(1), 2);
       TensorBuffer* out_polygons_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
       out_polygons_buffer->CopyFrom(polygons_buffer);
-      int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
-      int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
+      int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
+      int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
       SwitchFlipPolygons(SwitchCase(out_polygons_buffer->data_type()), out_polygons_buffer,
-                         image_height, image_width, flip_code);
+                         image_width, image_height, flip_code);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -360,10 +360,10 @@ class ObjectSegmentationPolygonScaleKernel final : public user_op::OpKernel {
       CHECK_EQ(poly_buffer.shape().At(1), 2);
       TensorBuffer* out_poly_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
       out_poly_buffer->CopyFrom(poly_buffer);
-      float scale_h = scale_tensor->dptr<float>()[i * 2 + 0];
-      float scale_w = scale_tensor->dptr<float>()[i * 2 + 1];
-      SwitchScalePolygons(SwitchCase(out_poly_buffer->data_type()), out_poly_buffer, scale_h,
-                          scale_w);
+      float scale_w = scale_tensor->dptr<float>()[i * 2 + 0];
+      float scale_h = scale_tensor->dptr<float>()[i * 2 + 1];
+      SwitchScalePolygons(SwitchCase(out_poly_buffer->data_type()), out_poly_buffer, scale_w,
+                          scale_h);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -416,11 +416,11 @@ class ObjectSegmentationPolygonToMask final : public user_op::OpKernel {
     MultiThreadLoop(num_images, [&](size_t i) {
       const TensorBuffer& poly_buffer = poly_tensor->dptr<TensorBuffer>()[i];
       const TensorBuffer& poly_index_buffer = poly_index_tensor->dptr<TensorBuffer>()[i];
-      int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
-      int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
+      int32_t image_width = image_size_tensor->dptr<int32_t>()[i * 2 + 0];
+      int32_t image_height = image_size_tensor->dptr<int32_t>()[i * 2 + 1];
       TensorBuffer* mask_buffer = mask_tensor->mut_dptr<TensorBuffer>() + i;
       SwitchPolygonsToMask(SwitchCase(poly_buffer.data_type(), poly_index_buffer.data_type()),
-                           poly_buffer, poly_index_buffer, mask_buffer, image_height, image_width);
+                           poly_buffer, poly_index_buffer, mask_buffer, image_width, image_height);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -441,7 +441,7 @@ MakeInplaceProposalFn(const std::string& input_arg_name) {
 
 REGISTER_USER_KERNEL("image_flip")
     .SetCreateFn<ImageFlipKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("flip_code", 0) == DataType::kInt8)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
@@ -449,7 +449,7 @@ REGISTER_USER_KERNEL("image_flip")
 
 REGISTER_USER_KERNEL("object_bbox_flip")
     .SetCreateFn<ObjectBboxFlipKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("bbox", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("image_size", 0) == DataType::kInt32)
                      & (user_op::HobDataType("flip_code", 0) == DataType::kInt8)
@@ -458,7 +458,7 @@ REGISTER_USER_KERNEL("object_bbox_flip")
 
 REGISTER_USER_KERNEL("object_bbox_scale")
     .SetCreateFn<ObjectBboxScaleKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("bbox", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("scale", 0) == DataType::kFloat)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
@@ -466,7 +466,7 @@ REGISTER_USER_KERNEL("object_bbox_scale")
 
 REGISTER_USER_KERNEL("object_segmentation_polygon_flip")
     .SetCreateFn<ObjectSegmentationPolygonFlipKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("poly", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("image_size", 0) == DataType::kInt32)
                      & (user_op::HobDataType("flip_code", 0) == DataType::kInt8)
@@ -475,7 +475,7 @@ REGISTER_USER_KERNEL("object_segmentation_polygon_flip")
 
 REGISTER_USER_KERNEL("object_segmentation_polygon_scale")
     .SetCreateFn<ObjectSegmentationPolygonScaleKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("poly", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("scale", 0) == DataType::kFloat)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
@@ -483,14 +483,14 @@ REGISTER_USER_KERNEL("object_segmentation_polygon_scale")
 
 REGISTER_USER_KERNEL("image_normalize")
     .SetCreateFn<ImageNormalize>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer))
     .SetInplaceProposalFn(MakeInplaceProposalFn("in"));
 
 REGISTER_USER_KERNEL("object_segmentation_polygon_to_mask")
     .SetCreateFn<ObjectSegmentationPolygonToMask>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("poly", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("poly_index", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("image_size", 0) == DataType::kInt32)
