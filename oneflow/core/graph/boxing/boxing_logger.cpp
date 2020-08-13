@@ -36,11 +36,11 @@ Maybe<void> BoxingLogger::OutputLogStream(std::string log_line) {
 }
 
 Maybe<void> CsvBoxingLogger::SetLogStream(std::string path) {
-  return BoxingLogger::SetLogStream(path);
+  return TRY(BoxingLogger::SetLogStream(path));
 }
 
 Maybe<void> CsvBoxingLogger::BoxingLoggerSave(std::string log_line) {
-  return OutputLogStream(log_line);
+  return TRY(OutputLogStream(log_line));
 }
 
 }  // namespace oneflow
