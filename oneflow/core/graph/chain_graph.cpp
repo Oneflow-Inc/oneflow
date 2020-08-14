@@ -44,8 +44,10 @@ class ChainMerger final {
   void MergeChains();
   bool DoMerge(std::list<ChainIt>& chains, ChainIt rhs);
 
-  bool IsSubset(const ChainIt& lhs, const ChainIt& rhs) const;
+  bool ShouldMerge(const ChainIt& lhs, const ChainIt& rhs) const;
   void CarefullySetBitset(std::vector<std::bitset<BITSET_SIZE>>* bitset_vec, int64_t pos);
+  void MergeBitset(std::vector<std::bitset<BITSET_SIZE>>*,
+                   const std::vector<std::bitset<BITSET_SIZE>>*);
 
   int64_t GetTaskUid(TaskNode* task_node) const;
   void UpdateTaskUid(TaskNode* task_node);
@@ -87,12 +89,11 @@ void ChainMerger::InitChains() {
     cur_chain.stream_area_id =
         std::make_pair(task_node->AreaId4ChainMerge(), task_node->GlobalWorkStreamId());
     cur_chain.ancestors.resize(bitset_num);
-    cur_chain.ancestors_and_this.resize(bitset_num);
-    CarefullySetBitset(&(cur_chain.ancestors_and_this), GetTaskUid(task_node));
+    cur_chain.node_ids.resize(bitset_num);
+    CarefullySetBitset(&(cur_chain.node_ids), GetTaskUid(task_node));
     for (auto& ancestor : node2ancestors_.at(task_node)) {
       int64_t ancestor_uid = GetTaskUid(ancestor);
       CarefullySetBitset(&(cur_chain.ancestors), ancestor_uid);
-      CarefullySetBitset(&(cur_chain.ancestors_and_this), ancestor_uid);
     }
   }
 }
@@ -103,10 +104,11 @@ bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
   if (rhs->nodes.front()->AreaId4ChainMerge() == kMdUpdtArea) { return false; }
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
-    if (IsSubset(lhs, rhs)) {
+    if (ShouldMerge(lhs, rhs)) {
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
-        CarefullySetBitset(&(lhs->ancestors_and_this), GetTaskUid(node));
+        CarefullySetBitset(&(lhs->node_ids), GetTaskUid(node));
+        MergeBitset(&(lhs->ancestors), &(rhs->ancestors));
       }
       return true;
     }
@@ -136,15 +138,34 @@ void ChainMerger::CarefullySetBitset(std::vector<std::bitset<BITSET_SIZE>>* bits
   bitset_vec->at(index).set(remain);
 }
 
-bool ChainMerger::IsSubset(const ChainIt& lhs, const ChainIt& rhs) const {
-  CHECK_EQ(lhs->ancestors_and_this.size(), rhs->ancestors_and_this.size());
-  int64_t bitset_num = lhs->ancestors_and_this.size();
+void ChainMerger::MergeBitset(std::vector<std::bitset<BITSET_SIZE>>* a,
+                              const std::vector<std::bitset<BITSET_SIZE>>* b) {
+  CHECK_EQ(a->size(), b->size());
+  const int64_t bitset_num = a->size();
+  for (int64_t i = 0; i < bitset_num; ++i) { a->at(i) &= b->at(i); }
+}
+
+bool IsAncestor(const ChainIt& ancestor, const ChainIt& descent, const int64_t bitset_num) {
   for (int64_t i = 0; i < bitset_num; ++i) {
-    if (lhs->ancestors_and_this.at(i) != (lhs->ancestors_and_this.at(i) | rhs->ancestors.at(i))) {
+    if (ancestor->node_ids.at(i) != (ancestor->node_ids.at(i) | descent->ancestors.at(i))) {
       return false;
     }
   }
   return true;
+}
+
+bool HasIdenticalAncestors(const ChainIt& a, const ChainIt& b, const int64_t bitset_num) {
+  for (int64_t i = 0; i < bitset_num; ++i) {
+    if (a->node_ids.at(i) != b->node_ids.at(i)) { return false; }
+  }
+  return true;
+}
+
+bool ChainMerger::ShouldMerge(const ChainIt& lhs, const ChainIt& rhs) const {
+  CHECK_EQ(lhs->node_ids.size(), rhs->node_ids.size());
+  CHECK_EQ(lhs->ancestors.size(), rhs->ancestors.size());
+  const int64_t bitset_num = lhs->node_ids.size();
+  return IsAncestor(lhs, rhs, bitset_num) || HasIdenticalAncestors(lhs, rhs, bitset_num);
 }
 
 bool IsForwardOnlyTaskNode(TaskNode* node) {
