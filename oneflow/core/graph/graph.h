@@ -57,6 +57,7 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
       const std::function<void(NodeType*)>& Handler) const;
 
+  // Use topological sort to traverse through the graph
   Maybe<void> TopoForEachNodeWithErrorCaptured(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/operator/normal_model_update_op.h"
+#include "oneflow/core/auto_prallel/include/SbpConstructor.h"
 
 namespace oneflow {
 
@@ -160,6 +161,7 @@ const OpNode& OpNode::SrcNode4Ibn(const std::string& bn_in_op) const {
   return *MutSrcNode4Ibn(bn_in_op);
 }
 
+// mutable source node with specified input blob name
 OpNode* OpNode::MutSrcNode4Ibn(const std::string& bn_in_op) const {
   const LogicalBlobId& lbi = op().BnInOp2Lbi(bn_in_op);
   CHECK(ibns_.find(bn_in_op) != ibns_.end());
@@ -387,6 +389,12 @@ Maybe<void> OpGraph::Init(const Job& job) {
   InferBlobLastUsed();
   InferTimeShape();
   JUST(InferLogicalBlobDesc(job));
+
+  // auto-parallel
+  std::cout << "test job complete. \n";
+  SbpConstructor sbp_constructor;
+  sbp_constructor.constructSbpGraph(*this, job);
+
   ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
   return Maybe<void>::Ok();
 }
