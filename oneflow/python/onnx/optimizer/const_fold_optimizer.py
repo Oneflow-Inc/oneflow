@@ -120,7 +120,7 @@ class ConstFoldOptimizer(GraphOptimizerBase):
     @_register_func("Cast")
     def _FoldCast(node, graph):
         const_val = node.inputs[0].get_tensor_value(as_list=False)
-        np_dtype = util.ONNX_2_NUMPY_DTYPE[node.get_attr("to").i]
+        np_dtype = util.ONNX_2_NUMPY_DTYPE[node.attr["to"]]
         const_val_after_cast = const_val.astype(np_dtype)
         return [const_val_after_cast]
 
@@ -128,8 +128,7 @@ class ConstFoldOptimizer(GraphOptimizerBase):
     @_register_func("Transpose")
     def _FoldTranspose(node, graph) -> list:
         const_val = node.inputs[0].get_tensor_value(as_list=False)
-        perm_attr = node.get_attr("perm")
-        perm = perm_attr.ints if perm_attr else None
+        perm = node.attr.get("perm", None)
         const_val_after_trans = const_val.transpose(perm)
         return [const_val_after_trans]
 
@@ -140,7 +139,7 @@ class ConstFoldOptimizer(GraphOptimizerBase):
         numpy expand_dims only supports to unsqueeze one dim one time, so reshape is used to simplify the logic
         """
         const_val = node.inputs[0].get_tensor_value(as_list=False)
-        axes = list(node.get_attr("axes").ints)
+        axes = node.attr["axes"]
         util.MakeSure(
             all(axis >= 0 for axis in axes),
             "onnx spec says it only supports positive axis",

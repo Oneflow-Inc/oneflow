@@ -87,13 +87,13 @@ class BackToBackOptimizer(GraphOptimizerBase):
     def _OptimizeCast(g, node, consumer_nodes):
         """remove long chains of cast ops"""
         q2 = []
-        type1 = node.get_attr("to").i
+        type1 = node.attr["to"]
         type1_name = ONNX_DTYPE_NAMES[type1] if type1 in ONNX_DTYPE_NAMES else ""
 
         # if parent node is cast node, and same type, delete this one
         pnode = node.inputs[0]
         if pnode.type == "Cast":
-            type2 = pnode.get_attr("to").i
+            type2 = pnode.attr["to"]
             if type1 == type2:
                 for node2 in consumer_nodes:
                     node2.input[0] = node.input[0]
@@ -105,7 +105,7 @@ class BackToBackOptimizer(GraphOptimizerBase):
         # that contains more information than current type
         can_reduce = True
         for node2 in consumer_nodes:
-            type2 = node2.get_attr("to").i
+            type2 = node2.attr["to"]
             type2_name = ONNX_DTYPE_NAMES[type2] if type2 in ONNX_DTYPE_NAMES else ""
 
             if "float" in type1_name or type1_name == "double":
@@ -139,11 +139,11 @@ class BackToBackOptimizer(GraphOptimizerBase):
     @_register_func("Transpose")
     def _OptimizeTranspose(g, node, consumer_nodes):
         """remove long chains of transpose ops"""
-        t1 = list(node.get_attr("perm").ints)
+        t1 = node.attr["perm"]
         q2 = []
         for node2 in consumer_nodes:
             node2.input[0] = node.input[0]
-            t2 = list(node2.get_attr("perm").ints)
+            t2 = node.attr["perm"]
             new_perm = [t1[i] for i in t2]
             # check if node2 can be removed. otherwise only update
             if new_perm == list(range(len(t2))):
@@ -162,7 +162,7 @@ class BackToBackOptimizer(GraphOptimizerBase):
                         dtypes=[dtype],
                     )
             else:
-                node2.set_attr("perm", [t1[i] for i in t2])
+                node2.attr["perm"] = [t1[i] for i in t2]
                 q2.append(node2.output[0])
         g.RemoveNode(node.name)
         return q2
@@ -180,8 +180,8 @@ class BackToBackOptimizer(GraphOptimizerBase):
         if node2.type != "Unsqueeze":
             return []
 
-        axis1 = node.get_attr("axes").ints
-        axis2 = node2.get_attr("axes").ints
+        axis1 = node.attr["axes"]
+        axis2 = node2.attr["axes"]
 
         # if squeeze followed by unsqueeze is on diff axes, skip
         if axis1 != axis2:
