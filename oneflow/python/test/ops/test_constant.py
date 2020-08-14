@@ -29,7 +29,7 @@ def compare_with_tensorflow(test_case, device_type, value, shape, rtol=1e-5, ato
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ConstantJob():
         with flow.scope.placement(device_type, "0:0"):
             x = flow.constant(value, dtype=flow.float, shape=shape)

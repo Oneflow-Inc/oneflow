@@ -104,16 +104,22 @@ def DataLoaderEvalJob():
     return normal, label
 
 
-rsz, normal, label, rng = DataLoaderJob().get()
-print("resized image: ", rsz)
-print("normalized image output: ", normal)
-print("label: ", label)
-print("mirror:", rng)
-np.save("output/oneflow_train_data_0.npy", normal.numpy())
+if __name__ == "__main__":
+    rsz, normal, label, rng = DataLoaderJob().get()
+    print("resized image: ", rsz)
+    print("normalized image output: ", normal)
+    print("label: ", label)
+    print("mirror:", rng)
+    np.save("output/oneflow_train_data_0.npy", normal.numpy())
 
-rsz, normal, label, rng = DataLoaderJob().get()
-print("resized image: ", rsz)
-print("normalized image output: ", normal)
-print("label: ", label)
-print("mirror:", rng)
-np.save("output/oneflow_train_data_1.npy", normal.numpy())
+    rsz, normal, label, rng = DataLoaderJob().get()
+    print("resized image: ", rsz)
+    print("normalized image output: ", normal)
+    print("label: ", label)
+    print("mirror:", rng)
+    np.save("output/oneflow_train_data_1.npy", normal.numpy())
+
+    normal, label = DataLoaderEvalJob().get()
+    print("normalized image output: ", normal)
+    print("label: ", label)
+    np.save("output/oneflow_eval_data_0.npy", normal.numpy())

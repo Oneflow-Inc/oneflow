@@ -47,12 +47,17 @@ class ConstantLikeKernel final : public KernelIf<device_type> {
   }
 };
 
+#ifdef WITH_CUDA
 #define REGISTER_CONSTANT_LIKE_KERNEL(dtype)                                                      \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kConstantLikeConf, DeviceType::kCPU, dtype, \
                                         ConstantLikeKernel<DeviceType::kCPU, dtype>)              \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kConstantLikeConf, DeviceType::kGPU, dtype, \
                                         ConstantLikeKernel<DeviceType::kGPU, dtype>)
-
+#else
+#define REGISTER_CONSTANT_LIKE_KERNEL(dtype)                                                      \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kConstantLikeConf, DeviceType::kCPU, dtype, \
+                                        ConstantLikeKernel<DeviceType::kCPU, dtype>)
+#endif
 REGISTER_CONSTANT_LIKE_KERNEL(float);
 REGISTER_CONSTANT_LIKE_KERNEL(double);
 REGISTER_CONSTANT_LIKE_KERNEL(int8_t);

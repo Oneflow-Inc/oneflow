@@ -15,14 +15,17 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
+import unittest
+import os
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_deadlock(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
     func_config.enable_inplace(False)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def DistributeConcat():
         with flow.scope.placement("gpu", "0:0"):
             w = flow.get_variable(

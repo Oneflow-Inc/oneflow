@@ -13,17 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/job_build_and_infer_ctx.h"
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
-#include "oneflow/core/job_rewriter/autograd.h"
-#include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/job/mirrored_sig_infer_hint.h"
-#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/job/job_build_and_infer_ctx.h"
+#include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/job_rewriter/autograd.h"
+#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/user/summary/summary_converter.h"
+
 #include <google/protobuf/text_format.h>
-#include "oneflow/customized/summary/summary_converter.h"
 #include <json.hpp>
 
 namespace oneflow {
@@ -302,7 +304,9 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
     int64_t num_axes = logical_blob_desc.shape().NumAxes();
     if (axis < 0) { axis += num_axes; }
     CHECK_GE_OR_RETURN(axis, 0);
-    CHECK_LT_OR_RETURN(axis, num_axes);
+    CHECK_LT_OR_RETURN(axis, num_axes)
+        << "op: " << op->op_name() << ", blob: " << pair.first << ", axis: " << axis
+        << ", shape: " << logical_blob_desc.shape();
     CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
         << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
         << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
@@ -396,7 +400,8 @@ Maybe<void> JobBuildAndInferCtx::CheckAllInputsConvertableToMirroredBlob(const O
     if (sbp.has_broadcast_parallel()) { continue; }
     if (sbp.has_split_parallel() && sbp.split_parallel().axis() == 0) { continue; }
     const std::string& lbn = GenLogicalBlobName(lbi);
-    return Error::CheckFailed() << "input lbn: " << lbn << " is not convertable to mirrored blob";
+    return Error::CheckFailedError()
+           << "input lbn: " << lbn << " is not convertable to mirrored blob";
   }
   return Maybe<void>::Ok();
 }
@@ -502,9 +507,9 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   CHECK_OR_RETURN(op_name2op_.find(op_name) == op_name2op_.end())
       << JobBuildAndInferError::kOpNameExist << "op_name: " << op_name
       << " already exist in job: " << job_->job_conf().job_name();
-  CHECK_NE_OR_RETURN(op_conf.device_type(), DeviceType::kInvalidDevice)
-      << JobBuildAndInferError::kOpConfDeviceTypeNoSet << "op_name: " << op_name
-      << " not set device type";
+  CHECK_NE_OR_RETURN(op_conf.device_tag(), "invalid_device")
+      << JobBuildAndInferError::kOpConfDeviceTagNoSet << "op_name: " << op_name
+      << " not set device tag";
 
   op_name2op_.emplace(op_name, ConstructOp(op_conf, job_desc));
   Operator* op = op_name2op_.at(op_name).get();
@@ -546,10 +551,10 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   };
   JUST(op->InferLogicalOutBlobDescsIf(GetBlobDesc4BnInOp, BatchAxis4Ibn, parallel_desc));
   // Fill logical blob_desc signature.
-  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc*> {
+  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
     const auto* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
     CHECK_NOTNULL_OR_RETURN(blob_desc);
-    return blob_desc;
+    return *blob_desc;
   }));
   // Infer ParallelDesc for output blobs.
   auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
@@ -665,7 +670,7 @@ Maybe<void> JobBuildAndInferCtx::AddLossMirroredBlobName(const std::string& lbn)
 Maybe<LogicalBlobId> JobBuildAndInferCtx::GetMirroredLbi(const std::string& lbn_with_hint) const {
   const LogicalBlobId& lbi = GenLogicalBlobId(lbn_with_hint);
   if (mirrored_lbi2sub_lbis_.find(lbi) != mirrored_lbi2sub_lbis_.end()) { return lbi; }
-  return Error::CheckFailed() << lbn_with_hint << " is not a mirrored blob name";
+  return Error::CheckFailedError() << lbn_with_hint << " is not a mirrored blob name";
 }
 
 Maybe<int> JobBuildAndInferCtx::MirroredBlobGetNumSubLbi(const std::string& lbn_with_hint) const {
@@ -833,7 +838,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompati
     lbi_vec->push_back(sub_lbi);
   };
   OperatorConf op_conf;
-  op_conf.set_device_type(parallel_desc.device_type());
+  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(parallel_desc.device_type())));
   if (sbp.has_broadcast_parallel()) {
     op_conf.set_name(kAutoMirroredBlobNamePrefix + "-DistributeClone-" + NewUniqueId());
     auto* distribute_clone = op_conf.mutable_distribute_clone_conf();
@@ -887,7 +892,8 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
     CHECK_OR_RETURN(producer_op_conf.has_scope_symbol_id());
     op_conf.set_scope_symbol_id(producer_op_conf.scope_symbol_id());
   }
-  op_conf.set_device_type(parallel_desc.device_type());
+  // const char* device_tag = JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
+  op_conf.set_device_tag(JUST(DeviceTag4DeviceType(parallel_desc.device_type())));
   op_conf.set_name(kAutoMirroredBlobNamePrefix + "-CastToMirrored-" + NewUniqueId());
   auto* cast_to_mirrored_conf = op_conf.mutable_cast_to_mirrored_conf();
   cast_to_mirrored_conf->set_in(lbn);
@@ -920,7 +926,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("CompleteOfrecordDecoder"));
     JUST(DoPass("SetDefaultVariableConf"));
+#ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
+#endif
     JUST(DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps"));
     JUST(DoPass("NonDistributedOptimizerPass"));
     JUST(DoPass("AutoTrainStep"));

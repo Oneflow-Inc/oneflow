@@ -33,15 +33,15 @@ class BlobObject : public vm::Object {
   BlobObject(const BlobObject&) = delete;
   BlobObject(BlobObject&&) = delete;
   BlobObject(const std::shared_ptr<MemoryCase>& mem_case, DataType data_type)
-      : mem_case_(mem_case), blob_desc_(data_type), blob_body_bytes_(0) {}
-  ~BlobObject() override = default;
+      : mem_case_(mem_case), blob_body_bytes_(0), blob_desc_(data_type) {}
+  virtual ~BlobObject() override = default;
 
   const BlobDesc& blob_desc() const { return blob_desc_; }
   BlobDesc* mut_blob_desc() { return &blob_desc_; }
 
-  const Blob& blob() const { return *blob_; }
-  Blob* mut_blob() { return blob_.get(); }
-  Maybe<void> TryInitBlob();
+  virtual const Blob& blob() const { return *blob_; }
+  virtual Blob* mut_blob() { return blob_.get(); }
+  virtual Maybe<void> TryInitBlob();
 
   Maybe<void> CheckMemCase(const ParallelDesc& parallel_desc, int64_t machine_id) const;
 
@@ -51,13 +51,15 @@ class BlobObject : public vm::Object {
   Maybe<void> InitBlob();
 
   std::shared_ptr<MemoryCase> mem_case_;
-  BlobDesc blob_desc_;
-  std::unique_ptr<RtBlobDesc> rt_blob_desc_;
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
   std::size_t blob_body_bytes_;
   MemoryAllocator non_pod_initer_;
+
+ protected:
+  BlobDesc blob_desc_;
+  std::unique_ptr<RtBlobDesc> rt_blob_desc_;
 };
 
 }  // namespace eager

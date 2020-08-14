@@ -13,14 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/eager_kernel.h"
+#include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
-#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/framework/infer_util.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -61,8 +61,8 @@ class UserKernelBaseContext {
     };
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_);
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
-
-    device_type_ = kernel_conf.op_attribute().op_conf().device_type();
+    device_tag_ = kernel_conf.op_attribute().op_conf().device_tag();
+    device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
     parallel_ctx_ = kernel_conf.user_conf().parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
       arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::TensorDesc(pair.second));
@@ -71,6 +71,7 @@ class UserKernelBaseContext {
   ~UserKernelBaseContext() = default;
 
   DeviceType device_type() const { return device_type_; }
+  const std::string& device_tag() const { return device_tag_; }
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
   const JobDesc& job_desc() const { return job_desc_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -87,6 +88,7 @@ class UserKernelBaseContext {
   ArgVec inputs_;
   ArgVec outputs_;
   DeviceType device_type_;
+  std::string device_tag_;
   ParallelContext parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
   const JobDesc& job_desc_;
@@ -100,13 +102,14 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
             user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
-        sbp_signature_(&(kernel_conf.user_conf().sbp_sig())) {
+        sbp_signature_(&(kernel_conf.user_conf().sbp_sig())),
+        parallel_desc_(kernel_conf.user_conf().parallel_conf()) {
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2logical_blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
                                        user_op::TensorDesc(pair.second));
     }
   }
-  ~UserKernelInitContext() = default;
+  ~UserKernelInitContext() override = default;
 
   DeviceCtx* device_ctx() override { return device_ctx_; }
 
@@ -135,12 +138,14 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   }
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
+  const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
 
  private:
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   const SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2logical_tensor_desc_;
+  ParallelDesc parallel_desc_;
 };
 
 class UserKernelOpInferContext : public user_op::InferContext {
@@ -375,6 +380,7 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   ~UserKernelRegContext() = default;
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
+  const std::string& device_tag() const override { return base_ctx_.device_tag(); }
   const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {

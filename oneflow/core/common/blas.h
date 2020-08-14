@@ -18,7 +18,9 @@ limitations under the License.
 
 #include <type_traits>
 #include <utility>
+#ifdef WITH_CUDA
 #include <cuda_fp16.h>
+#endif  // WITH_CUDA
 #include "oneflow/core/common/cblas.h"
 #include "oneflow/core/common/preprocessor.h"
 
@@ -58,15 +60,15 @@ OF_PP_FOR_EACH_TUPLE(CBLAS_TEMPLATE, BLAS_NAME_SEQ);
 #define CUBLAS_TEMPLATE(name)                                                                   \
   template<typename T, typename... Args>                                                        \
   typename std::enable_if<std::is_same<T, float>::value>::type cublas_##name(Args&&... args) {  \
-    CudaCheck(cublasS##name(std::forward<Args>(args)...));                                      \
+    OF_CUBLAS_CHECK(cublasS##name(std::forward<Args>(args)...));                                \
   }                                                                                             \
   template<typename T, typename... Args>                                                        \
   typename std::enable_if<std::is_same<T, double>::value>::type cublas_##name(Args&&... args) { \
-    CudaCheck(cublasD##name(std::forward<Args>(args)...));                                      \
+    OF_CUBLAS_CHECK(cublasD##name(std::forward<Args>(args)...));                                \
   }                                                                                             \
   template<typename T, typename... Args>                                                        \
   typename std::enable_if<std::is_same<T, half>::value>::type cublas_##name(Args&&... args) {   \
-    CudaCheck(cublasH##name(std::forward<Args>(args)...));                                      \
+    OF_CUBLAS_CHECK(cublasH##name(std::forward<Args>(args)...));                                \
   }
 
 OF_PP_FOR_EACH_TUPLE(CUBLAS_TEMPLATE, BLAS_NAME_SEQ);

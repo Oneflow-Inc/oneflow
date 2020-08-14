@@ -45,10 +45,8 @@ def _test_two_stage_reduce(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def two_stage_reduce_job(x: oft.Numpy.Placeholder((4, 20, 20, 20))):
         with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
@@ -64,7 +62,9 @@ def _test_two_stage_reduce(
                 keepdims=True,
             )
             loss = flow.identity(loss)
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))

@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
@@ -180,10 +181,8 @@ void CollectIgnoreTaskEdgesInFirstMergedChains(const std::vector<std::vector<Tas
       if (fw_node == nullptr) { continue; }
       if (fw_node->logical_node()->op_vec().size() != 1) { continue; }
       const auto& src_op = *fw_node->logical_node()->SoleOp();
-      if (src_op.op_conf().has_variable_conf()
-          && src_op.op_conf().device_type() == DeviceType::kGPU) {
-        return true;
-      }
+      DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(src_op.op_conf().device_tag()));
+      if (src_op.op_conf().has_variable_conf() && device_type == DeviceType::kGPU) { return true; }
     }
     return false;
   };
@@ -403,7 +402,6 @@ void ChainGraph::InitChainEdge(const std::vector<std::vector<TaskNode*>>& chains
       auto cur_chain_node = ChainNode4TaskNode(cur_task_node);
       for (auto& task_in_edge : cur_task_node->in_edges()) {
         auto src_task_node = task_in_edge->src_node();
-        if (IsBackEdge(src_task_node, cur_task_node)) { continue; }
         auto src_chain_node = ChainNode4TaskNode(src_task_node);
         if (cur_chain_node == src_chain_node) { continue; }
         if (HasChainEdge(src_chain_node, cur_chain_node)) { continue; }

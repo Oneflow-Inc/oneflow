@@ -16,6 +16,8 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import unittest
+import os
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -37,7 +39,7 @@ def _check_unique(test_case, x, y, idx, count, num_unique):
 
 
 def _run_test(test_case, x, dtype, device):
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def UniqueWithCountsJob(x: oft.Numpy.Placeholder(x.shape, dtype=dtype)):
         with flow.scope.placement(device, "0:0"):
             return flow.experimental.unique_with_counts(x)
@@ -48,18 +50,21 @@ def _run_test(test_case, x, dtype, device):
     )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_unique_with_counts_int(test_case):
     x = np.asarray(list(range(32)) * 2).astype(np.int32)
     np.random.shuffle(x)
     _run_test(test_case, x, flow.int32, "gpu")
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_unique_with_counts_float(test_case):
     x = np.asarray(list(range(32)) * 2).astype(np.float32)
     np.random.shuffle(x)
     _run_test(test_case, x, flow.float32, "gpu")
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_unique_with_counts_random_gpu(test_case):
     x = np.random.randint(0, 32, 1024).astype(np.int32)
     np.random.shuffle(x)

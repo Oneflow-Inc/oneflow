@@ -53,9 +53,8 @@ def compare_with_tensorflow(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
-    func_config.default_distribute_strategy(flow.scope.mirrored_view())
+
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
     if data_format == "NCHW":
         xy_data_transpose = (0, 2, 3, 1)
@@ -64,15 +63,17 @@ def compare_with_tensorflow(
         xy_data_transpose = (0, 1, 2, 3)
         weight_data_transpose = (1, 2, 3, 0)
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def DynamicConvJob(x: oft.ListNumpy.Placeholder((10, 3, 100, 100))):
         with flow.scope.placement(device_type, "0:0"):
-            x += flow.get_variable(
+            x_var = flow.get_variable(
                 name="v1",
                 shape=(1,),
                 dtype=flow.float,
                 initializer=flow.zeros_initializer(),
             )
+            x_var = flow.cast_to_current_logical_view(x_var)
+            x += x_var
             if data_format == "NCHW":
                 weight_shape = (filters, x_shape[1] // groups, kernel_size, kernel_size)
             else:
@@ -83,6 +84,7 @@ def compare_with_tensorflow(
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(minval=0, maxval=100),
             )
+            weight = flow.cast_to_current_logical_view(weight)
             loss = flow.nn.conv2d(
                 x,
                 weight,
@@ -92,7 +94,9 @@ def compare_with_tensorflow(
                 dilations=[1, 1],
                 groups=groups,
             )
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, global_storage_setter("x"))
             flow.watch_diff(x, global_storage_setter("x_diff"))
@@ -134,11 +138,19 @@ def compare_with_tensorflow(
     loss_diff = global_storage["loss_diff"].numpy_list()[0].transpose(xy_data_transpose)
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
+    rtol = 1e-4
+    atol = 1e-4
+    if device_type == "cpu":
+        rtol *= 100
+        atol *= 100
     assert np.allclose(
         global_storage["x_diff"].numpy_list()[0].transpose(xy_data_transpose),
         tf_x_diff.numpy(),
-        rtol=1e-4,
-        atol=1e-4,
+        rtol=rtol,
+        atol=atol,
+    ), (
+        global_storage["x_diff"].numpy_list()[0].transpose(xy_data_transpose)
+        - tf_x_diff.numpy()
     )
     assert np.allclose(
         global_storage["weight_diff"].numpy().transpose(weight_data_transpose),

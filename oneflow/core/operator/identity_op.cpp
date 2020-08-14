@@ -44,11 +44,11 @@ class IdentityOpTpl final : public Operator {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
     const auto bns = StdVec2PbRpf<std::string>({"in", "out"});
     SbpSignatureBuilder().PartialSum(bns).Build(sbp_sig_list->mutable_sbp_signature()->Add());
-    const int64_t num_axes = JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes();
+    const int64_t num_axes = JUST(LogicalBlobDesc4Ibn("in")).shape().NumAxes();
     SbpSignatureBuilder().Split(bns, 0).MakeSplitSignatureListBuilder(num_axes).Build(sbp_sig_list);
     return Maybe<void>::Ok();
   }
@@ -246,11 +246,11 @@ class CastToStaticShapeOp final : public Operator {
   }
 
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder().PartialSum("in").PartialSum("out").Build(
         sbp_sig_list->mutable_sbp_signature()->Add());
-    const int64_t num_axes = JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes();
+    const int64_t num_axes = JUST(LogicalBlobDesc4Ibn("in")).shape().NumAxes();
     FOR_RANGE(int64_t, i, 0, num_axes) {
       SbpSignatureBuilder().Split("in", i).Split("out", i).Build(
           sbp_sig_list->mutable_sbp_signature()->Add());

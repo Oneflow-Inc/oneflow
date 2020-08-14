@@ -13,14 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/job/sbp_signature_builder.h"
-#include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -39,7 +40,8 @@ DataType GetDataTypeFromBnInOpVec(
 std::shared_ptr<Operator> CheckAndConstructOp(const OperatorConf& op_conf,
                                               const JobDesc* job_desc) {
   Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
-  if (IsCpuOnly(op_conf)) { CHECK_EQ(op_conf.device_type(), DeviceType::kCPU); }
+  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf.device_tag()));
+  if (IsCpuOnly(op_conf)) { CHECK_EQ(device_type, DeviceType::kCPU); }
   rptr->Init(op_conf, job_desc);
   return std::shared_ptr<Operator>(rptr);
 }
@@ -72,6 +74,11 @@ LogicalBlobId* Operator::MutBnInOp2Lbi(const std::string& bn_in_op) {
   }
 }
 
+DeviceType Operator::device_type() const {
+  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_attribute_.op_conf().device_tag()));
+  return device_type;
+}
+
 const std::string& Operator::SoleIbn() const {
   CHECK_EQ(input_bns().size(), 1);
   return input_bns().Get(0);
@@ -99,7 +106,7 @@ Maybe<void> Operator::InferParallelSignatureIf() {
 
 Maybe<void> Operator::InferParallelSignature() {
   const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
-  const auto& scope = *JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
+  const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
   int64_t parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
   auto* parallel_signature = op_attribute_.mutable_parallel_signature();
   parallel_signature->set_op_parallel_desc_symbol_id(parallel_desc_symbol_id);
@@ -121,7 +128,7 @@ Maybe<void> Operator::InferLogicalOutBlobDescs(
   auto* map = sbp_signature.mutable_bn_in_op2sbp_parallel();
   for (const auto& ibn : input_bns()) { (*map)[ibn].mutable_split_parallel()->set_axis(0); }
   for (const auto& obn : output_bns()) { (*map)[obn].mutable_split_parallel()->set_axis(0); }
-  return InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &sbp_signature, [](OpContext*) {});
+  return InferOutBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &sbp_signature, [](OpContext*) {});
 }
 
 Maybe<void> Operator::InferBlobDescsIf(
@@ -168,10 +175,10 @@ Maybe<void> Operator::InferOutBlobDescs(
 }
 
 Maybe<void> Operator::FillLogicalBlobDescSignature(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& BlobDesc4BnInOp) {
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& BlobDesc4BnInOp) {
   auto* map = op_attribute_.mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc();
-  for (const auto& ibn : input_bns()) { JUST(BlobDesc4BnInOp(ibn))->ToProto(&(*map)[ibn]); }
-  for (const auto& obn : output_bns()) { JUST(BlobDesc4BnInOp(obn))->ToProto(&(*map)[obn]); }
+  for (const auto& ibn : input_bns()) { JUST(BlobDesc4BnInOp(ibn)).ToProto(&(*map)[ibn]); }
+  for (const auto& obn : output_bns()) { JUST(BlobDesc4BnInOp(obn)).ToProto(&(*map)[obn]); }
   return Maybe<void>::Ok();
 }
 
@@ -218,7 +225,7 @@ Maybe<void> Operator::InferOutputBlobTimeShape(
 }
 
 Maybe<void> Operator::GetSbpSignaturesIf(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
   JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, sbp_sig_list));
   SbpSignatureBuilder()
@@ -259,9 +266,9 @@ Maybe<void> Operator::InferSbpSignature(
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   // get op sbp signatures
-  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc*> {
+  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
     const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
-    return Maybe<const BlobDesc*>(&(sbp_infer_hint->logical_blob_desc()));
+    return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());
   };
   SbpSignatureList sbp_sig_list;
   JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_list));
@@ -393,7 +400,8 @@ bool HasBlobDescWithField(std::function<const BlobDesc*(const std::string&)> Get
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
-    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
+    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
+    const ParallelDesc* parallel_desc) const {
   auto* dtype_signature = kernel_conf->mutable_dtype_signature();
   for (const std::string& ibn : input_bns()) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(ibn);
@@ -425,6 +433,15 @@ void Operator::GenKernelConf(
     kernel_conf->set_data_type(data_type);
   }
 
+  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx,
+                       LogicalBlobDesc4BnInOp, parallel_desc);
+}
+
+void Operator::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
+    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
+    const ParallelDesc* parallel_desc) const {
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx,
                        LogicalBlobDesc4BnInOp);
 }
@@ -626,7 +643,7 @@ bool IsCpuOnly(const OperatorConf& op_conf) {
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type,
                                       const JobDesc* job_desc) {
   OperatorConf dev_op_conf = op_conf;
-  dev_op_conf.set_device_type(device_type);
+  dev_op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type)));
   return CheckAndConstructOp(dev_op_conf, job_desc);
 }
 
@@ -723,7 +740,8 @@ Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn, SbpParallel* sb
   } else if (split_hint[0] == 'B') {
     sbp->mutable_broadcast_parallel();
   } else {
-    return Error::CheckFailed() << "split hint only support 'S' or 'B', but get:" << split_hint[0];
+    return Error::CheckFailedError()
+           << "split hint only support 'S' or 'B', but get:" << split_hint[0];
   }
   return true;
 }
@@ -745,8 +763,8 @@ Maybe<void> InferOpSbpSignature(
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
     auto it = ibn2sbp_infer_hint.find(ibn);
     if (it == ibn2sbp_infer_hint.end()) {
-      return Error::CheckFailed() << "cannot find corresponding SbpInferHint for input_blob_name : "
-                                  << ibn;
+      return Error::CheckFailedError()
+             << "cannot find corresponding SbpInferHint for input_blob_name : " << ibn;
     }
     return &(it->second);
   };
@@ -943,9 +961,9 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
   };
   // infer logical blob_desc
   JUST(op->InferLogicalOutBlobDescsIf(BlobDesc4BnInOp, BatchAxis4Ibn, parallel_desc));
-  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc*> {
+  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
     CHECK_OR_RETURN(bn_in_op2blob_desc.find(bn_in_op) != bn_in_op2blob_desc.end());
-    return bn_in_op2blob_desc[bn_in_op].get();
+    return *bn_in_op2blob_desc[bn_in_op];
   }));
   return op;
 }

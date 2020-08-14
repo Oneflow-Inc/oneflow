@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/vm/cuda_instruction_status_querier.h"
 #include "oneflow/core/device/device_context.h"
 
@@ -26,10 +28,12 @@ bool CudaInstrStatusQuerier::event_completed() const {
 
 void CudaInstrStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
   cudaSetDevice(device_id_);
-  CudaCheck(cudaEventCreateWithFlags(&event_, cudaEventBlockingSync | cudaEventDisableTiming));
-  CudaCheck(cudaEventRecord(event_, device_ctx->cuda_stream()));
+  OF_CUDA_CHECK(cudaEventCreateWithFlags(&event_, cudaEventBlockingSync | cudaEventDisableTiming));
+  OF_CUDA_CHECK(cudaEventRecord(event_, device_ctx->cuda_stream()));
   launched_ = true;
 }
 
 }  // namespace vm
 }  // namespace oneflow
+
+#endif

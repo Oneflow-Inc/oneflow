@@ -35,10 +35,10 @@ class CudnnConvDesc final {
   CudnnConvDesc() = delete;
   ~CudnnConvDesc();
 
-  CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
-                const PbMessage& conv_conf);
-  CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
-                const user_op::UserOpConfWrapper& conv_conf);
+  CudnnConvDesc(const DataType compute_type, const DataType data_type,
+                const ShapeView& in_blob_shape, const PbMessage& conv_conf);
+  CudnnConvDesc(const DataType compute_type, const DataType data_type,
+                const ShapeView& in_blob_shape, const user_op::UserOpConfWrapper& conv_conf);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 

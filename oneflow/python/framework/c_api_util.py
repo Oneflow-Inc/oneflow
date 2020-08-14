@@ -213,6 +213,14 @@ def InferOpConf(op_conf_proto, upstream_signature):
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 
+def IsInterfaceOpConf(op_conf):
+    op_type_field = op_conf.WhichOneof("op_type")
+    field_number = op_conf_util.OperatorConf.DESCRIPTOR.fields_by_name[
+        op_type_field
+    ].number
+    return oneflow_internal.IsInterfaceOpTypeCase(field_number)
+
+
 def GetOpParallelSymbolId(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
     symbol_id, error_str = oneflow_internal.GetOpParallelSymbolId(serialized_op_conf)
@@ -552,15 +560,6 @@ def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     return text_format.Parse(ofrecord, record_util.OFRecord())
-
-
-def DeviceType4DeviceTag(device_tag):
-    device_tag = str(device_tag)
-    device_type, error_str = oneflow_internal.DeviceType4DeviceTag(device_tag)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
-    return device_type
 
 
 def GetFunctionConfigDef():

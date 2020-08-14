@@ -28,7 +28,7 @@ def _of_object_segm_poly_flip(poly_list, image_size, flip_code):
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def object_segm_poly_flip_job(
         poly_def: oft.ListListNumpy.Placeholder(
             shape=tuple(poly_shape), dtype=flow.float
@@ -93,7 +93,7 @@ def _compare_segm_poly_flip(
         poly_array = np.array(poly_pts, dtype=np.single).reshape(-1, 2)
         segm_poly_list.append(poly_array)
         image_size_list.append(
-            [coco.imgs[rand_img_id]["height"], coco.imgs[rand_img_id]["width"]]
+            [coco.imgs[rand_img_id]["width"], coco.imgs[rand_img_id]["height"]]
         )
         sample_cnt += 1
 
@@ -104,7 +104,7 @@ def _compare_segm_poly_flip(
     for of_poly, poly, image_size in zip(
         of_segm_poly_list, segm_poly_list, image_size_list
     ):
-        h, w = image_size
+        w, h = image_size
         if flip_code == 1:
             poly[:, 0] = w - poly[:, 0]
         else:

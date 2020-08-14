@@ -61,10 +61,14 @@ def CurJobAddConsistentOp(op_conf, scope_symbol=None):
     if scope_symbol is None:
         scope_symbol = oneflow.current_scope()
     op_conf.scope_symbol_id = scope_symbol.symbol_id
-    if not op_conf.HasField("device_type"):
+    if not op_conf.HasField("device_tag"):
         device_tag = scope_symbol.device_parallel_desc_symbol.device_tag
-        op_conf.device_type = c_api_util.DeviceType4DeviceTag(device_tag)
-    return c_api_util.CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf)
+        op_conf.device_tag = device_tag
+    op_attr = c_api_util.CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf)
+    if c_api_util.IsInterfaceOpConf(op_conf):
+        sess = session_ctx.GetDefaultSession()
+        sess.AddInfo4InterfaceOpName(op_conf.name, op_attr)
+    return op_attr
 
 
 def CurJobAddMirroredOp(op_conf, scope_symbol=None):
@@ -72,7 +76,11 @@ def CurJobAddMirroredOp(op_conf, scope_symbol=None):
     if scope_symbol is None:
         scope_symbol = oneflow.current_scope()
     op_conf.scope_symbol_id = scope_symbol.symbol_id
-    if not op_conf.HasField("device_type"):
+    if not op_conf.HasField("device_tag"):
         device_tag = scope_symbol.device_parallel_desc_symbol.device_tag
-        op_conf.device_type = c_api_util.DeviceType4DeviceTag(device_tag)
-    return c_api_util.CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf)
+        op_conf.device_tag = device_tag
+    op_attr = c_api_util.CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf)
+    if c_api_util.IsInterfaceOpConf(op_conf):
+        sess = session_ctx.GetDefaultSession()
+        sess.AddInfo4InterfaceOpName(op_conf.name, op_attr)
+    return op_attr

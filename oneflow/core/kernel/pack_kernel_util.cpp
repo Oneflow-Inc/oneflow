@@ -42,6 +42,8 @@ void PackKernelUtil<device_type>::Unpack(DeviceCtx* ctx, size_t out_index, size_
 }
 
 template class PackKernelUtil<DeviceType::kCPU>;
+#ifdef WITH_CUDA
 template class PackKernelUtil<DeviceType::kGPU>;
+#endif
 
 }  // namespace oneflow

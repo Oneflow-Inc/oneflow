@@ -86,17 +86,17 @@ class SigmoidCrossEntropyGradGpuKernel final : public KernelIf<DeviceType::kGPU>
 #define REGISTER_SIGMOID_CROSS_ENTROPY_GPU_KERNEL(dtype, ltype)                                    \
   NEW_REGISTER_KERNEL(OperatorConf::kSigmoidCrossEntropyConf,                                      \
                       SigmoidCrossEntropyGpuKernel<dtype, ltype>)                                  \
-      .SetIsMatchedPred([](const KernelConf& conf) {                                               \
-        return ((conf.op_attribute().op_conf().device_type() == DeviceType::kGPU)                  \
+      .SetIsMatchedPred([](const KernelConf& conf) -> bool {                                       \
+        return ((conf.op_attribute().op_conf().device_tag() == "gpu")                              \
                 && (conf.data_type() == GetDataType<dtype>::value)                                 \
                 && (GetDataType<ltype>::value                                                      \
                     == conf.op_attribute().op_conf().sigmoid_cross_entropy_conf().label_type()));  \
       });                                                                                          \
   NEW_REGISTER_KERNEL(OperatorConf::kSigmoidCrossEntropyGradConf,                                  \
                       SigmoidCrossEntropyGradGpuKernel<dtype, ltype>)                              \
-      .SetIsMatchedPred([](const KernelConf& conf) {                                               \
+      .SetIsMatchedPred([](const KernelConf& conf) -> bool {                                       \
         return (                                                                                   \
-            (conf.op_attribute().op_conf().device_type() == DeviceType::kGPU)                      \
+            (conf.op_attribute().op_conf().device_tag() == "gpu")                                  \
             && (conf.data_type() == GetDataType<dtype>::value)                                     \
             && (GetDataType<ltype>::value                                                          \
                 == conf.op_attribute().op_conf().sigmoid_cross_entropy_grad_conf().label_type())); \
