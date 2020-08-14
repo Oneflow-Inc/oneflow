@@ -290,6 +290,22 @@ def ofrecord_reader(
     shuffle_after_epoch: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Get ofrecord object from ofrecord dataset.
+
+    Args:
+        ofrecord_dir (str): Path to ofrecord dataset.
+        batch_size (int, optional): Batch size. Defaults to 1.
+        data_part_num (int, optional): Number of dataset's partitions. Defaults to 1.
+        part_name_prefix (str, optional): Prefix of dataset's parition file. Defaults to "part-".
+        part_name_suffix_length (int, optional): Total length of padded suffix number , -1 means no padding. eg: 3 for `part-001`. Defaults to -1.
+        random_shuffle (bool, optional): Determines records shuffled or not. Defaults to False.
+        shuffle_buffer_size (int, optional): Shuffle buffer size. Defaults to 1024.
+        shuffle_after_epoch (bool, optional): Shuffled or not after each epoch. Defaults to False.
+        name (Optional[str], optional): Optional name. Defaults to None.
+        
+    Returns:
+        remote_blob_util.BlobDef: [description]
+    """
     if name is None:
         name = id_util.UniqueStr("OFRecord_Reader_")
 

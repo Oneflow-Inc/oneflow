@@ -51,7 +51,7 @@ def name_scope(name: str) -> None:
                 ...
 
     Args:
-        name: Name of this name scope
+        name: Name of this namespace
 
     """
     assert isinstance(name, str)
