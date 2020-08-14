@@ -47,8 +47,8 @@ class ChainMerger final {
 
   bool ShouldMerge(const ChainIt& lhs, const ChainIt& rhs) const;
   void CarefullySetBitset(std::vector<std::bitset<BITSET_SIZE>>* bitset_vec, int64_t pos);
-  void MergeBitset(std::vector<std::bitset<BITSET_SIZE>>*,
-                   const std::vector<std::bitset<BITSET_SIZE>>*);
+  void BitwiseOr(std::vector<std::bitset<BITSET_SIZE>>*,
+                 const std::vector<std::bitset<BITSET_SIZE>>*);
 
   int64_t GetTaskUid(TaskNode* task_node) const;
   void UpdateTaskUid(TaskNode* task_node);
@@ -110,7 +110,7 @@ bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
         lhs->nodes.push_back(node);
         CarefullySetBitset(&(lhs->node_ids), GetTaskUid(node));
       }
-      MergeBitset(&(lhs->ancestors), &(rhs->ancestors));
+      BitwiseOr(&(lhs->ancestors), &(rhs->ancestors));
       return true;
     }
   }
@@ -139,8 +139,8 @@ void ChainMerger::CarefullySetBitset(std::vector<std::bitset<BITSET_SIZE>>* bits
   bitset_vec->at(index).set(remain);
 }
 
-void ChainMerger::MergeBitset(std::vector<std::bitset<BITSET_SIZE>>* a,
-                              const std::vector<std::bitset<BITSET_SIZE>>* b) {
+void ChainMerger::BitwiseOr(std::vector<std::bitset<BITSET_SIZE>>* a,
+                            const std::vector<std::bitset<BITSET_SIZE>>* b) {
   CHECK_EQ(a->size(), b->size());
   const int64_t bitset_num = a->size();
   for (int64_t i = 0; i < bitset_num; ++i) { a->at(i) |= b->at(i); }
