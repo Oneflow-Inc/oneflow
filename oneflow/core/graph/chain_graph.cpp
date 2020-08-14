@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/chain_graph.h"
+#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
@@ -276,6 +277,32 @@ void ChainGraph::CheckNoCycle() const {
     auto OnCycle = [ptr](ChainNode* chain_node) { return ptr->find(chain_node) != ptr->end(); };
     const auto& filename = "job" + job_id + "_cycle_chain_graph.dot";
     ToDotWithFilePath(OnCycle, [](ChainEdge*) { return true; }, filename);
+
+    HashMap<std::string, int32_t> op_name2color = {};
+    int32_t chain_node_cnt = 0;
+    for (ChainNode* chain_node : *ptr) {
+      chain_node_cnt++;
+      for (TaskNode* task_node : chain_node->TaskNodes()) {
+        auto ct = reinterpret_cast<CompTaskNode*>(task_node);
+        if (ct != nullptr) {
+          for (auto op : ct->logical_node()->op_vec()) {
+            op_name2color.emplace(op->op_name(), chain_node_cnt);
+          }
+        }
+      }
+    }
+    const std::function<std::string(OpNode*)> ColorNode = [&](OpNode* o) {
+      auto color_it = op_name2color.find(o->op().op_name());
+      if (color_it != op_name2color.end()) {
+        return ", style=filled, colorscheme=set312, fillcolor=" + std::to_string(color_it->second);
+      } else {
+        return std::string("");
+      }
+    };
+    const std::function<std::string(OpEdge*)> ColorEdge = [&](OpEdge* task) { return ""; };
+    Global<OpGraph>::Get()->ToDotWithFilePath(
+        ColorNode, ColorEdge, "optimized_dlnet_" + job_id + "_op_graph_colored_nodes_in_cycle.dot");
+
     HashSet<const TaskNode*> tasks;
     for (const auto* chain_node : *scc) {
       for (const TaskNode* task_node : chain_node->TaskNodes()) {
