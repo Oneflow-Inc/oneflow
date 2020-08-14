@@ -59,16 +59,16 @@ class SubTskGphBuilderStatus final {
   ~SubTskGphBuilderStatus() = default;
 
   // Getters
-  std::string src_op_name() { return src_op_name_; }
-  std::string dst_op_name() { return dst_op_name_; }
-  ParallelDesc src_parallel_desc() { return src_parallel_desc_; }
-  ParallelDesc dst_parallel_desc() { return dst_parallel_desc_; }
-  SbpParallel src_sbp_parallel() { return src_sbp_parallel_; }
-  SbpParallel dst_sbp_parallel() { return dst_sbp_parallel_; }
-  LogicalBlobId lbi() { return lbi_; }
-  BlobDesc& logical_blob_desc() { return logical_blob_desc_; }
-  std::string builder_name() { return builder_name_; }
-  std::string boxing_type() { return boxing_type_; }
+  const std::string& src_op_name() { return src_op_name_; }
+  const std::string& dst_op_name() { return dst_op_name_; }
+  const ParallelDesc& src_parallel_desc() { return src_parallel_desc_; }
+  const ParallelDesc& dst_parallel_desc() { return dst_parallel_desc_; }
+  const SbpParallel& src_sbp_parallel() { return src_sbp_parallel_; }
+  const SbpParallel& dst_sbp_parallel() { return dst_sbp_parallel_; }
+  const LogicalBlobId& lbi() { return lbi_; }
+  const BlobDesc& logical_blob_desc() { return logical_blob_desc_; }
+  const std::string& builder_name() { return builder_name_; }
+  const std::string& boxing_type() { return boxing_type_; }
 
   std::string ToString() const;
 
