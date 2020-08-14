@@ -15,6 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "pybind11/embed.h"
+#include "pybind11/numpy.h"
+#include "pybind11/stl.h"
 
 namespace oneflow {
 
@@ -28,17 +31,20 @@ class PyKernel : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    size_t in_num = ctx->inputs().size();
+    // size_t in_num = ctx->inputs().size();
 
+    const T* in_dptrs = ctx->Tensor4ArgNameAndIndex("in", 0)->dptr<T>();
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t n = out->shape().elem_cnt();
     T* out_dptr = out->mut_dptr<T>();
 
-    std::vector<const T*> in_dptrs(in_num);
-    for (int32_t i = 0; i < in_num; ++i) {
-      in_dptrs.at(i) = ctx->Tensor4ArgNameAndIndex("in", i)->dptr<T>();
-    }
     // TODO(strint) : compute forward with py
+    py::scoped_interpreter guard{};
+    auto in_array = py : array_t<T>(n, in_dptrs);
+    py::moudle py_kernel = py::module::import("pyk_sigmoid");
+    py::object result = py_kernel.attr("forward")(in_array);
+    auto result_v = result.cast<std::vector<T>>();
+    for (int i = 0; i < n; ++i) { out_dptr[i] = result_v.at(i); }
   }
 };
 
