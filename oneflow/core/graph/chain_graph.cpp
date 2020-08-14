@@ -108,8 +108,8 @@ bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
         CarefullySetBitset(&(lhs->node_ids), GetTaskUid(node));
-        MergeBitset(&(lhs->ancestors), &(rhs->ancestors));
       }
+      MergeBitset(&(lhs->ancestors), &(rhs->ancestors));
       return true;
     }
   }
