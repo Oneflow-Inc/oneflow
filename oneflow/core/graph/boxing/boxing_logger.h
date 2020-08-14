@@ -60,7 +60,7 @@ class CsvBoxingLogger final : public BoxingLogger {
   std::unique_ptr<TeePersistentLogStream> log_stream_;
 };
 
-#define OF_BOXING_LOGGER_CSV_COLNUM_NAME_FIELD                            \
+#define OF_BOXING_LOGGER_CSV_COLNUM_NAME_FIELD                        \
   "src_op_name,src_parallel_conf,src_sbp_conf,lbi,logical_blob_desc," \
   "boxing_type,dst_op_name,dst_parallel_conf,dst_sbp_conf\n"
 
