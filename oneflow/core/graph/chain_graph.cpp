@@ -165,7 +165,7 @@ bool ChainMerger::ShouldMerge(const ChainIt& lhs, const ChainIt& rhs) const {
     }
     return true;
   };
-  return HasIdenticalAncestors(lhs, rhs);
+  return IsAncestor(lhs, rhs) || HasIdenticalAncestors(lhs, rhs);
 }
 
 bool IsForwardOnlyTaskNode(TaskNode* node) {
