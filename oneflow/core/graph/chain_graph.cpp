@@ -158,6 +158,7 @@ bool IsAncestor(const ChainIt& ancestor, const ChainIt& descent) {
 bool ChainMerger::ShouldMerge(const ChainIt& lhs, const ChainIt& rhs) const {
   CHECK_EQ(lhs->node_ids.size(), rhs->node_ids.size());
   CHECK_EQ(lhs->ancestors.size(), rhs->ancestors.size());
+  CHECK_EQ(lhs->ancestors.size(), lhs->node_ids.size());
   const int64_t bitset_num = lhs->node_ids.size();
   auto IsAncestor = [bitset_num](const ChainIt& ancestor, const ChainIt& descent) {
     for (int64_t i = 0; i < bitset_num; ++i) {
