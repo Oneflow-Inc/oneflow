@@ -146,16 +146,6 @@ void ChainMerger::MergeBitset(std::vector<std::bitset<BITSET_SIZE>>* a,
   for (int64_t i = 0; i < bitset_num; ++i) { a->at(i) &= b->at(i); }
 }
 
-bool IsAncestor(const ChainIt& ancestor, const ChainIt& descent) {
-  const int64_t bitset_num = ancestor->node_ids.size();
-  for (int64_t i = 0; i < bitset_num; ++i) {
-    if (ancestor->node_ids.at(i) != (ancestor->node_ids.at(i) | descent->ancestors.at(i))) {
-      return false;
-    }
-  }
-  return true;
-}
-
 bool ChainMerger::ShouldMerge(const ChainIt& lhs, const ChainIt& rhs) const {
   CHECK_EQ(lhs->node_ids.size(), rhs->node_ids.size());
   CHECK_EQ(lhs->ancestors.size(), rhs->ancestors.size());
@@ -175,7 +165,7 @@ bool ChainMerger::ShouldMerge(const ChainIt& lhs, const ChainIt& rhs) const {
     }
     return true;
   };
-  return IsAncestor(lhs, rhs) || HasIdenticalAncestors(lhs, rhs);
+  return HasIdenticalAncestors(lhs, rhs);
 }
 
 bool IsForwardOnlyTaskNode(TaskNode* node) {
