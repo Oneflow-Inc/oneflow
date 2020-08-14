@@ -51,9 +51,9 @@ class ScalarBinaryOp:
     @classmethod
     def Version_6(cls, ctx, node, **kwargs):
         scalar_val = (
-            node.get_attr_value("int_operand")
-            if node.get_attr_value("has_int_operand")
-            else node.get_attr_value("float_operand")
+            node.attr["int_operand"]
+            if node.attr["has_int_operand"]
+            else node.attr["float_operand"]
         )
         np_dtype = util.Onnx2NumpyDtype(ctx.get_dtype(node.input[0]))
         scalar_node = ctx.MakeConst(
@@ -73,7 +73,7 @@ class AddN:
 class BiasAdd(common.BroadcastOp):
     @classmethod
     def Version_6(cls, ctx, node, **kwargs):
-        axis = node.get_attr_value("axis")
+        axis = node.attr["axis"]
         unsqueeze_axes = []
         x_rank = len(ctx.get_shape(node.input[0]))
         for i in range(x_rank):
@@ -252,9 +252,9 @@ class ClipOps:
         # relu6 = min(max(features, 0), 6)
         node.type = "Clip"
         if min_val is not None:
-            node.set_attr("min", float(min_val))
+            node.attr["min"] = float(min_val)
         if max_val is not None:
-            node.set_attr("max", float(max_val))
+            node.attr["max"] = float(max_val)
 
     @classmethod
     def Version_11(cls, ctx, node, min_val=None, max_val=None, **kwargs):
@@ -284,20 +284,20 @@ class ClipOps:
 class ClipByValueOp(ClipOps):
     @classmethod
     def Version_1(cls, ctx, node, **kwargs):
-        min_val = node.get_attr_value("floating_min", None) or node.get_attr_value(
+        min_val = node.attr.get("floating_min", None) or node.attr.get(
             "integral_min", None
         )
-        max_val = node.get_attr_value("floating_max", None) or node.get_attr_value(
+        max_val = node.attr.get("floating_max", None) or node.attr.get(
             "integral_max", None
         )
         super().Version_1(ctx, node, min_val, max_val)
 
     @classmethod
     def Version_11(cls, ctx, node, **kwargs):
-        min_val = node.get_attr_value("floating_min", None) or node.get_attr_value(
+        min_val = node.attr.get("floating_min", None) or node.attr.get(
             "integral_min", None
         )
-        max_val = node.get_attr_value("floating_max", None) or node.get_attr_value(
+        max_val = node.attr.get("floating_max", None) or node.attr.get(
             "integral_max", None
         )
         super().Version_11(ctx, node, min_val, max_val)
@@ -310,7 +310,7 @@ class Softmax:
         # T output = Softmax(T logits). The axis softmax would be performed on is always on -1.
         # T output = Softmax(T input, @int axis). Default axis is 1.
         logits_rank = len(ctx.get_shape(node.input[0]))
-        node.set_attr("axis", logits_rank - 1)
+        node.attr["axis"] = logits_rank - 1
 
     @classmethod
     def Version_11(cls, ctx, node, **kwargs):
@@ -409,12 +409,8 @@ class Sign:
 class MatMul:
     @classmethod
     def Version_1(cls, ctx, node, **kwargs):
-        attrs = ["transpose_a", "transpose_b"]
-        attrs_val = [node.get_attr(attr) for attr in attrs]
-        attrs_val = [0 if val is None else val.i for val in attrs_val]
-
-        transpose_a = node.get_attr_value("transpose_a")
-        transpose_b = node.get_attr_value("transpose_b")
+        transpose_a = node.attr.get("transpose_a", 0)
+        transpose_b = node.attr.get("transpose_b", 0)
 
         if transpose_a != 0:
             shape = ctx.get_shape(node.input[0])
@@ -436,8 +432,8 @@ class MatMul:
 
         unsupported = ["a_is_sparse", "b_is_sparse"]
         for i in unsupported:
-            val = node.get_attr(i)
-            if val is not None and val.i != 0:
+            val = node.attr.get(i, 0)
+            if val != 0:
                 raise ValueError(node.type + " attribute " + i + " is not supported")
 
 

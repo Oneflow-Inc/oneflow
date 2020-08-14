@@ -66,12 +66,15 @@ class Node(object):
         self.graph = graph
         self._input = list(node.input)
         self._output = list(node.output)
-        self._attr = {}
+        self.attr = {}
 
         graph.set_node_by_name(self)
         # dict to original attributes
         for a in node.attribute:
-            self._attr[a.name] = a
+            attr_val = helper.get_attribute_value(a)
+            if isinstance(attr_val, bytes):
+                attr_val = attr_val.decode("utf-8")
+            self.attr[a.name] = attr_val
         self._skip_conversion = skip_conversion
 
     @property
@@ -112,10 +115,6 @@ class Node(object):
         return val
 
     @property
-    def attr(self):
-        return self._attr
-
-    @property
     def attr_onnx(self):
         """Return onnx valid attributes"""
         schema = get_schema(self.type, self.graph.opset, self.domain)
@@ -127,9 +126,9 @@ class Node(object):
                 self.type,
             )
         onnx_attrs = {}
-        for a in self._attr.values():
-            if schema is None or schema.has_attribute(a.name):
-                onnx_attrs[a.name] = a
+        for name, attr in self.attr.items():
+            if schema is None or schema.has_attribute(name):
+                onnx_attrs[name] = helper.make_attribute(name, attr)
         return onnx_attrs
 
     @property
@@ -163,17 +162,17 @@ class Node(object):
     @property
     def data_format(self):
         """Return data_format."""
-        return self.get_attr_str("data_format")
+        return self.attr["data_format"]
 
     @data_format.setter
     def data_format(self, val):
         """Set data_format."""
-        self.set_attr("data_format", val)
+        self.attr["data_format"] = val
 
     def is_nhwc(self):
         """Return True if node is in NHWC format."""
         if self.type == "BatchNormalization":
-            axis = self.get_attr_value("axis")
+            axis = self.attr["axis"]
             return axis == -1 or axis == len(self.output_shapes[0]) - 1
         return self.data_format in ["NHWC", "channels_last"]
 
@@ -228,43 +227,6 @@ class Node(object):
 
         return "\n".join(lines)
 
-    def get_attr(self, name, default=None):
-        """Get raw attribute value."""
-        attr = self.attr.get(name, default)
-        return attr
-
-    def get_attr_value(self, name, default=None):
-        attr = self.get_attr(name)
-        if attr:
-            return helper.get_attribute_value(attr)
-        return default
-
-    def get_attr_int(self, name):
-        """Get attribute value as int."""
-        attr_int = self.get_attr_value(name)
-        util.MakeSure(
-            attr_int is not None and isinstance(attr_int, int),
-            "attribute %s is None",
-            name,
-        )
-        return attr_int
-
-    def get_attr_str(self, name, encoding="utf-8"):
-        """Get attribute value as string."""
-        attr_str = self.get_attr_value(name)
-        util.MakeSure(
-            attr_str is not None and isinstance(attr_str, bytes),
-            "attribute %s is None",
-            name,
-        )
-        return attr_str.decode(encoding)
-
-    def set_attr(self, name, value):
-        self.attr[name] = helper.make_attribute(name, value)
-
-    def set_attr_onnx(self, value):
-        self.attr[value.name] = value
-
     # If some Node is created as onnx_node, then we don't need convert it
     @property
     def skip_conversion(self):
@@ -302,9 +264,9 @@ class Node(object):
         """
         if not self.is_const():
             raise ValueError("get tensor value: {} must be Const".format(self.name))
-        t = self.get_attr("value")
+        t = self.attr.get("value", None)
         if t:
-            t = numpy_helper.to_array(helper.get_attribute_value(t))
+            t = numpy_helper.to_array(t)
         else:
             self._GraphCheck()
             t = self.graph.get_saved_tensor(self)
@@ -331,7 +293,7 @@ class Node(object):
         """
         if not self.is_const():
             raise ValueError("set tensor value: {} must be Const".format(self.name))
-        t = self.get_attr("value")
+        t = self.attr.get("value")
         if t is not None:
             t = helper.get_attribute_value(t)
             del t
@@ -340,7 +302,7 @@ class Node(object):
         else:
             tensor_name = self.output[0]
         onnx_tensor = util.TensorProtoFromNumpy(new_val, tensor_name)
-        self.set_attr("value", onnx_tensor)
+        self.attr["value"] = onnx_tensor
         # track shapes in _output_shapes
         self._GraphCheck()
         self.graph.set_shape(onnx_tensor.name, onnx_tensor.dims)
@@ -578,13 +540,9 @@ class Graph(object):
             outputs = [name + ":" + str(i) for i in range(output_count)]
 
         output_count = len(outputs)
-        raw_attr = {}
         onnx_attrs = []
         for a, v in attr.items():
-            if isinstance(v, AttributeProto):
-                onnx_attrs.append(v)
-            else:
-                raw_attr[a] = v
+            assert not isinstance(v, AttributeProto)
 
         n = self.get_node_by_name(name)
         util.MakeSure(n is None, "name %s already exists in node: \n%s", name, n)
@@ -595,7 +553,7 @@ class Graph(object):
             )
 
         onnx_node = helper.make_node(
-            op_type, inputs, outputs, name=name, domain=domain, **raw_attr
+            op_type, inputs, outputs, name=name, domain=domain, **attr
         )
 
         if op_type in ["If", "Loop", "Scan"]:

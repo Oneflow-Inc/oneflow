@@ -96,7 +96,7 @@ class LoopOptimizer(GraphOptimizerBase):
                 body_outputs = body_graph.outputs
                 body_outputs[body_outputs.index(node.output[0])] = new_output
                 # 3 insert new node in parent graph
-                ori_perm = list(trans.get_attr("perm").ints)
+                ori_perm = trans.attr["perm"]
                 new_perm = [0] + [
                     i + 1 for i in ori_perm
                 ]  # body output's rank is m > rank of loop's output is m+1

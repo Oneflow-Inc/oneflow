@@ -35,29 +35,21 @@ from .optimizer_base import GraphOptimizerBase
 
 
 def IsNhwcTranspose(transpose_node):
-    perm_attr = transpose_node.get_attr("perm")
-    return (
-        transpose_node.type == "Transpose"
-        and perm_attr
-        and perm_attr.ints == NCHW_TO_NHWC
-    )
+    perm_attr = transpose_node.attr.get("perm")
+    return transpose_node.type == "Transpose" and perm_attr == NCHW_TO_NHWC
 
 
 def IsNchwTranspose(transpose_node):
-    perm_attr = transpose_node.get_attr("perm")
-    return (
-        transpose_node.type == "Transpose"
-        and perm_attr
-        and perm_attr.ints == NHWC_TO_NCHW
-    )
+    perm_attr = transpose_node.attr.get("perm")
+    return transpose_node.type == "Transpose" and perm_attr == NHWC_TO_NCHW
 
 
 def IsUselessTranspose(transpose_node):
-    perm_attr = transpose_node.get_attr("perm")
+    perm_attr = transpose_node.attr.get("perm")
     return (
         transpose_node.type == "Transpose"
         and perm_attr
-        and perm_attr.ints == list(range(len(perm_attr.ints)))
+        and perm_attr == list(range(len(perm_attr)))
     )
 
 
@@ -177,8 +169,8 @@ class TransposeOptimizer(GraphOptimizerBase):
         graph = self._g
         input_transposes_map = defaultdict(list)
         for node in graph.get_nodes():
-            if node.type == "Transpose" and node.get_attr("perm"):
-                key = (node.input[0], str(node.get_attr("perm").ints))
+            if node.type == "Transpose" and node.attr.get("perm"):
+                key = (node.input[0], str(node.attr["perm"]))
                 input_transposes_map[key].append(node)
 
         for transposes in input_transposes_map.values():
@@ -341,7 +333,7 @@ class TransposeOptimizer(GraphOptimizerBase):
         # move transpose into branches to let Transposes can be "handled" in each branch
         for n in out_nodes:
             branch_trans = self._g.MakeNode(
-                "Transpose", [trans.input[0]], attr=trans.attr_onnx
+                "Transpose", [trans.input[0]], attr=trans.attr
             )
             self._g.ReplaceAllInputs(n, trans.output[0], branch_trans.output[0])
 
@@ -497,7 +489,7 @@ class TransposeOptimizer(GraphOptimizerBase):
                 target_node.set_tensor_value(target_val)
 
                 conv_inputs = [t_p.input[0], t_p.input[1], node.input[1]]
-                conv_node = self._g.MakeNode(t_p.type, conv_inputs, attr=t_p.attr_onnx)
+                conv_node = self._g.MakeNode(t_p.type, conv_inputs, attr=t_p.attr)
                 ops = self._g.get_nodes()
                 trans.input[0] = id_util.UniqueStr(conv_node.name)
                 self._g.ReplaceAllInputs(ops, node.output[0], trans.output[0])
@@ -578,17 +570,17 @@ class TransposeOptimizer(GraphOptimizerBase):
 
     def _ConcatHandler(self, trans, node):
         if self._HandleNodeHavingBranches(node):
-            perm = trans.get_attr_value("perm")
-            axis = node.get_attr_value("axis", 0)
+            perm = trans.attr["perm"]
+            axis = node.attr.get("axis", 0)
             new_axis = perm[axis]
-            node.set_attr("axis", new_axis)
+            node.attr["axis"] = new_axis
             return True
         return False
 
     def _SplitHandler(self, trans, node):
         # TODO(daquexian): need handle cases where Split node has more than 1 outputs.
         if self._HandleNodeHavingBranches(node):
-            node.set_attr("axis", 1)
+            node.attr["axis"] = 1
             return True
         return False
 
@@ -613,7 +605,7 @@ class TransposeOptimizer(GraphOptimizerBase):
         if not self._NodesHasSingleConsumerNode([trans]):
             return False
 
-        if node.get_attr("axes"):
+        if "axes" in node.attr:
             # switch tran and squeeze
             # 1 switch
             ops = self._g.get_nodes()
@@ -621,13 +613,13 @@ class TransposeOptimizer(GraphOptimizerBase):
             node.input[0] = trans.input[0]
             trans.input[0] = node.output[0]
             # 2 correct attr of nodes
-            squeeze_axes = sorted(list(node.get_attr("axes").ints))
-            trans_perm = list(trans.get_attr("perm").ints)
+            squeeze_axes = sorted(node.attr["axes"])
+            trans_perm = trans.attr["perm"]
             new_perm, new_squeeze_axes = _CalculateNewAttr(
                 ori_perm=trans_perm, ori_squeeze_axes=squeeze_axes
             )
-            trans.set_attr("perm", new_perm)
-            node.set_attr("axes", new_squeeze_axes)
+            trans.attr["perm"] = new_perm
+            node.attr["axes"] = new_squeeze_axes
             # 3 set shape
             squeeze_shape = self._g.get_shape(node.output[0])
             self._g.set_shape(trans.output[0], squeeze_shape)
@@ -652,9 +644,7 @@ class TransposeOptimizer(GraphOptimizerBase):
     def _PadHandler(self, trans, node):
         # [N-start, H-start, W-start, C-start, N-end, H-end,  W-end, C-end]
         if self._g.opset < 11:
-            pads = node.get_attr(
-                "pads"
-            ).ints  # [x1_begin, x2_begin...x1_end, x2_end,...]
+            pads = node.attr["pads"]  # [x1_begin, x2_begin...x1_end, x2_end,...]
             # NHWC->NCHW
             new_pads = [
                 pads[0],
@@ -666,7 +656,7 @@ class TransposeOptimizer(GraphOptimizerBase):
                 pads[5],
                 pads[6],
             ]
-            node.set_attr("pads", new_pads)
+            node.attr["pads"] = new_pads
             return self._SwitchTransposeAndNode(node, trans)
         if node.inputs[1].is_const():
             pads = node.inputs[1].get_tensor_value()
@@ -689,22 +679,22 @@ class TransposeOptimizer(GraphOptimizerBase):
         return False
 
     def _ReducemeanHandler(self, trans, node):
-        axes = node.get_attr("axes").ints
-        keepdims = node.get_attr("keepdims")
+        axes = node.attr["axes"]
+        keepdims = node.attr.get("keepdims", 1)
         # make sure keepdims is 1, then we can do the swap, otherwise, please don't, because
         # once keepdims is not set, original dims are lost, so transpose back won't work well.
         # by default, if keepdims is not specified, it is 1
-        if axes == [1, 2] and ((keepdims and keepdims.i == 1) or (not keepdims)):
-            node.set_attr("axes", [2, 3])
+        if axes == [1, 2] and keepdims == 1:
+            node.attr["axes"] = [2, 3]
             return self._SwitchTransposeAndNode(node, trans)
         return False
 
     def _SliceHandler(self, trans, node):
         axes = None
         if self._g.opset < 10:
-            axes = node.get_attr("axes").ints
+            axes = node.attr["axes"]
             if axes == [0, 1, 2, 3]:
-                node.set_attr("axes", NCHW_TO_NHWC)
+                node.attr["axes"] = NCHW_TO_NHWC
                 return self._SwitchTransposeAndNode(node, trans)
         else:  # in opset 10, axes is input instead of an attribute.
             if len(node.inputs) >= 4 and node.inputs[3].is_const():
@@ -738,7 +728,7 @@ class TransposeOptimizer(GraphOptimizerBase):
         self._g.RemoveNode(node.name)
         shape_node = self._g.MakeNode("Shape", [trans.input[0]])
         const_node = self._g.MakeConst(
-            id_util.UniqueStr("Const"), np.array(trans.get_attr("perm").ints)
+            id_util.UniqueStr("Const"), np.array(trans.attr["perm"])
         )
         gather_node = self._g.MakeNode(
             "Gather", [shape_node.output[0], const_node.output[0]], outputs=node.output
