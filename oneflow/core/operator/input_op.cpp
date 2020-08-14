@@ -23,7 +23,9 @@ namespace oneflow {
 void InputOp::InitFromOpConf() {
   CHECK(op_conf().has_input_conf());
   if (op_conf().input_conf().has_tick()) { EnrollInputBn("tick", false); }
-  EnrollOutputBn("out", false);
+  OutputBlobModifier* modifier = EnrollOutputBn("out", false);
+  modifier->set_is_mutable(true);
+  modifier->set_header_infered_before_compute(false);
 }
 
 const PbMessage& InputOp::GetCustomizedConf() const { return op_conf().input_conf(); }

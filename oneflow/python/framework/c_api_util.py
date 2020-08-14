@@ -213,6 +213,14 @@ def InferOpConf(op_conf_proto, upstream_signature):
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 
+def IsInterfaceOpConf(op_conf):
+    op_type_field = op_conf.WhichOneof("op_type")
+    field_number = op_conf_util.OperatorConf.DESCRIPTOR.fields_by_name[
+        op_type_field
+    ].number
+    return oneflow_internal.IsInterfaceOpTypeCase(field_number)
+
+
 def GetOpParallelSymbolId(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
     symbol_id, error_str = oneflow_internal.GetOpParallelSymbolId(serialized_op_conf)
