@@ -21,6 +21,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace py = pybind11;
+
 template<typename T>
 class PyKernel : public user_op::OpKernel {
  public:

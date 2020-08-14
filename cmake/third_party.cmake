@@ -147,7 +147,7 @@ set(oneflow_third_party_dependencies
   half_copy_headers_to_destination
   re2
   json_copy_headers_to_destination
-  pybind11
+  pybind11_copy_headers_to_destination
 )
 
 
