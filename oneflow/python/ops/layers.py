@@ -49,8 +49,8 @@ def dense(
         activation (Optional[remote_blob_util.BlobDef], optional):  Activation function. Defaults to None.
         use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
         kernel_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
-        bias_initializer (Optional[op_conf_util.InitializerConf], optional): [description]. Defaults to None.
-        kernel_regularizer (Optional[op_conf_util.RegularizerConf], optional): [description]. Defaults to None.
+        bias_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
+        kernel_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer function applied to the kernel weights matrix. Defaults to None.
         bias_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the bias vector. Defaults to None.
         trainable (bool, optional): A boolean specifies whether to train the variables. Defaults to True.
         name (Optional[str], optional): This layer's name. Defaults to None.
@@ -646,7 +646,7 @@ def layer_norm(
         begin_norm_axis (int, optional): An integer specifies which axis to normalize at first. Defaults to 1.
         begin_params_axis (int, optional):  An integer specifies which axis params at . Defaults to -1.
         epsilon (float, optional): A small float is added to avoid division by zero. Defaults to 1e-5.
-        name (Optional[str], optional):  This layer's name. Defaults to None.
+        name (Optional[str], optional): This layer's name. Defaults to None.
 
     Returns:
         remote_blob_util.BlobDef: A normalized `Blob` with same shape of input.
@@ -1015,7 +1015,7 @@ def upsample(
         ValueError: data_format must be "NHWC" or "NCHW"
 
     Returns:
-        [type]: remote_blob_util.BlobDef:  A `Blob` with new shape of input. if  input size is(2,2),then the  new shape is [N, C, 2H, 2W].
+        [type]: remote_blob_util.BlobDef:  A `Blob` with new shape of input. if input size is(2,2),then the new shape is [N, C, 2H, 2W].
     """
     if isinstance(size, int):
         height_scale = size
