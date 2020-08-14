@@ -170,7 +170,7 @@ bool ChainMerger::ShouldMerge(const ChainIt& lhs, const ChainIt& rhs) const {
   };
   auto HasIdenticalAncestors = [bitset_num](const ChainIt& a, const ChainIt& b) {
     for (int64_t i = 0; i < bitset_num; ++i) {
-      if (a->node_ids.at(i) != b->node_ids.at(i)) { return false; }
+      if (a->ancestors.at(i) != b->ancestors.at(i)) { return false; }
     }
     return true;
   };
