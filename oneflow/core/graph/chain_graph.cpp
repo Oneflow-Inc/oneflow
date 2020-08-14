@@ -143,7 +143,7 @@ void ChainMerger::MergeBitset(std::vector<std::bitset<BITSET_SIZE>>* a,
                               const std::vector<std::bitset<BITSET_SIZE>>* b) {
   CHECK_EQ(a->size(), b->size());
   const int64_t bitset_num = a->size();
-  for (int64_t i = 0; i < bitset_num; ++i) { a->at(i) &= b->at(i); }
+  for (int64_t i = 0; i < bitset_num; ++i) { a->at(i) |= b->at(i); }
 }
 
 bool ChainMerger::ShouldMerge(const ChainIt& lhs, const ChainIt& rhs) const {
