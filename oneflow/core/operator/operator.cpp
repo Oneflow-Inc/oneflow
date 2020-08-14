@@ -296,6 +296,7 @@ std::string DebugString4MirroredHint(
 Maybe<void> Operator::InferMirroredSignature(
     std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
     bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc) {
+  // We can only have one mirrored signature
   HashSet<bool> is_mirrored_parallel_view_values;
   for (const auto& ibn : input_bns()) {
     const auto& infer_hint = *JUST(MirroredSigInferHint4Ibn(ibn));
@@ -310,12 +311,14 @@ Maybe<void> Operator::InferMirroredSignature(
   if (is_mirrored_parallel_view_values.size() == 1) {
     is_mirrored_parallel_view_conf = *is_mirrored_parallel_view_values.begin();
   }
+  // check number of devices
   if (is_mirrored_parallel_view_conf) {
     for (const auto& ibn : input_bns()) {
       const auto& infer_hint = *JUST(MirroredSigInferHint4Ibn(ibn));
       CHECK_EQ_OR_RETURN(infer_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
     }
   }
+  // Mark all intput and output blob as mirrored parallel 
   const auto SetIsMirroredParallel = [&](const std::string& bn_in_op) {
     if (is_mirrored_parallel_view_conf) {
       MutOptMirroredParallel(bn_in_op)->mutable_mirrored_parallel();
