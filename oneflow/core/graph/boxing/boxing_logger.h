@@ -26,9 +26,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class BoxingLogger;
-std::unique_ptr<BoxingLogger> CreateBoxingLogger();
-
 class BoxingLogger {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingLogger);
@@ -50,19 +47,13 @@ class CsvBoxingLogger final : public BoxingLogger {
   OF_DISALLOW_COPY_AND_MOVE(CsvBoxingLogger);
   CsvBoxingLogger() = delete;
   CsvBoxingLogger(std::string path);
-  ~CsvBoxingLogger() override {
-    CHECK_NOTNULL(log_stream_);
-    log_stream_->Flush();
-  };
+  ~CsvBoxingLogger() override;
   void Log(const SubTskGphBuilderStatus& status) override;
+  std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status);
 
  private:
   std::unique_ptr<TeePersistentLogStream> log_stream_;
 };
-
-#define OF_BOXING_LOGGER_CSV_COLNUM_NAME_FIELD                        \
-  "src_op_name,src_parallel_conf,src_sbp_conf,lbi,logical_blob_desc," \
-  "boxing_type,dst_op_name,dst_parallel_conf,dst_sbp_conf\n"
 
 }  // namespace oneflow
 

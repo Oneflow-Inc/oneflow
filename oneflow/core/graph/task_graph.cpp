@@ -142,6 +142,15 @@ bool IsInplaceAllowed(
   return true;
 }
 
+std::unique_ptr<BoxingLogger> CreateBoxingLogger() {
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    return std::unique_ptr<BoxingLogger>(
+        new CsvBoxingLogger(StrCat("boxing/logger/", GlobalJobDesc().job_id()) + ".csv"));
+  } else {
+    return std::unique_ptr<BoxingLogger>(new NullBoxingLogger());
+  }
+}
+
 }  // namespace
 
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
@@ -468,7 +477,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     auto status = CHECK_JUST(sub_tsk_gph_builder_->Build(
         sub_tsk_gph_builder_ctx_.get(), src_nodes, sorted_dst_comp_tasks, *src_parallel_desc,
         *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
-    CHECK_NOTNULL(boxing_logger_);
     boxing_logger_->Log(*status);
   }
 }
