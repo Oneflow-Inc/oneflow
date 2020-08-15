@@ -15,6 +15,7 @@ include(cocoapi)
 include(half)
 include(re2)
 include(json)
+include(pybind11)
 
 if (WITH_XLA)
   include(tensorflow)
@@ -95,10 +96,6 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
-add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/pybind11/src/pybind11)
-#target_link_libraries(oneflow_internal PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/pybind11/src/pybind11::embed)
-#target_link_libraries(oneflow_internal PRIVATE embed)
-
 set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${GLOG_STATIC_LIBRARIES}
@@ -113,7 +110,6 @@ set(oneflow_third_party_libs
     ${COCOAPI_STATIC_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
     ${ZLIB_STATIC_LIBRARIES}
-    ${Python_LIBRARIES}
     pybind11::embed
 )
 
@@ -170,7 +166,6 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
     ${JSON_INCLUDE_DIR}
-    ${Python_INCLUDE_DIRS}
 )
 
 if (NOT WITH_XLA)
