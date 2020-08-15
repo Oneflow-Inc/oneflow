@@ -46,7 +46,7 @@ std::string SerializeParallelDesc(const ParallelDesc& parallel_desc) {
   std::string serialized_parallel_desc;
   serialized_parallel_desc += "device_type: " + DeviceType_Name(parallel_desc.device_type()) + " ";
   serialized_parallel_desc += "device_name: ";
-  for(int64_t machine_id : parallel_desc.sorted_machine_ids()) {
+  for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
     serialized_parallel_desc += std::to_string(machine_id) + ": ";
     int64_t min_id = parallel_desc.sorted_dev_phy_ids(machine_id).front();
     int64_t max_id = parallel_desc.sorted_dev_phy_ids(machine_id).back();
@@ -66,7 +66,6 @@ std::string GetBlobInfo4LogicalBlobDesc(const BlobDesc& logical_blob_desc) {
   return blob_desc_info;
 }
 
-
 }  // namespace
 
 CsvBoxingLogger::CsvBoxingLogger(std::string path) {
@@ -74,9 +73,9 @@ CsvBoxingLogger::CsvBoxingLogger(std::string path) {
   log_stream_ << OF_BOXING_LOGGER_CSV_COLNUM_NAME_FIELD;
 }
 
- CsvBoxingLogger::~CsvBoxingLogger() {
-    CHECK_NOTNULL(log_stream_);
-    log_stream_->Flush();
+CsvBoxingLogger::~CsvBoxingLogger() {
+  CHECK_NOTNULL(log_stream_);
+  log_stream_->Flush();
 }
 
 void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status) {
@@ -95,7 +94,7 @@ std::string CsvBoxingLogger::SubTskGphBuilderStatusToCsvLine(const SubTskGphBuil
   } else {
     serialized_status += status.builder_name() + ":" + status.comment() + ",";
   }
-  serialized_status += status.dst_op_name()+ ",";
+  serialized_status += status.dst_op_name() + ",";
   serialized_status += SerializeParallelDesc(status.dst_parallel_desc()) + ",";
   serialized_status += SbpParallelToString(status.dst_sbp_parallel()) + "\n";
   return serialized_status;

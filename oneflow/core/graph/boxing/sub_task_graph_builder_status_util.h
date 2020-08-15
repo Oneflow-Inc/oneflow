@@ -56,7 +56,7 @@ class SubTskGphBuilderStatus final {
 
   // Getters
   const std::string& src_op_name() const { return src_op_name_; }
-  const std::string& dst_op_name()  const { return dst_op_name_; }
+  const std::string& dst_op_name() const { return dst_op_name_; }
   const ParallelDesc& src_parallel_desc() const { return src_parallel_desc_; }
   const ParallelDesc& dst_parallel_desc() const { return dst_parallel_desc_; }
   const SbpParallel& src_sbp_parallel() const { return src_sbp_parallel_; }
