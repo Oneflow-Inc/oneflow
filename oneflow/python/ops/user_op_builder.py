@@ -105,6 +105,27 @@ class UserOpModule(object):
 
 @oneflow_export("user_op_builder")
 def api_user_op_builder(op_name):
+    r"""Build a wrapper of user op.
+
+    For instance::
+        def myargmax(
+            input: remote_blob_util.BlobDef) -> remote_blob_util.BlobDef:
+            return (
+            flow.user_op_builder("myargmax")
+            .Op("argmax")
+            .Input("in", [input])
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+            ) 
+        
+    Args:
+        op_name (str): name of new user op
+
+    Returns:
+        UserOpConfBuilder: `UserOpConfBuilder` object used to build a wrapper of user op.
+    """
     api = enable_if.unique([lazy_user_op_builder, eager_user_op_builder])
     return api(op_name)
 
@@ -179,6 +200,12 @@ class UserOpConfBuilder(object):
         return self
 
     def Build(self):
+        r"""Build op when in/output and other attribute set up.
+        
+        Returns:
+            self
+
+        """
         return self.CheckAndComplete().user_op_
 
     def OpName(self, op_name):
@@ -193,10 +220,27 @@ class UserOpConfBuilder(object):
         return self
 
     def Op(self, op_type_name):
+        r"""set typename of op
+
+        Args:
+            op_type_name (string): op type name
+
+        Returns:
+            self
+        """
         self.user_op_.op_conf_.user_conf.op_type_name = op_type_name
         return self
 
     def Input(self, input_name, input_blob_list):
+        r"""Set input blob of op
+       
+        Args:
+            input_name (str): input name of blob
+            input_blob_list : list of blobs
+
+        Returns:
+            self
+        """
         assert isinstance(input_blob_list, (tuple, list))
         input_conf = self.user_op_.op_conf_.user_conf.input
         input_conf[input_name].ClearField("s")
@@ -215,6 +259,15 @@ class UserOpConfBuilder(object):
         return self
 
     def Output(self, output_name, num=1):
+        r"""Set output blob of op
+
+        Args:
+            output_name (str): name of output blob
+            num (int, optional):  Defaults to 1.
+
+        Returns:
+            self
+        """
         assert isinstance(num, int) and num >= 1
         out_lbns = []
         for i in range(num):
@@ -225,13 +278,26 @@ class UserOpConfBuilder(object):
         return self
 
     def Attr(self, attr_name, attr_value, attr_type_name=None):
+        r"""Set value of op's attribute.
+
+        Args:
+            attr_name (str): attribute name of op
+            attr_value (Any): attribute value of op
+
+        Raises:
+            ValueError: raised when value is not idential to op's attribute type.
+
+        Returns:
+            [type]: [description]
+        """
         if attr_type_name != None:
             print(
                 """WARNING: Argument 'attr_type_name' of UserOpConfBuilder.Attr has been deprecated. Please remove it.
-For instance:
-        -     .Attr("out_num", out_num, "AttrTypeInt64")
-        +     .Attr("out_num", out_num)
-                """
+            
+            For instance:
+                -     .Attr("out_num", out_num, "AttrTypeInt64")
+                +     .Attr("out_num", out_num)
+                        """
             )
             print(traceback.format_stack()[-2])
 
