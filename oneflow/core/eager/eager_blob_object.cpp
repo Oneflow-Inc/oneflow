@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/eager/blob_object.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/to_string.h"
@@ -21,12 +21,12 @@ limitations under the License.
 namespace oneflow {
 namespace eager {
 
-Maybe<void> BlobObject::TryInitBlob() {
+Maybe<void> EagerBlobObject::TryInitBlob() {
   if (!blob_) { JUST(InitBlob()); }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BlobObject::InitBlob() {
+Maybe<void> EagerBlobObject::InitBlob() {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
   rt_blob_desc_.reset(new RtBlobDesc(blob_desc_));
   {
@@ -40,7 +40,8 @@ Maybe<void> BlobObject::InitBlob() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BlobObject::CheckMemCase(const ParallelDesc& parallel_desc, int64_t machine_id) const {
+Maybe<void> EagerBlobObject::CheckMemCase(const ParallelDesc& parallel_desc,
+                                          int64_t machine_id) const {
   CHECK_OR_RETURN(parallel_desc.HasMachineId(machine_id))
       << "ParallelDesc does not contain machine_id: " << machine_id;
   const char* device_tag = JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
@@ -60,7 +61,7 @@ Maybe<void> BlobObject::CheckMemCase(const ParallelDesc& parallel_desc, int64_t 
   return Maybe<void>::Ok();
 }
 
-void BlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
+void EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   vm::Allocator* allocator = device_ctx->mut_allocator();
   CHECK_NOTNULL(allocator);
   Blob* blob = mut_blob();
