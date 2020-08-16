@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/vm/mem_buffer_object.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/dss/flat_msg_view.h"
 
 namespace oneflow {
 namespace vm {

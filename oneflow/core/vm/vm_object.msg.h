@@ -17,8 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_MIRRORED_OBJECT_MSG_H_
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/object_msg/flat_msg.h"
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/dss/flat_msg.h"
+#include "oneflow/core/dss/object_msg.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/mirrored_object_id.msg.h"
 #include "oneflow/core/vm/stream_desc.msg.h"

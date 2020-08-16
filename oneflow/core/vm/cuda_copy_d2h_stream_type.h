@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_CUDA_COPY_D2H_STREAM_TYPE_H_
 #define ONEFLOW_CORE_VM_CUDA_COPY_D2H_STREAM_TYPE_H_
 
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/dss/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"

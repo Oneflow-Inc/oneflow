@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_CALLBACK_MSG_H_
 
 #include <functional>
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/dss/object_msg.h"
 
 namespace oneflow {
 

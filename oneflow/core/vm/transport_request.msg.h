@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_TRANSPORT_REQUEST_H_
 #define ONEFLOW_CORE_VM_TRANSPORT_REQUEST_H_
 
-#include "oneflow/core/object_msg/flat_msg.h"
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/dss/flat_msg.h"
+#include "oneflow/core/dss/object_msg.h"
 
 namespace oneflow {
 namespace vm {

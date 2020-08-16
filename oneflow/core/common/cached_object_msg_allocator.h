@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <mutex>
 #include <thread>
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/dss/object_msg.h"
 
 namespace oneflow {
 

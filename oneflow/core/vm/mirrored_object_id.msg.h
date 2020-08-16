@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID_MSG_H_
 #define ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID_MSG_H_
 
-#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/dss/flat_msg.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/instruction.pb.h"
 

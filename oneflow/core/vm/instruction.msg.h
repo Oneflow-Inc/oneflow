@@ -19,8 +19,8 @@ limitations under the License.
 #include <cstring>
 #include <mutex>
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/object_msg/flat_msg.h"
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/dss/flat_msg.h"
+#include "oneflow/core/dss/object_msg.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/vm_object.msg.h"
 #include "oneflow/core/vm/stream_type.h"

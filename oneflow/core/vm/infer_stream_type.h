@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_INFER_STREAM_TYPE_H_
 
 #include <glog/logging.h>
-#include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/dss/object_msg.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
