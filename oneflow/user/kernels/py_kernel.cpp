@@ -19,9 +19,9 @@ limitations under the License.
 #include "pybind11/numpy.h"
 #include "pybind11/stl.h"
 
-namespace oneflow {
-
 namespace py = pybind11;
+
+namespace oneflow {
 
 template<typename T>
 class PyKernel : public user_op::OpKernel {
@@ -42,8 +42,8 @@ class PyKernel : public user_op::OpKernel {
 
     // TODO(strint) : compute forward with py
     py::scoped_interpreter guard{};
-    auto in_array = py : array_t<T>(n, in_dptrs);
-    py::moudle py_kernel = py::module::import("pyk_sigmoid");
+    auto in_array = py::array_t<T>(n, in_dptrs);
+    py::module py_kernel = py::module::import("pyk_sigmoid");
     py::object result = py_kernel.attr("forward")(in_array);
     auto result_v = result.cast<std::vector<T>>();
     for (int i = 0; i < n; ++i) { out_dptr[i] = result_v.at(i); }

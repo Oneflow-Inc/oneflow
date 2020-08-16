@@ -309,8 +309,6 @@ if (BUILD_CUDA)
 endif()
 if (USE_CXX11_ABI)
   file(APPEND ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=1')\n")
-else()
-  file(APPEND ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=0')\n")
 endif()
 
 add_dependencies(of_pyscript_copy of_protoobj)
