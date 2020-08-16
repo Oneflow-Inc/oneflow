@@ -112,8 +112,8 @@ std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type, const int6
 }
 
 template<typename T, typename CallbackT>
-Maybe<void> ForEachIbnAndBlobObject(vm::Instruction* instruction, const T& args,
-                                    const CallbackT& Callback) {
+Maybe<void> ForEachIbnAndEagerBlobObject(vm::Instruction* instruction, const T& args,
+                                         const CallbackT& Callback) {
   CHECK_EQ_OR_RETURN(args.ibn_size(), args.input_blob_size());
   FOR_RANGE(int, i, 0, args.ibn_size()) {
     const auto* operand_ibn = instruction->operand_type(args.ibn(i));
@@ -129,8 +129,8 @@ Maybe<void> ForEachIbnAndBlobObject(vm::Instruction* instruction, const T& args,
 }
 
 template<typename T, typename CallbackT>
-Maybe<void> ForEachObnAndBlobObject(vm::Instruction* instruction, const T& args,
-                                    const CallbackT& Callback) {
+Maybe<void> ForEachObnAndEagerBlobObject(vm::Instruction* instruction, const T& args,
+                                         const CallbackT& Callback) {
   CHECK_EQ_OR_RETURN(args.obn_size(), args.output_blob_size());
   FOR_RANGE(int, i, 0, args.obn_size()) {
     const auto* operand_obn = instruction->operand_type(args.obn(i));
@@ -160,7 +160,7 @@ Maybe<void> MakeBlobDesc4BnInOp(vm::Instruction* instruction, const T& args,
   const auto& obn2blob_desc = std::make_shared<HashMap<std::string, BlobDesc*>>();
   {
     HashSet<const BlobDesc*> out_blob_descs;
-    JUST(ForEachObnAndBlobObject(
+    JUST(ForEachObnAndEagerBlobObject(
         instruction, args,
         [&](const std::string& bn_in_op, EagerBlobObject* blob_object) -> Maybe<void> {
           auto* blob_desc = blob_object->mut_blob_desc();
@@ -170,7 +170,7 @@ Maybe<void> MakeBlobDesc4BnInOp(vm::Instruction* instruction, const T& args,
         }));
   }
   const auto& ibn2blob_desc = std::make_shared<HashMap<std::string, const BlobDesc*>>();
-  JUST(ForEachIbnAndBlobObject(
+  JUST(ForEachIbnAndEagerBlobObject(
       instruction, args,
       [&](const std::string& bn_in_op, const EagerBlobObject& blob_object) -> Maybe<void> {
         CHECK_OR_RETURN(ibn2blob_desc->emplace(bn_in_op, &blob_object.blob_desc()).second);
@@ -192,7 +192,7 @@ Maybe<void> MakeBlob4BnInOp(
     std::function<Blob*(const std::string&)>* Blob4BnInOp,
     const std::function<bool(const std::string&, const EagerBlobObject&)>& FilterOutBlob) {
   const auto& obn2blob = std::make_shared<HashMap<std::string, Blob*>>();
-  JUST(ForEachObnAndBlobObject(
+  JUST(ForEachObnAndEagerBlobObject(
       instruction, args,
       [&](const std::string& bn_in_op, EagerBlobObject* blob_object) -> Maybe<void> {
         if (!FilterOutBlob(bn_in_op, *blob_object)) { return Maybe<void>::Ok(); }
@@ -200,7 +200,7 @@ Maybe<void> MakeBlob4BnInOp(
         return Maybe<void>::Ok();
       }));
   const auto& ibn2blob = std::make_shared<HashMap<std::string, const Blob*>>();
-  JUST(ForEachIbnAndBlobObject(
+  JUST(ForEachIbnAndEagerBlobObject(
       instruction, args,
       [&](const std::string& bn_in_op, const EagerBlobObject& blob_object) -> Maybe<void> {
         CHECK_OR_RETURN(ibn2blob->emplace(bn_in_op, &blob_object.blob()).second);
@@ -260,7 +260,7 @@ Maybe<void> CheckBlobParallel(vm::Instruction* instruction, const T& args,
     return symbol_storage_ptr->GetPtr(symbol_id).get();
   };
 
-  JUST(ForEachObnAndBlobObject(
+  JUST(ForEachObnAndEagerBlobObject(
       instruction, args,
       [&](const std::string& bn_in_op, EagerBlobObject* blob_object) -> Maybe<void> {
         const auto* parallel_desc = JUST(ParallelDesc4BnInOp(bn_in_op));
@@ -269,7 +269,7 @@ Maybe<void> CheckBlobParallel(vm::Instruction* instruction, const T& args,
         return Maybe<void>::Ok();
       }));
 
-  JUST(ForEachIbnAndBlobObject(
+  JUST(ForEachIbnAndEagerBlobObject(
       instruction, args,
       [&](const std::string& bn_in_op, const EagerBlobObject& blob_object) -> Maybe<void> {
         const auto* parallel_desc = JUST(ParallelDesc4BnInOp(bn_in_op));
@@ -303,7 +303,7 @@ Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruc
   JUST(opkernel_obj->ResetOpAndKernel(*op_node_signature, &parallel_ctx, BlobDesc4BnInOp,
                                       instruction->parallel_desc().get()));
   JUST(CheckBlobParallel(instruction, args, op_node_signature));
-  JUST(ForEachObnAndBlobObject(
+  JUST(ForEachObnAndEagerBlobObject(
       instruction, args, [](const std::string& obn, EagerBlobObject* blob_object) -> Maybe<void> {
         return blob_object->TryInitBlob();
       }));
@@ -340,7 +340,7 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
   JUST(opkernel_obj->ResetKernel(*op_node_signature, &parallel_ctx, BlobDesc4BnInOp,
                                  instruction->parallel_desc().get()));
   JUST(CheckBlobParallel(instruction, args, op_node_signature));
-  JUST(ForEachObnAndBlobObject(
+  JUST(ForEachObnAndEagerBlobObject(
       instruction, args, [](const std::string& obn, EagerBlobObject* blob_object) -> Maybe<void> {
         return blob_object->TryInitBlob();
       }));
@@ -354,7 +354,7 @@ template<typename T>
 Maybe<void> OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instruction,
                             const T& args) {
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  JUST(ForEachObnAndBlobObject(
+  JUST(ForEachObnAndEagerBlobObject(
       instruction, args, [&](const std::string&, EagerBlobObject* blob_object) -> Maybe<void> {
         blob_object->TryAllocateBlobBodyMemory(device_ctx);
         return Maybe<void>::Ok();
@@ -379,7 +379,7 @@ Maybe<void> OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instr
 Maybe<void> OpKernelCompute(SystemOpKernelObject* opkernel_obj, vm::Instruction* instruction,
                             const StatelessCallOpKernelInstrOperand& args) {
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  JUST(ForEachObnAndBlobObject(
+  JUST(ForEachObnAndEagerBlobObject(
       instruction, args, [&](const std::string&, EagerBlobObject* blob_object) -> Maybe<void> {
         blob_object->TryAllocateBlobBodyMemory(device_ctx);
         return Maybe<void>::Ok();
@@ -543,7 +543,7 @@ void FeedOrFetchBlob(vm::Instruction* instruction) {
   FlatMsgView<T> args(instruction->instr_msg().operand());
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   auto* rw_mutext_blob = instruction->mut_operand_type(args->blob());
-  auto* blob_object = rw_mutext_blob->template Mut<EagerBlobObject>();
+  auto* blob_object = rw_mutext_blob->template Mut<BlobObject>();
   OfBlob of_blob(device_ctx, blob_object->mut_blob());
   int64_t of_blob_ptr = reinterpret_cast<int64_t>(&of_blob);
   Global<ForeignCallback>::Get()->OfBlobCall(args->unique_callback_id(), of_blob_ptr);
