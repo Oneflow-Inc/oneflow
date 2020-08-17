@@ -38,7 +38,7 @@ class Net(nn.Module):
         self.linear = nn.Linear(8, 4, True)
         self.loss = nn.CrossEntropyLoss(reduction="none")
         self.register_buffer("label", torch.tensor([0, 1], dtype=torch.int64))
-        # self.label = torch.tensor([3, 1], device=torch.device('cuda'))
+        self.label = torch.tensor([3, 1], device=torch.device("cuda"))
 
     def forward(self, x):
         x = self.bn(self.conv(x))
@@ -62,6 +62,13 @@ input_size = (2, 4, 5, 3)
 # job = torch2flow(model, func_config, input_size)
 @flow.global_function(func_config)
 def job(x=flow.FixedTensorDef(input_size)):
+    x += flow.get_variable(
+        name="trick",
+        shape=(1,),
+        dtype=flow.float,
+        initializer=flow.zeros_initializer(),
+    )
+
     y = flow.from_pytorch(model, x)
     flow.losses.add_loss(y)
     return y

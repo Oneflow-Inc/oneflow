@@ -23,11 +23,11 @@ class Gemm(BackendHandler):
     @classmethod
     def _common(cls, node, **kwargs):
         tensor_dict = kwargs["tensor_dict"]
-        x = tensor_dict[node.inputs[0]]
-        y = tensor_dict[node.inputs[1]]
+        x = tensor_dict[node.input_tensors[0]]
+        y = tensor_dict[node.input_tensors[1]]
 
-        if len(node.inputs) > 2:
-            z = tensor_dict[node.inputs[2]]
+        if len(node.input_tensors) > 2:
+            z = tensor_dict[node.input_tensors[2]]
         else:
             z = 0
 

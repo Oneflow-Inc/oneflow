@@ -18,11 +18,12 @@ import numpy as np
 from onnx import numpy_helper
 import tensorflow as tf
 
+import oneflow as flow
 from oneflow.python.ops import get_variable
+from oneflow.python.onnx import util
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
 from oneflow.python.onnx.load.handlers.handler import onnx_op
 from oneflow.python.onnx.load.handlers.handler import tf_func
-from oneflow.python.onnx.load.common import data_type
 
 import os
 
@@ -33,17 +34,17 @@ class Constant(BackendHandler):
     @classmethod
     def _common(cls, node, **kwargs):
         attr_value = node.attrs["value"]
-        dtype = data_type.onnx2flow(attr_value.data_type)
+        dtype = util.Onnx2FlowDtype(attr_value.data_type)
         shape = numpy_helper.to_array(attr_value).shape
         # we do not support 0d tensor
         if len(shape) == 0:
             shape = (1,)
-        node.name = node.outputs[0]
         return [
             cls.make_tensor_from_onnx_node(
                 node,
                 # inputs=[value],
                 # attrs={"dtype": dtype}
+                name=node.output_tensors[0],
                 attrs={
                     "dtype": dtype,
                     "trainable": False,
