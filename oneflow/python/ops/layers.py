@@ -992,6 +992,131 @@ def batch_normalization(
         return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
+@oneflow_export("layers.batch_normalization_add_relu")
+def batch_normalization_add_relu(
+    inputs: remote_blob_util.BlobDef,
+    add: remote_blob_util.BlobDef,
+    axis: int = -1,
+    momentum: float = 0.99,
+    epsilon: float = 0.001,
+    center: bool = True,
+    scale: bool = True,
+    beta_initializer: Optional[op_conf_util.InitializerConf] = None,
+    gamma_initializer: Optional[op_conf_util.InitializerConf] = None,
+    beta_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    gamma_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    moving_mean_initializer: Optional[op_conf_util.InitializerConf] = None,
+    moving_variance_initializer: Optional[op_conf_util.InitializerConf] = None,
+    trainable: bool = True,
+    training: bool = True,
+    name: str = "BatchNormAddRelu",
+) -> remote_blob_util.BlobDef:
+    if axis < 0:
+        axis += len(inputs.shape)
+    assert axis >= 0 and axis < len(inputs.shape)
+
+    params_shape = [inputs.shape[axis]]
+    params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
+
+    if not flow.current_global_function_desc().IsTrainable() or not trainable:
+        training = False
+
+    with flow.scope.namespace(name):
+        if center:
+            beta = flow.get_variable(
+                name="beta",
+                shape=params_shape,
+                dtype=params_dtype,
+                initializer=beta_initializer or flow.zeros_initializer(),
+                regularizer=beta_regularizer,
+                trainable=trainable,
+                distribute=distribute_util.broadcast(),
+                reuse=False,
+            )
+        else:
+            beta = flow.constant(0, dtype=params_dtype, shape=params_shape, name="beta")
+
+        if scale:
+            gamma = flow.get_variable(
+                name="gamma",
+                shape=params_shape,
+                dtype=params_dtype,
+                initializer=gamma_initializer or flow.ones_initializer(),
+                regularizer=gamma_regularizer,
+                trainable=trainable,
+                distribute=distribute_util.broadcast(),
+                reuse=False,
+            )
+        else:
+            gamma = flow.constant(
+                1, dtype=params_dtype, shape=params_shape, name="gamma"
+            )
+
+        moving_mean = flow.get_variable(
+            name="moving_mean",
+            shape=params_shape,
+            dtype=params_dtype,
+            initializer=moving_mean_initializer or flow.zeros_initializer(),
+            trainable=False,
+            distribute=distribute_util.broadcast(),
+            reuse=False,
+        )
+
+        moving_variance = flow.get_variable(
+            name="moving_variance",
+            shape=params_shape,
+            dtype=params_dtype,
+            initializer=moving_variance_initializer or flow.ones_initializer(),
+            trainable=False,
+            distribute=distribute_util.broadcast(),
+            reuse=False,
+        )
+
+    if (
+        flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu"
+        and training
+    ):
+        builder = (
+            flow.user_op_builder(name)
+            .Op("normalization_add_relu")
+            .Input("x", [inputs])
+            .Input("z", [add])
+            .Input("moving_mean", [moving_mean])
+            .Input("moving_variance", [moving_variance])
+            .Input("gamma", [gamma])
+            .Input("beta", [beta])
+            .Output("y")
+            .Attr("axis", axis)
+            .Attr("epsilon", epsilon)
+            .Attr("training", training)
+            .Attr("momentum", momentum)
+        )
+        if trainable:
+            builder = builder.Output("mean").Output("inv_variance")
+
+        return builder.Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        bn = flow.layers.batch_normalization(
+            inputs=inputs,
+            axis=axis,
+            momentum=momentum,
+            epsilon=epsilon,
+            center=center,
+            scale=scale,
+            beta_initializer=beta_initializer,
+            gamma_initializer=gamma_initializer,
+            beta_regularizer=beta_regularizer,
+            gamma_regularizer=gamma_regularizer,
+            moving_mean_initializer=moving_mean_initializer,
+            moving_variance_initializer=moving_variance_initializer,
+            trainable=trainable,
+            training=training,
+            name="BatchNorm",
+        )
+
+        return flow.math.relu(flow.math.add(bn, add_in))
+
+
 @oneflow_export("layers.upsample_2d")
 def upsample(
     x: remote_blob_util.BlobDef,
