@@ -264,7 +264,7 @@ void ChainGraph::CheckNoCycle() const {
     for (ChainNode* chain_node : *ptr) {
       chain_node_cnt++;
       for (TaskNode* task_node : chain_node->TaskNodes()) {
-        auto ct = reinterpret_cast<CompTaskNode*>(task_node);
+        auto ct = dynamic_cast<CompTaskNode*>(task_node);
         if (ct != nullptr) {
           for (auto op : ct->logical_node()->op_vec()) {
             op_name2color.emplace(op->op_name(), chain_node_cnt);
