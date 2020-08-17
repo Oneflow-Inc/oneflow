@@ -120,8 +120,8 @@ jobs:
     steps:
     - name: Clean environment
       run: |
+        docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
         rm -rf build/third_party
-        bash ci/build/clean.sh
     - uses: actions/checkout@v2
     - name: Setup environment
       run: |
