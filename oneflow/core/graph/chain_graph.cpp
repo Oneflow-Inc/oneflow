@@ -264,10 +264,18 @@ void ChainGraph::CheckNoCycle() const {
         return std::string("");
       }
     };
+    const std::function<std::string(TaskEdge*)> ColorEdge = [&](TaskEdge* te) {
+      auto src_color_it = task_id2color.find(te->src_node()->task_id());
+      auto dst_color_it = task_id2color.find(te->dst_node()->task_id());
+      if (src_color_it != task_id2color.end() && dst_color_it != task_id2color.end()) {
+        return ", style=filled, colorscheme=set312, color=" + std::to_string(task_id2color.size());
+      } else {
+        return std::string("");
+      }
+    };
     const std::string colored_task_graph_filename =
         "optimized_dlnet_" + job_id + "_task_graph_colored_nodes_in_cycle.dot";
-    task_gph_.ToDotWithFilePath(ColorNode, [](TaskEdge*) { return ""; },
-                                colored_task_graph_filename);
+    task_gph_.ToDotWithFilePath(ColorNode, ColorEdge, colored_task_graph_filename);
 
     HashSet<const TaskNode*> tasks;
     for (const auto* chain_node : *scc) {
