@@ -22,7 +22,7 @@ jobs:
     steps:
     - name: Clean environment
       run: |
-        docker run --rm -v $PWD:/p -w /p busybox chmod -R +w .
+        docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
         echo $PWD
         ls -la
         rm -rf build/third_party
