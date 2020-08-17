@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_BOXING_LOGGER_H_
-#define ONEFLOW_CORE_GRAPH_BOXING_LOGGER_H_
+#ifndef ONEFLOW_CORE_GRAPH_BOXING_LOG_H_
+#define ONEFLOW_CORE_GRAPH_BOXING_LOG_H_
 
 #include <memory>
 #include "glog/logging.h"
@@ -26,30 +26,32 @@ limitations under the License.
 
 namespace oneflow {
 
-class BoxingLogger {
+class BoxingLog {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingLogger);
-  BoxingLogger() = default;
-  virtual ~BoxingLogger() = default;
+  OF_DISALLOW_COPY_AND_MOVE(BoxingLog);
+  BoxingLog() = default;
+  virtual ~BoxingLog() = default;
+
   virtual void Log(const SubTskGphBuilderStatus& status) = 0;
 };
 
-class NullBoxingLogger final : public BoxingLogger {
+class NullBoxingLog final : public BoxingLog {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NullBoxingLogger);
-  NullBoxingLogger() = default;
-  ~NullBoxingLogger() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NullBoxingLog);
+  NullBoxingLog() = default;
+  ~NullBoxingLog() override = default;
+
   void Log(const SubTskGphBuilderStatus& status) override{};
 };
 
-class CsvBoxingLogger final : public BoxingLogger {
+class CsvBoxingLog final : public BoxingLog {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CsvBoxingLogger);
-  CsvBoxingLogger() = delete;
-  CsvBoxingLogger(std::string path);
-  ~CsvBoxingLogger() override;
+  OF_DISALLOW_COPY_AND_MOVE(CsvBoxingLog);
+  CsvBoxingLog() = delete;
+  CsvBoxingLog(std::string path);
+  ~CsvBoxingLog() override;
+
   void Log(const SubTskGphBuilderStatus& status) override;
-  std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status);
 
  private:
   std::unique_ptr<TeePersistentLogStream> log_stream_;
@@ -57,4 +59,4 @@ class CsvBoxingLogger final : public BoxingLogger {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_BOXING_LOGGER_H_
+#endif  // ONEFLOW_CORE_GRAPH_BOXING_LOG_H_

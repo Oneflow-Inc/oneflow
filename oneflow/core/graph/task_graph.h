@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/register/op_blob_arg_info.h"
-#include "oneflow/core/graph/boxing/boxing_logger.h"
+#include "oneflow/core/graph/boxing/boxing_log.h"
 
 namespace oneflow {
 
@@ -100,7 +100,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::vector<TaskNode*> ordered_task_nodes_;
   std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
   std::shared_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
-  std::unique_ptr<BoxingLogger> boxing_logger_;
+  std::unique_ptr<BoxingLog> boxing_log_;
 };
 
 bool IsBackEdge(TaskNode* src, TaskNode* dst);
