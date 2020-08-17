@@ -36,13 +36,44 @@ import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
 import typing
 import oneflow
-import inspect
+import time
+
+
+def get_time_stamp_str(t):
+    head = time.strftime("%H:%M:%S", time.localtime(t))
+    tail = round((t - int(t)) * 1e6)
+    return "{}.{:6d}".format(head, tail)
 
 
 def Compile(session, function_desc, config_proto):
+    start = time.time()
+    job_name = function_desc.job_func.__name__
+    print(
+        "[{}] <profile> {{python}}.{{CompileJob#job_name:{}}} <Begin>".format(
+            get_time_stamp_str(start), job_name
+        )
+    )
     with InterpretScope(session, function_desc, config_proto):
         _CompileJob(function_desc)
+        cur_time = time.time()
+        print(
+            "[{}] <profile> {{python}}.{{CompileJob#job_name:{}}}.{{Compile#time:{}}}".format(
+                get_time_stamp_str(cur_time), job_name, cur_time - start,
+            )
+        )
         c_api_util.CurJobBuildAndInferCtx_Complete()
+        cur_time = time.time()
+        print(
+            "[{}] <profile> {{python}}.{{CompileJob#job_name:{}}}.{{Complete#time:{}}}".format(
+                get_time_stamp_str(cur_time), job_name, cur_time - start,
+            )
+        )
+
+    print(
+        "[{}] <profile> {{python}}.{{CompileJob#job_name:{}#time:{}}} <End>".format(
+            get_time_stamp_str(start), job_name, time.time() - start
+        )
+    )
 
 
 def EagerRun(session, function_desc, config_proto, args):
