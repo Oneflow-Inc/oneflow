@@ -22,6 +22,8 @@ jobs:
     steps:
     - name: Clean environment
       run: |
+        echo $PWD
+        ls -la
         rm -rf build/third_party
         bash ci/build/clean.sh
     - uses: actions/checkout@v2
