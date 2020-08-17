@@ -32,16 +32,15 @@ from onnx.helper import make_opsetid
 import tensorflow as tf
 import oneflow as flow
 
+from oneflow.python.onnx import util
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.onnx.load.backend_rep import TensorflowRep
-from oneflow.python.onnx.load.common import data_type
-from oneflow.python.onnx.load.common import exception
 from oneflow.python.onnx.load.common import get_device_option
 from oneflow.python.onnx.load.common import get_unique_suffix
 from oneflow.python.onnx.load.common import supports_device as common_supports_device
 from oneflow.python.onnx.load.common.handler_helper import get_all_backend_handlers
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
-from oneflow.python.onnx.load.pb_wrapper import OnnxNode
+from oneflow.python.onnx.graph import Node as OnnxNode
 import oneflow.python.onnx.load.common as common
 import io
 import tempfile
@@ -90,7 +89,7 @@ def from_pytorch(torch_model, inputs):
                 # we do not support 0d tensor
                 if len(value.shape) == 0:
                     value = np.reshape(value, (1,))
-                dir_name = os.path.join(tmpdirname, node.outputs[0])
+                dir_name = os.path.join(tmpdirname, node.output_tensors[0])
                 if not os.path.exists(dir_name):
                     os.makedirs(dir_name)
                 with open(os.path.join(dir_name, "out"), "wb") as f:
@@ -109,80 +108,6 @@ def from_pytorch(torch_model, inputs):
 
         d = prepare(onnx_model, blob_dict=dict(zip(input_names, inputs)))
         return d["y"]
-
-
-def torch2flow(model, func_config, input_size):
-    model = model.to("cpu")
-    f = io.BytesIO()
-    torch.onnx.export(
-        model,
-        torch.zeros(input_size),
-        f,
-        input_names=["x"],
-        output_names=["y"],
-        opset_version=12,
-    )
-    model_str = f.getvalue()
-    with open("/home/dev/files/temp.onnx", "wb") as f:
-        f.write(model_str)
-    onnx_model = onnx.load_model_from_string(model_str)
-
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        tmpdirname = "/tmp/tmp2/"
-        BackendHandler.WEIGHT_SAVE_DIR = tmpdirname
-        for x in onnx_model.graph.initializer:
-            dir_name = os.path.join(tmpdirname, x.name)
-            if not os.path.exists(dir_name):
-                os.makedirs(dir_name)
-            with open(os.path.join(dir_name, "out"), "wb") as f:
-                value = numpy_helper.to_array(x)
-                f.write(value.tobytes())
-        for node in onnx_model.graph.node:
-            node = OnnxNode(node)
-            if node.op_type == "Constant":
-                attr_value = node.attrs["value"]
-                value = numpy_helper.to_array(attr_value)
-                # we do not support 0d tensor
-                if len(value.shape) == 0:
-                    value = np.reshape(value, (1,))
-                dir_name = os.path.join(tmpdirname, node.outputs[0])
-                if not os.path.exists(dir_name):
-                    os.makedirs(dir_name)
-                with open(os.path.join(dir_name, "out"), "wb") as f:
-                    f.write(value.tobytes())
-
-        def write_fake_data(var_name, value):
-            dir_name = os.path.join(tmpdirname, var_name)
-            if not os.path.exists(dir_name):
-                os.makedirs(dir_name)
-            with open(os.path.join(dir_name, "out"), "wb") as f:
-                f.write(value.tobytes())
-
-        train_step_name = "System-Train-TrainStep-temp_job"
-        write_fake_data(train_step_name, np.array([0]))
-        write_fake_data("v1", np.array([0], dtype=np.float32))
-
-        def get_job():
-            @flow.global_function(func_config)
-            def temp_job(x=flow.FixedTensorDef(input_size)):
-                x += flow.get_variable(
-                    name="v1",
-                    shape=(1,),
-                    dtype=flow.float,
-                    initializer=flow.zeros_initializer(),
-                )
-                d = prepare(onnx_model, blob_dict={"x": x})
-                flow.losses.add_loss(d["y"])
-                return d["y"]
-
-            return temp_job
-
-        temp_job = get_job()
-
-        checkpoint = flow.train.CheckPoint()
-        checkpoint.load(tmpdirname)
-
-    return temp_job
 
 
 class TensorflowBackend(Backend):
@@ -308,60 +233,9 @@ class TensorflowBackend(Backend):
                 output_ops = cls._onnx_node_to_tensorflow_op(
                     onnx_node, tensor_dict, handlers, opset=opset, strict=strict
                 )
-                curr_node_output_map = dict(zip(onnx_node.outputs, output_ops))
+                curr_node_output_map = dict(zip(onnx_node.output_tensors, output_ops))
                 tensor_dict.update(curr_node_output_map)
         return tensor_dict
-
-    @classmethod
-    def run_node(cls, node, inputs, device="CPU", outputs_info=None, **kwargs):
-        """ Run ONNX node.
-
-    :param node: ONNX NodeProto object.
-    :param inputs: Inputs.
-    :param device: Device run on.
-    :param outputs_info: None.
-    :param kwargs: Other args.
-    :return: Outputs.
-    """
-        super(TensorflowBackend, cls).run_node(node, inputs, device)
-        node_graph = tf.Graph()
-        with node_graph.as_default():
-            node = OnnxNode(node)
-            device_option = get_device_option(Device(device))
-            input_tensors = []
-            for i in inputs:
-                input_tensors.append(tf.constant(i))
-
-            if isinstance(inputs, dict):
-                feed_dict_raw = inputs
-            else:
-                assert len(node.inputs) == len(inputs)
-                feed_dict_raw = dict(zip(node.inputs, inputs))
-
-            func_config = flow.FunctionConfig()
-            func_config.default_data_type(flow.float)
-
-            @flow.global_function(func_config)
-            def temp_job():
-                # TODO: is constant the best way for feeding inputs?
-                input_dict = dict(
-                    [
-                        (x[0], flow.constant(-1, shape=x[1].shape, dtype=flow.float32))
-                        for x in feed_dict_raw.items()
-                    ]
-                )
-                ops = cls._onnx_node_to_tensorflow_op(node, input_dict)
-                return ops
-
-                # with tf.compat.v1.Session() as sess:
-                #     with tf.device(device_option):
-                #         sess.run(tf.compat.v1.global_variables_initializer())
-                #         output_vals = sess.run(ops)
-
-            tmp = temp_job().get()
-            output_vals = [x.ndarray() for x in temp_job().get()]
-
-        return namedtupledict("Outputs", node.outputs)(*output_vals)
 
     @classmethod
     def _onnx_initializer_to_input_dict_items(cls, initializer):
@@ -397,7 +271,7 @@ class TensorflowBackend(Backend):
                     shape=get_flow_shape(list(init.dims)),
                     initializer=flow.zeros_initializer(),
                     trainable=True,
-                    dtype=data_type.onnx2flow(init.data_type),
+                    dtype=util.Onnx2FlowDtype(init.data_type),
                 )
                 # tf.constant(
                 #     tensor2list(init),
@@ -429,9 +303,12 @@ class TensorflowBackend(Backend):
         handlers = handlers or cls._get_handlers(opset)
         handler = handlers[node.domain].get(node.op_type, None)
         if handler:
-            return handler.handle(node, tensor_dict=tensor_dict, strict=strict)
+            output = handler.handle(node, tensor_dict=tensor_dict, strict=strict)
+            if not isinstance(output, (list, tuple)):
+                output = [output]
+            return output
         else:
-            exception.OP_UNIMPLEMENTED_EXCEPT(node.op_type)
+            raise ValueError("{} is not supported".format(node.op_type))
 
     @classmethod
     def _get_handlers(cls, opset):
@@ -447,57 +324,6 @@ class TensorflowBackend(Backend):
     @classmethod
     def supports_device(cls, device):
         return common_supports_device(device)
-
-    @classmethod
-    def onnx_graph_to_tensorflow_ops(
-        cls, subgraph, input_values, tensor_dict, opset=None, strict=True
-    ):
-        """
-    Converts ONNX graph to Tensorflow operations
-    Args:
-      subgraph:         the ONNX graph to be converted
-      input_values:     dictionary with values/tensors to initialize
-                        the subgraph inputs. if the subgraph.input
-                        are send in as parameters then it is required,
-                        otherwise this can be empty dictionary
-      tensor_dict:      the dictionary that contain values for all the
-                        node.inputs in the subgraph that are not defined
-                        in the subgraph or input_values.
-      opset:            opset version of the operator set.
-      strict:           whether to enforce semantic equivalence between the
-                        original model and the converted tensorflow model,
-                        defaults to True (yes, enforce semantic equivalence).
-    Returns:
-      array of Tensorflow Tensors
-    """
-        # get the subgraph.input from input_values
-        subgraph_tensor_dict = input_values.copy()
-        # get the rest of the subgraph input from tensor_dict
-        for i in subgraph.input:
-            if i.name not in subgraph_tensor_dict.keys():
-                subgraph_tensor_dict[i.name] = tensor_dict[i.name]
-        # get the required initializer constant node(s) for the subgraph
-        # Need to get the initializer constant nodes from tensor_dict here
-        # because input from initializer will not be send in as inputs
-        # to the subgraph and those nodes are not in the subgraph
-        nodes_outputs = []
-        for node in subgraph.node:
-            for o_name in node.output:
-                nodes_outputs.append(o_name)
-        for node in subgraph.node:
-            for i_name in node.input:
-                if (
-                    i_name not in nodes_outputs
-                    and i_name not in subgraph_tensor_dict.keys()
-                ):
-                    subgraph_tensor_dict[i_name] = tensor_dict[i_name]
-            onnx_node = OnnxNode(node)
-            output_ops = cls._onnx_node_to_tensorflow_op(
-                onnx_node, subgraph_tensor_dict, opset=opset, strict=strict
-            )
-            curr_node_output_map = dict(zip(onnx_node.outputs, output_ops))
-            subgraph_tensor_dict.update(curr_node_output_map)
-        return subgraph_tensor_dict
 
     @classmethod
     def onnx_graph_to_tensorflow_rep(cls, graph_def, strict=True):
@@ -518,12 +344,8 @@ class TensorflowBackend(Backend):
 
 prepare = TensorflowBackend.prepare
 
-run_node = TensorflowBackend.run_node
-
 run_model = TensorflowBackend.run_model
 
 supports_device = TensorflowBackend.supports_device
-
-onnx_graph_to_tensorflow_ops = TensorflowBackend.onnx_graph_to_tensorflow_ops
 
 onnx_graph_to_tensorflow_rep = TensorflowBackend.onnx_graph_to_tensorflow_rep

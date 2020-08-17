@@ -56,7 +56,7 @@ logger = logging.getLogger(__name__)
 class Node(object):
     """A Node - wrapper around onnx nodes that we use for graph manipulations."""
 
-    def __init__(self, node, graph, skip_conversion=False):
+    def __init__(self, node, graph=None, skip_conversion=False):
         """Create Node.
         Args:
             node: Onnx node in NodeProto
@@ -68,7 +68,8 @@ class Node(object):
         self._output = list(node.output)
         self.attr = {}
 
-        graph.set_node_by_name(self)
+        if graph is not None:
+            graph.set_node_by_name(self)
         # dict to original attributes
         for a in node.attribute:
             attr_val = helper.get_attribute_value(a)
@@ -78,12 +79,24 @@ class Node(object):
         self._skip_conversion = skip_conversion
 
     @property
+    def input_tensors(self):
+        return self._input
+
+    @input_tensors.setter
+    def input_tensors(self, val):
+        self._input = copy.deepcopy(val)
+
+    @property
     def input(self):
         return self._input
 
     @input.setter
     def input(self, val):
         self._input = copy.deepcopy(val)
+
+    @property
+    def output_tensors(self):
+        return copy.deepcopy(self._output)
 
     @property
     def output(self):
@@ -115,6 +128,10 @@ class Node(object):
         return val
 
     @property
+    def attrs(self):
+        return self.attr
+
+    @property
     def attr_onnx(self):
         """Return onnx valid attributes"""
         schema = get_schema(self.type, self.graph.opset, self.domain)
@@ -141,6 +158,11 @@ class Node(object):
 
     @property
     def type(self):
+        """Return Op type."""
+        return self._op.op_type
+
+    @property
+    def op_type(self):
         """Return Op type."""
         return self._op.op_type
 

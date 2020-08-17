@@ -28,7 +28,7 @@ from oneflow.python.onnx.load.handlers.handler import tf_func
 class Flatten(BackendHandler):
     @classmethod
     def _common(cls, node, **kwargs):
-        x = kwargs["tensor_dict"][node.inputs[0]]
+        x = kwargs["tensor_dict"][node.input_tensors[0]]
         shape = x.shape
         axis = node.attrs.get("axis", 1)
 

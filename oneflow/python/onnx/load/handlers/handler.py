@@ -22,7 +22,6 @@ import inspect
 
 from onnx import defs
 
-from oneflow.python.onnx.load.common import exception
 from oneflow.python.onnx.load.common import IS_PYTHON3
 
 
@@ -75,7 +74,11 @@ class Handler(object):
         if ver_handle:
             cls.args_check(node, **kwargs)
             return ver_handle(node, **kwargs)
-        exception.OP_UNIMPLEMENTED_EXCEPT(node.op_type, cls.SINCE_VERSION)
+        raise ValueError(
+            'node "{}" of version {} is not supported'.format(
+                node.op_type, cls.SINCE_VERSION
+            )
+        )
         return None
 
     @classmethod
