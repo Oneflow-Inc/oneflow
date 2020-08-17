@@ -40,27 +40,6 @@ Maybe<void> EagerBlobObject::InitBlob() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerBlobObject::CheckMemCase(const ParallelDesc& parallel_desc,
-                                          int64_t machine_id) const {
-  CHECK_OR_RETURN(parallel_desc.HasMachineId(machine_id))
-      << "ParallelDesc does not contain machine_id: " << machine_id;
-  const char* device_tag = JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
-  if (parallel_desc.device_type() == DeviceType::kCPU) {
-    CHECK_OR_RETURN(this->mem_case_->has_host_mem())
-        << "DeviceType: " << device_tag
-        << " not match MemoryCase: " << this->mem_case_->host_mem().DebugString();
-  } else if (parallel_desc.device_type() == DeviceType::kGPU) {
-    CHECK_OR_RETURN(this->mem_case_->has_device_cuda_mem())
-        << "DeviceType: " << device_tag
-        << " not match MemoryCase: " << this->mem_case_->device_cuda_mem().DebugString();
-    CHECK_OR_RETURN(
-        parallel_desc.Containing(machine_id, this->mem_case_->device_cuda_mem().device_id()));
-  } else {
-    OF_UNIMPLEMENTED();
-  }
-  return Maybe<void>::Ok();
-}
-
 void EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   vm::Allocator* allocator = device_ctx->mut_allocator();
   CHECK_NOTNULL(allocator);

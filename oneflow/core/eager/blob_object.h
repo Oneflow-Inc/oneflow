@@ -22,11 +22,14 @@ limitations under the License.
 
 namespace oneflow {
 
+class ParallelDesc;
+
 namespace eager {
 
 class BlobObject : public vm::Object {
  public:
-  BlobObject(DataType data_type) : blob_desc_(data_type) {}
+  BlobObject(const std::shared_ptr<MemoryCase>& mem_case, DataType data_type)
+      : mem_case_(mem_case), blob_desc_(data_type) {}
   BlobObject(const BlobObject&) = delete;
   BlobObject(BlobObject&&) = delete;
   virtual ~BlobObject() override = default;
@@ -36,7 +39,10 @@ class BlobObject : public vm::Object {
   virtual const Blob& blob() const = 0;
   virtual Blob* mut_blob() = 0;
 
+  Maybe<void> CheckMemCase(const ParallelDesc& parallel_desc, int64_t machine_id) const;
+
  protected:
+  std::shared_ptr<MemoryCase> mem_case_;
   BlobDesc blob_desc_;
 };
 

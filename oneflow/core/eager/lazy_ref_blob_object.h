@@ -25,7 +25,10 @@ class LazyRefBlobObject : public BlobObject {
  public:
   LazyRefBlobObject(const LazyRefBlobObject&) = delete;
   LazyRefBlobObject(LazyRefBlobObject&&) = delete;
-  LazyRefBlobObject(Blob* blob) : BlobObject(blob->data_type()) { ref_blob_ = blob; }
+  LazyRefBlobObject(Blob* blob)
+      : BlobObject(std::make_shared<MemoryCase>(blob->mem_case()), blob->data_type()) {
+    ref_blob_ = blob;
+  }
   virtual ~LazyRefBlobObject() override = default;
 
   virtual const Blob& blob() const override { return *ref_blob_; }

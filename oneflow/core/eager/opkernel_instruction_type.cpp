@@ -112,8 +112,8 @@ std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type, const int6
 }
 
 template<typename T, typename CallbackT>
-Maybe<void> ForEachIbnAndEagerBlobObject(vm::Instruction* instruction, const T& args,
-                                         const CallbackT& Callback) {
+Maybe<void> ForEachIbnAndBlobObject(vm::Instruction* instruction, const T& args,
+                                    const CallbackT& Callback) {
   CHECK_EQ_OR_RETURN(args.ibn_size(), args.input_blob_size());
   FOR_RANGE(int, i, 0, args.ibn_size()) {
     const auto* operand_ibn = instruction->operand_type(args.ibn(i));
@@ -122,7 +122,7 @@ Maybe<void> ForEachIbnAndEagerBlobObject(vm::Instruction* instruction, const T& 
     const auto* operand_input_blob = instruction->operand_type(args.input_blob(i));
     CHECK_NOTNULL_OR_RETURN(operand_input_blob)
         << "bn_in_op: " << bn_in_op << ", object_id: " << args.input_blob(i).logical_object_id();
-    const auto& blob_object = *JUST(operand_input_blob->template Get<EagerBlobObject>());
+    const auto& blob_object = *JUST(operand_input_blob->template Get<BlobObject>());
     JUST(Callback(bn_in_op, blob_object));
   }
   return Maybe<void>::Ok();
@@ -170,9 +170,9 @@ Maybe<void> MakeBlobDesc4BnInOp(vm::Instruction* instruction, const T& args,
         }));
   }
   const auto& ibn2blob_desc = std::make_shared<HashMap<std::string, const BlobDesc*>>();
-  JUST(ForEachIbnAndEagerBlobObject(
+  JUST(ForEachIbnAndBlobObject(
       instruction, args,
-      [&](const std::string& bn_in_op, const EagerBlobObject& blob_object) -> Maybe<void> {
+      [&](const std::string& bn_in_op, const BlobObject& blob_object) -> Maybe<void> {
         CHECK_OR_RETURN(ibn2blob_desc->emplace(bn_in_op, &blob_object.blob_desc()).second);
         return Maybe<void>::Ok();
       }));
@@ -200,9 +200,9 @@ Maybe<void> MakeBlob4BnInOp(
         return Maybe<void>::Ok();
       }));
   const auto& ibn2blob = std::make_shared<HashMap<std::string, const Blob*>>();
-  JUST(ForEachIbnAndEagerBlobObject(
+  JUST(ForEachIbnAndBlobObject(
       instruction, args,
-      [&](const std::string& bn_in_op, const EagerBlobObject& blob_object) -> Maybe<void> {
+      [&](const std::string& bn_in_op, const BlobObject& blob_object) -> Maybe<void> {
         CHECK_OR_RETURN(ibn2blob->emplace(bn_in_op, &blob_object.blob()).second);
         return Maybe<void>::Ok();
       }));
@@ -269,9 +269,9 @@ Maybe<void> CheckBlobParallel(vm::Instruction* instruction, const T& args,
         return Maybe<void>::Ok();
       }));
 
-  JUST(ForEachIbnAndEagerBlobObject(
+  JUST(ForEachIbnAndBlobObject(
       instruction, args,
-      [&](const std::string& bn_in_op, const EagerBlobObject& blob_object) -> Maybe<void> {
+      [&](const std::string& bn_in_op, const BlobObject& blob_object) -> Maybe<void> {
         const auto* parallel_desc = JUST(ParallelDesc4BnInOp(bn_in_op));
         if (parallel_desc == nullptr) { return Maybe<void>::Ok(); }
         JUST(blob_object.CheckMemCase(*parallel_desc, instruction->stream().machine_id()));
