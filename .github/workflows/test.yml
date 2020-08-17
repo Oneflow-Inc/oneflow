@@ -22,10 +22,10 @@ jobs:
     steps:
     - name: Clean environment
       run: |
+        chmod -R +w .
         echo $PWD
         ls -la
         rm -rf build/third_party
-        bash ci/build/clean.sh
     - uses: actions/checkout@v2
     - name: Check license (please run 'make of_format' if failed)
       run: |
