@@ -41,6 +41,5 @@ if __name__ == "__main__":
     cmd_line = sys.executable + " -m black " + "."
     if arguments.fix == False:
         cmd_line += " --check -v"
-    print(cmd_line)
     if os.system(cmd_line):
         sys.exit(1)
