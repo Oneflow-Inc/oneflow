@@ -301,17 +301,19 @@ def conv1d(
     )
 
 
-def split(x, axis, split_num):
-    split_len = x.shape[axis] // split_num
-    result_list = []
-    slice_begin = [0] * len(x.shape)
-    slice_size = [-1] * len(x.shape)
-    slice_size[axis] = split_len
-    for i in range(split_num):
-        slice_begin[axis] = i * split_len
-        result = flow.slice(x, slice_begin, slice_size)
-        result_list.append(result)
-    return result_list
+class ConvUtil(object):
+    @classmethod
+    def split(cls, x, axis, split_num):
+        split_len = x.shape[axis] // split_num
+        result_list = []
+        slice_begin = [0] * len(x.shape)
+        slice_size = [-1] * len(x.shape)
+        slice_size[axis] = split_len
+        for i in range(split_num):
+            slice_begin[axis] = i * split_len
+            result = flow.slice(x, slice_begin, slice_size)
+            result_list.append(result)
+        return result_list
 
 
 @oneflow_export("nn.conv2d")
@@ -378,72 +380,77 @@ def conv2d(
         else:
             raise ValueError("dilations must be an int or a list.")
 
-    if channel_pos == "channels_first":
+    assert isinstance(groups, int)
+    assert groups > 0
+
+    if data_format.upper() == "NCHW":
         kernel_size_list = filters.shape[2:4]
-    elif channel_pos == "channels_last":
+        in_channel_axis = 1
+        filter_out_axis = 0
+        filter_in_axis = 1
+    elif data_format.upper() == "NHWC":
         kernel_size_list = filters.shape[-3:-1]
+        in_channel_axis = 3
+        filter_out_axis = 0
+        filter_in_axis = 3
+        if (
+            groups > 1
+            and flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu"
+        ):
+            raise ValueError("gpu data_format NHWC not support groups > 1")
     else:
-        raise ValueError("invalid data_format")
+        raise ValueError('data_format must be "NHWC" or "NCHW".')
+
     assert isinstance(kernel_size_list, tuple)
     inputs, pads_list = calc_conv_padding(
         input, padding, data_format.upper(), kernel_size_list, dilations, strides,
     )
     assert len(pads_list) == len(inputs.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
-    assert isinstance(groups, int)
-    assert groups > 0
-    if groups > 1:
-        if data_format.upper() == "NCHW":
-            in_channel_axis = 1
-            filter_out_axis = 0
-            filter_in_axis = 1
-        elif data_format.upper() == "NHWC":
-            in_channel_axis = 3
-            filter_out_axis = 0
-            filter_in_axis = 3
-            if flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu":
-                raise ValueError("data_format NHWC not support groups > 1")
-        else:
-            raise ValueError("invalid data_format")
 
-        assert groups <= filters.shape[filter_out_axis]
-        assert filters.shape[filter_out_axis] % groups == 0
-        assert groups <= inputs.shape[in_channel_axis]
-        assert inputs.shape[in_channel_axis] % groups == 0
-        assert filters.shape[filter_in_axis] == inputs.shape[in_channel_axis] // groups
+    assert groups <= filters.shape[filter_out_axis]
+    assert filters.shape[filter_out_axis] % groups == 0
+    assert groups <= inputs.shape[in_channel_axis]
+    assert inputs.shape[in_channel_axis] % groups == 0
+    assert filters.shape[filter_in_axis] == inputs.shape[in_channel_axis] // groups
 
-        if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
-            in_split_list = split(inputs, axis=in_channel_axis, split_num=groups)
-            filter_split_list = split(filters, axis=filter_out_axis, split_num=groups)
-            out_list = []
-            name = name if name is not None else id_util.UniqueStr("Conv2d_")
-            for i in range(len(in_split_list)):
-                out_list.append(
-                    conv2d_op(
-                        in_split_list[i],
-                        filter_split_list[i],
-                        padding_before,
-                        channel_pos,
-                        kernel_size_list,
-                        strides,
-                        dilations,
-                        groups=1,
-                        name=name + str(i),
-                    )
+    if (
+        groups > 1
+        and flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu"
+    ):
+        in_split_list = ConvUtil.split(inputs, axis=in_channel_axis, split_num=groups)
+        filter_split_list = ConvUtil.split(
+            filters, axis=filter_out_axis, split_num=groups
+        )
+        out_list = []
+        name = name if name is not None else id_util.UniqueStr("Conv2d_")
+        for i in range(len(in_split_list)):
+            out_list.append(
+                conv2d_op(
+                    in_split_list[i],
+                    filter_split_list[i],
+                    padding_before,
+                    channel_pos,
+                    kernel_size_list,
+                    strides,
+                    dilations,
+                    groups=1,
+                    name=name + str(i),
                 )
-            return flow.concat(out_list, axis=in_channel_axis)
-
-    return conv2d_op(
-        inputs,
-        filters,
-        padding_before,
-        channel_pos,
-        kernel_size_list,
-        strides,
-        dilations,
-        groups,
-        name,
-    )
+            )
+        return flow.concat(out_list, axis=in_channel_axis)
+    else:
+        return conv2d_op(
+            inputs,
+            filters,
+            padding_before,
+            channel_pos,
+            kernel_size_list,
+            strides,
+            dilations,
+            groups,
+            name,
+        )
 
 
 def conv2d_op(
