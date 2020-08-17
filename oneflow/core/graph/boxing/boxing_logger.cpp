@@ -42,7 +42,7 @@ std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
   return serialized_sbp_parallel;
 }
 
-std::string SerializeParallelDesc(const ParallelDesc& parallel_desc) {
+std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   std::string serialized_parallel_desc;
   serialized_parallel_desc += "device_type: " + DeviceType_Name(parallel_desc.device_type()) + " ";
   serialized_parallel_desc += "device_name: ";
@@ -85,7 +85,7 @@ void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status) {
 std::string CsvBoxingLogger::SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status) {
   std::string serialized_status("");
   serialized_status += status.src_op_name() + ",";
-  serialized_status += SerializeParallelDesc(status.src_parallel_desc()) + ",";
+  serialized_status += ParallelDescToString(status.src_parallel_desc()) + ",";
   serialized_status += SbpParallelToString(status.src_sbp_parallel()) + ",";
   serialized_status += GenLogicalBlobName(status.lbi()) + ",";
   serialized_status += GetBlobInfo4LogicalBlobDesc(status.logical_blob_desc()) + ",";
@@ -95,7 +95,7 @@ std::string CsvBoxingLogger::SubTskGphBuilderStatusToCsvLine(const SubTskGphBuil
     serialized_status += status.builder_name() + ":" + status.comment() + ",";
   }
   serialized_status += status.dst_op_name() + ",";
-  serialized_status += SerializeParallelDesc(status.dst_parallel_desc()) + ",";
+  serialized_status += ParallelDescToString(status.dst_parallel_desc()) + ",";
   serialized_status += SbpParallelToString(status.dst_sbp_parallel()) + "\n";
   return serialized_status;
 }
