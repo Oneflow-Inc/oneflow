@@ -25,7 +25,7 @@ namespace {
 
 #define OF_BOXING_LOGGER_CSV_COLNUM_NAME_FIELD                   \
   "src_op_name,dst_op_name,src_parallel_conf,dst_parallel_conf," \
-  "src_sbp_conf,dst_sbp_conf,lbi,data_shape,dtype,comment\n"
+  "src_sbp_conf,dst_sbp_conf,lbi,dtype,data_shape,comment\n"
 
 std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
   std::string serialized_sbp_parallel = "";
@@ -79,8 +79,9 @@ std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status
   if (status.comment() == std::string("")) {
     serialized_status += status.builder_name() + ",";
   } else {
-    serialized_status += status.builder_name() + ":" + status.comment() + "\n";
+    serialized_status += status.builder_name() + ":" + status.comment();
   }
+  serialized_status += "\n";
   return serialized_status;
 }
 
