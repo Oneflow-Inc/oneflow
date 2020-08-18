@@ -36,6 +36,22 @@ def add(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """Compute x + y element-wise, math.add supports broadcasting. Analogous to `tf.math.add <https://www.tensorflow.org/api_docs/python/tf/math/add>`_
+
+    The equation is:
+
+    .. math::
+        out = X + Y
+
+    Args:
+        x (Union[int, float, remote_blob_util.BlobDef]): A Blob. 
+        y (Union[int, float, remote_blob_util.BlobDef]): A Blob has the same type of x.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob is added by x and y, and has the same type of x.
+
+    """
     if isinstance(x, (int, float)):
         return scalar_add(y, x, name)
     elif isinstance(y, (int, float)):
@@ -78,6 +94,16 @@ def _recursive_build_add_n(inputs, name=None):
 def add_n(
     inputs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    """Add all the input tensors in element-wise, Analogous to `tf.math.add_n <https://www.tensorflow.org/api_docs/python/tf/math/add_n>`_
+
+    Args:
+        inputs (Sequence[remote_blob_util.BlobDef]): A list of Blob, each Blob has the same shape and type. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The sum of the inputs, has the same shape and type as the elements of inputs.
+
+    """
     return _recursive_build_add_n(inputs, name)
 
 
@@ -87,6 +113,22 @@ def subtract(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """Compute x - y element-wise, Analogous to `tf.math.subtract <https://www.tensorflow.org/api_docs/python/tf/math/subtract>`_
+
+    The equation is:
+
+    .. math::
+        out = X - Y
+
+    Args:
+        x (Union[int, float, remote_blob_util.BlobDef]): A Blob.
+        y (Union[int, float, remote_blob_util.BlobDef]): A Blob has the same type of x.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob after subtracting, has the same type as x.
+
+    """
     if isinstance(x, (int, float)):
         return scalar_add(-1 * y, x, name)
     elif isinstance(y, (int, float)):
@@ -108,6 +150,22 @@ def multiply(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """Compute x * y element-wise, Analogous to `tf.math.multiply <https://www.tensorflow.org/api_docs/python/tf/math/multiply>`_
+
+    The equation is:
+
+    .. math::
+        out = X * Y
+
+    Args:
+        x (Union[int, float, remote_blob_util.BlobDef]): A Blob.
+        y (Union[int, float, remote_blob_util.BlobDef]): A Blob has the same type of x.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob after multiplying, has the same type as x.
+
+    """
     if isinstance(x, (int, float)):
         return scalar_mul(y, x, name)
     elif isinstance(y, (int, float)):
@@ -128,6 +186,22 @@ def divide(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Computes the division of x by y, Analogous to `tf.math.divide <https://www.tensorflow.org/api_docs/python/tf/math/divide>`_ 
+
+    The equation is:
+
+    .. math::
+        out = \frac{X}{Y}
+
+    Args:
+        x (Union[int, float, remote_blob_util.BlobDef]): A Blob.
+        y (Union[int, float, remote_blob_util.BlobDef]): A Blob.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with same shape as input x.
+
+    """
     if isinstance(x, (int, float)):
         return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
     elif isinstance(y, (int, float)):
@@ -153,6 +227,26 @@ def floor_mod(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """Mod two Blobs, Analogous to `tf.math.floormod <https://www.tensorflow.org/api_docs/python/tf/math/floormod>`_ 
+
+    The equation is:
+
+    .. math::
+        out = X \% Y
+
+    Args:
+        x (Union[int, float, remote_blob_util.BlobDef]): A Blob
+        y (Union[int, float, remote_blob_util.BlobDef]): A Blob has the same type of x
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Raises:
+        NotImplementedError: x must be an int or a float
+        NotImplementedError: y must be an int or a float
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with same type as input x.
+
+    """
     if isinstance(x, (int, float)):
         raise NotImplementedError
     elif isinstance(y, (int, float)):
@@ -312,14 +406,23 @@ def broadcast_floor_mod(x, y, name=None):
 
 @oneflow_export("math.tanh")
 def tanh(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Computes hyperbolic tangent of `x` element-wise.
+    r"""Computes hyperbolic tangent of `x` element-wise, Analogous to `tf.math.tanh <https://www.tensorflow.org/api_docs/python/tf/math/tanh>`_ 
+
+    The equation is:
+
+    .. math::
+        out = \frac{e^x - e^{-x}}{e^x + e^{-x}}
 
     Args:
-        x: Input `Blob`.
+        x (remote_blob_util.BlobDef): Input Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`
+        remote_blob_util.BlobDef: A Blob.
+
     """
 
     return (
@@ -335,14 +438,23 @@ def tanh(
 
 @oneflow_export("math.gelu")
 def gelu(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Gaussian Error Linear Units.
+    r"""Gelu activation operator, Analogous to `tf.nn.gelu <https://www.tensorflow.org/api_docs/python/tf/nn/gelu>`_ 
+
+    The equation is:
+
+    .. math::
+        out = 0.5 * x * (1 + tanh(\sqrt{\frac{2}{\pi}} * (x + 0.044715x^{3})))
 
     Args:
-        x: Input `Blob`.
+        x (remote_blob_util.BlobDef): Input Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`
+        remote_blob_util.BlobDef: A Blob.
+
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Gelu_"))
@@ -357,14 +469,23 @@ def gelu(
 
 @oneflow_export("math.relu", "nn.relu")
 def relu(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""ReLU activation
+    r"""Relu activation
+
+    The equation is:
+
+    .. math::
+        out = max(X, 0)
 
     Args:
-        x: Input `Blob`.
+        x (remote_blob_util.BlobDef): Input Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`
+        remote_blob_util.BlobDef: An activated Blob.
+
     """
 
     return (
@@ -380,14 +501,23 @@ def relu(
 
 @oneflow_export("math.sigmoid")
 def sigmoid(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Computes sigmoid of `x` element-wise.
+    r"""Sigmoid activation 
+
+    The equation is:
+
+    .. math::
+        out = \frac{1}{1 + e^{-x}}
 
     Args:
-        x: Input `Blob`.
+        x (remote_blob_util.BlobDef): Input Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`
+        remote_blob_util.BlobDef: An activated Blob.
+
     """
     return (
         flow.user_op_builder(
@@ -410,6 +540,19 @@ def unsorted_segment_sum(
     axis: int = 0,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Computes the sum along segments of a Blob, Analogous to `tf.math.unsorted_segment_sum <https://www.tensorflow.org/api_docs/python/tf/math/unsorted_segment_sum>`_
+
+    Args:
+        data (remote_blob_util.BlobDef): Input Blob
+        segment_ids (remote_blob_util.BlobDef): A Blob should be the size of the first dimension, with consecutive IDs in the range 0 to k (k < d0).
+        num_segments (int): num_segments should equal the number of distinct segment IDs.
+        axis (int, optional): The axis of data. Defaults to 0.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with the same type of data.
+
+    """
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("UnsortedSegmentSum_")
@@ -434,6 +577,19 @@ def unsorted_segment_sum_like(
     axis: int = 0,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Computes the sum along segments of a Blob, the output shape is the same as the `like` Blob. 
+
+    Args:
+        data (remote_blob_util.BlobDef): Input Blob
+        segment_ids (remote_blob_util.BlobDef): A Blob should be the size of the first dimension, with consecutive IDs in the range 0 to k (k < d0).
+        like (remote_blob_util.BlobDef): The input Blob which specifies shape
+        axis (int, optional): The axis of data. Defaults to 0.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob.
+
+    """
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("UnsortedSegmentSumLike_")
@@ -457,6 +613,24 @@ def unsorted_batch_segment_sum(
     num_segments: int,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""It is similar with `unsorted_segment_sum`, the difference is that `unsorted_batch_segment_sum` brings a `batch axis`. We can do the segment sum in different batch of data. 
+    
+    For example, the segment id is like:
+
+    .. code-block:: python
+    
+        [[0 0 0 1 2 2 3 3], 
+         [0 0 1 1 2 3 3 3]]
+
+    Args:
+        data (remote_blob_util.BlobDef): Input Blob
+        segment_ids (remote_blob_util.BlobDef): A Blob with shape (d0, d1). The d0, d1 are the first and second dimension of data. 
+        num_segments (int): num_segments should equal the number of distinct segment IDs.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob.
+    """
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("UnsortedBatchSegmentSum_")
@@ -474,15 +648,19 @@ def unsorted_batch_segment_sum(
 
 @oneflow_export("cast")
 def cast(
-    x: remote_blob_util.BlobDef, dtype: dtype_util.dtype, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    dtype: dtype_util.dtype, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Return a `Blob` of given data type `dtype` and indentical shape to `x`
+    r"""The op takes input x and casts it to the output with `dtype`
 
     Args:
-        x: a `Blob`.
-        dtype: a OneFlow data type. For instance, `oneflow.float`.
+        x (remote_blob_util.BlobDef): Input Blob
+        dtype (dtype_util.dtype): Data type of the output
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`
+        remote_blob_util.BlobDef: A Blob
     """
     if x.dtype == dtype:
         return x
@@ -503,64 +681,177 @@ def cast(
 
 @oneflow_export("math.equal")
 def equal(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    y: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    r"""Returns the truth value of (x == y) element-wise.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with Bool type.
+    """
     return build_broadcast_binary_op("broadcast_equal", x, y, name)
 
 
 @oneflow_export("math.not_equal")
 def not_equal(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    y: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    r"""Returns the truth value of (x != y) element-wise.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with Bool type.
+    """
     return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
 
 
 @oneflow_export("math.less")
 def less(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    y: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    r"""Returns the truth value of (x < y) element-wise.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with Bool type.
+    """
     return build_broadcast_binary_op("broadcast_less", x, y, name)
 
 
 @oneflow_export("math.less_equal")
 def less_equal(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    y: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    r"""Returns the truth value of (x <= y) element-wise.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with Bool type.
+    """
     return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
 
 
 @oneflow_export("math.greater")
 def greater(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    y: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    r"""Returns the truth value of (x > y) element-wise.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with Bool type.
+    """
     return build_broadcast_binary_op("broadcast_greater", x, y, name)
 
 
 @oneflow_export("math.greater_equal")
 def greater_equal(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    y: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    r"""Returns the truth value of (x >= y) element-wise.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with Bool type.
+    """
     return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
 
 
 @oneflow_export("math.logical_and")
 def logical_and(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    y: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    r"""Logical AND function.
+
+    Each element is calculated by:
+
+    .. math::
+        out = X ∧ Y
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with Bool type.
+    """
     return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
 
 
 @oneflow_export("math.minimum")
 def broadcast_min(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    y: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    r"""Returns the min of x and y element-wise, this op supports broadcasting.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob. Must have the same type of x
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob, has the same type of x. 
+    """
     return build_broadcast_binary_op("broadcast_minimum", x, y, name)
 
 
 @oneflow_export("math.maximum")
 def broadcast_max(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, 
+    y: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    """Returns the max of x and y element-wise, this op supports broadcasting.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob. Must have the same type of x
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob, has the same type of x. 
+    """
     return build_broadcast_binary_op("broadcast_maximum", x, y, name)
 
 
@@ -571,6 +862,17 @@ def elem_cnt(
     dtype: Optional[dtype_util.dtype] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """Computes the product of input_blob's dimensions along the parameter `axis`. By default, dimension 1 will be excluded when `axis` is None.
+
+    Args:
+        input_blob (remote_blob_util.BlobDef): Input Blob
+        axis (Optional[Sequence[int]], optional): The dimensions along which the op is performed. Defaults to None.
+        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob 
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -600,6 +902,17 @@ def top_k(
     sorted: bool = True,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """Finds the indices of the k largest entries for the last dimension.
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob
+        k (int, optional): Number of top elements to look for along the last dimension. Defaults to 1.
+        sorted (bool, optional): If true the resulting k elements will be sorted by the values in descending order. Defaults to True.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob contains the indices of the k largest elements.
+    """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
         .Op("top_k")
@@ -615,8 +928,18 @@ def top_k(
 
 @oneflow_export("math.argmax")
 def argmax(
-    input: remote_blob_util.BlobDef, name: Optional[str] = None
+    input: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    """The op computes the index with the largest value of a Blob.
+
+    Args:
+        input (remote_blob_util.BlobDef): Input Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob contains the index with the largest value of `input`
+    """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
         .Op("argmax")
@@ -662,6 +985,25 @@ def clip_by_value(
     max_value: Optional[Union[int, float]] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """This op clips Blob values to a specified min value and max value.
+    
+    The equation is:
+
+    .. math::
+        out = MIN(MAX(x, min), max)
+
+    Args:
+        values (remote_blob_util.BlobDef): Input Blob
+        min_value (Optional[Union[int, float]], optional): The minimum value to clip by. Defaults to None.
+        max_value (Optional[Union[int, float]], optional): The maximum value to clip by. Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Raises:
+        ValueError: min_value and max_value `cannot be None at the same time`
+
+    Returns:
+        remote_blob_util.BlobDef: A clipped Blob
+    """
     if name is None:
         name = id_util.UniqueStr("ClipByValue_")
 
@@ -707,6 +1049,22 @@ def l2_normalize(
     epsilon: float = 1e-12,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Use L2 norm to normalizes along dimension `axis`
+
+    The equation is: 
+    
+    .. math::
+        out = \frac{x}{\sqrt{\Sigma{x^2}+epsilon}}
+
+    Args:
+        input (remote_blob_util.BlobDef): Input Blob
+        axis (Optional[int], optional): The axis on which to apply L2 normalization. Defaults to None.
+        epsilon (float, optional): The epsilon value is used to avoid division by zero. Defaults to 1e-12.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The normalized Blob
+    """
     if axis < 0:
         axis += len(input.shape)
     assert axis >= 0 and axis < len(input.shape)
@@ -733,6 +1091,16 @@ def squared_difference(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """This op computes (x - y)(x - y) element-wise.
+
+    Args:
+        x (Union[int, float, remote_blob_util.BlobDef]): A Blob
+        y (Union[int, float, remote_blob_util.BlobDef]): A Blob with the same type of x
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob
+    """
     name_subtract, name_square = None, None
     if name is not None:
         name_subtract = name + "_subtract"

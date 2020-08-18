@@ -19,7 +19,7 @@ import collections
 import os
 import sys
 import random
-from typing import Union, Optional, Sequence, Tuple
+from typing import Union, Optional, Sequence, Tuple, List
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -537,7 +537,7 @@ def moments(x: remote_blob_util.BlobDef,
             keepdims: Optional[bool] = False, 
             name: Optional[str] = None, 
 ) -> remote_blob_util.BlobDef:
-    """Analogous to `tf.nn.moments<https://www.tensorflow.org/api_docs/python/tf/nn
+    """Analogous to `tf.nn.moments <https://www.tensorflow.org/api_docs/python/tf/nn
     /moments>`_
 
     Args:
@@ -1034,6 +1034,11 @@ def softmax(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""Computes softmax activations. Analogous to `tf.nn.softmax <https://www.tensorflow.org/api_docs/python/tf/nn/softmax>`_
+
+    For each element, we apply: 
+
+    .. math::
+        S_i = \frac{e^i}{\sum_1^j e^j }
 
     Args:
         logits (remote_blob_util.BlobDef): A non-empty `Blob`.
@@ -1742,7 +1747,10 @@ def deconv2d_torch(
 def leaky_relu(
     x: remote_blob_util.BlobDef, alpha: float = 0.2, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Leaky ReLU activation value
+    r"""Leaky ReLU activation value, Analogous to `tf.nn.leaky_relu <https://www.tensorflow.org/api_docs/python/tf/nn/leaky_relu>`_
+
+    .. math::
+        out = max(x, alpha*x)
 
     Args:
         x (remote_blob_util.BlobDef):  A `Blob` representing preactivation values.
@@ -1750,7 +1758,7 @@ def leaky_relu(
         name (Optional[str], optional): This operator's name(optional). Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The activation `Blob`
+        remote_blob_util.BlobDef: The activation `Blob`.
     """
     return (
         flow.user_op_builder(
