@@ -60,7 +60,7 @@ def FlowToOnnxNaive(graph, shape_override):
         lbd = graph.helper.lbn2logical_blob_desc[lbn]
         if lbn not in shape_override:
             shape_override[lbn] = list(lbd.body.shape.dim)
-        dtypes[lbn] = util.Flow2OnnxDtype(lbd.body.data_type)
+        dtypes[lbn] = util.FlowProto2OnnxDtype(lbd.body.data_type)
 
     # some stats
     op_cnt = collections.Counter()
@@ -156,7 +156,9 @@ def FlowToOnnxNaive(graph, shape_override):
         for a in attrs:
             attr_cnt[a] += 1
             if a == "dtype":
-                attr[a] = util.Flow2OnnxDtype(util.get_flow_node_attr(node, "dtype"))
+                attr[a] = util.FlowProto2OnnxDtype(
+                    util.get_flow_node_attr(node, "dtype")
+                )
             else:
                 attr[a] = util.get_flow_node_attr(node, a)
 
@@ -189,7 +191,7 @@ def FlowOnnxMapping(g, ops_mapping):
             logger.debug("explicitly skip node " + node.name)
             continue
 
-        op = node.type
+        op = node.op_type
         map_info = ops_mapping.get(op)
         if map_info is None:
             unmapped_op[op] += 1
@@ -199,7 +201,7 @@ def FlowOnnxMapping(g, ops_mapping):
 
         func, onnx_op, kwargs = map_info
         if onnx_op is not None:
-            node.type = onnx_op
+            node.op_type = onnx_op
         try:
             func(g, node, **kwargs)
             node.skip_conversion = True

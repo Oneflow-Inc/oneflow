@@ -145,7 +145,12 @@ def InferOnnxShapeDtype(
 
     def BuildOnnxOp(node):
         """Build onnx op"""
-        onnx_node = helper.make_node(node.type, node.input, node.output, name=node.name)
+        onnx_node = helper.make_node(
+            node.op_type,
+            node.input_tensor_names,
+            node.output_tensor_names,
+            name=node.name,
+        )
         # deal with attributes
         attr = []
         attr_graphs = node.get_body_graphs()
@@ -156,16 +161,16 @@ def InferOnnxShapeDtype(
                     "graph for " + node.name + " " + attr_name
                 )
                 attr.append(helper.make_attribute(attr_name, graph_proto))
-        attr.extend(node.attr_onnx.values())
+        attr.extend(node.attrs_onnx.values())
         if attr:
             onnx_node.attribute.extend(attr)
         return onnx_node
 
     inputs = []
     outputs = []
-    for inp, shape, dtype in zip(node.input, input_shapes, input_dtypes):
+    for inp, shape, dtype in zip(node.input_tensor_names, input_shapes, input_dtypes):
         inputs.append(util.MakeOnnxInputsOutputs(inp, dtype, shape))
-    for output in node.output:
+    for output in node.output_tensor_names:
         outputs.append(util.MakeOnnxInputsOutputs(output, TensorProto.UNDEFINED, None))
     graph_proto = helper.make_graph(
         [BuildOnnxOp(node)], "infer-graph", inputs, outputs, initializer=initializers
@@ -181,7 +186,7 @@ def InferOnnxShapeDtype(
         logger.warning(
             "ONNX Failed to infer shapes and dtypes for [%s, type: %s]",
             node.name,
-            node.type,
+            node.op_type,
             exc_info=1,
         )
         return None, None
@@ -204,7 +209,7 @@ def InferOnnxShapeDtype(
             shapes[output.name] = None
     output_shapes = []
     output_dtypes = []
-    for output in node.output:
+    for output in node.output_tensor_names:
         if output in shapes:
             output_shapes.append(shapes[output])
         else:
