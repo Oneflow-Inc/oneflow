@@ -144,6 +144,7 @@ Maybe<void> NormalizationAddReluGradTensorDescInfer(user_op::InferContext* ctx) 
 
 REGISTER_USER_OP("normalization_add_relu_grad")
     .Input("x")
+    .Input("z")
     .Input("dy")
     .Input("mean")
     .Input("inv_variance")
@@ -152,6 +153,7 @@ REGISTER_USER_OP("normalization_add_relu_grad")
     .Output("gamma_diff")
     .Output("beta_diff")
     .Output("dx")
+    .Output("dz")
     .Attr("axis", UserOpAttrType::kAtInt32)
     .Attr("epsilon", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn(NormalizationAddReluGradTensorDescInfer)
@@ -166,8 +168,10 @@ REGISTER_USER_OP("normalization_add_relu_grad")
           .Broadcast(ctx->inputs())
           .PartialSum(ctx->outputs())
           .Split(user_op::OpArg("x", 0), 0)
+          .Split(user_op::OpArg("z", 0), 0)
           .Split(user_op::OpArg("dx", 0), 0)
           .Split(user_op::OpArg("dy", 0), 0)
+          .Split(user_op::OpArg("dz", 0), 0)
           .Build();
       return Maybe<void>::Ok();
     });
@@ -205,6 +209,7 @@ REGISTER_USER_OP_GRAD("normalization_add_relu")
                                    &var_rsqrt_op_name](user_op::BackwardOpBuilder& builder) {
         builder.OpTypeName("normalization_add_relu_grad")
             .InputBind("x", ctx->FwOp().input("x", 0))
+            .InputBind("z", ctx->FwOp().input("z", 0))
             .InputBind("dy", ctx->FwOp().output_grad("y", 0))
             .InputBind("gamma", ctx->FwOp().input("gamma", 0))
             .InputBind("beta", ctx->FwOp().input("beta", 0))
@@ -212,7 +217,8 @@ REGISTER_USER_OP_GRAD("normalization_add_relu")
             .Attr("epsilon", ctx->FwOp().attr<float>("epsilon"))
             .Output("gamma_diff")
             .Output("beta_diff")
-            .Output("dx");
+            .Output("dx")
+            .Output("dz");
         if (is_training) {
           builder.InputBind("mean", ctx->FwOp().output("mean", 0))
               .InputBind("inv_variance", ctx->FwOp().output("inv_variance", 0));
@@ -335,6 +341,15 @@ REGISTER_USER_OP_GRAD("normalization_add_relu")
                           .Build();
                     });
 
+      // const auto z_op_name = ctx->FwOp().op_name() + "_grad_z";
+      // ctx->DefineOp(z_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+      //   return builder.OpTypeName("add_n")
+      //       .Input("in", ctx->FwOp().input("x", 0))
+      //       .Input("in", ctx->FwOp().input("z", 0))
+      //       .Output("dz")
+      //       .Build();
+      // });
+
       ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
                                 [&ctx, &is_training, &is_fp16, &grad_op_name, &dx_f2h_cast_op_name,
                                  &dy_mul_inv_var_op_name]() -> const std::string& {
@@ -347,6 +362,10 @@ REGISTER_USER_OP_GRAD("normalization_add_relu")
                                       return ctx->GetOp(dy_mul_inv_var_op_name).output("z", 0);
                                     }
                                   }
+                                });
+      ctx->FwOp().InputGradBind(user_op::OpArg("z", 0),
+                                [&ctx, &grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(grad_op_name).output("dz", 0);
                                 });
 
       ctx->FwOp().InputGradBind(user_op::OpArg("gamma", 0),

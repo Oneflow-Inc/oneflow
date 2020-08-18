@@ -995,7 +995,7 @@ def batch_normalization(
 @oneflow_export("layers.batch_normalization_add_relu")
 def batch_normalization_add_relu(
     inputs: remote_blob_util.BlobDef,
-    add: remote_blob_util.BlobDef,
+    add_inputs: remote_blob_util.BlobDef,
     axis: int = -1,
     momentum: float = 0.99,
     epsilon: float = 0.001,
@@ -1080,7 +1080,7 @@ def batch_normalization_add_relu(
             flow.user_op_builder(name)
             .Op("normalization_add_relu")
             .Input("x", [inputs])
-            .Input("z", [add])
+            .Input("z", [add_inputs])
             .Input("moving_mean", [moving_mean])
             .Input("moving_variance", [moving_variance])
             .Input("gamma", [gamma])
@@ -1114,7 +1114,7 @@ def batch_normalization_add_relu(
             name="BatchNorm",
         )
 
-        return flow.math.relu(flow.math.add(bn, add_in))
+        return flow.math.relu(flow.math.add(bn, add_inputs))
 
 
 @oneflow_export("layers.upsample_2d")
