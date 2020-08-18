@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_BOXING_LOG_H_
-#define ONEFLOW_CORE_GRAPH_BOXING_LOG_H_
+#ifndef ONEFLOW_CORE_GRAPH_BOXING_LOGGER_H_
+#define ONEFLOW_CORE_GRAPH_BOXING_LOGGER_H_
 
 #include <memory>
 #include "glog/logging.h"
@@ -59,4 +59,4 @@ class CsvBoxingLog final : public BoxingLog {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_BOXING_LOG_H_
+#endif  // ONEFLOW_CORE_GRAPH_BOXING_LOGGER_H_

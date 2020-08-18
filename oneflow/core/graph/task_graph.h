@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/register/op_blob_arg_info.h"
-#include "oneflow/core/graph/boxing/boxing_log.h"
+#include "oneflow/core/graph/boxing/boxing_logger.h"
 
 namespace oneflow {
 

@@ -13,11 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/boxing/boxing_log.h"
+#include "oneflow/core/graph/boxing/boxing_logger.h"
 #include <cstdint>
 #include <string>
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/oneflow.h"
 
 namespace oneflow {
 
@@ -25,7 +27,7 @@ namespace {
 
 #define OF_BOXING_LOGGER_CSV_COLNUM_NAME_FIELD                   \
   "src_op_name,dst_op_name,src_parallel_conf,dst_parallel_conf," \
-  "src_sbp_conf,dst_sbp_conf,lbi,dtype,data_shape,comment\n"
+  "src_sbp_conf,dst_sbp_conf,lbi,dtype,data_shape,builder,comment\n"
 
 std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
   std::string serialized_sbp_parallel = "";
@@ -33,7 +35,6 @@ std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
     serialized_sbp_parallel = "B";
   } else if (sbp_parallel.has_partial_sum_parallel()) {
     serialized_sbp_parallel = "P";
-
   } else if (sbp_parallel.has_split_parallel()) {
     serialized_sbp_parallel = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
   } else {
@@ -43,11 +44,17 @@ std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
 }
 
 std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
-  std::string serialized_parallel_desc;
-  serialized_parallel_desc += "device_type: " + DeviceType_Name(parallel_desc.device_type()) + " ";
-  serialized_parallel_desc += "device_name: ";
+  std::string serialized_parallel_desc = "";
+  std::string device_type = "";
+  if(parallel_desc.device_type() == DeviceType::kCPU) {
+    device_type = "CPU";
+  } else if (parallel_desc.device_type() == DeviceType::kGPU) {
+    device_type = "GPU";
+  } else {
+    UNIMPLEMENTED();
+  }
   for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
-    serialized_parallel_desc += std::to_string(machine_id) + ": ";
+    serialized_parallel_desc += std::to_string(machine_id) + ":" + device_type + ":";
     int64_t min_id = parallel_desc.sorted_dev_phy_ids(machine_id).front();
     int64_t max_id = parallel_desc.sorted_dev_phy_ids(machine_id).back();
     serialized_parallel_desc += std::to_string(min_id) + "-" + std::to_string(max_id);
@@ -57,13 +64,14 @@ std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   return serialized_parallel_desc;
 }
 
-std::string GetBlobInfo4LogicalBlobDesc(const BlobDesc& logical_blob_desc) {
-  std::string blob_desc_info = "dtype: ";
-  blob_desc_info += DataType_Name(logical_blob_desc.data_type()) + ",";
-  auto shape_info = logical_blob_desc.shape().ToString();
-  StringReplace(&shape_info, ',', ' ');
-  blob_desc_info += " shape: " + shape_info;
-  return blob_desc_info;
+std::string GetBlobDtype4LogicalBlobDesc(const BlobDesc& logical_blob_desc) {
+  return DataType_Name(logical_blob_desc.data_type());
+}
+
+std::string GetBlobShape4LogicalBlobDesc(const BlobDesc& logical_blob_desc) {
+  auto shape = logical_blob_desc.shape().ToString();
+  StringReplace(&shape, ',', ' ');
+  return shape;
 }
 
 std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status) {
@@ -75,11 +83,13 @@ std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status
   serialized_status += SbpParallelToString(status.src_sbp_parallel()) + ",";
   serialized_status += SbpParallelToString(status.dst_sbp_parallel()) + ",";
   serialized_status += GenLogicalBlobName(status.lbi()) + ",";
-  serialized_status += GetBlobInfo4LogicalBlobDesc(status.logical_blob_desc()) + ",";
+  serialized_status += GetBlobDtype4LogicalBlobDesc(status.logical_blob_desc()) + ",";
+  serialized_status += GetBlobShape4LogicalBlobDesc(status.logical_blob_desc()) + ",";
+  serialized_status += status.builder_name() + ",";
   if (status.comment() == std::string("")) {
-    serialized_status += status.builder_name() + ",";
+    serialized_status += "-";
   } else {
-    serialized_status += status.builder_name() + ":" + status.comment();
+    serialized_status +=  status.comment();
   }
   serialized_status += "\n";
   return serialized_status;
