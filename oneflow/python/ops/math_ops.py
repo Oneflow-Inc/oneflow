@@ -957,6 +957,16 @@ def broadcast_to_compatible_with(
     compatible: Sequence[remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""Returns a 'Blob' with the shape can be broadcasted by other shapes
+
+    Args:
+        x (remote_blob_util.BlobDef): a 'Blob'
+        compatible (Sequence[remote_blob_util.BlobDef]): Sequence of different shape
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A 'Blob' with the biggest shape
+    """
     assert isinstance(compatible, (list, tuple))
     if name is None:
         name = id_util.UniqueStr("BroadcastToCompatibleWith_")

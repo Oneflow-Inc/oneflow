@@ -1004,10 +1004,10 @@ def upsample(
 
     Args:
         x ([type]): Input `Blob`.
-        size (tuple, optional): (height_scale,width_scale)  Defaults to (2, 2).
+        size (tuple, optional): (height_scale, width_scale)  Defaults to (2, 2).
         data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCHW" or "NHWC" (default: "NCHW"). "NCHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, height, width).
                         "NHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, height, width, channels).. Defaults to "NCHW".
-        interpolation (str, optional): Image interpolation algorithm to enlarge the image size. Defaults to "nearest".
+        interpolation (str, optional): Image interpolation algorithm to enlarge the image size. Defaults to "nearest". "nearest" and "bilinear" are available now.
         name ([type], optional): This layer's name. Defaults to None.
 
     Raises:
@@ -1015,7 +1015,7 @@ def upsample(
         ValueError: data_format must be "NHWC" or "NCHW"
 
     Returns:
-        [type]: remote_blob_util.BlobDef:  A `Blob` with new shape of input. if input size is(2,2),then the new shape is [N, C, 2H, 2W].
+        [type]: remote_blob_util.BlobDef:  A `Blob` which is the upsampled `x`. If `size` is (2, 2), the shape of return value is [N, C, 2H, 2W].
     """
     if isinstance(size, int):
         height_scale = size
