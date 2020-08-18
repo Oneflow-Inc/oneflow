@@ -65,7 +65,7 @@ void Compiler::GenNetTopo(Plan* plan) const {
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   std::ostringstream ss;
   ss << "<profile> {oneflow}.{CompileAndMergePlanOnMaster}.{CompileCurJobOnMaster#job_name:"
-     << job->job_conf().job_name() << "}";
+     << job->job_conf().job_name() << "}.{Compile}";
   LOG(INFO) << ss.str() << " <Begin>";
   const JobDesc& job_desc = GlobalJobDesc();
   if (need_job_complete) { JobCompleter().Complete(job); }

@@ -91,29 +91,46 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
+  std::ostringstream ss;
+  ss << "<profile> {oneflow}.{CompileAndMergePlanOnMaster}.{CompileCurJobOnMaster#job_name:"
+     << job->job_conf().job_name() << "}.{Compile}.{Complete}";
+  LOG(INFO) << ss.str() << " <Begin>";
   FunctionPass("DumpTimeShapeAndBlobParallelConfPass")(job);
+  // LOG(INFO) << "CompleteJob, DumpTimeShapeAndBlobParallelConfPass";
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
+  // LOG(INFO) << "CompleteJob, GroupBoxingByDstParallel";
   if (GlobalJobDesc().enable_keep_header_only()) {
     WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
+    // LOG(INFO) << "CompleteJob, AddKeepHeaderOnlyOp";
   }
   WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp);
+  // LOG(INFO) << "CompleteJob, SetCtrlInOpName4VariableOp";
   // complete tick ops
   WithOpGraphAndMutJobBuilder(job, &AutoSourceTick);
+  // LOG(INFO) << "CompleteJob, AutoSourceTick";
   WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape);
+  // LOG(INFO) << "CompleteJob, AddTickForTimeShape";
   WithOpGraphAndMutJobBuilder(job, &AutoSinkTick);
+  // LOG(INFO) << "CompleteJob, AutoSinkTick";
   AddGlobalTotalJobCriticalSection(*job);
+  // LOG(INFO) << "CompleteJob, AddGlobalTotalJobCriticalSection";
   WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
+  // LOG(INFO) << "CompleteJob, AddGlobalInputCriticalSections";
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
+  // LOG(INFO) << "CompleteJob, AddGlobalOutputCriticalSections";
   FunctionPass("DumpTimeShapeAndBlobParallelConfPass")(job);
+  // LOG(INFO) << "CompleteJob, DumpTimeShapeAndBlobParallelConfPass";
   if (XrtCompilationEnabled(GlobalJobDesc())) {
 #ifdef OF_WITH_XRT
     WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob);
+// LOG(INFO) << "CompleteJob, RebuildXrtCompiledJob";
 #else
     LOG(WARNING) << "It will not use XLA or TensorRT since WITH_XLA or "
                     "WITH_TENSORRT was not enabled when compiling the project.";
 #endif  // OF_WITH_XRT
   }
   CheckOpGraph(OpGraph(*job));
+  LOG(INFO) << ss.str() << " <End>";
 }
 
 }  // namespace oneflow

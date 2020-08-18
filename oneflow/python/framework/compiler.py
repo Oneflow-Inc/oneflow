@@ -42,7 +42,7 @@ import time
 def get_time_stamp_str(t):
     head = time.strftime("%H:%M:%S", time.localtime(t))
     tail = round((t - int(t)) * 1e6)
-    return "{}.{:6d}".format(head, tail)
+    return "{}.{:06d}".format(head, tail)
 
 
 def Compile(session, function_desc, config_proto):
@@ -71,7 +71,7 @@ def Compile(session, function_desc, config_proto):
 
     print(
         "[{}] <profile> {{python}}.{{CompileJob#job_name:{}#time:{}}} <End>".format(
-            get_time_stamp_str(start), job_name, time.time() - start
+            get_time_stamp_str(time.time()), job_name, time.time() - start
         )
     )
 
