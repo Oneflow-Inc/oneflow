@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/chain_graph.h"
+#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
@@ -244,8 +245,38 @@ void ChainGraph::CheckNoCycle() const {
     std::string job_id = std::to_string(GlobalJobDesc().job_id());
     auto* ptr = scc.get();
     auto OnCycle = [ptr](ChainNode* chain_node) { return ptr->find(chain_node) != ptr->end(); };
-    const auto& filename = "job" + job_id + "_cycle_chain_graph.dot";
-    ToDotWithFilePath(OnCycle, [](ChainEdge*) { return true; }, filename);
+    const auto& chain_graph_filename = "job" + job_id + "_cycle_chain_graph.dot";
+    ToDotWithFilePath(OnCycle, [](ChainEdge*) { return true; }, chain_graph_filename);
+
+    HashMap<int64_t, int32_t> task_id2color = {};
+    int32_t chain_node_cnt = 0;
+    for (ChainNode* chain_node : *ptr) {
+      chain_node_cnt++;
+      for (TaskNode* task_node : chain_node->TaskNodes()) {
+        task_id2color.emplace(task_node->task_id(), chain_node_cnt);
+      }
+    }
+    const std::function<std::string(TaskNode*)> ColorNode = [&](TaskNode* t) {
+      auto color_it = task_id2color.find(t->task_id());
+      if (color_it != task_id2color.end()) {
+        return ", style=filled, colorscheme=set312, fillcolor=" + std::to_string(color_it->second);
+      } else {
+        return std::string("");
+      }
+    };
+    const std::function<std::string(TaskEdge*)> ColorEdge = [&](TaskEdge* te) {
+      auto src_color_it = task_id2color.find(te->src_node()->task_id());
+      auto dst_color_it = task_id2color.find(te->dst_node()->task_id());
+      if (src_color_it != task_id2color.end() && dst_color_it != task_id2color.end()) {
+        return ", style=filled, colorscheme=set312, color=" + std::to_string(task_id2color.size());
+      } else {
+        return std::string("");
+      }
+    };
+    const std::string colored_task_graph_filename =
+        "optimized_dlnet_" + job_id + "_highlighted_cycle_task_nodes_in_chain_graph.dot";
+    task_gph_.ToDotWithFilePath(ColorNode, ColorEdge, colored_task_graph_filename);
+
     HashSet<const TaskNode*> tasks;
     for (const auto* chain_node : *scc) {
       for (const TaskNode* task_node : chain_node->TaskNodes()) {
@@ -255,7 +286,10 @@ void ChainGraph::CheckNoCycle() const {
     auto TaskOnCycle = [&](TaskNode* task) { return tasks.find(task) != tasks.end(); };
     const auto& task_gph_filename = "job" + job_id + "_cycle_task_graph.dot";
     task_gph_.ToDotWithFilePath(TaskOnCycle, [](TaskEdge*) { return true; }, task_gph_filename);
-    LOG(FATAL) << "cycle in graph detected";
+    LOG(FATAL) << "cycle in graph detected, please check:\n"
+               << colored_task_graph_filename << "\n"
+               << task_gph_filename << "\n"
+               << chain_graph_filename;
   }
 }
 
