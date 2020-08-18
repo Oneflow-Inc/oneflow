@@ -46,7 +46,7 @@ std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
 std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   std::string serialized_parallel_desc = "";
   std::string device_type = "";
-  if(parallel_desc.device_type() == DeviceType::kCPU) {
+  if (parallel_desc.device_type() == DeviceType::kCPU) {
     device_type = "CPU";
   } else if (parallel_desc.device_type() == DeviceType::kGPU) {
     device_type = "GPU";
@@ -89,7 +89,7 @@ std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status
   if (status.comment() == std::string("")) {
     serialized_status += "-";
   } else {
-    serialized_status +=  status.comment();
+    serialized_status += status.comment();
   }
   serialized_status += "\n";
   return serialized_status;
