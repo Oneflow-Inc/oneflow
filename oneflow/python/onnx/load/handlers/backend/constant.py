@@ -44,7 +44,7 @@ class Constant(BackendHandler):
                 node,
                 # inputs=[value],
                 # attrs={"dtype": dtype}
-                name=node.output_tensors[0],
+                name=node.output_tensor_names[0],
                 attrs={
                     "dtype": dtype,
                     "trainable": False,

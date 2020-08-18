@@ -41,11 +41,11 @@ class BatchNormalization(BackendHandler):
 
         name = "bn_" + randomString()
 
-        cls.copy_variable_file(node.input_tensors[1], name + "-gamma")
-        cls.copy_variable_file(node.input_tensors[2], name + "-beta")
-        cls.copy_variable_file(node.input_tensors[3], name + "-moving_mean")
-        cls.copy_variable_file(node.input_tensors[4], name + "-moving_variance")
-        node.input_tensors = node.input_tensors[:1]
+        cls.copy_variable_file(node.input_tensor_names[1], name + "-gamma")
+        cls.copy_variable_file(node.input_tensor_names[2], name + "-beta")
+        cls.copy_variable_file(node.input_tensor_names[3], name + "-moving_mean")
+        cls.copy_variable_file(node.input_tensor_names[4], name + "-moving_variance")
+        node.input_tensor_names = node.input_tensor_names[:1]
 
         return [
             cls.make_tensor_from_onnx_node(node, name=name, **kwargs, attrs={"axis": 1})
