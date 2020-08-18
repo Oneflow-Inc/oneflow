@@ -22,6 +22,8 @@ import oneflow as flow
 import oneflow.typing as oft
 from test_util import Args, CompareOpWithTensorFlow, GenArgDict
 
+flow.config.enable_debug_mode(True)
+
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
@@ -41,7 +43,8 @@ def make_job(input_shape, dtype=flow.float32):
 def make_py_job(input_shape, dtype=flow.float32):
     @flow.global_function(function_config=func_config)
     def py_sigmoid_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
-        return flow.math.sigmoid(x)
+        with flow.scope.placement("cpu", "0:0"):
+            return flow.math.sigmoid_py(x)
 
     return py_sigmoid_job
 
