@@ -6,13 +6,12 @@ import inspect
 import oneflow
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "-root", "--root_path", type=str, required=True
-)
+parser.add_argument("-root", "--root_path", type=str, required=True)
 parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
 )
 args = parser.parse_args()
+
 
 class VirtualModule(object):
     def __init__(self):
@@ -25,8 +24,8 @@ class VirtualModule(object):
         self._func_or_class_dict[api_name_base] = func_or_class
 
     def find_or_create_submodule(self, submodule_name):
-        return self._submodule_dict.setdefault(submodule_name, VirtualModule()) 
-    
+        return self._submodule_dict.setdefault(submodule_name, VirtualModule())
+
     def __str__(self):
         ret = ""
         for k, v in self._submodule_dict.items():
@@ -42,9 +41,9 @@ class VirtualModule(object):
             sub_dir_path = os.path.join(dir_path, k)
             v.dump(sub_dir_path)
         init_file_path = os.path.join(dir_path, "__init__.py")
-        filemode = 'w'
+        filemode = "w"
         if is_root:
-            filemode = 'a+'
+            filemode = "a+"
         with open(init_file_path, filemode) as f:
             mod_set = set()
             lines = []
@@ -64,17 +63,23 @@ class VirtualModule(object):
 def include_submodule(modname):
     return "from . import {}".format(modname)
 
+
 def include_export(api_name_base, symbol):
     if symbol.__name__ == api_name_base:
-        return ["from {} import {}".format(symbol.__module__, api_name_base)]    
+        return ["from {} import {}".format(symbol.__module__, api_name_base)]
     else:
         if inspect.isclass(symbol):
             return [
                 "from {} import {}".format(symbol.__module__, symbol.__name__),
-                "{} = {}".format(api_name_base, symbol.__name__)
+                "{} = {}".format(api_name_base, symbol.__name__),
             ]
         else:
-            return ["from {} import {} as {}".format(symbol.__module__, symbol.__name__, api_name_base)]    
+            return [
+                "from {} import {} as {}".format(
+                    symbol.__module__, symbol.__name__, api_name_base
+                )
+            ]
+
 
 def exported_symbols():
     for mod in sys.modules.values():
@@ -85,15 +90,19 @@ def exported_symbols():
                     for api_name in getattr(symbol, "_ONEFLOW_API"):
                         yield api_name, symbol, mod
 
+
 def collect_exports():
     exports = {}
     api_name2module = {}
     for api_name, symbol, module in exported_symbols():
-        assert api_name not in exports, (
-            "exported twice: {}, previous exported: {} in {}, current: {} in {}".format(
-                api_name, exports[api_name], api_name2module[api_name].__file__,
-                symbol, module.__file__
-            )
+        assert (
+            api_name not in exports
+        ), "exported twice: {}, previous exported: {} in {}, current: {} in {}".format(
+            api_name,
+            exports[api_name],
+            api_name2module[api_name].__file__,
+            symbol,
+            module.__file__,
         )
         exports[api_name] = symbol
         api_name2module[api_name] = module
@@ -102,7 +111,8 @@ def collect_exports():
     for api_name, symbol in exports.items():
         fields = api_name.split(".")
         api = root_virmod
-        for field in fields[:-1]: api = api.find_or_create_submodule(field)
+        for field in fields[:-1]:
+            api = api.find_or_create_submodule(field)
         api.add_func_or_class(fields[-1], symbol)
     if args.verbose:
         print(root_virmod)
@@ -112,6 +122,7 @@ def collect_exports():
 def main():
     mod = collect_exports()
     mod.dump(args.root_path, is_root=True)
+
 
 if __name__ == "__main__":
     main()
