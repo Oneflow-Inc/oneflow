@@ -200,7 +200,7 @@ message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
 add_custom_target(of_format
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix --quiet
-  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --python_bin ${Python_EXECUTABLE} --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow/python --fix
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR} --fix
   )
 
 # generate version
@@ -282,17 +282,16 @@ target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
-file(REMOVE_RECURSE "${of_pyscript_dir}/oneflow/python")
 add_custom_target(of_pyscript_copy ALL
     COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/clean_generated_api.py --root_path=${of_pyscript_dir}/oneflow
     COMMAND "${CMAKE_COMMAND}" -E copy
         "${PROJECT_SOURCE_DIR}/oneflow/init.py" "${of_pyscript_dir}/oneflow/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python"
+    COMMAND rm -rf ${of_pyscript_dir}/oneflow/python
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/oneflow/python" "${of_pyscript_dir}/oneflow/python"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
-file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
 if (BUILD_CUDA)
   add_custom_command(TARGET of_pyscript_copy POST_BUILD
         COMMAND echo "with_cuda=True" >> "${of_pyscript_dir}/oneflow/python/compatibility.py")
@@ -301,16 +300,14 @@ else()
         COMMAND echo "with_cuda=False" >> "${of_pyscript_dir}/oneflow/python/compatibility.py")
 endif()
 
-copy_files("${oneflow_all_python_file}" "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}" of_pyscript_copy)
-
-file(WRITE ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags = []\n")
+file(WRITE ${PROJECT_SOURCE_DIR}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags = []\n")
 if (BUILD_CUDA)
-  file(APPEND ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-DWITH_CUDA')\n")
+    file(APPEND ${PROJECT_SOURCE_DIR}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-DWITH_CUDA')\n")
 endif()
 if (USE_CXX11_ABI)
-  file(APPEND ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=1')\n")
+    file(APPEND ${PROJECT_SOURCE_DIR}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=1')\n")
 else()
-  file(APPEND ${of_pyscript_dir}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=0')\n")
+    file(APPEND ${PROJECT_SOURCE_DIR}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=0')\n")
 endif()
 
 add_dependencies(of_pyscript_copy of_protoobj)
