@@ -18,6 +18,7 @@ limitations under the License.
 #include <string>
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/oneflow.h"
 
@@ -27,7 +28,7 @@ namespace {
 
 #define OF_BOXING_LOGGER_CSV_COLNUM_NAME_FIELD                   \
   "src_op_name,dst_op_name,src_parallel_conf,dst_parallel_conf," \
-  "src_sbp_conf,dst_sbp_conf,lbi,dtype,data_shape,builder,comment\n"
+  "src_sbp_conf,dst_sbp_conf,lbi,dtype,shape,builder,comment\n"
 
 std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
   std::string serialized_sbp_parallel = "";
@@ -48,10 +49,10 @@ std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   std::string device_type = "";
   if (parallel_desc.device_type() == DeviceType::kCPU) {
     device_type = "CPU";
-  } else if (parallel_desc.device_type() == DeviceType::kGPU) {
+  } else if(parallel_desc.device_type() == DeviceType::kGPU) {
     device_type = "GPU";
   } else {
-    UNIMPLEMENTED();
+    device_type = "Unknow Device";
   }
   for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
     serialized_parallel_desc += std::to_string(machine_id) + ":" + device_type + ":";
@@ -71,6 +72,8 @@ std::string GetBlobDtype4LogicalBlobDesc(const BlobDesc& logical_blob_desc) {
 std::string GetBlobShape4LogicalBlobDesc(const BlobDesc& logical_blob_desc) {
   auto shape = logical_blob_desc.shape().ToString();
   StringReplace(&shape, ',', ' ');
+  shape.at(0) = '[';
+  shape.at(shape.size() - 1) = ']';
   return shape;
 }
 
