@@ -64,16 +64,6 @@ void DumpVersionInfo() {
 
 #ifdef WITH_CUDA
   {
-    int cuda_driver_version;
-    cudaError_t err = cudaDriverGetVersion(&cuda_driver_version);
-    if (err == cudaSuccess) {
-      LOG(INFO) << "CUDA driver version: " << GetCudaVersionString(cuda_driver_version);
-    } else {
-      LOG(ERROR) << "Failed to get cuda driver version: " << cudaGetErrorString(err);
-    }
-  }
-
-  {
     int cuda_runtime_version;
     cudaError_t err = cudaRuntimeGetVersion(&cuda_runtime_version);
     if (err == cudaSuccess) {
