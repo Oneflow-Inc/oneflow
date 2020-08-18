@@ -274,7 +274,7 @@ void ChainGraph::CheckNoCycle() const {
       }
     };
     const std::string colored_task_graph_filename =
-        "optimized_dlnet_" + job_id + "_task_graph_colored_nodes_in_cycle.dot";
+        "optimized_dlnet_" + job_id + "_highlighted_cycle_task_nodes_in_chain_graph.dot";
     task_gph_.ToDotWithFilePath(ColorNode, ColorEdge, colored_task_graph_filename);
 
     HashSet<const TaskNode*> tasks;
