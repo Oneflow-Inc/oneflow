@@ -49,7 +49,7 @@ std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   std::string device_type = "";
   if (parallel_desc.device_type() == DeviceType::kCPU) {
     device_type = "CPU";
-  } else if(parallel_desc.device_type() == DeviceType::kGPU) {
+  } else if (parallel_desc.device_type() == DeviceType::kGPU) {
     device_type = "GPU";
   } else {
     device_type = "Unknow Device";
