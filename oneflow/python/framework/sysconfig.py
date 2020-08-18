@@ -19,7 +19,7 @@ import os
 
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
-from .sysconfig_gen import generated_compile_flags
+from oneflow.python_gen.framework.sysconfig import generated_compile_flags
 from typing import List
 
 

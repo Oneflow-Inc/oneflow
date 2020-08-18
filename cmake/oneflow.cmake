@@ -291,23 +291,23 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
-        "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
+        "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python_gen/__export_symbols__.py")
 if (BUILD_CUDA)
   add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "with_cuda=True" >> "${of_pyscript_dir}/oneflow/python/compatibility.py")
+        COMMAND echo "with_cuda=True" >> "${of_pyscript_dir}/oneflow/python_gen/compatibility.py")
 else()
   add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "with_cuda=False" >> "${of_pyscript_dir}/oneflow/python/compatibility.py")
+        COMMAND echo "with_cuda=False" >> "${of_pyscript_dir}/oneflow/python_gen/compatibility.py")
 endif()
 
-file(WRITE ${PROJECT_SOURCE_DIR}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags = []\n")
+file(WRITE ${of_pyscript_dir}/oneflow/python_gen/framework/sysconfig.py "generated_compile_flags = []\n")
 if (BUILD_CUDA)
-    file(APPEND ${PROJECT_SOURCE_DIR}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-DWITH_CUDA')\n")
+    file(APPEND ${of_pyscript_dir}/oneflow/python_gen/framework/sysconfig.py "generated_compile_flags.append('-DWITH_CUDA')\n")
 endif()
 if (USE_CXX11_ABI)
-    file(APPEND ${PROJECT_SOURCE_DIR}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=1')\n")
+    file(APPEND ${of_pyscript_dir}/oneflow/python_gen/framework/sysconfig.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=1')\n")
 else()
-    file(APPEND ${PROJECT_SOURCE_DIR}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=0')\n")
+    file(APPEND ${of_pyscript_dir}/oneflow/python_gen/framework/sysconfig.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=0')\n")
 endif()
 
 add_dependencies(of_pyscript_copy of_protoobj)
