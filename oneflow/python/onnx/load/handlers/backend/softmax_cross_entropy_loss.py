@@ -25,5 +25,8 @@ class SoftmaxCrossEntropyLoss(BackendHandler):
     @classmethod
     def version_12(cls, node, **kwargs):
         tensor_dict = kwargs.get("tensor_dict", {})
-        inputs = tensor_dict[node.input_tensors[1]], tensor_dict[node.input_tensors[0]]
+        inputs = (
+            tensor_dict[node.input_tensor_names[1]],
+            tensor_dict[node.input_tensor_names[0]],
+        )
         return [cls.make_tensor_from_onnx_node(node, inputs=inputs, **kwargs)]

@@ -40,7 +40,7 @@ class ConvMixin(BroadcastMixin):
       And conv_transpose_output shape should be:
         conv_transpose_output_shape[i] = strides[i] * (input_shape[i] - 1) + kernel_shape[i]
     """
-        x = input_dict[node.input_tensors[0]]
+        x = input_dict[node.input_tensor_names[0]]
         x_shape = list(x.shape)
         x_rank = len(x_shape)
         spatial_size = x_rank - 2
@@ -51,7 +51,7 @@ class ConvMixin(BroadcastMixin):
         compute_c_idx = compute_format.find("C")
         spatial_format = "".join([d for d in compute_format if d not in ["N", "C"]])
 
-        in_weights = input_dict[node.input_tensors[1]]
+        in_weights = input_dict[node.input_tensor_names[1]]
         in_weights_shape = list(in_weights.shape)
         weights_rank = len(in_weights_shape)
         if transpose:
@@ -245,7 +245,7 @@ class ConvMixin(BroadcastMixin):
         #       for (x, weight) in zip(xs, weight_groups)
         #   ]
 
-        if len(node.input_tensors) == 2:
+        if len(node.input_tensor_names) == 2:
             # if support_cuda:
             #   output = tf.concat(convolved, axis=1)
             # else:
@@ -255,7 +255,7 @@ class ConvMixin(BroadcastMixin):
             #                             compute_format, storage_format))
             output = conv
         else:
-            bias = input_dict[node.input_tensors[2]]
+            bias = input_dict[node.input_tensor_names[2]]
             output = nn_ops.bias_add(conv, bias)
 
         return [output]

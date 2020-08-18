@@ -31,7 +31,7 @@ from .pool_mixin import PoolMixin
 class MaxPool(PoolMixin, BackendHandler):
     @classmethod
     def _common(cls, node, **kwargs):
-        pool_type = "MAX" if len(node.output_tensors) == 1 else "MAX_WITH_ARGMAX"
+        pool_type = "MAX" if len(node.output_tensor_names) == 1 else "MAX_WITH_ARGMAX"
         return cls.pool(
             node, kwargs["tensor_dict"], pool_type, kwargs.get("strict", True)
         )

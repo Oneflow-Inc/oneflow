@@ -122,7 +122,7 @@ class BackendHandler(Handler):
         if tf_func is None:
             raise RuntimeError("No Tensorflow function is given.")
         if inputs is None:
-            inputs = [tensor_dict.get(inp, None) for inp in node.input_tensors]
+            inputs = [tensor_dict.get(inp, None) for inp in node.input_tensor_names]
         if attrs is None:
             attrs = copy.deepcopy(node.attrs)
         name = name or node.name

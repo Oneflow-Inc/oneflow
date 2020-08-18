@@ -34,7 +34,6 @@ import oneflow as flow
 
 from oneflow.python.onnx import util
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.onnx.load.backend_rep import TensorflowRep
 from oneflow.python.onnx.load.common import get_device_option
 from oneflow.python.onnx.load.common import get_unique_suffix
 from oneflow.python.onnx.load.common import supports_device as common_supports_device
@@ -89,7 +88,7 @@ def from_pytorch(torch_model, inputs):
                 # we do not support 0d tensor
                 if len(value.shape) == 0:
                     value = np.reshape(value, (1,))
-                dir_name = os.path.join(tmpdirname, node.output_tensors[0])
+                dir_name = os.path.join(tmpdirname, node.output_tensor_names[0])
                 if not os.path.exists(dir_name):
                     os.makedirs(dir_name)
                 with open(os.path.join(dir_name, "out"), "wb") as f:
@@ -233,7 +232,9 @@ class TensorflowBackend(Backend):
                 output_ops = cls._onnx_node_to_tensorflow_op(
                     onnx_node, tensor_dict, handlers, opset=opset, strict=strict
                 )
-                curr_node_output_map = dict(zip(onnx_node.output_tensors, output_ops))
+                curr_node_output_map = dict(
+                    zip(onnx_node.output_tensor_names, output_ops)
+                )
                 tensor_dict.update(curr_node_output_map)
         return tensor_dict
 

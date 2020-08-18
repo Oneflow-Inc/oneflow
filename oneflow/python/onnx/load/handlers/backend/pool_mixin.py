@@ -25,7 +25,7 @@ from oneflow.python.onnx.load.common import logger
 class PoolMixin(object):
     @classmethod
     def pool(cls, node, input_dict, pooling_type, strict=True):
-        x = input_dict[node.input_tensors[0]]
+        x = input_dict[node.input_tensor_names[0]]
         orig_x = x
 
         kernel_shape = node.attrs["kernel_shape"]
