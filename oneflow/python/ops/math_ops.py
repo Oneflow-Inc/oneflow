@@ -689,6 +689,24 @@ def sigmoid(
     Returns:
         remote_blob_util.BlobDef: An activated Blob.
 
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def sigmoidJob(x: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.sigmoid(x)
+
+        x = np.array([-1, 0, 1]).astype(np.float32)
+        out = sigmoidJob(x)
+
+        # output [0.26894143, 0.5, 0.7310586]
+
     """
     return (
         flow.user_op_builder(
@@ -723,6 +741,50 @@ def unsorted_segment_sum(
     Returns:
         remote_blob_util.BlobDef: A Blob with the same type of data.
 
+    For example:
+
+    .. code-block:: python 
+
+        # Example 1: 
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def unsorted_segment_sumJob(data: tp.Numpy.Placeholder((3, 4)),
+                                    segment_ids: tp.Numpy.Placeholder((4, ), dtype=flow.int32)
+        )->tp.Numpy:
+            return flow.math.unsorted_segment_sum(data, segment_ids, num_segments=2, axis=1)
+
+        input_blob = np.array([[1, 2, 3, 4], 
+                               [5, 6, 7 ,8], 
+                               [9, 10, 11, 12]]).astype(np.float32)
+        segment_ids = np.array([0, 1, 0, 1]).astype(np.int32)
+        out = unsorted_segment_sumJob(input_blob, segment_ids)
+
+        # output [[ 4.  6.]
+                  [12. 14.]
+                  [20. 22.]]
+
+        # Example 2
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def unsorted_segment_sumJob(data: tp.Numpy.Placeholder((3, 4)),
+                                    segment_ids: tp.Numpy.Placeholder((3, ), dtype=flow.int32)
+        )->tp.Numpy:
+            return flow.math.unsorted_segment_sum(data, segment_ids, num_segments=2, axis=0)
+
+        input_blob = np.array([[1, 2, 3, 4], 
+                               [5, 6, 7 ,8], 
+                               [9, 10, 11, 12]]).astype(np.float32)
+        segment_ids = np.array([0, 1, 0]).astype(np.int32)
+        out = unsorted_segment_sumJob(input_blob, segment_ids)
+
+        # output [[10. 12. 14. 16.]
+                  [ 5.  6.  7.  8.]]
     """
     return (
         flow.user_op_builder(
