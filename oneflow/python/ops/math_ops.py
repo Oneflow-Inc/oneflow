@@ -948,6 +948,25 @@ def cast(
 
     Returns:
         remote_blob_util.BlobDef: A Blob
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def cast_Job(x: tp.Numpy.Placeholder((3, ), dtype=flow.float32)
+        )->tp.Numpy:
+            return flow.cast(x, dtype=flow.int32)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        out = cast_Job(x)
+
+        # out.dtype = "int32"
+
     """
     if x.dtype == dtype:
         return x
@@ -972,7 +991,7 @@ def equal(
     y: remote_blob_util.BlobDef, 
     name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Returns the truth value of (x == y) element-wise.
+    r"""Returns the truth value of :math:`{x}=={y}` element-wise.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -980,7 +999,27 @@ def equal(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A Blob with Bool type.
+        remote_blob_util.BlobDef: A Blob with int8 type.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def equal_Job(x: tp.Numpy.Placeholder((3, )), 
+                    y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.equal(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([1, 2, 1]).astype(np.float32)
+        out = equal_Job(x, y)
+
+        # output [1 1 0]
     """
     return build_broadcast_binary_op("broadcast_equal", x, y, name)
 
@@ -991,7 +1030,7 @@ def not_equal(
     y: remote_blob_util.BlobDef, 
     name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Returns the truth value of (x != y) element-wise.
+    r"""Returns the truth value of :math:`{x}!={y}` element-wise.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -999,7 +1038,27 @@ def not_equal(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A Blob with Bool type.
+        remote_blob_util.BlobDef: A Blob with int8 type.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def not_equal_Job(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.not_equal(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([1, 2, 1]).astype(np.float32)
+        out = not_equal_Job(x, y)
+
+        # output [0 0 1]
     """
     return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
 
@@ -1010,7 +1069,7 @@ def less(
     y: remote_blob_util.BlobDef, 
     name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Returns the truth value of (x < y) element-wise.
+    r"""Returns the truth value of :math:`x < y` element-wise.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -1018,7 +1077,27 @@ def less(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A Blob with Bool type.
+        remote_blob_util.BlobDef: A Blob with int8 type.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def less_Job(x: tp.Numpy.Placeholder((3, )), 
+                    y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.less(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([1, 2, 4]).astype(np.float32)
+        out = less_Job(x, y)
+
+        # output [0 0 1]
     """
     return build_broadcast_binary_op("broadcast_less", x, y, name)
 
@@ -1029,7 +1108,7 @@ def less_equal(
     y: remote_blob_util.BlobDef, 
     name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Returns the truth value of (x <= y) element-wise.
+    r"""Returns the truth value of :math:`x <= y` element-wise.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -1037,7 +1116,27 @@ def less_equal(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A Blob with Bool type.
+        remote_blob_util.BlobDef: A Blob with int8 type.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def less_equal_Job(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.less_equal(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([1, 1, 4]).astype(np.float32)
+        out = less_equal_Job(x, y)
+
+        # output [1 0 1]
     """
     return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
 
@@ -1048,7 +1147,7 @@ def greater(
     y: remote_blob_util.BlobDef, 
     name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Returns the truth value of (x > y) element-wise.
+    r"""Returns the truth value of :math:`x > y` element-wise.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -1056,7 +1155,27 @@ def greater(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A Blob with Bool type.
+        remote_blob_util.BlobDef: A Blob with int8 type.
+
+    For example: 
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def greater_Job(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.greater(x, y)
+
+        x = np.array([1, 1, 4]).astype(np.float32)
+        y = np.array([1, 2, 3]).astype(np.float32)
+        out = greater_Job(x, y)
+
+        # output [0 0 1]
     """
     return build_broadcast_binary_op("broadcast_greater", x, y, name)
 
@@ -1067,7 +1186,7 @@ def greater_equal(
     y: remote_blob_util.BlobDef, 
     name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Returns the truth value of (x >= y) element-wise.
+    r"""Returns the truth value of :math:`x >= y` element-wise.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -1075,7 +1194,27 @@ def greater_equal(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A Blob with Bool type.
+        remote_blob_util.BlobDef: A Blob with int8 type.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def greater_equal_Job(x: tp.Numpy.Placeholder((3, )), 
+                            y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.greater_equal(x, y)
+
+        x = np.array([1, 1, 4]).astype(np.float32)
+        y = np.array([1, 2, 3]).astype(np.float32)
+        out = greater_equal_Job(x, y)
+    
+        # output [1 0 1]
     """
     return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
 
@@ -1099,7 +1238,7 @@ def logical_and(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A Blob with Bool type.
+        remote_blob_util.BlobDef: A Blob with int8 type.
     """
     return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
 
