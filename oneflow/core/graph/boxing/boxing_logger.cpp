@@ -61,7 +61,7 @@ std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
     int64_t min_id = parallel_desc.sorted_dev_phy_ids(machine_id).front();
     int64_t max_id = parallel_desc.sorted_dev_phy_ids(machine_id).back();
     serialized_parallel_desc += std::to_string(min_id) + "-" + std::to_string(max_id);
-    if(++idx != sorted_machine_ids.size()) { serialized_parallel_desc += " "; }
+    if (++idx != sorted_machine_ids.size()) { serialized_parallel_desc += " "; }
   }
   return serialized_parallel_desc;
 }
