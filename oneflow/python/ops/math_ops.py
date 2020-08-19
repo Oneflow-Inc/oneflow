@@ -1239,6 +1239,27 @@ def logical_and(
 
     Returns:
         remote_blob_util.BlobDef: A Blob with int8 type.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def logical_and_Job(x: tp.Numpy.Placeholder((3, )), 
+                            y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.logical_and(x, y)
+
+        x = np.array([1, 0, 1]).astype(np.float32)
+        y = np.array([0, 0, 1]).astype(np.float32)
+        out = logical_and_Job(x, y)
+    
+        # output [0 0 1]
+    
     """
     return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
 
