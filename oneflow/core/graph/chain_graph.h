@@ -31,7 +31,7 @@ struct Chain {
   std::vector<TaskNode*> nodes;
   // ancestors of the nodes in this chain
   std::vector<std::bitset<BITSET_SIZE>> ancestors;
-  // nodes = node ids in this chain
+  // nodes in this chain
   std::vector<std::bitset<BITSET_SIZE>> members;
 
   std::pair<int64_t, int64_t> stream_area_id;
