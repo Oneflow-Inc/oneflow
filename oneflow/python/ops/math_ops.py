@@ -281,6 +281,25 @@ def divide(
     Returns:
         remote_blob_util.BlobDef: A Blob with same shape as input x.
 
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def divideJob(x: tp.Numpy.Placeholder((3, )), 
+                    y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.divide(x, y)
+
+        x = np.array([25, 16, 9]).astype(np.float32)
+        y = np.array([10, 4, 2]).astype(np.float32)
+        out = divideJob(x, y)
+
+        # output [2.5, 4., 4.5]
     """
     if isinstance(x, (int, float)):
         return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
@@ -307,12 +326,12 @@ def floor_mod(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """Mod two Blobs, Analogous to `tf.math.floormod <https://www.tensorflow.org/api_docs/python/tf/math/floormod>`_ 
+    r"""Mod two Blobs, Analogous to `tf.math.floormod <https://www.tensorflow.org/api_docs/python/tf/math/floormod>`_ 
 
     The equation is:
 
     .. math::
-        out = X \% Y
+        out = X \bmod Y
 
     Args:
         x (Union[int, float, remote_blob_util.BlobDef]): A Blob
@@ -326,6 +345,25 @@ def floor_mod(
     Returns:
         remote_blob_util.BlobDef: A Blob with same type as input x.
 
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def modJob(x: tp.Numpy.Placeholder((3, )), 
+                y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.mod(x, y)
+
+        x = np.array([16, 9, 5]).astype(np.float32)
+        y = np.array([6, 4, 3]).astype(np.float32)
+        out = modJob(x, y)
+        
+        # output [4., 1., 2.]
     """
     if isinstance(x, (int, float)):
         raise NotImplementedError
@@ -503,6 +541,23 @@ def tanh(
     Returns:
         remote_blob_util.BlobDef: A Blob.
 
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def tanhJob(x: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.tanh(x)
+
+        x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        out = tanhJob(x)
+        
+        # output [-0.46211714, 0., 0.46211714]
     """
 
     return (
