@@ -461,7 +461,7 @@ def _TryCompleteConfigProto(config_proto):
 
 
 def _GetDefaultConfigProto():
-    from oneflow.python.compatibility import with_cuda
+    from oneflow.python_gen.compatibility import with_cuda
 
     config_proto = job_set_util.ConfigProto()
     config_proto.resource.machine_num = 0
