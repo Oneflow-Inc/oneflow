@@ -33,6 +33,9 @@ class ChainMerger final {
   ChainMerger(const std::vector<TaskNode*>& task_nodes,
               const HashMap<TaskNode*, HashSet<TaskNode*>>& node2ancestors)
       : task_nodes_(task_nodes), node2ancestors_(node2ancestors) {
+    for (auto pair : node2ancestors) {
+      for (auto ancestor : pair.second) { node2descents_[ancestor].insert(pair.first); }
+    }
     InitTaskNode2UId();
     InitChains();
     MergeChains();
@@ -56,6 +59,8 @@ class ChainMerger final {
   const std::vector<TaskNode*>& task_nodes_;
   std::list<Chain> chain_list_;
   HashMap<TaskNode*, int64_t> task_node2uid_;
+  HashMap<TaskNode*, Chain*> task_node2chain_node_;
+  HashMap<TaskNode*, HashSet<TaskNode*>> node2descents_;
   const HashMap<TaskNode*, HashSet<TaskNode*>>& node2ancestors_;
 };
 
@@ -96,6 +101,7 @@ void ChainMerger::InitChains() {
       int64_t ancestor_uid = GetTaskUid(ancestor);
       CarefullySetBitset(&(cur_chain.ancestors), ancestor_uid);
     }
+    task_node2chain_node_.insert({task_node, &cur_chain});
   }
 }
 
@@ -109,6 +115,19 @@ bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
         CarefullySetBitset(&(lhs->members), GetTaskUid(node));
+        // update the respective chain node of task nodes in right chain node
+        CHECK(task_node2chain_node_[node] == &*rhs);
+        task_node2chain_node_[node] = &*lhs;
+      }
+      for (TaskNode* node : lhs->nodes) {
+        // inlclude members in descent nodes' ancestors
+        auto pair = node2descents_.find(node);
+        if (pair != node2descents_.end()) {
+          for (auto descent : pair->second) {
+            CarefullyInPlaceBitwiseOR(&(task_node2chain_node_.at(descent)->ancestors),
+                                      &(lhs->members));
+          }
+        }
       }
       CarefullyInPlaceBitwiseOR(&(lhs->ancestors), &(rhs->ancestors));
       return true;
