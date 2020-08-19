@@ -20,14 +20,16 @@ from oneflow.python.version import __version__
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
 import oneflow.python.framework.session_util as session_util
+
 del session_util
 
 import oneflow.python.framework.register_python_callback
 
-import oneflow.python.__export_symbols__
+import oneflow.python_gen.__export_symbols__
 
 import atexit
 import oneflow.python.framework.c_api_util
+
 atexit.register(oneflow.python.framework.c_api_util.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 del atexit
@@ -35,3 +37,4 @@ del atexit
 del absolute_import
 del oneflow
 del python
+del python_gen

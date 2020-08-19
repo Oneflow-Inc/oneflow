@@ -62,10 +62,11 @@ RegstMgr::RegstMgr(const Plan& plan) {
     if (task.machine_id() != this_machine_id) { continue; }
     for (const auto& pair : task.produced_regst_desc()) {
       const RegstDescProto& regst_desc = pair.second;
-      CHECK(
-          regst_desc_id2rt_regst_desc_
-              .emplace(regst_desc.regst_desc_id(), std::make_unique<const RtRegstDesc>(regst_desc))
-              .second);
+      const int64_t regst_desc_id = regst_desc.regst_desc_id();
+      CHECK(regst_desc_id2rt_regst_desc_
+                .emplace(regst_desc_id, std::make_unique<const RtRegstDesc>(regst_desc))
+                .second);
+      CHECK(regst_desc_id2parallel_ctx_.emplace(regst_desc_id, task.parallel_ctx()).second);
     }
   }
 }
@@ -162,6 +163,15 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
           InitNonPODTypeBlobIfNeed(Global<MemoryAllocator>::Get(), blob_ptr.get());
         }
         CHECK(regst->lbi2blob_.emplace(lbi.lbi(), std::move(blob_ptr)).second);
+        const int64_t regst_desc_id = rt_regst_desc->regst_desc_id();
+        const auto& parallel_ctx = regst_desc_id2parallel_ctx_.at(regst_desc_id);
+        if (parallel_ctx.has_parallel_id()) {
+          const int64_t parallel_id = parallel_ctx.parallel_id();
+          {
+            std::lock_guard<std::mutex> lock(mutex_);
+            lbi2parallel_id2blob_[lbi.lbi()][parallel_id] = regst->GetBlobByLbi(lbi.lbi());
+          }
+        }
       });
 }
 
@@ -169,6 +179,10 @@ const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const 
   const auto& it = regst_desc_id2rt_regst_desc_.find(regst_desc_id);
   CHECK(it != regst_desc_id2rt_regst_desc_.end());
   return *it->second;
+}
+
+Blob* RegstMgr::Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id) {
+  return lbi2parallel_id2blob_.at(lbi).at(parallel_id);
 }
 
 }  // namespace oneflow
