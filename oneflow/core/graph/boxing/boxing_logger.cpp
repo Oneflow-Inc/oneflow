@@ -52,16 +52,17 @@ std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   } else if (parallel_desc.device_type() == DeviceType::kGPU) {
     device_type = "GPU";
   } else {
-    device_type = "Unknow Device";
+    device_type = "UNKNOWN_DEVICE";
   }
-  for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
+  int32_t idx = 0;
+  auto sorted_machine_ids = parallel_desc.sorted_machine_ids();
+  for (int64_t machine_id : sorted_machine_ids) {
     serialized_parallel_desc += std::to_string(machine_id) + ":" + device_type + ":";
     int64_t min_id = parallel_desc.sorted_dev_phy_ids(machine_id).front();
     int64_t max_id = parallel_desc.sorted_dev_phy_ids(machine_id).back();
     serialized_parallel_desc += std::to_string(min_id) + "-" + std::to_string(max_id);
-    serialized_parallel_desc += " ";
+    if(++idx != sorted_machine_ids.size()) { serialized_parallel_desc += " "; }
   }
-  serialized_parallel_desc.pop_back();
   return serialized_parallel_desc;
 }
 
@@ -70,11 +71,16 @@ std::string GetBlobDtype4LogicalBlobDesc(const BlobDesc& logical_blob_desc) {
 }
 
 std::string GetBlobShape4LogicalBlobDesc(const BlobDesc& logical_blob_desc) {
-  auto shape = logical_blob_desc.shape().ToString();
-  StringReplace(&shape, ',', ' ');
-  shape.at(0) = '[';
-  shape.at(shape.size() - 1) = ']';
-  return shape;
+  std::stringstream shape_ss;
+  int32_t idx = 0;
+  auto dim_vec = logical_blob_desc.shape().dim_vec();
+  shape_ss << "[";
+  for (int64_t dim : dim_vec) {
+    shape_ss << dim;
+    if (++idx != dim_vec.size()) { shape_ss << " "; }
+  }
+  shape_ss << "]";
+  return shape_ss.str();
 }
 
 std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status) {
