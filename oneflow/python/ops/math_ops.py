@@ -1279,6 +1279,27 @@ def broadcast_min(
 
     Returns:
         remote_blob_util.BlobDef: A Blob, has the same type of x. 
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def minimum_Job(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.minimum(x, y)
+
+        x = np.array([2, 3, 4]).astype(np.float32)
+        y = np.array([4, 2, 1]).astype(np.float32)
+        out = minimum_Job(x, y)
+    
+        # output [2. 2. 1.]
+
     """
     return build_broadcast_binary_op("broadcast_minimum", x, y, name)
 
@@ -1298,6 +1319,26 @@ def broadcast_max(
 
     Returns:
         remote_blob_util.BlobDef: A Blob, has the same type of x. 
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def maximum_Job(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.maximum(x, y)
+
+        x = np.array([2, 3, 4]).astype(np.float32)
+        y = np.array([4, 2, 1]).astype(np.float32)
+        out = maximum_Job(x, y)
+
+        # output [4. 3. 4.]
     """
     return build_broadcast_binary_op("broadcast_maximum", x, y, name)
 
@@ -1309,7 +1350,7 @@ def elem_cnt(
     dtype: Optional[dtype_util.dtype] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """Computes the product of input_blob's dimensions along the parameter `axis`. By default, dimension 1 will be excluded when `axis` is None.
+    """Computes the product of input_blob's dimensions along the parameter `axis`. By default, all the dimensions will be computed. 
 
     Args:
         input_blob (remote_blob_util.BlobDef): Input Blob
@@ -1318,7 +1359,41 @@ def elem_cnt(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A Blob 
+        remote_blob_util.BlobDef: A Blob
+
+    For example:
+
+    .. code-block:: python
+
+        # Example 1:
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def elem_cnt_Job(x: tp.Numpy.Placeholder((3, 4, 5))
+        )->tp.Numpy:
+            return flow.math.reduced_shape_elem_cnt(x, axis=[0, 1])
+
+        x = np.ones(shape=(3, 4, 5), dtype=np.float32)
+        out = elem_cnt_Job(x) # 3 x 4 = 12
+        
+        # output [12]
+
+        # Example 2:
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def elem_cnt_Job(x: tp.Numpy.Placeholder((3, 4, 5))
+        )->tp.Numpy:
+            return flow.math.reduced_shape_elem_cnt(x)
+
+        x = np.ones(shape=(3, 4, 5), dtype=np.float32)
+        out = elem_cnt_Job(x) # 3 x 4 x 5 = 60
+        
+        # output [60]
     """
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -1349,7 +1424,7 @@ def top_k(
     sorted: bool = True,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """Finds the indices of the k largest entries for the last dimension.
+    """Finds the indices of the k largest entries for the last dimension, the difference between other framework is that oneflow only return the indices. 
 
     Args:
         input (remote_blob_util.BlobDef): The input Blob
@@ -1358,7 +1433,25 @@ def top_k(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A Blob contains the indices of the k largest elements.
+        remote_blob_util.BlobDef: A Blob(dtype=int32) contains the indices of the k largest elements.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def topk_Job(x: tp.Numpy.Placeholder((5, ))
+        )->tp.Numpy:
+            return flow.math.top_k(x, 2)
+
+        x = np.array([1, 3, 8, 7, 2], dtype=np.float32)
+        out = topk_Job(x)
+
+        # output [2 3]
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
@@ -1385,7 +1478,27 @@ def argmax(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A Blob contains the index with the largest value of `input`
+        remote_blob_util.BlobDef: A Blob(dtype=int32) contains the index with the largest value of `input`
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def argmax_Job(x: tp.Numpy.Placeholder((2, 5))
+        )->tp.Numpy:
+            return flow.math.argmax(x)
+
+        x = np.array([[1, 3, 8, 7, 2], 
+                    [1, 9, 4, 3, 2]], dtype=np.float32)
+
+        out = argmax_Job(x)
+
+        # output [2 1]
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
@@ -1413,6 +1526,28 @@ def broadcast_to_compatible_with(
 
     Returns:
         remote_blob_util.BlobDef: A 'Blob' with the biggest shape
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def broadcast_to_compatible_with_Job(x: tp.Numpy.Placeholder((4, 1, 1))
+        )->tp.Numpy:
+            blob_a = flow.constant(value=1, dtype=flow.float32, shape=(1, 2, 1))
+            blob_b = flow.constant(value=1, dtype=flow.float32, shape=(1, 1, 3))
+
+            return flow.math.broadcast_to_compatible_with(x, [blob_a, blob_b])
+
+        x = np.ones(shape=(4, 1, 1), dtype=np.float32)
+
+        out = broadcast_to_compatible_with_Job(x)
+
+        # output.shape (4, 2, 3)
     """
     assert isinstance(compatible, (list, tuple))
     if name is None:
@@ -1460,6 +1595,25 @@ def clip_by_value(
 
     Returns:
         remote_blob_util.BlobDef: A clipped Blob
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def clip_by_value_Job(x: tp.Numpy.Placeholder((4, ))
+        )->tp.Numpy:
+            return flow.math.clip_by_value(x, min_value=-1, max_value=5)
+
+        x = np.array([-2, 1, 4, 7], dtype=np.float32)
+
+        out = clip_by_value_Job(x)
+
+        # output [-1. 1. 4. 5.]
     """
     if name is None:
         name = id_util.UniqueStr("ClipByValue_")
@@ -1511,7 +1665,7 @@ def l2_normalize(
     The equation is: 
     
     .. math::
-        out = \frac{x}{\sqrt{\Sigma{x^2}+epsilon}}
+        out = \frac{x}{\sqrt{\Sigma{x^2}+\epsilon}}
 
     Args:
         input (remote_blob_util.BlobDef): Input Blob
@@ -1521,6 +1675,26 @@ def l2_normalize(
 
     Returns:
         remote_blob_util.BlobDef: The normalized Blob
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def l2_normalize_Job(x: tp.Numpy.Placeholder((4, ))
+        )->tp.Numpy:
+            return flow.math.l2_normalize(x, axis=0)
+
+        x = np.array([1, 2, 3, 4], dtype=np.float32)
+
+        out = l2_normalize_Job(x)
+        
+        # output [0.18257418 0.36514837 0.5477226  0.73029673]
+
     """
     if axis < 0:
         axis += len(input.shape)
@@ -1548,7 +1722,7 @@ def squared_difference(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """This op computes (x - y)(x - y) element-wise.
+    """This op computes :math:`(x - y)^2` element-wise.
 
     Args:
         x (Union[int, float, remote_blob_util.BlobDef]): A Blob
@@ -1557,6 +1731,27 @@ def squared_difference(
 
     Returns:
         remote_blob_util.BlobDef: A Blob
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def squared_difference_Job(x: tp.Numpy.Placeholder((4, )), 
+                                y: tp.Numpy.Placeholder((4, ))
+        )->tp.Numpy:
+            return flow.math.squared_difference(x, y)
+
+        x = np.array([1, 2, 3, 4], dtype=np.float32)
+        y = np.array([2, 4, 6, 8], dtype=np.float32)
+
+        out = squared_difference_Job(x, y)
+
+        # output [ 1.  4.  9. 16.]
     """
     name_subtract, name_square = None, None
     if name is not None:
