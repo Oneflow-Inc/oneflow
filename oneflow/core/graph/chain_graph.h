@@ -32,7 +32,7 @@ struct Chain {
   // ancestors of the nodes in this chain
   std::vector<std::bitset<BITSET_SIZE>> ancestors;
   // nodes = node ids in this chain
-  std::vector<std::bitset<BITSET_SIZE>> node_ids;
+  std::vector<std::bitset<BITSET_SIZE>> members;
 
   std::pair<int64_t, int64_t> stream_area_id;
 };

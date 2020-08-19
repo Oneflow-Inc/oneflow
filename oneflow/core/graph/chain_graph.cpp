@@ -90,8 +90,8 @@ void ChainMerger::InitChains() {
     cur_chain.stream_area_id =
         std::make_pair(task_node->AreaId4ChainMerge(), task_node->GlobalWorkStreamId());
     cur_chain.ancestors.resize(bitset_num);
-    cur_chain.node_ids.resize(bitset_num);
-    CarefullySetBitset(&(cur_chain.node_ids), GetTaskUid(task_node));
+    cur_chain.members.resize(bitset_num);
+    CarefullySetBitset(&(cur_chain.members), GetTaskUid(task_node));
     for (auto& ancestor : node2ancestors_.at(task_node)) {
       int64_t ancestor_uid = GetTaskUid(ancestor);
       CarefullySetBitset(&(cur_chain.ancestors), ancestor_uid);
@@ -108,7 +108,7 @@ bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
     if (ShouldMerge(lhs, rhs)) {
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
-        CarefullySetBitset(&(lhs->node_ids), GetTaskUid(node));
+        CarefullySetBitset(&(lhs->members), GetTaskUid(node));
       }
       CarefullyInPlaceBitwiseOR(&(lhs->ancestors), &(rhs->ancestors));
       return true;
@@ -147,13 +147,13 @@ void ChainMerger::CarefullyInPlaceBitwiseOR(std::vector<std::bitset<BITSET_SIZE>
 }
 
 bool ChainMerger::ShouldMerge(const ChainIt& lhs, const ChainIt& rhs) const {
-  CHECK_EQ(lhs->node_ids.size(), rhs->node_ids.size());
+  CHECK_EQ(lhs->members.size(), rhs->members.size());
   CHECK_EQ(lhs->ancestors.size(), rhs->ancestors.size());
-  CHECK_EQ(lhs->ancestors.size(), lhs->node_ids.size());
-  const int64_t bitset_num = lhs->node_ids.size();
+  CHECK_EQ(lhs->ancestors.size(), lhs->members.size());
+  const int64_t bitset_num = lhs->members.size();
   auto IsAncestor = [bitset_num](const ChainIt& ancestor, const ChainIt& descent) {
     for (int64_t i = 0; i < bitset_num; ++i) {
-      if (ancestor->node_ids.at(i) != (ancestor->node_ids.at(i) | descent->ancestors.at(i))) {
+      if (ancestor->members.at(i) != (ancestor->members.at(i) | descent->ancestors.at(i))) {
         return false;
       }
     }
