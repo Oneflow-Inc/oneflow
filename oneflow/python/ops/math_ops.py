@@ -590,6 +590,23 @@ def gelu(
     Returns:
         remote_blob_util.BlobDef: A Blob.
 
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def geluJob(x: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.gelu(x)
+
+        x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        out = geluJob(x)
+
+        # output [-0.15426877, 0., 0.34573123]
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Gelu_"))
@@ -621,6 +638,25 @@ def relu(
     Returns:
         remote_blob_util.BlobDef: An activated Blob.
 
+    For example:
+
+    .. code-block:: python
+
+        # in math_ops.py -> math.gelu
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def reluJob(x: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.relu(x)
+
+        x = np.array([-1, 0, 5]).astype(np.float32)
+        out = reluJob(x)
+
+        # output [0., 0., 5.]
     """
 
     return (
