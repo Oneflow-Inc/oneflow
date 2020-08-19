@@ -123,6 +123,27 @@ def add_n(
     Returns:
         remote_blob_util.BlobDef: The sum of the inputs, has the same shape and type as the elements of inputs.
 
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def add_n_Job(x: tp.Numpy.Placeholder((3, )), 
+                    y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.add_n([x, y])
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([1, 1, 1]).astype(np.float32)
+        out = add_n_Job(x, y)
+        print(out)
+
+        # output [2., 3., 4.]
+
     """
     return _recursive_build_add_n(inputs, name)
 
@@ -148,6 +169,26 @@ def subtract(
     Returns:
         remote_blob_util.BlobDef: A Blob after subtracting, has the same type as x.
 
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def subtractJob(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.subtract(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([2, 4, 1]).astype(np.float32)
+        out = subtractJob(x, y)
+
+        # output [-1., -2., 2.]
+
     """
     if isinstance(x, (int, float)):
         return scalar_add(-1 * y, x, name)
@@ -170,12 +211,12 @@ def multiply(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """Compute x * y element-wise, Analogous to `tf.math.multiply <https://www.tensorflow.org/api_docs/python/tf/math/multiply>`_
+    r"""Compute :math:`x \times y` element-wise, Analogous to `tf.math.multiply <https://www.tensorflow.org/api_docs/python/tf/math/multiply>`_
 
     The equation is:
 
     .. math::
-        out = X * Y
+        out = X \times Y
 
     Args:
         x (Union[int, float, remote_blob_util.BlobDef]): A Blob.
@@ -185,6 +226,25 @@ def multiply(
     Returns:
         remote_blob_util.BlobDef: A Blob after multiplying, has the same type as x.
 
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def multiplyJob(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.multiply(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([2, 3, 3]).astype(np.float32)
+        out = multiplyJob(x, y)
+
+        # output [2., 6., 9.]
     """
     if isinstance(x, (int, float)):
         return scalar_mul(y, x, name)
