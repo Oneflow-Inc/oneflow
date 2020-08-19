@@ -762,10 +762,10 @@ def unsorted_segment_sum(
         segment_ids = np.array([0, 1, 0, 1]).astype(np.int32)
         out = unsorted_segment_sumJob(input_blob, segment_ids)
 
-        # output [[ 4.  6.]
-                  [12. 14.]
-                  [20. 22.]]
-
+        #  output [[ 4.  6.]
+        #          [12. 14.]
+        #          [20. 22.]]
+        
         # Example 2
         import oneflow as flow
         import numpy as np
@@ -783,8 +783,9 @@ def unsorted_segment_sum(
         segment_ids = np.array([0, 1, 0]).astype(np.int32)
         out = unsorted_segment_sumJob(input_blob, segment_ids)
 
-        # output [[10. 12. 14. 16.]
-                  [ 5.  6.  7.  8.]]
+        #  output [[10. 12. 14. 16.]
+        #          [ 5.  6.  7.  8.]]
+        
     """
     return (
         flow.user_op_builder(
@@ -822,6 +823,32 @@ def unsorted_segment_sum_like(
     Returns:
         remote_blob_util.BlobDef: A Blob.
 
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def unsorted_segment_sum_like_Job(data: tp.Numpy.Placeholder((3, 4)),
+                                        segment_ids: tp.Numpy.Placeholder((3, ), dtype=flow.int32), 
+                                        like: tp.Numpy.Placeholder((2, 4), dtype=flow.float32)
+        )->tp.Numpy:
+            return flow.math.unsorted_segment_sum_like(data, segment_ids, like, axis=0)
+
+        input_blob = np.array([[1, 2, 3, 4], 
+                            [5, 6, 7 ,8], 
+                            [9, 10, 11, 12]]).astype(np.float32)
+        segment_ids = np.array([0, 1, 0]).astype(np.int32)
+        like = np.zeros(shape=(2, 4), dtype=np.float32)
+
+        out = unsorted_segment_sum_like_Job(input_blob, segment_ids, like)
+
+        #  output [[10. 12. 14. 16.]
+        #          [ 5.  6.  7.  8.]]
+        
     """
     return (
         flow.user_op_builder(
@@ -863,6 +890,33 @@ def unsorted_batch_segment_sum(
 
     Returns:
         remote_blob_util.BlobDef: A Blob.
+    
+    For example:
+
+    .. code-block:: python
+    
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def unsorted_batch_segment_sum_Job(data: tp.Numpy.Placeholder((3, 4)),
+                                        segment_ids: tp.Numpy.Placeholder((3, 4), dtype=flow.int32)
+        )->tp.Numpy:
+            return flow.math.unsorted_batch_segment_sum(data, segment_ids, 2)
+
+        input_blob = np.array([[1, 2, 3, 4], 
+                            [1, 2, 3 ,4], 
+                            [1, 2, 3, 4]]).astype(np.float32)
+        segment_ids = np.array([[0, 0, 0, 1], 
+                                [0, 0, 1, 0], 
+                                [0, 1, 0, 0]]).astype(np.int32)
+        out = unsorted_batch_segment_sum_Job(input_blob, segment_ids)
+
+        # output [[6. 4.]
+        #         [7. 3.]
+        #         [8. 2.]]
+
     """
     return (
         flow.user_op_builder(
