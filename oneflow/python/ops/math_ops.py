@@ -36,7 +36,7 @@ def add(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """Compute x + y element-wise, math.add supports broadcasting. Analogous to `tf.math.add <https://www.tensorflow.org/api_docs/python/tf/math/add>`_
+    """Compute :math:`X + Y` element-wise, math.add supports broadcasting. Analogous to `tf.math.add <https://www.tensorflow.org/api_docs/python/tf/math/add>`_
 
     The equation is:
 
@@ -50,6 +50,26 @@ def add(
 
     Returns:
         remote_blob_util.BlobDef: A Blob is added by x and y, and has the same type of x.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def addJob(x: tp.Numpy.Placeholder((3, )), 
+                y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.add(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([1, 1, 1]).astype(np.float32)
+        out = addJob(x, y) 
+        
+        # output [2., 3., 4.]
 
     """
     if isinstance(x, (int, float)):
