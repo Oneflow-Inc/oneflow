@@ -93,7 +93,7 @@ def api_placement(
             flow.losses.add_loss(loss)
 
     """
-    from oneflow.python.compatibility import with_cuda
+    from oneflow.python_gen.compatibility import with_cuda
 
     if with_cuda == False:
         device_tag = "cpu"
