@@ -95,7 +95,7 @@ std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status
   serialized_status += GetBlobDtype4LogicalBlobDesc(status.logical_blob_desc()) + ",";
   serialized_status += GetBlobShape4LogicalBlobDesc(status.logical_blob_desc()) + ",";
   serialized_status += status.builder_name() + ",";
-  if (status.comment() == std::string("")) {
+  if (status.comment().empty()) {
     serialized_status += "-";
   } else {
     serialized_status += status.comment();
