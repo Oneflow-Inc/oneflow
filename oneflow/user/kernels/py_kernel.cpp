@@ -24,26 +24,6 @@ extern "C" {
 
 namespace oneflow {
 
-namespace {
-template<typename T>
-PyArrayObject* vector_to_nparray(const std::vector<T>& vec, int type_num = NPY_FLOAT) {
-  if (!vec.empty()) {
-    size_t nRows = vec.size();
-    npy_intp dims[0] = {nRows};
-
-    PyArrayObject* vec_array = (PyArrayObject*)PyArray_SimpleNew(0, dims, type_num);
-    T* vec_array_pointer = (T*)PyArray_DATA(vec_array);
-
-    copy(vec.begin(), vec.end(), vec_array_pointer);
-    return vec_array;
-  } else {
-    // no data at all
-    npy_intp dims[0] = {0};
-    return (PyArrayObject*)PyArray_ZEROS(0, dims, type_num, 0);
-  }
-}
-}  // namespace
-
 template<typename T>
 class PyKernel : public user_op::OpKernel {
  public:
@@ -63,6 +43,7 @@ class PyKernel : public user_op::OpKernel {
 
     if (!PyEval_ThreadsInitialized()) { PyEval_InitThreads(); }
     PyGILState_STATE py_gil_st = PyGILState_Ensure();
+    if (PyArray_API == nullptr) { _import_array(); }
 
     PyRun_SimpleString("print('hello')");
 
@@ -84,18 +65,27 @@ class PyKernel : public user_op::OpKernel {
     }
 
     // input
-    int num_input = 1;
-    p_args = PyTuple_New(num_input);
-    for (int i = 0; i < num_input; ++i) {
-      p_value = PyLong_FromLong(1);
-      if (p_value == nullptr) {
-        Py_DECREF(p_args);
-        Py_DECREF(p_module);
-        CHECK(false) << "py_kernel cannot convert argument";
-      }
-      /* p_value reference stolen here: */
-      PyTuple_SetItem(p_args, i, p_value);
-    }
+    // int num_input = 1;
+    // p_args = PyTuple_New(num_input);
+    // for (int i = 0; i < num_input; ++i) {
+    //   p_value = PyLong_FromLong(1);
+    //   if (p_value == nullptr) {
+    //     Py_DECREF(p_args);
+    //     Py_DECREF(p_module);
+    //     CHECK(false) << "py_kernel cannot convert argument";
+    //   }
+    //   /* p_value reference stolen here: */
+    //   PyTuple_SetItem(p_args, i, p_value);
+    // }
+
+    // temp input to pass test
+    p_args = PyTuple_New(1);
+    size_t n_rows = n;
+    npy_intp dims[1] = {n_rows};
+    std::vector<float> input;
+    for (int i = 0; i < n; ++i) { input.push_back(in_dptrs[i]); }
+    PyObject* numpy_array = PyArray_SimpleNewFromData(1, dims, NPY_FLOAT, (void*)input.data());
+    PyTuple_SetItem(p_args, 0, numpy_array);
 
     // call func
     p_value = PyObject_CallObject(p_func, p_args);
@@ -103,6 +93,15 @@ class PyKernel : public user_op::OpKernel {
 
     // output
     if (p_value != nullptr) {
+      PyArrayObject* np_value = reinterpret_cast<PyArrayObject*>(p_value);
+      int len = PyArray_SHAPE(np_value)[0];
+      if (len != n) {
+        Py_DECREF(p_value);
+        CHECK(false) << " input size not equal to input";
+      }
+
+      float* ptr_value = reinterpret_cast<float*>(PyArray_DATA(np_value));
+      for (int i = 0; i < n; ++i) { out_dptr[i] = ptr_value[i]; }
       // deal with p_value
       Py_DECREF(p_value);
     } else {
@@ -112,9 +111,6 @@ class PyKernel : public user_op::OpKernel {
     }
     Py_XDECREF(p_func);
     Py_DECREF(p_module);
-
-    // dummy code to pass sigmoid test
-    // for (int i = 0; i < n; ++i) { out_dptr[i] = 0.7310586; }
 
     PyGILState_Release(py_gil_st);
   }
