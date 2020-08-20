@@ -108,11 +108,11 @@ ONNX_EMPTY_INPUT = ""
 
 
 def Flow2OnnxDtype(dtype):
-    return FLOW_2_ONNX_DTYPE[dtype]
-
-
-def FlowProto2OnnxDtype(dtype):
-    return FLOW_PROTO_2_ONNX_DTYPE[dtype]
+    assert dtype in FLOW_2_ONNX_DTYPE or dtype in FLOW_PROTO_2_ONNX_DTYPE
+    if dtype in FLOW_2_ONNX_DTYPE:
+        return FLOW_2_ONNX_DTYPE[dtype]
+    else:
+        return FLOW_PROTO_2_ONNX_DTYPE[dtype]
 
 
 def Onnx2FlowDtype(dtype):
