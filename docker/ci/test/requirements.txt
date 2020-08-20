@@ -5,3 +5,4 @@ sphinx-material
 recommonmark
 scipy
 pillow
+sphinx_rtd_theme

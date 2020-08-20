@@ -642,8 +642,6 @@ def relu(
 
     .. code-block:: python
 
-        # in math_ops.py -> math.gelu
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
