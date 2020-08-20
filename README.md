@@ -64,8 +64,6 @@
     ```
     For more information on this, please refer to [pypi 镜像使用帮助](https://mirror.tuna.tsinghua.edu.cn/help/pypi/)
 
-  - CPU-only OneFlow is not available for now.
-
   - Releases are built with G++/GCC 4.8.5, cuDNN 7 and MKL 2020.0-088.
 
 ### Build from Source
