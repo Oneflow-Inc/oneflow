@@ -59,8 +59,6 @@ std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   return serialized_parallel_desc;
 }
 
-std::string DataTypeToString(const DataType& dtype) { return DataType_Name(dtype); }
-
 std::string ShapeToString(const Shape& shape) {
   std::stringstream shape_ss;
   auto dim_vec = shape.dim_vec();
@@ -82,7 +80,7 @@ std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status
   serialized_status += SbpParallelToString(status.src_sbp_parallel()) + ",";
   serialized_status += SbpParallelToString(status.dst_sbp_parallel()) + ",";
   serialized_status += GenLogicalBlobName(status.lbi()) + ",";
-  serialized_status += DataTypeToString(status.logical_blob_desc().data_type()) + ",";
+  serialized_status += DataType_Name(status.logical_blob_desc().data_type()) + ",";
   serialized_status += ShapeToString(status.logical_blob_desc().shape()) + ",";
   serialized_status += status.builder_name() + ",";
   if (status.comment().empty()) {
