@@ -210,6 +210,7 @@ bool ChainMerger::ShouldMerge(const ChainIt& lhs, const ChainIt& rhs) const {
     for (int64_t i = 0; i < bitset_num; ++i) {
       if (a->ancestors.at(i) != b->ancestors.at(i)) {
         if (a->nodes.size() == 1 && b->nodes.size()) {
+          continue;
           LOG(ERROR) << a->nodes[0]->VisualStr() << " i: " << i << " "
                      << GetAncestorNames(a->ancestors, task_node2uid_);
           LOG(ERROR) << b->nodes[0]->VisualStr() << " i: " << i << " "
