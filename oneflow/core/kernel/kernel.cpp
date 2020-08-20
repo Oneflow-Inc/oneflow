@@ -134,44 +134,6 @@ void Kernel::ForwardShape(const KernelCtx& ctx,
   return shape_infer_helper_->InferShape(BnInOp2Blob);
 }
 
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardPackedHeader(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyHeaderFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
-                                      std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                      const Blob* from_blob, const PbRpf<std::string>& to_bns,
-                                      void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
-  for (const std::string& to_bn : to_bns) { (BnInOp2Blob(to_bn)->*Copy)(ctx, from_blob); }
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
-                                      std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                      const PbRpf<std::string>& from_bns,
-                                      const PbRpf<std::string>& to_bns,
-                                      void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
-  if (from_bns.size() == 1) {
-    const Blob* in_blob = BnInOp2Blob(from_bns[0]);
-    CopyField(ctx, BnInOp2Blob, in_blob, to_bns, Copy);
-  } else if (to_bns.size() == 1) {
-    Blob* in_blob = BnInOp2Blob(from_bns[0]);
-    Blob* out_blob = BnInOp2Blob(to_bns[0]);
-    (out_blob->*Copy)(ctx, in_blob);
-  } else {
-    CHECK_EQ(from_bns.size(), to_bns.size());
-    FOR_RANGE(size_t, i, 0, from_bns.size()) {
-      Blob* in_blob = BnInOp2Blob(from_bns[i]);
-      Blob* out_blob = BnInOp2Blob(to_bns[i]);
-      (out_blob->*Copy)(ctx, in_blob);
-    }
-  }
-}
-
 std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf& conf,
                                               DeviceCtx* device_ctx) {
   auto op_type = conf.op_attribute().op_conf().op_type_case();

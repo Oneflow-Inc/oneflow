@@ -18,9 +18,14 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/string_object.h"
+#include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/eager/lazy_ref_blob_object.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 namespace eager {
@@ -35,6 +40,7 @@ FLAT_MSG_VIEW_END(PinBlobInstruction);
 
 }  // namespace
 
+#ifdef WITH_CUDA
 class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
  public:
   CudaHostRegisterBlobInstructionType() = default;
@@ -55,7 +61,7 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
     size_t size = blob->AlignedByteSizeOfBlobBody();
     cudaError_t cuda_error = cudaHostRegister(dptr, size, cudaHostRegisterDefault);
     if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) { return; }
-    CudaCheck(cuda_error);
+    OF_CUDA_CHECK(cuda_error);
   }
 };
 COMMAND(vm::RegisterInstructionType<CudaHostRegisterBlobInstructionType>("CudaHostRegisterBlob"));
@@ -79,11 +85,26 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
     CHECK_NOTNULL(dptr);
     cudaError_t cuda_error = cudaHostUnregister(dptr);
     if (cuda_error == cudaErrorHostMemoryNotRegistered) { return; }
-    CudaCheck(cuda_error);
+    OF_CUDA_CHECK(cuda_error);
   }
 };
 COMMAND(
     vm::RegisterInstructionType<CudaHostUnregisterBlobInstructionType>("CudaHostUnregisterBlob"));
+#endif
+
+Maybe<void> LazyReferenceInstructionType::Run(vm::Instruction* instruction) const {
+  FlatMsgView<LazyReferenceInstruction> args(instruction->instr_msg().operand());
+  vm::RwMutexedObject* eager_blob_rw = instruction->mut_operand_type(args->eager_blob());
+  const auto* lbn_operand = instruction->operand_type(args->lbn_sym_id());
+  const auto lbn = JUST(lbn_operand->template Get<vm::StringObject>())->str();
+  ParallelContext parallel_ctx;
+  JUST(instruction->parallel_desc()->GetParallelContext(
+      &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
+  Blob* blob = Global<RegstMgr>::Get()->Blob4LbiAndParallelId(GenLogicalBlobId(lbn),
+                                                              parallel_ctx.parallel_id());
+  eager_blob_rw->Init<eager::LazyRefBlobObject>(blob);
+  return Maybe<void>::Ok();
+}
 
 }  // namespace eager
 }  // namespace oneflow

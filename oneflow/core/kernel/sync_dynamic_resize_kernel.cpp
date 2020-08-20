@@ -13,25 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/register/register_desc.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <mutex>
 #include <queue>
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/register/register_desc.h"
 
 namespace oneflow {
+
+#ifdef WITH_CUDA
 
 namespace {
 
 class CudaHostMem {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaHostMem);
-  CudaHostMem(const size_t size) { CudaCheck(cudaMallocHost(&ptr_, size)); }
-  ~CudaHostMem() { CudaCheck(cudaFreeHost(ptr_)); }
+  CudaHostMem(const size_t size) { OF_CUDA_CHECK(cudaMallocHost(&ptr_, size)); }
+  ~CudaHostMem() { OF_CUDA_CHECK(cudaFreeHost(ptr_)); }
   void* Ptr() const { return ptr_; }
 
  private:
@@ -85,7 +89,7 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
       queue_.push(cuda_host_mem_ptr);
     };
     if (conf.eager()) {
-      CudaCheck(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()));
+      OF_CUDA_CHECK(cudaStreamSynchronize(ctx.device_ctx->cuda_stream()));
       UpdateShape();
     } else {
       ctx.device_ctx->AddCallBack(UpdateShape);
@@ -99,13 +103,15 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
 #define REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(stype)                                         \
   NEW_REGISTER_KERNEL(OperatorConf::kSyncDynamicResizeConf, SyncDynamicResizeGPUKernel<stype>) \
       .SetIsMatchedPred([](const KernelConf& kernel_conf) {                                    \
-        return (kernel_conf.op_attribute().op_conf().device_type() == DeviceType::kGPU         \
+        return (kernel_conf.op_attribute().op_conf().device_tag() == "gpu"                     \
                 && GetDataType<stype>::value                                                   \
                        == kernel_conf.sync_dynamic_resize_conf().size_data_type());            \
       })
 REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int8_t);
 REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int32_t);
 REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int64_t);
+
+#endif  // WITH_CUDA
 
 template<typename SizeType>
 class SyncDynamicResizeCPUKernel final : public KernelIf<DeviceType::kCPU> {
@@ -135,7 +141,7 @@ class SyncDynamicResizeCPUKernel final : public KernelIf<DeviceType::kCPU> {
 #define REGISTER_SYNC_DYNAMIC_RESIZE_CPU_KERNEL(stype)                                         \
   NEW_REGISTER_KERNEL(OperatorConf::kSyncDynamicResizeConf, SyncDynamicResizeCPUKernel<stype>) \
       .SetIsMatchedPred([](const KernelConf& kernel_conf) {                                    \
-        return (kernel_conf.op_attribute().op_conf().device_type() == DeviceType::kCPU         \
+        return (kernel_conf.op_attribute().op_conf().device_tag() == "cpu"                     \
                 && GetDataType<stype>::value                                                   \
                        == kernel_conf.sync_dynamic_resize_conf().size_data_type());            \
       })

@@ -37,7 +37,7 @@ std::string GetNcclUniqueIdRpcKey(const std::vector<std::pair<int64_t, int64_t>>
 EagerNcclCommMgr::~EagerNcclCommMgr() {
   for (auto& device_set7device_id2comm : device_set2device_id2comm_) {
     for (auto& device_id7comm : device_set7device_id2comm.second) {
-      NcclCheck(ncclCommDestroy(device_id7comm.second));
+      OF_NCCL_CHECK(ncclCommDestroy(device_id7comm.second));
     }
   }
 }
@@ -45,7 +45,7 @@ EagerNcclCommMgr::~EagerNcclCommMgr() {
 ncclComm_t EagerNcclCommMgr::GetCommForDevice(
     const std::set<std::pair<int64_t, int64_t>>& device_set) {
   int dev;
-  CudaCheck(cudaGetDevice(&dev));
+  OF_CUDA_CHECK(cudaGetDevice(&dev));
   {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = device_set2device_id2comm_.find(device_set);
@@ -68,7 +68,7 @@ ncclComm_t EagerNcclCommMgr::GetCommForDevice(
   ncclUniqueId nccl_unique_id{};
   std::string nccl_unique_id_rpc_key = GetNcclUniqueIdRpcKey(device_vec);
   if (rank == 0) {
-    NcclCheck(ncclGetUniqueId(&nccl_unique_id));
+    OF_NCCL_CHECK(ncclGetUniqueId(&nccl_unique_id));
     Global<CtrlClient>::Get()->PushKV(nccl_unique_id_rpc_key,
                                       std::string(nccl_unique_id.internal, NCCL_UNIQUE_ID_BYTES));
   } else {
@@ -78,7 +78,7 @@ ncclComm_t EagerNcclCommMgr::GetCommForDevice(
         });
   }
   ncclComm_t comm;
-  NcclCheck(ncclCommInitRank(&comm, device_vec.size(), nccl_unique_id, rank));
+  OF_NCCL_CHECK(ncclCommInitRank(&comm, device_vec.size(), nccl_unique_id, rank));
   {
     std::lock_guard<std::mutex> lock(mutex_);
     device_set2device_id2comm_[device_set][dev] = comm;

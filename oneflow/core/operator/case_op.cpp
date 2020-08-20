@@ -47,7 +47,7 @@ Maybe<void> CaseOp::InferBatchAxis(
 }
 
 Maybe<void> CaseOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }

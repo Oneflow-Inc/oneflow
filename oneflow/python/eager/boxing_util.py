@@ -505,6 +505,7 @@ def ConstructNaiveBoxingOpConf(
 ):
     op_conf = op_conf_pb.OperatorConf()
     op_conf.name = "undefined_boxing_op_name"
+    op_conf.device_tag = "cpu"
     op_conf.boxing_conf.lbi.op_name = "undefined_boxing_op_name"
     op_conf.boxing_conf.lbi.blob_name = "undefined_boxing_blob_name"
     op_conf.boxing_conf.in_num = in_parallel_num
@@ -623,7 +624,7 @@ def BuildCopyHdInstruction(builder, produced_blob_object, to_device_tag):
 def _MakeCopyHdOpConfAndRetLbi():
     op_conf = op_conf_pb.OperatorConf()
     op_conf.name = "copy_hd"
-    op_conf.device_type = c_api_util.DeviceType4DeviceTag("gpu")
+    op_conf.device_tag = "gpu"
     setattr(op_conf.copy_conf, "in", "%s/in" % op_conf.name)
     op_conf.copy_conf.out = "out"
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -669,6 +670,8 @@ def _AssignOpConf():
     op_conf.name = "assign"
     op_conf.assign_conf.ref = "assign/ref"
     op_conf.assign_conf.value = "assign/value"
+    device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
+    op_conf.device_tag = device_tag
     return op_conf
 
 
@@ -722,6 +725,7 @@ def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
 
 def _GetEagerNcclAllReduce(parallel_conf, ibn2blob_object):
     op_conf = op_conf_pb.OperatorConf()
+    op_conf.device_tag = "gpu"
     op_conf.name = "eager_nccl_all_reduce"
     op_conf.user_conf.op_type_name = "eager_nccl_all_reduce"
     op_conf.user_conf.input["in"].s.append("eager_nccl_all_reduce/in_0")
@@ -739,24 +743,26 @@ NcclAllReduce = Sequential(
     OptionalBoxing(CopyD2H),
 )
 
+BoxingOneToOne = Sequential(
+    boxing_middle.BoxingToMiddle(
+        OptionalBoxing(CopyD2H),
+        boxing_middle.ReplaceProducerDeviceTag("cpu"),
+        boxing_middle.ProducerSbpParallel,
+    ),
+    boxing_middle.BoxingToMiddle(
+        CpuOneToOne,
+        boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+        boxing_middle.ConsumerSbpParallel,
+    ),
+    OptionalBoxing(CopyH2D),
+)
+
 conditional_function_table = [
     CopyH2D,
     CopyD2H,
     NoBoxing,
     # one to one
-    Sequential(
-        boxing_middle.BoxingToMiddle(
-            OptionalBoxing(CopyD2H),
-            boxing_middle.ReplaceProducerDeviceTag("cpu"),
-            boxing_middle.ProducerSbpParallel,
-        ),
-        boxing_middle.BoxingToMiddle(
-            CpuOneToOne,
-            boxing_middle.ReplaceConsumerDeviceTag("cpu"),
-            boxing_middle.ConsumerSbpParallel,
-        ),
-        OptionalBoxing(CopyH2D),
-    ),
+    BoxingOneToOne,
     # B -> B
     BroadcastManyToOne,
     Sequential(
@@ -781,7 +787,7 @@ conditional_function_table = [
             boxing_middle.BroadcastParallel,
         ),
         OptionalBoxing(CopyH2D),
-        exclude=(BroadcastManyToOne, CopyH2D, CopyD2H, NoBoxing, CpuOneToOne),
+        exclude=(BroadcastManyToOne, CopyH2D, CopyD2H, NoBoxing, BoxingOneToOne),
     ),
     # B -> S
     Sequential(

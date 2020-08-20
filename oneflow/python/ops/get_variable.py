@@ -119,7 +119,7 @@ def get_eager_variable(
         op_attribute = compile_context.CurJobAddConsistentOp(op_conf)
         if var_blob is None:
             var_blob = _CreateEagerVariableBlob(op_attribute)
-            op_executor.EagerInitVariableBlob(op_conf, var_blob)
+            op_executor.EagerInitVariableBlob(sess, op_conf, var_blob)
 
         assert isinstance(var_blob, remote_blob_util.EagerConsistentBlob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
@@ -256,7 +256,9 @@ def _CreateEagerVariableBlob(op_attribute):
     bn_in_op2blob_object = {}
 
     def BuildInstruction(builder):
-        parallel_conf = oneflow.placement.current_scope().default_parallel_conf
+        parallel_conf = (
+            oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
+        )
         builder.StatelessCall(
             op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
         )

@@ -55,15 +55,28 @@ if (BUILD_CUDA)
       break()
     endif()
   endforeach()
-  if(EXISTS ${cublas_lib_dir}/libcublas_static.a)
-    if(EXISTS ${cublas_lib_dir}/libcublasLt_static.a)
-      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublasLt_static.a)
+  if (WITH_XLA)
+    if(EXISTS ${cublas_lib_dir}/libcublas.so AND EXISTS ${cublas_lib_dir}/libcublasLt.so)
+      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublasLt.so)
+      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublas.so)
+    elseif(EXISTS ${cublas_lib_dir}/libcublas.so)
+      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublas.so)
+    elseif(EXISTS ${cuda_lib_dir}/libcublas.so)
+      list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/libcublas.so)
+    else()
+      message(FATAL_ERROR "cuda lib not found: ${cublas_lib_dir}/libcublas.so or ${cuda_lib_dir}/libcublas.so")
     endif()
-    list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublas_static.a)
-  elseif(EXISTS ${cuda_lib_dir}/libcublas_static.a)
-    list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/libcublas_static.a)
   else()
-    message(FATAL_ERROR "cuda lib not found: ${cublas_lib_dir}/libcublas_static.a or ${cuda_lib_dir}/libcublas_static.a")
+    if(EXISTS ${cublas_lib_dir}/libcublas_static.a AND EXISTS ${cublas_lib_dir}/libcublasLt_static.a)
+      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublasLt_static.a)
+      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublas_static.a)
+    elseif(EXISTS ${cublas_lib_dir}/libcublas_static.a)
+      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublas_static.a)
+    elseif(EXISTS ${cuda_lib_dir}/libcublas_static.a)
+      list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/libcublas_static.a)
+    else()
+      message(FATAL_ERROR "cuda lib not found: ${cublas_lib_dir}/libcublas_static.a or ${cuda_lib_dir}/libcublas_static.a")
+    endif()
   endif()
   find_package(CUDNN REQUIRED)
 endif()
@@ -90,12 +103,12 @@ set(oneflow_third_party_libs
     ${GOOGLEMOCK_STATIC_LIBRARIES}
     ${PROTOBUF_STATIC_LIBRARIES}
     ${GRPC_STATIC_LIBRARIES}
-    ${ZLIB_STATIC_LIBRARIES}
     ${farmhash_STATIC_LIBRARIES}
     ${BLAS_LIBRARIES}
-    ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
+    ${LIBJPEG_STATIC_LIBRARIES}
+    ${ZLIB_STATIC_LIBRARIES}
 )
 
 if (NOT WITH_XLA)
@@ -125,6 +138,7 @@ set(oneflow_third_party_dependencies
   grpc_copy_headers_to_destination
   grpc_copy_libs_to_destination
   opencv_copy_headers_to_destination
+  libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
   eigen
   cocoapi_copy_headers_to_destination
@@ -145,6 +159,7 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${GRPC_INCLUDE_DIR}
     ${LIBJPEG_INCLUDE_DIR}
     ${OPENCV_INCLUDE_DIR}
+    ${LIBPNG_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
@@ -159,11 +174,6 @@ if (BUILD_CUDA)
   include(cub)
   include(nccl)
 
-  if (WITH_XLA)
-    # Fix conflicts between tensorflow cublas dso and oneflow static cublas.
-    # TODO(hjchen2) Should commit a issue about this fix.
-    list(APPEND oneflow_third_party_libs -Wl,--whole-archive ${cuda_lib_dir}/libcublas_static.a -Wl,--no-whole-archive)
-  endif()
   list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})

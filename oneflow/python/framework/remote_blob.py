@@ -32,6 +32,8 @@ import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.core.job.placement_pb2 as placement_pb
+import traceback
+import sys
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
 
@@ -64,9 +66,11 @@ def LazyRemoteBlob(lbi, **kw):
 class BlobDef(
     blob_desc.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 ):
-    def __init__(self, lbi, **kw):
+    def __init__(self, lbi, job_name=None, **kw):
         blob_desc.BlobDesc.__init__(self, lbi, **kw)
-        self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        if job_name is None:
+            job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        self.job_name_ = job_name
         self.parallel_size_ = 0
 
     @property
@@ -118,8 +122,11 @@ class LazyConsistentBlob(ConsistentBlob):
         if oneflow.scope.mirrored_view_enabled():
             print(
                 "WARNING:",
-                "You access a consistent blob shape in mirrored view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+                "You access a consistent blob shape in mirrored view, there may be problems,",
+                "you should add 'x = flow.cast_to_current_logical_view(x)'.",
+                file=sys.stderr,
             )
+            print(traceback.format_stack()[-2])
         return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.lbn_)
 
     @property
@@ -199,8 +206,11 @@ class LazyMirroredBlob(MirroredBlob):
         if oneflow.scope.consistent_view_enabled():
             print(
                 "WARNING:",
-                "You access a mirrored blob shape in consistent view, there may be problems, you should add 'x = flow.cast_to_current_logical_view(x)'.",
+                "You access a mirrored blob shape in consistent view, there may be problems,"
+                "you should add 'x = flow.cast_to_current_logical_view(x)'.",
+                file=sys.stderr,
             )
+            print(traceback.format_stack()[-2])
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
             self.job_name_, self.lbn_
         )
@@ -422,8 +432,8 @@ class EagerBlobTrait(object):
 
 
 class EagerConsistentBlob(EagerBlobTrait, ConsistentBlob):
-    def __init__(self, lbi, blob_object=None, **kw):
-        ConsistentBlob.__init__(self, lbi, **kw)
+    def __init__(self, lbi, blob_object=None, job_name=None, **kw):
+        ConsistentBlob.__init__(self, lbi, job_name=job_name, **kw)
         self._Init(blob_object)
 
 

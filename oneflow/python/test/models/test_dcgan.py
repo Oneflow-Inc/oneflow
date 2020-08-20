@@ -14,15 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import oneflow.typing as oft
 import numpy as np
 import os
+import unittest
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n1c(test_case):
     dcgan = DCGAN()
     dcgan.compare_with_tf(1)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n4c(test_case):
     dcgan = DCGAN()
     dcgan.compare_with_tf(4)
@@ -38,14 +42,12 @@ class DCGAN:
         flow.config.gpu_device_num(gpu_num)
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
-        func_config.default_distribute_strategy(flow.scope.consistent_view())
-        func_config.train.primary_lr(self.lr)
-        func_config.train.model_update_conf(dict(naive_conf={}))
+        func_config.default_logical_view(flow.scope.consistent_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def test_generator(
-            z=flow.FixedTensorDef((self.batch_size, self.z_dim)),
-            label1=flow.FixedTensorDef((self.batch_size, 1)),
+            z: oft.Numpy.Placeholder((self.batch_size, self.z_dim)),
+            label1: oft.Numpy.Placeholder((self.batch_size, 1)),
         ):
             g_out = self.generator(z, trainable=True, const_init=True)
             g_logits = self.discriminator(g_out, trainable=False, const_init=True)
@@ -55,15 +57,17 @@ class DCGAN:
                 name="Gloss_sigmoid_cross_entropy_with_logits",
             )
 
-            flow.losses.add_loss(g_loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [self.lr]), momentum=0
+            ).minimize(g_loss)
             return g_loss
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def test_discriminator(
-            z=flow.FixedTensorDef((self.batch_size, 100)),
-            images=flow.FixedTensorDef((self.batch_size, 1, 28, 28)),
-            label1=flow.FixedTensorDef((self.batch_size, 1)),
-            label0=flow.FixedTensorDef((self.batch_size, 1)),
+            z: oft.Numpy.Placeholder((self.batch_size, 100)),
+            images: oft.Numpy.Placeholder((self.batch_size, 1, 28, 28)),
+            label1: oft.Numpy.Placeholder((self.batch_size, 1)),
+            label0: oft.Numpy.Placeholder((self.batch_size, 1)),
         ):
             g_out = self.generator(z, trainable=False, const_init=True)
             g_logits = self.discriminator(g_out, trainable=True, const_init=True)
@@ -82,7 +86,9 @@ class DCGAN:
                 name="Dloss_real_sigmoid_cross_entropy_with_logits",
             )
             d_loss = d_loss_fake + d_loss_real
-            flow.losses.add_loss(d_loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [self.lr]), momentum=0
+            ).minimize(d_loss)
 
             return d_loss
 

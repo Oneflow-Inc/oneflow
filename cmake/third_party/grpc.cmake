@@ -29,7 +29,7 @@ if(THIRD_PARTY)
 
 ExternalProject_Add(grpc
     PREFIX grpc
-    DEPENDS protobuf zlib
+    DEPENDS protobuf zlib zlib_copy_headers_to_destination
     URL ${GRPC_URL}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1

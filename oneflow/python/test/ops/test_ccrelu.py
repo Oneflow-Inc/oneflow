@@ -16,6 +16,8 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import unittest
+import os
 
 
 def ccrelu(x, name):
@@ -33,7 +35,7 @@ def ccrelu(x, name):
 def fixed_tensor_def_test(test_case, func_config):
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ReluJob(a: oft.Numpy.Placeholder((5, 2))):
         return ccrelu(a, "my_cc_relu_op")
 
@@ -45,7 +47,7 @@ def fixed_tensor_def_test(test_case, func_config):
 def mirrored_tensor_def_test(test_case, func_config):
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ReluJob(a: oft.ListNumpy.Placeholder((5, 2))):
         return ccrelu(a, "my_cc_relu_op")
 
@@ -54,25 +56,28 @@ def mirrored_tensor_def_test(test_case, func_config):
     test_case.assertTrue(np.array_equal(y, np.maximum(x, 0)))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_ccrelu(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.consistent_view())
     fixed_tensor_def_test(test_case, func_config)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_mirror_ccrelu(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
     mirrored_tensor_def_test(test_case, func_config)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n2c_mirror_dynamic_ccrelu(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ReluJob(a: oft.ListNumpy.Placeholder((5, 2))):
         return ccrelu(a, "my_cc_relu_op")
 

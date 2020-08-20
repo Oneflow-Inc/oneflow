@@ -160,6 +160,8 @@ def _AddPadding(ctx, node, kernel_shape, strides, dilations=None, spatial=2):
             dilations = [1] * spatial * 2
         padding = padding.s.decode("utf-8")
         if padding == "same":
+            padding = "same_lower"
+        if padding in ["same_lower", "same_upper"]:
             pads = [0] * spatial * 2
             input_shape = ctx.get_shape(node.input[0])
             output_shape = ctx.get_shape(node.output[0])
@@ -187,7 +189,10 @@ def _AddPadding(ctx, node, kernel_shape, strides, dilations=None, spatial=2):
                     input_shape,
                     output_shape,
                 )
-                node.set_attr("auto_pad", "SAME_LOWER")
+                if padding == "same_lower":
+                    node.set_attr("auto_pad", "SAME_LOWER")
+                else:
+                    node.set_attr("auto_pad", "SAME_UPPER")
             else:
                 for i in range(spatial):
                     pad = (
@@ -197,10 +202,12 @@ def _AddPadding(ctx, node, kernel_shape, strides, dilations=None, spatial=2):
                         - input_shape[i + 2]
                     )
                     pad = max(pad, 0)
-                    # pads[i] = pad // 2
-                    # pads[i + spatial] = pad - pad // 2
-                    pads[i + spatial] = pad // 2
-                    pads[i] = pad - pad // 2
+                    if padding == "same_lower":
+                        pads[i + spatial] = pad // 2
+                        pads[i] = pad - pad // 2
+                    else:
+                        pads[i] = pad // 2
+                        pads[i + spatial] = pad - pad // 2
                 node.set_attr("pads", pads)
 
         elif padding == "valid":
@@ -249,7 +256,7 @@ class ConvOp:
         node.set_attr("dilations", node.get_attr_value("dilation_rate", [1, 1]))
         strides = conv_dims_attr(node, "strides")
         dilations = conv_dims_attr(node, "dilations")
-        _AddPadding(ctx, node, kernel_shape, strides, dilations=dilations, spatial=2)
+        node.set_attr("pads", node.get_attr_value("padding_before", [0, 0]) * 2)
         _ConvConvertInputs(ctx, node, with_kernel=True)
 
     @classmethod
@@ -291,7 +298,13 @@ class PoolOp:
         node.set_attr("kernel_shape", kernel_shape_flow)
         node.set_attr("strides", strides_flow)
         conv_dims_attr(node, "dilations")
-        _AddPadding(ctx, node, kernel_shape_flow, strides_flow)
+        if node.get_attr("padding") is not None:
+            _AddPadding(ctx, node, kernel_shape_flow, strides_flow)
+        else:
+            pads = node.get_attr_value("padding_before", [0, 0]) + node.get_attr_value(
+                "padding_after", [0, 0]
+            )
+            node.set_attr("pads", pads)
         _ConvConvertInputs(ctx, node, with_kernel=False)
 
 

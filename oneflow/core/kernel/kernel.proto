@@ -39,10 +39,6 @@ message RecordLoadKernelConf {
   required int64 parallel_num = 3;
 }
 
-message PReluAlphaGradKernelConf {
-  repeated int32 perm = 1;
-}
-
 message ShapeElemCntKernelConf {
   repeated int32 axis = 1;
 }
@@ -57,6 +53,7 @@ message UserKernelConf {
   required ParallelContext parallel_ctx = 2;
   required SbpSignature sbp_sig = 3;
   map<string, BlobDescProto> bn_in_op2logical_blob_desc = 4;
+  required ParallelConf parallel_conf = 5;
 }
 
 message XrtLaunchKernelConf {
@@ -126,7 +123,6 @@ message KernelConf {
     SliceKernelConf slice_conf = 402;
     VariableKernelConf variable_conf = 407;
     RecordLoadKernelConf record_load_conf = 408;
-    PReluAlphaGradKernelConf prelu_alpha_grad_conf = 409;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
     ModelIoV2KernelConf model_io_v2_conf = 418;
     BroadcastToCompatibleWithKernelConf broadcast_to_compatible_with_conf = 428;

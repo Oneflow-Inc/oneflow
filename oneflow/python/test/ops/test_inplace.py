@@ -28,14 +28,16 @@ def test_loss_inplace(test_case):
     def IdentityLoss(name):
         w = flow.get_variable(name, (10,), initializer=flow.constant_initializer(100))
         y = flow.math.reduce_sum(w)
-        flow.losses.add_loss(y)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0
+        ).minimize(y)
         return y
 
     TrainCompare(test_case, IdentityLoss)
 
 
 def test_inplace_variable(test_case):
-    @flow.global_function(MakeFuncConfig(True))
+    @flow.global_function(function_config=MakeFuncConfig(True))
     def InplaceVariable():
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(1))
         y = flow.math.relu(w)
@@ -48,7 +50,7 @@ def test_inplace_variable(test_case):
 
 
 def test_deadlock(test_case):
-    @flow.global_function(MakeFuncConfig(True))
+    @flow.global_function(function_config=MakeFuncConfig(True))
     def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
@@ -57,7 +59,7 @@ def test_deadlock(test_case):
 
 
 def test_nodeadlock_with_return(test_case):
-    @flow.global_function(MakeFuncConfig(True))
+    @flow.global_function(function_config=MakeFuncConfig(True))
     def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
@@ -67,7 +69,7 @@ def test_nodeadlock_with_return(test_case):
 
 
 def test_reentrant_lock_check_failed(test_case):
-    @flow.global_function(MakeFuncConfig(True))
+    @flow.global_function(function_config=MakeFuncConfig(True))
     def Foo(x: oft.Numpy.Placeholder((10,))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
@@ -76,7 +78,7 @@ def test_reentrant_lock_check_failed(test_case):
 
 
 def test_const_inplace_variable(test_case):
-    @flow.global_function(MakeFuncConfig(True))
+    @flow.global_function(function_config=MakeFuncConfig(True))
     def InplaceVariable():
         w = flow.get_variable("w", (2, 5), initializer=flow.constant_initializer(1))
         y = flow.reshape(w, (10,))
@@ -88,18 +90,15 @@ def test_const_inplace_variable(test_case):
 
 
 def TrainCompare(test_case, func):
-    lr = 5
     func_config = MakeFuncConfig(True)
-    func_config.train.primary_lr(5)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def EnableInplace():
         return func("w0")
 
     func_config.enable_inplace(False)
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def DisableInplace():
         return func("w1")
 

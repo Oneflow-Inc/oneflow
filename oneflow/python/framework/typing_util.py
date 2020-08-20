@@ -18,6 +18,8 @@ from __future__ import absolute_import
 import typing
 import inspect
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.local_blob as local_blob_util
+import oneflow.python.framework.pull_util as pull_util
 import oneflow.python.framework.typing as oft
 import oneflow.python.experimental.enable_typing_check as enable_typing_check
 
@@ -68,6 +70,14 @@ def CheckGlobalFunctionReturnAnnotation(cls):
         ), "T in oneflow.typing.Callback[T] cannot be omitted"
         assert len(cls.__args__) == 1
         _CheckGlobalFunctionReturnAnnotation(cls.__args__[0])
+    elif oft.OriginFrom(cls, oft.Bundle):
+        assert cls.__args__[0] in (
+            oft.Numpy,
+            oft.ListNumpy,
+            oft.ListListNumpy,
+        ), "T in oneflow.typing.Bundle[T] must be one of (oneflow.typing.Numpy, oneflow.typing.ListNumpy, oneflow.typing.ListListNumpy)"
+        assert len(cls.__args__) == 1
+        _CheckGlobalFunctionReturnAnnotation(cls.__args__[0])
     else:
         _CheckGlobalFunctionReturnAnnotation(cls)
 
@@ -78,6 +88,10 @@ def _CheckGlobalFunctionReturnAnnotation(cls):
         assert len(cls.__args__) > 0
         for cls_arg in cls.__args__:
             _CheckGlobalFunctionReturnAnnotation(cls_arg)
+    elif oft.OriginFrom(cls, typing.List):
+        assert cls.__args__ is not None, "T in typing.List[T] cannot be omitted"
+        assert len(cls.__args__) == 1
+        _CheckGlobalFunctionReturnAnnotation(cls.__args__[0])
     elif oft.OriginFrom(cls, typing.Dict):
         assert cls.__args__ is not None, "(K, V) in typing.Dict[K,V] cannot be omitted"
         assert len(cls.__args__) == 2
@@ -99,6 +113,17 @@ def CheckReturnByAnnotation(function_name, ret, annotation):
         assert ret is None, error_str
     elif oft.OriginFrom(annotation, oft.Callback):
         _CheckReturnByAnnotation(function_name, ret, annotation.__args__[0])
+    elif oft.OriginFrom(annotation, oft.Bundle):
+        if isinstance(ret, remote_blob_util.BlobDef):
+            _CheckReturnByAnnotation(function_name, ret, annotation.__args__[0])
+        elif isinstance(ret, (list, tuple)):
+            for elem in ret:
+                CheckReturnByAnnotation(function_name, elem, annotation)
+        elif type(ret) is dict:
+            for val in ret.values():
+                CheckReturnByAnnotation(function_name, val, annotation)
+        else:
+            raise NotImplementedError("invalid return  %s found" % (type(ret)))
     else:
         _CheckReturnByAnnotation(function_name, ret, annotation)
 
@@ -118,6 +143,13 @@ def _CheckReturnByAnnotation(function_name, ret, annotation):
         )
         for ret_i, annotation_i in zip(ret, annotation.__args__):
             _CheckReturnByAnnotation(function_name, ret_i, annotation_i)
+    elif oft.OriginFrom(annotation, typing.List):
+        assert type(ret) is list, error_str
+        assert len(annotation.__args__) == 1, (
+            "%s element type in list must be unique" % error_str
+        )
+        for ret_i in ret:
+            _CheckReturnByAnnotation(function_name, ret_i, annotation.__args__[0])
     elif oft.OriginFrom(annotation, typing.Dict):
         assert len(annotation.__args__) == 2
         assert type(ret) is dict, error_str
@@ -163,8 +195,36 @@ def TransformGlobalFunctionResult(future_blob, annotation):
             return lambda x: f(TransformReturnedLocalBlob(x, annotation))
 
         return lambda f: future_blob.async_get(Transform(f))
+    elif oft.OriginFrom(annotation, oft.Bundle):
+        return TransformReturnedBundle(future_blob.get(), annotation)
     else:
         return TransformReturnedLocalBlob(future_blob.get(), annotation)
+
+
+def TransformReturnedBundle(bundle_blob, annotation):
+    """
+    Transform returned bundle blob from global_function(job_func),
+    the returned bundle blob could be the form like x, [x], (x, ),
+    {"key": x} or the mixed form of them.
+    """
+    if isinstance(
+        bundle_blob,
+        (local_blob_util.LocalMirroredTensor, local_blob_util.LocalMirroredTensorList),
+    ):
+        return TransformReturnedLocalBlob(bundle_blob, annotation.__args__[0])
+    elif isinstance(bundle_blob, (list, tuple)):
+        return type(bundle_blob)(
+            TransformReturnedBundle(elem, annotation) for elem in bundle_blob
+        )
+    elif type(bundle_blob) is dict:
+        return {
+            key: TransformReturnedBundle(val, annotation)
+            for key, val in bundle_blob.items()
+        }
+    else:
+        raise NotImplementedError(
+            "invalid return  %s : %s found" % (bundle_blob, type(bundle_blob))
+        )
 
 
 def TransformReturnedLocalBlob(local_blob, annotation):
@@ -173,6 +233,13 @@ def TransformReturnedLocalBlob(local_blob, annotation):
         assert len(local_blob) == len(annotation.__args__)
         pairs = zip(local_blob, annotation.__args__)
         return tuple(TransformReturnedLocalBlob(*pair) for pair in pairs)
+    elif oft.OriginFrom(annotation, typing.List):
+        assert type(local_blob) is list
+        assert len(annotation.__args__) == 1
+        return [
+            TransformReturnedLocalBlob(elem, annotation.__args__[0])
+            for elem in local_blob
+        ]
     elif oft.OriginFrom(annotation, typing.Dict):
         assert type(local_blob) is dict
         assert len(annotation.__args__) == 2

@@ -2,6 +2,8 @@ set -ex
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
 tmp_dir=${ONEFLOW_CI_TMP_DIR:-"$HOME/ci-tmp"}
+extra_oneflow_cmake_args=${ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS:-""}
+package_appendix=${ONEFLOW_CI_PACKAGE_APPENDIX:-""}
 mkdir -p $tmp_dir
 docker_tag=${ONEFLOW_CI_DOCKER_TAG:-"oneflow:ci-manylinux2014-cuda10.2"}
 
@@ -18,6 +20,7 @@ fi
 # build manylinux image
 cd $src_dir
 docker build -f $src_dir/docker/package/manylinux/Dockerfile \
+    --build-arg from=nvidia/cuda:10.2-cudnn7-devel-centos7 \
     $docker_proxy_build_args -t $docker_tag .
 
 cd -
@@ -32,7 +35,10 @@ function build() {
         -v $tmp_dir/py-build-lib:/oneflow-src/build/lib/ \
         -w /ci-tmp \
         "$docker_tag" \
-        /oneflow-src/docker/package/manylinux/build_wheel.sh --python3.6
+        /oneflow-src/docker/package/manylinux/build_wheel.sh \
+            --python3.6 \
+            --package-name oneflow${package_appendix} \
+            $extra_oneflow_cmake_args
 }
 
 set +e
@@ -44,6 +50,6 @@ cached_build_ret=$?
 set -e
 if [ $cached_build_ret -ne 0 ] && [[ ! -t 1 ]]; then
     echo "retry after cleaning build dir"
-    docker run --rm -v $tmp_dir:/ci-tmp busybox rm -rf /ci-tmp/*
+    docker run --rm -v $tmp_dir:/ci-tmp busybox sh -c "rm -rf /ci-tmp/*"
     build
 fi

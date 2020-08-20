@@ -23,7 +23,7 @@ func_config.default_data_type(flow.int32)
 
 
 def test_naive(test_case):
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ModJob(
         a: oft.Numpy.Placeholder((5, 2), dtype=flow.int32),
         b: oft.Numpy.Placeholder((5, 2), dtype=flow.int32),
@@ -38,7 +38,7 @@ def test_naive(test_case):
 
 
 def test_broadcast(test_case):
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ModJob(
         a: oft.Numpy.Placeholder((5, 2), dtype=flow.int32),
         b: oft.Numpy.Placeholder((1, 2), dtype=flow.int32),
@@ -69,7 +69,7 @@ def test_xyz_mod_1y1(test_case):
 
 
 def GenerateTest(test_case, a_shape, b_shape):
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def ModJob(
         a: oft.Numpy.Placeholder(a_shape, dtype=flow.int32),
         b: oft.Numpy.Placeholder(b_shape, dtype=flow.int32),

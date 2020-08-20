@@ -28,13 +28,15 @@ set(NCCL_HEADERS
 
 if(THIRD_PARTY)
 
+include(ProcessorCount)
+ProcessorCount(PROC_NUM)
 ExternalProject_Add(nccl
     PREFIX nccl
     URL ${NCCL_URL}
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1
-    BUILD_COMMAND make -j src.build CUDA_HOME=${CUDA_TOOLKIT_ROOT_DIR}
+    BUILD_COMMAND make -j${PROC_NUM} src.build CUDA_HOME=${CUDA_TOOLKIT_ROOT_DIR}
     INSTALL_COMMAND ""
 )
 

@@ -36,12 +36,14 @@ def _check_one_file(completed_processes, filename):
     formatted = stdout
     if formatted != original:
         # Run the equivalent of diff -u
-        diff = list(difflib.unified_diff(
-            original.decode('utf8').splitlines(True),
-            formatted.decode('utf8').splitlines(True),
-            fromfile=filename,
-            tofile="{} (after clang format)".format(
-                filename)))
+        diff = list(
+            difflib.unified_diff(
+                original.decode("utf8").splitlines(True),
+                formatted.decode("utf8").splitlines(True),
+                fromfile=filename,
+                tofile="{} (after clang format)".format(filename),
+            )
+        )
     else:
         diff = None
 
@@ -54,24 +56,33 @@ if __name__ == "__main__":
         "files. If --fix is specified enforce format by "
         "modifying in place, otherwise compare the output "
         "with the existing file and output any necessary "
-        "changes as a patch in unified diff format")
-    parser.add_argument("--clang_format_binary",
-                        required=True,
-                        help="Path to the clang-format binary")
-    parser.add_argument("--exclude_globs",
-                        help="Filename containing globs for files "
-                        "that should be excluded from the checks")
-    parser.add_argument("--source_dir",
-                        required=True,
-                        help="Root directory of the source code")
-    parser.add_argument("--fix", default=False,
-                        action="store_true",
-                        help="If specified, will re-format the source "
-                        "code instead of comparing the re-formatted "
-                        "output, defaults to %(default)s")
-    parser.add_argument("--quiet", default=False,
-                        action="store_true",
-                        help="If specified, only print errors")
+        "changes as a patch in unified diff format"
+    )
+    parser.add_argument(
+        "--clang_format_binary", required=True, help="Path to the clang-format binary"
+    )
+    parser.add_argument(
+        "--exclude_globs",
+        help="Filename containing globs for files "
+        "that should be excluded from the checks",
+    )
+    parser.add_argument(
+        "--source_dir", required=True, help="Root directory of the source code"
+    )
+    parser.add_argument(
+        "--fix",
+        default=False,
+        action="store_true",
+        help="If specified, will re-format the source "
+        "code instead of comparing the re-formatted "
+        "output, defaults to %(default)s",
+    )
+    parser.add_argument(
+        "--quiet",
+        default=False,
+        action="store_true",
+        help="If specified, only print errors",
+    )
     arguments = parser.parse_args()
 
     # FIXME: files under xrt directory are formatted differently, skip for now
@@ -86,15 +97,18 @@ if __name__ == "__main__":
 
     if arguments.fix:
         if not arguments.quiet:
-            print("\n".join(map(lambda x: "Formatting {}".format(x),
-                                formatted_filenames)))
+            print(
+                "\n".join(map(lambda x: "Formatting {}".format(x), formatted_filenames))
+            )
 
         # Break clang-format invocations into chunks: each invocation formats
         # 16 files. Wait for all processes to complete
-        results = lintutils.run_parallel([
-            [arguments.clang_format_binary, "-i"] + some
-            for some in lintutils.chunk(formatted_filenames, 16)
-        ])
+        results = lintutils.run_parallel(
+            [
+                [arguments.clang_format_binary, "-i"] + some
+                for some in lintutils.chunk(formatted_filenames, 16)
+            ]
+        )
         for returncode, stdout, stderr in results:
             # if any clang-format reported a parse error, bubble it
             if returncode != 0:
@@ -103,20 +117,27 @@ if __name__ == "__main__":
     else:
         # run an instance of clang-format for each source file in parallel,
         # then wait for all processes to complete
-        results = lintutils.run_parallel([
-            [arguments.clang_format_binary, filename]
-            for filename in formatted_filenames
-        ], stdout=PIPE, stderr=PIPE)
+        results = lintutils.run_parallel(
+            [
+                [arguments.clang_format_binary, filename]
+                for filename in formatted_filenames
+            ],
+            stdout=PIPE,
+            stderr=PIPE,
+        )
         for returncode, stdout, stderr in results:
             # if any clang-format reported a parse error, bubble it
             if returncode != 0:
                 sys.exit(returncode)
 
         error = False
-        checker = partial(_check_one_file, {
-            filename: result
-            for filename, result in zip(formatted_filenames, results)
-        })
+        checker = partial(
+            _check_one_file,
+            {
+                filename: result
+                for filename, result in zip(formatted_filenames, results)
+            },
+        )
         pool = mp.Pool()
         try:
             # check the output from each invocation of clang-format in parallel

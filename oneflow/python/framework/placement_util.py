@@ -18,7 +18,7 @@ import re
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.device_scope_stack as device_scope_stack
 import oneflow
@@ -27,6 +27,21 @@ import traceback
 
 @oneflow_export("placement.current_scope")
 def api_current_placement_scope() -> placement_ctx.PlacementScope:
+    r"""Get current placement scope object.
+
+    For instance:
+
+        if "cpu" == flow.placement.current_scope().default_device_tag:
+            print("ops shall run in the cpu mode only")
+
+    Returns:
+        placement_ctx.PlacementScope: [description]
+    """
+    print(
+        "WARNING: oneflow.placement.current_scope has been deprecated. "
+        "Please use oneflow.current_scope.device_parallel_desc_symbol instead."
+    )
+    print(traceback.format_stack()[-2])
     api = enable_if.unique(
         [global_mode_cur_placement_scope, normal_mode_cur_placement_scope]
     )
@@ -44,6 +59,7 @@ def normal_mode_cur_placement_scope():
 
 
 @oneflow_export("device_prior_placement", "fixed_placement")
+@oneflow_deprecate()
 def deprecated_placement(*args, **kwargs):
     print(
         "WARNING:",
@@ -60,6 +76,27 @@ def deprecated_placement(*args, **kwargs):
 def api_placement(
     device_tag: str, machine_device_ids: str
 ) -> placement_ctx.PlacementScope:
+    r"""Create a scope. All ops within the scope will run on specified device that placed by  "device_tag" and "machine_device_ids".
+
+    Args:
+        device_tag (str): Device tag, "cpu" or "gpu" only
+        machine_device_ids (str): String that specifies what device(s) to use in the format "<NODE INDEX (RANGE)>:<DEVICE INDEX (RANGE)>". For example, "0:0" means use the device 0 of machine 0, and "1:4-6" means use device 4, 5, 6 of machine 1.
+
+    Returns:
+        placement_ctx.DevicePriorPlacementScope:  Placement scope
+
+    For instance::
+
+        with flow.fixed_placement("gpu", "0:0"):
+            logits = lenet(images, train=False)
+            loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels, logits, name="softmax_loss")
+            flow.losses.add_loss(loss)
+
+    """
+    from oneflow.python_gen.compatibility import with_cuda
+
+    if with_cuda == False:
+        device_tag = "cpu"
     func = enable_if.unique([GetPlacementScope, GetNormalModePlacementScope])
     return func(device_tag, machine_device_ids)
 
@@ -84,7 +121,7 @@ def GetNormalModePlacementScope(device_tag, machine_device_ids):
 
 
 def GetDefaultMachineDeviceIds(resource):
-    if resource.HasField("gpu_device_num"):
+    if resource.HasField("gpu_device_num") and resource.gpu_device_num > 0:
         return "gpu", placement_ctx.GetGpuMachineDeviceIds(resource)
     elif resource.HasField("cpu_device_num"):
         return "cpu", placement_ctx.GetCpuMachineDeviceIds(resource)

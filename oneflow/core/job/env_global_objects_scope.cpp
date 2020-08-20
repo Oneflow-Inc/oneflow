@@ -13,7 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
 #include <cuda.h>
+#endif  // WITH_CUDA
 #include <thread>
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
@@ -87,12 +89,16 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
   Global<EagerJobBuildAndInferCtxMgr>::New();
+#ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
+#endif
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+#ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::Delete();
+#endif
   Global<EagerJobBuildAndInferCtxMgr>::Delete();
   Global<vm::VirtualMachineScope>::Delete();
   Global<ThreadPool>::Delete();

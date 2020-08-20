@@ -156,6 +156,12 @@ Maybe<void> StartGlobalSession() {
   return Maybe<void>::Ok();
 }
 
+Maybe<std::string> GetSerializedStructureGraph() {
+  const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
+  return job_ctx_mgr->structure_graph();
+}
+
 Maybe<void> StopGlobalSession() {
   if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
@@ -201,10 +207,6 @@ Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(cb);
   Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Send(job_id);
   return Maybe<void>::Ok();
-}
-
-Maybe<long long> GetDeviceType4DeviceTag(const std::string& device_tag) {
-  return JUST(DeviceType4DeviceTag(device_tag));
 }
 
 Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(

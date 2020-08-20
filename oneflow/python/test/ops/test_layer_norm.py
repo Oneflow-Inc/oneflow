@@ -29,15 +29,17 @@ for gpu in gpus:
 
 
 def test_layer_norm(_):
-    confs = [{"x_shape": (4, 5, 2, 6), "begin_norm_axis": -1, "begin_params_axis": -1}]
+    confs = [
+        {"x_shape": (4, 5, 2, 6), "begin_norm_axis": -1, "begin_params_axis": -1},
+    ]
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["confs"] = confs
     arg_dict["data_type"] = ["float32"]
     arg_dict["trainable"] = [True, False]
     arg_dict["center"] = [True, False]
     arg_dict["scale"] = [True, False]
-    arg_dict["epsilon"] = [0.0, 1e-10]
+    arg_dict["epsilon"] = [1e-5, 1e-10]
 
     for case in GenArgList(arg_dict):
         (device_type, confs, data_type, trainable, center, scale, epsilon) = case
@@ -45,7 +47,9 @@ def test_layer_norm(_):
         begin_norm_axis = confs["begin_norm_axis"]
         begin_params_axis = confs["begin_params_axis"]
         flow.clear_default_session()
-
+        assert (
+            begin_norm_axis == begin_params_axis
+        ), "tf doesn't support a dedicated begin_params_axis"
         # Random inputs
         x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
         dim = len(x.shape) - 2
@@ -70,10 +74,11 @@ def test_layer_norm(_):
         dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
 
         def assert_grad(b):
+            diff = dx_tf.numpy() - b.numpy()
+            max_diff = np.max(np.abs(diff))
             assert np.allclose(dx_tf.numpy(), b.numpy(), rtol=1e-5, atol=1e-5), (
                 case,
-                dx_tf.numpy(),
-                b.numpy(),
+                max_diff,
             )
 
         # 1F results
@@ -81,10 +86,8 @@ def test_layer_norm(_):
 
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
-        func_config.train.primary_lr(1e-4)
-        func_config.train.model_update_conf(dict(naive_conf={}))
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def test_job(x: oft.Numpy.Placeholder(x_shape, dtype=dtype)):
             v = flow.get_variable(
                 "x",
@@ -103,7 +106,9 @@ def test_layer_norm(_):
                     center=center,
                     scale=scale,
                 )
-            flow.losses.add_loss(y)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(y)
             return y
 
         check_point = flow.train.CheckPoint()

@@ -102,14 +102,18 @@ def _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_value):
         raise NotImplementedError
 
 
+def FeedValueToEagerBlob(blob_object, blob_def, ndarray):
+    physical_blob_objects = _GetPhysicalBlobObjects(blob_object, None)
+    feed_ctx = FeedContext(blob_object.op_arg_parallel_attr, ndarray)
+    for i, physical_blob_object in enumerate(physical_blob_objects):
+        feed_ctx.set_rank(i)
+        _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, physical_blob_object)
+
+
 def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
     _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_ndarray)
     arg_blob_object, lbi = _MakeInputBlobObject(arg_blob_def)
-    physical_blob_objects = _GetPhysicalBlobObjects(arg_blob_object, lbi)
-    feed_ctx = FeedContext(arg_blob_object.op_arg_parallel_attr, arg_ndarray)
-    for i, physical_blob_object in enumerate(physical_blob_objects):
-        feed_ctx.set_rank(i)
-        _FeedValueToInputPhysicalBlob(feed_ctx, arg_blob_def, physical_blob_object)
+    FeedValueToEagerBlob(arg_blob_object, arg_blob_def, arg_ndarray)
     get_blob = None
     if isinstance(arg_blob_def, input_blob_def.FixedTensorDef):
 

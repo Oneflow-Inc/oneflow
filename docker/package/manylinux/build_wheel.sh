@@ -13,6 +13,7 @@ while [[ "$#" > 0 ]]; do
         --skip-third-party) SKIP_THIRD_PARTY=1; ;;
         --cache-dir) CACHE_DIR=$2; shift ;;
         --house-dir) HOUSE_DIR=$2; shift ;;
+        --package-name) PACKAGE_NAME=$2; shift ;;
         --python3.5) PY_VERS+=( "35" ) ;;
         --python3.6) PY_VERS+=( "36" ) ;;
         --python3.7) PY_VERS+=( "37" ) ;;
@@ -32,6 +33,11 @@ then
     HOUSE_DIR=$PWD/wheelhouse
 fi
 
+if [[ ! -v PACKAGE_NAME ]]
+then
+    PACKAGE_NAME=oneflow
+fi
+
 ONEFLOW_SRC_DIR=`cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd`
 ONEFLOW_SRC_DIR=$ONEFLOW_SRC_DIR/../../..
 
@@ -44,15 +50,16 @@ cd $ONEFLOW_SRC_DIR
 
 THIRD_PARTY_BUILD_DIR=$CACHE_DIR/build-third-party
 THIRD_PARTY_INSTALL_DIR=$CACHE_DIR/build-third-party-install
+COMMON_CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release -DBUILD_RDMA=ON -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR"
 if [[ $SKIP_THIRD_PARTY != 1 ]]; then
     mkdir -p $THIRD_PARTY_BUILD_DIR
     pushd $THIRD_PARTY_BUILD_DIR
 
-    cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release \
+    cmake -DTHIRD_PARTY=ON \
+        $COMMON_CMAKE_ARGS \
         -DONEFLOW=OFF \
-        -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR   \
+        $EXTRA_ONEFLOW_CMAKE_ARGS \
         $ONEFLOW_SRC_DIR
-    make -j nccl
     make -j`nproc` prepare_oneflow_third_party
 
     popd
@@ -77,15 +84,15 @@ do
     PY_ROOT=/opt/python/${PY_ABI}
     PY_BIN=${PY_ROOT}/bin/python
     cmake -DTHIRD_PARTY=OFF -DONEFLOW=ON\
+        $COMMON_CMAKE_ARGS \
         -DPython3_ROOT_DIR=$PY_ROOT \
-        -DCMAKE_BUILD_TYPE=Release  \
-        -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR   \
-        $EXTRA_ONEFLOW_CMAKE_ARGS   \
+        $EXTRA_ONEFLOW_CMAKE_ARGS \
         $ONEFLOW_SRC_DIR
     cmake --build . -j `nproc`
     popd
     trap cleanup EXIT
-    $PY_BIN setup.py bdist_wheel -d tmp_wheel --build_dir $ONEFLOW_BUILD_DIR
+    rm -rf $ONEFLOW_BUILD_DIR/python_scripts/*.egg-info
+    $PY_BIN setup.py bdist_wheel -d tmp_wheel --build_dir $ONEFLOW_BUILD_DIR --package_name $PACKAGE_NAME
     auditwheel repair tmp_wheel/*.whl --wheel-dir $HOUSE_DIR
     cleanup
 done
