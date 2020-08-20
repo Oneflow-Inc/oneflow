@@ -394,6 +394,8 @@ Maybe<void> OpGraph::Init(const Job& job) {
   std::cout << "test job complete. \n";
   SbpConstructor sbp_constructor;
   sbp_constructor.constructSbpGraph(*this, job);
+  SbpConstructor sbp_constructor_im(true);
+  sbp_constructor_im.constructSbpGraph(*this, job);
 
   ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
   return Maybe<void>::Ok();
