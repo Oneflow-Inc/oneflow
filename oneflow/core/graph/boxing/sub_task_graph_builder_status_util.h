@@ -16,12 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_SUB_TASK_GRAPH_BUILDER_STATUS_UTIL_H_
 #define ONEFLOW_CORE_GRAPH_SUB_TASK_GRAPH_BUILDER_STATUS_UTIL_H_
 
-#include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
-#include "oneflow/core/register/logical_blob_id.pb.h"
-#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/register/register_desc.pb.h"
 
 namespace oneflow {
 
