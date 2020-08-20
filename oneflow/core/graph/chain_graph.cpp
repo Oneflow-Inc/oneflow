@@ -75,6 +75,8 @@ void ChainMerger::UpdateTaskUid(TaskNode* task_node) {
   if (uid_it == task_node2uid_.end()) {
     int64_t new_id = task_node2uid_.size();
     CHECK(task_node2uid_.emplace(task_node, new_id).second);
+    LOG(ERROR) << "uid: " << new_id << ", task_id: " << task_node->task_id()
+               << " str: " << task_node->VisualStr();
   }
 }
 
@@ -101,6 +103,7 @@ void ChainMerger::InitChains() {
       int64_t ancestor_uid = GetTaskUid(ancestor);
       CarefullySetBitset(&(cur_chain.ancestors), ancestor_uid);
     }
+    LOG(ERROR) << "init: " << task_node->VisualStr() << " ancestors: " << cur_chain.ancestors[0];
     task_node2chain_node_.insert({task_node, &cur_chain});
   }
 }
@@ -124,8 +127,8 @@ bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
         auto pair = node2descents_.find(node);
         if (pair != node2descents_.end()) {
           for (auto descent : pair->second) {
-            CarefullyInPlaceBitwiseOR(&(task_node2chain_node_.at(descent)->ancestors),
-                                      &(lhs->members));
+            // CarefullyInPlaceBitwiseOR(&(task_node2chain_node_.at(descent)->ancestors),
+            // &(lhs->members));
           }
         }
       }
@@ -180,7 +183,14 @@ bool ChainMerger::ShouldMerge(const ChainIt& lhs, const ChainIt& rhs) const {
   };
   auto HasIdenticalAncestors = [bitset_num](const ChainIt& a, const ChainIt& b) {
     for (int64_t i = 0; i < bitset_num; ++i) {
-      if (a->ancestors.at(i) != b->ancestors.at(i)) { return false; }
+      if (a->ancestors.at(i) != b->ancestors.at(i)) {
+        if (a->nodes.size() == 1 && b->nodes.size()) {
+          LOG(ERROR) << a->nodes[0]->VisualStr() << " i: " << i << " " << a->ancestors.at(i);
+          LOG(ERROR) << b->nodes[0]->VisualStr() << " i: " << i << " " << b->ancestors.at(i)
+                     << "\n\n";
+        }
+        return false;
+      }
     }
     return true;
   };

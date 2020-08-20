@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 // 1KB
-const int64_t BITSET_SIZE = 8 * 1024;
+const int64_t BITSET_SIZE = 8 * 3;
 
 class TaskNode;
 class TaskEdge;
