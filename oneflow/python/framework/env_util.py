@@ -225,8 +225,8 @@ def api_get_require_resource():
 def get_require_resource():
     resource = c_api_util.CurrentResource()
     required_memory_zone_info_list = []
-    required_memory_zone_info_detail = {}
     for item in resource.required_memory_zone_info:
+        required_memory_zone_info_detail = {}
         required_memory_zone_info_detail["machine_id"] = item.machine_id
         required_memory_zone_info_detail["mem_zone_id"] = item.mem_zone_id
         required_memory_zone_info_detail["device_tag"] = item.device_tag
