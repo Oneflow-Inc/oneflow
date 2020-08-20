@@ -13,15 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/job_build_and_infer_ctx.h"
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
-#include "oneflow/core/job_rewriter/autograd.h"
-#include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/job/mirrored_sig_infer_hint.h"
-#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/job/job_build_and_infer_ctx.h"
+#include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/job_rewriter/autograd.h"
+#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/user/summary/summary_converter.h"
+
+#include <google/protobuf/text_format.h>
+#include <json.hpp>
 
 namespace oneflow {
 
@@ -288,27 +293,28 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
   return Maybe<void>::Ok();
 }
 
-Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, const SbpSignature& sbp_sig,
-                                                         int64_t parallel_num) {
+Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t parallel_num) {
   HashSet<std::string> obns(op->output_bns().begin(), op->output_bns().end());
   auto GetParallelNum = [&](const std::string& bn_in_op) {
     if (obns.find(bn_in_op) == obns.end()) { return parallel_num; }
     return lbi2parallel_desc_from_producer_view_.at(op->BnInOp2Lbi(bn_in_op)).parallel_num();
   };
-  for (const auto& pair : sbp_sig.bn_in_op2sbp_parallel()) {
-    if (pair.second.has_split_parallel()) {
-      int64_t axis = pair.second.split_parallel().axis();
-      const LogicalBlobId& lbi = op->BnInOp2Lbi(pair.first);
-      int64_t blob_parallel_num = GetParallelNum(pair.first);
-      const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
-      int64_t num_axes = logical_blob_desc.shape().NumAxes();
-      if (axis < 0) { axis += num_axes; }
-      CHECK_GE_OR_RETURN(axis, 0);
-      CHECK_LT_OR_RETURN(axis, num_axes);
-      CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
-          << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
-          << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
-    }
+  for (const auto& pair : JUST(op->sbp_signature())->bn_in_op2sbp_parallel()) {
+    if (!pair.second.has_split_parallel()) { continue; }
+    if (JUST(op->OptMirroredParallel4BnInOp(pair.first))->has_mirrored_parallel()) { continue; }
+    int64_t axis = pair.second.split_parallel().axis();
+    const LogicalBlobId& lbi = op->BnInOp2Lbi(pair.first);
+    int64_t blob_parallel_num = GetParallelNum(pair.first);
+    const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
+    int64_t num_axes = logical_blob_desc.shape().NumAxes();
+    if (axis < 0) { axis += num_axes; }
+    CHECK_GE_OR_RETURN(axis, 0);
+    CHECK_LT_OR_RETURN(axis, num_axes)
+        << "op: " << op->op_name() << ", blob: " << pair.first << ", axis: " << axis
+        << ", shape: " << logical_blob_desc.shape();
+    CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
+        << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
+        << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
   }
   return Maybe<void>::Ok();
 }
@@ -399,7 +405,8 @@ Maybe<void> JobBuildAndInferCtx::CheckAllInputsConvertableToMirroredBlob(const O
     if (sbp.has_broadcast_parallel()) { continue; }
     if (sbp.has_split_parallel() && sbp.split_parallel().axis() == 0) { continue; }
     const std::string& lbn = GenLogicalBlobName(lbi);
-    return Error::CheckFailed() << "input lbn: " << lbn << " is not convertable to mirrored blob";
+    return Error::CheckFailedError()
+           << "input lbn: " << lbn << " is not convertable to mirrored blob";
   }
   return Maybe<void>::Ok();
 }
@@ -505,9 +512,9 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   CHECK_OR_RETURN(op_name2op_.find(op_name) == op_name2op_.end())
       << JobBuildAndInferError::kOpNameExist << "op_name: " << op_name
       << " already exist in job: " << job_->job_conf().job_name();
-  CHECK_NE_OR_RETURN(op_conf.device_type(), DeviceType::kInvalidDevice)
-      << JobBuildAndInferError::kOpConfDeviceTypeNoSet << "op_name: " << op_name
-      << " not set device type";
+  CHECK_NE_OR_RETURN(op_conf.device_tag(), "invalid_device")
+      << JobBuildAndInferError::kOpConfDeviceTagNoSet << "op_name: " << op_name
+      << " not set device tag";
 
   op_name2op_.emplace(op_name, ConstructOp(op_conf, job_desc));
   Operator* op = op_name2op_.at(op_name).get();
@@ -547,16 +554,12 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
     }
     return nullptr;
   };
-  ParallelContext parallel_ctx;
-  parallel_ctx.set_parallel_id(0);
-  parallel_ctx.set_parallel_num(1);
-  JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, CHECK_JUST(op->sbp_signature()),
-                               [](OpContext*) {}));
+  JUST(op->InferLogicalOutBlobDescsIf(GetBlobDesc4BnInOp, BatchAxis4Ibn, parallel_desc));
   // Fill logical blob_desc signature.
-  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc*> {
+  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
     const auto* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
     CHECK_NOTNULL_OR_RETURN(blob_desc);
-    return blob_desc;
+    return *blob_desc;
   }));
   // Infer ParallelDesc for output blobs.
   auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
@@ -575,7 +578,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   // Infer whether input/output blobs are backward used
   InferBlobBackwardSignature(op);
   // Check splitability
-  JUST(CheckOpBlobSplitability(op, *JUST(op->sbp_signature()), parallel_desc.parallel_num()));
+  JUST(CheckOpBlobSplitability(op, parallel_desc.parallel_num()));
 
   return op->GetOpAttributeWithoutOpNameAndLbn();
 }
@@ -672,7 +675,7 @@ Maybe<void> JobBuildAndInferCtx::AddLossMirroredBlobName(const std::string& lbn)
 Maybe<LogicalBlobId> JobBuildAndInferCtx::GetMirroredLbi(const std::string& lbn_with_hint) const {
   const LogicalBlobId& lbi = GenLogicalBlobId(lbn_with_hint);
   if (mirrored_lbi2sub_lbis_.find(lbi) != mirrored_lbi2sub_lbis_.end()) { return lbi; }
-  return Error::CheckFailed() << lbn_with_hint << " is not a mirrored blob name";
+  return Error::CheckFailedError() << lbn_with_hint << " is not a mirrored blob name";
 }
 
 Maybe<int> JobBuildAndInferCtx::MirroredBlobGetNumSubLbi(const std::string& lbn_with_hint) const {
@@ -840,7 +843,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompati
     lbi_vec->push_back(sub_lbi);
   };
   OperatorConf op_conf;
-  op_conf.set_device_type(parallel_desc.device_type());
+  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(parallel_desc.device_type())));
   if (sbp.has_broadcast_parallel()) {
     op_conf.set_name(kAutoMirroredBlobNamePrefix + "-DistributeClone-" + NewUniqueId());
     auto* distribute_clone = op_conf.mutable_distribute_clone_conf();
@@ -894,7 +897,8 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
     CHECK_OR_RETURN(producer_op_conf.has_scope_symbol_id());
     op_conf.set_scope_symbol_id(producer_op_conf.scope_symbol_id());
   }
-  op_conf.set_device_type(parallel_desc.device_type());
+  // const char* device_tag = JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
+  op_conf.set_device_tag(JUST(DeviceTag4DeviceType(parallel_desc.device_type())));
   op_conf.set_name(kAutoMirroredBlobNamePrefix + "-CastToMirrored-" + NewUniqueId());
   auto* cast_to_mirrored_conf = op_conf.mutable_cast_to_mirrored_conf();
   cast_to_mirrored_conf->set_in(lbn);
@@ -929,7 +933,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("CompleteOfrecordDecoder"));
     JUST(DoPass("SetDefaultVariableConf"));
+#ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
+#endif
     JUST(DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps"));
     JUST(DoPass("NonDistributedOptimizerPass"));
     JUST(DoPass("AutoTrainStep"));
@@ -937,6 +943,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
     JUST(DoPass("PruneCastToStaticShapeOpsPass"));
     JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
+    JUST(DoPass("SplitSparseSoftmaxCrossEntropyOpPass"));
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
     JUST(DoPass("AddLbiDiffWatcherOpConfs"));
     JUST(DoPass("PruneParallelCastOpsPass"));
@@ -1027,6 +1034,138 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(
   *IsLbiBackwardUsed = [backward_used_lbis](const LogicalBlobId& lbi) {
     return backward_used_lbis->find(lbi) != backward_used_lbis->end();
   };
+}
+
+namespace {
+
+std::string OpConf2ClassName(const OperatorConf& op_conf) {
+  if (op_conf.has_user_conf()) {
+    return op_conf.user_conf().op_type_name();
+  } else if (op_conf.has_variable_conf()) {
+    return "variable";
+  } else if (op_conf.has_decode_ofrecord_conf()) {
+    return "decode_ofrecord";
+  } else if (op_conf.has_input_conf() && op_conf.has_return_conf()) {
+    return "input";
+  } else if (op_conf.has_output_conf() && op_conf.has_return_conf()) {
+    return "output";
+  } else {
+    return "system_op";
+  }
+}
+
+void FormateUserConf(nlohmann::json& json_conf) {
+  nlohmann::json user_conf = json_conf["user_conf"];
+  if (user_conf.is_null()) {
+    json_conf.erase(json_conf.find("user_conf"));
+    return;
+  }
+  std::string nomarl_array[] = {"at_int32",  "at_int64",  "at_bool",  "at_float",
+                                "at_double", "at_string", "at_shape", "at_data_type"};
+  std::string list_array[] = {"at_list_int32",     "at_list_int64", "at_list_float",
+                              "at_list_data_type", "at_list_shape", "at_list_string"};
+  nlohmann::json attr_json = user_conf["attr"];
+  for (int32_t i = 0; i < attr_json.size(); i++) {
+    std::string key = attr_json[i]["key"];
+    nlohmann::json value_json = attr_json[i]["value"];
+    bool is_found_normal = false;
+    for (int32_t j = 0; j < nomarl_array->length(); j++) {
+      std::string value_key = nomarl_array[j];
+      if (value_json.contains(value_key)) {
+        is_found_normal = true;
+        if ("at_shape" == value_key) {
+          json_conf[key] = value_json[value_key]["dim"];
+        } else {
+          json_conf[key] = value_json[value_key];
+        }
+        break;
+      }
+    }
+    if (is_found_normal) { continue; }
+    for (int32_t j = 0; j < list_array->length(); j++) {
+      std::string value_key = list_array[j];
+      if (value_json.contains(value_key)) {
+        if (value_json[value_key].contains("val")) {
+          json_conf[key] = value_json[value_key]["val"];
+          break;
+        } else if (value_json[value_key].contains("dim")) {
+          json_conf[key] = value_json[value_key]["dim"];
+          break;
+        }
+      }
+    }
+  }
+  json_conf.erase(json_conf.find("user_conf"));
+}
+
+void FormateVariableConf(nlohmann::json& json_conf) {
+  nlohmann::json variable_conf = json_conf["variable_conf"];
+  if (variable_conf == nullptr) {
+    json_conf.erase(json_conf.find("variable_conf"));
+    return;
+  }
+  for (nlohmann::json::iterator it = variable_conf.begin(); it != variable_conf.end(); ++it) {
+    std::string key = it.key();
+    if ("shape" == key) {
+      json_conf[key] = it.value()["dim"];
+    } else {
+      json_conf[key] = it.value();
+    }
+  }
+  json_conf.erase(json_conf.find("variable_conf"));
+}
+
+}  // namespace
+
+std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
+    const std::string& job_name) const {
+  HashSet<std::string> input_op_names;
+  HashSet<std::string> output_op_names;
+  std::vector<nlohmann::json> layers_vec;
+  for (const auto& pair : op_name2op_) {
+    nlohmann::json json_layers_pair;
+
+    const Operator* op = pair.second.get();
+    const std::string& op_name = pair.first;
+    HashSet<std::string> inbound_nodes;
+    for (const auto& ibn : op->input_bns()) {
+      const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
+      if (op_name2op_.find(lbi.op_name()) != op_name2op_.end()) {
+        inbound_nodes.insert(lbi.op_name());
+      }
+    }
+
+    if (op->op_conf().has_input_conf() && op->op_conf().has_return_conf()) {
+      input_op_names.insert(op_name);
+    }
+    if (op->op_conf().has_output_conf() && op->op_conf().has_return_conf()) {
+      output_op_names.insert(op_name);
+    }
+    json_layers_pair["name"] = op_name;
+
+    std::string class_name = OpConf2ClassName(op->op_conf());
+    json_layers_pair["class_name"] = class_name;
+
+    nlohmann::json json_conf;
+    summary::ConvertProtobufMsg2Json(json_conf, op->op_conf());
+    FormateUserConf(json_conf);
+    FormateVariableConf(json_conf);
+    json_layers_pair["config"] = json_conf;
+
+    std::vector<std::string> inbound_nodes_vec;
+    for (const auto& in_node_name : inbound_nodes) { inbound_nodes_vec.emplace_back(in_node_name); }
+    json_layers_pair["inbound_nodes"] = inbound_nodes_vec;
+
+    layers_vec.emplace_back(json_layers_pair);
+  }
+
+  nlohmann::json json_pair;
+  json_pair["name"] = job_name;
+  json_pair["layers"] = layers_vec;
+  json_pair["input_layers"] = input_op_names;
+  json_pair["output_layers"] = output_op_names;
+
+  return json_pair.dump();
 }
 
 }  // namespace oneflow

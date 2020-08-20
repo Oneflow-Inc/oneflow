@@ -16,8 +16,11 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import unittest
+import os
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def TestMultiOutputOrder(x, name):
     return (
         flow.user_op_builder(name)
@@ -36,7 +39,7 @@ def GenerateTest(test_case, shape):
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def TestMultiOutputOrderJob(x: oft.Numpy.Placeholder(shape)):
         return TestMultiOutputOrder(x, "my_2_output_op")
 

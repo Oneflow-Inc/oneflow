@@ -124,15 +124,14 @@ def _data_load_layer(args, data_dir):
     node_num = args.num_nodes
     total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
     rgb_mean = [123.68, 116.78, 103.94]
-    ofrecord = flow.data.ofrecord_reader(
+    (image, label) = flow.data.ofrecord_image_classification_reader(
         data_dir,
         batch_size=total_batch_size,
         data_part_num=args.data_part_num,
+        image_feature_name="encoded",
+        label_feature_name="class/label",
+        color_space="RGB",
         name="decode",
-    )
-    image = flow.data.ofrecord_image_decoder(ofrecord, "encoded", color_space="RGB")
-    label = flow.data.ofrecord_raw_decoder(
-        ofrecord, "class/label", shape=(), dtype=flow.int32
     )
     rsz = flow.image.resize(image, resize_x=227, resize_y=227, color_space="RGB")
     normal = flow.image.crop_mirror_normalize(
@@ -221,27 +220,27 @@ def main(args):
     flow.config.gpu_device_num(args.gpu_num_per_node)
 
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(0.00001)
-    func_config.train.model_update_conf(dict(naive_conf={}))
     func_config.cudnn_conv_force_fwd_algo(0)
     func_config.cudnn_conv_force_bwd_data_algo(1)
     func_config.cudnn_conv_force_bwd_filter_algo(1)
     func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def alexnet_train_job():
         (labels, images) = _data_load_layer(args, args.train_dir)
         loss = alexnet(args, images, labels)
-        flow.losses.add_loss(loss)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [0.00001]), momentum=0
+        ).minimize(loss)
         return loss
 
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
     #  print(func_config.function_desc.job_config_proto)
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def alexnet_eval_job():
         with flow.scope.consistent_view():
             (labels, images) = _data_load_layer(args, args.eval_dir)

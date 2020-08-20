@@ -58,7 +58,7 @@ def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
     if dynamic is True:
         func_config.default_logical_view(flow.scope.mirrored_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(function_config=func_config)
         def argwhere_fn(x_def: oft.ListNumpy.Placeholder(x.shape, dtype=data_type)):
             return do_argwhere(x_def)
 
@@ -67,7 +67,7 @@ def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
     else:
         func_config.default_logical_view(flow.scope.consistent_view())
 
-        @flow.global_function(func_config)
+        @flow.global_function(function_config=func_config)
         def argwhere_fn(x_def: oft.Numpy.Placeholder(x.shape, dtype=data_type)):
             return do_argwhere(x_def)
 

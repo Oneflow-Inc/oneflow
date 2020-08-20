@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/common/process_state.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/persistence/posix/posix_file_system.h"
-#include "oneflow/core/persistence/windows/windows_file_system.h"
 
 namespace oneflow {
 
@@ -97,9 +96,6 @@ void TestFileSystem(FileSystem* file_system) {
 TEST(file_system, write_and_read) {
 #ifdef PLATFORM_POSIX
   fs::FileSystem* file_system = new fs::PosixFileSystem();
-  fs::TestFileSystem(file_system);
-#elif PLATFORM_WINDOWS
-  fs::FileSystem* file_system = new fs::WindowsFileSystem();
   fs::TestFileSystem(file_system);
 #endif
 }

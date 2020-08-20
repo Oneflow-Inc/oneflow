@@ -49,13 +49,13 @@ Maybe<void> NormalModelUpdtOp::InferBatchAxis(
 }
 
 Maybe<void> NormalModelUpdtOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const auto& bns = AlwaysBroadcastParallelBns();
   PbRpf<std::string> broadcast_bns = {bns.begin(), bns.end()};
   *broadcast_bns.Add() = "learning_rate";
   *broadcast_bns.Add() = "train_step";
-  FOR_RANGE(int64_t, i, 0, JUST(LogicalBlobDesc4Ibn("model"))->shape().NumAxes()) {
+  FOR_RANGE(int64_t, i, 0, JUST(LogicalBlobDesc4Ibn("model")).shape().NumAxes()) {
     SbpSignatureBuilder()
         .Split(input_bns(), i)
         .Broadcast(broadcast_bns)

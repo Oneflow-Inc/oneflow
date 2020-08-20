@@ -70,8 +70,6 @@ def test_smooth_l1_loss(_):
         flow.clear_default_session()
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
-        func_config.train.primary_lr(1e-4)
-        func_config.train.model_update_conf(dict(naive_conf={}))
 
         prediction = np.random.randn(*prediction_shape).astype(
             type_name_to_np_type[data_type]
@@ -91,7 +89,7 @@ def test_smooth_l1_loss(_):
                 b.numpy(),
             )
 
-        @flow.global_function(func_config)
+        @flow.global_function(type="train", function_config=func_config)
         def TestJob(
             prediction: oft.Numpy.Placeholder(
                 prediction_shape, dtype=type_name_to_flow_type[data_type]
@@ -111,7 +109,9 @@ def test_smooth_l1_loss(_):
             prediction += v
             with flow.scope.placement(device_type, "0:0"):
                 loss = flow.smooth_l1_loss(prediction, label, beta)
-                flow.losses.add_loss(loss)
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+                ).minimize(loss)
                 return loss
 
         loss_np = np_result["loss"]

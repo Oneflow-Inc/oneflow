@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/register/op_blob_arg_info.h"
+#include "oneflow/core/graph/boxing/boxing_logger.h"
 
 namespace oneflow {
 
@@ -32,9 +33,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
   TaskGraph() = delete;
-  ~TaskGraph() = default;
+  ~TaskGraph() override = default;
 
-  TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph);
+  explicit TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph);
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
@@ -43,22 +44,19 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
 
-  void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
-  void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
-  void MdUpdtDelayedTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
+  void AcyclicTopoForEachNode(const std::function<void(TaskNode* node)>& Handler) const;
 
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect);
 
  private:
   void AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
-                              std::function<void(TaskNode* node)> Handler) const;
+                              const std::function<void(TaskNode* node)>& Handler) const;
 
   void BuildTaskPath(
       CompTaskNode* src, CompTaskNode* dst,
@@ -67,8 +65,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
       bool use_buf_task_node);
   TaskNode* BuildTaskStep(
       TaskNode* cur_node, TaskNode* dst,
-      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> GetBufTask,
-      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> SetBufTask,
+      const std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)>& GetBufTask,
+      const std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)>&
+          SetBufTask,
       bool use_buf_task_node);
   TaskNode* TryAddCopyH2DTaskTo(TaskNode*);
   TaskNode* AddCopyD2HTaskFrom(TaskNode*);
@@ -88,10 +87,10 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void GetInplaceOpBlobArgList(
       InplaceObasInfo* obas_info, const HashSet<TaskNode*>& dev_nodes,
       const std::function<const TaskNode*(const std::string&)>& TaskNode4OpName) const;
-  void GetSafeInplaceOpBlobArgList(InplaceObasInfo* safe_obas_info,
-                                   const HashSet<TaskNode*>& dev_nodes,
-                                   std::function<bool(const std::string&, const std::string&)>
-                                       IsOpNameDataOrCtrlReachable) const;
+  void GetSafeInplaceOpBlobArgList(
+      InplaceObasInfo* safe_obas_info, const HashSet<TaskNode*>& dev_nodes,
+      const std::function<bool(const std::string&, const std::string&)>&
+          IsOpNameDataOrCtrlReachable) const;
   void SetTaskRegstInplaceInfo(const InplaceObasInfo& obas_info,
                                const HashSet<TaskNode*>& dev_nodes) const;
   void ForEachGpuDeviceNodes(
@@ -101,6 +100,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::vector<TaskNode*> ordered_task_nodes_;
   std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
   std::shared_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
+  std::unique_ptr<BoxingLogger> boxing_logger_;
 };
 
 bool IsBackEdge(TaskNode* src, TaskNode* dst);

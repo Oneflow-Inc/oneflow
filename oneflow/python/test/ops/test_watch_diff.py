@@ -30,14 +30,12 @@ def WatchDiff(test_case, device_type, input_shape, dtype):
 
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     def CheckOnes(diff):
         ones = np.ones(input_shape)
         test_case.assertTrue(np.allclose(diff.numpy(), ones, rtol=1e-5, atol=1e-5))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def TrainJob():
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
@@ -48,7 +46,9 @@ def WatchDiff(test_case, device_type, input_shape, dtype):
                 trainable=True,
             )
             flow.watch_diff(x, CheckOnes)
-            flow.losses.add_loss(x)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(x)
 
     check_point = flow.train.CheckPoint()
     check_point.init()

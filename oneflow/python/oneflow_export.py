@@ -15,6 +15,7 @@ limitations under the License.
 """
 import inspect
 import re
+import collections
 
 import oneflow.python.lib.core.enable_if as enable_if_util
 import oneflow.python.lib.core.traceinfo as traceinfo
@@ -27,3 +28,21 @@ def oneflow_export(*api_names, **kwargs):
         return func_or_class
 
     return Decorator
+
+
+_DEPRECATED = set()
+
+
+def oneflow_deprecate(*api_names, **kwargs):
+    def Decorator(func_or_class):
+        _DEPRECATED.add(func_or_class)
+        return func_or_class
+
+    return Decorator
+
+
+@oneflow_export("is_deprecated")
+def is_deprecated(func_or_class):
+    return (
+        isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
+    )

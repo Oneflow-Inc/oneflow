@@ -65,6 +65,7 @@ class JobBuildAndInferCtx {
 
   const Job& job() const;
   Maybe<void> CheckJob() const;
+  std::string GetJobStructureGraphJson(const std::string& job_name) const;
 
   virtual Maybe<void> Complete() = 0;
 
@@ -118,7 +119,7 @@ class JobBuildAndInferCtx {
                                      const ParallelDesc&);
   Maybe<void> InferOpOutSbpParallel(Operator*, const SbpSignature&, const ParallelDesc&);
   Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
-  Maybe<void> CheckOpBlobSplitability(Operator*, const SbpSignature&, int64_t parallel_num);
+  Maybe<void> CheckOpBlobSplitability(Operator*, int64_t parallel_num);
   Maybe<void> CheckPlacement() const;
   Maybe<void> CheckJobConf() const;
   Maybe<void> CheckLbnValidAndExist(const std::string& lbn) const;

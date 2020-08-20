@@ -40,8 +40,9 @@ from oneflow.python.framework.pull_util import (
     EagerFutureRemoteBlobs,
 )
 from oneflow.python.framework.session_context import SessionStatus
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
+from oneflow.python.framework.check_point import SnapshotManager
 import oneflow.python.eager.blob_register as blob_register_util
 from contextlib import contextmanager
 from typing import Callable
@@ -66,6 +67,8 @@ class Session(object):
         self.job_name2module_name2module_ = {}
         self.existed_module_names_ = set()
         self.var_name2var_blob_ = {}
+        self.interface_op_name2op_attr_ = {}
+        self.interface_op_name2job_name_ = {}
         self.job_name2name_scope_stack_ = {}
         self.job_name2current_scope_ = {}
         self.eager_global_function_desc_stack_ = []
@@ -74,6 +77,7 @@ class Session(object):
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
         self.backward_blob_register_ = blob_register_util.BlobRegister()
         self.InitNormalModeNoneScope()
+        self.snapshot_mgr_ = SnapshotManager()
 
     @property
     def status(self):
@@ -124,6 +128,14 @@ class Session(object):
     @property
     def backward_blob_register(self):
         return self.backward_blob_register_
+
+    @property
+    def snapshot_mgr(self):
+        return self.snapshot_mgr_
+
+    @property
+    def var_name2var_blob(self):
+        return self.var_name2var_blob_
 
     def InitNormalModeScope(self):
         job_conf = job_conf_pb.JobConfigProto()
@@ -258,6 +270,7 @@ class Session(object):
             if remote_blobs is None:
                 return
             future_blob = EagerFutureRemoteBlobs().SetResult(remote_blobs).Inited()
+
         annotation = inspect.signature(function_desc.job_func).return_annotation
         return oft_util.TransformGlobalFunctionResult(future_blob, annotation)
 
@@ -302,6 +315,18 @@ class Session(object):
             self.job_name2var_name2var_blob_[job_name] = dict()
         assert var_name not in self.job_name2var_name2var_blob_[job_name]
         self.job_name2var_name2var_blob_[job_name][var_name] = var_blob
+
+    def AddInfo4InterfaceOpName(self, interface_op_name, op_attribute):
+        self.interface_op_name2op_attr_[interface_op_name] = op_attribute
+        self.interface_op_name2job_name_[
+            interface_op_name
+        ] = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+
+    def OpAttribute4InterfaceOpName(self, interface_op_name):
+        return self.interface_op_name2op_attr_[interface_op_name]
+
+    def JobName4InterfaceOpName(self, interface_op_name):
+        return self.interface_op_name2job_name_[interface_op_name]
 
     # return global_variable_blob, job_variable_blob
     def TryGetVariableBlobOfJobFromStash(self, job_name, var_name):
@@ -436,9 +461,15 @@ def _TryCompleteConfigProto(config_proto):
 
 
 def _GetDefaultConfigProto():
+    from oneflow.python_gen.compatibility import with_cuda
+
     config_proto = job_set_util.ConfigProto()
     config_proto.resource.machine_num = 0
-    config_proto.resource.gpu_device_num = 1
+    if with_cuda:
+        config_proto.resource.gpu_device_num = 1
+    else:
+        config_proto.resource.cpu_device_num = 1
+        config_proto.resource.gpu_device_num = 0
     config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
     config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
     return config_proto
@@ -448,6 +479,7 @@ session_ctx.OpenDefaultSession(Session())
 
 
 @oneflow_export("scope.current_scope")
+@oneflow_deprecate()
 def deprecated_current_scope(*args, **kwargs):
     print(
         "WARNING:",

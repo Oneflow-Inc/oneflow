@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.msg.h"
@@ -53,7 +55,7 @@ void CudaStreamType::Compute(Instruction* instruction) const {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
     instr_type_id.instruction_type().Compute(instruction);
-    CudaCheck(cudaGetLastError());
+    OF_CUDA_CHECK(cudaGetLastError());
   }
   stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
@@ -75,3 +77,5 @@ ObjectMsgPtr<StreamDesc> CudaStreamType::MakeStreamDesc(const Resource& resource
 
 }  // namespace vm
 }  // namespace oneflow
+
+#endif

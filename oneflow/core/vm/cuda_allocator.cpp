@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#ifdef WITH_CUDA
+
 #include "oneflow/core/vm/cuda_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
 #include <iostream>
@@ -49,7 +52,7 @@ CudaAllocator::~CudaAllocator() {
     return;
   }
   cudaSetDevice(device_id_);
-  for (auto& pair : mem_ptr2block_) { CudaCheck(cudaFree(pair.first)); }
+  for (auto& pair : mem_ptr2block_) { OF_CUDA_CHECK(cudaFree(pair.first)); }
 }
 
 void CudaAllocator::InsertPiece2Bin(Piece* piece) {
@@ -161,7 +164,7 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   cudaSetDevice(device_id_);
   size_t free_bytes = -1;
   size_t total_bytes = -1;
-  CudaCheck(cudaMemGetInfo(&free_bytes, &total_bytes));
+  OF_CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
   const size_t remain_bytes = 50 * 1048576;
   const size_t available_bytes = free_bytes - remain_bytes;  // remain at least 50MiB memory
 
@@ -244,7 +247,7 @@ bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
       CHECK_EQ(block.size, piece_size_sum);
 
       mem_ptr2block_.erase(it);
-      CudaCheck(cudaFree(ptr));
+      OF_CUDA_CHECK(cudaFree(ptr));
     }
   }
 
@@ -309,3 +312,5 @@ void CudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
 
 }  // namespace vm
 }  // namespace oneflow
+
+#endif

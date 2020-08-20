@@ -298,7 +298,8 @@ Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruc
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  JUST(opkernel_obj->ResetOpAndKernel(*op_node_signature, &parallel_ctx, BlobDesc4BnInOp));
+  JUST(opkernel_obj->ResetOpAndKernel(*op_node_signature, &parallel_ctx, BlobDesc4BnInOp,
+                                      instruction->parallel_desc().get()));
   JUST(CheckBlobParallel(instruction, args, op_node_signature));
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
@@ -334,7 +335,8 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  JUST(opkernel_obj->ResetKernel(*op_node_signature, &parallel_ctx, BlobDesc4BnInOp));
+  JUST(opkernel_obj->ResetKernel(*op_node_signature, &parallel_ctx, BlobDesc4BnInOp,
+                                 instruction->parallel_desc().get()));
   JUST(CheckBlobParallel(instruction, args, op_node_signature));
   JUST(ForEachObnAndBlobObject(instruction, args,
                                [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
@@ -442,11 +444,11 @@ void CallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
       << instruction->parallel_desc()->parallel_conf().DebugString();
 }
 
-Maybe<const OperatorConf*> GetOpConf(vm::Instruction* instruction,
+Maybe<const OperatorConf&> GetOpConf(vm::Instruction* instruction,
                                      const StatelessCallOpKernelInstrOperand& args) {
   const auto* operand_op_conf = instruction->operand_type(args.op_conf());
   CHECK_NOTNULL_OR_RETURN(operand_op_conf);
-  return &JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConf>>())->Get();
+  return JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConf>>())->Get();
 }
 
 Maybe<void> UserStatelessCallOpKernelInstructionType::Infer(
@@ -467,7 +469,7 @@ void UserStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instructio
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString()
       << "\n============ op_conf ============\n"
-      << CHECK_JUST(GetOpConf(instruction, args.Get()))->DebugString();
+      << CHECK_JUST(GetOpConf(instruction, args.Get())).DebugString();
 }
 
 Maybe<void> UserStatelessCallOpKernelInstructionType::Compute(
@@ -485,7 +487,7 @@ void UserStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruct
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString()
       << "\n============ op_conf ============\n"
-      << CHECK_JUST(GetOpConf(instruction, args.Get()))->DebugString();
+      << CHECK_JUST(GetOpConf(instruction, args.Get())).DebugString();
 }
 
 std::shared_ptr<MemoryCase> SystemStatelessCallOpKernelInstructionType::GetOutBlobMemCase(
@@ -511,7 +513,7 @@ void SystemStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruct
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString()
       << "\n============ op_conf ============\n"
-      << CHECK_JUST(GetOpConf(instruction, args.Get()))->DebugString();
+      << CHECK_JUST(GetOpConf(instruction, args.Get())).DebugString();
 }
 
 Maybe<void> SystemStatelessCallOpKernelInstructionType::Compute(
@@ -530,7 +532,7 @@ void SystemStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instru
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString()
       << "\n============ op_conf ============\n"
-      << CHECK_JUST(GetOpConf(instruction, args.Get()))->DebugString();
+      << CHECK_JUST(GetOpConf(instruction, args.Get())).DebugString();
 }
 
 template<typename T>

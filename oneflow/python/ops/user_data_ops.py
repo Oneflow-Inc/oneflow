@@ -25,6 +25,7 @@ from oneflow.python.framework.remote_blob import BlobDef
 from typing import Optional, Sequence, Union
 import random
 import sys
+import traceback
 
 
 @oneflow_export("data.OFRecordRawDecoder", "data.ofrecord_raw_decoder")
@@ -58,7 +59,7 @@ def OFRecordRawDecoder(
 @oneflow_export(
     "data.OFRecordImageDecoderRandomCrop", "data.ofrecord_image_decoder_random_crop"
 )
-def OFRecordImageDecoderRandomCrop(
+def api_ofrecord_image_decoder_random_crop(
     input_blob: BlobDef,
     blob_name: str,
     color_space: str = "BGR",
@@ -66,25 +67,67 @@ def OFRecordImageDecoderRandomCrop(
     seed: Optional[int] = None,
     random_area: Sequence[float] = [0.08, 1.0],
     random_aspect_ratio: Sequence[float] = [0.75, 1.333333],
-    name: Optional[str] = None,
+    name: str = "OFRecordImageDecoderRandomCrop",
 ) -> BlobDef:
-    if name is None:
-        name = id_util.UniqueStr("OFRecordImageDecoderRandomCrop_")
-    return (
-        flow.user_op_builder(name)
-        .Op("ofrecord_image_decoder_random_crop")
-        .Input("in", [input_blob])
-        .Output("out")
-        .Attr("name", blob_name)
-        .Attr("color_space", color_space)
-        .Attr("num_attempts", num_attempts)
-        .SetRandomSeed(seed)
-        .Attr("random_area", random_area)
-        .Attr("random_aspect_ratio", random_aspect_ratio)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
+    assert isinstance(name, str)
+    if seed is not None:
+        assert name is not None
+    module = flow.find_or_create_module(
+        name,
+        lambda: OFRecordImageDecoderRandomCropModule(
+            blob_name=blob_name,
+            color_space=color_space,
+            num_attempts=num_attempts,
+            random_seed=seed,
+            random_area=random_area,
+            random_aspect_ratio=random_aspect_ratio,
+            name=name,
+        ),
     )
+    return module(input_blob)
+
+
+class OFRecordImageDecoderRandomCropModule(module_util.Module):
+    def __init__(
+        self,
+        blob_name: str,
+        color_space: str,
+        num_attempts: int,
+        random_seed: Optional[int],
+        random_area: Sequence[float],
+        random_aspect_ratio: Sequence[float],
+        name: str,
+    ):
+        module_util.Module.__init__(self, name)
+        seed, has_seed = flow.random.gen_seed(random_seed)
+        self.op_module_builder = (
+            flow.user_op_module_builder("ofrecord_image_decoder_random_crop")
+            .InputSize("in", 1)
+            .Output("out")
+            .Attr("name", blob_name)
+            .Attr("color_space", color_space)
+            .Attr("num_attempts", num_attempts)
+            .Attr("random_area", random_area)
+            .Attr("random_aspect_ratio", random_aspect_ratio)
+            .Attr("has_seed", has_seed)
+            .Attr("seed", seed)
+            .CheckAndComplete()
+        )
+        self.op_module_builder.user_op_module.InitOpKernel()
+
+    def forward(self, input: BlobDef):
+        if self.call_seq_no == 0:
+            name = self.module_name
+        else:
+            name = id_util.UniqueStr("OFRecordImageDecoderRandomCrop_")
+
+        return (
+            self.op_module_builder.OpName(name)
+            .Input("in", [input])
+            .Build()
+            .InferAndTryRun()
+            .SoleOutputBlob()
+        )
 
 
 @oneflow_export("data.OFRecordImageDecoder", "data.ofrecord_image_decoder")
@@ -109,32 +152,219 @@ def OFRecordImageDecoder(
     )
 
 
-@oneflow_export("image.Resize", "image.resize")
-def Resize(
-    input_blob: BlobDef,
-    color_space: str = "BGR",
-    interp_type: str = "Linear",
+@oneflow_export("image.Resize", "image.resize", "image_resize")
+def api_image_resize(
+    image: BlobDef,
+    target_size: Union[int, Sequence[int]] = None,
+    min_size: Optional[int] = None,
+    max_size: Optional[int] = None,
+    keep_aspect_ratio: bool = False,
+    resize_side: str = "shorter",
+    channels: int = 3,
+    dtype: Optional[dtype_util.dtype] = None,
+    interpolation_type: str = "auto",
+    name: Optional[str] = None,
+    # deprecated params, reserve for backward compatible
+    color_space: Optional[str] = None,
+    interp_type: Optional[str] = None,
     resize_shorter: int = 0,
     resize_x: int = 0,
     resize_y: int = 0,
-    name: Optional[str] = None,
-) -> BlobDef:
+) -> Union[BlobDef, Sequence[BlobDef]]:
+    r"""Resize images to target size.
+
+    Args:
+        image: A `Tensor` consists of images to be resized.
+        target_size: A list or tuple when `keep_aspect_ratio` is false or an int when
+            `keep_aspect_ratio` is true. When `keep_aspect_ratio` is false, `target_size` has
+            a form of `(target_width, target_height)` that image will resize to. When
+            `keep_aspect_ratio` is true, the longer side or shorter side of the image
+            will be resized to target size.
+        min_size: An int, optional. Only works when `keep_aspect_ratio` is true and `resize_side`
+            is "longer". If `min_size` is not None, the shorter side must be greater than or
+            equal to `min_size`. Default is None.
+        max_size: An int, optional. Only works when `keep_aspect_ratio` is true and `resize_side`
+            is "shorter". If `max_size` is not None, the longer side must be less than or equal
+            to `max_size`. Default is None.
+        keep_aspect_ratio: A bool. If is false, indicate that image will be resized to fixed
+            width and height, otherwise image will be resized keeping aspect ratio.
+        resize_side: A str of "longer" or "shorter". Only works when `keep_aspect_ratio` is True.
+            If `resize_side` is "longer", the longer side of image will be resized to `target_size`.
+            If `resize_side` is "shorter", the shorter side of image will be resized to
+            `target_size`.
+        channels: An int. how many channels an image has
+        dtype: `oneflow.dtype`. Indicate output resized image data type.
+        interpolation_type: A str of "auto", "bilinear", "nearest_neighbor", "bicubic" or "area".
+            Indicate interpolation method used to resize image.
+        name: A str, optional. Name for the operation.
+        color_space: Deprecated, a str of "RGB", "BGR" or "GRAY". Please use `channels` instead.
+        interp_type: Deprecated, s str of "Linear", "Cubic" or "NN". Please use `interpolation_type`
+            instead.
+        resize_shorter: Deprecated, a int. Indicate target size that the shorter side of image will
+            resize to. Please use `target_size` and `resize_side` instead.
+        resize_x: Deprecated, a int. Indicate the target size that the width of image will resize to.
+            Please use `target_size` instead.
+        resize_y: Deprecated, a int. Indicate the target size that the height of image will resize to.
+            Please use `target_size` instead.
+
+    Returns:
+        Tuple of resized images `Blob`, width and height scales `Blob` and new width and height `Blob`
+        (new width and height `Blob` will be None when keep_aspect_ratio is false).
+        If deprecated params are used, a single resized images `Blob` will be returned.
+    """
+    # process deprecated params
+    deprecated_param_used = False
+    if color_space is not None:
+        print("WARNING: color_space has been deprecated. Please use channels instead.")
+        print(traceback.format_stack()[-2])
+        deprecated_param_used = True
+        assert isinstance(color_space, str)
+        if color_space.upper() == "RGB" or color_space.upper() == "BGR":
+            channels = 3
+        elif color_space.upper() == "GRAY":
+            channels = 1
+        else:
+            raise ValueError("invalid color_space")
+
+    if interp_type is not None:
+        print(
+            "WARNING: interp_type has been deprecated. Please use interpolation_type instead."
+        )
+        print(traceback.format_stack()[-2])
+        deprecated_param_used = True
+        assert isinstance(interp_type, str)
+        if interp_type == "Linear":
+            interpolation_type = "bilinear"
+        elif interp_type == "NN":
+            interpolation_type = "nearest_neighbor"
+        elif interp_type == "Cubic":
+            interpolation_type = "bicubic"
+        else:
+            raise ValueError("invalid interp_type")
+
+    if resize_x > 0 and resize_y > 0:
+        print(
+            "WARNING: resize_x and resize_y has been deprecated. Please use target_size instead."
+        )
+        print(traceback.format_stack()[-2])
+        deprecated_param_used = True
+        target_size = (resize_x, resize_y)
+        keep_aspect_ratio = False
+
+    if resize_shorter > 0:
+        print(
+            "WARNING: resize_shorter has been deprecated. Please use target_size instead."
+        )
+        print(traceback.format_stack()[-2])
+        deprecated_param_used = True
+        target_size = resize_shorter
+        keep_aspect_ratio = True
+        resize_side = "shorter"
+
     if name is None:
         name = id_util.UniqueStr("ImageResize_")
-    return (
-        flow.user_op_builder(name)
-        .Op("image_resize")
-        .Input("in", [input_blob])
-        .Output("out")
-        .Attr("color_space", color_space)
-        .Attr("interp_type", interp_type)
-        .Attr("resize_shorter", resize_shorter)
-        .Attr("resize_x", resize_x)
-        .Attr("resize_y", resize_y)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
+
+    if keep_aspect_ratio:
+        if not isinstance(target_size, int):
+            raise ValueError(
+                "target_size must be an int when keep_aspect_ratio is True"
+            )
+
+        if min_size is None:
+            min_size = 0
+
+        if max_size is None:
+            max_size = 0
+
+        if resize_side == "shorter":
+            resize_longer = False
+        elif resize_side == "longer":
+            resize_longer = True
+        else:
+            raise ValueError('resize_side must be "shorter" or "longer"')
+
+        op = (
+            flow.user_op_builder(name)
+            .Op("image_resize_keep_aspect_ratio")
+            .Input("in", [image])
+            .Output("out")
+            .Output("size")
+            .Output("scale")
+            .Attr("target_size", target_size)
+            .Attr("min_size", min_size)
+            .Attr("max_size", max_size)
+            .Attr("resize_longer", resize_longer)
+            .Attr("interpolation_type", interpolation_type)
+            .Build()
+        )
+        res_image, new_size, scale = op.InferAndTryRun().RemoteBlobList()
+        scale = flow.tensor_buffer_to_tensor(
+            scale, dtype=flow.float32, instance_shape=(2,)
+        )
+        new_size = flow.tensor_buffer_to_tensor(
+            new_size, dtype=flow.int32, instance_shape=(2,)
+        )
+
+    else:
+        if (
+            not isinstance(target_size, (list, tuple))
+            or len(target_size) != 2
+            or not all(isinstance(size, int) for size in target_size)
+        ):
+            raise ValueError(
+                "target_size must be a form like (width, height) when keep_aspect_ratio is False"
+            )
+
+        if dtype is None:
+            dtype = flow.uint8
+
+        target_w, target_h = target_size
+        op = (
+            flow.user_op_builder(name)
+            .Op("image_resize_to_fixed")
+            .Input("in", [image])
+            .Output("out")
+            .Output("scale")
+            .Attr("target_width", target_w)
+            .Attr("target_height", target_h)
+            .Attr("channels", channels)
+            .Attr("data_type", dtype)
+            .Attr("interpolation_type", interpolation_type)
+            .Build()
+        )
+        res_image, scale = op.InferAndTryRun().RemoteBlobList()
+        new_size = None
+
+    if deprecated_param_used:
+        return res_image
+
+    return res_image, scale, new_size
+
+
+@oneflow_export("image.target_resize", "image_target_resize")
+def api_image_target_resize(
+    images: BlobDef,
+    target_size: int,
+    min_size: Optional[int] = None,
+    max_size: Optional[int] = None,
+    resize_side: str = "shorter",
+    interpolation_type: str = "auto",
+    name: Optional[str] = None,
+) -> Sequence[BlobDef]:
+    if name is None:
+        name = id_util.UniqueStr("ImageTargetResize_")
+
+    res_image, scale, new_size = api_image_resize(
+        images,
+        target_size=target_size,
+        min_size=min_size,
+        max_size=max_size,
+        keep_aspect_ratio=True,
+        resize_side=resize_side,
+        interpolation_type=interpolation_type,
+        name=name,
     )
+    return res_image, new_size, scale
 
 
 @oneflow_export("image.CropMirrorNormalize", "image.crop_mirror_normalize")
@@ -151,12 +381,23 @@ def CropMirrorNormalize(
     std: Sequence[float] = [1.0],
     output_dtype: dtype_util.dtype = dtype_util.float,
     name: Optional[str] = None,
-):
+) -> BlobDef:
     if name is None:
         name = id_util.UniqueStr("CropMirrorNormalize_")
-    op = (
-        flow.user_op_builder(name).Op("crop_mirror_normalize").Input("in", [input_blob])
-    )
+    op_type_name = ""
+    if input_blob.dtype is dtype_util.tensor_buffer:
+        op_type_name = "crop_mirror_normalize_from_tensorbuffer"
+    elif input_blob.dtype is dtype_util.uint8:
+        op_type_name = "crop_mirror_normalize_from_uint8"
+    else:
+        print(
+            "ERROR! oneflow.data.crop_mirror_normalize op",
+            " NOT support input data type : ",
+            input_blob.dtype,
+        )
+        raise NotImplementedError
+
+    op = flow.user_op_builder(name).Op(op_type_name).Input("in", [input_blob])
     if mirror_blob is not None:
         op = op.Input("mirror", [mirror_blob])
     return (
@@ -176,27 +417,126 @@ def CropMirrorNormalize(
     )
 
 
+@oneflow_export("image.random_crop", "image_random_crop")
+def api_image_random_crop(
+    input_blob: BlobDef,
+    num_attempts: int = 10,
+    seed: Optional[int] = None,
+    random_area: Sequence[float] = None,
+    random_aspect_ratio: Sequence[float] = None,
+    name: str = "ImageRandomCrop",
+) -> BlobDef:
+    assert isinstance(name, str)
+    if seed is not None:
+        assert name is not None
+    if random_area is None:
+        random_area = [0.08, 1.0]
+    if random_aspect_ratio is None:
+        random_aspect_ratio = [0.75, 1.333333]
+    module = flow.find_or_create_module(
+        name,
+        lambda: ImageRandomCropModule(
+            num_attempts=num_attempts,
+            random_seed=seed,
+            random_area=random_area,
+            random_aspect_ratio=random_aspect_ratio,
+            name=name,
+        ),
+    )
+    return module(input_blob)
+
+
+class ImageRandomCropModule(module_util.Module):
+    def __init__(
+        self,
+        num_attempts: int,
+        random_seed: Optional[int],
+        random_area: Sequence[float],
+        random_aspect_ratio: Sequence[float],
+        name: str,
+    ):
+        module_util.Module.__init__(self, name)
+        seed, has_seed = flow.random.gen_seed(random_seed)
+        self.op_module_builder = (
+            flow.user_op_module_builder("image_random_crop")
+            .InputSize("in", 1)
+            .Output("out")
+            .Attr("num_attempts", num_attempts)
+            .Attr("random_area", random_area)
+            .Attr("random_aspect_ratio", random_aspect_ratio)
+            .Attr("has_seed", has_seed)
+            .Attr("seed", seed)
+            .CheckAndComplete()
+        )
+        self.op_module_builder.user_op_module.InitOpKernel()
+
+    def forward(self, input: BlobDef):
+        if self.call_seq_no == 0:
+            name = self.module_name
+        else:
+            name = id_util.UniqueStr("ImageRandomCrop_")
+
+        return (
+            self.op_module_builder.OpName(name)
+            .Input("in", [input])
+            .Build()
+            .InferAndTryRun()
+            .SoleOutputBlob()
+        )
+
+
 @oneflow_export("random.CoinFlip", "random.coin_flip")
-def CoinFlip(
+def api_coin_flip(
     batch_size: int = 1,
     seed: Optional[int] = None,
     probability: float = 0.5,
-    name: Optional[str] = None,
+    name: str = "CoinFlip",
 ) -> BlobDef:
-    if name is None:
-        name = id_util.UniqueStr("CoinFlip_")
-
-    return (
-        flow.user_op_builder(name)
-        .Op("coin_flip")
-        .Output("out")
-        .Attr("batch_size", batch_size)
-        .Attr("probability", probability)
-        .SetRandomSeed(seed)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
+    assert isinstance(name, str)
+    if seed is not None:
+        assert name is not None
+    module = flow.find_or_create_module(
+        name,
+        lambda: CoinFlipModule(
+            batch_size=batch_size, probability=probability, random_seed=seed, name=name,
+        ),
     )
+    return module()
+
+
+class CoinFlipModule(module_util.Module):
+    def __init__(
+        self,
+        batch_size: str,
+        probability: float,
+        random_seed: Optional[int],
+        name: str,
+    ):
+        module_util.Module.__init__(self, name)
+        seed, has_seed = flow.random.gen_seed(random_seed)
+        self.op_module_builder = (
+            flow.user_op_module_builder("coin_flip")
+            .Output("out")
+            .Attr("batch_size", batch_size)
+            .Attr("probability", probability)
+            .Attr("has_seed", has_seed)
+            .Attr("seed", seed)
+            .CheckAndComplete()
+        )
+        self.op_module_builder.user_op_module.InitOpKernel()
+
+    def forward(self):
+        if self.call_seq_no == 0:
+            name = self.module_name
+        else:
+            name = id_util.UniqueStr("CoinFlip_")
+
+        return (
+            self.op_module_builder.OpName(name)
+            .Build()
+            .InferAndTryRun()
+            .SoleOutputBlob()
+        )
 
 
 @oneflow_export("image.decode", "image_decode")
@@ -220,28 +560,6 @@ def image_decode(
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
-
-
-@oneflow_export("image.target_resize", "image_target_resize")
-def image_target_resize(
-    images: BlobDef, target_size: int, max_size: int, name: Optional[str] = None
-) -> Sequence[BlobDef]:
-    # TODO: check target_size and max_size valid
-    if name is None:
-        name = id_util.UniqueStr("ImageTargetResize_")
-
-    op = (
-        flow.user_op_builder(name)
-        .Op("image_target_resize")
-        .Input("in", [images])
-        .Output("out")
-        .Output("size")
-        .Output("scale")
-        .Attr("target_size", target_size)
-        .Attr("max_size", max_size)
-        .Build()
-    )
-    return op.InferAndTryRun().RemoteBlobList()
 
 
 @oneflow_export("image.batch_align", "image_batch_align")
@@ -520,6 +838,7 @@ class COCOReader(module_util.Module):
         module_util.Module.__init__(self, name)
         self.op_module_builder = (
             flow.consistent_user_op_module_builder("COCOReader")
+            .Op("COCOReader")
             .Output("image")
             .Output("image_id")
             .Output("image_size")
@@ -549,3 +868,49 @@ class COCOReader(module_util.Module):
             .InferAndTryRun()
             .RemoteBlobList()
         )
+
+
+@oneflow_export("data.ofrecord_image_classification_reader")
+def ofrecord_image_classification_reader(
+    ofrecord_dir: str,
+    image_feature_name: str,
+    label_feature_name: str,
+    batch_size: int = 1,
+    data_part_num: int = 1,
+    part_name_prefix: str = "part-",
+    part_name_suffix_length: int = -1,
+    random_shuffle: bool = False,
+    shuffle_buffer_size: int = 1024,
+    shuffle_after_epoch: bool = False,
+    color_space: str = "BGR",
+    decode_buffer_size_per_thread: int = 32,
+    num_decode_threads_per_machine: Optional[int] = None,
+    name: Optional[str] = None,
+) -> BlobDef:
+    if name is None:
+        name = id_util.UniqueStr("OFRecordImageClassificationReader_")
+    (image, label) = (
+        flow.user_op_builder(name)
+        .Op("ofrecord_image_classification_reader")
+        .Output("image")
+        .Output("label")
+        .Attr("data_dir", ofrecord_dir)
+        .Attr("data_part_num", data_part_num)
+        .Attr("batch_size", batch_size)
+        .Attr("part_name_prefix", part_name_prefix)
+        .Attr("random_shuffle", random_shuffle)
+        .Attr("shuffle_buffer_size", shuffle_buffer_size)
+        .Attr("shuffle_after_epoch", shuffle_after_epoch)
+        .Attr("part_name_suffix_length", part_name_suffix_length)
+        .Attr("color_space", color_space)
+        .Attr("image_feature_name", image_feature_name)
+        .Attr("label_feature_name", label_feature_name)
+        .Attr("decode_buffer_size_per_thread", decode_buffer_size_per_thread)
+        .Attr("num_decode_threads_per_machine", num_decode_threads_per_machine or 0)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    label = flow.tensor_buffer_to_tensor(label, dtype=flow.int32, instance_shape=[1])
+    label = flow.squeeze(label, axis=[-1])
+    return image, label

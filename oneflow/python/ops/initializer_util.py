@@ -30,13 +30,16 @@ def constant_initializer(
     value: float = 0, dtype: dtype_util.dtype = dtype_util.float
 ) -> op_conf_util.InitializerConf:
     r"""Initializer that generates blob with constant values.
-    
+
     Args:
-        value: A Python scalar. All elements of the initialized variable 
-        will be set to the corresponding value.
-        dtype: Default data type.
+        value (float, optional): A Python scalar. All elements of the initialized variable . Defaults to 0.
+        dtype (dtype_util.dtype, optional): . Default data type. Defaults to dtype_util.float.
+
+    Raises:
+        NotImplementedError:  Do not support such data type.
+
     Returns:
-        An InitializerConf object.
+        op_conf_util.InitializerConf:  An InitializerConf object.
     """
     initializer = op_conf_util.InitializerConf()
     if dtype in [dtype_util.float, dtype_util.double]:
@@ -57,6 +60,14 @@ def constant_initializer(
 def zeros_initializer(
     dtype: dtype_util.dtype = dtype_util.float,
 ) -> op_conf_util.InitializerConf:
+    r"""Initializer that generates tensors initialized to 0
+
+    Args:
+        dtype (dtype_util.dtype, optional): . Defaults to dtype_util.float.
+
+    Returns:
+        op_conf_util.InitializerConf: constant_initializer
+    """
     return constant_initializer(0.0, dtype)
 
 
@@ -64,6 +75,14 @@ def zeros_initializer(
 def ones_initializer(
     dtype: dtype_util.dtype = dtype_util.float,
 ) -> op_conf_util.InitializerConf:
+    r"""Initializer that generates tensors initialized to 1.
+
+    Args:
+        dtype (dtype_util.dtype, optional): . Defaults to dtype_util.float.
+
+    Returns:
+        op_conf_util.InitializerConf: constant_initializer
+    """
     return constant_initializer(1.0, dtype)
 
 
@@ -71,16 +90,18 @@ def ones_initializer(
 def random_uniform_initializer(
     minval: float = 0, maxval: float = 1, dtype: dtype_util.dtype = dtype_util.float
 ) -> op_conf_util.InitializerConf:
-    r"""Initializer that generates blob with a uniform distribution.
+    r"""[summary]
 
     Args:
-        minval: A python scalar. Lower bound of the range of random values to generate.
-        maxval: A python scalar. Upper bound of the range of random values to generate. 
-        Defaults to 1 for float types.
-        seed: None. Not support yet.
-        dtype: Default data type
+        minval (float, optional): A python scalar. Lower bound of the range of random values to generate. Defaults to 0.
+        maxval (float, optional): A python scalar. Upper bound of the range of random values to generate. Defaults to 1.
+        dtype (dtype_util.dtype, optional): Default data type. Defaults to dtype_util.float.
+
+    Raises:
+        NotImplementedError: Do not support such data type.
+
     Returns:
-        An InitializerConf object.
+        op_conf_util.InitializerConf:  Initial configuration
     """
     assert minval <= maxval
     initializer = op_conf_util.InitializerConf()
@@ -110,15 +131,19 @@ def random_normal_initializer(
     r"""Initializer that generates blob with a normal distribution.
 
     Args:
-        mean: a python scalar. Mean of the random values to generate.
-        stddev: a python scalar. Standard deviation of the random values to generate.
-        seed: None. Not support yet.
-        dtype: None. Not applicable in OneFlow
+        mean (float, optional): A python scalar. Mean of the random values to generate.. Defaults to 0.0.
+        stddev (float, optional): A python scalar. Standard deviation of the random values to generate. Defaults to 1.0.
+        seed (Optional[int], optional): None. Not support yet. Defaults to None.
+        dtype (Optional[dtype_util.dtype], optional): . Defaults to None.
+
     Returns:
-        An InitializerConf object.
+        op_conf_util.InitializerConf: Initial configuration
+
     """
     assert seed is None
     assert dtype is None
+    if seed is not None:
+        assert name is not None
     initializer = op_conf_util.InitializerConf()
     setattr(initializer.random_normal_conf, "mean", float(mean))
     setattr(initializer.random_normal_conf, "std", float(stddev))
@@ -133,8 +158,11 @@ def truncated_normal_initializer(
     r"""Initializer that generates a truncated normal distribution.
 
     Args:
-        mean: A scalar (float)
-        stddev: A scalar (float)
+        mean (float, optional): A scalar (float). Defaults to 0.0.
+        stddev (float, optional): A scalar (float). Defaults to 1.0.
+
+    Returns:
+        op_conf_util.InitializerConf: Initial configuration
     """
     initializer = op_conf_util.InitializerConf()
     setattr(initializer.truncated_normal_conf, "mean", float(mean))
@@ -160,15 +188,17 @@ def variance_scaling_initializer(
     data_format: str = "",
 ) -> op_conf_util.InitializerConf:
     r"""Initializer that generates a truncated normal distribution
-    or a random normal distribution or a random uniform distribution
-    with a scale adapting to it.
+            or a random normal distribution or a random uniform distribution
+            with a scale adapting to it.
 
     Args:
-        scale: Scaling factor (positive float).
-        mode: One of "fan_in", "fan_out", "fan_avg".
-        distribution: Random distribution to use. One of "truncated_normal",
-            "random_normal", "random_uniform".
-        data_format: A string be one of "N...C" or "NC..."
+        scale (float, optional): Scaling factor (positive float). Defaults to 1.0.
+        mode (str, optional): One of "fan_in", "fan_out", "fan_avg".. Defaults to "fan_in".
+        distribution (str, optional): Random distribution to use. One of "truncated_normal",. Defaults to "truncated_normal".
+        data_format (str, optional): A string be one of "N...C" or "NC...". Defaults to "".
+
+    Returns:
+        op_conf_util.InitializerConf: 
     """
     initializer = op_conf_util.InitializerConf()
     setattr(initializer.variance_scaling_conf, "scale", float(scale))
@@ -200,11 +230,18 @@ def kaiming_initializer(
     - He, K. et al. (2015), using a normal or uniform distribution.
 
     Args:
-        distribution: 'random_normal' or 'random_uniform'
-        mode: 'fan_in', 'fan_out' or 'fan_avg'
-        nonlinearity: None, 'tanh', 'sigmoid', 'relu' or 'leaky_relu'
-        negative_slope: the negative slope of leaky_relu
-        data_format: 'NCHW', 'NHWC'
+        shape (Sequence[int]): Blob shape.
+        distribution (str, optional): 'random_normal' or 'random_uniform'. Defaults to "random_normal".
+        mode (str, optional): 'fan_in', 'fan_out' or 'fan_avg'. Defaults to "fan_in".
+        nonlinearity (str, optional): None, 'tanh', 'sigmoid', 'relu' or 'leaky_relu'. Defaults to "leaky_relu".
+        negative_slope (float, optional): The negative slope of leaky_relu. Defaults to 0.0.
+        data_format (str, optional):  'NCHW', 'NHWC'. Defaults to "NCHW".
+
+    Raises:
+        NotImplementedError: Only support normal and uniform distribution
+
+    Returns:
+        [type]: flow.random_normal_initializer or flow.random_uniform_initializer
     """
     assert isinstance(shape, tuple)
     # Kaiming Initialization only deals with FC, Conv and Deconv's weight

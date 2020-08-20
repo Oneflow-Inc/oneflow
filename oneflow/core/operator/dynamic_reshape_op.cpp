@@ -76,7 +76,7 @@ class DynamicReshapeOp final : public Operator {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder()
         .Split(input_bns(), 0)
@@ -111,7 +111,7 @@ class DynamicReshapeLikeOp final : public Operator {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder()
         .Split(input_bns(), 0)

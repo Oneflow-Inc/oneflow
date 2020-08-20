@@ -95,7 +95,7 @@ def _GetReturnOpConfAndOutLbiAndScope(remote_blob, allow_cpu_return_op=True):
     setattr(op_conf.return_conf, "in", remote_blob.unique_name)
     op_conf.return_conf.out = "out"
     if allow_cpu_return_op:
-        op_conf.device_type = c_api_util.DeviceType4DeviceTag("cpu")
+        op_conf.device_tag = "cpu"
 
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name

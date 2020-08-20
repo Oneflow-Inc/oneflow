@@ -18,6 +18,8 @@ import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
 import typing
+import unittest
+import os
 
 
 def _test_categorical_ordinal_encoder(
@@ -28,7 +30,7 @@ def _test_categorical_ordinal_encoder(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def test_job(
         x: oft.Numpy.Placeholder(shape=(size,), dtype=dtype)
     ) -> typing.Tuple[oft.Numpy, oft.Numpy]:
@@ -74,6 +76,7 @@ def _test_categorical_ordinal_encoder(
     test_case.assertEqual(len(vk_set), unique_size)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_categorical_ordinal_encoder_gpu_large(test_case):
     _test_categorical_ordinal_encoder(
         test_case=test_case,
@@ -86,6 +89,7 @@ def test_categorical_ordinal_encoder_gpu_large(test_case):
     )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_categorical_ordinal_encoder_gpu_small(test_case):
     _test_categorical_ordinal_encoder(
         test_case=test_case,

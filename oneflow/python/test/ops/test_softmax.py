@@ -33,26 +33,30 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
     func_config = flow.FunctionConfig()
 
     if data_type == "float16":
-        func_config.enable_auto_mixed_precision(True)
         dtype = flow.float
     else:
         dtype = type_name_to_flow_type[data_type]
 
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
-
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def SoftmaxJob():
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
                 dtype=dtype,
-                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
+                initializer=flow.random_uniform_initializer(minval=-0.1, maxval=0.1),
                 trainable=True,
             )
-            loss = flow.nn.softmax(x, axis=axis)
-            flow.losses.add_loss(loss)
+            if data_type == "float16":
+                loss = flow.cast(
+                    flow.nn.softmax(flow.cast(x, dtype=flow.float16), axis=axis),
+                    dtype=flow.float,
+                )
+            else:
+                loss = flow.nn.softmax(x, axis=axis)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
@@ -72,16 +76,31 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
 
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
-    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    if data_type == "float16":
+        tolerance = 1e-3
+    else:
+        tolerance = 1e-5
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=tolerance, atol=tolerance)
     assert np.allclose(
-        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        test_global_storage.Get("x_diff"),
+        tf_x_diff.numpy(),
+        rtol=tolerance,
+        atol=tolerance,
     )
 
 
 def test_softmax(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 10, 20, 30), (10, 20, 30), (10, 20)]
+    arg_dict["x_shape"] = [
+        (10, 10, 20, 30),
+        (10, 20, 30),
+        (10, 20),
+        (10, 960),
+        (10, 4096),
+        (10, 8092),
+        (256, 1001),
+    ]
     arg_dict["data_type"] = ["float32", "double", "float16"]
     arg_dict["axis"] = [-1, 1, 2, 3]
     for arg in GenArgList(arg_dict):

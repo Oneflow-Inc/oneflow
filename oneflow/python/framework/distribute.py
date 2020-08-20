@@ -18,7 +18,7 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 
 import oneflow.python.framework.distribute_context as distribute_ctx
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import traceback
 
 
@@ -48,6 +48,7 @@ class SplitDistribute(Distribute):
 
 
 @oneflow_export("distribute.mirrored_strategy")
+@oneflow_deprecate()
 def deprecated_mirrored_strategy():
     print(
         "WARNING:",
@@ -75,6 +76,7 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
 
 
 @oneflow_export("distribute.mirrored_strategy_enabled")
+@oneflow_deprecate()
 def deprecated_mirrored_strategy_enabled():
     print(
         "WARNING:",
@@ -99,6 +101,7 @@ def MirroredStrategyEnabled() -> bool:
 
 
 @oneflow_export("distribute.consistent_strategy")
+@oneflow_deprecate()
 def deprecated_consistent_strategy():
     print(
         "WARNING:",
@@ -114,6 +117,7 @@ def deprecated_consistent_strategy():
 @oneflow_export("scope.consistent_view")
 class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
     r"""Create a scope in consistent view. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
+    
     Usage::
 
         with oneflow.scope.consistent_view():
@@ -126,6 +130,7 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
 
 
 @oneflow_export("distribute.consistent_strategy_enabled")
+@oneflow_deprecate()
 def deprecated_consistent_strategy_enabled():
     print(
         "WARNING:",
@@ -151,6 +156,18 @@ def ConsistentStrategyEnabled() -> bool:
 
 @oneflow_export("distribute.split")
 def split(axis: int) -> SplitDistribute:
+    r"""Generate a split scheme in which op will be splitted at `axis`.
+    
+    Args:
+        axis (int): At `axis` the op will be splitted. 
+    
+    Returns:
+        SplitDistribute: Split scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
+    
+    Example::
+        weight = weight.with_distribute(distribute.split(1))
+
+    """
     assert type(axis) is int
     assert str(axis) in _axis_str2split_axis_obj, "not a valid split. expected: [0, 11)"
     return _axis_str2split_axis_obj[str(axis)]
@@ -158,11 +175,26 @@ def split(axis: int) -> SplitDistribute:
 
 @oneflow_export("distribute.broadcast")
 def broadcast() -> BroadcastDistribute:
+    r"""Generate a broadcast scheme.
+
+    Returns:
+        BroadcastDistribute: Broadcast scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
+    
+    Example::
+        segment_ids = segment_ids.with_distribute(flow.distribute.broadcast())
+    
+    """
     return _broadcast
 
 
 @oneflow_export("distribute.auto")
 def auto() -> AutoDistribute:
+    r"""Generate a broadcast scheme.
+
+    Returns:
+        AutoDistribute: Auto distribute scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
+    
+    """
     return _auto
 
 
@@ -170,7 +202,7 @@ def auto() -> AutoDistribute:
 def assert_is_valid_distribute(distribute: Distribute) -> None:
     assert isinstance(
         distribute, Distribute
-    ), """not a valid distribute policy. 
+    ), """not a valid distribute policy.
            expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"""
 
 

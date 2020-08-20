@@ -24,6 +24,7 @@ class DeviceCtx;
 
 namespace vm {
 
+#ifdef WITH_CUDA
 class CudaInstrStatusQuerier {
  public:
   ~CudaInstrStatusQuerier() = default;
@@ -49,6 +50,8 @@ class CudaInstrStatusQuerier {
   int64_t device_id_;
   cudaEvent_t event_;
 };
+
+#endif
 
 }  // namespace vm
 }  // namespace oneflow

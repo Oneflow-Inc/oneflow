@@ -95,18 +95,17 @@ std::string GetSerializedJobSet(std::string* error_str) {
   return oneflow::GetSerializedJobSet().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
+std::string GetSerializedStructureGraph(std::string* error_str) {
+  return oneflow::GetSerializedStructureGraph().GetDataAndSerializedErrorProto(error_str,
+                                                                               std::string(""));
+}
+
 std::string GetFunctionConfigDef(std::string* error_str) {
   return oneflow::GetFunctionConfigDef().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb, std::string* error_str) {
   return oneflow::LaunchJob(cb).GetDataAndSerializedErrorProto(error_str);
-}
-
-long DeviceType4DeviceTag(const std::string& device_tag, std::string* error_str) {
-  return oneflow::GetDeviceType4DeviceTag(device_tag)
-      .GetDataAndSerializedErrorProto(error_str,
-                                      static_cast<long>(oneflow::DeviceType::kInvalidDevice));
 }
 
 std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& parallel_conf,
@@ -125,6 +124,10 @@ std::string InferOpConf(const std::string& serialized_op_conf,
                         const std::string& serialized_op_input_signature, std::string* error_str) {
   return oneflow::InferOpConf(serialized_op_conf, serialized_op_input_signature)
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
+}
+
+bool IsInterfaceOpTypeCase(int64_t op_type_case) {
+  return oneflow::IsClassRegistered<oneflow::IsInterfaceOpConf4OpTypeCase>(op_type_case);
 }
 
 long GetOpParallelSymbolId(const std::string& serialized_op_conf, std::string* error_str) {
