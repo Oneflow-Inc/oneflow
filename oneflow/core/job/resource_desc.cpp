@@ -50,4 +50,15 @@ CollectiveBoxingConf ResourceDesc::collective_boxing_conf() const {
   }
 }
 
+void ResourceDesc::SetRequiredMemoryZoneInfo(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
+                                             const std::string& device_tag) {
+  if (calc > 0) {
+    auto* required_memory_zone_info = resource_.add_required_memory_zone_info();
+    required_memory_zone_info->set_machine_id(machine_id);
+    required_memory_zone_info->set_mem_zone_id(mem_zone_id);
+    required_memory_zone_info->set_device_tag(device_tag);
+    required_memory_zone_info->set_required(calc);
+  }
+}
+
 }  // namespace oneflow

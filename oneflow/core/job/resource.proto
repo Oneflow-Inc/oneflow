@@ -19,6 +19,13 @@ message CollectiveBoxingConf {
   optional bool nccl_fusion_all_reduce_use_buffer = 108 [default = true];
 }
 
+message RequiredMemoryZoneInfo {
+  required int32 machine_id = 1;
+  required int32 mem_zone_id = 2;
+  required string device_tag = 3;
+  required uint64 required = 4;
+}
+
 message Resource {
   optional int32 machine_num = 1 [default = 0];
   optional int32 gpu_device_num = 4 [default = 0];
@@ -37,4 +44,5 @@ message Resource {
   optional int64 thread_local_cache_max_size = 17 [default = 67108864]; // 64M
   optional bool enable_debug_mode = 18 [default = false];
   optional CollectiveBoxingConf collective_boxing_conf = 19;
+  repeated RequiredMemoryZoneInfo required_memory_zone_info = 20;
 }
