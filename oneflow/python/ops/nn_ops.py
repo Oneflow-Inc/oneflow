@@ -605,10 +605,11 @@ def conv3d(
 
 
 @oneflow_export("nn.moments")
-def moments(x: remote_blob_util.BlobDef, 
-            axes: List[int], 
-            keepdims: Optional[bool] = False, 
-            name: Optional[str] = None, 
+def moments(
+    x: remote_blob_util.BlobDef,
+    axes: List[int],
+    keepdims: Optional[bool] = False,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """Analogous to `tf.nn.moments <https://www.tensorflow.org/api_docs/python/tf/nn
     /moments>`_
