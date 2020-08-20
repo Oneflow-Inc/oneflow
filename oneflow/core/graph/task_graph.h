@@ -100,7 +100,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::vector<TaskNode*> ordered_task_nodes_;
   std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
   std::shared_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
-  std::unique_ptr<BoxingLog> boxing_log_;
+  std::unique_ptr<BoxingLogger> boxing_logger_;
 };
 
 bool IsBackEdge(TaskNode* src, TaskNode* dst);

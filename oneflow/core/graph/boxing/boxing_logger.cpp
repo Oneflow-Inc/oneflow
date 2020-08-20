@@ -14,13 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/boxing/boxing_logger.h"
-#include <cstdint>
-#include <string>
-#include "oneflow/core/common/device_type.pb.h"
-#include "oneflow/core/common/str_util.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/job/oneflow.h"
 
 namespace oneflow {
 
@@ -31,7 +24,7 @@ namespace {
   "src_sbp_conf,dst_sbp_conf,lbi,dtype,shape,builder,comment\n"
 
 std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
-  std::string serialized_sbp_parallel = "";
+  std::string serialized_sbp_parallel;
   if (sbp_parallel.has_broadcast_parallel()) {
     serialized_sbp_parallel = "B";
   } else if (sbp_parallel.has_partial_sum_parallel()) {
@@ -45,8 +38,8 @@ std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
 }
 
 std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
-  std::string serialized_parallel_desc = "";
-  std::string device_type = "";
+  std::string serialized_parallel_desc;
+  std::string device_type;
   if (parallel_desc.device_type() == DeviceType::kCPU) {
     device_type = "CPU";
   } else if (parallel_desc.device_type() == DeviceType::kGPU) {
@@ -54,37 +47,40 @@ std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   } else {
     device_type = "UNKNOWN_DEVICE";
   }
-  int32_t idx = 0;
   auto sorted_machine_ids = parallel_desc.sorted_machine_ids();
-  for (int64_t machine_id : sorted_machine_ids) {
+  for (int64_t i = 0; i < sorted_machine_ids.size(); ++i) {
+    const int64_t machine_id = sorted_machine_ids.at(i);
     serialized_parallel_desc += std::to_string(machine_id) + ":" + device_type + ":";
     int64_t min_id = parallel_desc.sorted_dev_phy_ids(machine_id).front();
     int64_t max_id = parallel_desc.sorted_dev_phy_ids(machine_id).back();
     serialized_parallel_desc += std::to_string(min_id) + "-" + std::to_string(max_id);
-    if (++idx != sorted_machine_ids.size()) { serialized_parallel_desc += " "; }
+    if (i != sorted_machine_ids.size() - 1) { 
+      serialized_parallel_desc += " "; 
+    }
   }
   return serialized_parallel_desc;
 }
 
-std::string GetBlobDtype4LogicalBlobDesc(const BlobDesc& logical_blob_desc) {
-  return DataType_Name(logical_blob_desc.data_type());
+std::string DataTypeToString(const DataType& dtype) {
+  return DataType_Name(dtype);
 }
 
-std::string GetBlobShape4LogicalBlobDesc(const BlobDesc& logical_blob_desc) {
+std::string ShapeToString(const Shape& shape) {
   std::stringstream shape_ss;
-  int32_t idx = 0;
-  auto dim_vec = logical_blob_desc.shape().dim_vec();
+  auto dim_vec = shape.dim_vec();
   shape_ss << "[";
-  for (int64_t dim : dim_vec) {
-    shape_ss << dim;
-    if (++idx != dim_vec.size()) { shape_ss << " "; }
+  for (int32_t i = 0; i < dim_vec.size(); ++i) {
+    shape_ss << dim_vec.at(i);
+    if (i != dim_vec.size() - 1) {
+      shape_ss << " ";
+    }
   }
   shape_ss << "]";
   return shape_ss.str();
 }
 
 std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status) {
-  std::string serialized_status("");
+  std::string serialized_status;
   serialized_status += status.src_op_name() + ",";
   serialized_status += status.dst_op_name() + ",";
   serialized_status += ParallelDescToString(status.src_parallel_desc()) + ",";
@@ -92,8 +88,8 @@ std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status
   serialized_status += SbpParallelToString(status.src_sbp_parallel()) + ",";
   serialized_status += SbpParallelToString(status.dst_sbp_parallel()) + ",";
   serialized_status += GenLogicalBlobName(status.lbi()) + ",";
-  serialized_status += GetBlobDtype4LogicalBlobDesc(status.logical_blob_desc()) + ",";
-  serialized_status += GetBlobShape4LogicalBlobDesc(status.logical_blob_desc()) + ",";
+  serialized_status += DataTypeToString(status.logical_blob_desc().data_type()) + ",";
+  serialized_status += ShapeToString(status.logical_blob_desc().shape()) + ",";
   serialized_status += status.builder_name() + ",";
   if (status.comment().empty()) {
     serialized_status += "-";
@@ -106,14 +102,14 @@ std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status
 
 }  // namespace
 
-CsvBoxingLog::CsvBoxingLog(std::string path) {
+CsvBoxingLogger::CsvBoxingLogger(std::string path) {
   log_stream_ = TeePersistentLogStream::Create(path);
   log_stream_ << OF_BOXING_LOGGER_CSV_COLNUM_NAME_FIELD;
 }
 
-CsvBoxingLog::~CsvBoxingLog() { log_stream_->Flush(); }
+CsvBoxingLogger::~CsvBoxingLogger() { log_stream_->Flush(); }
 
-void CsvBoxingLog::Log(const SubTskGphBuilderStatus& status) {
+void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status) {
   log_stream_ << SubTskGphBuilderStatusToCsvLine(status);
 }
 

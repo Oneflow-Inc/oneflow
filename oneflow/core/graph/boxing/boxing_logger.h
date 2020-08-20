@@ -16,40 +16,35 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_BOXING_LOGGER_H_
 #define ONEFLOW_CORE_GRAPH_BOXING_LOGGER_H_
 
-#include <memory>
-#include "glog/logging.h"
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/graph/boxing/sub_task_graph_builder_status_util.h"
-#include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/graph/boxing/sub_task_graph_builder_status_util.h"
 
 namespace oneflow {
 
-class BoxingLog {
+class BoxingLogger {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingLog);
-  BoxingLog() = default;
-  virtual ~BoxingLog() = default;
+  OF_DISALLOW_COPY_AND_MOVE(BoxingLogger);
+  BoxingLogger() = default;
+  virtual ~BoxingLogger() = default;
 
   virtual void Log(const SubTskGphBuilderStatus& status) = 0;
 };
 
-class NullBoxingLog final : public BoxingLog {
+class NullBoxingLogger final : public BoxingLogger {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NullBoxingLog);
-  NullBoxingLog() = default;
-  ~NullBoxingLog() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NullBoxingLogger);
+  NullBoxingLogger() = default;
+  ~NullBoxingLogger() override = default;
 
   void Log(const SubTskGphBuilderStatus& status) override{};
 };
 
-class CsvBoxingLog final : public BoxingLog {
+class CsvBoxingLogger final : public BoxingLogger {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CsvBoxingLog);
-  CsvBoxingLog() = delete;
-  CsvBoxingLog(std::string path);
-  ~CsvBoxingLog() override;
+  OF_DISALLOW_COPY_AND_MOVE(CsvBoxingLogger);
+  CsvBoxingLogger() = delete;
+  CsvBoxingLogger(std::string path);
+  ~CsvBoxingLogger() override;
 
   void Log(const SubTskGphBuilderStatus& status) override;
 
