@@ -524,8 +524,7 @@ def broadcast_floor_mod(x, y, name=None):
 
 @oneflow_export("math.tanh")
 def tanh(
-    x: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Computes hyperbolic tangent of `x` element-wise, Analogous to `tf.math.tanh <https://www.tensorflow.org/api_docs/python/tf/math/tanh>`_ 
 
@@ -573,8 +572,7 @@ def tanh(
 
 @oneflow_export("math.gelu")
 def gelu(
-    x: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Gelu activation operator, Analogous to `tf.nn.gelu <https://www.tensorflow.org/api_docs/python/tf/nn/gelu>`_ 
 
@@ -621,8 +619,7 @@ def gelu(
 
 @oneflow_export("math.relu", "nn.relu")
 def relu(
-    x: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Relu activation
 
@@ -670,8 +667,7 @@ def relu(
 
 @oneflow_export("math.sigmoid")
 def sigmoid(
-    x: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Sigmoid activation 
 
@@ -933,9 +929,7 @@ def unsorted_batch_segment_sum(
 
 @oneflow_export("cast")
 def cast(
-    x: remote_blob_util.BlobDef, 
-    dtype: dtype_util.dtype, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, dtype: dtype_util.dtype, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""The op takes input x and casts it to the output with `dtype`
 
@@ -985,9 +979,7 @@ def cast(
 
 @oneflow_export("math.equal")
 def equal(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Returns the truth value of :math:`{x}=={y}` element-wise.
 
@@ -1024,9 +1016,7 @@ def equal(
 
 @oneflow_export("math.not_equal")
 def not_equal(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Returns the truth value of :math:`{x}!={y}` element-wise.
 
@@ -1063,9 +1053,7 @@ def not_equal(
 
 @oneflow_export("math.less")
 def less(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Returns the truth value of :math:`x < y` element-wise.
 
@@ -1102,9 +1090,7 @@ def less(
 
 @oneflow_export("math.less_equal")
 def less_equal(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Returns the truth value of :math:`x <= y` element-wise.
 
@@ -1141,9 +1127,7 @@ def less_equal(
 
 @oneflow_export("math.greater")
 def greater(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Returns the truth value of :math:`x > y` element-wise.
 
@@ -1180,9 +1164,7 @@ def greater(
 
 @oneflow_export("math.greater_equal")
 def greater_equal(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Returns the truth value of :math:`x >= y` element-wise.
 
@@ -1219,9 +1201,7 @@ def greater_equal(
 
 @oneflow_export("math.logical_and")
 def logical_and(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Logical AND function.
 
@@ -1264,9 +1244,7 @@ def logical_and(
 
 @oneflow_export("math.minimum")
 def broadcast_min(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Returns the min of x and y element-wise, this op supports broadcasting.
 
@@ -1304,9 +1282,7 @@ def broadcast_min(
 
 @oneflow_export("math.maximum")
 def broadcast_max(
-    x: remote_blob_util.BlobDef, 
-    y: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     """Returns the max of x and y element-wise, this op supports broadcasting.
 
@@ -1466,8 +1442,7 @@ def top_k(
 
 @oneflow_export("math.argmax")
 def argmax(
-    input: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    input: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     """The op computes the index with the largest value of a Blob.
 
