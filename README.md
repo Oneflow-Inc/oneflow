@@ -35,6 +35,7 @@
     | oneflow_cu92  | >= 396.26  |
     | oneflow_cu91  | >= 390.46  |
     | oneflow_cu90  | >= 384.81  |
+    | oneflow_cpu  | N/A  |
 
     - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
@@ -48,6 +49,12 @@
 
     ```
     python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu102 --user
+    ```
+
+  - To install latest release of CPU-only OneFlow:
+
+    ```
+    python3 -m pip install oneflow_cpu
     ```
 
   - To install OneFlow with legacy CUDA support, run one of:
