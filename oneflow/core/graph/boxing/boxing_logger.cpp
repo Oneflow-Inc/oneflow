@@ -54,16 +54,12 @@ std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
     int64_t min_id = parallel_desc.sorted_dev_phy_ids(machine_id).front();
     int64_t max_id = parallel_desc.sorted_dev_phy_ids(machine_id).back();
     serialized_parallel_desc += std::to_string(min_id) + "-" + std::to_string(max_id);
-    if (i != sorted_machine_ids.size() - 1) { 
-      serialized_parallel_desc += " "; 
-    }
+    if (i != sorted_machine_ids.size() - 1) { serialized_parallel_desc += " "; }
   }
   return serialized_parallel_desc;
 }
 
-std::string DataTypeToString(const DataType& dtype) {
-  return DataType_Name(dtype);
-}
+std::string DataTypeToString(const DataType& dtype) { return DataType_Name(dtype); }
 
 std::string ShapeToString(const Shape& shape) {
   std::stringstream shape_ss;
@@ -71,9 +67,7 @@ std::string ShapeToString(const Shape& shape) {
   shape_ss << "[";
   for (int32_t i = 0; i < dim_vec.size(); ++i) {
     shape_ss << dim_vec.at(i);
-    if (i != dim_vec.size() - 1) {
-      shape_ss << " ";
-    }
+    if (i != dim_vec.size() - 1) { shape_ss << " "; }
   }
   shape_ss << "]";
   return shape_ss.str();
