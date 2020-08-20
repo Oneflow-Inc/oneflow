@@ -28,6 +28,7 @@
   - CUDA Toolkit Linux x86_64 Driver
     | OneFlow |CUDA Driver Version|
     |---|---|
+    | oneflow_cu110  | >= 450.36.06  |
     | oneflow_cu102  | >= 440.33  |
     | oneflow_cu101  | >= 418.39  |
     | oneflow_cu100  | >= 410.48  |
