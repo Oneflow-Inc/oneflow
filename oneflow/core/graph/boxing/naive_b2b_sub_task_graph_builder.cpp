@@ -37,7 +37,7 @@ Maybe<void> NaiveB2BSubTskGphBuilder::Build(
     }
     return Maybe<void>::Ok();
   } else {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
 }
 

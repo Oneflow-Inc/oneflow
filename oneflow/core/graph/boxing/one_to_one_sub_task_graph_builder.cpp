@@ -37,7 +37,7 @@ Maybe<void> OneToOneSubTskGphBuilder::Build(
     }
     return Maybe<void>::Ok();
   } else {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
 }
 

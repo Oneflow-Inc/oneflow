@@ -37,7 +37,7 @@ Maybe<void> B21SubTskGphBuilder::Build(SubTskGphBuilderCtx* ctx,
     Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
     return Maybe<void>::Ok();
   } else {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
 }
 
