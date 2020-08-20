@@ -19,17 +19,56 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+template<typename T>
+size_t GetProbTmpSize(int64_t n, int64_t w) {
+  return GetCudaAlignedSize(n * sizeof(T));
+}
+
+template<typename T>
+size_t GetDiffTmpSize(int64_t n, int64_t w) {
+  return GetCudaAlignedSize(n * sizeof(T));
+}
+
+template<typename T>
+size_t GetReduceTempStorageSize(int64_t n, int64_t w) {
+  return GetCudaAlignedSize(n * w * sizeof(T));
+}
+
+}  // namespace
+
+template<DeviceType device_type, typename T>
+size_t SoftmaxKernelUtil<device_type, T>::GetComputeProbTempStorageSizeInBytes(int64_t n,
+                                                                               int64_t w) {
+  return GetProbTmpSize<T>(n, w) + GetReduceTempStorageSize<T>(n, w);
+}
+
+template<DeviceType device_type, typename T>
+size_t SoftmaxKernelUtil<device_type, T>::GetComputeDiffTempStorageSizeInBytes(int64_t n,
+                                                                               int64_t w) {
+  return GetDiffTmpSize<T>(n, w) + GetReduceTempStorageSize<T>(n, w);
+}
+
 template<DeviceType device_type, typename T>
 void SoftmaxKernelUtil<device_type, T>::ComputeProb(DeviceCtx* ctx, const int64_t n,
-                                                    const int64_t w, const T* in, T* tmp, T* prob,
+                                                    const int64_t w, const T* in, T* prob,
                                                     void* temp_storage,
                                                     const size_t temp_storage_bytes) {
   auto Val = NdarrayUtil<device_type, T>::GetValNdarrayBuilder();
   auto Var = NdarrayUtil<device_type, T>::GetVarNdarrayBuilder();
+  const size_t min_temp_storage_bytes =
+      SoftmaxKernelUtil<device_type, T>::GetComputeProbTempStorageSizeInBytes(n, w);
+  CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
+  const size_t reduce_temp_storage_bytes = GetReduceTempStorageSize<T>(n, w);
+  T* reduce_storage = reinterpret_cast<T*>(temp_storage);
+  auto reduce_storage_var =
+      Var({static_cast<int64_t>(reduce_temp_storage_bytes / sizeof(T))}, reduce_storage);
+  T* tmp = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
+                                + reduce_temp_storage_bytes);
   // max | tmp[i] = Max_j(in[i][j])
   NdarrayUtil<device_type, T>::ReduceMax(ctx, Var({n, 1}, tmp), Val({n, w}, in),
-                                         Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
-                                             reinterpret_cast<T*>(temp_storage)));
+                                         reduce_storage_var);
   // sub | prob[i][j] = in[i][j] - tmp[i]
   NdarrayUtil<device_type, T>::BroadcastSub(ctx, Var({n, w}, prob), Val({n, w}, in),
                                             Val({n, 1}, tmp));
@@ -37,8 +76,7 @@ void SoftmaxKernelUtil<device_type, T>::ComputeProb(DeviceCtx* ctx, const int64_
   NdarrayUtil<device_type, T>::InplaceExp(ctx, Var({n, w}, prob));
   // sum | tmp[i] = Sum_j(prob[i][j])
   NdarrayUtil<device_type, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, prob),
-                                         Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
-                                             reinterpret_cast<T*>(temp_storage)));
+                                         reduce_storage_var);
   // div | prob[i][j] /= tmp[i]
   NdarrayUtil<device_type, T>::InplaceBroadcastDiv(ctx, Var({n, w}, prob), Val({n, 1}, tmp));
 }
@@ -46,17 +84,25 @@ void SoftmaxKernelUtil<device_type, T>::ComputeProb(DeviceCtx* ctx, const int64_
 template<DeviceType device_type, typename T>
 void SoftmaxKernelUtil<device_type, T>::ComputeDiff(DeviceCtx* ctx, const int64_t n,
                                                     const int64_t w, const T* dy, const T* out,
-                                                    T* sum_vec, T* dx, void* temp_storage,
+                                                    T* dx, void* temp_storage,
                                                     const size_t temp_storage_bytes) {
   auto Val = NdarrayUtil<device_type, T>::GetValNdarrayBuilder();
   auto Var = NdarrayUtil<device_type, T>::GetVarNdarrayBuilder();
+  const size_t min_temp_storage_bytes =
+      SoftmaxKernelUtil<device_type, T>::GetComputeProbTempStorageSizeInBytes(n, w);
+  CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
+  const size_t reduce_temp_storage_bytes = GetReduceTempStorageSize<T>(n, w);
+  T* reduce_storage = reinterpret_cast<T*>(temp_storage);
+  auto reduce_storage_var =
+      Var({static_cast<int64_t>(reduce_temp_storage_bytes / sizeof(T))}, reduce_storage);
+  T* sum_vec = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
+                                    + reduce_temp_storage_bytes);
   // it's safe to use dx as tmp
   // dot product | get dot product sum_vec[i] from out[i] * dy[i]
   T* tmp = dx;
   NdarrayUtil<device_type, T>::Mul(ctx, Var({n * w}, tmp), Val({n * w}, out), Val({n * w}, dy));
   NdarrayUtil<device_type, T>::ReduceSum(ctx, Var({n, 1}, sum_vec), Val({n, w}, tmp),
-                                         Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
-                                             reinterpret_cast<T*>(temp_storage)));
+                                         reduce_storage_var);
   // sub | dx[i][j] = dy[i][j] - sum_vec[i]
   NdarrayUtil<device_type, T>::BroadcastSub(ctx, Var({n, w}, dx), Val({n, w}, dy),
                                             Val({n, 1}, sum_vec));

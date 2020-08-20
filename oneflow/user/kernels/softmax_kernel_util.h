@@ -22,11 +22,12 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 struct SoftmaxKernelUtil {
-  static void ComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* tmp,
-                          T* prob, void* temp_storage, const size_t temp_storage_bytes);
-  static void ComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* dy,
-                          const T* out, T* sum_vec, T* dx, void* temp_storage,
-                          const size_t temp_storage_bytes);
+  static size_t GetComputeProbTempStorageSizeInBytes(int64_t n, int64_t w);
+  static size_t GetComputeDiffTempStorageSizeInBytes(int64_t n, int64_t w);
+  static void ComputeProb(DeviceCtx* ctx, int64_t n, int64_t w, const T* in, T* prob,
+                          void* temp_storage, size_t temp_storage_bytes);
+  static void ComputeDiff(DeviceCtx* ctx, int64_t n, int64_t w, const T* dy, const T* out, T* dx,
+                          void* temp_storage, size_t temp_storage_bytes);
 };
 
 }  // namespace oneflow
