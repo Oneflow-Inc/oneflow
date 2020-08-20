@@ -22,10 +22,10 @@ docker run --rm -it -v `pwd`:/oneflow-src -w /oneflow-src oneflow:rel-manylinux2
     -DBUILD_CUDA=OFF \
     --package-name oneflow_cpu
 
-# release 11.0
-# release 10.2
-# release 10.1
-# release 10.0
-# release 9.2
-# release 9.1
-# release 9.0
+release 11.0
+release 10.2
+release 10.1
+release 10.0
+release 9.2
+release 9.1
+release 9.0
