@@ -25,36 +25,31 @@ template<DeviceType device_type, typename T>
 class SoftmaxKernel final : public user_op::OpKernel {
  public:
   SoftmaxKernel() = default;
-  ~SoftmaxKernel() = default;
+  ~SoftmaxKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t num_classes = x->shape().At(x->shape().NumAxes() - 1);
-    const int64_t num_instances = x->shape().elem_cnt() / num_classes;
-
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int64_t num_classes = in->shape().At(in->shape().NumAxes() - 1);
+    const int64_t num_instances = in->shape().Count(0, in->shape().NumAxes() - 1);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const size_t temp_storage_bytes = x->shape().elem_cnt() * sizeof(T);
-    const size_t tmp_bytes = GetCudaAlignedSize(temp_storage_bytes / num_classes);
-
-    T* tmp_ptr = tmp_buffer->mut_dptr<T>();
-    void* temp_storage_ptr = reinterpret_cast<void*>(tmp_ptr + tmp_bytes / sizeof(T));
+    const size_t temp_storage_bytes = tmp_buffer->shape().elem_cnt();
     SoftmaxKernelUtil<device_type, T>::ComputeProb(ctx->device_ctx(), num_instances, num_classes,
-                                                   x->dptr<T>(), tmp_ptr, y->mut_dptr<T>(),
-                                                   temp_storage_ptr, temp_storage_bytes);
+                                                   in->dptr<T>(), out->mut_dptr<T>(),
+                                                   tmp_buffer->mut_dptr(), temp_storage_bytes);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-user_op::InferTmpSizeFn GenInferTmpSizeFn(const std::string& bn) {
-  return [bn](user_op::InferContext* ctx) {
-    const Shape* x = ctx->Shape4ArgNameAndIndex(bn, 0);
-    const size_t num_classes = x->dim_vec().back();
-    size_t temp_storage_bytes = GetCudaAlignedSize(x->elem_cnt() * sizeof(T));           // [i][j]
-    size_t tmp_or_sum_vec_bytes = GetCudaAlignedSize(temp_storage_bytes / num_classes);  //[i]
-    return tmp_or_sum_vec_bytes + temp_storage_bytes;
+template<DeviceType device_type, typename T>
+user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
+  return [](user_op::InferContext* ctx) {
+    const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+    const int64_t num_classes = in_shape->At(in_shape->NumAxes() - 1);
+    const int64_t num_instances = in_shape->Count(0, in_shape->NumAxes() - 1);
+    return SoftmaxKernelUtil<device_type, T>::GetComputeProbTempStorageSizeInBytes(num_instances,
+                                                                                   num_classes);
   };
 }
 
@@ -63,21 +58,16 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn(const std::string& bn) {
       .SetCreateFn<SoftmaxKernel<device, dtype>>()                                      \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(GenInferTmpSizeFn<dtype>("in"));
+      .SetInferTmpSizeFn(GenFwInferTmpSizeFn<device, dtype>());
 
 REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, float)
 REGISTER_SOFTMAX_KERNEL(DeviceType::kCPU, double)
-#ifdef WITH_CUDA
-REGISTER_SOFTMAX_KERNEL(DeviceType::kGPU, float16)
-REGISTER_SOFTMAX_KERNEL(DeviceType::kGPU, float)
-REGISTER_SOFTMAX_KERNEL(DeviceType::kGPU, double)
-#endif
 
 template<DeviceType device_type, typename T>
 class SoftmaxGradKernel final : public user_op::OpKernel {
  public:
   SoftmaxGradKernel() = default;
-  ~SoftmaxGradKernel() = default;
+  ~SoftmaxGradKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -89,32 +79,35 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
     const int64_t num_instances = y->shape().elem_cnt() / num_classes;
 
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const size_t temp_storage_bytes = y->shape().elem_cnt() * sizeof(T);
-    const size_t sum_vec_bytes = GetCudaAlignedSize(temp_storage_bytes / num_classes);
+    const size_t temp_storage_bytes = tmp_buffer->shape().elem_cnt();
 
-    T* sum_vec_ptr = tmp_buffer->mut_dptr<T>();
-    void* temp_storage_ptr = reinterpret_cast<void*>(sum_vec_ptr + sum_vec_bytes / sizeof(T));
-    SoftmaxKernelUtil<device_type, T>::ComputeDiff(
-        ctx->device_ctx(), num_instances, num_classes, dy->dptr<T>(), y->dptr<T>(), sum_vec_ptr,
-        dx->mut_dptr<T>(), temp_storage_ptr, temp_storage_bytes);
+    SoftmaxKernelUtil<device_type, T>::ComputeDiff(ctx->device_ctx(), num_instances, num_classes,
+                                                   dy->dptr<T>(), y->dptr<T>(), dx->mut_dptr<T>(),
+                                                   tmp_buffer->mut_dptr(), temp_storage_bytes);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
+template<DeviceType device_type, typename T>
+user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
+  return [](user_op::InferContext* ctx) {
+    const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
+    const int64_t num_classes = dy_shape->At(dy_shape->NumAxes() - 1);
+    const int64_t num_instances = dy_shape->Count(0, dy_shape->NumAxes() - 1);
+    return SoftmaxKernelUtil<device_type, T>::GetComputeDiffTempStorageSizeInBytes(num_instances,
+                                                                                   num_classes);
+  };
+}
 
 #define REGISTER_SOFTMAX_GRAD_KERNEL(device, dtype)                                    \
   REGISTER_USER_KERNEL("softmax_grad")                                                 \
       .SetCreateFn<SoftmaxGradKernel<device, dtype>>()                                 \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(GenInferTmpSizeFn<dtype>("dx"));
+      .SetInferTmpSizeFn(GenBwInferTmpSizeFn<device, dtype>());
 
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, float)
 REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, double)
-#ifdef WITH_CUDA
-REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kGPU, float16)
-REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kGPU, float)
-REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kGPU, double)
-#endif
 
 }  // namespace
 
