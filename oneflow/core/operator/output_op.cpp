@@ -22,7 +22,7 @@ namespace oneflow {
 void OutputOp::InitFromOpConf() {
   CHECK(op_conf().has_output_conf());
   EnrollInputBn("in");
-  EnrollOutputBn("out");
+  EnrollOutputBn("out")->set_is_mutable(true);
 }
 
 Maybe<void> OutputOp::InferBlobDescs(

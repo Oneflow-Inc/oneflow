@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/infer_stream_type.h"
+#include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/vm/object_wrapper.h"
@@ -25,6 +26,8 @@ limitations under the License.
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/eager/lazy_ref_blob_object.h"
 
 namespace oneflow {
 namespace vm {
