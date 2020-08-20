@@ -54,7 +54,7 @@
   - To install latest release of CPU-only OneFlow:
 
     ```
-    python3 -m pip install oneflow_cpu
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cpu --user
     ```
 
   - To install OneFlow with legacy CUDA support, run one of:
