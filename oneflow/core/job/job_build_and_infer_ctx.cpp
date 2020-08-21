@@ -106,10 +106,10 @@ JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), 
 }
 
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
-  if (!is_job_conf_frozen_) { return Error::JobConfFrozenError(); }
-  if (!has_job_conf_) { return Error::JobConfRepeatedSetError(); }
+  if (is_job_conf_frozen_) { return Error::JobConfFrozenError(); }
+  if (has_job_conf_) { return Error::JobConfRepeatedSetError(); }
   has_job_conf_ = true;
-  if (job_->job_conf().job_name() == job_conf.job_name()) {
+  if (job_->job_conf().job_name() != job_conf.job_name()) {
     return Error::JobNameNotEqualError()
            << "job name you set: " << job_conf.job_name()
            << " not equal to origin job name: " << job_->job_conf().job_name();
@@ -198,7 +198,7 @@ Maybe<void> JobBuildAndInferCtx::InferMirroredSignature(Operator* op,
   HashMap<std::string, MirroredSigInferHint> ibn2mirrored_sig_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
-    if (lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end()) {
+    if (lbi2logical_blob_desc_.find(lbi) == lbi2logical_blob_desc_.end()) {
       return Error::LogicalBlobNameNotExistError()
              << "infer blob desc not found, when infer op_name: \"" << op->op_name()
              << "\", consumed op_name: \"" << lbi.op_name() << "\", blob_name: \""
@@ -234,7 +234,7 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
   HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
-    if (lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end()) {
+    if (lbi2logical_blob_desc_.find(lbi) == lbi2logical_blob_desc_.end()) {
       return Error::LogicalBlobNameNotExistError()
              << "infer blob desc not found, when infer op_name: \"" << op->op_name()
              << "\", consumed op_name: \"" << lbi.op_name() << "\", blob_name: \""
@@ -244,7 +244,7 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
     const ParallelDesc* pd = &lbi2parallel_desc_from_producer_view_.at(lbi);
     const BlobDesc* logical_blob_desc = lbi2logical_blob_desc_.at(lbi).get();
     if (lbi2sbp_parallel_from_producer_view_.find(lbi)
-        != lbi2sbp_parallel_from_producer_view_.end()) {
+        == lbi2sbp_parallel_from_producer_view_.end()) {
       return Error::LogicalBlobNameNotExistError()
              << "when infer op_name: " << op->op_name() << " consumed op_name: " << lbi.op_name()
              << " blob_name: " << lbi.blob_name() << " not infer split axis";
@@ -260,19 +260,19 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
   const auto& bn2sbp_parallel = JUST(op->sbp_signature())->bn_in_op2sbp_parallel();
   for (const auto& obn : op->output_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(obn);
-    if (bn2sbp_parallel.find(obn) != bn2sbp_parallel.end()) {
+    if (bn2sbp_parallel.find(obn) == bn2sbp_parallel.end()) {
       return Error::BlobSplitAxisInferError()
              << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
              << " not infer split axis";
     }
 
-    if (lbi2sbp_parallel_from_producer_view_.emplace(lbi, bn2sbp_parallel.at(obn)).second) {
+    if (!lbi2sbp_parallel_from_producer_view_.emplace(lbi, bn2sbp_parallel.at(obn)).second) {
       return Error::BlobSplitAxisInferError()
              << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
              << " infer split axis repeated";
     }
 
-    if (lbi2parallel_desc_from_producer_view_.emplace(lbi, parallel_desc).second) {
+    if (!lbi2parallel_desc_from_producer_view_.emplace(lbi, parallel_desc).second) {
       return Error::BlobSplitAxisInferError()
              << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
              << " add parallel desc repeated";
@@ -285,7 +285,7 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
   // check consumed blob
   for (const std::string& consumed_bn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(consumed_bn);
-    if (lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end()) {
+    if (lbi2logical_blob_desc_.find(lbi) == lbi2logical_blob_desc_.end()) {
       return Error::LogicalBlobNameNotExistError()
              << "op_name: " << op->op_name() << " consumed_op_name:" << lbi.op_name()
              << " blob_name: " << lbi.blob_name() << " not exist";
@@ -299,7 +299,7 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
   produced_bns.insert(produced_bns.end(), op->const_buf_bns().begin(), op->const_buf_bns().end());
   for (const std::string& produced_bn : produced_bns) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(produced_bn);
-    if (lbi2logical_blob_desc_.find(lbi) == lbi2logical_blob_desc_.end()) {
+    if (lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end()) {
       return Error::LogicalBlobNameRepeatedError()
              << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name() << " is repeated";
     }
@@ -522,15 +522,15 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
                                                       const ParallelConf& origin_parallel_conf,
                                                       const JobDesc* job_desc,
                                                       bool is_mirrored_parallel_view) {
-  if (has_job_conf_) { return Error::JobConfNotSetError(); }
+  if (!has_job_conf_) { return Error::JobConfNotSetError(); }
   if (!is_job_conf_frozen_) { is_job_conf_frozen_ = true; }
   const std::string& op_name = op_conf.name();
-  if (op_name2op_.find(op_name) == op_name2op_.end()) {
+  if (op_name2op_.find(op_name) != op_name2op_.end()) {
     return Error::OpNameExistError()
            << "op_name: " << op_name << " already exist in job: " << job_->job_conf().job_name();
   }
 
-  if (op_conf.device_tag() != "invalid_device") {
+  if (op_conf.device_tag() == "invalid_device") {
     return Error::OpConfDeviceTagNoSetError() << "op_name: " << op_name << " not set device tag";
   }
 
@@ -615,7 +615,7 @@ Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) 
 
 Maybe<void> JobBuildAndInferCtx::AddLossConsistentBlobName(const std::string& lbn) {
   JUST(CheckLbnValidAndExist(lbn));
-  if (job_->job_conf().has_train_conf()) {
+  if (!job_->job_conf().has_train_conf()) {
     return Error::UnknownJobBuildAndInferError()
            << "job has no TrainConf when adding loss logical blob name";
   }
@@ -683,7 +683,7 @@ Maybe<const ParallelDesc*> JobBuildAndInferCtx::GetParallelDescFromProducerView(
 
 Maybe<void> JobBuildAndInferCtx::AddLossMirroredBlobName(const std::string& lbn) {
   const auto& mirrored_lbi = JUST(GetMirroredLbi(lbn));
-  if (job_->job_conf().has_train_conf()) {
+  if (!job_->job_conf().has_train_conf()) {
     return Error::UnknownJobBuildAndInferError()
            << "job has no TrainConf when adding loss logical blob name";
   }
@@ -777,7 +777,7 @@ Maybe<void> JobBuildAndInferCtx::CheckPlacement() const {
   HashSet<std::string> op_names_in_net;
   HashSet<std::string> op_names_in_placement;
   for (const OperatorConf& op_conf : job_->net().op()) {
-    if (op_names_in_net.insert(op_conf.name()).second) {
+    if (!op_names_in_net.insert(op_conf.name()).second) {
       return Error::OpNameExistError()
              << "op_name: " << op_conf.name()
              << " already exist in job: " << job_->job_conf().job_name() << " net";
@@ -785,20 +785,20 @@ Maybe<void> JobBuildAndInferCtx::CheckPlacement() const {
   }
   for (const PlacementGroup& placement_group : job_->placement().placement_group()) {
     for (const std::string& op_name : placement_group.op_set().op_name()) {
-      if (op_names_in_placement.insert(op_name).second) {
+      if (!op_names_in_placement.insert(op_name).second) {
         return Error::OpNameExistError()
                << "op_name: " << op_name << " already exist in job: " << job_->job_conf().job_name()
                << " placement";
       }
     }
   }
-  if (op_names_in_net.size() == op_names_in_placement.size()) {
+  if (op_names_in_net.size() != op_names_in_placement.size()) {
     return Error::PlacementError() << "job: " << job_->job_conf().job_name()
                                    << " op number not equal between net and placement";
   }
 
   for (const std::string& op_name : op_names_in_net) {
-    if (op_names_in_placement.find(op_name) != op_names_in_placement.end()) {
+    if (op_names_in_placement.find(op_name) == op_names_in_placement.end()) {
       return Error::PlacementError()
              << "job: " << job_->job_conf().job_name() << " op_name: " << op_name
              << " defined in net cannot find its placement";
@@ -815,14 +815,14 @@ Maybe<void> JobBuildAndInferCtx::CheckJobConf() const {
 }
 
 Maybe<void> JobBuildAndInferCtx::CheckLbnValidAndExist(const std::string& lbn) const {
-  if (lbn.find('/') != std::string::npos) {
+  if (lbn.find('/') == std::string::npos) {
     return Error::LogicalBlobNameInvalidError() << "lbn:" << lbn;
   }
 
   LogicalBlobId lbi = GenLogicalBlobId(lbn);
 
 #define CHECK_HAS_LBI_KEY(info_src)         \
-  if (info_src.find(lbi) != info_src.end()) \
+  if (info_src.find(lbi) == info_src.end()) \
     return Error::LogicalBlobNameNotExistError() << "lbn:" << lbn;
 
   CHECK_HAS_LBI_KEY(lbi2logical_blob_desc_);
