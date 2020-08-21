@@ -24,8 +24,7 @@ const AdamModelUpdateConf& GetAdamModelUpdateConf(const OperatorConf& op_conf) {
 };
 
 template<typename T>
-void UpdateMomentEstimate(int64_t n, T beta, int32_t p, const T* model_diff, const T* beta_t,
-                          T* moment) {
+void UpdateMomentEstimate(int64_t n, T beta, int32_t p, const T* model_diff, T* moment) {
   FOR_RANGE(int64_t, i, 0, n) {
     // Update biased moment estimate
     moment[i] = beta * moment[i] + (1 - beta) * std::pow(model_diff[i], p);
@@ -73,9 +72,9 @@ class AdamMdUpdateKernelUtil<DeviceType::kCPU, T> final {
     } else {
       lr = *learning_rate;
     }
-    UpdateMomentEstimate<T>(n, beta1, 1, model_diff, beta1_t, m);
+    UpdateMomentEstimate<T>(n, beta1, 1, model_diff, m);
     // second-order moment
-    UpdateMomentEstimate<T>(n, beta2, 2, model_diff, beta2_t, v);
+    UpdateMomentEstimate<T>(n, beta2, 2, model_diff, v);
     FOR_RANGE(int64_t, i, 0, n) {
       const T mdv = m[i] / (std::sqrt(v[i]) + epsilon);
       model[i] = model[i] - lr * (mdv + weight_decay * model[i]);

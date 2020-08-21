@@ -40,7 +40,7 @@ struct PowUtil<2> final {
 };
 
 template<int32_t power, typename T>
-__device__ void UpdateMomentEstimate(T beta, const T model_diff, const T* beta_t, T* moment) {
+__device__ void UpdateMomentEstimate(T beta, const T model_diff, T* moment) {
   // Update biased moment estimate
   *moment = beta * (*moment) + (1 - beta) * PowUtil<power>::pow(model_diff);
 }
@@ -66,18 +66,17 @@ __global__ void UpdateModelGpu(int64_t n, const float* learning_rate, T weight_d
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T model_diff_val = model_diff[i];
     T m_val = m[i];
-    UpdateMomentEstimate<1>(beta1, model_diff_val, beta1_t, &m_val);
+    UpdateMomentEstimate<1>(beta1, model_diff_val, &m_val);
     m[i] = m_val;
     T v_val = v[i];
-    UpdateMomentEstimate<2>(beta2, model_diff_val, beta2_t, &v_val);
+    UpdateMomentEstimate<2>(beta2, model_diff_val, &v_val);
     v[i] = v_val;
     UpdateModel(lr, weight_decay, epsilon, model + i, m_val, v_val);
   }
 }
 
 template<typename T>
-__global__ void UpdateBetaTGpu(const int64_t* train_step, const T beta1, const T beta2, T* beta1_t,
-                               T* beta2_t) {
+__global__ void UpdateBetaTGpu(const T beta1, const T beta2, T* beta1_t, T* beta2_t) {
   *beta1_t *= beta1;
   *beta2_t *= beta2;
 }
@@ -96,8 +95,7 @@ class AdamMdUpdateKernelUtil<DeviceType::kGPU, T> final {
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
               n, learning_rate, weight_decay, beta1, beta2, epsilon, beta1_t, beta2_t, model_diff,
               model, m, v);
-      UpdateBetaTGpu<T>
-          <<<1, 1, 0, ctx->cuda_stream()>>>(train_step, beta1, beta2, beta1_t, beta2_t);
+      UpdateBetaTGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(beta1, beta2, beta1_t, beta2_t);
     } else {
       UpdateModelGpu<false, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
