@@ -67,6 +67,7 @@ def _get_images_bbox_list(coco, image_ids):
             [coco.anns[anno_id]["bbox"] for anno_id in anno_ids], dtype=np.single
         )
         bbox_list.append(bbox_array)
+
     return bbox_list
 
 
@@ -116,7 +117,7 @@ def _of_target_resize_bbox_scale(images, bbox_list, target_size, max_size):
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(image_def)
         resized_images_buffer, new_size, scale = flow.image_target_resize(
-            images_buffer, target_size, max_size
+            images_buffer, target_size=target_size, max_size=max_size
         )
         bbox_buffer = flow.tensor_list_to_tensor_buffer(bbox_def)
         scaled_bbox = flow.object_bbox_scale(bbox_buffer, scale)
@@ -150,7 +151,7 @@ def _compare_bbox_scale(
     for image, bbox, of_bbox, image_size in zip(
         images, bbox_list, of_bbox_list, image_size_list
     ):
-        h, w = image_size
+        w, h = image_size
         oh, ow = image.shape[0:2]
         scale_h = h / oh
         scale_w = w / ow

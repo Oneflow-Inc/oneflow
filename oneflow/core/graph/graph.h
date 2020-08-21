@@ -134,8 +134,13 @@ class Graph {
   template<typename StreamT>
   void ToDotWithStream(const std::function<bool(NodeType*)>& IsNodeAllowed,
                        const std::function<bool(EdgeType*)>& IsEdgeAllowed,
+                       const std::function<std::string(NodeType*)>& AddNodeAttribute,
+                       const std::function<std::string(EdgeType*)>& AddEdgeAttribute,
                        StreamT& out_stream) const;
   void ToDotWithFilePath(const std::string& file_path) const;
+  void ToDotWithFilePath(const std::function<std::string(NodeType*)>& AddNodeAttribute,
+                         const std::function<std::string(EdgeType*)>& AddEdgeAttribute,
+                         const std::string& file_path) const;
   void ToDotWithFilePath(const std::function<bool(NodeType*)>& IsNodeAllowed,
                          const std::function<bool(EdgeType*)>& IsEdgeAllowed,
                          const std::string& file_path) const;
@@ -275,18 +280,22 @@ void Graph<NodeType, EdgeType>::DeleteNode(NodeType* node) {
 template<typename NodeType, typename EdgeType>
 template<typename StreamT>
 void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) const {
-  ToDotWithStream([](NodeType*) { return true; }, [](EdgeType*) { return true; }, out_stream);
+  ToDotWithStream([](NodeType*) { return true; }, [](EdgeType*) { return true; },
+                  [](NodeType*) { return ""; }, [](EdgeType*) { return ""; }, out_stream);
 }
 
 template<typename NodeType, typename EdgeType>
 template<typename StreamT>
-void Graph<NodeType, EdgeType>::ToDotWithStream(const std::function<bool(NodeType*)>& IsNodeAllowed,
-                                                const std::function<bool(EdgeType*)>& IsEdgeAllowed,
-                                                StreamT& out_stream) const {
+void Graph<NodeType, EdgeType>::ToDotWithStream(
+    const std::function<bool(NodeType*)>& IsNodeAllowed,
+    const std::function<bool(EdgeType*)>& IsEdgeAllowed,
+    const std::function<std::string(NodeType*)>& AddNodeAttribute,
+    const std::function<std::string(EdgeType*)>& AddEdgeAttribute, StreamT& out_stream) const {
   out_stream << "digraph {\n";
   this->ForEachNode([&](NodeType* node) {
     if (IsNodeAllowed(node) == false) { return; }
-    out_stream << "\"" << node->node_id_str() << "\" [label=\"" << node->VisualStr() << "\"]\n";
+    out_stream << "\"" << node->node_id_str() << "\" [label=\"" << node->VisualStr() << "\""
+               << AddNodeAttribute(node) << "]\n";
   });
   this->ForEachEdge([&](EdgeType* edge) {
     if (IsEdgeAllowed(edge) == false) { return; }
@@ -294,7 +303,7 @@ void Graph<NodeType, EdgeType>::ToDotWithStream(const std::function<bool(NodeTyp
     if (IsNodeAllowed(edge->dst_node()) == false) { return; }
     out_stream << "\"" << edge->src_node()->node_id_str() << "\" -> "
                << "\"" << edge->dst_node()->node_id_str() << "\""
-               << "[label=\"" << edge->VisualStr() << "\"];\n";
+               << "[label=\"" << edge->VisualStr() << "\"" << AddEdgeAttribute(edge) << "];\n";
   });
   out_stream << "}\n";
 }
@@ -308,10 +317,22 @@ void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) 
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ToDotWithFilePath(
+    const std::function<std::string(NodeType*)>& AddNodeAttribute,
+    const std::function<std::string(EdgeType*)>& AddEdgeAttribute,
+    const std::string& file_path) const {
+  auto log_stream = TeePersistentLogStream::Create(file_path);
+  ToDotWithStream([](NodeType*) { return true; }, [](EdgeType*) { return true; }, AddNodeAttribute,
+                  AddEdgeAttribute, log_stream);
+  log_stream->Flush();
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ToDotWithFilePath(
     const std::function<bool(NodeType*)>& IsNodeAllowed,
     const std::function<bool(EdgeType*)>& IsEdgeAllowed, const std::string& file_path) const {
   auto log_stream = TeePersistentLogStream::Create(file_path);
-  ToDotWithStream(IsNodeAllowed, IsEdgeAllowed, log_stream);
+  ToDotWithStream(IsNodeAllowed, IsEdgeAllowed, [](NodeType*) { return ""; },
+                  [](EdgeType*) { return ""; }, log_stream);
   log_stream->Flush();
 }
 
