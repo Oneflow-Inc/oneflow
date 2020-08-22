@@ -49,5 +49,3 @@ WORKDIR /workspace
 COPY setup.py /workspace/setup.py
 RUN python3 setup.py bdist_wheel
 RUN pip3 install /workspace/dist/*.whl
-
-RUN rm -rf oneflow third_party cmake CMakeLists.txt
