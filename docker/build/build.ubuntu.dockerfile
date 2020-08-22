@@ -46,7 +46,6 @@ RUN cmake -DTHIRD_PARTY=OFF -DONEFLOW=ON .. && make -j$(nproc)
 
 # BUILD WHEEL
 WORKDIR /workspace
-RUN pip3 install wheel
 COPY setup.py /workspace/setup.py
 RUN python3 setup.py bdist_wheel
 RUN pip3 install /workspace/dist/*.whl
