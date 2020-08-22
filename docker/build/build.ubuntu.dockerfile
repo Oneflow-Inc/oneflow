@@ -15,11 +15,10 @@ RUN apt-get update && \
     gcc \
     g++ \
     libopenblas-dev \
-    python3-dev \
-    cmake
+    python3-dev
 
-# use this to speed up pip install in China
-# ENV TUNA_PIP_INSTALL=" -i https://pypi.tuna.tsinghua.edu.cn/simple"
+# speed up pip install in China
+ENV TUNA_PIP_INSTALL=" -i https://pypi.tuna.tsinghua.edu.cn/simple"
 
 COPY dev-requirements.txt /workspace/dev-requirements.txt
 
@@ -49,3 +48,5 @@ WORKDIR /workspace
 COPY setup.py /workspace/setup.py
 RUN python3 setup.py bdist_wheel
 RUN pip3 install /workspace/dist/*.whl
+
+RUN rm -rf oneflow third_party cmake CMakeLists.txt
