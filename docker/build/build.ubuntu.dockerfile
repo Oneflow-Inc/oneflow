@@ -15,27 +15,17 @@ RUN apt-get update && \
     gcc \
     g++ \
     libopenblas-dev \
-    python3-dev \
-    cmake
+    python3-dev
 
+# speed up pip install in China
+ENV TUNA_PIP_INSTALL=" -i https://pypi.tuna.tsinghua.edu.cn/simple"
 
-RUN mkdir -p /tmp/download/cmake-extracted && \
-    cd /tmp/download && \
-    curl --location https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0.tar.gz --output cmake.tar.gz && \
-    tar -xvzf cmake.tar.gz --directory cmake-extracted && \
-    cd cmake-extracted/* && \
-    mkdir /cmake-install && \
-    cmake . -DCMAKE_INSTALL_PREFIX=/cmake-install && \
-    make -j $(nproc) && \
-    make install
-ENV PATH="/cmake-install/bin:${PATH}"
-
-# use this to speed up pip install
-ENV TUNA_PIP_INSTALL="python3 -m pip --no-cache-dir install --upgrade -i https://pypi.tuna.tsinghua.edu.cn/simple"
+COPY dev-requirements.txt /workspace/dev-requirements.txt
 
 RUN curl https://bootstrap.pypa.io/get-pip.py --output ./get-pip.py \
     && python3 ./get-pip.py \
-    && pip3 install numpy protobuf
+    && pip3 install $TUNA_INDEX cmake \
+    && pip3 install $TUNA_INDEX -r /workspace/dev-requirements.txt
 
 WORKDIR /workspace/build
 
@@ -44,17 +34,17 @@ COPY CMakeLists.txt /workspace/CMakeLists.txt
 
 # BUILD DEPENDENCY
 COPY build/third_party /workspace/build/third_party
-RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON .. && make -j
+RUN cmake -DTHIRD_PARTY=ON -DONEFLOW=OFF -DCMAKE_BUILD_TYPE=Release .. && make -j$(nproc)
 
 # BUILD ONEFLOW
 COPY oneflow /workspace/oneflow
 COPY tools /workspace/tools
 
-RUN cmake -DTHIRD_PARTY=OFF -DBUILD_TESTING=OFF .. && make -j $(nproc)
+RUN cmake -DTHIRD_PARTY=OFF -DONEFLOW=ON .. && make -j$(nproc) of_pyscript_copy
+RUN cmake -DTHIRD_PARTY=OFF -DONEFLOW=ON .. && make -j$(nproc)
 
 # BUILD WHEEL
 WORKDIR /workspace
-RUN pip3 install wheel
 COPY setup.py /workspace/setup.py
 RUN python3 setup.py bdist_wheel
 RUN pip3 install /workspace/dist/*.whl
