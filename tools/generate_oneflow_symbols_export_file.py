@@ -32,7 +32,7 @@ def RecursiveFindPythonFile(directory):
 
 import_filepaths = []
 for py_script in RecursiveFindPythonFile(python_dir):
-    file_content = open(py_script, "r").read()
+    file_content = open(py_script, "r", encoding="utf-8").read()
     if re.search(r"@\s?oneflow_export\s?\(", file_content) is not None:
         import_filepaths.append(py_script)
 
