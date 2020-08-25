@@ -913,9 +913,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
 }
 
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
-  const std::string& job_name = job().job_conf().job_name();
-  LOG(INFO) << "<profile> {python}.{LazyJobBuildAndInferCtxComplete#job_name:" << job_name
-            << "} <Begin>";
+  LOG(INFO) << "<P>{Complete}";
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
   if (job().job_conf().has_train_conf()) {
@@ -924,11 +922,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   }
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    LOG(INFO) << "<profile> {python}.{LazyJobBuildAndInferCtxComplete#job_name:" << job_name
-              << "}.{" << pass_name << "} <Begin>";
     auto ret = FunctionPass(pass_name)(mut_job());
-    LOG(INFO) << "<profile> {python}.{LazyJobBuildAndInferCtxComplete#job_name:" << job_name
-              << "}.{" << pass_name << "} <End>";
     return ret;
   };
   if (GlobalJobDesc().Bool("__is_user_function__")) {
@@ -951,8 +945,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpTimeShapeAndBlobParallelConfPass"));
-  LOG(INFO) << "<profile> {python}.{LazyJobBuildAndInferCtxComplete#job_name:"
-            << job().job_conf().job_name() << "} <End>";
+  LOG(INFO) << "<P>{Complete}<END>";
   return Maybe<void>::Ok();
 }
 

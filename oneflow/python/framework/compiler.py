@@ -48,32 +48,13 @@ def get_time_stamp_str(t):
 def Compile(session, function_desc, config_proto):
     start = time.time()
     job_name = function_desc.job_func.__name__
-    print(
-        "[{}] <profile> {{python}}.{{CompileJob#job_name:{}}} <Begin>".format(
-            get_time_stamp_str(start), job_name
-        )
-    )
+    print("[{}]<P>{{PyCompileJob@{}}}".format(get_time_stamp_str(start), job_name))
     with InterpretScope(session, function_desc, config_proto):
         _CompileJob(function_desc)
-        cur_time = time.time()
-        print(
-            "[{}] <profile> {{python}}.{{CompileJob#job_name:{}}}.{{Compile#time:{}}}".format(
-                get_time_stamp_str(cur_time), job_name, cur_time - start,
-            )
-        )
+        print("[{}]<P>{{Compile}}<END>".format(get_time_stamp_str(time.time())))
         c_api_util.CurJobBuildAndInferCtx_Complete()
-        cur_time = time.time()
-        print(
-            "[{}] <profile> {{python}}.{{CompileJob#job_name:{}}}.{{Complete#time:{}}}".format(
-                get_time_stamp_str(cur_time), job_name, cur_time - start,
-            )
-        )
 
-    print(
-        "[{}] <profile> {{python}}.{{CompileJob#job_name:{}#time:{}}} <End>".format(
-            get_time_stamp_str(time.time()), job_name, time.time() - start
-        )
-    )
+    print("[{}]<P>{{PyCompileJob}}<END>".format(get_time_stamp_str(time.time())))
 
 
 def EagerRun(session, function_desc, config_proto, args):

@@ -41,6 +41,7 @@ void CheckOpGraph(const OpGraph& op_graph) {
 void WithOpGraphAndMutJob(Job* job, const std::function<void(const OpGraph&, Job*)>& Handler) {
   OpGraph op_graph(*job);
   Handler(op_graph, job);
+  LOG(INFO) << "<P>{WithOpGraphAndMutJob}<END>";
 }
 
 void WithOpGraphAndMutJobBuilder(Job* job,
@@ -48,9 +49,11 @@ void WithOpGraphAndMutJobBuilder(Job* job,
   OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   Handler(op_graph, &job_builder);
+  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder}<END>";
 }
 
 void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder) {
+  LOG(INFO) << "<P>{SetCtrlInOpName4VariableOp@node_num=" << op_graph.node_num() << "}";
   auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
     for (const std::string& bn : op.input_bns()) {
       if (op.BnInOp2Lbi(bn) == lbi && op.InputBlobModifier4Ibn(bn).is_mutable()) { return true; }
@@ -86,51 +89,47 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
     }
     job_builder->MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
   }
+  LOG(INFO) << "<P>{SetCtrlInOpName4VariableOp}<END>";
 }
 
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
-  std::ostringstream ss;
-  ss << "<profile> {oneflow}.{CompileAndMergePlanOnMaster}.{CompileCurJobOnMaster#job_name:"
-     << job->job_conf().job_name() << "}.{Compile}.{Complete}";
-  LOG(INFO) << ss.str() << " <Begin>";
+  LOG(INFO) << "<P>{Complete}";
   FunctionPass("DumpTimeShapeAndBlobParallelConfPass")(job);
-  // LOG(INFO) << "CompleteJob, DumpTimeShapeAndBlobParallelConfPass";
+  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@GroupBoxingByDstParallel}";
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
-  // LOG(INFO) << "CompleteJob, GroupBoxingByDstParallel";
   if (GlobalJobDesc().enable_keep_header_only()) {
+    LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@AddKeepHeaderOnlyOp}";
     WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
-    // LOG(INFO) << "CompleteJob, AddKeepHeaderOnlyOp";
   }
+  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@SetCtrlInOpName4VariableOp}";
   WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp);
-  // LOG(INFO) << "CompleteJob, SetCtrlInOpName4VariableOp";
   // complete tick ops
+  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@AutoSourceTick}";
   WithOpGraphAndMutJobBuilder(job, &AutoSourceTick);
-  // LOG(INFO) << "CompleteJob, AutoSourceTick";
+  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@AddTickForTimeShape}";
   WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape);
-  // LOG(INFO) << "CompleteJob, AddTickForTimeShape";
+  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@AutoSinkTick}";
   WithOpGraphAndMutJobBuilder(job, &AutoSinkTick);
-  // LOG(INFO) << "CompleteJob, AutoSinkTick";
   AddGlobalTotalJobCriticalSection(*job);
-  // LOG(INFO) << "CompleteJob, AddGlobalTotalJobCriticalSection";
+  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@AddGlobalInputCriticalSections}";
   WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
-  // LOG(INFO) << "CompleteJob, AddGlobalInputCriticalSections";
+  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@AddGlobalOutputCriticalSections}";
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
-  // LOG(INFO) << "CompleteJob, AddGlobalOutputCriticalSections";
   FunctionPass("DumpTimeShapeAndBlobParallelConfPass")(job);
-  // LOG(INFO) << "CompleteJob, DumpTimeShapeAndBlobParallelConfPass";
   if (XrtCompilationEnabled(GlobalJobDesc())) {
 #ifdef OF_WITH_XRT
+    LOG(INFO) << "<P>{WithOpGraphAndMutJob@RebuildXrtCompiledJob}";
     WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob);
-// LOG(INFO) << "CompleteJob, RebuildXrtCompiledJob";
 #else
     LOG(WARNING) << "It will not use XLA or TensorRT since WITH_XLA or "
                     "WITH_TENSORRT was not enabled when compiling the project.";
 #endif  // OF_WITH_XRT
   }
   CheckOpGraph(OpGraph(*job));
-  LOG(INFO) << ss.str() << " <End>";
+  LOG(INFO) << "<P>{CheckOpGraph}<END>";
+  LOG(INFO) << "<P>{Complete}<END>";
 }
 
 }  // namespace oneflow

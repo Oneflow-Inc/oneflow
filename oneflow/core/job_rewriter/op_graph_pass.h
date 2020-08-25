@@ -28,17 +28,26 @@ class OpGraphPass {
   virtual ~OpGraphPass() = default;
 
   Maybe<void> operator()(Job* job) const {
-    if (IsEnabled() == false) { return Maybe<void>::Ok(); }
-    return Apply(job);
+    if (IsEnabled() == false) {
+      LOG(INFO) << "<P>{FunctionPass}<END>";
+      return Maybe<void>::Ok();
+    }
+    auto ret = Apply(job);
+    LOG(INFO) << "<P>{FunctionPass}<END>";
+    return ret;
   }
   virtual bool IsEnabled() const { return true; }
   virtual Maybe<void> Apply(Job* job) const {
+    LOG(INFO) << "<P>{OpGraphInit}";
     OpGraph op_graph;
     JUST(op_graph.Init(*job));
+    LOG(INFO) << "<P>{OpGraphInit}<END>";
     return Apply(op_graph, job);
   }
   virtual Maybe<void> Apply(const OpGraph& op_graph, Job* job) const {
+    LOG(INFO) << "<P>{JobBuilderConstruct}";
     JobBuilder job_builder(job);
+    LOG(INFO) << "<P>{JobBuilderConstruct}<END>";
     return Apply(op_graph, &job_builder);
   }
   virtual Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {

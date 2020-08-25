@@ -30,6 +30,7 @@ class PruneParallelCastOpsPass final : public OpGraphPass {
 
 Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
                                             JobBuilder* job_builder) const {
+  LOG(INFO) << "<P>{PruneParallelCastOpsPassApply@node_num=" << op_graph.node_num() << "}";
   HashMap<std::string, OperatorConf> op_name2op_conf;
   HashMap<std::string, SbpSignature> op_name2sbp_signature;
   HashSet<std::string> ctrl_in_op_names;
@@ -38,6 +39,7 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
       ctrl_in_op_names.insert(ctrl_in_op_name);
     }
   });
+  LOG(INFO) << "<P>{MakeCtrlInOpNamesSet}<END>";
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_parallel_cast_conf()) { return; }
@@ -81,10 +83,14 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
     }
     job_builder->DelOps({op_conf});
   });
+  LOG(INFO) << "<P>{DelOps}<END>";
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
+  LOG(INFO) << "<P>{MutOpsOnlyOnce}<END>";
   for (const auto& pair : op_name2sbp_signature) {
     job_builder->AddSbpSignature4OpName(pair.first, pair.second);
   }
+  LOG(INFO) << "<P>{AddSbpSignature4OpName}<END>";
+  LOG(INFO) << "<P>{PruneParallelCastOpsPassApply}<END>";
   return Maybe<void>::Ok();
 }
 

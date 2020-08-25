@@ -290,8 +290,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_c
   Plan complete_plan;
   double start = GetCurTime();
   const std::string& job_name = job->job_conf().job_name();
-  LOG(INFO) << "<profile> {oneflow}.{CompileAndMergePlanOnMaster}.{CompileCurJobOnMaster#job_name:"
-            << job_name << "} <Begin>";
+  LOG(INFO) << "<P>{CompileCurJobOnMaster@" << job_name << "}";
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Compiler().Compile(job, &naive_plan, need_job_complete);
     LOG(INFO) << "job: " << job_name << ", compile time: " << GetCurTime() - start;
@@ -326,8 +325,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_c
     *improved_plan = complete_plan;
   }
   GenCollectiveBoxingPlan(job, improved_plan);
-  LOG(INFO) << "<profile> {oneflow}.{CompileAndMergePlanOnMaster}.{CompileCurJobOnMaster#job_name:"
-            << job_name << "} <End>";
+  LOG(INFO) << "<P>{CompileCurJobOnMaster}<END>";
   return Maybe<void>::Ok();
 }
 
@@ -890,7 +888,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
 REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defined function");
 
 Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
-  LOG(INFO) << "<profile> {oneflow}.{CompileAndMergePlanOnMaster} <Begin>";
+  LOG(INFO) << "<P>{}->{CompileAndMergePlanOnMaster}";
   std::vector<std::shared_ptr<Job>> jobs(conf_jobs.size());
   FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(conf_jobs.Get(i))); }
   if (jobs.size() > 1) { CheckNonDistributeOptimizerAvailable(jobs); }
@@ -969,7 +967,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     }
   }
   OF_BARRIER();
-  LOG(INFO) << "<profile> {oneflow}.{CompileAndMergePlanOnMaster} <End>";
+  LOG(INFO) << "<P>{}->{CompileAndMergePlanOnMaster}<END>";
   return Maybe<void>::Ok();
 }
 

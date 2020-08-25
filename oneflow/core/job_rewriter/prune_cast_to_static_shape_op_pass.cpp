@@ -32,6 +32,7 @@ class PruneCastToStaticShapeOpsPass final : public OpGraphPass {
 
 Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
                                                  JobBuilder* job_builder) const {
+  LOG(INFO) << "<P>{PruneCastToStaticShapeOpsPassApply@node_num=" << op_graph.node_num() << "}";
   HashMap<std::string, OperatorConf> op_name2op_conf;
   HashSet<std::string> ctrl_in_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
@@ -39,6 +40,7 @@ Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
       ctrl_in_op_names.insert(ctrl_in_op_name);
     }
   });
+  LOG(INFO) << "<P>{MakeCtrlInOpNamesSet}<END>";
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_cast_to_static_shape_conf()) { return; }
@@ -68,7 +70,10 @@ Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
     }
     job_builder->DelOps({op_conf});
   });
+  LOG(INFO) << "<P>{DelOps}<END>";
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
+  LOG(INFO) << "<P>{MutOpsOnlyOnce}<END>";
+  LOG(INFO) << "<P>{PruneCastToStaticShapeOpsPassApply}<END>";
   return Maybe<void>::Ok();
 }
 
