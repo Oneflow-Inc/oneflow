@@ -99,7 +99,7 @@ class ConstantWarmup(WarmupConf):
 
     .. math::
 
-        learning\_rate = base\_learning\_rate*Multiplier
+        learning\_rate = base\_learning\_rate*multiplier
 
     After the steps specified by user, the learning rate is: 
 
@@ -109,7 +109,7 @@ class ConstantWarmup(WarmupConf):
 
     Args:
         steps (int): [description]
-        multiplier (float): The scale factor :math:`Multiplier`, it should be greater than  0. and less than 1.
+        multiplier (float): The scale factor :math:`multiplier`, it should be greater than 0. and less than 1.
 
     For example: 
 
