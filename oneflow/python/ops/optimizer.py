@@ -250,8 +250,8 @@ class LinearCosineScheduler(LrScheduler):
         learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
         learning_rate_decay_conf.linear_cosine_conf.decay_batches = self.steps
         learning_rate_decay_conf.linear_cosine_conf.num_periods = self.num_periods
-        learning_rate_decay_conf.polynomial_conf.alpha = self.alpha
-        learning_rate_decay_conf.polynomial_conf.beta = self.beta
+        learning_rate_decay_conf.linear_cosine_conf.alpha = self.alpha
+        learning_rate_decay_conf.linear_cosine_conf.beta = self.beta
         return learning_rate_decay_conf
 
 
