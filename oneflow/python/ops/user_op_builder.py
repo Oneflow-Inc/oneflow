@@ -395,7 +395,11 @@ class UserOpModuleBuilder(UserOpConfBuilder):
         return self.user_op_
 
     def Op(self, op_type_name):
-        raise NotImplementedError
+        raise ValueError(
+            "user op module builder of {} can't call '.Op(op_type_name)' method".format(
+                op_type_name
+            )
+        )
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
