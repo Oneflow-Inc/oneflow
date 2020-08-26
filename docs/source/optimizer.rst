@@ -6,3 +6,6 @@ Optimizers
 .. automodule:: oneflow.optimizer
     :members:
     :imported-members:
+.. automodule:: oneflow.optimizer.warmup
+    :members:
+    :imported-members:
