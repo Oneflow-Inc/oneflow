@@ -16,8 +16,11 @@ limitations under the License.
 import os
 import hashlib
 import numpy as np
+from numpy import array
+from numpy.random import shuffle,get_state,set_state
 from tqdm import tqdm
 import requests
+
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -103,3 +106,48 @@ def load_mnist(
     test_images, test_labels = normalize(x_test, y_test, test_batch_size)
 
     return (train_images, train_labels), (test_images, test_labels)
+
+@oneflow_export("data.shuffle2")
+def shuffle2(data:array,label:array)->None:
+    """
+    Shuffle 2 inputs (usually data and label) in-place together.
+    Callers should ensure data.shape[0] equals label.shape[0].
+    Example:
+    >>> from numpy import array
+    >>> data=array([1,2,4,8,16,32,64,128,256,512,1024,2048,4096])
+    >>> backup_data=data+0 # create a copy
+    >>> label=-data
+    >>> assert (data !=-label).sum()==0
+    >>> 
+    >>> shuffle2(data,label)
+    >>> assert (data !=-label).sum()==0
+    >>> assert (data2!=-label).sum()!=0 # There is a small chance to failed
+    """
+    state=get_state()
+    shuffle(data)
+    set_state(state)
+    shuffle(label)
+
+@oneflow_export("data.batch_shuffle")
+def batch_shuffle(data:array,label:array)->None:
+    """
+    Shuffle the first 2 dimensions of batch-data and batch-label in-place together.
+    Callers should ensure the first 2 dimensions of data and labels are the same. 
+    Example:
+    >>> import oneflow as flow
+    >>> from numpy.random import random,randint
+    >>> (train_images, train_labels), _ = flow.data.load_mnist(100,100)
+    >>> assert (train_images.shape,train_labels.shape)==((600,100,1,28,28),(600,100))
+    >>> # to ensure we perform the right shuffle
+    >>> train_labels=1000+random(train_labels.shape).astype('float32')
+    >>> backup_labels=train_labels+0 # create a copy
+    >>> (a,b)=randint(0,28,2) # choose a random place to inject the train label
+    >>> train_images[:,:,0,a,b]=train_labels
+    >>> assert (train_images[:,:,0,a,b]!=train_labels).sum()==0
+    >>> 
+    >>> batch_shuffle(train_images, train_labels)
+    >>> assert (train_images[:,:,0,a,b]!=train_labels).sum()==0
+    >>> assert (train_images[:,:,0,a,b]!=backup_labels).sum()!=0 # There is a small chance to failed
+    """
+    shape=data.shape[0]*data.shape[1]
+    shuffle2(data.reshape(shape,-1),label.reshape(shape,-1))
