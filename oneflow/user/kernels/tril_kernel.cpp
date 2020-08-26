@@ -30,15 +30,15 @@ class CpuTrilKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto shape = x->shape();
     const int64_t diagonal = ctx->Attr<int64_t>("diagonal");
-    const int64_t m = shape.At(shape.NumAxes() - 2);
-    const int64_t n = shape.At(shape.NumAxes() - 1);
+    const int64_t row = shape.At(shape.NumAxes() - 2);
+    const int64_t col = shape.At(shape.NumAxes() - 1);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* y_dptr = y->mut_dptr<T>();
     const T* x_dptr = x->dptr<T>();
     T zero = GetZeroVal<T>();
     for (int64_t k = 0; k < shape.elem_cnt(); ++k) {
-      int64_t i = (k % (m * n)) / n;
-      int64_t j = (k % (m * n)) % n;
+      int64_t i = (k % (row * col)) / col;
+      int64_t j = (k % (row * col)) % col;
       y_dptr[k] = j > i + diagonal ? zero : x_dptr[k];
     }
   }
@@ -67,16 +67,16 @@ class CpuTrilGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const auto shape = dy->shape();
     const int64_t diagonal = ctx->Attr<int64_t>("diagonal");
-    const int64_t m = shape.At(shape.NumAxes() - 2);
-    const int64_t n = shape.At(shape.NumAxes() - 1);
+    const int64_t row = shape.At(shape.NumAxes() - 2);
+    const int64_t col = shape.At(shape.NumAxes() - 1);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    T* y_dptr = dx->mut_dptr<T>();
-    const T* x_dptr = dy->dptr<T>();
+    T* dx_dptr = dx->mut_dptr<T>();
+    const T* dy_dptr = dy->dptr<T>();
     T zero = GetZeroVal<T>();
     for (int64_t k = 0; k < shape.elem_cnt(); ++k) {
-      int64_t i = (k % (m * n)) / n;
-      int64_t j = (k % (m * n)) % n;
-      y_dptr[k] = j > i + diagonal ? zero : x_dptr[k];
+      int64_t i = (k % (row * col)) / col;
+      int64_t j = (k % (row * col)) % col;
+      dx_dptr[k] = j > i + diagonal ? zero : dy_dptr[k];
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
