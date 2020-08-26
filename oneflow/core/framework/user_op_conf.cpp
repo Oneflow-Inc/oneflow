@@ -71,13 +71,11 @@ const std::string& UserOpConfWrapper::output(const std::string& arg_name, int32_
 }
 
 bool UserOpConfWrapper::has_input(const std::string& arg_name, int32_t index) const {
-  auto it = op_conf_.user_conf().input().find(arg_name);
-  return (it != op_conf_.user_conf().input().end());
+  return input_size(arg_name) > index;
 }
 
 bool UserOpConfWrapper::has_output(const std::string& arg_name, int32_t index) const {
-  auto it = op_conf_.user_conf().output().find(arg_name);
-  return (it != op_conf_.user_conf().output().end());
+  return output_size(arg_name) > index;
 }
 
 int32_t UserOpConfWrapper::input_size(const std::string& arg_name) const {
