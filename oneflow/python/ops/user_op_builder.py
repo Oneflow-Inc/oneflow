@@ -133,12 +133,13 @@ def api_user_op_builder(op_name):
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpConfBuilder(job_name, op_name, LazyUserOp)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
+    return UserOpConfBuilder(LazyUserOp, op_name, None)
 
 
 class LazyUserOp(UserOp):
-    def __init__(self, op_name):
-        UserOp.__init__(self, op_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InferAndTryRun(self):
         compile_context.CurJobAddOp(self.op_conf_)
@@ -151,12 +152,13 @@ class LazyUserOp(UserOp):
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpConfBuilder(job_name, op_name, EagerUserOp)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
+    return UserOpConfBuilder(EagerUserOp, op_name, None)
 
 
 class EagerUserOp(UserOp):
-    def __init__(self, op_name):
-        UserOp.__init__(self, op_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InferAndTryRun(self):
         interpret_util.Forward(self.op_conf_)
@@ -176,8 +178,8 @@ def consistent_user_op_builder(op_name):
 
 
 class ConsistentUserOp(UserOp):
-    def __init__(self, op_name):
-        UserOp.__init__(self, op_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InferAndTryRun(self):
         interpret_util.ConsistentForward(self.op_conf_)
@@ -188,9 +190,8 @@ class ConsistentUserOp(UserOp):
 
 
 class UserOpConfBuilder(object):
-    def __init__(self, job_name, op_name, user_op_class):
-        name_scope_prefix = name_scope.GetJobNameScopePrefix(job_name)
-        self.user_op_ = user_op_class(name_scope_prefix + op_name)
+    def __init__(self, user_op_or_module_class, op_name, op_type_name):
+        self.user_op_ = user_op_or_module_class(op_name, op_type_name)
 
     def CheckAndComplete(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name != ""
@@ -201,7 +202,7 @@ class UserOpConfBuilder(object):
 
     def Build(self):
         r"""Build op when in/output and other attribute set up.
-        
+
         Returns:
             self
 
@@ -209,6 +210,9 @@ class UserOpConfBuilder(object):
         return self.CheckAndComplete().user_op_
 
     def OpName(self, op_name):
+        job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
+
         self.user_op_.op_conf_.name = op_name
         user_conf = self.user_op_.op_conf_.user_conf
 
@@ -390,22 +394,27 @@ class UserOpModuleBuilder(UserOpConfBuilder):
     def user_op_module(self):
         return self.user_op_
 
+    def Op(self, op_type_name):
+        raise NotImplementedError
+
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def lazy_user_op_module_builder(op_name):
+def lazy_user_op_module_builder(op_type_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpModuleBuilder(job_name, op_name, LazyUserOpModule)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
+    return UserOpModuleBuilder(LazyUserOpModule, op_name, op_type_name)
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
-def eager_logical_user_op_module_builder(op_name):
+def eager_logical_user_op_module_builder(op_type_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpModuleBuilder(job_name, op_name, EagerLogicalUserOpModule)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
+    return UserOpModuleBuilder(EagerLogicalUserOpModule, op_name, op_type_name)
 
 
 class LazyUserOpModule(UserOpModule, UserOp):
-    def __init__(self, op_type_name):
-        UserOp.__init__(self, op_type_name, op_type_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InitOpKernel(self):
         self.set_opkernel_object(None)
@@ -420,8 +429,8 @@ class LazyUserOpModule(UserOpModule, UserOp):
 
 
 class EagerLogicalUserOpModule(UserOpModule, UserOp):
-    def __init__(self, op_type_name):
-        UserOp.__init__(self, op_type_name, op_type_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InitOpKernel(self):
         def BuildInstruction(builder):
@@ -452,18 +461,20 @@ def api_consistent_user_op_module_builder(op_type_name):
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_consistent_user_op_module_builder(op_type_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpModuleBuilder(job_name, op_type_name, LazyConsistentUserOpModule)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
+    return UserOpModuleBuilder(LazyConsistentUserOpModule, op_name, op_type_name)
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_consistent_user_op_module_builder(op_type_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpModuleBuilder(job_name, op_type_name, EagerConsistentUserOpModule)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
+    return UserOpModuleBuilder(EagerConsistentUserOpModule, op_name, op_type_name)
 
 
 class LazyConsistentUserOpModule(UserOpModule, UserOp):
-    def __init__(self, op_type_name):
-        UserOp.__init__(self, op_type_name, op_type_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InitOpKernel(self):
         self.set_opkernel_object(None)
@@ -478,8 +489,8 @@ class LazyConsistentUserOpModule(UserOpModule, UserOp):
 
 
 class EagerConsistentUserOpModule(UserOpModule, UserOp):
-    def __init__(self, op_type_name):
-        UserOp.__init__(self, op_type_name, op_type_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InitOpKernel(self):
         def BuildInstruction(builder):
