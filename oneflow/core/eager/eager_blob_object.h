@@ -32,13 +32,13 @@ class EagerBlobObject : public BlobObject {
       : BlobObject(mem_case, data_type), blob_body_bytes_(0) {}
   virtual ~EagerBlobObject() override = default;
 
-  BlobDesc* mut_blob_desc() { return &blob_desc_; }
+  virtual BlobDesc* mut_blob_desc() override { return &blob_desc_; }
 
   virtual const Blob& blob() const override { return *blob_; }
   virtual Blob* mut_blob() override { return blob_.get(); }
-  Maybe<void> TryInitBlob();
+  virtual Maybe<void> TryInitBlob() override;
 
-  void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx);
+  virtual void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
 
  private:
   Maybe<void> InitBlob();

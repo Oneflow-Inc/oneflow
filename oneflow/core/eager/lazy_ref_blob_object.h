@@ -31,8 +31,16 @@ class LazyRefBlobObject : public BlobObject {
   }
   virtual ~LazyRefBlobObject() override = default;
 
+  virtual BlobDesc* mut_blob_desc() override { UNIMPLEMENTED(); }
+
   virtual const Blob& blob() const override { return *ref_blob_; }
   virtual Blob* mut_blob() override { return ref_blob_; }
+
+  virtual void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override{
+      // do nothing
+  };
+
+  virtual Maybe<void> TryInitBlob() override { return Maybe<void>::Ok(); }
 
  private:
   Blob* ref_blob_ = nullptr;

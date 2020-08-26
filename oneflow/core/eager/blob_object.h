@@ -35,9 +35,12 @@ class BlobObject : public vm::Object {
   virtual ~BlobObject() override = default;
 
   const BlobDesc& blob_desc() const { return blob_desc_; }
+  virtual BlobDesc* mut_blob_desc() = 0;
 
   virtual const Blob& blob() const = 0;
   virtual Blob* mut_blob() = 0;
+  virtual Maybe<void> TryInitBlob() = 0;
+  virtual void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) = 0;
 
   Maybe<void> CheckMemCase(const ParallelDesc& parallel_desc, int64_t machine_id) const;
 
