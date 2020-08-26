@@ -445,6 +445,8 @@ def erf(
 
     The equation is: 
 
+    ..math ::
+    
         out = \frac{2}{\sqrt{\pi}}*\int_{0}^{x}e^{-z^2}\mathrm{d}{z}
 
     Args:
@@ -640,6 +642,8 @@ def lgamma(
 
     The equation is: 
 
+    .. math:: 
+    
         out = \int_{0}^{\infty}t^{x-1}*e^{-t}\mathrm{d}{t}
 
     Args:

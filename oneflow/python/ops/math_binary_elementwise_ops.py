@@ -213,7 +213,7 @@ def xdivy(
 def xlogy(
     x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the result of :math:`x*log_e(y)`
+    """This operator computes the result of :math:`x*log(y)`
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
