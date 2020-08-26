@@ -174,7 +174,8 @@ in_physical_placement = hob.env_initialized & hob.is_current_placement_physical
 @oneflow_export("consistent_user_op_builder")
 def consistent_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpConfBuilder(job_name, op_name, ConsistentUserOp)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
+    return UserOpConfBuilder(ConsistentUserOp, op_name, None)
 
 
 class ConsistentUserOp(UserOp):
