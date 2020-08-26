@@ -1466,8 +1466,7 @@ class RandomMaskLike(module_util.Module):
             seed = random.randint(-sys.maxsize, sys.maxsize)
 
         self.op_module_builder = (
-            flow.user_op_module_builder(name)
-            .Op("random_mask_like")
+            flow.user_op_module_builder("random_mask_like")
             .InputSize("like", 1)
             .Output("out")
             .Attr("rate", float(rate))
