@@ -77,6 +77,7 @@ class ClipByGlobalNorm(ClipGradientConf):
             return loss
 
     """
+
     def __init__(self, clip_norm):
         self.clip_norm = clip_norm
 
@@ -138,6 +139,7 @@ class ConstantWarmup(WarmupConf):
             return loss
 
     """
+
     def __init__(self, steps, multiplier):
         self.steps = steps
         self.multiplier = multiplier
@@ -191,6 +193,7 @@ class LinearWarmup(WarmupConf):
             return loss
 
     """
+
     def __init__(self, steps, start_multiplier):
         self.steps = steps
         self.start_multiplier = start_multiplier
@@ -291,6 +294,7 @@ class CosineScheduler(LrScheduler):
             return loss
 
     """
+
     def __init__(
         self,
         base_lr: float,
@@ -366,6 +370,7 @@ class PiecewiseConstantScheduler(LrScheduler):
             return loss
 
     """
+
     def __init__(
         self,
         boundaries: Sequence[int],
@@ -436,6 +441,7 @@ class PiecewiseScalingScheduler(LrScheduler):
             return loss
 
     """
+
     def __init__(
         self,
         base_lr: float,
@@ -515,6 +521,7 @@ class PolynomialSchduler(LrScheduler):
                 return loss
 
     """
+
     def __init__(
         self,
         base_lr: float,
@@ -591,6 +598,7 @@ class LinearCosineScheduler(LrScheduler):
                 return loss
 
     """
+
     def __init__(
         self,
         base_lr: float,
@@ -669,6 +677,7 @@ class ExponentialScheduler(LrScheduler):
                 return loss
 
     """
+
     def __init__(
         self,
         base_lr: float,
@@ -744,6 +753,7 @@ class InverseTimeScheduler(LrScheduler):
                 return loss
 
     """
+
     def __init__(
         self,
         base_lr: float,
@@ -819,6 +829,7 @@ class NaturalExpScheduler(LrScheduler):
                 return loss
 
     """
+
     def __init__(
         self,
         base_lr: float,
@@ -1226,6 +1237,7 @@ class RMSProp(Optimizer):
             return loss
 
     """
+
     def __init__(
         self,
         lr_scheduler: LrScheduler,
@@ -1294,6 +1306,7 @@ class LARS(Optimizer):
             return loss
 
     """
+
     def __init__(
         self,
         lr_scheduler: LrScheduler,
@@ -1366,6 +1379,7 @@ class LazyAdam(Optimizer):
             return loss
 
     """
+
     def __init__(
         self,
         lr_scheduler: LrScheduler,
