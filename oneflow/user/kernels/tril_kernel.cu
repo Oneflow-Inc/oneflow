@@ -52,11 +52,10 @@ class GpuTrilKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_TRIL_KERNEL(dtype)                   \
-  REGISTER_USER_KERNEL("tril")                            \
-      .SetCreateFn<GpuTrilKernel<dtype>>()                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+#define REGISTER_GPU_TRIL_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("tril").SetCreateFn<GpuTrilKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == "gpu")                                            \
+      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_TRIL_KERNEL(float)
 REGISTER_GPU_TRIL_KERNEL(double)
@@ -84,7 +83,6 @@ class GpuTrilGradKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
 
 #define REGISTER_GPU_TRIL_GRAD_KERNEL(dtype)              \
   REGISTER_USER_KERNEL("tril_grad")                       \

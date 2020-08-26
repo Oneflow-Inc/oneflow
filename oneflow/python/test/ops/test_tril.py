@@ -25,7 +25,7 @@ from test_util import (
 import oneflow.typing as oft
 
 
-def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal = 0):
+def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal=0):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
@@ -34,9 +34,7 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal = 0):
     flow_type = type_name_to_flow_type[type_name]
 
     @flow.global_function(type="train", function_config=func_config)
-    def test_tril_fw_bw_job(
-        x: oft.Numpy.Placeholder(shape, dtype=flow.float),
-    ):
+    def test_tril_fw_bw_job(x: oft.Numpy.Placeholder(shape, dtype=flow.float),):
         with flow.scope.placement(device, "0:0"):
             x += flow.get_variable(
                 name="vx",
@@ -78,7 +76,7 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal = 0):
 def test_tril_fw_bw(test_case):
     arg_dict = OrderedDict()
     arg_dict["device"] = ["gpu", "cpu"]
-    arg_dict["shape"] = [(6, 6),(3, 6, 8), (3, 4, 8, 6), (5, 3, 4, 8, 6)]
+    arg_dict["shape"] = [(6, 6), (3, 6, 8), (3, 4, 8, 6), (5, 3, 4, 8, 6)]
     arg_dict["type_name"] = ["float32", "double", "int8", "int32", "int64"]
     arg_dict["diagonal"] = [0, 1, -1]
     for arg in GenArgDict(arg_dict):

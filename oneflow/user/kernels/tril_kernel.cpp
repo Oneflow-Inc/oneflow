@@ -37,20 +37,18 @@ class CpuTrilKernel final : public user_op::OpKernel {
     const T* x_dptr = x->dptr<T>();
     T zero = GetZeroVal<T>();
     for (int64_t k = 0; k < shape.elem_cnt(); ++k) {
-
-    int64_t i = (k % (m * n)) / n;
-    int64_t j = (k % (m * n)) % n;
-    y_dptr[k] = j > i + diagonal ? zero : x_dptr[k];
-  }
+      int64_t i = (k % (m * n)) / n;
+      int64_t j = (k % (m * n)) % n;
+      y_dptr[k] = j > i + diagonal ? zero : x_dptr[k];
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_TRIL_KERNEL(dtype)                   \
-  REGISTER_USER_KERNEL("tril")                            \
-      .SetCreateFn<CpuTrilKernel<dtype>>()                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+#define REGISTER_CPU_TRIL_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("tril").SetCreateFn<CpuTrilKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == "cpu")                                            \
+      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_TRIL_KERNEL(float)
 REGISTER_CPU_TRIL_KERNEL(double)
@@ -76,11 +74,10 @@ class CpuTrilGradKernel final : public user_op::OpKernel {
     const T* x_dptr = dy->dptr<T>();
     T zero = GetZeroVal<T>();
     for (int64_t k = 0; k < shape.elem_cnt(); ++k) {
-
-    int64_t i = (k % (m * n)) / n;
-    int64_t j = (k % (m * n)) % n;
-    y_dptr[k] = j > i + diagonal ? zero : x_dptr[k];
-  }
+      int64_t i = (k % (m * n)) / n;
+      int64_t j = (k % (m * n)) % n;
+      y_dptr[k] = j > i + diagonal ? zero : x_dptr[k];
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
