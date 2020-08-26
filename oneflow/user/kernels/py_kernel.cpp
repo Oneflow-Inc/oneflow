@@ -14,15 +14,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/cpp_py.h"
 #include "oneflow/core/framework/framework.h"
 
-extern "C" {
-#include <Python.h>
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#include <numpy/arrayobject.h>
+namespace oneflow {
+
+void TensorToNdarray(const user_op::Tensor* tensor, PyObject* arg) {}
+
+void NdarrayToTensor(PyObject* arg, user_op::Tensor* tensor) {}
+
+void MakePyInputs(user_op::KernelComputeContext* ctx, PyObject* py_input) {
+  size_t in_num = ctx->inputs().size();
+  py_input = PyList_New(in_num);
+
+  FOR_RANGE(size_t, i, 0, in_num) {
+    PyObject* arg = nullptr;
+    const std::string& arg_name = ctx->inputs().at(i).first;
+    int32_t index = 0;
+    TensorToNdarray(ctx->Tensor4ArgNameAndIndex(arg_name, index), arg);
+    PyList_SetItem(py_input, i, arg);
+  }
 }
 
-namespace oneflow {
+void GetPyOutputs(user_op::KernelComputeContext* ctx, PyObject* py_output) {
+  size_t out_num = ctx->outputs().size();
+  FOR_RANGE(size_t, i, 0, out_num) {}
+}
 
 template<typename T>
 class PyKernel : public user_op::OpKernel {
@@ -34,83 +51,43 @@ class PyKernel : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    // size_t in_num = ctx->inputs().size();
-
-    const T* in_dptrs = ctx->Tensor4ArgNameAndIndex("in", 0)->dptr<T>();
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t n = out->shape().elem_cnt();
-    T* out_dptr = out->mut_dptr<T>();
-
     if (!PyEval_ThreadsInitialized()) { PyEval_InitThreads(); }
-    PyGILState_STATE py_gil_st = PyGILState_Ensure();
+    PyGILState_STATE py_gil_st;
+    py_gil_st = PyGILState_Ensure();
     if (PyArray_API == nullptr) { _import_array(); }
 
     PyRun_SimpleString("print('hello')");
 
-    PyObject *p_name, *p_module, *p_func;
-    PyObject *p_args, *p_value;
+    PyObject *py_name, *py_module, *py_func;
+    PyObject *py_inputs, *py_outputs;
 
     // load python kernel
-    p_name = PyUnicode_DecodeFSDefault("pyk_sigmoid");
+    py_name = PyUnicode_DecodeFSDefault("pyk_sigmoid");
     // Error checking of pName left out
-    p_module = PyImport_Import(p_name);
-    Py_DECREF(p_name);
-    if (p_module == nullptr) { PyErr_Print(); }
+    py_module = PyImport_Import(py_name);
+    Py_DECREF(py_name);
+    if (py_module == nullptr) { PyErr_Print(); }
 
     // get forward func
-    p_func = PyObject_GetAttrString(p_module, "forward");
-    if (p_func == nullptr || !PyCallable_Check(p_func)) {
-      Py_DECREF(p_module);
+    py_func = PyObject_GetAttrString(py_module, "forward");
+    if (py_func == nullptr || !PyCallable_Check(py_func)) {
+      Py_DECREF(py_module);
       PyErr_Print();
     }
 
     // input
-    // int num_input = 1;
-    // p_args = PyTuple_New(num_input);
-    // for (int i = 0; i < num_input; ++i) {
-    //   p_value = PyLong_FromLong(1);
-    //   if (p_value == nullptr) {
-    //     Py_DECREF(p_args);
-    //     Py_DECREF(p_module);
-    //     CHECK(false) << "py_kernel cannot convert argument";
-    //   }
-    //   /* p_value reference stolen here: */
-    //   PyTuple_SetItem(p_args, i, p_value);
-    // }
-
-    // temp input to pass test
-    p_args = PyTuple_New(1);
-    size_t n_rows = n;
-    npy_intp dims[1] = {n_rows};
-    std::vector<float> input;
-    for (int i = 0; i < n; ++i) { input.push_back(in_dptrs[i]); }
-    PyObject* numpy_array = PyArray_SimpleNewFromData(1, dims, NPY_FLOAT, (void*)input.data());
-    PyTuple_SetItem(p_args, 0, numpy_array);
+    MakePyInputs(ctx, py_inputs);
 
     // call func
-    p_value = PyObject_CallObject(p_func, p_args);
-    Py_DECREF(p_args);
+    py_outputs = PyObject_CallObject(py_func, py_inputs);
+    Py_DECREF(py_inputs);
 
     // output
-    if (p_value != nullptr) {
-      PyArrayObject* np_value = reinterpret_cast<PyArrayObject*>(p_value);
-      int len = PyArray_SHAPE(np_value)[0];
-      if (len != n) {
-        Py_DECREF(p_value);
-        CHECK(false) << " input size not equal to input";
-      }
+    GetPyOutputs(ctx, py_outputs);
 
-      float* ptr_value = reinterpret_cast<float*>(PyArray_DATA(np_value));
-      for (int i = 0; i < n; ++i) { out_dptr[i] = ptr_value[i]; }
-      // deal with p_value
-      Py_DECREF(p_value);
-    } else {
-      Py_DECREF(p_func);
-      Py_DECREF(p_module);
-      PyErr_Print();
-    }
-    Py_XDECREF(p_func);
-    Py_DECREF(p_module);
+    Py_DECREF(py_outputs);
+    Py_XDECREF(py_func);
+    Py_DECREF(py_module);
 
     PyGILState_Release(py_gil_st);
   }
