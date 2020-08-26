@@ -21,7 +21,6 @@ from numpy.random import shuffle,get_state,set_state
 from tqdm import tqdm
 import requests
 
-
 from oneflow.python.oneflow_export import oneflow_export
 
 
