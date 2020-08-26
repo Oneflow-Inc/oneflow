@@ -1771,3 +1771,19 @@ def tanh_grad(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("math.tril", "nn.tril")
+def tril(
+    x: remote_blob_util.BlobDef, diagonal: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Tril_"))
+        .Op("tril")
+        .Input("in", [x])
+        .Attr("diagonal", diagonal)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
