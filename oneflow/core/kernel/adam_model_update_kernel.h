@@ -40,10 +40,8 @@ class AdamMdUpdateKernelUtil final {
  public:
   static void UpdateModel(DeviceCtx*, int64_t n, const float* learning_rate, T weight_decay,
                           T beta1, T beta2, T epsilon, bool do_bias_correction,
-                          const int64_t* train_step, const T* beta1_t, const T* beta2_t,
-                          const T* model_diff, T* model, T* m, T* v);
-  static void DoBiasCorrection(DeviceCtx*, const int64_t* train_step, T beta1, T beta2, T* beta1_t,
-                               T* beta2_t);
+                          const int64_t* train_step, T* beta1_t, T* beta2_t, const T* model_diff,
+                          T* model, T* m, T* v);
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(Adam);
