@@ -41,7 +41,7 @@ def dense(
     name: str = "Dense",
     model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
 ) -> remote_blob_util.BlobDef:
-    r"""Analogous to `tf.keras.layers.Dense <https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense>`_
+    r"""The fully-connected layer
 
     Args:
         inputs (remote_blob_util.BlobDef): A 2D input `Blob`.
@@ -76,16 +76,15 @@ def dense(
         @flow.global_function()
         def dense_Job(x: tp.Numpy.Placeholder((1, 256))
         ) -> tp.Numpy:
-            with flow.scope.placement("gpu", "0:0"):
-                initializer = flow.truncated_normal(0.1)
-                hidden = flow.layers.dense(
-                    x,
-                    512,
-                    activation=flow.nn.relu,
-                    kernel_initializer=initializer,
-                    name="dense1",
-                )
-                return hidden
+            initializer = flow.truncated_normal(0.1)
+            hidden = flow.layers.dense(
+                x,
+                512,
+                activation=flow.nn.relu,
+                kernel_initializer=initializer,
+                name="dense1",
+            )
+            return hidden
 
 
         x = np.random.randn(1, 256).astype(np.float32)
@@ -224,18 +223,18 @@ def conv1d(
         @flow.global_function()
         def conv1d_Job(x: tp.Numpy.Placeholder((1, 64, 32))
         ) -> tp.Numpy:
-            with flow.scope.placement("gpu", "0:0"):
-                initializer = flow.truncated_normal(0.1)
-                conv1d = flow.layers.conv1d(
-                    x,
-                    filters=128,
-                    kernel_size=3,
-                    strides=1,
-                    padding='SAME',
-                    kernel_initializer=initializer,
-                    name="Conv1d"
-                )
-                return conv1d
+            initializer = flow.truncated_normal(0.1)
+            conv1d = flow.layers.conv1d(
+                x,
+                filters=128,
+                kernel_size=3,
+                strides=1,
+                padding='SAME',
+                kernel_initializer=initializer,
+                name="Conv1d"
+            )
+            return conv1d
+
 
 
         x = np.random.randn(1, 64, 32).astype(np.float32)
@@ -419,18 +418,17 @@ def conv2d(
         @flow.global_function()
         def conv2d_Job(x: tp.Numpy.Placeholder((1, 256, 32, 32))
         ) -> tp.Numpy:
-            with flow.scope.placement("gpu", "0:0"):
-                initializer = flow.truncated_normal(0.1)
-                conv2d = flow.layers.conv2d(
-                    x,
-                    filters=128,
-                    kernel_size=3,
-                    strides=1,
-                    padding='SAME',
-                    kernel_initializer=initializer,
-                    name="Conv2d"
-                )
-                return conv2d
+            initializer = flow.truncated_normal(0.1)
+            conv2d = flow.layers.conv2d(
+                x,
+                filters=128,
+                kernel_size=3,
+                strides=1,
+                padding='SAME',
+                kernel_initializer=initializer,
+                name="Conv2d"
+            )
+            return conv2d
 
 
         x = np.random.randn(1, 256, 32, 32).astype(np.float32)
@@ -615,18 +613,17 @@ def conv3d(
         @flow.global_function()
         def conv3d_Job(x: tp.Numpy.Placeholder((1, 64, 16, 16, 16))
         ) -> tp.Numpy:
-            with flow.scope.placement("gpu", "0:0"):
-                initializer = flow.truncated_normal(0.1)
-                conv3d = flow.layers.conv3d(
-                    x,
-                    filters=128,
-                    kernel_size=3,
-                    strides=1,
-                    padding='SAME',
-                    kernel_initializer=initializer,
-                    name="Conv3d"
-                )
-                return conv3d
+            initializer = flow.truncated_normal(0.1)
+            conv3d = flow.layers.conv3d(
+                x,
+                filters=128,
+                kernel_size=3,
+                strides=1,
+                padding='SAME',
+                kernel_initializer=initializer,
+                name="Conv3d"
+            )
+            return conv3d
 
         # output.shape (1, 128, 16, 16, 16)
 
@@ -758,7 +755,7 @@ def layer_norm(
     epsilon: float = 1e-5,
     name: str = "LayerNorm",
 ) -> remote_blob_util.BlobDef:
-    r"""Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
+    r"""The Layer Normalization
 
     Args:
         inputs (remote_blob_util.BlobDef): Input `Blob`.
@@ -776,7 +773,7 @@ def layer_norm(
     For example: 
 
     .. code-block:: python 
-    
+
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
@@ -785,12 +782,11 @@ def layer_norm(
         @flow.global_function()
         def layer_norm_Job(x: tp.Numpy.Placeholder((1, 64, 128, 128))
         ) -> tp.Numpy:
-            with flow.scope.placement("gpu", "0:0"):
-                layer_norm = flow.layers.layer_norm(
-                    x,
-                    name="LayerNorm1"
-                )
-                return layer_norm
+            layer_norm = flow.layers.layer_norm(
+                x,
+                name="LayerNorm1"
+            )
+            return layer_norm
 
 
         x = np.random.randn(1, 64, 128, 128).astype(np.float32)
@@ -992,7 +988,7 @@ def batch_normalization(
     training: bool = True,
     name: str = "BatchNorm",
 ) -> remote_blob_util.BlobDef:
-    r"""Analogous to `tf.keras.layers.BatchNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization>`_
+    r"""The BatchNormalization Layer
 
     Args:
         inputs (remote_blob_util.BlobDef): Input `Blob`.
@@ -1029,22 +1025,21 @@ def batch_normalization(
         @flow.global_function()
         def batch_norm_Job(x: tp.Numpy.Placeholder((1, 64, 128, 128))
         ) -> tp.Numpy:
-            with flow.scope.placement("gpu", "0:0"):
-                initializer = flow.truncated_normal(0.1)
-                conv2d = flow.layers.conv2d(
-                    x,
-                    filters=128,
-                    kernel_size=3,
-                    strides=2,
-                    padding='SAME',
-                    kernel_initializer=initializer,
-                    name="Conv2d"
-                )
-                batch_norm = flow.layers.batch_normalization(
-                    conv2d,
-                    axis=1
-                )
-                return batch_norm
+            initializer = flow.truncated_normal(0.1)
+            conv2d = flow.layers.conv2d(
+                x,
+                filters=128,
+                kernel_size=3,
+                strides=2,
+                padding='SAME',
+                kernel_initializer=initializer,
+                name="Conv2d"
+            )
+            batch_norm = flow.layers.batch_normalization(
+                conv2d,
+                axis=1
+            )
+            return batch_norm
 
 
         x = np.random.randn(1, 64, 128, 128).astype(np.float32)
@@ -1184,7 +1179,7 @@ def upsample(
     interpolation: str = "nearest",
     name: str = "Upsample2D",
 ):
-    r"""Upsample Operation
+    r"""The Upsample Layer
 
     Args:
         x ([type]): Input `Blob`.
@@ -1212,14 +1207,13 @@ def upsample(
 
         @flow.global_function()
         def upsample_Job(x: tp.Numpy.Placeholder((1, 32, 32, 32))
-                        ) -> tp.Numpy:
-            with flow.scope.placement("gpu", "0:0"):
-                upsample = flow.layers.upsample_2d(
-                    x,
-                    size=(2, 2),
-                    name="Upsample1"
-                )
-                return upsample
+        ) -> tp.Numpy:
+            upsample = flow.layers.upsample_2d(
+                x,
+                size=(2, 2),
+                name="Upsample1"
+            )
+            return upsample
 
 
         x = np.random.randn(1, 32, 32, 32).astype(np.float32)
