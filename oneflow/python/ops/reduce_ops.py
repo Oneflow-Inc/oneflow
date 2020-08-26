@@ -503,7 +503,7 @@ def reduce_std(
     The equation is: 
 
     .. math:: 
-    
+
         out=\sqrt{\frac{1}{n}*\sum_{i=1}^{n}(x_i-mean)^2}
     
     Args:
@@ -517,6 +517,8 @@ def reduce_std(
 
     For example: 
 
+    .. code-block:: python 
+    
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
@@ -575,6 +577,8 @@ def reduce_variance(
         remote_blob_util.BlobDef: The result of variance on the specified axis of input Blob
     
     For example: 
+
+    .. code-block:: python 
 
         import oneflow as flow
         import numpy as np
