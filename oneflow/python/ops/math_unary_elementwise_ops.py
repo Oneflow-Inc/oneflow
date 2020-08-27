@@ -46,7 +46,7 @@ def build_unary_elemwise_math_op(math_op, x, name=None):
 def abs(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator returns the absolute value of Blob
+    r"""This operator returns the absolute value of Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -82,7 +82,7 @@ def abs(
 def acos(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the acos value of Blob
+    r"""This operator computes the acos value of Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -120,7 +120,7 @@ def acos(
 def acosh(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the inverse hyperbolic cosine value of Blob
+    r"""This operator computes the inverse hyperbolic cosine value of Blob.
 
     The equation is: 
 
@@ -163,7 +163,7 @@ def acosh(
 def asin(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the arcsin value of Blob
+    r"""This operator computes the arcsin value of Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -202,7 +202,7 @@ def asin(
 def asinh(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the inverse hyperbolic sine value of Blob
+    r"""This operator computes the inverse hyperbolic sine value of Blob.
 
     The equation is: 
 
@@ -245,7 +245,7 @@ def asinh(
 def atan(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the arctan value of Blob
+    r"""This operator computes the arctan value of Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -282,7 +282,7 @@ def atan(
 def atanh(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the inverse hyperbolic tangent value of Blob
+    r"""This operator computes the inverse hyperbolic tangent value of Blob.
 
     The equation is: 
 
@@ -325,7 +325,7 @@ def atanh(
 def ceil(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the ceiling value of Blob
+    """This operator computes the ceiling value of Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -362,7 +362,7 @@ def ceil(
 def cos(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the cosine value of Blob
+    """This operator computes the cosine value of Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -398,7 +398,7 @@ def cos(
 def cosh(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes hyperbolic cosine value of Blob
+    r"""This operator computes hyperbolic cosine value of Blob.
 
     The equation is: 
 
@@ -441,7 +441,7 @@ def cosh(
 def erf(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the Gauss error value of Blob
+    r"""This operator computes the Gauss error value of Blob.
 
     The equation is: 
 
@@ -484,8 +484,8 @@ def erf(
 def erfc(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the :math:`1-erf(x)`, the more details of `erf` function 
-    please refer to `math.erf`
+    """This operator computes the :math:`1-erf(x)`, for more details of `erf` function 
+    please refer to `math.erf`.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -522,7 +522,7 @@ def erfc(
 def exp(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the exponential of Blob
+    """This operator computes the exponential of Blob.
 
     The equation is: 
 
@@ -564,7 +564,7 @@ def exp(
 def expm1(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes :math:`y=e^x-1`
+    """This operator computes :math:`y=e^x-1`.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -601,7 +601,7 @@ def expm1(
 def floor(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the largest integer not greater than input Blob
+    """This operator computes the largest integer not greater than input Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -638,7 +638,7 @@ def floor(
 def lgamma(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the :math:`Gamma(x)` value
+    r"""This operator computes the :math:`Gamma(x)` value.
 
     The equation is: 
 
@@ -680,7 +680,7 @@ def lgamma(
 def log(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the log value of input Blob
+    """This operator computes the log value of input Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -717,7 +717,7 @@ def log(
 def log1p(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the :math:`log(x)+1` value of input Blob
+    """This operator computes the :math:`log(x)+1` value of input Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -754,7 +754,7 @@ def log1p(
 def log_sigmoid(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the log sigmoid value of input Blob
+    r"""This operator computes the log sigmoid value of input Blob.
 
     The equation is: 
 
@@ -797,7 +797,7 @@ def log_sigmoid(
 def negative(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the negative value of Blob
+    """This operator computes the negative value of Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -834,7 +834,7 @@ def negative(
 def reciprocal(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the reciprocal of x
+    r"""This operator computes the reciprocal of x.
 
     The equation is: 
 
@@ -878,7 +878,7 @@ def reciprocal_no_nan(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     """This operator computes the safe reciprocal of x. If x is zero, the reciprocal will 
-    be also set to zero
+    be also set to zero.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -915,7 +915,7 @@ def reciprocal_no_nan(
 def rint(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operators computes the closest integer to Blob
+    """This operator computes the closest integer to Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -1073,7 +1073,7 @@ def sigmoid_v2(
 def sign(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the sign of Blob
+    """This operator computes the sign of Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -1110,7 +1110,7 @@ def sign(
 def sin(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the sin value of Blob
+    """This operator computes the sin value of Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -1147,7 +1147,7 @@ def sin(
 def sinh(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the hyperbolic sine value of Blob
+    r"""This operator computes the hyperbolic sine value of Blob.
 
     The equation is: 
 
@@ -1190,7 +1190,7 @@ def sinh(
 def softplus(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computesthe softplus value of Blob
+    """This operator computes the softplus value of Blob.
 
     The equation is: 
 
@@ -1233,7 +1233,7 @@ def softplus(
 def sqrt(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the sqrt root value of Blob
+    """This operator computes the sqrt root value of Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -1270,7 +1270,7 @@ def sqrt(
 def square(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the square value of Blob
+    """This operator computes the square value of Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -1307,7 +1307,7 @@ def square(
 def tan(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the tan value of Blob
+    """This operator computes the tan value of Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -1344,7 +1344,7 @@ def tan(
 def tanh_v2(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the hyperbolic tangent value of Blob
+    r"""This operator computes the hyperbolic tangent value of Blob.
 
     The equation is: 
 

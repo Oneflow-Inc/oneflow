@@ -41,7 +41,9 @@ def dense(
     name: str = "Dense",
     model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
 ) -> remote_blob_util.BlobDef:
-    r"""The fully-connected layer
+    r"""Fully-connected layer. 
+    
+    The fully-connected layer multiplies input Blob with weight matrix and produces an Output Blob. 
 
     Args:
         inputs (remote_blob_util.BlobDef): A 2D input `Blob`.
@@ -178,7 +180,9 @@ def conv1d(
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""1D convolution layer.
+    r"""1D convolution layer. 
+    
+    This layer computes a 1-D convolution with 3D input Blob and filters. 
 
     Args:
         inputs (remote_blob_util.BlobDef): A 3D input `Blob`.
@@ -234,7 +238,6 @@ def conv1d(
                 name="Conv1d"
             )
             return conv1d
-
 
 
         x = np.random.randn(1, 64, 32).astype(np.float32)
@@ -371,7 +374,9 @@ def conv2d(
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""2D convolution layer.
+    r"""2D convolution layer. 
+    
+    This layer computes a 2D convolution with 4D input Blob and filters. 
 
     Args:
         inputs (remote_blob_util.BlobDef): A 4D input `Blob`.
@@ -566,7 +571,9 @@ def conv3d(
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""3D convolution layer.
+    r"""3D convolution layer. 
+    
+    This layer computes 3D convolution with 5D input Blob and filters
 
     Args:
         inputs (remote_blob_util.BlobDef): A 5D input `Blob`.
@@ -755,7 +762,7 @@ def layer_norm(
     epsilon: float = 1e-5,
     name: str = "LayerNorm",
 ) -> remote_blob_util.BlobDef:
-    r"""The Layer Normalization
+    r"""Layer Normalization. 
 
     Args:
         inputs (remote_blob_util.BlobDef): Input `Blob`.
@@ -988,7 +995,11 @@ def batch_normalization(
     training: bool = True,
     name: str = "BatchNorm",
 ) -> remote_blob_util.BlobDef:
-    r"""The BatchNormalization Layer
+    r"""The BatchNormalization Layer. 
+    
+    This layer can be used in conv or dense layer.
+    
+    The input data will be normalized by the mean and variance of the current batch data
 
     Args:
         inputs (remote_blob_util.BlobDef): Input `Blob`.
@@ -1179,7 +1190,7 @@ def upsample(
     interpolation: str = "nearest",
     name: str = "Upsample2D",
 ):
-    r"""The Upsample Layer
+    r"""The Upsample Layer, this layer can upsample the feature map to a specified scale. 
 
     Args:
         x ([type]): Input `Blob`.
