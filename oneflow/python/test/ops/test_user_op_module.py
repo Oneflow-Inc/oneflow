@@ -73,13 +73,19 @@ def _make_global_func(test_case, x_shape, y_shape):
     ) -> oft.Numpy:
         with flow.scope.namespace("AddJob"):
             add_op = flow.find_or_create_module("Add", Add)
-            result = add_op(x, y)
+            z = add_op(x, y)
+            # print(z.logical_blob_name)
+            test_case.assertTrue(
+                z.op_name == "AddJob-Add_{}".format(add_op.call_seq_no - 1)
+            )
 
-        # print(result.logical_blob_name)
-        test_case.assertTrue(
-            result.op_name == "AddJob-Add_{}".format(add_op.call_seq_no - 1)
-        )
-        return result
+            v = add_op(z, x)
+            # print(v.logical_blob_name)
+            test_case.assertTrue(
+                v.op_name == "AddJob-Add_{}".format(add_op.call_seq_no - 1)
+            )
+
+        return z
 
     return AddJob
 
