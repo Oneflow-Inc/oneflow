@@ -32,7 +32,6 @@ REGISTER_USER_OP("tril")
       CHECK_GE_OR_RETURN(diagonal,
                          -1 * std::min(in->shape().At(num_axes - 1), in->shape().At(num_axes - 2)));
       *out = *in;
-      if (in->is_dynamic()) { *out->mut_is_dynamic() = true; }
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -41,7 +40,7 @@ REGISTER_USER_OP("tril")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, i, 0, in.shape().NumAxes()) {
+      FOR_RANGE(int64_t, i, 0, in.shape().NumAxes() - 2) {
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
       ctx->NewBuilder()
@@ -66,7 +65,6 @@ REGISTER_USER_OP("tril_grad")
       CHECK_GE_OR_RETURN(diagonal,
                          -1 * std::min(dy->shape().At(num_axes - 1), dy->shape().At(num_axes - 2)));
       *dx = *dy;
-      if (dy->is_dynamic()) { *dx->mut_is_dynamic() = true; }
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -75,7 +73,7 @@ REGISTER_USER_OP("tril_grad")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& dy = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-      FOR_RANGE(int64_t, i, 0, dy.shape().NumAxes()) {
+      FOR_RANGE(int64_t, i, 0, dy.shape().NumAxes() - 2) {
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
       ctx->NewBuilder()

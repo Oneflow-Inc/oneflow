@@ -22,9 +22,12 @@ namespace {
 template<typename T>
 __global__ void TrilCalGpu(const int64_t elem_cnt, const int64_t row, const int64_t col,
                            const int64_t diagonal, const T* x, T* y) {
+  T zero = GetZeroVal<T>();
+  int64_t matrix_cnt = row * col;
   CUDA_1D_KERNEL_LOOP_T(int64_t, k, elem_cnt) {
-    int64_t i = (k % (row * col)) / col;
-    int64_t j = (k % (row * col)) % col;
+    int64_t index_in_matrix = k - matrix_cnt * (k / matrix_cnt);
+    int64_t i = index_in_matrix / col;
+    int64_t j = index_in_matrix - col * (index_in_matrix / col);
     y[k] = j > i + diagonal ? 0 : x[k];
   }
 }

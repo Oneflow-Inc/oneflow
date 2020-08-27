@@ -36,9 +36,11 @@ class CpuTrilKernel final : public user_op::OpKernel {
     T* y_dptr = y->mut_dptr<T>();
     const T* x_dptr = x->dptr<T>();
     T zero = GetZeroVal<T>();
+    int64_t matrix_cnt = row * col;
     for (int64_t k = 0; k < shape.elem_cnt(); ++k) {
-      int64_t i = (k % (row * col)) / col;
-      int64_t j = (k % (row * col)) % col;
+      int64_t index_in_matrix = k - matrix_cnt * (k / matrix_cnt);
+      int64_t i = index_in_matrix / col;
+      int64_t j = index_in_matrix - col * (index_in_matrix / col);
       y_dptr[k] = j > i + diagonal ? zero : x_dptr[k];
     }
   }
@@ -73,9 +75,11 @@ class CpuTrilGradKernel final : public user_op::OpKernel {
     T* dx_dptr = dx->mut_dptr<T>();
     const T* dy_dptr = dy->dptr<T>();
     T zero = GetZeroVal<T>();
+    int64_t matrix_cnt = row * col;
     for (int64_t k = 0; k < shape.elem_cnt(); ++k) {
-      int64_t i = (k % (row * col)) / col;
-      int64_t j = (k % (row * col)) % col;
+      int64_t index_in_matrix = k - matrix_cnt * (k / matrix_cnt);
+      int64_t i = index_in_matrix / col;
+      int64_t j = index_in_matrix - col * (index_in_matrix / col);
       dx_dptr[k] = j > i + diagonal ? zero : dy_dptr[k];
     }
   }
