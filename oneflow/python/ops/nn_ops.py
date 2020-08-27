@@ -203,7 +203,7 @@ def conv1d(
     groups: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Analogous to `tf.nn.conv1d <https://www.tensorflow.org/api_docs/python/tf/nn/conv1d>`_
+    r"""1D convolution layer.
 
     Args:
         input (remote_blob_util.BlobDef): A 3D input `Blob`. [batch_num, channel, width]
@@ -226,6 +226,54 @@ def conv1d(
 
     Returns:
         remote_blob_util.BlobDef: A `Blob` with the same type as `input` and the same outer batch shape.
+    
+    Note: 
+
+        This api is more flexible, if you're new to OneFlow, it's more recommend to use `oneflow.layers.conv1d`
+
+    For example: 
+
+    .. code-block:: python 
+    
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        def conv1d(input, filters, kernel_size, strides, padding, name):
+            input_shape = input.shape
+            weight_initializer = flow.truncated_normal(0.1)
+            weight_regularizer = flow.regularizers.l2(0.0005)
+            weight_shape = (filters,
+                            input_shape[1],
+                            kernel_size)
+
+            weight = flow.get_variable(
+                name + "-weight",
+                shape=weight_shape,
+                initializer=weight_initializer,
+                regularizer=weight_regularizer,
+            )
+            return flow.nn.conv1d(input, weight, strides, padding, name=name)
+
+
+        @flow.global_function()
+        def conv1d_Job(x: tp.Numpy.Placeholder((1, 64, 32))
+        ) -> tp.Numpy:
+            conv = conv1d(x,
+                        filters=32,
+                        kernel_size=3,
+                        strides=1,
+                        padding='SAME',
+                        name="Convlayer")
+            return conv
+
+
+        x = np.random.randn(1, 64, 32).astype(np.float32)
+        out = conv1d_Job(x)
+
+        # output.shape (1, 32, 32)
+
     """
     assert len(input.shape) == 3
     assert len(filters.shape) == 3
@@ -327,7 +375,7 @@ def conv2d(
     groups: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Analogous to `tf.nn.conv2d <https://www.tensorflow.org/api_docs/python/tf/nn/conv2d>`_
+    r"""2D convolution layer.
 
     Args:
         input (remote_blob_util.BlobDef): A 4D input `Blob`. [batch_num, channel, height, width]
@@ -350,6 +398,55 @@ def conv2d(
 
     Returns:
         remote_blob_util.BlobDef: A `Blob` with the same type as `input` and the same outer batch shape.
+    
+    Note: 
+
+        This api is more flexible, if you're new to OneFlow, it's more recommend to use `oneflow.layers.conv2d`. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        def conv2d(input, filters, kernel_size, strides, padding, name):
+            input_shape = input.shape
+            weight_initializer = flow.truncated_normal(0.1)
+            weight_regularizer = flow.regularizers.l2(0.0005)
+            weight_shape = (filters,
+                            input_shape[1],
+                            kernel_size[0],
+                            kernel_size[1])
+
+            weight = flow.get_variable(
+                name + "-weight",
+                shape=weight_shape,
+                initializer=weight_initializer,
+                regularizer=weight_regularizer,
+            )
+            return flow.nn.conv2d(input, weight, strides, padding, name=name)
+
+
+        @flow.global_function()
+        def conv2d_Job(x: tp.Numpy.Placeholder((1, 64, 32, 32))
+        ) -> tp.Numpy:
+            conv = conv2d(x,
+                        filters=128,
+                        kernel_size=[3, 3],
+                        strides=2,
+                        padding='SAME',
+                        name="Convlayer")
+            return conv
+
+
+        x = np.random.randn(1, 64, 32, 32).astype(np.float32)
+        out = conv2d_Job(x)
+
+        # output.shape (1, 128, 16, 16)
+
     """
     assert len(input.shape) == 4
     assert len(filters.shape) == 4
@@ -494,7 +591,7 @@ def conv3d(
     groups: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Analogous to `tf.nn.conv3d <https://www.tensorflow.org/api_docs/python/tf/nn/conv3d>`_
+    r"""3D convolution layer.
 
     Args:
         input (remote_blob_util.BlobDef):  A 5D input `Blob`. [batch_num, channel, depth, height, width]
@@ -517,6 +614,56 @@ def conv3d(
 
     Returns:
         remote_blob_util.BlobDef: A `Blob` with the same type as `input` and the same outer batch shape.
+    
+    Note: 
+
+        This api is more flexible, if you're new to OneFlow, it's more recommend to use `oneflow.layers.conv3d`
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        def conv3d(input, filters, kernel_size, strides, padding, name):
+            input_shape = input.shape
+            weight_initializer = flow.truncated_normal(0.1)
+            weight_regularizer = flow.regularizers.l2(0.0005)
+            weight_shape = (filters,
+                            input_shape[1],
+                            kernel_size[0],
+                            kernel_size[1],
+                            kernel_size[2])
+
+            weight = flow.get_variable(
+                name + "-weight",
+                shape=weight_shape,
+                initializer=weight_initializer,
+                regularizer=weight_regularizer,
+            )
+            return flow.nn.conv3d(input, weight, strides, padding, name=name)
+
+
+        @flow.global_function()
+        def conv3d_Job(x: tp.Numpy.Placeholder((1, 64, 10, 16, 16))
+        ) -> tp.Numpy:
+            conv = conv3d(x,
+                        filters=128,
+                        kernel_size=[3, 3, 3],
+                        strides=1,
+                        padding='SAME',
+                        name="Convlayer")
+            return conv
+
+
+        x = np.random.randn(1, 64, 10, 16, 16).astype(np.float32)
+        out = conv3d_Job(x)
+
+        # output.shape (1, 128, 10, 16, 16)
+
     """
 
     need_transpose = 0
@@ -611,8 +758,7 @@ def moments(
     keepdims: Optional[bool] = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """Analogous to `tf.nn.moments <https://www.tensorflow.org/api_docs/python/tf/nn
-    /moments>`_
+    """This operator computes the mean and variance value of input Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -622,6 +768,29 @@ def moments(
 
     Returns:
         remote_blob: Two Blobs, mean and variance. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+        from typing import Tuple
+
+
+        @flow.global_function()
+        def moments_Job(x: tp.Numpy.Placeholder((5,))
+        ) -> Tuple[tp.Numpy, tp.Numpy]:
+            return flow.nn.moments(x, axes=[0])
+
+
+        x = np.array([1, 2, 3, 4, 5]).astype(np.float32)
+        mean, variance = moments_Job(x)
+
+        # mean: [3.]
+        # variance: [2.]
+
     """
     assert isinstance(axes, list)
     if name is None:
@@ -659,6 +828,38 @@ def batch_normalization(
 
     Returns:
         remote_blob_util.BlobDef:  the normalized, scaled, offset `Blob`.
+    
+    Note: 
+    
+        This api is more flexible, if you're new to OneFlow, it's more recommend to use `oneflow.layers.batch_normalization`
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def batch_norm_Job(x: tp.Numpy.Placeholder((1, 5))
+        ) -> tp.Numpy:
+            bn_mean, bn_variance = flow.nn.moments(x, axes=[1])
+            batch_norm = flow.nn.batch_normalization(
+                x,
+                mean=bn_mean,
+                variance=bn_variance,
+                axis=0
+            )
+            return batch_norm
+
+
+        x = np.array([[1, 2, 3, 4, 5]]).astype(np.float32)
+        out = batch_norm_Job(x)
+
+        # output [[-1.41421  -0.707105  0.        0.707105  1.41421 ]]
+
     """
 
     assert axis >= -len(x.shape) and axis < len(x.shape)
@@ -759,6 +960,51 @@ def tf_conv2d(
 
     Returns:
         remote_blob_util.BlobDef:  A `Blob` with the same type as `input` and the same outer batch shape.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        def conv2d(input, filters, kernel_size, strides, padding, name):
+            input_shape = input.shape
+            weight_initializer = flow.truncated_normal(0.1)
+            weight_regularizer = flow.regularizers.l2(0.0005)
+            weight_shape = (filters,
+                            input_shape[1],
+                            kernel_size[0],
+                            kernel_size[1])
+
+            weight = flow.get_variable(
+                name + "-weight",
+                shape=weight_shape,
+                initializer=weight_initializer,
+                regularizer=weight_regularizer,
+            )
+            return flow.nn.compat_conv2d(input, weight, strides, padding, name=name)
+
+
+        @flow.global_function()
+        def conv2d_Job(x: tp.Numpy.Placeholder((1, 64, 32, 32))
+        ) -> tp.Numpy:
+            conv = conv2d(x,
+                        filters=128,
+                        kernel_size=[3, 3],
+                        strides=2,
+                        padding='SAME',
+                        name="Convlayer")
+            return conv
+
+
+        x = np.random.randn(1, 64, 32, 32).astype(np.float32)
+        out = conv2d_Job(x)
+
+        # output.shape (1, 128, 16, 16)
+
     """
     if padding.upper() == "SAME":
         padding = "SAME_UPPER"
@@ -774,7 +1020,7 @@ def bias_add(
     data_format: Optional[str] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Analogous to `tf.nn.bias_add <https://www.tensorflow.org/api_docs/python/tf/nn/bias_add>`_
+    r"""This operator adds a bias to Blob 
 
     Args:
         value (remote_blob_util.BlobDef):  A `Blob`.
@@ -787,6 +1033,36 @@ def bias_add(
 
     Returns:
         remote_blob_util.BlobDef: A `Blob` with the same type as value.
+    
+    For example: 
+
+    .. code-block:: python 
+    
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def bias_add_Job(x: tp.Numpy.Placeholder((1, 64, 128, 128))
+        ) -> tp.Numpy:
+            bias_initializer = flow.truncated_normal(0.1)
+            bias_regularizer = flow.regularizers.l2(0.0005)
+            bias = flow.get_variable(
+                    "Add_bias",
+                    shape=(64,),
+                    initializer=bias_initializer,
+                    regularizer=bias_regularizer,
+                )
+            bias_out = flow.nn.bias_add(x, bias)
+            return bias_out
+
+
+        x = np.random.randn(1, 64, 128, 128).astype(np.float32)
+        out = bias_add_Job(x)
+
+        # output.shape (1, 64, 128, 128)
+
     """
     # TODO: name unused, fix it
     if name is None:
@@ -824,7 +1100,7 @@ def max_pool1d(
     data_format: str = "NWC",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Performs the max pooling on the input.
+    r"""Performs the 1d-max pooling on the input.
 
     Args:
         input (remote_blob_util.BlobDef): A 3-D `Blob` of the format specified by data_format.
@@ -897,7 +1173,7 @@ def max_pool2d(
     ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r""" Performs the max pooling on the input `Blob`.Analogous to `tf.nn.max_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool2d>`_
+    r""" Performs the 2d-max pooling on the input `Blob`.
 
     Args:
         input (remote_blob_util.BlobDef): A 4-D `Blob` of the format specified by data_format.
@@ -909,6 +1185,35 @@ def max_pool2d(
 
     Returns:
         remote_blob_util.BlobDef:  A `Blob` of format specified by data_format. The max pooled output `Blob`.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def maxpool2d_Job(x: tp.Numpy.Placeholder((1, 32, 128, 128))
+        ) -> tp.Numpy:
+            pool_out = flow.nn.max_pool2d(
+                input=x,
+                ksize=3,
+                strides=2,
+                padding='SAME',
+                data_format='NCHW'
+            )
+
+            return pool_out
+
+
+        x = np.random.randn(1, 32, 128, 128).astype(np.float32)
+        out = maxpool2d_Job(x)
+
+        # output.shape (1, 32, 64, 64)
+
     """
     op = (
         flow.user_op_builder(
@@ -946,7 +1251,7 @@ def avg_pool2d(
     ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Performs the average pooling on the input. Analogous to `tf.nn.avg_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool2d>`_
+    r"""Performs the 2d-average pooling on the input. 
 
     Args:
         input (remote_blob_util.BlobDef): A 4-D `Blob` of shape [batch, height, width, channels].
@@ -958,6 +1263,34 @@ def avg_pool2d(
 
     Returns:
         remote_blob_util.BlobDef:  A `Blob` with the same type as '`value'`. The average pooled output `Blob`.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def avgpool2d_Job(x: tp.Numpy.Placeholder((1, 32, 128, 128))
+        ) -> tp.Numpy:
+            pool_out = flow.nn.avg_pool2d(
+                input=x,
+                ksize=3,
+                strides=2,
+                padding='SAME',
+                data_format='NCHW'
+            )
+
+            return pool_out
+
+
+        x = np.random.randn(1, 32, 128, 128).astype(np.float32)
+        out = avgpool2d_Job(x)
+
+        # output.shape (1, 32, 64, 64)
+
     """
     op = (
         flow.user_op_builder(
@@ -995,7 +1328,7 @@ def max_pool3d(
     ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Performs the max pooling on the input. Analogous to `tf.nn.max_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool3d>`_
+    r"""Performs the 3d-max pooling on the input.
 
     Args:
         input (remote_blob_util.BlobDef):  A 5-D `Blob` of the format specified by data_format.
@@ -1007,6 +1340,35 @@ def max_pool3d(
 
     Returns:
         remote_blob_util.BlobDef: A `Blob` of format specified by data_format. The max pooled output `Blob`.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def maxpool3d_Job(x: tp.Numpy.Placeholder((1, 32, 10, 128, 128))
+        ) -> tp.Numpy:
+            pool_out = flow.nn.max_pool3d(
+                input=x,
+                ksize=3,
+                strides=2,
+                padding='SAME',
+                data_format='NCDHW'
+            )
+
+            return pool_out
+
+
+        x = np.random.randn(1, 32, 10, 128, 128).astype(np.float32)
+        out = maxpool3d_Job(x)
+
+        # output.shape (1, 32, 5, 64, 64)
+
     """
     op = (
         flow.user_op_builder(
@@ -1044,7 +1406,7 @@ def avg_pool3d(
     ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Performs the average pooling on the input. Analogous to `tf.nn.avg_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool3d>`_
+    r"""Performs the 3d-average pooling on the input. 
 
     Args:
         input (remote_blob_util.BlobDef): A 5-D `Blob` of shape [batch, height, width, channels].
@@ -1056,6 +1418,35 @@ def avg_pool3d(
 
     Returns:
         remote_blob_util.BlobDef: A `Blob` with the same type as value. The average pooled output `Blob`.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def avgpool3d_Job(x: tp.Numpy.Placeholder((1, 32, 10, 128, 128))
+        ) -> tp.Numpy:
+            pool_out = flow.nn.avg_pool3d(
+                input=x,
+                ksize=3,
+                strides=2,
+                padding='SAME',
+                data_format='NCDHW'
+            )
+
+            return pool_out
+
+
+        x = np.random.randn(1, 32, 10, 128, 128).astype(np.float32)
+        out = avgpool3d_Job(x)
+
+        # output.shape (1, 32, 5, 64, 64)
+
     """
     op = (
         flow.user_op_builder(
@@ -1124,6 +1515,29 @@ def softmax(
 
     Raises:
         InvalidArgumentError: if logits is empty or axis is beyond the last dimension of logits.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def softmax_Job(x: tp.Numpy.Placeholder((1, 5))
+        ) -> tp.Numpy:
+            softmax_out = flow.nn.softmax(x, axis=1)
+
+            return softmax_out
+
+
+        x = np.array([[1, 2, 1, 5, 4]]).astype(np.float32)
+        out = softmax_Job(x)
+
+        # output [[0.01259415 0.03423444 0.01259415 0.68761706 0.2529602 ]]
+
     """
     if axis is None:
         axis = -1
@@ -1208,6 +1622,39 @@ def sparse_cross_entropy(
 
     Returns:
         remote_blob_util.BlobDef: A `Blob` of the same shape as labels.
+    
+    Note: 
+
+        The labels data type should be `oneflow.int32`. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def sparse_cross_entropy_Job(input: tp.Numpy.Placeholder((5, 2), dtype=flow.float32),
+                                    labels: tp.Numpy.Placeholder((5,), dtype=flow.int32)
+        ) -> tp.Numpy:
+            loss = flow.nn.sparse_cross_entropy(labels=labels,
+                                                prediction=input)
+            return loss
+
+
+        x = np.array([[0.3, 0.7],
+                    [0.4, 0.6],
+                    [0.5, 0.5],
+                    [0.1, 0.9],
+                    [0.2, 0.8]]).astype(np.float32)
+        labels = np.array([0, 1, 1, 0, 1]).astype(np.int32)
+        loss = sparse_cross_entropy_Job(x, labels)
+
+        # output [1.2039728  0.5108256  0.6931472  2.3025851  0.22314353]
+
     """
     assert labels is not None
     assert prediction is not None
@@ -1254,7 +1701,7 @@ def softmax_cross_entropy_with_logits(
     logits: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Computes softmax cross entropy between logits and labels. Analogous to `tf.nn.softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/softmax_cross_entropy_with_logits>`_
+    r"""Computes softmax cross entropy between logits and labels. 
 
     Args:
         labels (remote_blob_util.BlobDef): Each vector along the class dimension should hold a valid probability distribution.
@@ -1263,6 +1710,36 @@ def softmax_cross_entropy_with_logits(
 
     Returns:
         remote_blob_util.BlobDef: A `Blob` that contains the softmax cross entropy loss. Its type is the same as logits and its shape is the same as labels except that it does not have the last dimension of labels.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def softmax_cross_entropy_Job(input: tp.Numpy.Placeholder((3, 3), dtype=flow.float32),
+                                    labels: tp.Numpy.Placeholder((3, 3), dtype=flow.float32)
+        ) -> tp.Numpy:
+            input = flow.nn.softmax(input)
+            loss = flow.nn.softmax_cross_entropy_with_logits(labels=labels,
+                                                            logits=input)
+            return loss
+
+
+        x = np.array([[4, 1, 2],
+                    [3, 2, 3],
+                    [1, 5, 10]]).astype(np.float32)
+        labels = np.array([[0.9, 0.05, 0.05],
+                        [0.3, 0.4, 0.3],
+                        [0.8, 0.1, 0.1]]).astype(np.float32)
+        loss = softmax_cross_entropy_Job(x, labels)
+
+        # output [0.73441553 1.1240788  1.4488925 ]
+
     """
 
     assert labels is not None
@@ -1293,7 +1770,7 @@ def sparse_softmax_cross_entropy_with_logits(
     logits: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Computes sparse softmax cross entropy between logits and labels. Analogous to `tf.nn.sparse_softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sparse_softmax_cross_entropy_with_logits>`_
+    r"""Computes sparse softmax cross entropy between logits and labels. 
 
     Args:
         labels (remote_blob_util.BlobDef): `Blob` of shape [d_0, d_1, ..., d_{r-1}] (where r is rank of labels and result). Each entry in labels must be an index in [0, num_classes).
@@ -1305,6 +1782,38 @@ def sparse_softmax_cross_entropy_with_logits(
 
     Returns:
         remote_blob_util.BlobDef:  A `Blob` of the same shape as labels and of the same type as logits with the softmax cross entropy loss.
+    
+    Note: 
+
+        The labels data type should be `oneflow.int32`. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def sparse_softmax_cross_entropy_Job(input: tp.Numpy.Placeholder((3, 3), dtype=flow.float32),
+                                             labels: tp.Numpy.Placeholder((3, ), dtype=flow.int32)
+        ) -> tp.Numpy:
+            input = flow.nn.softmax(input)
+            loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,
+                                                                    logits=input)
+            return loss
+
+
+        x = np.array([[4, 1, 2],
+                    [3, 2, 3],
+                    [1, 5, 10]]).astype(np.float32)
+        labels = np.array([0, 1, 2]).astype(np.int32)
+        loss = sparse_softmax_cross_entropy_Job(x, labels)
+
+        # output [0.65784633 1.2842525  0.5557927 ]
+
     """
     assert labels is not None
     assert logits is not None
@@ -1358,7 +1867,7 @@ def sigmoid_cross_entropy_with_logits(
     logits: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Computes sigmoid cross entropy given logits. Analogous to `tf.nn.sigmoid_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>`_
+    r"""Computes sigmoid cross entropy given logits. 
 
     Args:
         labels (remote_blob_util.BlobDef): A `Blob` of the same type and shape as logits.
@@ -1370,6 +1879,39 @@ def sigmoid_cross_entropy_with_logits(
 
     Raises:
         ValueError: If logits and labels do not have the same shape.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def sigmoid_cross_entropy_Job(input: tp.Numpy.Placeholder((3, 2), dtype=flow.float32),
+                                    labels: tp.Numpy.Placeholder((3, 2), dtype=flow.float32)
+        ) -> tp.Numpy:
+            input = flow.math.sigmoid(input)
+            loss = flow.nn.sigmoid_cross_entropy_with_logits(labels=labels,
+                                                            logits=input)
+            return loss
+
+
+        x = np.array([[4, 1],
+                    [3, 2],
+                    [1, 5]]).astype(np.float32)
+        labels = np.array([[0.7, 0.3],
+                        [0.4, 0.6],
+                        [0.2, 0.8]]).astype(np.float32)
+        loss = sigmoid_cross_entropy_Job(x, labels)
+
+        # output [[0.612735   0.90472794]
+        #         [0.89778364 0.6990613 ]
+        #         [0.97783387 0.51372755]]
+
+
     """
     assert labels is not None
     assert logits is not None
@@ -1430,6 +1972,33 @@ def random_mask_like(
 
     Raises:
         ValueError: If rate is not in [0, 1). Rate=1 is not allowed.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def random_mask_like_Job(like: tp.Numpy.Placeholder((5, 5), dtype=flow.float32)
+        ) -> tp.Numpy:
+
+            return flow.nn.random_mask_like(like=like,
+                                            rate=0.5)
+
+
+        like = np.ones(shape=(5, 5)).astype(np.float32)
+        random_mask = random_mask_like_Job(like)
+
+        # output [[0 0 0 0 0]
+        #         [1 1 1 0 0]
+        #         [1 0 1 1 0]
+        #         [0 0 0 0 1]
+        #         [1 0 1 1 1]]
+
     """
     assert rate is not None and rate >= 0.0 and rate < 1.0
     if noise_shape is not None:
@@ -1466,8 +2035,7 @@ class RandomMaskLike(module_util.Module):
             seed = random.randint(-sys.maxsize, sys.maxsize)
 
         self.op_module_builder = (
-            flow.user_op_module_builder(name)
-            .Op("random_mask_like")
+            flow.user_op_module_builder("random_mask_like")
             .InputSize("like", 1)
             .Output("out")
             .Attr("rate", float(rate))
@@ -1498,7 +2066,7 @@ def dropout(
     seed: Optional[int] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""For preventing overfitting, randomly set elements to zero. Analogous to `tf.nn.dropout <https://www.tensorflow.org/api_docs/python/tf/nn/dropout>`_
+    r"""For preventing overfitting, randomly set elements to zero. 
 
     Args:
         x (remote_blob_util.BlobDef): A floating point `Blob`.
@@ -1512,6 +2080,53 @@ def dropout(
 
     Raises:
         ValueError: If rate is not in [0, 1) or if x is not a floating point `Blob`. Rate=1 is not allowed.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+
+
+        def lenet(data, train=False):
+            initializer = flow.truncated_normal(0.1)
+            conv1 = flow.layers.conv2d(
+                data,
+                32,
+                5,
+                padding="SAME",
+                activation=flow.nn.relu,
+                name="conv1",
+                kernel_initializer=initializer,
+            )
+            pool1 = flow.nn.max_pool2d(
+                conv1, ksize=2, strides=2, padding="SAME", name="pool1", data_format="NCHW"
+            )
+            conv2 = flow.layers.conv2d(
+                pool1,
+                64,
+                5,
+                padding="SAME",
+                activation=flow.nn.relu,
+                name="conv2",
+                kernel_initializer=initializer,
+            )
+            pool2 = flow.nn.max_pool2d(
+                conv2, ksize=2, strides=2, padding="SAME", name="pool2", data_format="NCHW"
+            )
+            reshape = flow.reshape(pool2, [pool2.shape[0], -1])
+            hidden = flow.layers.dense(
+                reshape,
+                512,
+                activation=flow.nn.relu,
+                kernel_initializer=initializer,
+                name="dense1",
+            )
+            if train:
+                hidden = flow.nn.dropout(hidden, rate=0.5, name="dropout")
+
+            return flow.layers.dense(hidden, 10, kernel_initializer=initializer, name="dense2")
+    
     """
     assert rate is not None and rate >= 0.0 and rate < 1.0
     if not flow.current_global_function_desc().IsTrainable() or rate == 0.0:
@@ -1571,6 +2186,56 @@ def deconv2d(
 
     Returns:
         remote_blob_util.BlobDef: A `Blob` with the same type as `value`.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        def deconv2d(input, filters, kernel_size, strides, padding, name):
+            input_shape = input.shape
+            weight_initializer = flow.truncated_normal(0.1)
+            weight_regularizer = flow.regularizers.l2(0.0005)
+            weight_shape = (filters,
+                            input_shape[1],
+                            kernel_size[0],
+                            kernel_size[1])
+
+            weight = flow.get_variable(
+                name + "-weight",
+                shape=weight_shape,
+                initializer=weight_initializer,
+                regularizer=weight_regularizer,
+            )
+            return flow.nn.conv2d_transpose(value=input,
+                                            output_shape=(1, 32, 64, 64),
+                                            filter=weight,
+                                            strides=strides,
+                                            padding=padding,
+                                            name=name)
+
+
+        @flow.global_function()
+        def deconv2d_Job(x: tp.Numpy.Placeholder((1, 32, 32, 32),)
+        ) -> tp.Numpy:
+            deconv = deconv2d(x,
+                            filters=32,
+                            kernel_size=[3, 3],
+                            strides=2,
+                            padding='SAME',
+                            name="Convlayer")
+            return deconv
+
+
+        x = np.random.randn(1, 32, 32, 32).astype(np.float32)
+        out = deconv2d_Job(x)
+
+        # output.shape (1, 32, 64, 64)
+
     """
     assert (value is not None) ^ (
         input is not None
@@ -1833,6 +2498,29 @@ def leaky_relu(
 
     Returns:
         remote_blob_util.BlobDef: The activation `Blob`.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def leaky_relu_Job(x: tp.Numpy.Placeholder((5, ),)
+        ) -> tp.Numpy:
+            leaky_relu = flow.nn.leaky_relu(x, alpha=0.2)
+
+            return leaky_relu
+
+
+        x = np.array([-10, -5, 0, 5, 10]).astype(np.float32)
+        out = leaky_relu_Job(x)
+
+        # output [-2. -1.  0.  5. 10.]
+
     """
     return (
         flow.user_op_builder(
