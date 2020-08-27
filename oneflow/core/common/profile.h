@@ -34,14 +34,14 @@ inline void profile_log(std::ostringstream& ss, const T& str, const Ts&... rest)
 template<typename... Ts>
 inline void profile_entry(const Ts&... msgs) {
   std::ostringstream ss;
-  profile(ss, msgs...);
+  profile_log(ss, msgs...);
   LOG(INFO) << "<P>" << ss.str();
 }
 
 template<typename... Ts>
 inline void profile_end(const Ts&... msgs) {
   std::ostringstream ss;
-  profile(ss, msgs...);
+  profile_log(ss, msgs...);
   LOG(INFO) << "<P>" << ss.str() << "<END>";
 }
 
@@ -49,7 +49,7 @@ template<typename... Ts>
 inline void profile_entry_if(bool cond, const Ts&... msgs) {
   if (cond) {
     std::ostringstream ss;
-    profile(ss, msgs...);
+    profile_log(ss, msgs...);
     LOG(INFO) << "<P>" << ss.str();
   }
 }
@@ -58,7 +58,7 @@ template<typename... Ts>
 inline void profile_end_if(bool cond, const Ts&... msgs) {
   if (cond) {
     std::ostringstream ss;
-    profile(ss, msgs...);
+    profile_log(ss, msgs...);
     LOG(INFO) << "<P>" << ss.str() << "<END>";
   }
 }
