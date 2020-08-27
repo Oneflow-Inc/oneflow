@@ -110,7 +110,7 @@ class ConstantWarmup(WarmupConf):
 
         learning\_rate = base\_learning\_rate*multiplier
 
-    After the steps specified by user, the learning rate is: 
+    After the steps are specified by user, the learning rate is: 
 
     .. math:: 
 
