@@ -1073,7 +1073,7 @@ def sigmoid_v2(
 def sign(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the sign of Blob.
+    """This operator returns the sign of Blob.
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
