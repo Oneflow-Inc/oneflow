@@ -37,7 +37,13 @@ class ClipGradientConf:
 
 @oneflow_export("optimizer.grad_clipping.by_global_norm")
 class ClipByGlobalNorm(ClipGradientConf):
-    r"""This operator limits the norm of `Input` with `clip_norm`. If the norm of `Input` less than the `clip_norm`, the `Output` will be the same as `Input`. If the norm of `Input` greater than the `clip_norm`, the `Output` will be scaled. 
+    r"""This operator limits the norm of `Input` with `clip_norm`. 
+
+    If the norm of `Input` is less than the `clip_norm`, 
+
+    the `Output` will be the same as `Input`. 
+
+    If the norm of `Input` is greater than the `clip_norm`, the `Output` will be scaled. 
 
     The equation is: 
 
@@ -96,7 +102,9 @@ class WarmupConf:
 
 @oneflow_export("optimizer.warmup.constant")
 class ConstantWarmup(WarmupConf):
-    r"""This operator use the constant warmup strategy to adjust the learning rate. Before the steps specified by user, the learning rate is: 
+    r"""This operator use the constant warmup strategy to adjust the learning rate. 
+
+    Before the steps are specified by user, the learning rate is: 
 
     .. math::
 
@@ -154,7 +162,8 @@ class ConstantWarmup(WarmupConf):
 
 @oneflow_export("optimizer.warmup.linear")
 class LinearWarmup(WarmupConf):
-    r"""This operator use the linear warmup strategy to adjust the learning rate.
+    r"""This operator uses the linear warmup strategy to adjust the learning rate.
+
     When current train step is less than warmup steps, the learning rate will be updated as: 
 
     .. math:: 
@@ -165,7 +174,7 @@ class LinearWarmup(WarmupConf):
 
     Args:
         steps (int): The warmup steps. 
-        start_multiplier (float): The start multiplier(:math:`start\_multiplier`). it should be greater than 0. and less than 1.
+        start_multiplier (float): The start multiplier(:math:`start\_multiplier`). It should be greater than 0. and less than 1.
     
     For example: 
 
@@ -246,7 +255,9 @@ class LrScheduler:
 
 @oneflow_export("optimizer.CosineScheduler")
 class CosineScheduler(LrScheduler):
-    r"""This operator creates a Cosine decayed learning rate scheduler. Before the steps specified by user, the learning rate will be updated as: 
+    r"""This operator creates a Cosine decayed learning rate scheduler. 
+    
+    Before the steps are specified by user, the learning rate will be updated as: 
 
     .. math:: 
 
@@ -326,7 +337,9 @@ class CustomScheduler(LrScheduler):
 
 @oneflow_export("optimizer.PiecewiseConstantScheduler")
 class PiecewiseConstantScheduler(LrScheduler):
-    r"""This operator creates a piecewise constant learning rate scheduler. The change in learning rate can be described as follows:
+    r"""This operator creates a piecewise constant learning rate scheduler. 
+    
+    The change in learning rate can be described as follows:
 
     .. code-block:: python 
 
@@ -394,7 +407,9 @@ class PiecewiseConstantScheduler(LrScheduler):
 
 @oneflow_export("optimizer.PiecewiseScalingScheduler")
 class PiecewiseScalingScheduler(LrScheduler):
-    """This operator creates a piecewise scaled decayed learning rate scheduler. The change in learning rate can be described as follows:
+    """This operator creates a piecewise scaled decayed learning rate scheduler. 
+    
+    The change in learning rate can be described as follows:
 
     .. code-block:: python 
 
@@ -412,7 +427,7 @@ class PiecewiseScalingScheduler(LrScheduler):
     Args:
         base_lr (float): The base learning rate
         boundaries (Sequence[int]): A list of train steps. 
-        scale (Union[float, Sequence[float]]): A list of learning rate scaled factor during the different train step boundary. 
+        scale (Union[float, Sequence[float]]): A list of learning rate scaled factors during the different train step boundary. 
         warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
 
     For example:
@@ -468,7 +483,9 @@ class PiecewiseScalingScheduler(LrScheduler):
 
 @oneflow_export("optimizer.PolynomialSchduler")
 class PolynomialSchduler(LrScheduler):
-    r"""This operator creates a polynomial decayed learning rate scheduler. The learning rate will be updated as follow:
+    r"""This operator creates a polynomial decayed learning rate scheduler. 
+    
+    The learning rate will be updated as follows:
 
     If cycle is `True`, the equation is: 
 
@@ -551,7 +568,9 @@ class PolynomialSchduler(LrScheduler):
 
 @oneflow_export("optimizer.LinearCosineScheduler")
 class LinearCosineScheduler(LrScheduler):
-    r"""This operator creates a linear cosine decayed learning rate scheduler. The learning rate will be updated as follow:
+    r"""This operator creates a linear cosine decayed learning rate scheduler. 
+    
+    The learning rate will be updated as follows:
 
     .. math:: 
 
@@ -626,9 +645,11 @@ class LinearCosineScheduler(LrScheduler):
 
 @oneflow_export("optimizer.ExponentialScheduler")
 class ExponentialScheduler(LrScheduler):
-    r"""This operator creates a exponential decayed learning rate scheduler. The learning rate will be updated as follow:
+    r"""This operator creates a exponential decayed learning rate scheduler. 
+    
+    The learning rate will be updated as follows:
 
-    If stair case is set to False, the equation is: 
+    If staircase is set to False, the equation is: 
 
     .. math:: 
 
@@ -702,9 +723,11 @@ class ExponentialScheduler(LrScheduler):
 
 @oneflow_export("optimizer.InverseTimeScheduler")
 class InverseTimeScheduler(LrScheduler):
-    r"""This operator creates a inverse time decayed learning rate scheduler. The learning rate will be updated as follow:
+    r"""This operator creates a inverse time decayed learning rate scheduler. 
+    
+    The learning rate will be updated as follows:
 
-    If stair case is set to False, the equation is: 
+    If staircase is set to False, the equation is: 
 
     .. math:: 
 
@@ -778,9 +801,11 @@ class InverseTimeScheduler(LrScheduler):
 
 @oneflow_export("optimizer.NaturalExpScheduler")
 class NaturalExpScheduler(LrScheduler):
-    r"""This operator creates a natural exponential decayed learning rate scheduler. The learning rate will be updated as follow:
+    r"""This operator creates a natural exponential decayed learning rate scheduler. 
     
-    If stair case is set to False, the equation is: 
+    The learning rate will be updated as follows:
+    
+    If staircase is set to False, the equation is: 
 
     .. math:: 
 
@@ -894,7 +919,9 @@ class Optimizer:
 
 @oneflow_export("optimizer.SGD")
 class SGD(Optimizer):
-    r"""The optimizer of the stochastic gradient descent algorithm. This algorithm takes a random sample's gradient as an approximate estimate of the overall gradient in small batch gradient descent.  
+    r"""The optimizer of the stochastic gradient descent algorithm. 
+    
+    This algorithm takes a random sample's gradient as an approximate estimate of the overall gradient in small batch gradient descent.  
 
     When the momentum = 0, the equation of parameters updating is: 
 
@@ -965,7 +992,11 @@ class SGD(Optimizer):
 
 @oneflow_export("optimizer.Adam")
 class Adam(Optimizer):
-    r"""The optimizer of the Adam algorithm. This algorithm can adjust the learning rate of each parameter dynamically according to the 1st-moment estimates and the 2nd-moment estimates of gradient.
+    r"""The optimizer of the Adam algorithm. 
+    
+    This algorithm can adjust the learning rate of each parameter dynamically according to the 1st-moment estimates 
+    
+    and the 2nd-moment estimates of gradient.
     
     With bias correction, the equation of parameters updating is: 
     
@@ -1063,7 +1094,15 @@ class Adam(Optimizer):
 
 @oneflow_export("optimizer.AdamW")
 class AdamW(Optimizer):
-    r"""The optimizer of the Adam-weight-decay algorithm. If we use L2 regularization, it will be invalid due to the adaptive learning rate in Adam optimizer (More details please refer to `Adam-weight-decay <https://www.fast.ai/2018/07/02/adam-weight-decay/>`_). So we use Adam-weight-decay algorithm to solve this problem. 
+    r"""The optimizer of the Adam-weight-decay algorithm. 
+    
+    If we use L2 regularization, 
+    
+    it will be invalid due to the adaptive learning rate in Adam optimizer 
+    
+    (More details please refer to `Adam-weight-decay <https://www.fast.ai/2018/07/02/adam-weight-decay/>`_). 
+    
+    So we use Adam-weight-decay algorithm to solve this problem. 
 
     With bias correction, the equation of parameters updating is: 
     
@@ -1108,7 +1147,8 @@ class AdamW(Optimizer):
 
     Note:
 
-        Only one of `weight_decay_includes` and `weight_decay_excludes` can be set. If both are None. All the model parameters will use weight decay. 
+        Only one of `weight_decay_includes` and `weight_decay_excludes` can be set. If both are None, 
+        all the model parameters will use weight decay. 
 
     For example: 
 
@@ -1194,7 +1234,9 @@ class AdamW(Optimizer):
 
 @oneflow_export("optimizer.RMSProp")
 class RMSProp(Optimizer):
-    r"""The optimizer of the RMSProp algorithm. This algorithm uses mean squared gradient to adjust the learning rate. 
+    r"""The optimizer of the RMSProp algorithm. 
+    
+    This algorithm uses mean squared gradient to adjust the learning rate. 
 
     The equation of parameters updating is: 
     
@@ -1260,7 +1302,7 @@ class RMSProp(Optimizer):
 
 @oneflow_export("optimizer.LARS")
 class LARS(Optimizer):
-    r"""The optimizer of the Lars algorithm. 
+    r"""The optimizer of the LARS algorithm. 
 
     The equation of parameters updating is: 
     
@@ -1333,7 +1375,11 @@ class LARS(Optimizer):
 @oneflow_export("optimizer.LazyAdam")
 class LazyAdam(Optimizer):
     r"""
-    The optimizer of the LazyAdam algorithm. This algorithm can adjust the learning rate of each parameter dynamically according to the 1st-moment estimates and the 2nd-moment estimates of the gradient. The difference between Adam optimizer and LazyAdam optimizer is that LazyAdam only updates the element that has gradient in the current batch, it is faster than Adam optimizer. 
+    The optimizer of the LazyAdam algorithm. 
+    
+    This algorithm can adjust the learning rate of each parameter dynamically according to the 1st-moment estimates and the 2nd-moment estimates of the gradient. 
+    
+    The difference between Adam optimizer and LazyAdam optimizer is that LazyAdam only updates the element that has gradient in the current batch, it is faster than Adam optimizer. 
 
     .. math::
 

@@ -43,7 +43,7 @@ def build_math_binary_elementwise_op(math_op, x, y, name=None):
 def atan2(
     x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the values of :math:`arctan(x/y)`. 
+    r"""This operator computes the values of :math:`arctan(\frac{x}{y})`. 
 
     The equation is: 
 
@@ -90,7 +90,7 @@ def atan2(
 def pow(
     x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operator compute the Pow result. 
+    """This operator computes the Pow result. 
 
     The equation is: 
 
