@@ -838,7 +838,6 @@ class COCOReader(module_util.Module):
         module_util.Module.__init__(self, name)
         self.op_module_builder = (
             flow.consistent_user_op_module_builder("COCOReader")
-            .Op("COCOReader")
             .Output("image")
             .Output("image_id")
             .Output("image_size")
