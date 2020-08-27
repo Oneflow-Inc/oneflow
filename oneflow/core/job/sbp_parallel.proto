@@ -30,8 +30,8 @@ package oneflow;
 //             (m, n1)    (m, k) , (k, n1)
 //     -----------------------------------
 //     where (n0 + n1 == n)
-//            and (B0 == B[:, 0:m0]) and (B1 == B[:, m0:])
-//            and (Y0 == Y[:, 0:m0]) and (Y1 == Y[:, m0:])
+//            and (B0 == B[:, 0:n0]) and (B1 == B[:, n0:])
+//            and (Y0 == Y[:, 0:n0]) and (Y1 == Y[:, n0:])
 
 // candidate signature 2:
 //     Y:PartialSum, A:Split(1), B:Split(0)
