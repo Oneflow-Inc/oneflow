@@ -35,7 +35,7 @@ bool HasFunctionPass(const std::string& pass_name) {
 }
 
 const OpGraphPass& FunctionPass(const std::string& pass_name) {
-  LOG(INFO) << "<P>{FunctionPass@" << pass_name << "}";
+  PROF("{FunctionPass@}", pass_name, "}");
   const auto& iter = PassName2FunctionPass()->find(pass_name);
   CHECK(iter != PassName2FunctionPass()->end());
   return *iter->second;

@@ -381,7 +381,7 @@ void AutoSinkTick(const OpGraph& op_graph, JobBuilder* job_builder) {
 }
 
 void AddGlobalTotalJobCriticalSection(const Job& job) {
-  LOG(INFO) << "<P>{AddGlobalTotalJobCriticalSection}";
+  PROF("{AddGlobalTotalJobCriticalSection}");
   const OperatorConf* src_tick_op_conf = nullptr;
   const OperatorConf* sink_tick_op_conf = nullptr;
   for (const auto& op_conf : job.net().op()) {
@@ -398,7 +398,7 @@ void AddGlobalTotalJobCriticalSection(const Job& job) {
   CHECK_NOTNULL(sink_tick_op_conf);
   AddGlobalCriticalSection(src_tick_op_conf->name(), sink_tick_op_conf->name())
       ->mutable_total_job_critical_section();
-  LOG(INFO) << "<P>{AddGlobalTotalJobCriticalSection}<END>";
+  PROFE("{AddGlobalTotalJobCriticalSection}");
 }
 
 void AddGlobalInputCriticalSections(const OpGraph& op_graph, JobBuilder* job_builder) {

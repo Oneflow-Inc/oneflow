@@ -24,6 +24,7 @@ namespace {
 
 #if (CUDNN_VERSION >= 7401)
 #define BN_ENABLE_EX_API
+#undef BN_ENABLE_EX_API
 #endif
 
 void InferDimSizeAndDataFormat(const ShapeView& x_shape, const int32_t axis, int32_t* n, int32_t* c,

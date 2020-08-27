@@ -63,7 +63,7 @@ void Compiler::GenNetTopo(Plan* plan) const {
 }
 
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
-  LOG(INFO) << "<P>{Compile}";
+  PROF("{Compile}");
   const JobDesc& job_desc = GlobalJobDesc();
   if (need_job_complete) { JobCompleter().Complete(job); }
   Global<OpGraph>::New(*job);
@@ -72,11 +72,11 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
                                               + "_op_graph.dot");
   }
-  LOG(INFO) << "<P>{Compile}";
+  PROF("{Compile}");
   auto logical_gph = std::make_unique<LogicalGraph>(*job);
-  LOG(INFO) << "<P>{MakeLogicalGraph}<END>";
+  PROFE("{MakeLogicalGraph}");
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
-  LOG(INFO) << "<P>{MakeTaskGraph}<END>";
+  PROFE("{MakeTaskGraph}");
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
@@ -84,26 +84,26 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->TopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
-  LOG(INFO) << "<P>{CompleteTaskGraph}<END>";
+  PROFE("{CompleteTaskGraph}");
   if (job_desc.enable_inplace()) {
     auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
     task_gph->EnableInplaceMemSharing(IsReachable);
-    LOG(INFO) << "<P>{EnableInplace}<END>";
+    PROFE("{EnableInplace}");
   }
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
-  LOG(INFO) << "<P>{InferTimeShape}<END>";
+  PROFE("{InferTimeShape}");
 
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
     task_node->ToProto(plan->mutable_task()->Add());
   });
-  LOG(INFO) << "<P>{ToProto}<END>";
+  PROFE("{ToProto}");
   {
     auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
     (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   }
   Global<OpGraph>::Delete();
-  LOG(INFO) << "<P>{Compile}<END>";
+  PROFE("{Compile}");
 }
 
 }  // namespace oneflow

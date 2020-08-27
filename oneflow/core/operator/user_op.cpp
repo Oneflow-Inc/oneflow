@@ -310,7 +310,10 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
                                    const ParallelContext* parallel_ctx,
                                    const SbpSignature* sbp_signature,
                                    std::function<void(OpContext*)> EnrollOpCtx) const {
+  bool track = (op_conf().name() == "Resnet-res5_0_branch2b_bn");
+  PROF_IF(track, "{InferBlobDescs@", op_conf().name(), "}");
   JUST(InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx));
+  PROFE_IF(track, "{InferOutBlobDescs}");
   // tmp buffer size must be inferred after out shape/dtype
   UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
                                GetBlobDesc4BnInOp);
@@ -328,6 +331,7 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     tmp_buffer_blob->set_data_type(DataType::kChar);
     tmp_buffer_blob->mut_shape() = Shape({static_cast<int64_t>(tmp_size)});
   }
+  PROFE_IF(track, "{InferTmpSize}");
 
   // get inplace proposal in/out blob pair
   UserOpCtx* op_ctx = new UserOpCtx();
@@ -361,8 +365,10 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     return Maybe<void>::Ok();
   };
   JUST(kernel_reg_val->inplace_proposal_fn(infer_ctx, AddInplaceArgPairFn));
+  PROFE_IF(track, "{InferInplaceProposal}");
   op_ctx->sbp_sig = *sbp_signature;
   EnrollOpCtx(op_ctx);
+  PROFE_IF(track, "{InferBlobDescs}");
   return Maybe<void>::Ok();
 }
 

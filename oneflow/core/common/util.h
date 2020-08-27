@@ -40,6 +40,7 @@ limitations under the License.
 
 #include "oneflow/core/common/meta_util.hpp"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/profile.h"
 
 DECLARE_string(log_dir);
 

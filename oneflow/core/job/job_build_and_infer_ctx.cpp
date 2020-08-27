@@ -913,7 +913,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
 }
 
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
-  LOG(INFO) << "<P>{Complete}";
+  PROF("{Complete}");
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
   if (job().job_conf().has_train_conf()) {
@@ -945,7 +945,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpTimeShapeAndBlobParallelConfPass"));
-  LOG(INFO) << "<P>{Complete}<END>";
+  PROFE("{Complete}");
   return Maybe<void>::Ok();
 }
 

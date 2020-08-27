@@ -41,7 +41,7 @@ void CheckOpGraph(const OpGraph& op_graph) {
 void WithOpGraphAndMutJob(Job* job, const std::function<void(const OpGraph&, Job*)>& Handler) {
   OpGraph op_graph(*job);
   Handler(op_graph, job);
-  LOG(INFO) << "<P>{WithOpGraphAndMutJob}<END>";
+  PROFE("{WithOpGraphAndMutJob}");
 }
 
 void WithOpGraphAndMutJobBuilder(Job* job,
@@ -49,11 +49,11 @@ void WithOpGraphAndMutJobBuilder(Job* job,
   OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   Handler(op_graph, &job_builder);
-  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder}<END>";
+  PROFE("{WithOpGraphAndMutJobBuilder}");
 }
 
 void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder) {
-  LOG(INFO) << "<P>{SetCtrlInOpName4VariableOp@node_num=" << op_graph.node_num() << "}";
+  PROF("{SetCtrlInOpName4VariableOp@node_num=}", op_graph.node_num(), "}");
   auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
     for (const std::string& bn : op.input_bns()) {
       if (op.BnInOp2Lbi(bn) == lbi && op.InputBlobModifier4Ibn(bn).is_mutable()) { return true; }
@@ -89,38 +89,38 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
     }
     job_builder->MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
   }
-  LOG(INFO) << "<P>{SetCtrlInOpName4VariableOp}<END>";
+  PROFE("{SetCtrlInOpName4VariableOp}");
 }
 
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
-  LOG(INFO) << "<P>{Complete}";
+  PROF("{Complete}");
   FunctionPass("DumpTimeShapeAndBlobParallelConfPass")(job);
-  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@GroupBoxingByDstParallel}";
+  PROF("{WithOpGraphAndMutJobBuilder@GroupBoxingByDstParallel}");
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
   if (GlobalJobDesc().enable_keep_header_only()) {
-    LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@AddKeepHeaderOnlyOp}";
+    PROF("{WithOpGraphAndMutJobBuilder@AddKeepHeaderOnlyOp}");
     WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
   }
-  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@SetCtrlInOpName4VariableOp}";
+  PROF("{WithOpGraphAndMutJobBuilder@SetCtrlInOpName4VariableOp}");
   WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp);
   // complete tick ops
-  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@AutoSourceTick}";
+  PROF("{WithOpGraphAndMutJobBuilder@AutoSourceTick}");
   WithOpGraphAndMutJobBuilder(job, &AutoSourceTick);
-  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@AddTickForTimeShape}";
+  PROF("{WithOpGraphAndMutJobBuilder@AddTickForTimeShape}");
   WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape);
-  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@AutoSinkTick}";
+  PROF("{WithOpGraphAndMutJobBuilder@AutoSinkTick}");
   WithOpGraphAndMutJobBuilder(job, &AutoSinkTick);
   AddGlobalTotalJobCriticalSection(*job);
-  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@AddGlobalInputCriticalSections}";
+  PROF("{WithOpGraphAndMutJobBuilder@AddGlobalInputCriticalSections}");
   WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
-  LOG(INFO) << "<P>{WithOpGraphAndMutJobBuilder@AddGlobalOutputCriticalSections}";
+  PROF("{WithOpGraphAndMutJobBuilder@AddGlobalOutputCriticalSections}");
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
   FunctionPass("DumpTimeShapeAndBlobParallelConfPass")(job);
   if (XrtCompilationEnabled(GlobalJobDesc())) {
 #ifdef OF_WITH_XRT
-    LOG(INFO) << "<P>{WithOpGraphAndMutJob@RebuildXrtCompiledJob}";
+    PROF("{WithOpGraphAndMutJobBuilder@RebuildXrtCompiledJob}");
     WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob);
 #else
     LOG(WARNING) << "It will not use XLA or TensorRT since WITH_XLA or "
@@ -128,8 +128,8 @@ void JobCompleter::Complete(Job* job) const {
 #endif  // OF_WITH_XRT
   }
   CheckOpGraph(OpGraph(*job));
-  LOG(INFO) << "<P>{CheckOpGraph}<END>";
-  LOG(INFO) << "<P>{Complete}<END>";
+  PROFE("{CheckOpGraph}");
+  PROFE("{Complete}");
 }
 
 }  // namespace oneflow
