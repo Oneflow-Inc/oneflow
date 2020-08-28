@@ -1020,7 +1020,7 @@ def bias_add(
     data_format: Optional[str] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""This operator adds a bias to Blob 
+    r"""This operator adds a bias to Blob. 
 
     Args:
         value (remote_blob_util.BlobDef):  A `Blob`.
@@ -1498,7 +1498,7 @@ def softmax(
     axis: Optional[int] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Computes softmax activations. Analogous to `tf.nn.softmax <https://www.tensorflow.org/api_docs/python/tf/nn/softmax>`_
+    r"""Computes softmax activations. 
 
     For each element, we apply: 
 
@@ -2164,7 +2164,7 @@ def deconv2d(
     filters: Optional[remote_blob_util.BlobDef] = None,
     dilations: Optional[Union[int, Sequence[int]]] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""2d transposed convolution
+    r"""2d transposed convolution.
 
     Args:
         value (Optional[remote_blob_util.BlobDef], optional):   4-d `Blob`. Defaults to None.
@@ -2486,7 +2486,7 @@ def deconv2d_torch(
 def leaky_relu(
     x: remote_blob_util.BlobDef, alpha: float = 0.2, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Leaky ReLU activation value, Analogous to `tf.nn.leaky_relu <https://www.tensorflow.org/api_docs/python/tf/nn/leaky_relu>`_
+    r"""Leaky ReLU activation. 
 
     .. math::
         out = max(x, alpha*x)
