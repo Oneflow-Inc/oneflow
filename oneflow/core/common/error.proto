@@ -61,7 +61,7 @@ message JobTypeNotSetError { }
 
 message LogicalBlobNameNotExistError { }
 
-message LogicalBlobNameRepeatedError { }
+message LogicalBlobNameExistError { }
 
 message LogicalBlobNameInvalidError { }
 
@@ -140,7 +140,7 @@ message ErrorProto {
     JobConfRepeatedSetError job_conf_repeated_set_error = 302;
     JobTypeNotSetError job_type_not_set_error = 303;
     LogicalBlobNameNotExistError logical_blob_name_not_exist_error = 400;
-    LogicalBlobNameRepeatedError logical_blob_name_repeated_error = 401;
+    LogicalBlobNameExistError logical_blob_name_exist_error = 401;
     LogicalBlobNameInvalidError logical_blob_name_invalid_error = 402;
     OpNameExistError op_name_exist_error = 450;
     OpConfDeviceTagNoSetError op_conf_device_tag_no_set_error = 460;

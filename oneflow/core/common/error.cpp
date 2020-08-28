@@ -104,9 +104,9 @@ Error Error::LogicalBlobNameNotExistError() {
   return error;
 }
 
-Error Error::LogicalBlobNameRepeatedError() {
+Error Error::LogicalBlobNameExistError() {
   auto error = std::make_shared<ErrorProto>();
-  error->mutable_logical_blob_name_repeated_error();
+  error->mutable_logical_blob_name_exist_error();
   return error;
 }
 

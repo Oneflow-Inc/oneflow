@@ -41,7 +41,7 @@ class Error final {
   static Error JobConfRepeatedSetError();
   static Error JobTypeNotSetError();
   static Error LogicalBlobNameNotExistError();
-  static Error LogicalBlobNameRepeatedError();
+  static Error LogicalBlobNameExistError();
   static Error LogicalBlobNameInvalidError();
   static Error OpNameExistError();
   static Error OpConfDeviceTagNoSetError();
@@ -66,6 +66,7 @@ class Error final {
   std::shared_ptr<ErrorProto> error_proto() const { return error_proto_; }
   ErrorProto* operator->() const { return error_proto_.get(); }
   operator std::string() const;
+  void Assign(const Error& other) { error_proto_ = other.error_proto_; }
 
  private:
   std::shared_ptr<ErrorProto> error_proto_;
@@ -76,6 +77,12 @@ Error&& operator<<(Error&& error, const T& x) {
   std::ostringstream ss;
   ss << x;
   error->set_msg(error->msg() + ss.str());
+  return std::move(error);
+}
+
+template<>
+inline Error&& operator<<(Error&& error, const Error& other) {
+  error.Assign(other);
   return std::move(error);
 }
 
