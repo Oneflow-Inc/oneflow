@@ -24,11 +24,7 @@ namespace py = pybind11;
 namespace oneflow {
 
 PYBIND11_MODULE(oneflow_internal2, m) {
-  m.def("EagerExecutionEnabled", []() { return *Global<bool, EagerExecution>::Get(); },
-        R"pbdoc(
-        Subtract two numbers
-
-        Some other explanation about the subtract function.
-    )pbdoc");
+  m.def("EagerExecutionEnabled", []() { return *Global<bool, EagerExecution>::Get(); });
 }
+
 }  // namespace oneflow
