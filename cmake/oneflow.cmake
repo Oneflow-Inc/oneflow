@@ -1,7 +1,7 @@
-# main cpp
-# TODO(tsai): skip for now, fail to link when building CPU only
 include(pybind11)
 
+# main cpp
+# TODO(tsai): skip for now, fail to link when building CPU only
 if (BUILD_CUDA)
   list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
 endif()
