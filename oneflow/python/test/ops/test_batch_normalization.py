@@ -498,6 +498,7 @@ def _test_batchnorm_add_relu(test_case, input_shape, axis, data_type):
     )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_batchnorm_add_relu(test_case):
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [(12, 16, 24, 32), (5, 7, 9, 11)]
@@ -563,6 +564,7 @@ def _test_batchnorm_relu(test_case, input_shape, axis, data_type):
     )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_batchnorm_relu(test_case):
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [(12, 16, 24, 32), (5, 7, 9, 11)]
