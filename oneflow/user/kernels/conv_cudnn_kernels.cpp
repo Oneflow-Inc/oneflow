@@ -70,6 +70,7 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
                              const user_op::TensorDesc* y, const JobDesc& job_desc,
                              const user_op::UserOpConfWrapper& user_op_conf, bool has_forced_algo,
                              int32_t forced_algo) {
+  TRACE("<T>", "{}->{InferTmpSize@", user_op_conf.op_name(), "}");
   using AlgoT = decltype(std::declval<PerfT>().algo);
 
   size_t workspace_size = job_desc.cudnn_buf_limit_mbyte() * 1024 * 1024;
@@ -98,6 +99,7 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
     workspace_size = algo_perf.memory;
   }
   workspace_size = std::max(size_t(1), workspace_size);
+  TRACE("<T>", "{InferTmpSize}", "<END>");
   return workspace_size;
 }
 

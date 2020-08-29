@@ -21,45 +21,29 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-inline void profile_log(std::ostringstream& ss, const T& str) {
+inline void trace(std::ostringstream& ss, const T& str) {
   ss << str;
 }
 
 template<typename T, typename... Ts>
-inline void profile_log(std::ostringstream& ss, const T& str, const Ts&... rest) {
+inline void trace(std::ostringstream& ss, const T& str, const Ts&... rest) {
   ss << str;
-  profile_log(ss, rest...);
+  trace(ss, rest...);
 }
 
 template<typename... Ts>
-inline void profile_entry(const Ts&... msgs) {
+inline void trace_entry(const Ts&... msgs) {
   std::ostringstream ss;
-  profile_log(ss, msgs...);
-  LOG(INFO) << "<P>" << ss.str();
+  trace(ss, msgs...);
+  LOG(INFO) << ss.str();
 }
 
 template<typename... Ts>
-inline void profile_end(const Ts&... msgs) {
-  std::ostringstream ss;
-  profile_log(ss, msgs...);
-  LOG(INFO) << "<P>" << ss.str() << "<END>";
-}
-
-template<typename... Ts>
-inline void profile_entry_if(bool cond, const Ts&... msgs) {
+inline void trace_entry_if(bool cond, const Ts&... msgs) {
   if (cond) {
     std::ostringstream ss;
-    profile_log(ss, msgs...);
-    LOG(INFO) << "<P>" << ss.str();
-  }
-}
-
-template<typename... Ts>
-inline void profile_end_if(bool cond, const Ts&... msgs) {
-  if (cond) {
-    std::ostringstream ss;
-    profile_log(ss, msgs...);
-    LOG(INFO) << "<P>" << ss.str() << "<END>";
+    trace(ss, msgs...);
+    LOG(INFO) << ss.str();
   }
 }
 
@@ -69,13 +53,16 @@ inline void profile_end_if(bool cond, const Ts&... msgs) {
 
 #if defined(ENABLE_PROFILE)
 
-#define PROF(...) profile_entry(__VA_ARGS__)
-#define PROFE(...) profile_end(__VA_ARGS__)
-#define PROF_IF(cond, ...) profile_entry_if(cond, __VA_ARGS__)
-#define PROFE_IF(cond, ...) profile_end_if(cond, __VA_ARGS__)
+#define TRACE(...) trace_entry(__VA_ARGS__)
+#define TRACE_IF(cond, ...) trace_entry_if(cond, __VA_ARGS__)
+#define PROF(...) TRACE("<P>", __VA_ARGS__)
+#define PROFE(...) TRACE("<P>", __VA_ARGS__, "<END>")
+#define PROF_IF(cond, ...) TRACE_IF(cond, "<P>", __VA_ARGS__)
+#define PROFE_IF(cond, ...) TRACE_IF(cond, "<P>", __VA_ARGS__, "<END")
 
 #else
 
+#define TRACE
 #define PROF
 #define PROFE
 #define PROF_IF

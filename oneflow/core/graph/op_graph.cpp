@@ -528,21 +528,21 @@ Maybe<void> OpGraph::InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirro
 }
 
 Maybe<void> OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
-  bool track = op_node->op().op_conf().has_user_conf()
-               && (op_node->op().op_conf().user_conf().op_type_name() == "normalization"
-                   || op_node->op().op_conf().user_conf().op_type_name() == "normalization_grad"
-                   || op_node->op().op_conf().user_conf().op_type_name() == "conv2d"
-                   || op_node->op().op_conf().user_conf().op_type_name() == "conv_data_grad"
-                   || op_node->op().op_conf().user_conf().op_type_name() == "conv_filter_grad"
-                   || op_node->op().op_conf().user_conf().op_type_name() == "conv_bias_grad");
-  PROF_IF(track, "{InferOpNodeLogicalBlobDesc@", op_node->op().op_name(), "}");
+  // bool track = op_node->op().op_conf().has_user_conf()
+  //              && (op_node->op().op_conf().user_conf().op_type_name() == "normalization"
+  //                  || op_node->op().op_conf().user_conf().op_type_name() == "normalization_grad"
+  //                  || op_node->op().op_conf().user_conf().op_type_name() == "conv2d"
+  //                  || op_node->op().op_conf().user_conf().op_type_name() == "conv_data_grad"
+  //                  || op_node->op().op_conf().user_conf().op_type_name() == "conv_filter_grad"
+  //                  || op_node->op().op_conf().user_conf().op_type_name() == "conv_bias_grad");
+  // PROF_IF(track, "{InferOpNodeLogicalBlobDesc@", op_node->op().op_name(), "}");
   auto* bn2parallel_id2blob_desc = op_node->mut_bn2parallel_id2blob_desc();
   op_node->SplitLogicalInputBlobDesc();
-  PROFE_IF(track, "{SplitLogicalInputBlobDesc}");
+  // PROFE_IF(track, "{SplitLogicalInputBlobDesc}");
   int64_t parallel_num = op_node->parallel_desc().parallel_num();
   const auto& input_bns = op_node->op().input_bns();
   FOR_RANGE(int64_t, parallel_id, 0, parallel_num) {
-    PROF_IF(track, "{InferBlobDescsIf@", parallel_id, "}");
+    // PROF_IF(track, "{InferBlobDescsIf@", parallel_id, "}");
     auto BlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
       if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
         CHECK(bn2parallel_id2blob_desc->find(bn) != bn2parallel_id2blob_desc->end());
@@ -561,11 +561,11 @@ Maybe<void> OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
     parallel_ctx.set_parallel_num(parallel_num);
     JUST(op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &op_node->sbp_signature(),
                                         [](OpContext*) {}));
-    PROFE_IF(track, "{InferBlobDescsIf}");
+    // PROFE_IF(track, "{InferBlobDescsIf}");
   }
   op_node->ConcatLogicalOutputBlobDesc();
-  PROFE_IF(track, "{ConcatLogicalOutputBlobDesc}");
-  PROFE_IF(track, "{InferOpNodeLogicalBlobDesc}");
+  // PROFE_IF(track, "{ConcatLogicalOutputBlobDesc}");
+  // PROFE_IF(track, "{InferOpNodeLogicalBlobDesc}");
   return Maybe<void>::Ok();
 }
 
