@@ -67,7 +67,7 @@ inline void profile_end_if(bool cond, const Ts&... msgs) {
 
 }  // namespace oneflow
 
-#if defined(ENABLE_PROFILE_LOG)
+#if defined(ENABLE_PROFILE)
 
 #define PROF(...) profile_entry(__VA_ARGS__)
 #define PROFE(...) profile_end(__VA_ARGS__)
