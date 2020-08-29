@@ -1,5 +1,7 @@
 # main cpp
 # TODO(tsai): skip for now, fail to link when building CPU only
+include(pybind11)
+
 if (BUILD_CUDA)
   list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
 endif()
@@ -275,10 +277,10 @@ endforeach()
 RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
                               ${PROJECT_SOURCE_DIR}
                               ${of_all_rel_swigs})
-oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
+pybind11_add_module(oneflow_internal ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
-target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
+target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
