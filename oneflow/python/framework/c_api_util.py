@@ -33,7 +33,7 @@ from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 from oneflow.python.framework.job_build_and_infer_error import JobBuildAndInferError
 import oneflow
 
-oneflow_internal2 = oneflow.oneflow_internal2
+oneflow_api = oneflow.oneflow_api
 
 
 def RegisterWatcherOnlyOnce(watcher):
@@ -87,7 +87,7 @@ def EnableEagerEnvironment(enable_eager_execution):
 
 
 def EagerExecutionEnabled():
-    return oneflow_internal2.EagerExecutionEnabled()
+    return oneflow_api.EagerExecutionEnabled()
 
 
 def IsEnvInited():

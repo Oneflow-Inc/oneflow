@@ -38,10 +38,10 @@ def import_oneflow_internal2():
         "_oneflow_internal", [dirname(__file__)]
     )
     path = os.path.join(dirname(__file__), pathname)
-    return import_secondary_module("oneflow_internal2", path)
+    return import_secondary_module("oneflow_api", path)
 
 
-oneflow_internal2 = import_oneflow_internal2()
+oneflow_api = import_oneflow_internal2()
 del import_secondary_module
 del import_oneflow_internal2
 
