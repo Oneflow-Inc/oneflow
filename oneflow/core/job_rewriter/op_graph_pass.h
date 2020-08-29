@@ -43,9 +43,7 @@ class OpGraphPass {
     return Apply(op_graph, job);
   }
   virtual Maybe<void> Apply(const OpGraph& op_graph, Job* job) const {
-    // PROF("{JobBuilderConstruct}");
     JobBuilder job_builder(job);
-    // PROFE("{JobBuilderConstruct}");
     return Apply(op_graph, &job_builder);
   }
   virtual Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {

@@ -289,18 +289,17 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_c
   Plan naive_plan;
   Plan complete_plan;
   double start = GetCurTime();
-  const std::string& job_name = job->job_conf().job_name();
-  PROF("{CompileCurJobOnMaster@}", job_name, "}");
+  PROF("{CompileCurJobOnMaster@}", job->job_conf().job_name(), "}");
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Compiler().Compile(job, &naive_plan, need_job_complete);
-    LOG(INFO) << "job: " << job_name << ", compile time: " << GetCurTime() - start;
+    LOG(INFO) << "compile time: " << GetCurTime() - start;
     complete_plan =
         *JUST(Improver().GenAndInferMemBlockIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan));
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
       TeePersistentLogStream::Create("complete_plan")->Write(complete_plan);
     }
-    LOG(INFO) << "job: " << job_name << ", push_pull_plan time: " << GetCurTime() - start;
+    LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
   }
   if (job_desc.enable_experiment_run()) {
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
@@ -325,6 +324,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_c
     *improved_plan = complete_plan;
   }
   GenCollectiveBoxingPlan(job, improved_plan);
+  LOG(INFO) << "compile and improve time: " << GetCurTime() - start;
   PROFE("{CompileCurJobOnMaster}");
   return Maybe<void>::Ok();
 }
