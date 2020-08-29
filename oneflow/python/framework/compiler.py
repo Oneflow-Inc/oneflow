@@ -46,9 +46,11 @@ def get_time_stamp_str(t):
 
 
 def Compile(session, function_desc, config_proto):
-    start = time.time()
-    job_name = function_desc.job_func.__name__
-    print("[{}]<P>{{PyCompileJob@{}}}".format(get_time_stamp_str(start), job_name))
+    print(
+        "[{}]<P>{{PyCompileJob@{}}}".format(
+            get_time_stamp_str(time.time()), function_desc.job_func.__name__
+        )
+    )
     with InterpretScope(session, function_desc, config_proto):
         _CompileJob(function_desc)
         print("[{}]<P>{{Compile}}<END>".format(get_time_stamp_str(time.time())))
