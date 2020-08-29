@@ -147,7 +147,7 @@ size_t InferGradTmpSize(user_op::InferContext* ctx) {
   const auto axis = ctx->Attr<int32_t>("axis");
   size_t tmp_size = 0;
   if (ctx->user_op_conf().op_type_name() == "normalization_add_relu_grad"
-      && !ctx->user_op_conf().has_output("d_addend", 0)) {
+      && !ctx->user_op_conf().has_output("addend_diff", 0)) {
     tmp_size += GetCudaAlignedSize(dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
   }
   tmp_size += GetCudaAlignedSize(InferGradWorkspaceSize(dy->shape(), dy->data_type(), axis));
@@ -402,14 +402,14 @@ class NormalizationGradUserKernel final : public user_op::OpKernel {
     } else if (ctx->user_op_conf().op_type_name() == "normalization_add_relu_grad") {
       const int64_t elem_cnt = dy->shape().elem_cnt();
       user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-      if (ctx->user_op_conf().has_output("d_addend", 0)) {
-        user_op::Tensor* d_addend = ctx->Tensor4ArgNameAndIndex("d_addend", 0);
+      if (ctx->user_op_conf().has_output("addend_diff", 0)) {
+        user_op::Tensor* addend_diff = ctx->Tensor4ArgNameAndIndex("addend_diff", 0);
         NewKernelUtil<DeviceType::kGPU>::ReluBackward(ctx->device_ctx(), elem_cnt, nullptr,
                                                       y->dptr<T>(), dy->dptr<T>(),
-                                                      d_addend->mut_dptr<T>());
+                                                      addend_diff->mut_dptr<T>());
         bn_workspace_ptr = tmp_buffer->mut_dptr();
         bn_workspace_size = tmp_buffer->shape().elem_cnt();
-        bn_dy_ptr = d_addend->dptr();
+        bn_dy_ptr = addend_diff->dptr();
       } else {
         const size_t tmp_buffer_size = tmp_buffer->shape().elem_cnt();
         const size_t relu_dx_size =
@@ -526,7 +526,7 @@ size_t InferFusedNormalizationAddReluGradTmpSize(user_op::InferContext* ctx) {
   CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
   cudnnBatchNormOps_t ops;
   cudnnTensorDescriptor_t z_desc;
-  if (ctx->user_op_conf().has_output("d_addend", 0)) {
+  if (ctx->user_op_conf().has_output("addend_diff", 0)) {
     ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
     z_desc = desc_helper.xy_desc();
   } else {
@@ -671,9 +671,9 @@ class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel {
     cudnnTensorDescriptor_t dz_desc;
     void* dz_ptr;
     cudnnBatchNormOps_t ops;
-    if (ctx->user_op_conf().has_output("d_addend", 0)) {
+    if (ctx->user_op_conf().has_output("addend_diff", 0)) {
       dz_desc = desc_helper.xy_desc();
-      dz_ptr = ctx->Tensor4ArgNameAndIndex("d_addend", 0)->mut_dptr();
+      dz_ptr = ctx->Tensor4ArgNameAndIndex("addend_diff", 0)->mut_dptr();
       ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
     } else {
       dz_desc = nullptr;

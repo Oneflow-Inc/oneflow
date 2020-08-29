@@ -258,8 +258,8 @@ Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(y->shape(), x_shape);
   }
   *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *x;
-  if (ctx->user_op_conf().has_output("d_addend", 0)) {
-    *ctx->TensorDesc4ArgNameAndIndex("d_addend", 0) = *x;
+  if (ctx->user_op_conf().has_output("addend_diff", 0)) {
+    *ctx->TensorDesc4ArgNameAndIndex("addend_diff", 0) = *x;
   }
   const Shape param_shape({x_shape.At(ctx->Attr<int32_t>("axis"))});
   const DataType param_data_type = x_type == DataType::kFloat16 ? DataType::kFloat : x_type;
@@ -277,8 +277,8 @@ Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
 Maybe<void> BwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
   const OptInt64* dy_batch_axis = ctx->BatchAxis4ArgNameAndIndex("dy", 0);
   *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *dy_batch_axis;
-  if (ctx->user_op_conf().has_output("d_addend", 0)) {
-    *ctx->BatchAxis4ArgNameAndIndex("d_addend", 0) = *dy_batch_axis;
+  if (ctx->user_op_conf().has_output("addend_diff", 0)) {
+    *ctx->BatchAxis4ArgNameAndIndex("addend_diff", 0) = *dy_batch_axis;
   }
   ctx->BatchAxis4ArgNameAndIndex("gamma_diff", 0)->clear_value();
   ctx->BatchAxis4ArgNameAndIndex("beta_diff", 0)->clear_value();
@@ -302,7 +302,9 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   split_args.emplace_back("dy", 0);
   split_args.emplace_back("dx", 0);
   if (ctx->user_op_conf().has_input("y", 0)) { split_args.emplace_back("y", 0); }
-  if (ctx->user_op_conf().has_output("d_addend", 0)) { split_args.emplace_back("d_addend", 0); }
+  if (ctx->user_op_conf().has_output("addend_diff", 0)) {
+    split_args.emplace_back("addend_diff", 0);
+  }
   ctx->NewBuilder()
       .Broadcast(broadcast_args)
       .PartialSum(partial_sum_args)
@@ -338,7 +340,7 @@ REGISTER_USER_OP("normalization_add_relu_grad")
     .Output("gamma_diff")
     .Output("beta_diff")
     .Output("dx")
-    .OptionalOutput("d_addend")
+    .OptionalOutput("addend_diff")
     .Attr("axis", UserOpAttrType::kAtInt32)
     .Attr("epsilon", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn(BwTensorDescInferFn)
@@ -359,7 +361,7 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu_grad")
     .Output("gamma_diff")
     .Output("beta_diff")
     .Output("dx")
-    .OptionalOutput("d_addend")
+    .OptionalOutput("addend_diff")
     .Attr("axis", UserOpAttrType::kAtInt32)
     .Attr("epsilon", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn(BwTensorDescInferFn)
@@ -560,7 +562,7 @@ REGISTER_USER_OP_GRAD("normalization_add_relu")
             .Output("gamma_diff")
             .Output("beta_diff")
             .Output("dx");
-        if (ctx->FwOp().input_size("addend") != 0) { builder.Output("d_addend"); }
+        if (ctx->FwOp().input_size("addend") != 0) { builder.Output("addend_diff"); }
         return builder.Build();
       });
 
@@ -591,7 +593,7 @@ REGISTER_USER_OP_GRAD("normalization_add_relu")
       if (ctx->FwOp().user_op_conf().has_input("addend", 0)) {
         ctx->FwOp().InputGradBind(user_op::OpArg("addend", 0),
                                   [&ctx, &grad_op_name]() -> const std::string& {
-                                    return ctx->GetOp(grad_op_name).output("d_addend", 0);
+                                    return ctx->GetOp(grad_op_name).output("addend_diff", 0);
                                   });
       }
       ctx->FwOp().InputGradBind(user_op::OpArg("gamma", 0),
