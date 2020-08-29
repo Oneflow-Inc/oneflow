@@ -24,7 +24,7 @@ namespace py = pybind11;
 namespace oneflow {
 
 PYBIND11_MODULE(oneflow_api, m) {
-  m.def("EagerExecutionEnabled", []() { return *Global<bool, EagerExecution>::Get(); });
+  m.def("EagerExecutionEnabled", []() { return EagerExecutionEnabled(); });
 }
 
 }  // namespace oneflow
