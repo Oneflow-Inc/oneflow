@@ -328,6 +328,10 @@ class Session(object):
     def JobName4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2job_name_[interface_op_name]
 
+    @property
+    def interface_ops(self):
+        return self.interface_op_name2op_attr_.keys()
+
     # return global_variable_blob, job_variable_blob
     def TryGetVariableBlobOfJobFromStash(self, job_name, var_name):
         if var_name not in self.var_name2var_blob_:

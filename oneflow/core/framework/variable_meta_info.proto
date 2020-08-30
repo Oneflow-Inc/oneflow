@@ -1,0 +1,19 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/data_type.proto";
+
+message QuantInfo {
+  
+}
+
+message VariableMetaInfo {
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+  optional QuantInfo quant_info = 4;
+}
+
+message VariableMetaInfos {
+  map<string, VariableMetaInfo> name2meta_info = 1;
+}

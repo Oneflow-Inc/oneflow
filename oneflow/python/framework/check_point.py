@@ -15,16 +15,23 @@ limitations under the License.
 """
 import datetime
 import os
+import shutil
 
 import numpy as np
+from google.protobuf import text_format
+
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.op_executor as op_executor
+import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
+from oneflow.python.experimental import interface_op_read_and_write
+from oneflow.python.framework.remote_blob import EagerBlobTrait
 
 from oneflow.python.oneflow_export import oneflow_export
-from typing import List, Union
+from typing import Dict, List, Union
 
 
 @oneflow_export("train.CheckPoint")
@@ -223,3 +230,139 @@ class SnapshotManager(object):
             return self.name2path_[name]
         except KeyError:
             return None
+
+
+META_INFO_FILENAME = "meta"
+
+
+def _ReadValueAsNumPyFromFile(path, dtype, shape):
+    return np.fromfile(path, dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(dtype)).reshape(shape)
+
+
+class FileBackendVariableBlob:
+    def __init__(self, name: str, root_dir:str):
+        self.name_ = name
+        self.root_dir_ = root_dir
+        meta_info_path = os.path.join(self.root_dir_, META_INFO_FILENAME)
+        if os.path.exists(meta_info_path):
+            meta_infos = variable_meta_info_pb.VariableMetaInfos()
+            with open(meta_info_path) as f:
+                text_format.Parse(f.read(), meta_infos)
+            if name in meta_infos.name2meta_info:
+                self.has_meta_info_ = True
+            else:
+                self.has_meta_info_ = False
+        else:
+            self.has_meta_info_ = False
+
+        if self.has_meta_info_:
+            self.shape_ = tuple(meta_infos.name2meta_info[name].shape.dim)
+            self.dtype_ = dtype_util.convert_proto_dtype_to_oneflow_dtype(meta_infos.name2meta_info[name].data_type)
+        else:
+            self.shape_ = None
+            self.dtype_ = None
+
+    @property
+    def file_path_(self):
+        return os.path.join(self.root_dir_, self.name, 'out')
+    
+    def _NumpyFriendlyToRepr(self):
+        return self.numpy()
+
+    def __repr__(self):
+        if self.has_meta_info_:
+            return '({}, name="{}", shape={}, dtype={})'.format(
+                self._NumpyFriendlyToRepr(), self.name, self.shape, self.dtype
+            )
+        else:
+            return '(variable without meta info, name="{}")'.format(self.name)
+
+    @property
+    def name(self):
+        return self.name_
+
+    @property
+    def shape(self):
+        return self.shape_
+
+    @property
+    def quant_info(self):
+        pass
+
+    @property
+    def dtype(self):
+        return self.dtype_
+
+    def _IsTooLarge(self):
+        return False
+
+    def numpy(self) -> np.ndarray:
+        if self._IsTooLarge():
+            raise RuntimeError("too large")
+        if not self.has_meta_info_:
+            raise RuntimeError("The variable does not have meta info")
+        return _ReadValueAsNumPyFromFile(self.file_path_, self.dtype, self.shape)
+
+
+@oneflow_export("get_all_variables")
+def get_all_variables() -> Dict[str, FileBackendVariableBlob]:
+    sess = session_ctx.GetDefaultSession()
+    interface_ops = sess.interface_ops
+    variables = {}
+    for op in interface_ops:
+        op_attr = sess.OpAttribute4InterfaceOpName(op)
+        if op_attr.op_conf.WhichOneof("op_type") != "variable_conf":
+            continue
+        variables[op] = interface_op_read_and_write.GetEagerInterfaceBlob(op)
+    return variables
+
+
+@oneflow_export("load")
+def load(path):
+    var_dict = {}
+    for f in os.listdir(path):
+        if os.path.isdir(os.path.join(path, f)):
+            var_path = os.path.join(path, f, "out")
+            if os.path.isfile(var_path):
+                var_dict[f] = FileBackendVariableBlob(f, path)
+    return var_dict
+
+
+@oneflow_export("checkpoint.save_all_variables")
+def save_all_variables(path):
+    os.makedirs(path, exist_ok=True)
+    meta_infos = variable_meta_info_pb.VariableMetaInfos()
+    for name, var in get_all_variables().items():
+        meta_info = meta_infos.name2meta_info[name]
+        meta_info.shape.dim[:] = var.shape
+        meta_info.data_type = var.dtype.oneflow_proto_dtype
+        param_path = os.path.join(path, name, 'out')
+        os.makedirs(os.path.dirname(param_path), exist_ok=True)
+        # TODO: large tensor / multi matchine support
+        var.numpy().tofile(param_path)
+    with open(os.path.join(path, META_INFO_FILENAME), 'w') as f:
+        f.write(text_format.MessageToString(meta_infos))
+
+
+def _FeedValueToVariable(var_name, value_blob):
+    # TODO: large tensor / multi matchine support
+    if isinstance(value_blob, EagerBlobTrait):
+        interface_op_read_and_write.FeedValueToInterfaceBlob(var_name, value_blob.numpy())
+    elif isinstance(value_blob, FileBackendVariableBlob):
+        if value_blob.has_meta_info_:
+            interface_op_read_and_write.FeedValueToInterfaceBlob(var_name, value_blob.numpy())
+        else:
+            var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
+            interface_op_read_and_write.FeedValueToInterfaceBlob(var_name, _ReadValueAsNumPyFromFile(value_blob.file_path_, var_blob.dtype, var_blob.shape))
+    else:
+        raise RuntimeError("")
+
+
+@oneflow_export("checkpoint.load_variables")
+def load_variables(var_dict, ignore_errors=False):
+    for name, var in var_dict.items():
+        if name in get_all_variables():
+            _FeedValueToVariable(name, var)
+        else:
+            if not ignore_errors:
+                raise RuntimeError("")

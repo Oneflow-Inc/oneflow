@@ -25,6 +25,36 @@ import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
 
 
+def GetEagerInterfaceBlob(op_name):
+    flow.sync_default_session()
+
+    sess = session_ctx.GetDefaultSession()
+    job_name = sess.JobName4InterfaceOpName(op_name)
+
+    def AsyncGetInterfaceBlob(Yield):
+        def build(builder):
+            blob_object = builder.MakeLazyRefBlobObject(op_name)
+            lbi = logical_blob_id_util.LogicalBlobId()
+            lbi.op_name = op_name
+            op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
+            assert len(op_attribute.output_bns) == 1
+            lbi.blob_name = op_attribute.output_bns[0]
+            if blob_object.op_arg_parallel_attr.is_mirrored():
+                remote_blob = remote_blob_util.EagerMirroredBlob(
+                    lbi, blob_object, job_name
+                )
+            else:
+                remote_blob = remote_blob_util.EagerConsistentBlob(
+                    lbi, blob_object, job_name
+                )
+
+            Yield(remote_blob)
+
+        vm_util.LogicalRun(build)
+
+    return async_util.Await(1, AsyncGetInterfaceBlob)[0]
+
+
 @oneflow_export("experimental.get_interface_blob_value")
 def GetInterfaceBlobValue(op_name):
     flow.sync_default_session()
