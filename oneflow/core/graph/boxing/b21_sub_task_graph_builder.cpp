@@ -38,7 +38,7 @@ Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
                                            dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
                                            lbi, logical_blob_desc, "B21SubTskGphBuilder", ""));
   } else {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
 }
 
