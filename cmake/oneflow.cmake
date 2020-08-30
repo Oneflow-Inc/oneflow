@@ -1,3 +1,5 @@
+include(pybind11)
+
 # main cpp
 # TODO(tsai): skip for now, fail to link when building CPU only
 if (BUILD_CUDA)
@@ -125,6 +127,9 @@ foreach(oneflow_single_file ${oneflow_all_src})
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
+    elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/.*\\.pybind\\.cpp$")
+      list(APPEND of_pybind_obj_cc ${oneflow_single_file})
+      set(group_this ON)
     else()
       # not test file
       list(FIND of_main_cc ${oneflow_single_file} main_found)
@@ -275,10 +280,10 @@ endforeach()
 RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
                               ${PROJECT_SOURCE_DIR}
                               ${of_all_rel_swigs})
-oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
+pybind11_add_module(oneflow_internal ${PROJECT_SOURCE_DIR}/oneflow/api/python/init.cpp ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
-target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
+target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
@@ -290,24 +295,29 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/oneflow/python" "${of_pyscript_dir}/oneflow/python"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python_gen"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/python_gen/__init__.py"
+    COMMAND echo "generated_compile_flags = []" > "${of_pyscript_dir}/oneflow/python_gen/sysconfig.py"
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
-        "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
+        "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python_gen/__export_symbols__.py")
 if (BUILD_CUDA)
   add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "with_cuda=True" >> "${of_pyscript_dir}/oneflow/python/compatibility.py")
+        COMMAND echo "with_cuda=True" >> "${of_pyscript_dir}/oneflow/python_gen/compatibility.py"
+        COMMAND echo "\"generated_compile_flags.append('-DWITH_CUDA')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
+        )
 else()
   add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "with_cuda=False" >> "${of_pyscript_dir}/oneflow/python/compatibility.py")
+        COMMAND echo "with_cuda=False" >> "${of_pyscript_dir}/oneflow/python_gen/compatibility.py")
 endif()
 
-file(WRITE ${PROJECT_SOURCE_DIR}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags = []\n")
-if (BUILD_CUDA)
-    file(APPEND ${PROJECT_SOURCE_DIR}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-DWITH_CUDA')\n")
-endif()
 if (USE_CXX11_ABI)
-    file(APPEND ${PROJECT_SOURCE_DIR}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=1')\n")
+  add_custom_command(TARGET of_pyscript_copy POST_BUILD
+        COMMAND echo "\"generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=1')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
+        )
 else()
-    file(APPEND ${PROJECT_SOURCE_DIR}/oneflow/python/framework/sysconfig_gen.py "generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=0')\n")
+  add_custom_command(TARGET of_pyscript_copy POST_BUILD
+        COMMAND echo "\"generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=0')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
+        )
 endif()
 
 add_dependencies(of_pyscript_copy of_protoobj)
