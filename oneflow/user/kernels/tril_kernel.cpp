@@ -58,44 +58,4 @@ REGISTER_CPU_TRIL_KERNEL(int8_t)
 REGISTER_CPU_TRIL_KERNEL(int32_t)
 REGISTER_CPU_TRIL_KERNEL(int64_t)
 
-template<typename T>
-class CpuTrilGradKernel final : public user_op::OpKernel {
- public:
-  CpuTrilGradKernel() = default;
-  ~CpuTrilGradKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const auto shape = dy->shape();
-    const int64_t diagonal = ctx->Attr<int64_t>("diagonal");
-    const int64_t row = shape.At(shape.NumAxes() - 2);
-    const int64_t col = shape.At(shape.NumAxes() - 1);
-    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    T* dx_dptr = dx->mut_dptr<T>();
-    const T* dy_dptr = dy->dptr<T>();
-    T zero = GetZeroVal<T>();
-    int64_t matrix_cnt = row * col;
-    for (int64_t k = 0; k < shape.elem_cnt(); ++k) {
-      int64_t index_in_matrix = k - matrix_cnt * (k / matrix_cnt);
-      int64_t i = index_in_matrix / col;
-      int64_t j = index_in_matrix - col * (index_in_matrix / col);
-      dx_dptr[k] = j > i + diagonal ? zero : dy_dptr[k];
-    }
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_CPU_TRIL_GRAD_KERNEL(dtype)              \
-  REGISTER_USER_KERNEL("tril_grad")                       \
-      .SetCreateFn<CpuTrilGradKernel<dtype>>()            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
-REGISTER_CPU_TRIL_GRAD_KERNEL(float)
-REGISTER_CPU_TRIL_GRAD_KERNEL(double)
-REGISTER_CPU_TRIL_GRAD_KERNEL(int8_t)
-REGISTER_CPU_TRIL_GRAD_KERNEL(int32_t)
-REGISTER_CPU_TRIL_GRAD_KERNEL(int64_t)
-
 }  // namespace oneflow

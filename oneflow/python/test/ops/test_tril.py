@@ -34,17 +34,16 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal=0):
     flow_type = type_name_to_flow_type[type_name]
 
     @flow.global_function(type="train", function_config=func_config)
-    def test_tril_fw_bw_job(x: oft.Numpy.Placeholder(shape, dtype=flow.float),):
+    def test_tril_fw_bw_job(x: oft.Numpy.Placeholder(shape, dtype=flow_type),):
         with flow.scope.placement(device, "0:0"):
-            x += flow.get_variable(
-                name="vx",
+            x_var = flow.get_variable(
+                name="xv",
                 shape=(1,),
                 dtype=flow.float,
                 initializer=flow.zeros_initializer(),
             )
-            x = flow.cast(x, dtype=flow_type)
+            x += flow.cast(x_var, dtype=flow_type)
             out = flow.math.tril(x, diagonal)
-            out = flow.cast(out, dtype=flow.float)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(out)
@@ -57,20 +56,14 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal=0):
 
     check_point = flow.train.CheckPoint()
     check_point.init()
-    x = np.random.randint(low=0, high=100, size=shape).astype(np.float32)
-    test_tril_fw_bw_job(x).get()
-    test_case.assertTrue(
-        np.allclose(
-            np.tril(test_global_storage.Get("x"), diagonal),
-            test_global_storage.Get("out"),
-        )
-    )
-    test_case.assertTrue(
-        np.allclose(
-            np.tril(test_global_storage.Get("out_diff"), diagonal),
-            test_global_storage.Get("x_diff"),
-        )
-    )
+    x = np.random.randint(low=0, high=100, size=shape)
+    test_tril_fw_bw_job(x.astype(np_type)).get()
+
+    np_out = np.tril(test_global_storage.Get("x"), diagonal)
+    np_x_diff = np.tril(test_global_storage.Get("out_diff"), diagonal)
+
+    test_case.assertTrue(np.allclose(np_out, test_global_storage.Get("out")))
+    test_case.assertTrue(np.allclose(np_x_diff, test_global_storage.Get("x_diff")))
 
 
 def test_tril_fw_bw(test_case):

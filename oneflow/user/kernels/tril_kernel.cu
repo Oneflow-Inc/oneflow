@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/util/cuda_half_util.h"
 
 namespace oneflow {
 
@@ -28,7 +29,19 @@ __global__ void TrilCalGpu(const int64_t elem_cnt, const int64_t row, const int6
     int64_t index_in_matrix = k - matrix_cnt * (k / matrix_cnt);
     int64_t i = index_in_matrix / col;
     int64_t j = index_in_matrix - col * (index_in_matrix / col);
-    y[k] = j > i + diagonal ? 0 : x[k];
+    y[k] = j > i + diagonal ? zero : x[k];
+  }
+}
+
+__global__ void NaiveHalfTrilCalGpu(const int64_t elem_cnt, const int64_t row, const int64_t col,
+                                    const int64_t diagonal, const half* x, half* y) {
+  half zero = hzero();
+  int64_t matrix_cnt = row * col;
+  CUDA_1D_KERNEL_LOOP_T(int64_t, k, elem_cnt) {
+    int64_t index_in_matrix = k - matrix_cnt * (k / matrix_cnt);
+    int64_t i = index_in_matrix / col;
+    int64_t j = index_in_matrix - col * (index_in_matrix / col);
+    y[k] = j > i + diagonal ? zero : x[k];
   }
 }
 
@@ -55,6 +68,28 @@ class GpuTrilKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+template<>
+class GpuTrilKernel<float16> final : public user_op::OpKernel {
+ public:
+  GpuTrilKernel() = default;
+  ~GpuTrilKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const auto shape = x->shape();
+    const int64_t diagonal = ctx->Attr<int64_t>("diagonal");
+    const int64_t row = shape.At(shape.NumAxes() - 2);
+    const int64_t col = shape.At(shape.NumAxes() - 1);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int32_t elem_cnt = shape.elem_cnt();
+    RUN_CUDA_KERNEL(NaiveHalfTrilCalGpu, ctx->device_ctx(), elem_cnt, elem_cnt, row, col, diagonal,
+                    reinterpret_cast<const half*>(x->dptr<float16>()),
+                    reinterpret_cast<half*>(y->mut_dptr<float16>()));
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
 #define REGISTER_GPU_TRIL_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("tril").SetCreateFn<GpuTrilKernel<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceTag() == "gpu")                                            \
@@ -65,38 +100,6 @@ REGISTER_GPU_TRIL_KERNEL(double)
 REGISTER_GPU_TRIL_KERNEL(int8_t)
 REGISTER_GPU_TRIL_KERNEL(int32_t)
 REGISTER_GPU_TRIL_KERNEL(int64_t)
-
-template<typename T>
-class GpuTrilGradKernel final : public user_op::OpKernel {
- public:
-  GpuTrilGradKernel() = default;
-  ~GpuTrilGradKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const auto shape = dy->shape();
-    const int64_t diagonal = ctx->Attr<int64_t>("diagonal");
-    const int64_t row = shape.At(shape.NumAxes() - 2);
-    const int64_t col = shape.At(shape.NumAxes() - 1);
-    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int32_t elem_cnt = shape.elem_cnt();
-    RUN_CUDA_KERNEL((TrilCalGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, row, col, diagonal,
-                    dy->dptr<T>(), dx->mut_dptr<T>());
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_GPU_TRIL_GRAD_KERNEL(dtype)              \
-  REGISTER_USER_KERNEL("tril_grad")                       \
-      .SetCreateFn<GpuTrilGradKernel<dtype>>()            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
-REGISTER_GPU_TRIL_GRAD_KERNEL(float)
-REGISTER_GPU_TRIL_GRAD_KERNEL(double)
-REGISTER_GPU_TRIL_GRAD_KERNEL(int8_t)
-REGISTER_GPU_TRIL_GRAD_KERNEL(int32_t)
-REGISTER_GPU_TRIL_GRAD_KERNEL(int64_t)
+REGISTER_GPU_TRIL_KERNEL(float16)
 
 }  // namespace oneflow
