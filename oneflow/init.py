@@ -37,8 +37,8 @@ def import_oneflow_internal2():
     fp, pathname, description = imp.find_module(
         "_oneflow_internal", [dirname(__file__)]
     )
-    path = os.path.join(dirname(__file__), pathname)
-    return import_secondary_module("oneflow_api", path)
+    assert os.path.isfile(pathname)
+    return import_secondary_module("oneflow_api", pathname)
 
 
 oneflow_api = import_oneflow_internal2()
