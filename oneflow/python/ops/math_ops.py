@@ -1771,25 +1771,3 @@ def tanh_grad(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-
-
-@oneflow_export("math.masked_fill")
-def masked_fill(
-    x: remote_blob_util.BlobDef,
-    mask: remote_blob_util.BlobDef,
-    value: float,
-    name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
-    return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Masked_Fill_")
-        )
-        .Op("masked_fill")
-        .Input("x", [x])
-        .Input("mask", [mask])
-        .Attr("value", value)
-        .Output("y")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
