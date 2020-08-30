@@ -49,17 +49,17 @@ def _masked_fill_np_fw_bw(x, mask, y_diff, type_name, value=0):
     filted_y_diff = np.where(brocadcasted_mask, zero_like, y_diff)
     extended_axes_num = len(y_diff.shape) - len(x.shape)
     extended_axes = tuple(range(extended_axes_num))
-    mid_diff = np.add.reduce(filted_y_diff, axis = extended_axes)
+    mid_diff = np.add.reduce(filted_y_diff, axis=extended_axes)
     diff_axes = list()
     for i in range(len(x.shape)):
         if x.shape[i] != y_diff.shape[i + extended_axes_num]:
             assert x.shape[i] == 1 and y_diff.shape[i + extended_axes_num] != 1
             diff_axes.append(i)
     if len(diff_axes) != 0:
-        x_diff = np.add.reduce(mid_diff, axis = tuple(diff_axes), keepdims = True)
+        x_diff = np.add.reduce(mid_diff, axis=tuple(diff_axes), keepdims=True)
     else:
         x_diff = mid_diff
-    
+
     return y, x_diff
 
 
@@ -108,7 +108,6 @@ def _test_masked_fill_fw_bw(test_case, device, x_shape, mask_shape, type_name, v
 
     np_out, np_x_diff = _masked_fill_np_fw_bw(x, mask, out_diff, np_type, value)
 
-   
     test_case.assertTrue(np.allclose(np_out, test_global_storage.Get("out")))
     test_case.assertTrue(np.allclose(np_x_diff, test_global_storage.Get("x_diff")))
 
