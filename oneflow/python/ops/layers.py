@@ -41,7 +41,9 @@ def dense(
     name: str = "Dense",
     model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
 ) -> remote_blob_util.BlobDef:
-    r"""Analogous to `tf.keras.layers.Dense <https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense>`_
+    r"""Fully-connected layer. 
+    
+    The fully-connected layer multiplies input Blob with weight matrix and produces an Output Blob. 
 
     Args:
         inputs (remote_blob_util.BlobDef): A 2D input `Blob`.
@@ -63,6 +65,35 @@ def dense(
         ValueError: The dimension of input `Blob` must be less than 2.
         VauleError: Model distribute must be in auto, broadcast, split.
         ValueError: The input must be a 2D `Blob` when the model distribute is split.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def dense_Job(x: tp.Numpy.Placeholder((1, 256))
+        ) -> tp.Numpy:
+            initializer = flow.truncated_normal(0.1)
+            hidden = flow.layers.dense(
+                x,
+                512,
+                activation=flow.nn.relu,
+                kernel_initializer=initializer,
+                name="dense1",
+            )
+            return hidden
+
+
+        x = np.random.randn(1, 256).astype(np.float32)
+        out = dense_Job(x)
+
+        # output.shape (1, 512)
+
     """
     in_shape = inputs.shape
     in_num_axes = len(in_shape)
@@ -149,7 +180,9 @@ def conv1d(
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""1D convolution layer.
+    r"""1D convolution layer. 
+    
+    This layer computes a 1-D convolution with 3D input Blob and filters. 
 
     Args:
         inputs (remote_blob_util.BlobDef): A 3D input `Blob`.
@@ -181,6 +214,37 @@ def conv1d(
 
     Returns:
         remote_blob_util.BlobDef: A 3D `Blob` with the shape of (batch_size, filters, new_width).
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def conv1d_Job(x: tp.Numpy.Placeholder((1, 64, 32))
+        ) -> tp.Numpy:
+            initializer = flow.truncated_normal(0.1)
+            conv1d = flow.layers.conv1d(
+                x,
+                filters=128,
+                kernel_size=3,
+                strides=1,
+                padding='SAME',
+                kernel_initializer=initializer,
+                name="Conv1d"
+            )
+            return conv1d
+
+
+        x = np.random.randn(1, 64, 32).astype(np.float32)
+        out = conv1d_Job(x)
+
+        # output.shape (1, 128, 32)
+
     """
 
     if isinstance(kernel_size, int):
@@ -310,7 +374,9 @@ def conv2d(
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""2D convolution layer.
+    r"""2D convolution layer. 
+    
+    This layer computes a 2D convolution with 4D input Blob and filters. 
 
     Args:
         inputs (remote_blob_util.BlobDef): A 4D input `Blob`.
@@ -344,6 +410,37 @@ def conv2d(
 
     Returns:
         remote_blob_util.BlobDef: A 4D `Blob` with the shape of (batch_size, filters, new_height, new_width).
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def conv2d_Job(x: tp.Numpy.Placeholder((1, 256, 32, 32))
+        ) -> tp.Numpy:
+            initializer = flow.truncated_normal(0.1)
+            conv2d = flow.layers.conv2d(
+                x,
+                filters=128,
+                kernel_size=3,
+                strides=1,
+                padding='SAME',
+                kernel_initializer=initializer,
+                name="Conv2d"
+            )
+            return conv2d
+
+
+        x = np.random.randn(1, 256, 32, 32).astype(np.float32)
+        out = conv2d_Job(x)
+
+        # output.shape (1, 128, 32, 32)
+
     """
 
     if isinstance(kernel_size, int):
@@ -474,7 +571,9 @@ def conv3d(
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""3D convolution layer.
+    r"""3D convolution layer. 
+    
+    This layer computes 3D convolution with 5D input Blob and filters
 
     Args:
         inputs (remote_blob_util.BlobDef): A 5D input `Blob`.
@@ -508,6 +607,33 @@ def conv3d(
 
     Returns:
         remote_blob_util.BlobDef: A 5D `Blob` with the shape of (batch_size, filters, new_height, new_width).
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def conv3d_Job(x: tp.Numpy.Placeholder((1, 64, 16, 16, 16))
+        ) -> tp.Numpy:
+            initializer = flow.truncated_normal(0.1)
+            conv3d = flow.layers.conv3d(
+                x,
+                filters=128,
+                kernel_size=3,
+                strides=1,
+                padding='SAME',
+                kernel_initializer=initializer,
+                name="Conv3d"
+            )
+            return conv3d
+
+        # output.shape (1, 128, 16, 16, 16)
+
     """
     need_transpose = 0
     if data_format.upper() == "NDHWC":  # NDHWC is not supported before cudnn 8.0
@@ -636,12 +762,12 @@ def layer_norm(
     epsilon: float = 1e-5,
     name: str = "LayerNorm",
 ) -> remote_blob_util.BlobDef:
-    r"""Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
+    r"""Layer Normalization. 
 
     Args:
         inputs (remote_blob_util.BlobDef): Input `Blob`.
         center (bool, optional): A boolean specifies whether to shift input `Blob`. Defaults to True.
-        scale (bool, optional): A boolean specifies whether to scaleinput `Blob`. Defaults to True.
+        scale (bool, optional): A boolean specifies whether to scale input `Blob`. Defaults to True.
         trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
         begin_norm_axis (int, optional): An integer specifies which axis to normalize at first. Defaults to 1.
         begin_params_axis (int, optional):  An integer specifies which axis params at . Defaults to -1.
@@ -650,6 +776,31 @@ def layer_norm(
 
     Returns:
         remote_blob_util.BlobDef: A normalized `Blob` with same shape of input.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def layer_norm_Job(x: tp.Numpy.Placeholder((1, 64, 128, 128))
+        ) -> tp.Numpy:
+            layer_norm = flow.layers.layer_norm(
+                x,
+                name="LayerNorm1"
+            )
+            return layer_norm
+
+
+        x = np.random.randn(1, 64, 128, 128).astype(np.float32)
+        out = layer_norm_Job(x)
+
+        # output.shape (1, 64, 128, 128)
+
     """
     if center is False and scale is False:
         trainable = False
@@ -844,7 +995,11 @@ def batch_normalization(
     training: bool = True,
     name: str = "BatchNorm",
 ) -> remote_blob_util.BlobDef:
-    r"""Analogous to `tf.keras.layers.BatchNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization>`_
+    r"""The BatchNormalization Layer. 
+    
+    This layer can be used in conv or dense layer.
+    
+    The input data will be normalized by the mean and variance of the current batch data
 
     Args:
         inputs (remote_blob_util.BlobDef): Input `Blob`.
@@ -868,6 +1023,41 @@ def batch_normalization(
 
     Raises:
         ValueError: If axis is out of dimension of input.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def batch_norm_Job(x: tp.Numpy.Placeholder((1, 64, 128, 128))
+        ) -> tp.Numpy:
+            initializer = flow.truncated_normal(0.1)
+            conv2d = flow.layers.conv2d(
+                x,
+                filters=128,
+                kernel_size=3,
+                strides=2,
+                padding='SAME',
+                kernel_initializer=initializer,
+                name="Conv2d"
+            )
+            batch_norm = flow.layers.batch_normalization(
+                conv2d,
+                axis=1
+            )
+            return batch_norm
+
+
+        x = np.random.randn(1, 64, 128, 128).astype(np.float32)
+        out = batch_norm_Job(x)
+
+        # output.shape (1, 128, 64, 64)
+
     """
     if axis < 0:
         axis += len(inputs.shape)
@@ -1000,7 +1190,7 @@ def upsample(
     interpolation: str = "nearest",
     name: str = "Upsample2D",
 ):
-    r"""Upsample Operation
+    r"""The Upsample Layer, this layer can upsample the feature map to a specified scale. 
 
     Args:
         x ([type]): Input `Blob`.
@@ -1016,6 +1206,32 @@ def upsample(
 
     Returns:
         [type]: remote_blob_util.BlobDef:  A `Blob` which is the upsampled `x`. If `size` is (2, 2), the shape of return value is [N, C, 2H, 2W].
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def upsample_Job(x: tp.Numpy.Placeholder((1, 32, 32, 32))
+        ) -> tp.Numpy:
+            upsample = flow.layers.upsample_2d(
+                x,
+                size=(2, 2),
+                name="Upsample1"
+            )
+            return upsample
+
+
+        x = np.random.randn(1, 32, 32, 32).astype(np.float32)
+        out = upsample_Job(x)
+
+        # output.shape (1, 32, 64, 64)
+
     """
     if isinstance(size, int):
         height_scale = size
