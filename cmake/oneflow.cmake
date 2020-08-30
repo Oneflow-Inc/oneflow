@@ -83,11 +83,6 @@ foreach(oneflow_single_file ${oneflow_all_src})
     continue()
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/.*\\.pybind\\.cpp$")
-    list(APPEND of_pybind_obj_cc ${oneflow_single_file})
-    set(group_this ON)
-  endif()
-
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.h$")
     list(APPEND of_python_obj_cc ${oneflow_single_file})
     set(group_this ON)
@@ -132,6 +127,9 @@ foreach(oneflow_single_file ${oneflow_all_src})
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
+    elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/.*\\.pybind\\.cpp$")
+      list(APPEND of_pybind_obj_cc ${oneflow_single_file})
+      set(group_this ON)
     else()
       # not test file
       list(FIND of_main_cc ${oneflow_single_file} main_found)
