@@ -65,23 +65,19 @@ include_files = [
     os.path.relpath(p, "{}/python_scripts/oneflow".format(args.build_dir))
     for p in include_files
 ]
-package_data = {"oneflow": ["_oneflow_internal.so"] + include_files}
 
-if args.with_xla:
-    packages += ["oneflow.libs"]
-    package_dir["oneflow.libs"] = "third_party/tensorflow/lib"
-    package_data["oneflow.libs"] = ["libtensorflow_framework.so.1", "libxla_core.so"]
-    # Patchelf >= 0.9 is required.
-    oneflow_internal_so = "{}/python_scripts/oneflow/_oneflow_internal.so".format(
-        args.build_dir
+
+def get_oneflow_internal_so_path():
+    import imp
+
+    fp, pathname, description = imp.find_module(
+        "_oneflow_internal", ["{}/python_scripts/oneflow".format(args.build_dir)]
     )
-    rpath = os.popen("patchelf --print-rpath " + oneflow_internal_so).read()
-    command = "patchelf --set-rpath '$ORIGIN/:$ORIGIN/libs/:%s' %s" % (
-        rpath.strip(),
-        oneflow_internal_so,
-    )
-    if os.system(command) != 0:
-        raise Exception("Patchelf set rpath failed. command is: %s" % command)
+    assert os.path.isfile(pathname)
+    return os.path.relpath(pathname, "{}/python_scripts/oneflow".format(args.build_dir))
+
+
+package_data = {"oneflow": [get_oneflow_internal_so_path()] + include_files}
 
 
 def get_version():
