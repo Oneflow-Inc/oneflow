@@ -530,6 +530,23 @@ def nccl_fusion_broadcast(val):
     sess.config_proto.resource.collective_boxing_conf.nccl_fusion_broadcast = val
 
 
+@oneflow_export("config.collective_boxing.nccl_fusion_all2all")
+def api_nccl_fusion_all2all(val: bool) -> None:
+    r"""Whether or not use nccl fusion during all2all progress
+
+    Args:
+        val (bool): True or False
+    """
+    return enable_if.unique([nccl_fusion_all2all, do_nothing])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def nccl_fusion_all2all(val):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_all2all = val
+
+
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
 def do_nothing(*args, **kwargs):
     print("Nothing happened because the session is running")

@@ -31,12 +31,22 @@ Shape GetSplitShape(const RankDesc& rank_desc) {
   return shape;
 }
 
+Shape GetSplitLastShape(const RankDesc& rank_desc) {
+  Shape shape(rank_desc.op_desc().shape());
+  CHECK_GT(shape.NumAxes(), 0);
+  const int32_t last_axis = shape.NumAxes() - 1;
+  CHECK(shape.At(last_axis) % rank_desc.op_desc().num_ranks() == 0);
+  shape.Set(last_axis, shape.At(last_axis) / rank_desc.op_desc().num_ranks());
+  return shape;
+}
+
 }  // namespace
 
 bool GenericOpHasInput(const RankDesc& rank_desc) {
   const OpType op_type = rank_desc.op_desc().op_type();
   if (op_type == OpType::kOpTypeAllReduce || op_type == OpType::kOpTypeAllGather
-      || op_type == OpType::kOpTypeReduceScatter || op_type == OpType::kOpTypeReduce) {
+      || op_type == OpType::kOpTypeReduceScatter || op_type == OpType::kOpTypeReduce
+      || op_type == OpType::kOpTypeAll2All) {
     return true;
   } else if (op_type == OpType::kOpTypeBroadcast) {
     CHECK(rank_desc.op_desc().has_root());
@@ -50,7 +60,8 @@ bool GenericOpHasInput(const RankDesc& rank_desc) {
 bool GenericOpHasOutput(const RankDesc& rank_desc) {
   const OpType op_type = rank_desc.op_desc().op_type();
   if (op_type == OpType::kOpTypeAllReduce || op_type == OpType::kOpTypeAllGather
-      || op_type == OpType::kOpTypeReduceScatter || op_type == OpType::kOpTypeBroadcast) {
+      || op_type == OpType::kOpTypeReduceScatter || op_type == OpType::kOpTypeBroadcast
+      || op_type == OpType::kOpTypeAll2All) {
     return true;
   } else if (op_type == OpType::kOpTypeReduce) {
     CHECK(rank_desc.op_desc().has_root());
@@ -69,6 +80,8 @@ Shape GenericOpGetInputShape(const RankDesc& rank_desc) {
     return Shape(rank_desc.op_desc().shape());
   } else if (op_type == OpType::kOpTypeAllGather) {
     return GetSplitShape(rank_desc);
+  } else if (op_type == OpType::kOpTypeAll2All) {
+    return GetSplitLastShape(rank_desc);
   } else {
     UNIMPLEMENTED();
     return Shape();
@@ -83,6 +96,8 @@ Shape GenericOpGetOutputShape(const RankDesc& rank_desc) {
     return Shape(rank_desc.op_desc().shape());
   } else if (op_type == OpType::kOpTypeReduceScatter) {
     return GetSplitShape(rank_desc);
+  } else if (op_type == OpType::kOpTypeAll2All) {
+    return GetSplitLastShape(rank_desc);
   } else {
     UNIMPLEMENTED();
     return Shape();

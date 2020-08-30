@@ -215,6 +215,8 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
       return collective_boxing_conf_.nccl_fusion_reduce();
     } else if (op_type == OpType::kOpTypeBroadcast) {
       return collective_boxing_conf_.nccl_fusion_broadcast();
+    } else if (op_type == OpType::kOpTypeAll2All) {
+      return collective_boxing_conf_.nccl_fusion_all2all();
     } else {
       UNIMPLEMENTED();
       return false;
@@ -374,6 +376,13 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
         } else if (op_type == OpType::kOpTypeBroadcast) {
           OF_NCCL_CHECK(ncclBroadcast(send_buff, recv_buff, elem_cnt, nccl_data_type,
                                       op_desc.root(), comm, device_ctx->stream));
+        } else if (op_type == OpType::kOpTypeAll2All) {
+          for (int32_t j = 0; j < num_ranks; j++) {
+            OF_NCCL_CHECK(ncclSend(send_buff + j * elem_cnt / num_ranks, elem_cnt / num_ranks,
+                                   nccl_data_type, j, comm, device_ctx->stream));
+            OF_NCCL_CHECK(ncclRecv(recv_buff + j * elem_cnt / num_ranks, elem_cnt / num_ranks,
+                                   nccl_data_type, j, comm, device_ctx->stream));
+          }
         } else {
           UNIMPLEMENTED();
         }
