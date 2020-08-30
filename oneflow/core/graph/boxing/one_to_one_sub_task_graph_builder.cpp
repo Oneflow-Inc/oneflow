@@ -40,7 +40,7 @@ Maybe<SubTskGphBuilderStatus> OneToOneSubTskGphBuilder::Build(
                                            dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
                                            lbi, logical_blob_desc, "OneToOneSubTskGphBuilder", ""));
   } else {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
 }
 
