@@ -28,7 +28,6 @@ limitations under the License.
 from collections import OrderedDict
 import numpy as np
 import oneflow as flow
-import torch
 
 from test_util import (
     GenArgDict,
@@ -37,6 +36,31 @@ from test_util import (
     type_name_to_np_type,
 )
 import oneflow.typing as oft
+
+
+def _masked_fill_np_fw_bw(x, mask, y_diff, type_name, value=0):
+    brocadcast_shape = np.broadcast(x, mask).shape
+    brocadcasted_x = np.broadcast_to(x, brocadcast_shape).astype(type_name)
+    brocadcasted_mask = np.broadcast_to(mask, brocadcast_shape)
+    masked_x = np.ma.array(brocadcasted_x, mask=brocadcasted_mask, fill_value=value)
+    y = masked_x.filled()
+
+    zero_like = np.zeros_like(y_diff)
+    filted_y_diff = np.where(brocadcasted_mask, zero_like, y_diff)
+    extended_axes_num = len(y_diff.shape) - len(x.shape)
+    extended_axes = tuple(range(extended_axes_num))
+    mid_diff = np.add.reduce(filted_y_diff, axis = extended_axes)
+    diff_axes = list()
+    for i in range(len(x.shape)):
+        if x.shape[i] != y_diff.shape[i + extended_axes_num]:
+            assert x.shape[i] == 1 and y_diff.shape[i + extended_axes_num] != 1
+            diff_axes.append(i)
+    if len(diff_axes) != 0:
+        x_diff = np.add.reduce(mid_diff, axis = tuple(diff_axes), keepdims = True)
+    else:
+        x_diff = mid_diff
+    
+    return y, x_diff
 
 
 def _test_masked_fill_fw_bw(test_case, device, x_shape, mask_shape, type_name, value=0):
@@ -62,8 +86,8 @@ def _test_masked_fill_fw_bw(test_case, device, x_shape, mask_shape, type_name, v
             )
             y = flow.cast(y, dtype=flow_type)
             x += y
-            mask = flow.cast(mask, dtype=flow_type)
-            out = flow.math.masked_fill(x, mask, value)
+            mask = flow.cast(mask, dtype=flow.int8)
+            out = flow.masked_fill(x, mask, value)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(out)
@@ -77,28 +101,16 @@ def _test_masked_fill_fw_bw(test_case, device, x_shape, mask_shape, type_name, v
     check_point = flow.train.CheckPoint()
     check_point.init()
     x = np.random.randint(low=0, high=100, size=x_shape)
-    mask = np.random.randint(low=0, high=1, size=mask_shape)
+    mask = np.random.randint(low=0, high=2, size=mask_shape)
 
     test_masked_fill_fw_bw_job(x.astype(np_type), mask.astype(np_type)).get()
     out_diff = test_global_storage.Get("out_diff")
 
-    torch_x = torch.Tensor(x).float()
-    torch_x.requires_grad = True
-    torch_mask = torch.ByteTensor(mask)
-    touch_y = torch_x.masked_fill(torch_mask, value)
-    touch_y.backward(torch.Tensor(out_diff))
+    np_out, np_x_diff = _masked_fill_np_fw_bw(x, mask, out_diff, np_type, value)
 
-    test_case.assertTrue(
-        np.all(
-            touch_y.detach().numpy().astype(np_type) == test_global_storage.Get("out")
-        )
-    )
-
-    test_case.assertTrue(
-        np.all(
-            torch_x.grad.numpy().astype(np_type) == test_global_storage.Get("x_diff")
-        )
-    )
+   
+    test_case.assertTrue(np.allclose(np_out, test_global_storage.Get("out")))
+    test_case.assertTrue(np.allclose(np_x_diff, test_global_storage.Get("x_diff")))
 
 
 def test_masked_fill_fw_bw(test_case):
@@ -108,12 +120,13 @@ def test_masked_fill_fw_bw(test_case):
     arg_dict["x_shape"] = [
         (2, 4),
         (1, 4),
-        (2, 3, 4),
+        (2, 2, 4),
         (2, 1, 4),
-        (2, 3, 3, 4),
-        (4, 2, 3, 4, 4),
+        (2, 3, 2, 4),
+        (2, 2, 3, 2, 4),
     ]
-    arg_dict["mask_shape"] = [(2, 1, 1, 4)]
+    arg_dict["mask_shape"] = [(2, 1, 2, 4)]
     arg_dict["value"] = [2.5, 3.3, -5.5]
+    arg_dict["value"] = [-5.5]
     for arg in GenArgDict(arg_dict):
         _test_masked_fill_fw_bw(test_case, **arg)

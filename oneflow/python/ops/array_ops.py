@@ -879,3 +879,15 @@ def broadcast_like(
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
+
+@oneflow_export("masked_fill")
+def masked_fill(
+    x: remote_blob_util.BlobDef,
+    mask: remote_blob_util.BlobDef,
+    value: Union[float, int],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    if name is None:
+        name = id_util.UniqueStr("MaskedFill_")
+    value_like_x = flow.constant_like(like=x, value=value, name=name + "_ConstantLike")
+    return flow.where(condition=mask, x=value_like_x, y=x, name=name + "_Where")

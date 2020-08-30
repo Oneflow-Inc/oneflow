@@ -1781,7 +1781,7 @@ def masked_fill(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Tril_"))
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Masked_Fill_"))
         .Op("masked_fill")
         .Input("x", [x])
         .Input("mask", [mask])
