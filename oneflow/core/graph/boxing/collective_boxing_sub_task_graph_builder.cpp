@@ -115,7 +115,7 @@ class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuil
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
           "NcclCollectiveBoxingAllReduceSubTskGphBuilder", ""));
     } else {
-      return Error::BoxingNotSupported();
+      return Error::BoxingNotSupportedError();
     }
   }
 };
@@ -157,7 +157,7 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
           "NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
     } else {
-      return Error::BoxingNotSupported();
+      return Error::BoxingNotSupportedError();
     }
   }
 };
@@ -201,7 +201,7 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
           "NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
     } else {
-      return Error::BoxingNotSupported();
+      return Error::BoxingNotSupportedError();
     }
   }
 };
@@ -226,7 +226,7 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && src_sbp_parallel.has_partial_sum_parallel()) {
       const int64_t root_parallel_id = FindRootParallelId(src_parallel_desc, dst_parallel_desc);
-      if (root_parallel_id == -1) { return Error::BoxingNotSupported(); }
+      if (root_parallel_id == -1) { return Error::BoxingNotSupportedError(); }
 
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingReduce-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
@@ -248,7 +248,7 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
           "NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
     } else {
-      return Error::BoxingNotSupported();
+      return Error::BoxingNotSupportedError();
     }
   }
 };
@@ -309,7 +309,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
           "NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
     } else {
-      return Error::BoxingNotSupported();
+      return Error::BoxingNotSupportedError();
     }
   };
 };
@@ -349,9 +349,9 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
         root_parallel_id = FindRootParallelId(dst_parallel_desc, src_parallel_desc);
         gpu_src_node = sorted_src_comp_tasks.front();
       } else {
-        return Error::BoxingNotSupported();
+        return Error::BoxingNotSupportedError();
       }
-      if (root_parallel_id == -1) { return Error::BoxingNotSupported(); }
+      if (root_parallel_id == -1) { return Error::BoxingNotSupportedError(); }
 
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingBroadcast-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, dst_parallel_desc.parallel_num()) {
@@ -372,7 +372,7 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
           "NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
     } else {
-      return Error::BoxingNotSupported();
+      return Error::BoxingNotSupportedError();
     }
   }
 };
@@ -395,9 +395,9 @@ Maybe<SubTskGphBuilderStatus> CollectiveBoxingSubTskGphBuilder::Build(
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
-  if (!GlobalJobDesc().Bool("__is_user_function__")) { return Error::BoxingNotSupported(); }
+  if (!GlobalJobDesc().Bool("__is_user_function__")) { return Error::BoxingNotSupportedError(); }
   if (!IsSourceTimeShape(*sorted_src_comp_tasks.front()->logical_node()->out_blob_time_shape())) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   return chain_builder_->Build(ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, src_parallel_desc,
                                dst_parallel_desc, lbi, logical_blob_desc, src_sbp_parallel,

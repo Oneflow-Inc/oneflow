@@ -147,7 +147,7 @@ Maybe<void> StartGlobalSession() {
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
   }
-  if (job_set.job().empty()) { return Error::JobSetEmpty() << "no function defined"; }
+  if (job_set.job().empty()) { return Error::JobSetEmptyError() << "no function defined"; }
   CHECK_ISNULL_OR_RETURN(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
   Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
