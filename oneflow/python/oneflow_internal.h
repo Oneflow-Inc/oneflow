@@ -40,6 +40,10 @@ std::string CurrentResource(std::string* error_str) {
   return oneflow::CurrentResource().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
+std::string RequiredMemory(std::string* error_str) {
+  return oneflow::RequiredMemory().GetDataAndSerializedErrorProto(error_str, std::string(""));
+}
+
 std::string EnvResource(std::string* error_str) {
   return oneflow::EnvResource().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }

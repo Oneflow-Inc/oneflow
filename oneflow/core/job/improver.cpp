@@ -576,8 +576,14 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
                                                  device_tag)
                << "OOM detected at compile time. ";
       } else {
-        Global<ResourceDesc, ForSession>::Get()->SetRequiredMemoryZoneInfo(machine_id, mem_zone_id,
-                                                                           calc, device_tag);
+        if (calc > 0) {
+          auto* device_memory_requirement =
+              Global<MemoryRequirements>::Get()->add_device_memory_requirement();
+          device_memory_requirement->set_machine_id(machine_id);
+          device_memory_requirement->set_mem_zone_id(mem_zone_id);
+          device_memory_requirement->set_device_tag(device_tag);
+          device_memory_requirement->set_required(calc);
+        }
       }
     }
   }

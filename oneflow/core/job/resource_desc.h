@@ -56,8 +56,6 @@ class ResourceDesc final {
 
   void SetMachineNum(int32_t val) { resource_.set_machine_num(val); }
   void SetCpuDeviceNum(int32_t val) { resource_.set_cpu_device_num(val); }
-  void SetRequiredMemoryZoneInfo(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
-                                 const std::string& device_tag);
   const Resource& resource() const { return resource_; }
 
  private:

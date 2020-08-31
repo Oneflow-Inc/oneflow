@@ -216,24 +216,24 @@ def logbuflevel(val):
     default_env_proto.cpp_logging_conf.logbuflevel = val
 
 
-@oneflow_export("require_resource")
-def api_get_require_resource():
-    return enable_if.unique([get_require_resource])()
+@oneflow_export("query_required_memory")
+def api_query_required_memory():
+    return enable_if.unique([query_required_memory])()
 
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
-def get_require_resource():
-    resource = c_api_util.CurrentResource()
-    required_memory_zone_info_list = []
-    for item in resource.required_memory_zone_info:
-        required_memory_zone_info_detail = {}
-        required_memory_zone_info_detail["machine_id"] = item.machine_id
-        required_memory_zone_info_detail["mem_zone_id"] = item.mem_zone_id
-        required_memory_zone_info_detail["device_tag"] = item.device_tag
-        required_memory_zone_info_detail["required"] = item.required
-        required_memory_zone_info_list.append(required_memory_zone_info_detail)
+def query_required_memory():
+    memory_requirements = c_api_util.RequiredMemory()
+    device_memory_requirement_list = []
+    for item in memory_requirements.device_memory_requirement:
+        device_memory_requirement_detail = {}
+        device_memory_requirement_detail["machine_id"] = item.machine_id
+        device_memory_requirement_detail["mem_zone_id"] = item.mem_zone_id
+        device_memory_requirement_detail["device_tag"] = item.device_tag
+        device_memory_requirement_detail["required"] = item.required
+        device_memory_requirement_list.append(device_memory_requirement_detail)
     return reduce(
-        lambda x, y: x if y in x else x + [y], [[],] + required_memory_zone_info_list
+        lambda x, y: x if y in x else x + [y], [[],] + device_memory_requirement_list
     )
 
 

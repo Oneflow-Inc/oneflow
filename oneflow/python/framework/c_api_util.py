@@ -71,6 +71,14 @@ def CurrentResource():
     return text_format.Parse(resource, resource_util.Resource())
 
 
+def RequiredMemory():
+    memory_requirements, error_str = oneflow_internal.RequiredMemory()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return text_format.Parse(memory_requirements, resource_util.MemoryRequirements())
+
+
 def EnvResource():
     resource, error_str = oneflow_internal.EnvResource()
     error = text_format.Parse(error_str, error_util.ErrorProto())
