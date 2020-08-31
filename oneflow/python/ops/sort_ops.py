@@ -33,7 +33,7 @@ def sort(
 
     Args:
         input (remote_blob_util.BlobDef): A Blob
-        direction (str, optional): The direction in which to sort the Blob values. Defaults to "ASCENDING".
+        direction (str, optional): The direction in which to sort the Blob values. If the direction is "ASCENDING", The order of input will be sorted as ascending, else, the order of input will be sorted as descending. Defaults to "ASCENDING".
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -57,7 +57,7 @@ def sort(
         x = np.array([10, 2, 9, 3, 7]).astype("float32")
         out = sort_Job(x)
 
-        # output [ 2.  3.  7.  9. 10.]
+        # out [ 2.  3.  7.  9. 10.]
 
     """
     assert direction in ["ASCENDING", "DESCENDING"]
@@ -83,7 +83,7 @@ def argsort(
 
     Args:
         input (remote_blob_util.BlobDef): A Blob
-        direction (str, optional): The direction in which to sort the Blob values. Defaults to "ASCENDING".
+        direction (str, optional): The direction in which to sort the Blob values. If the direction is "ASCENDING", The order of input will be sorted as ascending, else, the order of input will be sorted as descending. Defaults to "ASCENDING".
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -107,7 +107,7 @@ def argsort(
         x = np.array([10, 2, 9, 3, 7]).astype("float32")
         out = argsort_Job(x)
 
-        # output [1 3 4 2 0]
+        # out [1 3 4 2 0]
 
     """
     assert direction in ["ASCENDING", "DESCENDING"]
