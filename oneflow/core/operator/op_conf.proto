@@ -374,6 +374,7 @@ message MomentumModelUpdateOpConf {
 message RMSPropModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
+  required string mean_square = 3;
   required string model = 4;
   required string train_step = 5;
   required string learning_rate = 6;
