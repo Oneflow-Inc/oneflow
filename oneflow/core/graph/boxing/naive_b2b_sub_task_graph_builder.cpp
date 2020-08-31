@@ -40,7 +40,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2BSubTskGphBuilder::Build(
                                            dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
                                            lbi, logical_blob_desc, "NaiveB2BSubTskGphBuilder", ""));
   } else {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
 }
 
