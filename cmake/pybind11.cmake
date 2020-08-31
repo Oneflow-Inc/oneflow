@@ -2,7 +2,7 @@ include(FetchContent)
 
 FetchContent_Declare(
     pybind11
-    URL https://github.com/pybind/pybind11/archive/v2.5.0.zip
+    URL https://github.com/Oneflow-Inc/pybind11/archive/1534e17.zip
 )
 FetchContent_GetProperties(pybind11)
 if(NOT pybind11_POPULATED)
