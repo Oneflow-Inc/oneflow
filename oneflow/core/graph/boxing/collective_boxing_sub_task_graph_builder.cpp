@@ -208,7 +208,7 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
 
 void SplitAxisChange(const int32_t axis_pre, const int32_t axis_after,
                      const std::vector<TensorSliceView>& pre_slices,
-                     std::vector<TensorSliceView>& slices, TensorSliceView concat_slice) {
+                     std::vector<TensorSliceView>& slices, TensorSliceView& concat_slice) {
   // 2->0  (0,4)(0,16)(0,8)  (0,4)(0,16)(8,16) -> (0,4)(0,16)(0,8) (4,8)(0,16)(0,8)
   // 0->2  (0,4)(0,16)(0,8) (4,8)(0,16)(0,8) -> (0,4)(0,16)(0,8) (0,4)(0,16)(8,16)
   TensorSliceView slice_0 = pre_slices.at(0);
@@ -217,9 +217,9 @@ void SplitAxisChange(const int32_t axis_pre, const int32_t axis_after,
     ranges[axis_pre].mut_begin() = slice_0.range_vec().at(axis_pre).begin();
     ranges[axis_pre].mut_end() = slice_0.range_vec().at(axis_pre).end();
     ranges[axis_after].mut_begin() =
-        slice_0.range_vec().at(axis_after).begin() + i * slice_0.shape().At(i);
+        slice_0.range_vec().at(axis_after).begin() + i * slice_0.shape().At(axis_after);
     ranges[axis_after].mut_end() =
-        slice_0.range_vec().at(axis_after).end() + i * slice_0.shape().At(i);
+        slice_0.range_vec().at(axis_after).end() + i * slice_0.shape().At(axis_after);
     slices.push_back(TensorSliceView(ranges));
   }
   ranges[axis_pre].mut_begin() = slice_0.range_vec().at(axis_pre).begin();
@@ -281,7 +281,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
 
     if (dst_parallel_desc.EqualsIgnoringDeviceType(src_parallel_desc)
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
-        && SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(src_parallel_desc)
+        && src_parallel_desc.device_type() == DeviceType::kGPU
         && dst_parallel_desc.device_type() == DeviceType::kGPU
         && dst_parallel_desc.parallel_num() > 1
         && logical_blob_desc.shape().At(0) % dst_parallel_desc.parallel_num() == 0
@@ -318,7 +318,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
       in_nodes.assign(sorted_src_comp_tasks.begin(), sorted_src_comp_tasks.end());
 
       const int32_t src_split_axis = src_sbp_parallel.split_parallel().axis();
-
+      std::vector<TaskNode*> out_nodes;
       FOR_RANGE(int64_t, i, 0, parallel_num) {  // for gpus
 
         TaskNode* in_node = in_nodes.at(i);
@@ -360,9 +360,9 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         NcclInitCollectiveNode(collective_node, src_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAll2All, -1);
         Connect<TaskNode>(intersection_copy_to_s0, ctx->task_graph()->NewEdge(), collective_node);
-        Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), collective_out);
-
-        std::vector<TaskNode*> out_nodes;
+        //Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), collective_out);
+        collective_out->ConnectToSrcNodeWithSlice(collective_node, ctx->task_graph()->NewEdge(),
+                                                collective_in_slice);
         const int32_t dst_split_axis = dst_sbp_parallel.split_parallel().axis();
         SliceBoxingTaskNode* out_node =
             CreateBoxingNode121(dst_parallel_desc, i, out_slices.at(i), kSliceBoxingTaskModeCopy);
@@ -388,8 +388,8 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
                                               out_slices.at(i));
         }
         out_nodes.push_back(out_node);
-        ctx->ConnectAll121(out_nodes, sorted_dst_comp_tasks);
       }
+      ctx->ConnectAll121(out_nodes, sorted_dst_comp_tasks);
       return TRY(BuildSubTskGphBuilderStatus(
           sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,

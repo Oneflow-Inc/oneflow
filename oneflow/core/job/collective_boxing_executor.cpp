@@ -378,9 +378,9 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
                                       op_desc.root(), comm, device_ctx->stream));
         } else if (op_type == OpType::kOpTypeAll2All) {
           for (int32_t j = 0; j < num_ranks; j++) {
-            OF_NCCL_CHECK(ncclSend(send_buff + j * elem_cnt / num_ranks, elem_cnt / num_ranks,
+            OF_NCCL_CHECK(ncclSend(send_buff + j * elem_cnt / num_ranks / num_ranks, elem_cnt / num_ranks/ num_ranks,
                                    nccl_data_type, j, comm, device_ctx->stream));
-            OF_NCCL_CHECK(ncclRecv(recv_buff + j * elem_cnt / num_ranks, elem_cnt / num_ranks,
+            OF_NCCL_CHECK(ncclRecv(recv_buff + j * elem_cnt / num_ranks/ num_ranks, elem_cnt / num_ranks/ num_ranks,
                                    nccl_data_type, j, comm, device_ctx->stream));
           }
         } else {
