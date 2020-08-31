@@ -68,6 +68,7 @@ class SbpContext {
   T Attr(const std::string& attr_name) const {
     return user_op_conf_.attr<T>(attr_name);
   }
+  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
 
  protected:
   SbpContext(UserOpConfWrapper&& conf, SbpSignatureList* sbp_sig_list, DeviceType device_type,
