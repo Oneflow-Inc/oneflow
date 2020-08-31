@@ -1220,7 +1220,7 @@ def logical_and(
     Each element is calculated by:
 
     .. math::
-        out = X ∧ Y
+        out = X \land Y
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
