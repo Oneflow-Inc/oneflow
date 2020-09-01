@@ -83,6 +83,9 @@ do
     fi
     PY_ROOT=/opt/python/${PY_ABI}
     PY_BIN=${PY_ROOT}/bin/python
+    rm -rf $ONEFLOW_BUILD_DIR/python_scripts/oneflow/*.so
+    rm -rf $ONEFLOW_SRC_DIR/build/bdist.linux-x86_64
+    rm -rf $ONEFLOW_SRC_DIR/build/lib
     cmake -DTHIRD_PARTY=OFF -DONEFLOW=ON\
         $COMMON_CMAKE_ARGS \
         -DPython3_ROOT_DIR=$PY_ROOT \
