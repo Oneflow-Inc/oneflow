@@ -916,7 +916,7 @@ def masked_fill(
             return flow.masked_fill(x, mask, value=5)
 
         x = np.array([1, 2, 3, 4], dtype=np.float32)
-        x = np.array([1, 0, 0, 1], dtype=np.float32)
+        mask = np.array([1, 0, 0, 1], dtype=np.float32)
 
         out = masked_fill_Job(x, mask)
         
