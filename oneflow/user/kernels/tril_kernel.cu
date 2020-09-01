@@ -27,7 +27,7 @@ __global__ void TrilCalGpu(const int64_t elem_cnt, const int64_t num_rows, const
   T zero = GetZeroVal<T>();
   int64_t matrix_size = num_rows * num_cols;
   CUDA_1D_KERNEL_LOOP_T(int64_t, k, elem_cnt) {
-    int64_t offset_in_matrix = k - matrix_size * (k / matrix_size);
+    int64_t offset_in_matrix = k % matrix_size;
     int64_t i = offset_in_matrix / num_cols;
     int64_t j = offset_in_matrix - num_cols * i;
     y[k] = j > i + diagonal ? zero : x[k];
@@ -40,7 +40,7 @@ __global__ void NaiveHalfTrilCalGpu(const int64_t elem_cnt, const int64_t num_ro
   half zero = hzero();
   int64_t matrix_size = num_rows * num_cols;
   CUDA_1D_KERNEL_LOOP_T(int64_t, k, elem_cnt) {
-    int64_t offset_in_matrix = k - matrix_size * (k / matrix_size);
+    int64_t offset_in_matrix = k % matrix_size;
     int64_t i = offset_in_matrix / num_cols;
     int64_t j = offset_in_matrix - num_cols * i;
     y[k] = j > i + diagonal ? zero : x[k];

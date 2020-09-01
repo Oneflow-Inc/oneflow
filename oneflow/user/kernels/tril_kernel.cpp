@@ -38,7 +38,7 @@ class CpuTrilKernel final : public user_op::OpKernel {
     T zero = GetZeroVal<T>();
     int64_t matrix_size = num_rows * num_cols;
     for (int64_t k = 0; k < shape.elem_cnt(); ++k) {
-      int64_t offset_in_matrix = k - matrix_size * (k / matrix_size);
+      int64_t offset_in_matrix = k % matrix_size;
       int64_t i = offset_in_matrix / num_cols;
       int64_t j = offset_in_matrix - num_cols * i;
       y_dptr[k] = j > i + diagonal ? zero : x_dptr[k];
