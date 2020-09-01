@@ -1239,18 +1239,18 @@ class RMSProp(Optimizer):
     This algorithm uses mean squared gradient to adjust the learning rate. 
 
     The equation of parameters updating is: 
-    
-    .. math::
-
-        & S_t = \beta_1*S_{t-1} + (1-\beta_1)*grad \odot grad
-
+        .. math::
+            & S_t = \beta_1*S_{t-1} + (1-\beta_1)*grad \odot grad
+            & param_{new} = param_{old} - \frac{learning\_rate}{\sqrt{S_t+\epsilon}} \odot grad
         if centered:
-            & mg_t = mg * \beta_1 + (1 - \beta_1) * grad
-            & denom_t = S_t - mg_t * mg_t
+            .. math::
+                & mg_t = mg * \beta_1 + (1 - \beta_1) * grad
+                & denom_t = S_t - mg_t * mg_t
         else:
-            & denom_t = S_t
-
-        & param_{new} = param_{old} - \frac{learning\_rate}{\sqrt{denom_t+\epsilon}} \odot grad
+            .. math::
+                denom_t = S_t
+        .. math:: 
+            param_{new} = param_{old} - \frac{learning\_rate}{\sqrt{denom_t+\epsilon}} \odot grad
 
     Args:
         lr_scheduler (LrScheduler): The scheduler of learning rate.
