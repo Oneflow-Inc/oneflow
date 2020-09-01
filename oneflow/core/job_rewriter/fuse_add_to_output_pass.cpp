@@ -62,6 +62,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     }
   });
 
+  auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -81,11 +82,12 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     const OpNode* add_to_node;
     const LogicalBlobId* add_to_lbi;
     const LogicalBlobId* sum_lbi;
-    if (IsAddToOutputSupported(in_0_node, in_0)) {
+    if ((!IsReachable(in_0.op_name(), in_1.op_name())) && IsAddToOutputSupported(in_0_node, in_0)) {
       add_to_node = in_0_node;
       add_to_lbi = &in_1;
       sum_lbi = &in_0;
-    } else if (IsAddToOutputSupported(in_1_node, in_1)) {
+    } else if ((!IsReachable(in_1.op_name(), in_0.op_name()))
+               && IsAddToOutputSupported(in_1_node, in_1)) {
       add_to_node = in_1_node;
       add_to_lbi = &in_0;
       sum_lbi = &in_1;
