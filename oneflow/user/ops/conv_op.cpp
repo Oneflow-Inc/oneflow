@@ -296,6 +296,7 @@ REGISTER_USER_OP("conv_data_grad")
     .Input("dy")
     .Input("filter")
     .Input("x_like")
+    .OptionalInput("_add_to_output")
     .Output("dx")
     .Attr("num_spatial_dims", UserOpAttrType::kAtInt32)
     .Attr("padding_before", UserOpAttrType::kAtListInt32)
@@ -320,7 +321,12 @@ REGISTER_USER_OP("conv_data_grad")
       CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
       CHECK_EQ_OR_RETURN(x_like->shape().NumAxes(), num_spatial_dims + 2);
       CHECK_EQ_OR_RETURN(x_like->data_type(), dy->data_type());
-
+      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+        const user_op::TensorDesc* add_to_output =
+            ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
+        CHECK_EQ_OR_RETURN(add_to_output->data_type(), x_like->data_type());
+        CHECK_EQ_OR_RETURN(add_to_output->shape(), x_like->shape());
+      }
       user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
       *dx = *x_like;
       return Maybe<void>::Ok();
@@ -335,12 +341,14 @@ REGISTER_USER_OP("conv_data_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("dy", 0), 0)
-          .Broadcast(user_op::OpArg("filter", 0))
-          .Split(user_op::OpArg("x_like", 0), 0)
-          .Split(user_op::OpArg("dx", 0), 0)
-          .Build();
+      std::vector<user_op::OpArg> split_args;
+      split_args.emplace_back("dy", 0);
+      split_args.emplace_back("x_like", 0);
+      split_args.emplace_back("dx", 0);
+      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+        split_args.emplace_back("_add_to_output", 0);
+      }
+      ctx->NewBuilder().Split(split_args, 0).Broadcast(user_op::OpArg("filter", 0)).Build();
       return Maybe<void>::Ok();
     });
 
