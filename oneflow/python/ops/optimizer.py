@@ -1242,14 +1242,24 @@ class RMSProp(Optimizer):
     
     .. math::
 
-        & S_t = \beta_1*S_{t-1} + (1-\beta_1)*grad \odot grad 
+        & S_t = \beta_1*S_{t-1} + (1-\beta_1)*grad \odot grad
 
-        & param_{new} = param_{old} - \frac{learning\_rate}{\sqrt{S_t+\epsilon}} \odot grad
+        if centered:
+            & mg_t = mg * \beta_1 + (1 - \beta_1) * grad
+            & denom_t = S_t - mg_t * mg_t
+        else:
+            & denom_t = S_t
+
+        & param_{new} = param_{old} - \frac{learning\_rate}{\sqrt{denom_t+\epsilon}} \odot grad
 
     Args:
         lr_scheduler (LrScheduler): The scheduler of learning rate.
         decay_rate (float, optional): The decay factor (:math:`\beta_1`). Defaults to 0.99.
         epsilon (float, optional): A small float constant value for numerical stability (:math:`\epsilon`). Defaults to 1e-8.
+        centered (bool, optional): If `True`, gradients are normalized by the estimated
+                                   variance of the gradient; if False, by the uncentered second moment.
+                                   Setting this to `True` may help with training, but is slightly more
+                                   expensive in terms of computation and memory. Defaults to `False`.
         loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
@@ -1285,6 +1295,7 @@ class RMSProp(Optimizer):
         lr_scheduler: LrScheduler,
         decay_rate: float = 0.99,
         epsilon: float = 1e-8,
+        centered: bool = False,
         loss_scale_factor: Optional[float] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
@@ -1294,10 +1305,12 @@ class RMSProp(Optimizer):
         )
         self.decay_rate = decay_rate
         self.epsilon = epsilon
+        self.centered = centered
 
     def _SetSpecificFieldsInTrainConf(self, train_conf):
         train_conf.model_update_conf.rmsprop_conf.decay_rate = self.decay_rate
         train_conf.model_update_conf.rmsprop_conf.epsilon = self.epsilon
+        train_conf.model_update_conf.rmsprop_conf.centered = self.centered
 
 
 @oneflow_export("optimizer.LARS")
