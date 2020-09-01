@@ -36,7 +36,7 @@ class ClipGradientConf:
 
 
 @oneflow_export("optimizer.grad_clipping.by_global_norm")
-class ClipByGlobalNorm(ClipGradientConf):
+class by_global_norm(ClipGradientConf):
     r"""This operator limits the norm of `Input` with `clip_norm`. 
 
     If the norm of `Input` is less than the `clip_norm`, 
