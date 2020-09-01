@@ -13,18 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-"""
-Copyright 2020 The OneFlow Authors. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
 from collections import OrderedDict
 import numpy as np
 import oneflow as flow
@@ -91,7 +79,10 @@ def _test_masked_fill_fw_bw(test_case, device, x_shape, mask_shape, type_name, v
             x += flow.cast(y, flow_type)
             mask = flow.cast(mask, dtype=flow.int8)
             if type_name == "float16":
-                out = flow.cast(flow.masked_fill(flow.cast(x, flow.float16), mask, value), flow.float)
+                out = flow.cast(
+                    flow.masked_fill(flow.cast(x, flow.float16), mask, value),
+                    flow.float,
+                )
             else:
                 out = flow.masked_fill(x, mask, value)
             flow.optimizer.SGD(
@@ -119,8 +110,16 @@ def _test_masked_fill_fw_bw(test_case, device, x_shape, mask_shape, type_name, v
     else:
         tolerance = 1e-5
 
-    test_case.assertTrue(np.allclose(np_out, test_global_storage.Get("out"), rtol=tolerance, atol=tolerance))
-    test_case.assertTrue(np.allclose(np_x_diff, test_global_storage.Get("x_diff"), rtol=tolerance, atol=tolerance))
+    test_case.assertTrue(
+        np.allclose(
+            np_out, test_global_storage.Get("out"), rtol=tolerance, atol=tolerance
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            np_x_diff, test_global_storage.Get("x_diff"), rtol=tolerance, atol=tolerance
+        )
+    )
 
 
 def test_masked_fill_fw_bw(test_case):
