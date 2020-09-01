@@ -32,7 +32,6 @@ function build() {
         --rm $docker_it \
         -v $src_dir:/oneflow-src \
         -v $tmp_dir:/ci-tmp \
-        -v $tmp_dir/py-build-lib:/oneflow-src/build/lib/ \
         -w /ci-tmp \
         "$docker_tag" \
         /oneflow-src/docker/package/manylinux/build_wheel.sh \
