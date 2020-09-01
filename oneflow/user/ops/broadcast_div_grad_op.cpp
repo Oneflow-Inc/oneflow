@@ -30,16 +30,17 @@ REGISTER_USER_OP("broadcast_div_grad")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
       const Shape& z_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("z", 0).shape();
-      if (y_shape.NumAxes() == z_shape.NumAxes()) {
-        for (int64_t i = 0; i < y_shape.NumAxes(); ++i) {
-          if (y_shape.At(i) == z_shape.At(i)) {
-            ctx->NewBuilder()
-                .Split(user_op::OpArg("y", 0), i)
-                .Split(user_op::OpArg("z", 0), i)
-                .Split(user_op::OpArg("dz", 0), i)
-                .Split(user_op::OpArg("dy", 0), i)
-                .Build();
-          }
+      CHECK_LE_OR_RETURN(y_shape.NumAxes(), z_shape.NumAxes());
+      FOR_RANGE(int64_t, i, 0, y_shape.NumAxes()) {
+        const int64_t axis_y = y_shape.NumAxes() - 1 - i;
+        const int64_t axis_z = z_shape.NumAxes() - 1 - i;
+        if (y_shape.At(axis_y) == z_shape.At(axis_z)) {
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("y", 0), axis_y)
+              .Split(user_op::OpArg("z", 0), axis_z)
+              .Split(user_op::OpArg("dz", 0), axis_z)
+              .Split(user_op::OpArg("dy", 0), axis_y)
+              .Build();
         }
       }
       ctx->NewBuilder()
