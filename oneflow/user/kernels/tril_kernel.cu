@@ -23,7 +23,7 @@ namespace {
 
 template<typename T>
 __global__ void TrilGpu(const int64_t elem_cnt, const int64_t num_rows, const int64_t num_cols,
-                           const int64_t diagonal, const T* x, T* y) {
+                        const int64_t diagonal, const T* x, T* y) {
   T zero = GetZeroVal<T>();
   int64_t matrix_size = num_rows * num_cols;
   CUDA_1D_KERNEL_LOOP_T(int64_t, k, elem_cnt) {
@@ -35,8 +35,8 @@ __global__ void TrilGpu(const int64_t elem_cnt, const int64_t num_rows, const in
 }
 
 __global__ void NaiveHalfTrilGpu(const int64_t elem_cnt, const int64_t num_rows,
-                                    const int64_t num_cols, const int64_t diagonal, const half* x,
-                                    half* y) {
+                                 const int64_t num_cols, const int64_t diagonal, const half* x,
+                                 half* y) {
   half zero = hzero();
   int64_t matrix_size = num_rows * num_cols;
   CUDA_1D_KERNEL_LOOP_T(int64_t, k, elem_cnt) {
