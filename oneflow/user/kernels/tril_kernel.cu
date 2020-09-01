@@ -22,7 +22,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void TrilCalGpu(const int64_t elem_cnt, const int64_t num_rows, const int64_t num_cols,
+__global__ void TrilGpu(const int64_t elem_cnt, const int64_t num_rows, const int64_t num_cols,
                            const int64_t diagonal, const T* x, T* y) {
   T zero = GetZeroVal<T>();
   int64_t matrix_size = num_rows * num_cols;
@@ -34,7 +34,7 @@ __global__ void TrilCalGpu(const int64_t elem_cnt, const int64_t num_rows, const
   }
 }
 
-__global__ void NaiveHalfTrilCalGpu(const int64_t elem_cnt, const int64_t num_rows,
+__global__ void NaiveHalfTrilGpu(const int64_t elem_cnt, const int64_t num_rows,
                                     const int64_t num_cols, const int64_t diagonal, const half* x,
                                     half* y) {
   half zero = hzero();
@@ -64,7 +64,7 @@ class GpuTrilKernel final : public user_op::OpKernel {
     const int64_t num_cols = shape.At(shape.NumAxes() - 1);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t elem_cnt = shape.elem_cnt();
-    RUN_CUDA_KERNEL((TrilCalGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, num_rows, num_cols,
+    RUN_CUDA_KERNEL((TrilGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, num_rows, num_cols,
                     diagonal, x->dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -85,7 +85,7 @@ class GpuTrilKernel<float16> final : public user_op::OpKernel {
     const int64_t num_cols = shape.At(shape.NumAxes() - 1);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t elem_cnt = shape.elem_cnt();
-    RUN_CUDA_KERNEL(NaiveHalfTrilCalGpu, ctx->device_ctx(), elem_cnt, elem_cnt, num_rows, num_cols,
+    RUN_CUDA_KERNEL(NaiveHalfTrilGpu, ctx->device_ctx(), elem_cnt, elem_cnt, num_rows, num_cols,
                     diagonal, reinterpret_cast<const half*>(x->dptr<float16>()),
                     reinterpret_cast<half*>(y->mut_dptr<float16>()));
   }
