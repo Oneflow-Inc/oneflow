@@ -19,10 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-void TensorToNdarray(const user_op::Tensor* tensor, PyObject* arg) {}
-
-void NdarrayToTensor(PyObject* arg, user_op::Tensor* tensor) {}
-
+template<typename T>
 void MakePyInputs(user_op::KernelComputeContext* ctx, PyObject* py_input) {
   size_t in_num = ctx->inputs().size();
   py_input = PyList_New(in_num);
@@ -31,11 +28,12 @@ void MakePyInputs(user_op::KernelComputeContext* ctx, PyObject* py_input) {
     PyObject* arg = nullptr;
     const std::string& arg_name = ctx->inputs().at(i).first;
     int32_t index = 0;
-    TensorToNdarray(ctx->Tensor4ArgNameAndIndex(arg_name, index), arg);
+    TensorToNumpy<T>(ctx->Tensor4ArgNameAndIndex(arg_name, index), arg);
     PyList_SetItem(py_input, i, arg);
   }
 }
 
+template<typename T>
 void GetPyOutputs(user_op::KernelComputeContext* ctx, PyObject* py_output) {
   size_t out_num = ctx->outputs().size();
   FOR_RANGE(size_t, i, 0, out_num) {}
@@ -76,14 +74,14 @@ class PyKernel : public user_op::OpKernel {
     }
 
     // input
-    MakePyInputs(ctx, py_inputs);
+    MakePyInputs<T>(ctx, py_inputs);
 
     // call func
     py_outputs = PyObject_CallObject(py_func, py_inputs);
     Py_DECREF(py_inputs);
 
     // output
-    GetPyOutputs(ctx, py_outputs);
+    GetPyOutputs<T>(ctx, py_outputs);
 
     Py_DECREF(py_outputs);
     Py_XDECREF(py_func);
