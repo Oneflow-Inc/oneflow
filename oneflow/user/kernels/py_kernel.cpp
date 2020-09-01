@@ -20,23 +20,37 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void MakePyInputs(user_op::KernelComputeContext* ctx, PyObject* py_input) {
+void MakePyInputs(user_op::KernelComputeContext* ctx, PyObject* py_inputs) {
   size_t in_num = ctx->inputs().size();
-  py_input = PyList_New(in_num);
+  PyObject* py_list = PyList_New(in_num);
 
   FOR_RANGE(size_t, i, 0, in_num) {
     PyObject* arg = nullptr;
     const std::string& arg_name = ctx->inputs().at(i).first;
     int32_t index = 0;
     TensorToNumpy<T>(ctx->Tensor4ArgNameAndIndex(arg_name, index), arg);
-    PyList_SetItem(py_input, i, arg);
+    arg = PyArray_Return(reinterpret_cast<PyArrayObject*>(arg));
+    PyList_SetItem(py_list, i, arg);
   }
+  py_inputs = Py_BuildValue("(N)", py_list);
 }
 
 template<typename T>
-void GetPyOutputs(user_op::KernelComputeContext* ctx, PyObject* py_output) {
-  size_t out_num = ctx->outputs().size();
-  FOR_RANGE(size_t, i, 0, out_num) {}
+void GetPyOutputs(user_op::KernelComputeContext* ctx, PyObject* py_outputs) {
+  if (PyList_Check(py_outputs)) {
+    size_t out_num = ctx->outputs().size();
+    FOR_RANGE(size_t, i, 0, out_num) {
+      const std::string& arg_name = ctx->outputs().at(i).first;
+      int32_t index = 0;
+      NumpyToTensor<T>(PyList_GetItem(py_outputs, i), ctx->Tensor4ArgNameAndIndex(arg_name, index));
+    }
+  } else if (PyArray_Check(py_outputs)) {
+    const std::string& arg_name = ctx->outputs().at(0).first;
+    int32_t index = 0;
+    NumpyToTensor<T>(py_outputs, ctx->Tensor4ArgNameAndIndex(arg_name, index));
+  } else {
+    LOG(FATAL) << "Unexpeted PyObject was returned: " << Py_TYPE(py_outputs)->tp_name;
+  }
 }
 
 template<typename T>
@@ -77,13 +91,13 @@ class PyKernel : public user_op::OpKernel {
     MakePyInputs<T>(ctx, py_inputs);
 
     // call func
-    py_outputs = PyObject_CallObject(py_func, py_inputs);
+    py_outputs = PyEval_CallObject(py_func, py_inputs);
     Py_DECREF(py_inputs);
 
     // output
     GetPyOutputs<T>(ctx, py_outputs);
 
-    Py_DECREF(py_outputs);
+    // Py_DECREF(py_outputs);
     Py_XDECREF(py_func);
     Py_DECREF(py_module);
 

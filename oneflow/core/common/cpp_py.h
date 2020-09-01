@@ -45,7 +45,7 @@ void OFDataTypeToNumpyType(DataType of_data_type, int* out_numpy_type) {
 
 template<typename T>
 void TensorToNumpy(const user_op::Tensor* tensor, PyObject* arg) {
-  if (tensor = nullptr) {
+  if (tensor == nullptr) {
     Py_INCREF(Py_None);
     arg = Py_None;
     return;
