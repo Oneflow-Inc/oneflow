@@ -136,6 +136,131 @@ def compare_with_tensorflow_adam(
     assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4,)
 
 
+def compare_with_numpy_adamw(
+    device_type,
+    x_shape,
+    beta1,
+    beta2,
+    epsilon,
+    weight_decay,
+    learning_rate,
+    train_iters,
+):
+    assert device_type in ["gpu", "cpu"]
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float32)
+
+    @flow.global_function(type="train", function_config=flow.FunctionConfig())
+    def testAdamW() -> flow.typing.Numpy:
+        with flow.scope.placement(device_type, "0:0-0"):
+            x = flow.get_variable(
+                name="x",
+                shape=x_shape,
+                dtype=flow.float32,
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
+                trainable=True,
+            )
+            loss = flow.math.reduce_mean(x)
+            flow.optimizer.AdamW(
+                flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
+                beta1=beta1,
+                beta2=beta2,
+                epsilon=epsilon,
+                weight_decay=weight_decay,
+                do_bias_correction=True,
+            ).minimize(loss)
+            return x
+
+    checkpoint = flow.train.CheckPoint()
+    checkpoint.init()
+
+    init_value = None
+    for i in range(train_iters + 1):
+        x = testAdamW()
+        if i == 0:
+            init_value = x
+
+    def adamw_update_numpy(
+        param,
+        gradient,
+        iter,
+        m,
+        v,
+        lr=0.001,
+        beta1=0.9,
+        beta2=0.999,
+        epsilon=1e-7,
+        weight_decay=0.9,
+    ):
+        lr_t = lr * np.sqrt(1 - beta2 ** (iter + 1)) / (1 - beta1 ** (iter + 1))
+
+        m_t = beta1 * m + (1 - beta1) * gradient
+        v_t = beta2 * v + (1 - beta2) * gradient * gradient
+
+        param_t = param - lr_t * (m_t / (np.sqrt(v_t) + epsilon) + weight_decay * param)
+        return param_t, m_t, v_t
+
+    param = init_value
+    gradient = np.ones(param.shape)
+    m = np.zeros(param.shape)
+    v = np.zeros(param.shape)
+    for i in range(train_iters):
+        param, m, v = adamw_update_numpy(
+            param, gradient, i, m, v, learning_rate, beta1, beta2, epsilon, weight_decay
+        )
+
+    assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
+
+
+def compare_with_tensorflow_sgd(
+    device_type, x_shape, momentum, learning_rate, train_iters
+):
+    assert device_type in ["gpu", "cpu"]
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float32)
+
+    @flow.global_function(type="train", function_config=flow.FunctionConfig())
+    def testSGD() -> flow.typing.Numpy:
+        with flow.scope.placement(device_type, "0:0-0"):
+            x = flow.get_variable(
+                name="x",
+                shape=x_shape,
+                dtype=flow.float32,
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
+                trainable=True,
+            )
+            loss = flow.math.reduce_mean(x)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
+                momentum=momentum,
+            ).minimize(loss)
+            return x
+
+    checkpoint = flow.train.CheckPoint()
+    checkpoint.init()
+
+    init_value = None
+    for i in range(train_iters + 1):
+        x = testSGD()
+        if i == 0:
+            init_value = x
+
+    var = tf.Variable(init_value)
+    opt = tf.keras.optimizers.SGD(
+        learning_rate=learning_rate, momentum=momentum, nesterov=False
+    )
+
+    for i in range(train_iters):
+        with tf.GradientTape() as tape:
+            loss = tf.reduce_mean(var)
+        gradients = tape.gradient(loss, var)
+        opt.apply_gradients(zip([gradients], [var]))
+
+    assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4,)
+
+
 def test_rmsprop(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
@@ -159,3 +284,28 @@ def test_adam(test_case):
     arg_dict["train_iters"] = [10]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow_adam(*arg)
+
+
+def test_adamw(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["x_shape"] = [(10,)]
+    arg_dict["beta1"] = [0.9]
+    arg_dict["beta2"] = [0.99]
+    arg_dict["epsilon"] = [1e-9]
+    arg_dict["weight_decay"] = [0.9]
+    arg_dict["learning_rate"] = [1]
+    arg_dict["train_iters"] = [10]
+    for arg in GenArgList(arg_dict):
+        compare_with_numpy_adamw(*arg)
+
+
+def test_sgd(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["x_shape"] = [(10,)]
+    arg_dict["momentum"] = [0.9]
+    arg_dict["learning_rate"] = [1]
+    arg_dict["train_iters"] = [10]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow_sgd(*arg)
