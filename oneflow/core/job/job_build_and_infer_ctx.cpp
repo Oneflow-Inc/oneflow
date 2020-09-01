@@ -922,8 +922,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   }
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    auto ret = FunctionPass(pass_name)(mut_job());
-    return ret;
+    return FunctionPass(pass_name)(mut_job());
   };
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("CompleteOfrecordDecoder"));
