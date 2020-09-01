@@ -43,6 +43,38 @@ def constant_initializer(
     
     For example: 
 
+    Example 1:
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+
+        def watch_handler(y: tp.Numpy):
+            print("out", y)
+
+
+        @flow.global_function()
+        def constant_Job() -> None:
+            init = flow.constant_initializer(2.5)
+            blob = flow.get_variable(
+                "blob-weight",
+                shape=(3, ),
+                initializer=init,
+                trainable=True
+            )
+            flow.watch(blob, watch_handler)
+
+
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.init()
+        constant_Job()
+
+        # out [2.5 2.5 2.5]
+
+    Example 2:
+
     .. code-block:: python 
 
         import oneflow as flow
@@ -101,6 +133,38 @@ def zeros_initializer(
 
     For example: 
 
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+
+        def watch_handler(y: tp.Numpy):
+            print("out", y)
+
+
+        @flow.global_function()
+        def zeros_Job() -> None:
+            init = flow.zeros_initializer()
+            blob = flow.get_variable(
+                "blob-weight",
+                shape=(3, ),
+                initializer=init,
+                trainable=True
+            )
+            flow.watch(blob, watch_handler)
+
+
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.init()
+        zeros_Job()
+
+        # out [0. 0. 0.]
+
+    Example 2: 
+
     .. code-block:: python 
 
         import oneflow as flow
@@ -146,6 +210,38 @@ def ones_initializer(
         op_conf_util.InitializerConf: constant_initializer
 
     For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+
+        def watch_handler(y: tp.Numpy):
+            print("out", y)
+
+
+        @flow.global_function()
+        def ones_Job() -> None:
+            init = flow.ones_initializer()
+            blob = flow.get_variable(
+                "blob-weight",
+                shape=(3, ),
+                initializer=init,
+                trainable=True
+            )
+            flow.watch(blob, watch_handler)
+
+
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.init()
+        ones_Job()
+
+        # out [1. 1. 1.]
+
+    Example 2: 
 
     .. code-block:: python 
 
@@ -197,6 +293,38 @@ def random_uniform_initializer(
         op_conf_util.InitializerConf:  Initial configuration
 
     For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+
+        def watch_handler(y: tp.Numpy):
+            print("out", y)
+
+
+        @flow.global_function()
+        def random_uniform_Job() -> None:
+            init = flow.random_uniform_initializer(minval=0, maxval=0.5)
+            blob = flow.get_variable(
+                "blob-weight",
+                shape=(3, ),
+                initializer=init,
+                trainable=True
+            )
+            flow.watch(blob, watch_handler)
+
+
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.init()
+        random_uniform_Job()
+
+        # out [0.07557311 0.3943565  0.31875622]
+
+    Example 2: 
 
     .. code-block:: python 
 
@@ -266,6 +394,38 @@ def random_normal_initializer(
 
     For example: 
 
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+
+        def watch_handler(y: tp.Numpy):
+            print("out", y)
+
+
+        @flow.global_function()
+        def random_normal_Job() -> None:
+            init = flow.random_normal_initializer(mean=1, stddev=1)
+            blob = flow.get_variable(
+                "blob-weight",
+                shape=(3, ),
+                initializer=init,
+                trainable=True
+            )
+            flow.watch(blob, watch_handler)
+
+
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.init()
+        random_normal_Job()
+
+        # out [1.4190257 2.7663114 1.7114428]
+
+    Example 2: 
+
     .. code-block:: python 
 
         import oneflow as flow
@@ -322,6 +482,38 @@ def truncated_normal_initializer(
 
     For example: 
 
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+
+        def watch_handler(y: tp.Numpy):
+            print("out", y)
+
+
+        @flow.global_function()
+        def truncated_normal_Job() -> None:
+            init = flow.truncated_normal_initializer(mean=1, stddev=1)
+            blob = flow.get_variable(
+                "blob-weight",
+                shape=(3, ),
+                initializer=init,
+                trainable=True
+            )
+            flow.watch(blob, watch_handler)
+
+
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.init()
+        truncated_normal_Job()
+
+        # out [1.8303236  0.09787154 0.83049864]
+
+    Example 2: 
+
     .. code-block:: python 
 
         import oneflow as flow
@@ -360,7 +552,9 @@ def truncated_normal_initializer(
 
 @oneflow_export("glorot_uniform_initializer", "xavier_uniform_initializer")
 def glorot_uniform_initializer(data_format: str = "") -> op_conf_util.InitializerConf:
-    r"""Initializer that generates a Xavier uniform distribution, it can be also called as glorot uniform initializer.
+    r"""Initializer that generates a Xavier uniform distribution. 
+    
+    It also can be called as `oneflow.glorot_uniform_initializer`.  
 
     The equation is: 
 
@@ -379,6 +573,40 @@ def glorot_uniform_initializer(data_format: str = "") -> op_conf_util.Initialize
         op_conf_util.InitializerConf: Initial configuration
 
     For example: 
+
+    Example 1:
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+
+        def watch_handler(y: tp.Numpy):
+            print("out", y)
+
+
+        @flow.global_function()
+        def xavier_uniform_Job() -> None:
+            init = flow.xavier_uniform_initializer()
+            blob = flow.get_variable(
+                "blob-weight",
+                shape=(3, 3),
+                initializer=init,
+                trainable=True
+            )
+            flow.watch(blob, watch_handler)
+
+
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.init()
+        xavier_uniform_Job()
+
+        # out [[-0.14424723 -0.9532095  -0.08723891]
+        #      [-0.8011227  -0.29729813 -0.26769108]
+        #      [ 0.9208976  -0.5971756  -0.15077025]]
+
+    Example 2: 
 
     .. code-block:: python 
 
@@ -414,7 +642,9 @@ def glorot_uniform_initializer(data_format: str = "") -> op_conf_util.Initialize
 
 @oneflow_export("glorot_normal_initializer", "xavier_normal_initializer")
 def glorot_normal_initializer(data_format: str = "") -> op_conf_util.InitializerConf:
-    r"""Initializer that generates a Xavier normal distribution, it can be also called as glorot normal initializer.
+    r"""Initializer that generates a Xavier normal distribution. 
+    
+    It also can be called as `oneflow.glorot_normal_initializer`.  
 
     The equation is: 
 
@@ -433,6 +663,40 @@ def glorot_normal_initializer(data_format: str = "") -> op_conf_util.Initializer
         op_conf_util.InitializerConf: Initial configuration
 
     For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+
+        def watch_handler(y: tp.Numpy):
+            print("out", y)
+
+
+        @flow.global_function()
+        def xavier_normal_Job() -> None:
+            init = flow.xavier_normal_initializer()
+            blob = flow.get_variable(
+                "blob-weight",
+                shape=(3, 3),
+                initializer=init,
+                trainable=True
+            )
+            flow.watch(blob, watch_handler)
+
+
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.init()
+        xavier_normal_Job()
+
+        # out [[ 0.5908121  -0.10804518 -0.6148571 ]
+        #      [ 1.4007381  -0.08172473  0.36579943]
+        #      [-0.6461796  -0.15923311  0.33653972]]
+
+    Example 2: 
 
     .. code-block:: python 
 
@@ -499,6 +763,40 @@ def variance_scaling_initializer(
         op_conf_util.InitializerConf: Initial configuration
 
     For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+
+        def watch_handler(y: tp.Numpy):
+            print("out", y)
+
+
+        @flow.global_function()
+        def variance_scale_Job() -> None:
+            init = flow.variance_scaling_initializer(scale=2.0, mode="fan_avg")
+            blob = flow.get_variable(
+                "blob-weight",
+                shape=(3, 3),
+                initializer=init,
+                trainable=True
+            )
+            flow.watch(blob, watch_handler)
+
+
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.init()
+        variance_scale_Job()
+
+        # out [[-0.13931477  0.12266728 -0.9434968 ]
+        #      [-0.49665168  0.10231158 -0.19194333]
+        #      [-0.7902896  -1.7034698  -0.38695997]]
+
+    Example 2: 
 
     .. code-block:: python 
 
@@ -596,8 +894,44 @@ def kaiming_initializer(
 
     For example: 
 
+    Example 1: 
+
     .. code-block:: python 
 
+        import oneflow as flow
+        import oneflow.typing as tp
+
+
+        def watch_handler(y: tp.Numpy):
+            print("out", y)
+
+
+        @flow.global_function()
+        def kaiming_Job() -> None:
+            init = flow.kaiming_initializer(shape=(3, 3), 
+                                            mode="fan_avg", 
+                                            nonlinearity="relu")
+            blob = flow.get_variable(
+                "blob-weight",
+                shape=(3, 3),
+                initializer=init,
+                trainable=True
+            )
+            flow.watch(blob, watch_handler)
+
+
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.init()
+        kaiming_Job()
+
+        # out [[ 0.54521346  0.32585594  1.3474437 ]
+        #      [ 0.30729076 -0.19158769  0.2709008 ]
+        #      [-0.95830524 -0.05093324  0.28178614]]
+
+    Example 2: 
+
+    .. code-block:: python 
+    
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
