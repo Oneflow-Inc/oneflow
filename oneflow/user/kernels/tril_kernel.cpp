@@ -30,17 +30,17 @@ class CpuTrilKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto shape = x->shape();
     const int64_t diagonal = ctx->Attr<int64_t>("diagonal");
-    const int64_t row = shape.At(shape.NumAxes() - 2);
-    const int64_t col = shape.At(shape.NumAxes() - 1);
+    const int64_t num_rows = shape.At(shape.NumAxes() - 2);
+    const int64_t num_cols = shape.At(shape.NumAxes() - 1);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* y_dptr = y->mut_dptr<T>();
     const T* x_dptr = x->dptr<T>();
     T zero = GetZeroVal<T>();
-    int64_t matrix_cnt = row * col;
+    int64_t matrix_size = num_rows * num_cols;
     for (int64_t k = 0; k < shape.elem_cnt(); ++k) {
-      int64_t index_in_matrix = k - matrix_cnt * (k / matrix_cnt);
-      int64_t i = index_in_matrix / col;
-      int64_t j = index_in_matrix - col * (index_in_matrix / col);
+      int64_t offset_in_matrix = k - matrix_size * (k / matrix_size);
+      int64_t i = offset_in_matrix / num_cols;
+      int64_t j = offset_in_matrix - num_cols * i;
       y_dptr[k] = j > i + diagonal ? zero : x_dptr[k];
     }
   }

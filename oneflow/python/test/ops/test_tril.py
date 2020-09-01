@@ -30,8 +30,12 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal=0):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    np_type = type_name_to_np_type[type_name]
-    flow_type = type_name_to_flow_type[type_name]
+    if type_name == "float16":
+        flow_type = flow.float
+        np_type = np.float32
+    else:
+        flow_type = type_name_to_flow_type[type_name]
+        np_type = type_name_to_np_type[type_name]
 
     @flow.global_function(type="train", function_config=func_config)
     def test_tril_fw_bw_job(x: oft.Numpy.Placeholder(shape, dtype=flow_type),):
@@ -43,7 +47,12 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal=0):
                 initializer=flow.zeros_initializer(),
             )
             x += flow.cast(x_var, dtype=flow_type)
-            out = flow.math.tril(x, diagonal)
+            if type_name == "float16":
+                out = flow.cast(
+                    flow.math.tril(flow.cast(x, flow.float16), diagonal), flow.float
+                )
+            else:
+                out = flow.math.tril(x, diagonal)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(out)
@@ -62,15 +71,30 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal=0):
     np_out = np.tril(test_global_storage.Get("x"), diagonal)
     np_x_diff = np.tril(test_global_storage.Get("out_diff"), diagonal)
 
-    test_case.assertTrue(np.allclose(np_out, test_global_storage.Get("out")))
-    test_case.assertTrue(np.allclose(np_x_diff, test_global_storage.Get("x_diff")))
+    if type_name == "float16":
+        tolerance = 1e-3
+    else:
+        tolerance = 1e-5
+    test_case.assertTrue(
+        np.allclose(
+            np_out, test_global_storage.Get("out"), rtol=tolerance, atol=tolerance
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            np_x_diff, test_global_storage.Get("x_diff"), rtol=tolerance, atol=tolerance
+        )
+    )
 
 
 def test_tril_fw_bw(test_case):
     arg_dict = OrderedDict()
-    arg_dict["device"] = ["gpu", "cpu"]
-    arg_dict["shape"] = [(6, 6), (3, 6, 8), (3, 4, 8, 6), (5, 3, 4, 8, 6)]
-    arg_dict["type_name"] = ["float32", "double", "int8", "int32", "int64"]
-    arg_dict["diagonal"] = [0, 1, -1]
+    arg_dict["device"] = ["cpu", "gpu"]
+    arg_dict["type_name"] = ["float32", "float16", "double", "int8", "int32", "int64"]
+    arg_dict["shape"] = [(6, 6), (3, 6, 8), (3, 4, 8, 6)]
+    arg_dict["diagonal"] = [-8, -1, 0, 1, 8]
+
     for arg in GenArgDict(arg_dict):
+        if arg["device"] == "cpu" and arg["type_name"] == "float16":
+            continue
         _test_tril_fw_bw(test_case, **arg)

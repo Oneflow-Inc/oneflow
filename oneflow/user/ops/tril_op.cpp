@@ -24,13 +24,7 @@ REGISTER_USER_OP("tril")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      int64_t diagonal = ctx->Attr<int64_t>("diagonal");
-      size_t num_axes = in->shape().NumAxes();
       CHECK_GE_OR_RETURN(in->shape().NumAxes(), 2);
-      CHECK_LE_OR_RETURN(diagonal,
-                         std::min(in->shape().At(num_axes - 1), in->shape().At(num_axes - 2)));
-      CHECK_GE_OR_RETURN(diagonal,
-                         -1 * std::min(in->shape().At(num_axes - 1), in->shape().At(num_axes - 2)));
       *out = *in;
       return Maybe<void>::Ok();
     })
