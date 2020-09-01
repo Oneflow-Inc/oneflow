@@ -28,6 +28,20 @@ REGISTER_USER_OP("broadcast_div_grad")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
+      const Shape& z_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("z", 0).shape();
+      if (y_shape.NumAxes() == z_shape.NumAxes()) {
+        for (int64_t i = 0; i < y_shape.NumAxes(); ++i) {
+          if (y_shape.At(i) == z_shape.At(i)) {
+            ctx->NewBuilder()
+                .Split(user_op::OpArg("y", 0), i)
+                .Split(user_op::OpArg("z", 0), i)
+                .Split(user_op::OpArg("dz", 0), i)
+                .Split(user_op::OpArg("dy", 0), i)
+                .Build();
+          }
+        }
+      }
       ctx->NewBuilder()
           .Broadcast(user_op::OpArg("y", 0))
           .PartialSum(user_op::OpArg("z", 0))
