@@ -2,10 +2,11 @@ set -ex
 
 wheelhouse_dir=/oneflow-src/wheelhouse
 
+package_name=oneflow
+
 function release() {
     set -ex
     docker_tag=oneflow:rel-manylinux2014-cuda-$1
-    package_name=oneflow_cu`echo $1 | tr -d .`
     if [ "$1" == "11.0" ]; then
         cudnn_version=8
     else
@@ -15,7 +16,7 @@ function release() {
     docker run --rm -it -v `pwd`:/oneflow-src -w /oneflow-src $docker_tag \
         /oneflow-src/docker/package/manylinux/build_wheel.sh --cache-dir /oneflow-src/manylinux2014-build-cache-cuda-$1 \
         --house-dir $wheelhouse_dir \
-        --package-name $package_name
+        --package-name ${package_name}_cu`echo $1 | tr -d .`
 }
 
 function release_cpu() {
@@ -23,7 +24,7 @@ function release_cpu() {
         /oneflow-src/docker/package/manylinux/build_wheel.sh --cache-dir /oneflow-src/manylinux2014-build-cache-cpu \
         --house-dir $wheelhouse_dir \
         -DBUILD_CUDA=OFF \
-        --package-name oneflow_cpu
+        --package-name "${package_name}_cpu"
 }
 
 release_cpu
