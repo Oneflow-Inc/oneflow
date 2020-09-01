@@ -918,7 +918,7 @@ def masked_fill(
         x = np.array([1, 2, 3, 4], dtype=np.float32)
         mask = np.array([1, 0, 0, 1], dtype=np.float32)
 
-        out = masked_fill_Job(x, mask)
+        out = masked_fill_Job(x, mask).get()
         
         # output [5 2 3 5]
 
