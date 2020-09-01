@@ -67,8 +67,12 @@ def _test_masked_fill_fw_bw(test_case, device, x_shape, mask_shape, type_name, v
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
 
-    np_type = type_name_to_np_type[type_name]
-    flow_type = type_name_to_flow_type[type_name]
+    if type_name == "float16":
+        flow_type = flow.float
+        np_type = np.float32
+    else:
+        flow_type = type_name_to_flow_type[type_name]
+        np_type = type_name_to_np_type[type_name]
 
     func_config.default_data_type(flow_type)
 
@@ -84,10 +88,12 @@ def _test_masked_fill_fw_bw(test_case, device, x_shape, mask_shape, type_name, v
                 dtype=flow.float,
                 initializer=flow.zeros_initializer(),
             )
-            y = flow.cast(y, dtype=flow_type)
-            x += y
+            x += flow.cast(y, flow_type)
             mask = flow.cast(mask, dtype=flow.int8)
-            out = flow.masked_fill(x, mask, value)
+            if type_name == "float16":
+                out = flow.cast(flow.masked_fill(flow.cast(x, flow.float16), mask, value), flow.float)
+            else:
+                out = flow.masked_fill(x, mask, value)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(out)
@@ -108,13 +114,18 @@ def _test_masked_fill_fw_bw(test_case, device, x_shape, mask_shape, type_name, v
 
     np_out, np_x_diff = _masked_fill_np_fw_bw(x, mask, out_diff, np_type, value)
 
-    test_case.assertTrue(np.allclose(np_out, test_global_storage.Get("out")))
-    test_case.assertTrue(np.allclose(np_x_diff, test_global_storage.Get("x_diff")))
+    if type_name == "float16":
+        tolerance = 1e-3
+    else:
+        tolerance = 1e-5
+
+    test_case.assertTrue(np.allclose(np_out, test_global_storage.Get("out"), rtol=tolerance, atol=tolerance))
+    test_case.assertTrue(np.allclose(np_x_diff, test_global_storage.Get("x_diff"), rtol=tolerance, atol=tolerance))
 
 
 def test_masked_fill_fw_bw(test_case):
     arg_dict = OrderedDict()
-    arg_dict["type_name"] = ["float32", "double", "int8", "int32", "int64"]
+    arg_dict["type_name"] = ["float32", "float16", "double", "int8", "int32", "int64"]
     arg_dict["device"] = ["gpu", "cpu"]
     arg_dict["x_shape"] = [
         (2, 4),
@@ -126,6 +137,7 @@ def test_masked_fill_fw_bw(test_case):
     ]
     arg_dict["mask_shape"] = [(2, 1, 2, 4)]
     arg_dict["value"] = [2.5, 3.3, -5.5]
-    arg_dict["value"] = [-5.5]
     for arg in GenArgDict(arg_dict):
+        if arg["device"] == "cpu" and arg["type_name"] == "float16":
+            continue
         _test_masked_fill_fw_bw(test_case, **arg)
