@@ -1786,7 +1786,7 @@ def tril(
     Attention:
         The dimension of x must greater or equal to 2.
     Returns:
-        remote_blob_util.BlobDef: The lower triangle blob of imput.
+        remote_blob_util.BlobDef: The lower triangle blob of input.
     
     For example:
     .. code-block:: python
@@ -1799,7 +1799,7 @@ def tril(
             return flow.math.tril(x, 0)
         x = np.array([[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]],
                       dtype=np.float32)
-        out = tril_Job(x)
+        out = tril_Job(x).get()
         
         # output [[1, 0, 0, 0],
                   [1, 2, 0, 0],
