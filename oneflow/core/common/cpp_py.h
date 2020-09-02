@@ -81,8 +81,22 @@ template<typename T>
 void NumpyToTensor(PyObject* arg, user_op::Tensor* tensor) {
   PyObject* ro_array = PyArray_FromAny(arg, nullptr, 0, 0, NPY_ARRAY_CARRAY_RO, nullptr);
   PyArrayObject* array = reinterpret_cast<PyArrayObject*>(ro_array);
+
   DataType of_data_type = DataType::kFloat;
-  NumpyTypeToOFDataType(array, &of_data_type)
+  NumpyTypeToOFDataType(array, &of_data_type);
+  CHECK_EQ(of_data_type, tensor->data_type())
+      << "Numpy to OneFlow data type " << DataType_Name(of_data_type)
+      << " is not equal to OneFlow tensor data type " << DataType_Name(tensor->data_type());
+
+  int64_t array_elem_cnt = 1;
+  FOR_RANGE(int, i, 0, PyArray_NDIM(array)) { array_elem_cnt *= PyArray_SHAPE(array)[i]; }
+  CHECK_EQ(array_elem_cnt, tensor->shape().elem_cnt())
+      << "Numpy array element count " << array_elem_cnt
+      << " is not equal to OneFlow tensor element count " << tensor->shape().elem_cnt();
+
+  void* array_data_void = PyArray_DATA(array);
+  T* array_data = static_cast<T*>(array_data_void);
+  FOR_RANGE(int64_t, i, 0, array_elem_cnt) { tensor->mut_dptr<T>()[i] = array_data[i]; }
 }
 }  // namespace oneflow
 

@@ -68,8 +68,6 @@ class PyKernel : public user_op::OpKernel {
     py_gil_st = PyGILState_Ensure();
     if (PyArray_API == nullptr) { _import_array(); }
 
-    PyRun_SimpleString("print('hello')");
-
     PyObject *py_name, *py_module, *py_func;
     PyObject *py_inputs, *py_outputs;
 
