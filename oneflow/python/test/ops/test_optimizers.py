@@ -62,7 +62,7 @@ def compare_with_tensorflow_rmsprop(
     for i in range(train_iters + 1):
         x = testRmsprop()
         if i == 0:
-            init_value = x
+            init_value = np.copy(x)
 
     var = tf.Variable(init_value)
     opt = tf.keras.optimizers.RMSprop(
@@ -117,7 +117,7 @@ def compare_with_tensorflow_adam(
     for i in range(train_iters + 1):
         x = testAdam()
         if i == 0:
-            init_value = x
+            init_value = np.copy(x)
 
     var = tf.Variable(init_value)
     opt = tf.keras.optimizers.Adam(
@@ -180,7 +180,7 @@ def compare_with_numpy_adamw(
     for i in range(train_iters + 1):
         x = testAdamW()
         if i == 0:
-            init_value = x
+            init_value = np.copy(x)
 
     def adamw_update_numpy(
         param,
@@ -203,7 +203,7 @@ def compare_with_numpy_adamw(
         return param_t, m_t, v_t
 
     param = init_value
-    gradient = np.ones(param.shape)
+    gradient = np.full(param.shape, 1.0 / np.prod(param.shape))
     m = np.zeros(param.shape)
     v = np.zeros(param.shape)
     for i in range(train_iters):
@@ -255,7 +255,7 @@ def compare_with_numpy_lazy_adam(
     for i in range(train_iters + 1):
         x = testLazyAdam(mask_float)
         if i == 0:
-            init_value = x
+            init_value = np.copy(x)
 
     def lazy_adam_update_numpy(
         param,
@@ -290,13 +290,100 @@ def compare_with_numpy_lazy_adam(
         return param_t, m_t, v_t
 
     param = init_value
-    gradient = np.ones(param.shape)
+    gradient = np.full(param.shape, 1.0 / np.prod(param.shape))
     m = np.zeros(param.shape)
     v = np.zeros(param.shape)
 
     for i in range(train_iters):
         param, m, v = lazy_adam_update_numpy(
             param, mask, gradient, i, m, v, learning_rate, beta1, beta2, epsilon
+        )
+
+    assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
+
+
+def compare_with_numpy_lars(
+    device_type,
+    x_shape,
+    momentum_beta,
+    epsilon,
+    lars_coefficient,
+    learning_rate,
+    train_iters,
+):
+    assert device_type in ["gpu", "cpu"]
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float32)
+
+    @flow.global_function(type="train", function_config=func_config)
+    def testLars() -> flow.typing.Numpy:
+        with flow.scope.placement(device_type, "0:0-0"):
+            x = flow.get_variable(
+                name="x",
+                shape=x_shape,
+                dtype=flow.float32,
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
+                trainable=True,
+            )
+            loss = flow.math.reduce_mean(x)
+
+            flow.optimizer.LARS(
+                flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
+                momentum_beta=momentum_beta,
+                epsilon=epsilon,
+                lars_coefficient=lars_coefficient,
+            ).minimize(loss)
+            return x
+
+    checkpoint = flow.train.CheckPoint()
+    checkpoint.init()
+
+    init_value = None
+    for i in range(train_iters + 1):
+        x = testLars()
+        if i == 0:
+            init_value = np.copy(x)
+
+    def lars_update_numpy(
+        param,
+        gradient,
+        iter,
+        momentum,
+        learning_rate=0.001,
+        momentum_beta=0.9,
+        epsilon=1e-9,
+        lars_coefficient=0.0001,
+    ):
+        import math
+
+        model_norm = math.sqrt(np.mean(param * param))
+        model_diff_norm = math.sqrt(np.mean(gradient * gradient))
+
+        local_learning_rate = (
+            learning_rate * lars_coefficient * model_norm / (epsilon + model_diff_norm)
+        )
+
+        momentum_t = momentum_beta * momentum - local_learning_rate * gradient
+
+        param_t = param + momentum_t
+
+        return param_t, momentum_t
+
+    param = init_value
+    gradient = np.full(param.shape, 1.0 / np.prod(param.shape))
+    momentum = np.zeros(param.shape)
+
+    for i in range(train_iters):
+        param, momentum = lars_update_numpy(
+            param,
+            gradient,
+            i,
+            momentum,
+            learning_rate,
+            momentum_beta,
+            epsilon,
+            lars_coefficient,
         )
 
     assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
@@ -334,7 +421,7 @@ def compare_with_tensorflow_sgd(
     for i in range(train_iters + 1):
         x = testSGD()
         if i == 0:
-            init_value = x
+            init_value = np.copy(x)
 
     var = tf.Variable(init_value)
     opt = tf.keras.optimizers.SGD(
@@ -400,6 +487,19 @@ def test_adamw(test_case):
     arg_dict["train_iters"] = [10]
     for arg in GenArgList(arg_dict):
         compare_with_numpy_adamw(*arg)
+
+
+def test_lars(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["x_shape"] = [(10,)]
+    arg_dict["momentum_beta"] = [0.9]
+    arg_dict["epsilon"] = [1e-9]
+    arg_dict["lars_coefficient"] = [0.0001]
+    arg_dict["learning_rate"] = [1]
+    arg_dict["train_iters"] = [10]
+    for arg in GenArgList(arg_dict):
+        compare_with_numpy_lars(*arg)
 
 
 def test_sgd(test_case):
