@@ -31,15 +31,15 @@ class FuseAddToOutputPass final : public OpGraphPass {
 };
 
 Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
-  const HashMap<std::string, user_op::OpArg> supported_op_type_name2output_bn(
+  const HashMap<std::string, user_op::OpArg> supported_op_type_name2output_arg(
       {{"conv_data_grad", user_op::OpArg("dx", 0)}, {"normalization", user_op::OpArg("y", 0)}});
   HashMap<std::string, OperatorConf> op_name2op_conf;
   auto IsAddToOutputSupported = [&](const OpNode* node, const LogicalBlobId& lbi) -> bool {
     const OperatorConf& op_conf = node->op().op_conf();
     if (!op_conf.has_user_conf()) { return false; }
     if (op_name2op_conf.find(op_conf.name()) != op_name2op_conf.end()) { return false; }
-    auto it = supported_op_type_name2output_bn.find(op_conf.user_conf().op_type_name());
-    if (it == supported_op_type_name2output_bn.end()) { return false; }
+    auto it = supported_op_type_name2output_arg.find(op_conf.user_conf().op_type_name());
+    if (it == supported_op_type_name2output_arg.end()) { return false; }
     const user_op::UserOpConfWrapper user_op_conf(op_conf);
     if (GenLogicalBlobId(user_op_conf.output(it->second.name(), it->second.index())) != lbi) {
       return false;
