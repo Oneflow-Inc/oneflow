@@ -52,6 +52,7 @@ def register_test_cases(
             name.startswith("test")
             and callable(method)
             and filter_by_num_nodes(_GetNumOfNodes(method))
+            and filter_by_num_gpus(_GetNumOfGPUs(method))
         )
 
     onlytest_files = [f for f in os.listdir(directory) if FilterTestPyFile(f)]
@@ -74,7 +75,22 @@ def num_nodes_required(num_nodes: int) -> Callable[[Callable], Callable]:
     return Decorator
 
 
+@oneflow_export("unittest.num_gpus_per_node_required")
+def num_nodes_required(num_nodes: int) -> Callable[[Callable], Callable]:
+    def Decorator(f):
+        f.__oneflow_test_case_num_gpus_per_node_required__ = num_nodes
+        return f
+
+    return Decorator
+
+
 def _GetNumOfNodes(func):
     if hasattr(func, "__oneflow_test_case_num_nodes_required__") == False:
         return 1
     return getattr(func, "__oneflow_test_case_num_nodes_required__")
+
+
+def _GetNumOfGPUs(func):
+    if hasattr(func, "__oneflow_test_case_num_gpus_per_node_required__") == False:
+        return 1
+    return getattr(func, "__oneflow_test_case_num_gpus_per_node_required__")
