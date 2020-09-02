@@ -22,11 +22,13 @@ namespace oneflow {
 template<typename T>
 void MakePyInputs(user_op::KernelComputeContext* ctx, PyObject* py_inputs) {
   size_t in_num = ctx->inputs().size();
+  LOG(INFO) << "input num " << in_num;
   PyObject* py_list = PyList_New(in_num);
 
   FOR_RANGE(size_t, i, 0, in_num) {
     PyObject* arg = nullptr;
     const std::string& arg_name = ctx->inputs().at(i).first;
+    LOG(INFO) << "input arg_name " << arg_name;
     int32_t index = 0;
     TensorToNumpy<T>(ctx->Tensor4ArgNameAndIndex(arg_name, index), arg);
     arg = PyArray_Return(reinterpret_cast<PyArrayObject*>(arg));
@@ -39,8 +41,10 @@ template<typename T>
 void GetPyOutputs(user_op::KernelComputeContext* ctx, PyObject* py_outputs) {
   if (PyList_Check(py_outputs)) {
     size_t out_num = ctx->outputs().size();
+    LOG(INFO) << "output num " << out_num;
     FOR_RANGE(size_t, i, 0, out_num) {
       const std::string& arg_name = ctx->outputs().at(i).first;
+      LOG(INFO) << "output arg_name " << arg_name;
       int32_t index = 0;
       NumpyToTensor<T>(PyList_GetItem(py_outputs, i), ctx->Tensor4ArgNameAndIndex(arg_name, index));
     }
@@ -68,14 +72,14 @@ class PyKernel : public user_op::OpKernel {
     py_gil_st = PyGILState_Ensure();
     if (PyArray_API == nullptr) { _import_array(); }
 
-    PyObject *py_name, *py_module, *py_func;
+    PyObject *py_file, *py_module, *py_func;
     PyObject *py_inputs, *py_outputs;
 
     // load python kernel
-    py_name = PyUnicode_DecodeFSDefault("pyk_sigmoid");
+    py_file = PyUnicode_DecodeFSDefault("pyk_sigmoid");
     // Error checking of pName left out
-    py_module = PyImport_Import(py_name);
-    Py_DECREF(py_name);
+    py_module = PyImport_Import(py_file);
+    Py_DECREF(py_file);
     if (py_module == nullptr) { PyErr_Print(); }
 
     // get forward func
@@ -89,11 +93,13 @@ class PyKernel : public user_op::OpKernel {
     MakePyInputs<T>(ctx, py_inputs);
 
     // call func
-    py_outputs = PyEval_CallObject(py_func, py_inputs);
+    LOG(INFO) << "call python";
+    py_outputs = PyObject_CallObject(py_func, py_inputs);
+    LOG(INFO) << "after call python";
     Py_DECREF(py_inputs);
 
     // output
-    GetPyOutputs<T>(ctx, py_outputs);
+    // GetPyOutputs<T>(ctx, py_outputs);
 
     // Py_DECREF(py_outputs);
     Py_XDECREF(py_func);
