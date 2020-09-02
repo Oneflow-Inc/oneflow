@@ -43,7 +43,7 @@ def register_test_cases(
     filter_by_num_nodes: Callable[[bool], int],
     base_class: unittest.TestCase = unittest.TestCase,
     test_case_mixin=_ClearDefaultSession,
-    filter_by_num_gpus = 1 : Callable[[bool], int],
+    filter_by_num_gpus: Callable[[bool], int] = lambda x: x == 1,
 ) -> None:
     def FilterTestPyFile(f):
         return (
