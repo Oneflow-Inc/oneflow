@@ -21,12 +21,10 @@ from test_util import GenArgList
 import unittest
 import os
 
-GPU_DEVICE_NUM = 2
-
 
 def do_test(test_case, mirrored):
     flow.clear_default_session()
-    flow.config.gpu_device_num(GPU_DEVICE_NUM)
+    flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()
 
     if mirrored:
@@ -50,7 +48,7 @@ def do_test(test_case, mirrored):
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-@flow.unittest.num_gpus_per_node_required(GPU_DEVICE_NUM)
+@flow.unittest.num_gpus_per_node_required(2)
 def test_variable_as_loss_on_two_device(test_case):
     arg_dict = OrderedDict()
     arg_dict["mirrored"] = [True, False]
