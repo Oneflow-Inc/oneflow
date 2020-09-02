@@ -5,3 +5,4 @@ recommonmark
 scipy
 pillow
 sphinx_rtd_theme
+ray
