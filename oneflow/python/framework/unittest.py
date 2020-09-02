@@ -45,6 +45,8 @@ def register_test_cases(
             os.path.isfile(os.path.join(directory, f))
             and f.endswith(".py")
             and f.startswith("test")
+            and f.startswith("test_util") == False
+            and f.startswith("test_global_storage") == False
         )
 
     def FilterMethodName(module, name):
