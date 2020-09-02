@@ -77,7 +77,7 @@ def num_nodes_required(num_nodes: int) -> Callable[[Callable], Callable]:
 
 
 @oneflow_export("unittest.num_gpus_per_node_required")
-def num_nodes_required(num_gpus: int) -> Callable[[Callable], Callable]:
+def num_gpus_per_node_required(num_gpus: int) -> Callable[[Callable], Callable]:
     def Decorator(f):
         f.__oneflow_test_case_num_gpus_per_node_required__ = num_gpus
         return f
