@@ -41,6 +41,20 @@ void OFDataTypeToNumpyType(DataType of_data_type, int* out_numpy_type) {
                  << " is not valid to numpy data type.";
   }
 }
+void NumpyTypeToOFDataType(PyArrayObject* array, DataType* of_data_type) {
+  int py_array_type = PyArray_TYPE(array);
+  switch (py_array_type) {
+    case NPY_FLOAT32: *of_data_type = DataType::kFloat; break;
+    case NPY_FLOAT64: *of_data_type = DataType::kDouble; break;
+    case NPY_INT8: *of_data_type = DataType::kInt8; break;
+    case NPY_INT32: *of_data_type = DataType::kInt32; break;
+    case NPY_INT64: *of_data_type = DataType::kInt64; break;
+    case NPY_UINT8: *of_data_type = DataType::kUInt8; break;
+    case NPY_FLOAT16: *of_data_type = DataType::kFloat16; break;
+    default:
+      LOG(FATAL) << "Numpy data type " << py_array_type << " is not valid to OneFlow data type.";
+  }
+}
 }  // namespace
 
 template<typename T>
@@ -64,7 +78,12 @@ void TensorToNumpy(const user_op::Tensor* tensor, PyObject* arg) {
 }
 
 template<typename T>
-void NumpyToTensor(PyObject* arg, user_op::Tensor* tensor) {}
+void NumpyToTensor(PyObject* arg, user_op::Tensor* tensor) {
+  PyObject* ro_array = PyArray_FromAny(arg, nullptr, 0, 0, NPY_ARRAY_CARRAY_RO, nullptr);
+  PyArrayObject* array = reinterpret_cast<PyArrayObject*>(ro_array);
+  DataType of_data_type = DataType::kFloat;
+  NumpyTypeToOFDataType(array, &of_data_type)
+}
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_CPP_PY_H_
