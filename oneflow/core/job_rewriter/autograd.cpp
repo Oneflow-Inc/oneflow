@@ -730,11 +730,10 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
               .Output("out")
               .Attr<float>("l1", regularizer_conf.l1_l2_conf().l1())
               .Attr<float>("l2", regularizer_conf.l1_l2_conf().l2())
+              .ScopeSymbolId(scope_symbol_id)
               .Build();
-      OperatorConf regularize_gradient_op_conf = regularize_gradient_op.op_conf();
-      regularize_gradient_op_conf.set_scope_symbol_id(scope_symbol_id);
       job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
-                          {regularize_gradient_op_conf});
+                          {regularize_gradient_op.op_conf()});
       diff_lbi = GenLogicalBlobId(regularize_gradient_op.output("out", 0));
     } else {
       UNIMPLEMENTED();
