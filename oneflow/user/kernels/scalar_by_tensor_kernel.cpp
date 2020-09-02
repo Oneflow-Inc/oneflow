@@ -100,5 +100,10 @@ class ScalarAddByTensorKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_ADD_BY_TENSOR_KERNEL, SCALAR_BY_TENSOR_SEQ,
                                  DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
+#ifdef WITH_CUDA
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_ADD_BY_TENSOR_KERNEL,
+                                 (("scalar_add_by_tensor", ByScalarFunc::add)), (DeviceType::kGPU),
+                                 FLOAT16_DATA_TYPE_SEQ)
+#endif
 
 }  // namespace oneflow
