@@ -212,9 +212,15 @@ UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& ar
   return *this;
 }
 
+UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::ScopeSymbolId(int64_t scope_symbol_id) {
+  scope_symbol_id_.set_value(scope_symbol_id);
+  return *this;
+}
+
 UserOpConfWrapper UserOpConfWrapperBuilder::Build() {
   OperatorConf op_conf;
   op_conf.set_name(op_name_);
+  if (scope_symbol_id_.has_value()) { op_conf.set_scope_symbol_id(scope_symbol_id_.value()); }
   UserOpConf* user_conf = op_conf.mutable_user_conf();
   user_conf->set_op_type_name(op_type_name_);
   auto GenArgs = [&](const HashMap<std::string, std::vector<std::string>>& src,
