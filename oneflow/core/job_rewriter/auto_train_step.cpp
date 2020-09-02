@@ -53,6 +53,11 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
   const std::string& train_step_lbn =
       GenLogicalBlobName(identity_op_conf.name(), identity_conf->out());
 
+  JobBuilder job_builder(job);
+  const ParallelConf& parallel_conf = GenParallelConfOfCpuZeroOnMaster();
+  int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
+      job->job_conf().DebugString(), parallel_conf.DebugString(), false);
+
   auto scalar_add_op = user_op::UserOpConfWrapperBuilder(train_step_name + "-ScalarAdd")
                            .Op("scalar_add")
                            .Input("in", train_step_lbn)
@@ -61,6 +66,7 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
                            .Attr<double>("float_operand", 0)
                            .Attr<bool>("has_int_operand", true)
                            .Attr<int64_t>("int_operand", 1)
+                           .ScopeSymbolId(scope_symbol_id)
                            .Build();
 
   auto assign_op =
@@ -68,20 +74,13 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
           .Op("assign")
           .Input("ref", GenLogicalBlobName(variable_op_conf.name(), variable_conf->out()))
           .Input("value", scalar_add_op.output("out", 0))
+          .ScopeSymbolId(scope_symbol_id)
           .Build();
 
-  JobBuilder job_builder(job);
-  const ParallelConf& parallel_conf = GenParallelConfOfCpuZeroOnMaster();
-  int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
-      job->job_conf().DebugString(), parallel_conf.DebugString(), false);
-  OperatorConf scalar_add_op_conf(scalar_add_op.op_conf());
-  OperatorConf assign_op_conf(assign_op.op_conf());
   variable_op_conf.set_scope_symbol_id(scope_symbol_id);
   identity_op_conf.set_scope_symbol_id(scope_symbol_id);
-  scalar_add_op_conf.set_scope_symbol_id(scope_symbol_id);
-  assign_op_conf.set_scope_symbol_id(scope_symbol_id);
-  job_builder.AddOps(parallel_conf,
-                     {variable_op_conf, identity_op_conf, scalar_add_op_conf, assign_op_conf});
+  job_builder.AddOps(parallel_conf, {variable_op_conf, identity_op_conf, scalar_add_op.op_conf(),
+                                     assign_op.op_conf()});
   job->mutable_job_conf()->mutable_train_conf()->set_train_step_lbn(train_step_lbn);
   return Maybe<void>::Ok();
 }
