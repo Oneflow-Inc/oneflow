@@ -41,9 +41,9 @@ def register_test_cases(
     scope: Dict[str, Any],
     directory: str,
     filter_by_num_nodes: Callable[[bool], int],
-    filter_by_num_gpus: Callable[[bool], int],
     base_class: unittest.TestCase = unittest.TestCase,
     test_case_mixin=_ClearDefaultSession,
+    filter_by_num_gpus = 1 : Callable[[bool], int],
 ) -> None:
     def FilterTestPyFile(f):
         return (
