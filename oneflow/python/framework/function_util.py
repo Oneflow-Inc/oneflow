@@ -429,7 +429,6 @@ def set_cudnn_conv_heuristic_search_algo(func_desc, value):
 @oneflow_function_config("enable_cudnn_fused_normalization_add_relu")
 def set_enable_cudnn_fused_normalization_add_relu(func_desc, value):
     r"""Whether enable cudnn_fused_normalization_add_relu.
-            If enabled, try to fuse a binary element-wise add to one of the predecessors to improve performance.
 
     Args:
         func_desc ([type]): [description]
@@ -440,7 +439,8 @@ def set_enable_cudnn_fused_normalization_add_relu(func_desc, value):
 
 @oneflow_function_config("enable_fuse_add_to_output")
 def set_enable_fuse_add_to_output(func_desc, value):
-    r"""Whether enable fuse_add_to_output
+    r"""Whether enable fuse_add_to_output.
+            If enabled, try to fuse a binary element-wise add to one of the predecessors to improve performance.
 
     Args:
         func_desc ([type]): [description]
