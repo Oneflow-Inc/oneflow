@@ -30,6 +30,11 @@ class _ClearDefaultSession(object):
         oneflow.clear_default_session()
         oneflow.enable_eager_execution(False)
 
+    def runTest(self):
+        for f_name in dir(self):
+            if f_name.startswith("test_"):
+                getattr(self, f_name)()
+
 
 @oneflow_export("unittest.register_test_cases")
 def register_test_cases(
