@@ -44,6 +44,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     if (GenLogicalBlobId(user_op_conf.output(it->second.name(), it->second.index())) != lbi) {
       return false;
     }
+    // add op should be the only consumer
     int64_t output_consumer_cnt = 0;
     for (const OpEdge* out_edge : node->out_edges()) {
       if (std::find(out_edge->lbis().cbegin(), out_edge->lbis().cend(), lbi)
@@ -52,6 +53,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
       }
     }
     if (output_consumer_cnt != 1) { return false; }
+    // already fused
     if (user_op_conf.has_input("_add_to_output", 0)) { return false; }
     return true;
   };
