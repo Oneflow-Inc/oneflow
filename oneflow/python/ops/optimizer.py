@@ -41,9 +41,9 @@ class by_global_norm(ClipGradientConf):
 
     If the norm of `Input` is less than the `clip_norm`, 
 
-    the `Output` will be the same as `Input`. 
+    the `Out` will be the same as `Input`. 
 
-    If the norm of `Input` is greater than the `clip_norm`, the `Output` will be scaled. 
+    If the norm of `Input` is greater than the `clip_norm`, the `Out` will be scaled. 
 
     The equation is: 
 
