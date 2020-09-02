@@ -40,4 +40,14 @@ RUN /opt/python/cp35-cp35m/bin/pip install $TUNA_INDEX -r /tmp/dev-requirements.
     && /opt/python/cp38-cp38/bin/pip install $TUNA_INDEX -r /tmp/dev-requirements.txt --user \
     && rm /tmp/dev-requirements.txt
 
+RUN curl -L https://github.com/bazelbuild/bazel/releases/download/3.4.1/bazel-3.4.1-linux-x86_64 -o /usr/local/bin/bazel \
+    && chmod +x /usr/local/bin/bazel \
+    && bazel
+
+RUN yum -y update --exclude=kernel-devel
+RUN yum -y install centos-release-scl
+RUN yum -y install devtoolset-7-gcc*
+RUN echo "source scl_source enable devtoolset-7" >> /etc/bashrc
+RUN source /etc/bashrc
+
 CMD ["/oneflow-src/docker/package/manylinux/build_wheel.sh"]

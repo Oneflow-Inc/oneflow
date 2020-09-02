@@ -62,11 +62,11 @@ link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 if (THIRD_PARTY)
   ExternalProject_Add(${TENSORFLOW_PROJECT}
     PREFIX ${TENSORFLOW_SOURCES_DIR}
-    GIT_REPOSITORY ${TENSORFLOW_GIT_URL}
-    GIT_TAG ${TENSORFLOW_GIT_TAG}
+    URL https://github.com/Oneflow-Inc/tensorflow/archive/1f_dep_v2.3.0r4.zip
+    # URL file:///tensorflow-src
     CONFIGURE_COMMAND ""
     BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
-                  bazel build ${TENSORFLOW_BUILD_CMD} -j 20 //tensorflow/compiler/jit/xla_lib:libxla_core.so
+                  bazel build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so
     INSTALL_COMMAND ""
   )
 
