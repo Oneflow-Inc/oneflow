@@ -68,10 +68,9 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
                                    .Attr<DataType>("dtype", DataType::kFloat)
                                    .Attr<Shape>("shape", Shape({1}))
                                    .Output("out")
+                                   .ScopeSymbolId(op_node->op().op_conf().scope_symbol_id())
                                    .Build();
-      OperatorConf op_conf(constant_op.op_conf());
-      op_conf.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
-      job_builder.AddOps(parallel_conf, {op_conf});
+      job_builder.AddOps(parallel_conf, {constant_op.op_conf()});
       return constant_op.output("out", 0);
     }
   };
