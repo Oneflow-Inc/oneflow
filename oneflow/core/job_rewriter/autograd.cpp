@@ -722,20 +722,19 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
     if (!variable_conf.has_regularizer()) { continue; }
     const RegularizerConf& regularizer_conf = variable_conf.regularizer();
     if (regularizer_conf.has_l1_l2_conf()) {
-      OperatorConf regularize_gradient_op_conf{};
-      regularize_gradient_op_conf.set_name("System-RegularizeGradient-L1L2-" + NewUniqueId());
-      L1L2RegularizeGradientOpConf* l1_l2_regularize_gradient_conf =
-          regularize_gradient_op_conf.mutable_l1_l2_regularize_gradient_conf();
-      l1_l2_regularize_gradient_conf->set_model(GenLogicalBlobName(lbi));
-      l1_l2_regularize_gradient_conf->set_model_diff(GenLogicalBlobName(diff_lbi));
-      l1_l2_regularize_gradient_conf->set_out("out");
-      l1_l2_regularize_gradient_conf->set_l1(regularizer_conf.l1_l2_conf().l1());
-      l1_l2_regularize_gradient_conf->set_l2(regularizer_conf.l1_l2_conf().l2());
-      regularize_gradient_op_conf.set_scope_symbol_id(scope_symbol_id);
+      user_op::UserOpConfWrapper regularize_gradient_op =
+          user_op::UserOpConfWrapperBuilder("System-RegularizeGradient-L1L2-" + NewUniqueId())
+              .Op("l1_l2_regularize_gradient")
+              .Input("model", GenLogicalBlobName(lbi))
+              .Input("model_diff", GenLogicalBlobName(diff_lbi))
+              .Output("out")
+              .Attr<float>("l1", regularizer_conf.l1_l2_conf().l1())
+              .Attr<float>("l2", regularizer_conf.l1_l2_conf().l2())
+              .ScopeSymbolId(scope_symbol_id)
+              .Build();
       job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
-                          {regularize_gradient_op_conf});
-      diff_lbi.set_op_name(regularize_gradient_op_conf.name());
-      diff_lbi.set_blob_name(l1_l2_regularize_gradient_conf->out());
+                          {regularize_gradient_op.op_conf()});
+      diff_lbi = GenLogicalBlobId(regularize_gradient_op.output("out", 0));
     } else {
       UNIMPLEMENTED();
     }
