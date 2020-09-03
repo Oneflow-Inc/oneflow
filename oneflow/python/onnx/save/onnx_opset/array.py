@@ -34,7 +34,7 @@ from oneflow.python.framework import id_util
 from oneflow.python.onnx import constants, util
 from oneflow.python.onnx.graph_builder import GraphBuilder
 from oneflow.python.onnx.handler import flow_op
-from oneflow.python.onnx.onnx_opset import nn, math
+from oneflow.python.onnx.save.onnx_opset import nn, math
 
 logger = logging.getLogger(__name__)
 
