@@ -46,7 +46,6 @@ struct SubTskGphBuilderUtil {
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
   static bool IsErrorBoxingNotSupported(const ErrorProto& error);
   static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
-
   template<typename NodeType>
   static int64_t FindNearestNodeIndex(const std::vector<NodeType*> from_nodes,
                                       const NodeType* to_node) {
