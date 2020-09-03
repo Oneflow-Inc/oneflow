@@ -57,17 +57,7 @@ class Handler(object):
             )
 
     @classmethod
-    def args_check(cls, node, **kwargs):
-        """ Check args. e.g. if shape info is in graph.
-    Raise exception if failed.
-
-    :param node: NodeProto for backend.
-    :param kwargs: Other args.
-    """
-        pass
-
-    @classmethod
-    def handle(cls, node, **kwargs):
+    def handle(cls, node, tensor_dict, **kwargs):
         """ Main method in handler. It will find corresponding versioned handle method,
     whose name format is `version_%d`. So prefix `version_` is reserved in onnx-tensorflow.
     DON'T use it for other purpose.
@@ -78,8 +68,7 @@ class Handler(object):
     """
         ver_handle = getattr(cls, "version_{}".format(cls.SINCE_VERSION), None)
         if ver_handle:
-            cls.args_check(node, **kwargs)
-            return ver_handle(node, **kwargs)
+            return ver_handle(node, tensor_dict, **kwargs)
         raise ValueError(
             'node "{}" of version {} is not supported'.format(
                 node.op_type, cls.SINCE_VERSION

@@ -270,7 +270,6 @@ class TensorflowBackend(Backend):
             input_dict = dict(input_dict_items)
 
             for node in graph_def.node:
-                print(node)
                 onnx_node = OnnxNode(node)
                 output_ops = cls._onnx_node_to_tensorflow_op(
                     onnx_node, tensor_dict, handlers, opset=opset, strict=strict
@@ -347,7 +346,7 @@ class TensorflowBackend(Backend):
         handlers = handlers or cls._get_handlers(opset)
         handler = handlers[node.domain].get(node.op_type, None)
         if handler:
-            output = handler.handle(node, tensor_dict=tensor_dict, strict=strict)
+            output = handler.handle(node, tensor_dict, strict=strict)
             if not isinstance(output, (list, tuple)):
                 output = [output]
             return output
