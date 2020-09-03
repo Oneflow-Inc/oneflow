@@ -84,6 +84,8 @@ struct ArithemeticIf<DeviceType::kGPU> {
                              float* z);
   static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
                              double* z);
+  static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
+                             float16* z);
   static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t* y,
                              int8_t* z);
   static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t* y,
@@ -95,6 +97,8 @@ struct ArithemeticIf<DeviceType::kGPU> {
                              float* z);
   static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
                              double* z);
+  static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
+                             float16* z);
   static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t* y,
                              int8_t* z);
   static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t* y,
@@ -106,6 +110,8 @@ struct ArithemeticIf<DeviceType::kGPU> {
                              float* z);
   static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
                              double* z);
+  static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
+                             float16* z);
   static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t* y,
                              int8_t* z);
   static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t* y,
@@ -117,6 +123,8 @@ struct ArithemeticIf<DeviceType::kGPU> {
                              float* z);
   static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
                              double* z);
+  static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
+                             float16* z);
   static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t* y,
                              int8_t* z);
   static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t* y,

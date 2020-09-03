@@ -389,6 +389,11 @@ REGISTER_NO_CAST_REGISTRY("normalization", "moving_variance", 0)
 REGISTER_NO_CAST_REGISTRY("normalization", "gamma", 0)
 REGISTER_NO_CAST_REGISTRY("normalization", "beta", 0)
 
+REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "moving_mean", 0)
+REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "moving_variance", 0)
+REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "gamma", 0)
+REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "beta", 0)
+
 }  // namespace
 
 }  // namespace oneflow

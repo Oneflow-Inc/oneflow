@@ -18,14 +18,12 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> B21SubTskGphBuilder::Build(SubTskGphBuilderCtx* ctx,
-                                       const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
-                                       const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
-                                       const ParallelDesc& src_parallel_desc,
-                                       const ParallelDesc& dst_parallel_desc,
-                                       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
-                                       const SbpParallel& src_sbp_parallel,
-                                       const SbpParallel& dst_sbp_parallel) const {
+Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
+    SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+    const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
+    const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
+    const SbpParallel& dst_sbp_parallel) const {
   if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
       && dst_parallel_desc.parallel_num() == 1) {
     CompTaskNode* dst_node = sorted_dst_comp_tasks.front();
@@ -35,9 +33,12 @@ Maybe<void> B21SubTskGphBuilder::Build(SubTskGphBuilderCtx* ctx,
     TaskNode* proxy = ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
                                         dst_node->machine_id(), dst_node->MemZoneId121());
     Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
-    return Maybe<void>::Ok();
+    return TRY(BuildSubTskGphBuilderStatus(sorted_src_comp_tasks.front(),
+                                           sorted_dst_comp_tasks.front(), src_parallel_desc,
+                                           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
+                                           lbi, logical_blob_desc, "B21SubTskGphBuilder", ""));
   } else {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
 }
 

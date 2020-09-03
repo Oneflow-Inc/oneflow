@@ -19,17 +19,17 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> ToInterfaceSubTskGphBuilder::Build(
+Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
     const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
   const LogicalNode* dst_logical_node = sorted_dst_comp_tasks.front()->logical_node();
-  if (dst_logical_node->op_vec().size() != 1) { return Error::BoxingNotSupported(); }
+  if (dst_logical_node->op_vec().size() != 1) { return Error::BoxingNotSupportedError(); }
   if (!IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(
           dst_logical_node->SoleOp()->op_conf().op_type_case())) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
       && (dst_parallel_desc.parallel_num() == 1 || dst_sbp_parallel.has_broadcast_parallel())) {
@@ -47,7 +47,10 @@ Maybe<void> ToInterfaceSubTskGphBuilder::Build(
         Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
       }
     }
-    return Maybe<void>::Ok();
+    return TRY(BuildSubTskGphBuilderStatus(
+        sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
+        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
+        "ToInterfaceSubTskGphBuilder", "BuildSubTaskGphB2B"));
   } else if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
              && (dst_parallel_desc.parallel_num() > 1 || dst_sbp_parallel.has_split_parallel())) {
     const TensorSliceView in_slice =
@@ -78,9 +81,12 @@ Maybe<void> ToInterfaceSubTskGphBuilder::Build(
                             Global<IDMgr>::Get()->CpuMemZoneId());
       Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
     }
-    return Maybe<void>::Ok();
+    return TRY(BuildSubTskGphBuilderStatus(
+        sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
+        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
+        "ToInterfaceSubTskGphBuilder", "BuildSubTaskGphB2S"));
   } else {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
 }
 
