@@ -59,28 +59,28 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
   if (SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   if (!SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(src_parallel_desc)) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   if (!SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(dst_parallel_desc)) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(src_parallel_desc.parallel_num(), src_sbp_parallel,
                                                  logical_blob_desc)) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(dst_parallel_desc.parallel_num(), dst_sbp_parallel,
                                                  logical_blob_desc)) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   if (!(SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)
         || SubTskGphBuilderUtil::IsBoxingS2S(src_sbp_parallel, dst_sbp_parallel)
         || SubTskGphBuilderUtil::IsBoxingP2S(src_sbp_parallel, dst_sbp_parallel)
         || SubTskGphBuilderUtil::IsBoxingP2B(src_sbp_parallel, dst_sbp_parallel)
         || SubTskGphBuilderUtil::IsBoxingB2S(src_sbp_parallel, dst_sbp_parallel))) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   const auto GetBoxingGpuThrdId = [](const int64_t dev_id, CudaWorkType work_type) -> int64_t {
 #ifdef WITH_CUDA
