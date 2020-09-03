@@ -31,13 +31,11 @@ Shape GetSplitShape(const RankDesc& rank_desc) {
   return shape;
 }
 
-Shape GetSplitLastShape(const RankDesc& rank_desc) {
+Shape GetFlattenShape(const RankDesc& rank_desc) {
   Shape shape(rank_desc.op_desc().shape());
-  CHECK_GT(shape.NumAxes(), 0);
-  const int32_t last_axis = shape.NumAxes() - 1;
-  CHECK(shape.At(last_axis) % rank_desc.op_desc().num_ranks() == 0);
-  shape.Set(last_axis, shape.At(last_axis) / rank_desc.op_desc().num_ranks());
-  return shape;
+  Shape return_shape({shape.elem_cnt() / rank_desc.op_desc().num_ranks()});
+  CHECK_GT(return_shape.NumAxes(), 0);
+  return return_shape;
 }
 
 }  // namespace
@@ -81,7 +79,7 @@ Shape GenericOpGetInputShape(const RankDesc& rank_desc) {
   } else if (op_type == OpType::kOpTypeAllGather) {
     return GetSplitShape(rank_desc);
   } else if (op_type == OpType::kOpTypeAll2All) {
-    return GetSplitLastShape(rank_desc);
+    return GetFlattenShape(rank_desc);
   } else {
     UNIMPLEMENTED();
     return Shape();
@@ -97,7 +95,7 @@ Shape GenericOpGetOutputShape(const RankDesc& rank_desc) {
   } else if (op_type == OpType::kOpTypeReduceScatter) {
     return GetSplitShape(rank_desc);
   } else if (op_type == OpType::kOpTypeAll2All) {
-    return GetSplitLastShape(rank_desc);
+    return GetFlattenShape(rank_desc);
   } else {
     UNIMPLEMENTED();
     return Shape();

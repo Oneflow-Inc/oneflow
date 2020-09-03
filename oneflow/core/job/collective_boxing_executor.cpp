@@ -377,10 +377,11 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
           OF_NCCL_CHECK(ncclBroadcast(send_buff, recv_buff, elem_cnt, nccl_data_type,
                                       op_desc.root(), comm, device_ctx->stream));
         } else if (op_type == OpType::kOpTypeAll2All) {
-          for (int32_t j = 0; j < num_ranks; j++) {
-            OF_NCCL_CHECK(ncclSend(send_buff + j * elem_cnt / num_ranks / num_ranks, elem_cnt / num_ranks/ num_ranks,
+          for (int32_t j = 0; j < num_ranks; ++j) {
+            const int64_t dtype_size = GetSizeOfDataType(op_desc.data_type());
+            OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(reinterpret_cast<const char*>(send_buff) + dtype_size * j * elem_cnt / num_ranks / num_ranks), elem_cnt / num_ranks/ num_ranks,
                                    nccl_data_type, j, comm, device_ctx->stream));
-            OF_NCCL_CHECK(ncclRecv(recv_buff + j * elem_cnt / num_ranks/ num_ranks, elem_cnt / num_ranks/ num_ranks,
+            OF_NCCL_CHECK(ncclRecv(reinterpret_cast<void*>(reinterpret_cast<char*>(recv_buff) + dtype_size * j * elem_cnt / num_ranks/ num_ranks), elem_cnt / num_ranks/ num_ranks,
                                    nccl_data_type, j, comm, device_ctx->stream));
           }
         } else {

@@ -973,6 +973,24 @@ message CastToStaticShapeOpConf {
   required string out = 2;
 }
 
+message BoxingPackOpConf {
+  required bool need_transpose = 1;
+  required int64 src_split_axis = 2;
+  required int64 dst_split_axis = 3;
+  required int64 parallel_num = 4;
+  required LogicalBlobId lbi = 5;
+}
+
+message BoxingUnpackOpConf {
+  required bool need_transpose = 1;
+  required int64 src_split_axis = 2;
+  required int64 dst_split_axis = 3;
+  required int64 parallel_num = 4;
+  required LogicalBlobId lbi = 5;
+  required ShapeProto src_shape = 6;
+  required ShapeProto dst_shape = 7;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1036,6 +1054,8 @@ message OperatorConf {
     TensorListSplitOpConf tensor_list_split_conf = 172;
     CastToStaticShapeOpConf cast_to_static_shape_conf = 173;
     UserOpConf user_conf = 199;
+    BoxingPackOpConf boxing_pack_conf = 174;
+    BoxingUnpackOpConf boxing_unpack_conf = 175;
     
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
