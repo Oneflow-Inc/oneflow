@@ -34,7 +34,7 @@ import onnx
 from onnx import helper, onnx_pb, defs, numpy_helper
 import six
 
-import oneflow.python.framework.dtype as flow_dtype
+import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.framework import id_util
 from oneflow.python.onnx import constants
 
@@ -43,20 +43,18 @@ from oneflow.python.onnx import constants
 #  mapping dtypes from oneflow to onnx
 #
 FLOW_2_ONNX_DTYPE = {
-    flow_dtype.float32: onnx_pb.TensorProto.FLOAT,
-    flow_dtype.float64: onnx_pb.TensorProto.DOUBLE,
-    flow_dtype.int64: onnx_pb.TensorProto.INT64,
-    flow_dtype.int32: onnx_pb.TensorProto.INT32,
-    flow_dtype.int8: onnx_pb.TensorProto.INT8,
-    flow_dtype.uint8: onnx_pb.TensorProto.UINT8,
-    flow_dtype.float16: onnx_pb.TensorProto.FLOAT16,
+    dtype_util.float32: onnx_pb.TensorProto.FLOAT,
+    dtype_util.float64: onnx_pb.TensorProto.DOUBLE,
+    dtype_util.int64: onnx_pb.TensorProto.INT64,
+    dtype_util.int32: onnx_pb.TensorProto.INT32,
+    dtype_util.int8: onnx_pb.TensorProto.INT8,
+    dtype_util.uint8: onnx_pb.TensorProto.UINT8,
+    dtype_util.float16: onnx_pb.TensorProto.FLOAT16,
 }
 
-# TODO(daquexian):
 FLOW_PROTO_2_ONNX_DTYPE = {}
 for k, v in FLOW_2_ONNX_DTYPE.items():
     FLOW_PROTO_2_ONNX_DTYPE[k.oneflow_proto_dtype] = v
-#
 del k
 
 #
@@ -110,7 +108,18 @@ ONNX_EMPTY_INPUT = ""
 
 
 def Flow2OnnxDtype(dtype):
-    return FLOW_2_ONNX_DTYPE[dtype]
+    assert dtype in FLOW_2_ONNX_DTYPE or dtype in FLOW_PROTO_2_ONNX_DTYPE
+    if dtype in FLOW_2_ONNX_DTYPE:
+        return FLOW_2_ONNX_DTYPE[dtype]
+    else:
+        return FLOW_PROTO_2_ONNX_DTYPE[dtype]
+
+
+def Onnx2FlowDtype(dtype):
+    for flow_dtype, onnx_dtype in FLOW_2_ONNX_DTYPE.items():
+        if onnx_dtype == dtype:
+            return flow_dtype
+    raise ValueError("unsupported dtype " + np_dtype + " for mapping")
 
 
 def Onnx2FlowDtype(dtype):
