@@ -36,7 +36,7 @@ def categorical_ordinal_encode(
         table (remote_blob_util.BlobDef): The hash table, you can assign it as a variable. 
         size (remote_blob_util.BlobDef): The size of hash table. 
         input_tensor (remote_blob_util.BlobDef): The input Blob. 
-        hash_precomputed (bool, optional): If it is True, it represents the input of the computed hash value, and the internal hash value will no longer be computed. We currently support the 'True' mode. Defaults to True.
+        hash_precomputed (bool, optional): We currently only support the 'True' mode. The internal hash value will no longer be computed. Defaults to True.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
