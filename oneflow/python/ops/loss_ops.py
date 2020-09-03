@@ -29,6 +29,50 @@ def smooth_l1_loss(
     beta: float = 1.0,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""This operator computes the smooth l1 loss. 
+
+    The equation is: 
+
+    .. math:: 
+
+        & out = \frac{(\beta*x)^2}{2}, \left|x\right|<\frac{1}{{\beta}^2}
+
+        & out = \left|x\right|-\frac{0.5}{{\beta}^2}, otherwise
+
+
+    Args:
+        prediction (remote_blob_util.BlobDef): The prediction Blob
+        label (remote_blob_util.BlobDef): The label Blob
+        beta (float, optional): The :math:`\beta` in the equation. Defaults to 1.0.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def smooth_l1_loss_Job(prediction: tp.Numpy.Placeholder((5, )),
+                            label: tp.Numpy.Placeholder((5, ))
+        ) -> tp.Numpy:
+            return flow.smooth_l1_loss(prediction=prediction,
+                                    label=label)
+
+
+        prediction = np.array([0.1, 0.4, 0.3, 0.5, 0.9]).astype(np.float32)
+        label = np.array([0.3, 0.9, 2.5, 0.4, 0.3]).astype(np.float32)
+        out = smooth_l1_loss_Job(prediction, label)
+
+        # out [0.02       0.12499999 1.7        0.005      0.17999998]
+
+    """
     op = (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("SmoothL1Loss_")

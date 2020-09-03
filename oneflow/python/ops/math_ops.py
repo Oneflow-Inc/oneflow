@@ -69,7 +69,7 @@ def add(
         y = np.array([1, 1, 1]).astype(np.float32)
         out = addJob(x, y) 
         
-        # output [2., 3., 4.]
+        # out [2., 3., 4.]
 
     """
     if isinstance(x, (int, float)):
@@ -142,7 +142,7 @@ def add_n(
         out = add_n_Job(x, y)
         print(out)
 
-        # output [2., 3., 4.]
+        # out [2., 3., 4.]
 
     """
     return _recursive_build_add_n(inputs, name)
@@ -187,7 +187,7 @@ def subtract(
         y = np.array([2, 4, 1]).astype(np.float32)
         out = subtractJob(x, y)
 
-        # output [-1., -2., 2.]
+        # out [-1., -2., 2.]
 
     """
     if isinstance(x, (int, float)):
@@ -244,7 +244,8 @@ def multiply(
         y = np.array([2, 3, 3]).astype(np.float32)
         out = multiplyJob(x, y)
 
-        # output [2., 6., 9.]
+        # out [2., 6., 9.]
+
     """
     if isinstance(x, (int, float)):
         return scalar_mul(y, x, name)
@@ -299,7 +300,8 @@ def divide(
         y = np.array([10, 4, 2]).astype(np.float32)
         out = divideJob(x, y)
 
-        # output [2.5, 4., 4.5]
+        # out [2.5, 4., 4.5]
+        
     """
     if isinstance(x, (int, float)):
         return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
@@ -363,7 +365,8 @@ def floor_mod(
         y = np.array([6, 4, 3]).astype(np.float32)
         out = modJob(x, y)
         
-        # output [4., 1., 2.]
+        # out [4., 1., 2.]
+
     """
     if isinstance(x, (int, float)):
         raise NotImplementedError
@@ -556,7 +559,8 @@ def tanh(
         x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         out = tanhJob(x)
         
-        # output [-0.46211714, 0., 0.46211714]
+        # out [-0.46211714, 0., 0.46211714]
+
     """
 
     return (
@@ -604,7 +608,8 @@ def gelu(
         x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         out = geluJob(x)
 
-        # output [-0.15426877, 0., 0.34573123]
+        # out [-0.15426877, 0., 0.34573123]
+
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Gelu_"))
@@ -651,7 +656,8 @@ def relu(
         x = np.array([-1, 0, 5]).astype(np.float32)
         out = reluJob(x)
 
-        # output [0., 0., 5.]
+        # out [0., 0., 5.]
+
     """
 
     return (
@@ -699,7 +705,7 @@ def sigmoid(
         x = np.array([-1, 0, 1]).astype(np.float32)
         out = sigmoidJob(x)
 
-        # output [0.26894143, 0.5, 0.7310586]
+        # out [0.26894143, 0.5, 0.7310586]
 
     """
     return (
@@ -756,9 +762,9 @@ def unsorted_segment_sum(
         segment_ids = np.array([0, 1, 0, 1]).astype(np.int32)
         out = unsorted_segment_sumJob(input_blob, segment_ids)
 
-        #  output [[ 4.  6.]
-        #          [12. 14.]
-        #          [20. 22.]]
+        # out [[ 4.  6.]
+        #      [12. 14.]
+        #      [20. 22.]]
         
         # Example 2
         import oneflow as flow
@@ -777,8 +783,8 @@ def unsorted_segment_sum(
         segment_ids = np.array([0, 1, 0]).astype(np.int32)
         out = unsorted_segment_sumJob(input_blob, segment_ids)
 
-        #  output [[10. 12. 14. 16.]
-        #          [ 5.  6.  7.  8.]]
+        #  out [[10. 12. 14. 16.]
+        #       [ 5.  6.  7.  8.]]
         
     """
     return (
@@ -840,8 +846,8 @@ def unsorted_segment_sum_like(
 
         out = unsorted_segment_sum_like_Job(input_blob, segment_ids, like)
 
-        #  output [[10. 12. 14. 16.]
-        #          [ 5.  6.  7.  8.]]
+        # out [[10. 12. 14. 16.]
+        #      [ 5.  6.  7.  8.]]
         
     """
     return (
@@ -907,9 +913,9 @@ def unsorted_batch_segment_sum(
                                 [0, 1, 0, 0]]).astype(np.int32)
         out = unsorted_batch_segment_sum_Job(input_blob, segment_ids)
 
-        # output [[6. 4.]
-        #         [7. 3.]
-        #         [8. 2.]]
+        # out [[6. 4.]
+        #      [7. 3.]
+        #      [8. 2.]]
 
     """
     return (
@@ -1009,7 +1015,8 @@ def equal(
         y = np.array([1, 2, 1]).astype(np.float32)
         out = equal_Job(x, y)
 
-        # output [1 1 0]
+        # out [1 1 0]
+
     """
     return build_broadcast_binary_op("broadcast_equal", x, y, name)
 
@@ -1046,7 +1053,8 @@ def not_equal(
         y = np.array([1, 2, 1]).astype(np.float32)
         out = not_equal_Job(x, y)
 
-        # output [0 0 1]
+        # out [0 0 1]
+
     """
     return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
 
@@ -1083,7 +1091,8 @@ def less(
         y = np.array([1, 2, 4]).astype(np.float32)
         out = less_Job(x, y)
 
-        # output [0 0 1]
+        # out [0 0 1]
+
     """
     return build_broadcast_binary_op("broadcast_less", x, y, name)
 
@@ -1120,7 +1129,8 @@ def less_equal(
         y = np.array([1, 1, 4]).astype(np.float32)
         out = less_equal_Job(x, y)
 
-        # output [1 0 1]
+        # out [1 0 1]
+
     """
     return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
 
@@ -1157,7 +1167,8 @@ def greater(
         y = np.array([1, 2, 3]).astype(np.float32)
         out = greater_Job(x, y)
 
-        # output [0 0 1]
+        # out [0 0 1]
+
     """
     return build_broadcast_binary_op("broadcast_greater", x, y, name)
 
@@ -1194,7 +1205,8 @@ def greater_equal(
         y = np.array([1, 2, 3]).astype(np.float32)
         out = greater_equal_Job(x, y)
     
-        # output [1 0 1]
+        # out [1 0 1]
+
     """
     return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
 
@@ -1208,7 +1220,7 @@ def logical_and(
     Each element is calculated by:
 
     .. math::
-        out = X ∧ Y
+        out = X \land Y
 
     Args:
         x (remote_blob_util.BlobDef): A Blob
@@ -1236,7 +1248,7 @@ def logical_and(
         y = np.array([0, 0, 1]).astype(np.float32)
         out = logical_and_Job(x, y)
     
-        # output [0 0 1]
+        # out [0 0 1]
     
     """
     return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
@@ -1274,7 +1286,7 @@ def broadcast_min(
         y = np.array([4, 2, 1]).astype(np.float32)
         out = minimum_Job(x, y)
     
-        # output [2. 2. 1.]
+        # out [2. 2. 1.]
 
     """
     return build_broadcast_binary_op("broadcast_minimum", x, y, name)
@@ -1312,7 +1324,8 @@ def broadcast_max(
         y = np.array([4, 2, 1]).astype(np.float32)
         out = maximum_Job(x, y)
 
-        # output [4. 3. 4.]
+        # out [4. 3. 4.]
+
     """
     return build_broadcast_binary_op("broadcast_maximum", x, y, name)
 
@@ -1352,7 +1365,7 @@ def elem_cnt(
         x = np.ones(shape=(3, 4, 5), dtype=np.float32)
         out = elem_cnt_Job(x) # 3 x 4 = 12
         
-        # output [12]
+        # out [12]
 
         # Example 2:
         import oneflow as flow
@@ -1367,7 +1380,8 @@ def elem_cnt(
         x = np.ones(shape=(3, 4, 5), dtype=np.float32)
         out = elem_cnt_Job(x) # 3 x 4 x 5 = 60
         
-        # output [60]
+        # out [60]
+
     """
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -1425,7 +1439,8 @@ def top_k(
         x = np.array([1, 3, 8, 7, 2], dtype=np.float32)
         out = topk_Job(x)
 
-        # output [2 3]
+        # out [2 3]
+
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
@@ -1471,7 +1486,8 @@ def argmax(
 
         out = argmax_Job(x)
 
-        # output [2 1]
+        # out [2 1]
+
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
@@ -1520,7 +1536,8 @@ def broadcast_to_compatible_with(
 
         out = broadcast_to_compatible_with_Job(x)
 
-        # output.shape (4, 2, 3)
+        # out.shape (4, 2, 3)
+
     """
     assert isinstance(compatible, (list, tuple))
     if name is None:
@@ -1586,7 +1603,8 @@ def clip_by_value(
 
         out = clip_by_value_Job(x)
 
-        # output [-1. 1. 4. 5.]
+        # out [-1. 1. 4. 5.]
+
     """
     if name is None:
         name = id_util.UniqueStr("ClipByValue_")
@@ -1666,7 +1684,7 @@ def l2_normalize(
 
         out = l2_normalize_Job(x)
         
-        # output [0.18257418 0.36514837 0.5477226  0.73029673]
+        # out [0.18257418 0.36514837 0.5477226  0.73029673]
 
     """
     if axis < 0:
@@ -1724,7 +1742,8 @@ def squared_difference(
 
         out = squared_difference_Job(x, y)
 
-        # output [ 1.  4.  9. 16.]
+        # out [ 1.  4.  9. 16.]
+
     """
     name_subtract, name_square = None, None
     if name is not None:
@@ -1767,6 +1786,51 @@ def tanh_grad(
         .Input("y", [y])
         .Input("dy", [dy])
         .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("math.tril", "nn.tril")
+def tril(
+    x: remote_blob_util.BlobDef, diagonal: int = 0, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Compute lower triangle of an matrix.
+    Args:
+        x (remote_blob_util.BlobDef): Input Blob.
+        diagonal (int): Diagonal offset, when diagonal > 0, diagonal offset up, 
+                        otherwise, offset downward.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    Attention:
+        The dimension of x must greater or equal to 2.
+    Returns:
+        remote_blob_util.BlobDef: The lower triangle blob of input.
+    
+    For example:
+    .. code-block:: python
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+        @flow.global_function()
+        def tril_Job(x: tp.Numpy.Placeholder((4, 4))
+        )->tp.Numpy:
+            return flow.math.tril(x, 0)
+        x = np.array([[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]],
+                      dtype=np.float32)
+        out = tril_Job(x).get()
+        
+        # output [[1, 0, 0, 0],
+                  [1, 2, 0, 0],
+                  [1, 2, 3, 0],
+                  [1, 2, 3, 4]]
+    """
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Tril_"))
+        .Op("tril")
+        .Input("in", [x])
+        .Attr("diagonal", diagonal)
+        .Output("out")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

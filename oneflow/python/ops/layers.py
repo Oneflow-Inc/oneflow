@@ -92,7 +92,7 @@ def dense(
         x = np.random.randn(1, 256).astype(np.float32)
         out = dense_Job(x)
 
-        # output.shape (1, 512)
+        # out.shape (1, 512)
 
     """
     in_shape = inputs.shape
@@ -243,7 +243,7 @@ def conv1d(
         x = np.random.randn(1, 64, 32).astype(np.float32)
         out = conv1d_Job(x)
 
-        # output.shape (1, 128, 32)
+        # out.shape (1, 128, 32)
 
     """
 
@@ -439,7 +439,7 @@ def conv2d(
         x = np.random.randn(1, 256, 32, 32).astype(np.float32)
         out = conv2d_Job(x)
 
-        # output.shape (1, 128, 32, 32)
+        # out.shape (1, 128, 32, 32)
 
     """
 
@@ -632,7 +632,11 @@ def conv3d(
             )
             return conv3d
 
-        # output.shape (1, 128, 16, 16, 16)
+
+        x = np.random.randn(1, 64, 16, 16, 16).astype(np.float32)
+        out = conv3d_Job(x)
+
+        # out.shape (1, 128, 16, 16, 16)
 
     """
     need_transpose = 0
@@ -799,7 +803,7 @@ def layer_norm(
         x = np.random.randn(1, 64, 128, 128).astype(np.float32)
         out = layer_norm_Job(x)
 
-        # output.shape (1, 64, 128, 128)
+        # out.shape (1, 64, 128, 128)
 
     """
     if center is False and scale is False:
@@ -1123,7 +1127,7 @@ def batch_normalization(
         x = np.random.randn(1, 64, 128, 128).astype(np.float32)
         out = batch_norm_Job(x)
 
-        # output.shape (1, 128, 64, 64)
+        # out.shape (1, 128, 64, 64)
 
     """
     if axis < 0:
@@ -1443,7 +1447,7 @@ def upsample(
         x = np.random.randn(1, 32, 32, 32).astype(np.float32)
         out = upsample_Job(x)
 
-        # output.shape (1, 32, 64, 64)
+        # out.shape (1, 32, 64, 64)
 
     """
     if isinstance(size, int):
