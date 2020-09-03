@@ -62,15 +62,15 @@ link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 if (THIRD_PARTY)
   ExternalProject_Add(${TENSORFLOW_PROJECT}
     PREFIX ${TENSORFLOW_SOURCES_DIR}
-    URL https://github.com/Oneflow-Inc/tensorflow/archive/1f_dep_v2.3.0r4.zip
-    # URL file:///tensorflow-src
+    # URL https://github.com/Oneflow-Inc/tensorflow/archive/1f_dep_v2.3.0r4.zip
+    URL file:///tensorflow-src
     CONFIGURE_COMMAND ""
     BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
                   bazel build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so
     INSTALL_COMMAND ""
   )
 
-set(TENSORFLOW_XLA_FRAMEWORK_LIB ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/libtensorflow_framework.so.1)
+set(TENSORFLOW_XLA_FRAMEWORK_LIB ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/libtensorflow_framework.so.2)
 set(TENSORFLOW_XLA_CORE_LIB ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/compiler/jit/xla_lib/libxla_core.so)
 
 add_custom_target(tensorflow_create_library_dir
@@ -81,7 +81,7 @@ add_custom_target(tensorflow_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
       ${TENSORFLOW_XLA_FRAMEWORK_LIB} ${TENSORFLOW_XLA_CORE_LIB} ${TENSORFLOW_INSTALL_DIR}/lib
   COMMAND ${CMAKE_COMMAND} -E create_symlink
-      ${TENSORFLOW_INSTALL_DIR}/lib/libtensorflow_framework.so.1
+      ${TENSORFLOW_INSTALL_DIR}/lib/libtensorflow_framework.so.2
       ${TENSORFLOW_INSTALL_DIR}/lib/libtensorflow_framework.so
   DEPENDS tensorflow_create_library_dir)
 endif(THIRD_PARTY)
