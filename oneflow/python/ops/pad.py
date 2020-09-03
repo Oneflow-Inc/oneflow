@@ -145,11 +145,11 @@ def pad_grad(
 @oneflow_export("same_padding")
 def same_padding(
     x: remote_blob_util.BlobDef,
-    padding: Sequence[int], 
-    data_format: str, 
-    kernel_size: Sequence[int], 
-    strides: Sequence[int], 
-    dilation_rate: Sequence[int], 
+    padding: Sequence[int],
+    data_format: str,
+    kernel_size: Sequence[int],
+    strides: Sequence[int],
+    dilation_rate: Sequence[int],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """This operator do the padding in "SAME" mode, It can computes the pad width according to the `kernel_size` and `strides` to keep the size of feature map unchanged after convolution or other operations. 
