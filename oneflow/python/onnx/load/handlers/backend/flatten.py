@@ -26,8 +26,8 @@ from oneflow.python.onnx.handler import onnx_op
 @onnx_op("Flatten")
 class Flatten(BackendHandler):
     @classmethod
-    def _common(cls, node, **kwargs):
-        x = kwargs["tensor_dict"][node.input_tensor_names[0]]
+    def _common(cls, node, tensor_dict, **kwargs):
+        x = tensor_dict[node.input_tensor_names[0]]
         shape = x.shape
         axis = node.attrs.get("axis", 1)
 
@@ -43,13 +43,13 @@ class Flatten(BackendHandler):
         return [array_ops.reshape(x, cal_shape)]
 
     @classmethod
-    def version_1(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_9(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_9(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_11(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_11(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
