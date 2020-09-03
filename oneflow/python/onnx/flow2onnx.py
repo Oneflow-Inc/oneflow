@@ -42,7 +42,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.onnx
 from oneflow.python.onnx import constants, schemas, util, handler, optimizer
 from oneflow.python.onnx.graph import Graph
-import oneflow.python.onnx.onnx_opset  # pylint: disable=unused-import
+import oneflow.python.onnx.save.onnx_opset  # pylint: disable=unused-import
 
 logger = logging.getLogger(__name__)
 
@@ -156,9 +156,7 @@ def FlowToOnnxNaive(graph, shape_override):
         for a in attrs:
             attr_cnt[a] += 1
             if a == "dtype":
-                attr[a] = util.Flow2OnnxDtype(
-                    util.get_flow_node_attr(node, "dtype")
-                )
+                attr[a] = util.Flow2OnnxDtype(util.get_flow_node_attr(node, "dtype"))
             else:
                 attr[a] = util.get_flow_node_attr(node, a)
 
