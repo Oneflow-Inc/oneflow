@@ -214,6 +214,7 @@ include_directories(${ONEFLOW_INCLUDE_SRC_DIRS})
 
 if(WITH_XLA)
   list(APPEND oneflow_third_party_dependencies tensorflow_copy_libs_to_destination)
+  list(APPEND oneflow_third_party_dependencies tensorflow_symlink_headers)
   list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
 endif()
 
