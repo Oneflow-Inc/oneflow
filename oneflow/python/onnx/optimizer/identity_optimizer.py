@@ -40,13 +40,13 @@ class IdentityOptimizer(GraphOptimizerBase):
         has_update = True
         while has_update:
             has_update = False
-            nodes = [n for n in g.get_nodes() if n.type == "Identity"]
+            nodes = [n for n in g.get_nodes() if n.op_type == "Identity"]
             for n in nodes:
                 if n.graph is None:
                     self.logger.debug("node has been removed from this graph, skip")
                     continue
 
-                graph_outputs = set(n.output).intersection(g.outputs)
+                graph_outputs = set(n.output_tensor_names).intersection(g.outputs)
                 ret = False
                 if graph_outputs:
                     ret = self._HandleGraphOutputIdentity(g, n, graph_outputs)
@@ -59,13 +59,17 @@ class IdentityOptimizer(GraphOptimizerBase):
 
     @staticmethod
     def _HandleNonGraphOutputIdentity(graph, identity):
-        graph.ReplaceAllInputs(graph.get_nodes(), identity.output[0], identity.input[0])
+        graph.ReplaceAllInputs(
+            graph.get_nodes(),
+            identity.output_tensor_names[0],
+            identity.input_tensor_names[0],
+        )
         graph.RemoveNode(identity.name)
         return True
 
     def _HandleGraphOutputIdentity(self, graph, identity, graph_outputs):
-        input_id = identity.input[0]
-        input_node = identity.inputs[0]
+        input_id = identity.input_tensor_names[0]
+        input_node = identity.input_nodes[0]
 
         if input_node.graph != graph:
             # If input node is in parent graph, we don't handle it now
@@ -77,7 +81,7 @@ class IdentityOptimizer(GraphOptimizerBase):
             self.logger.debug("skip identity between input and output")
             return False
 
-        output_id = identity.output[0]
+        output_id = identity.output_tensor_names[0]
         output_shape = graph.get_shape(output_id)
         output_dtype = graph.get_dtype(output_id)
         if input_id in graph.outputs:
@@ -87,8 +91,10 @@ class IdentityOptimizer(GraphOptimizerBase):
             return False
 
         graph.RemoveNode(identity.name)
-        new_output = [output_id if o == input_id else o for o in input_node.output]
-        input_node.output = new_output
+        new_output = [
+            output_id if o == input_id else o for o in input_node.output_tensor_names
+        ]
+        input_node.output_tensor_names = new_output
 
         graph.set_shape(output_id, output_shape)
         graph.set_dtype(output_id, output_dtype)
