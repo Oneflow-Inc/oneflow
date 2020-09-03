@@ -113,7 +113,7 @@ def categorical_ordinal_encoder(
     Args:
         input_tensor (remote_blob_util.BlobDef): The input Blob. 
         capacity (int): The capacity of hash table. 
-        hash_precomputed (bool, optional): If it is True, it represents the input of the computed hash value, and the internal hash value will no longer be computed. We currently support the 'True' mode. Defaults to True.
+        hash_precomputed (bool, optional): We currently only support the 'True' mode. The internal hash value will no longer be computed. Defaults to True.
         name (str, optional): The name for the operation. Defaults to "CategoricalOrdinalEncoder".
 
     Returns:
