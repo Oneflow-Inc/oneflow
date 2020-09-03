@@ -34,11 +34,11 @@ import oneflow as flow
 
 from oneflow.python.onnx import util
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.onnx.load.common import get_device_option
 from oneflow.python.onnx.load.common import get_unique_suffix
 from oneflow.python.onnx.load.common import supports_device as common_supports_device
-from oneflow.python.onnx.load.common.handler_helper import get_all_backend_handlers
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
+# TODO(daquexian):
+from oneflow.python.onnx.load.handlers.backend import flatten
 from oneflow.python.onnx.graph import Node as OnnxNode
 import oneflow.python.onnx.load.common as common
 import io
@@ -107,6 +107,48 @@ def from_pytorch(torch_model, inputs):
 
         d = prepare(onnx_model, blob_dict=dict(zip(input_names, inputs)))
         return d["y"]
+
+
+def get_all_backend_handlers(opset_dict):
+    """ Get a dict of all backend handler classes.
+  e.g. {'domain': {'Abs': Abs handler class}, ...}, }.
+
+  :param opset_dict: A dict of opset. e.g. {'domain': version, ...}
+  :return: Dict.
+  """
+    handlers = {}
+    for handler in BackendHandler.__subclasses__():
+        print(handler.ONNX_OP)
+        handler.check_cls()
+
+        domain = handler.DOMAIN
+        version = opset_dict[domain]
+        handler.VERSION = version
+
+        since_version = 1
+        if defs.has(handler.ONNX_OP, domain=handler.DOMAIN):
+            try:
+                since_version = defs.get_schema(
+                    handler.ONNX_OP,
+                    domain=handler.DOMAIN,
+                    max_inclusive_version=version,
+                ).since_version
+            except RuntimeError:
+                common.logger.info(
+                    "Fail to get since_version of {} in domain `{}` "
+                    "with max_inclusive_version={}. Set to 1.".format(
+                        handler.ONNX_OP, handler.DOMAIN, version
+                    )
+                )
+        else:
+            common.logger.info(
+                "Unknown op {} in domain `{}`.".format(
+                    handler.ONNX_OP, handler.DOMAIN or "ai.onnx"
+                )
+            )
+        handler.SINCE_VERSION = since_version
+        handlers.setdefault(domain, {})[handler.ONNX_OP] = handler
+    return handlers
 
 
 class TensorflowBackend(Backend):
@@ -228,6 +270,7 @@ class TensorflowBackend(Backend):
             input_dict = dict(input_dict_items)
 
             for node in graph_def.node:
+                print(node)
                 onnx_node = OnnxNode(node)
                 output_ops = cls._onnx_node_to_tensorflow_op(
                     onnx_node, tensor_dict, handlers, opset=opset, strict=strict
