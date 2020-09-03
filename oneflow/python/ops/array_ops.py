@@ -879,3 +879,51 @@ def broadcast_like(
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("masked_fill")
+def masked_fill(
+    x: remote_blob_util.BlobDef,
+    mask: remote_blob_util.BlobDef,
+    value: Union[float, int],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Fill a blob with a given value according to the given mask.
+
+    Args:
+        x (remote_blob_util.BlobDef): Input Blob.
+        mask (remote_blob_util.BlobDef): Composed with 0 and 1, the input blob 'x' will be 
+            filled with the given value where the mask is 1. 
+        value (Union[int, int]): The value to use for filling the input blob.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    Attention:
+        x and mask must be broadcastable to each other.
+
+    Returns:
+        remote_blob_util.BlobDef: The value-filled Blob
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def masked_fill_Job(x: tp.Numpy.Placeholder((4, ), mask: tp.Numpy.Placeholder((4, ))
+        )->tp.Numpy:
+            return flow.masked_fill(x, mask, value=5)
+
+        x = np.array([1, 2, 3, 4], dtype=np.float32)
+        mask = np.array([1, 0, 0, 1], dtype=np.float32)
+
+        out = masked_fill_Job(x, mask).get()
+        
+        # output [5 2 3 5]
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("MaskedFill_")
+    value_like_x = flow.constant_like(like=x, value=value, name=name + "_ConstantLike")
+    return flow.where(condition=mask, x=value_like_x, y=x, name=name + "_Where")

@@ -174,10 +174,9 @@ void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder
             .Attr<double>("float_operand", scale_factor)
             .Attr<bool>("has_int_operand", false)
             .Attr<int64_t>("int_operand", 0)
+            .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
             .Build();
-    OperatorConf scalr_mul_op_conf(scalar_mul_op.op_conf());
-    scalr_mul_op_conf.set_scope_symbol_id(ScopeSymbolId4Lbi(op_graph, lbi));
-    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalr_mul_op_conf});
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
     diff_lbi = GenLogicalBlobId(scalar_mul_op.output("out", 0));
   }
 }
@@ -274,10 +273,9 @@ void ScaleModelDiffByDynamicLossInstanceNum(
             .Input("x", GenLogicalBlobName(diff_lbi))
             .Input("scalar", GenLogicalBlobName(total_loss_instance_num_lbi))
             .Output("y")
+            .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
             .Build();
-    OperatorConf scalar_div_op_conf(scalar_div_op.op_conf());
-    scalar_div_op_conf.set_scope_symbol_id(ScopeSymbolId4Lbi(op_graph, lbi));
-    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_div_op_conf});
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_div_op.op_conf()});
     diff_lbi = GenLogicalBlobId(scalar_div_op.output("y", 0));
   }
 }
@@ -466,10 +464,8 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
       add_op_builder.Input("in", lbns_to_add.at(i));
     }
     lbns_to_add.resize(start);
-    const auto add_op = add_op_builder.Output("out").Build();
-    OperatorConf add_op_conf(add_op.op_conf());
-    add_op_conf.set_scope_symbol_id(scope_symbol_id);
-    job_builder->AddOps(global_norm_parallel_conf, {add_op_conf});
+    const auto add_op = add_op_builder.Output("out").ScopeSymbolId(scope_symbol_id).Build();
+    job_builder->AddOps(global_norm_parallel_conf, {add_op.op_conf()});
     lbns_to_add.push_back(add_op.output("out", 0));
   }
   auto inv_global_norm_op = user_op::UserOpConfWrapperBuilder(
@@ -477,10 +473,9 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                                 .Op("rsqrt")
                                 .Input("x", lbns_to_add.front())
                                 .Output("y")
+                                .ScopeSymbolId(scope_symbol_id)
                                 .Build();
-  OperatorConf inv_global_norm_op_conf(inv_global_norm_op.op_conf());
-  inv_global_norm_op_conf.set_scope_symbol_id(scope_symbol_id);
-  job_builder->AddOps(global_norm_parallel_conf, {inv_global_norm_op_conf});
+  job_builder->AddOps(global_norm_parallel_conf, {inv_global_norm_op.op_conf()});
   OperatorConf inv_clip_norm_op_conf{};
   inv_clip_norm_op_conf.set_name("System-ClipGradient-GlobalNorm-InvClipNorm-" + NewUniqueId());
   ConstantLikeOpConf* inv_clip_norm_constant_like_conf =
@@ -497,10 +492,9 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
           .Input("y", GenLogicalBlobName(inv_clip_norm_op_conf.name(),
                                          inv_clip_norm_constant_like_conf->out()))
           .Output("z")
+          .ScopeSymbolId(scope_symbol_id)
           .Build();
-  OperatorConf minimum_op_conf(minimum_op.op_conf());
-  minimum_op_conf.set_scope_symbol_id(scope_symbol_id);
-  job_builder->AddOps(global_norm_parallel_conf, {minimum_op_conf});
+  job_builder->AddOps(global_norm_parallel_conf, {minimum_op.op_conf()});
   const std::string gradient_scale_factor_lbn = minimum_op.output("z", 0);
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
@@ -511,10 +505,9 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                              .Input("x", GenLogicalBlobName(diff_lbi))
                              .Input("scalar", gradient_scale_factor_lbn)
                              .Output("y")
+                             .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
                              .Build();
-    OperatorConf scalar_mul_op_conf(scalar_mul_op.op_conf());
-    scalar_mul_op_conf.set_scope_symbol_id(ScopeSymbolId4Lbi(op_graph, lbi));
-    job_builder->AddOps(lbi2parallel_desc.at(lbi)->parallel_conf(), {scalar_mul_op_conf});
+    job_builder->AddOps(lbi2parallel_desc.at(lbi)->parallel_conf(), {scalar_mul_op.op_conf()});
     diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
   }
 }
@@ -710,10 +703,9 @@ void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
             .Attr<double>("float_operand", down_scale_factor)
             .Attr<bool>("has_int_operand", false)
             .Attr<int64_t>("int_operand", 0)
+            .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
             .Build();
-    OperatorConf scalar_mul_op_conf(scalar_mul_op.op_conf());
-    scalar_mul_op_conf.set_scope_symbol_id(ScopeSymbolId4Lbi(op_graph, lbi));
-    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op_conf});
+    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
     diff_lbi = GenLogicalBlobId(scalar_mul_op.output("out", 0));
   }
 }
@@ -730,20 +722,19 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
     if (!variable_conf.has_regularizer()) { continue; }
     const RegularizerConf& regularizer_conf = variable_conf.regularizer();
     if (regularizer_conf.has_l1_l2_conf()) {
-      OperatorConf regularize_gradient_op_conf{};
-      regularize_gradient_op_conf.set_name("System-RegularizeGradient-L1L2-" + NewUniqueId());
-      L1L2RegularizeGradientOpConf* l1_l2_regularize_gradient_conf =
-          regularize_gradient_op_conf.mutable_l1_l2_regularize_gradient_conf();
-      l1_l2_regularize_gradient_conf->set_model(GenLogicalBlobName(lbi));
-      l1_l2_regularize_gradient_conf->set_model_diff(GenLogicalBlobName(diff_lbi));
-      l1_l2_regularize_gradient_conf->set_out("out");
-      l1_l2_regularize_gradient_conf->set_l1(regularizer_conf.l1_l2_conf().l1());
-      l1_l2_regularize_gradient_conf->set_l2(regularizer_conf.l1_l2_conf().l2());
-      regularize_gradient_op_conf.set_scope_symbol_id(scope_symbol_id);
+      user_op::UserOpConfWrapper regularize_gradient_op =
+          user_op::UserOpConfWrapperBuilder("System-RegularizeGradient-L1L2-" + NewUniqueId())
+              .Op("l1_l2_regularize_gradient")
+              .Input("model", GenLogicalBlobName(lbi))
+              .Input("model_diff", GenLogicalBlobName(diff_lbi))
+              .Output("out")
+              .Attr<float>("l1", regularizer_conf.l1_l2_conf().l1())
+              .Attr<float>("l2", regularizer_conf.l1_l2_conf().l2())
+              .ScopeSymbolId(scope_symbol_id)
+              .Build();
       job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
-                          {regularize_gradient_op_conf});
-      diff_lbi.set_op_name(regularize_gradient_op_conf.name());
-      diff_lbi.set_blob_name(l1_l2_regularize_gradient_conf->out());
+                          {regularize_gradient_op.op_conf()});
+      diff_lbi = GenLogicalBlobId(regularize_gradient_op.output("out", 0));
     } else {
       UNIMPLEMENTED();
     }
