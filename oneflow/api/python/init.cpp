@@ -13,21 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/to_string.h"
+#include <pybind11/pybind11.h>
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 
-Maybe<const char*> DeviceTag4DeviceType(DeviceType device_type) {
-  if (device_type == kCPU) { return "cpu"; }
-  if (device_type == kGPU) { return "gpu"; }
-  return Error::DeviceTagNotFoundError() << "invalid_device";
-}
-
-Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
-  if (device_tag == "cpu") { return DeviceType::kCPU; }
-  if (device_tag == "gpu") { return DeviceType::kGPU; }
-  return Error::DeviceTagNotFoundError() << "device tag `" << device_tag << "' not found";
+PYBIND11_MODULE(oneflow_api, m) {
+  m.def("EagerExecutionEnabled", []() { return EagerExecutionEnabled(); });
 }
 
 }  // namespace oneflow
