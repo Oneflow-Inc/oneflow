@@ -149,12 +149,6 @@ def get_perm_from_formats(from_, to_):
     return list(map(lambda x: from_.find(x), to_))
 
 
-# TODO: allow more flexible placement
-def get_device_option(device):
-    m = {DeviceType.CPU: "/cpu", DeviceType.CUDA: "/gpu"}
-    return m[device.type]
-
-
 def get_data_format(x_rank):
     """ Get data format by input rank.
   Channel first if support CUDA.

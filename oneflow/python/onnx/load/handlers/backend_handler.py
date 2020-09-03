@@ -27,7 +27,7 @@ from oneflow.python.onnx.load.common import IS_PYTHON3
 from oneflow.python.onnx.load.common import get_data_format
 from oneflow.python.onnx.load.common import get_perm_from_formats
 from oneflow.python.onnx.load.common import supports_device
-from .handler import Handler
+from oneflow.python.onnx.handler import Handler
 import os
 import shutil
 

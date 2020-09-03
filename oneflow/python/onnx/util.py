@@ -52,7 +52,7 @@ FLOW_2_ONNX_DTYPE = {
     flow_dtype.float16: onnx_pb.TensorProto.FLOAT16,
 }
 
-#TODO(daquexian):
+# TODO(daquexian):
 FLOW_PROTO_2_ONNX_DTYPE = {}
 for k, v in FLOW_2_ONNX_DTYPE.items():
     FLOW_PROTO_2_ONNX_DTYPE[k.oneflow_proto_dtype] = v
