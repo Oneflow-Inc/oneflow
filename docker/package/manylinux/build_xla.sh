@@ -4,7 +4,6 @@ wheelhouse_dir=${ONEFLOW_SRC_DIR}/wheelhouse-xla
 
 # TF requires py3 to build
 PY_ROOT=/opt/python/cp37-cp37m
-# PY_ROOT=/opt/python/cp36-cp36m
 PY_BIN=${PY_ROOT}/bin
 export PATH=$PY_BIN:$PATH
 python --version
