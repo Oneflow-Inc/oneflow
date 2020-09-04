@@ -57,18 +57,26 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, T> final {
                           const float* learning_rate, T decay_rate, T epsilon, bool centered,
                           T weight_decay, const T* model_diff, T* model, T* mean_square,
                           T* mean_gradient) {
-    T denom_t;
-    for (int64_t i = 0; i < n; ++i) {
-      T model_diff_val = model_diff[i];
-      mean_square[i] =
-          (1 - decay_rate) * model_diff_val * model_diff_val + decay_rate * mean_square[i];
-      if (centered) {
-        mean_gradient[i] = (1 - decay_rate) * model_diff_val + decay_rate * mean_gradient[i];
-        denom_t = mean_square[i] - mean_gradient[i] * mean_gradient[i];
-      } else {
-        denom_t = mean_square[i];
+    if (centered) {
+      for (int64_t i = 0; i < n; ++i) {
+        T model_diff_val = model_diff[i];
+        T mean_square_val = mean_square[i];
+        mean_square_val =
+            (1 - decay_rate) * model_diff_val * model_diff_val + decay_rate * mean_square_val;
+        mean_square[i] = mean_square_val;
+        T mean_gradient_val = mean_gradient[i];
+        mean_gradient_val = (1 - decay_rate) * model_diff_val + decay_rate * mean_gradient_val;
+        mean_gradient[i] = mean_gradient_val;
+        T denom_t = mean_square_val - mean_gradient_val * mean_gradient_val;
+        model[i] = model[i] - *learning_rate * model_diff_val / std::sqrt(denom_t + epsilon);
       }
-      model[i] = model[i] - *learning_rate * model_diff_val / std::sqrt(denom_t + epsilon);
+    } else {
+      for (int64_t i = 0; i < n; ++i) {
+        T model_diff_val = model_diff[i];
+        mean_square[i] =
+            (1 - decay_rate) * model_diff_val * model_diff_val + decay_rate * mean_square[i];
+        model[i] = model[i] - *learning_rate * model_diff_val / std::sqrt(mean_square[i] + epsilon);
+      }
     }
   }
 };
