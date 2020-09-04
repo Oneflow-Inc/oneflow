@@ -19,7 +19,9 @@ limitations under the License.
 
 namespace oneflow {
 
-void BoxingPackCompTaskNode::Init(const CompTaskNode* src_node, const LogicalBlobId& lbi, const bool need_transpose, const int64_t src_split_axis, const int64_t dst_split_axis, const int64_t parallel_num) {
+void BoxingPackCompTaskNode::Init(const CompTaskNode* src_node, const LogicalBlobId& lbi,
+                                  const bool need_transpose, const int64_t src_split_axis,
+                                  const int64_t dst_split_axis, const int64_t parallel_num) {
   lbi_ = lbi;
   set_logical_node(src_node->logical_node());
   *mut_parallel_ctx() = *src_node->parallel_ctx();
@@ -45,7 +47,7 @@ void BoxingPackCompTaskNode::ConsumeAllRegsts() {
 void BoxingPackCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
-  op_conf.set_name("System-Boxing-Pack-"+ NewUniqueId());
+  op_conf.set_name("System-Boxing-Pack-" + NewUniqueId());
   op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
   op_conf.mutable_boxing_pack_conf()->set_need_transpose(need_transpose_);
   op_conf.mutable_boxing_pack_conf()->set_src_split_axis(src_split_axis_);

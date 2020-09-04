@@ -36,7 +36,7 @@ class BoxingPackOp : public Operator {
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const {}
   virtual void VirtualInitFromOpConf(){};
- 
+
  private:
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
@@ -59,10 +59,10 @@ const PbMessage& BoxingPackOp::GetCustomizedConf() const { return op_conf().boxi
 Maybe<void> BoxingPackOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-      const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-      *out_blob_desc = *in_blob_desc;
-      out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().elem_cnt()});
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  *out_blob_desc = *in_blob_desc;
+  out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().elem_cnt()});
   return Maybe<void>::Ok();
 }
 

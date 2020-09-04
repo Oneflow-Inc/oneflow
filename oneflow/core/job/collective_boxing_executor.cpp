@@ -379,10 +379,14 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
         } else if (op_type == OpType::kOpTypeAll2All) {
           for (int32_t j = 0; j < num_ranks; ++j) {
             const int64_t dtype_size = GetSizeOfDataType(op_desc.data_type());
-            OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(reinterpret_cast<const char*>(send_buff) + dtype_size * j * elem_cnt / num_ranks / num_ranks), elem_cnt / num_ranks/ num_ranks,
-                                   nccl_data_type, j, comm, device_ctx->stream));
-            OF_NCCL_CHECK(ncclRecv(reinterpret_cast<void*>(reinterpret_cast<char*>(recv_buff) + dtype_size * j * elem_cnt / num_ranks/ num_ranks), elem_cnt / num_ranks/ num_ranks,
-                                   nccl_data_type, j, comm, device_ctx->stream));
+            OF_NCCL_CHECK(ncclSend(
+                reinterpret_cast<const void*>(reinterpret_cast<const char*>(send_buff)
+                                              + dtype_size * j * elem_cnt / num_ranks / num_ranks),
+                elem_cnt / num_ranks / num_ranks, nccl_data_type, j, comm, device_ctx->stream));
+            OF_NCCL_CHECK(ncclRecv(
+                reinterpret_cast<void*>(reinterpret_cast<char*>(recv_buff)
+                                        + dtype_size * j * elem_cnt / num_ranks / num_ranks),
+                elem_cnt / num_ranks / num_ranks, nccl_data_type, j, comm, device_ctx->stream));
           }
         } else {
           UNIMPLEMENTED();

@@ -26,7 +26,9 @@ class BoxingUnpackCompTaskNode : public CompTaskNode {
   BoxingUnpackCompTaskNode() = default;
   ~BoxingUnpackCompTaskNode() override = default;
 
-  void Init(const CompTaskNode* src_node, const LogicalBlobId& lbi, const Shape& logical_shape, const bool need_transpose, const int64_t src_split_axis, const int64_t dst_split_axis, const int64_t parallel_num);
+  void Init(const CompTaskNode* src_node, const LogicalBlobId& lbi, const Shape& logical_shape,
+            const bool need_transpose, const int64_t src_split_axis, const int64_t dst_split_axis,
+            const int64_t parallel_num);
 
   TaskType GetTaskType() const override { return TaskType::kBoxingUnpack; }
 
@@ -42,7 +44,6 @@ class BoxingUnpackCompTaskNode : public CompTaskNode {
   LogicalBlobId lbi_;
   Shape src_shape_;
   Shape dst_shape_;
-
 };
 
 }  // namespace oneflow

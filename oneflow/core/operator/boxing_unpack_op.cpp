@@ -36,7 +36,7 @@ class BoxingUnpackOp : public Operator {
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const {}
   virtual void VirtualInitFromOpConf(){};
- 
+
  private:
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
@@ -54,16 +54,18 @@ LogicalBlobId BoxingUnpackOp::lbi4ibn(const std::string& input_bn) const {
 LogicalBlobId BoxingUnpackOp::lbi4obn(const std::string& output_bn) const {
   return this->op_conf().boxing_unpack_conf().lbi();
 }
-const PbMessage& BoxingUnpackOp::GetCustomizedConf() const { return op_conf().boxing_unpack_conf(); }
+const PbMessage& BoxingUnpackOp::GetCustomizedConf() const {
+  return op_conf().boxing_unpack_conf();
+}
 
 Maybe<void> BoxingUnpackOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-      const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-      *out_blob_desc = *in_blob_desc;
-      out_blob_desc->mut_shape() = Shape(this->op_conf().boxing_unpack_conf().dst_shape());
-      //out_blob_desc->mut_shape() = Shape({3,9});
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  *out_blob_desc = *in_blob_desc;
+  out_blob_desc->mut_shape() = Shape(this->op_conf().boxing_unpack_conf().dst_shape());
+  // out_blob_desc->mut_shape() = Shape({3,9});
   return Maybe<void>::Ok();
 }
 
