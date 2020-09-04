@@ -266,7 +266,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
           "NcclCollectiveBoxingAll2AllSubTskGphBuilder", ""));
     } else {
-      return Error::BoxingNotSupported();
+      return Error::BoxingNotSupportedError();
     }
   }
 };

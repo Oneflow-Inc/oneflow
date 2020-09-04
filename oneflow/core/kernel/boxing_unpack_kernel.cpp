@@ -44,13 +44,8 @@ void BoxingUnpackKernel<device_type>::ForwardDataContent(
         const int64_t dst_split_axis = boxing_unpack_conf.dst_split_axis();
         const Shape src_shape(boxing_unpack_conf.src_shape());
         const Shape dst_shape(boxing_unpack_conf.dst_shape());
-        DimVector dim_vec;
-        dim_vec.push_back(parallel_num); //boxing is split 0
-        dim_vec.push_back(src_shape.At(0) / parallel_num);
-        FOR_RANGE(int64_t, i, 1, src_shape.NumAxes()) {
-            dim_vec.push_back(src_shape.At(i));
-        }
-        Shape transpose_in_shape = Shape(dim_vec);
+
+        Shape transpose_in_shape = Shape(src_shape.dim_vec());
         std::vector<int32_t> perm;
         DimVector out_dim_vec;
         FOR_RANGE(int64_t, i, 1, transpose_in_shape.NumAxes()) {
@@ -62,6 +57,7 @@ void BoxingUnpackKernel<device_type>::ForwardDataContent(
         out_dim_vec.insert(out_dim_vec.begin() + src_split_axis, transpose_in_shape.At(0));
 
         Shape transpose_out_shape = Shape(out_dim_vec);
+
         NewKernelUtil<device_type>::Transpose(ctx.device_ctx, transpose_in_shape.NumAxes(), transpose_in_shape,
                                               transpose_out_shape, perm, transpose_in_shape.elem_cnt(),
                                               in->dptr<float>(), out->mut_dptr<float>());

@@ -32,6 +32,8 @@ void BoxingUnpackCompTaskNode::Init(const CompTaskNode* src_node, const LogicalB
   parallel_num_ = parallel_num;
   DimVector src_dim_vec = logical_shape.dim_vec();
   src_dim_vec[src_split_axis] = src_dim_vec.at(src_split_axis) / parallel_num;
+  src_dim_vec[dst_split_axis] = src_dim_vec.at(dst_split_axis) / parallel_num;
+  src_dim_vec.insert(src_dim_vec.begin(), parallel_num);
   src_shape_ = Shape(src_dim_vec);
   DimVector dst_dim_vec = logical_shape.dim_vec();
   dst_dim_vec[dst_split_axis] = dst_dim_vec.at(dst_split_axis) / parallel_num;
