@@ -68,11 +68,13 @@ list(APPEND TENSORFLOW_XLA_LIBRARIES libtensorflow_framework.so.1)
 list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
 link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 
+if(NOT XRT_TF_URL)
+  set(XRT_TF_URL https://github.com/Oneflow-Inc/tensorflow/archive/1f_dep_v2.3.0r4.zip)
+endif()
 if (THIRD_PARTY)
   ExternalProject_Add(${TENSORFLOW_PROJECT}
     PREFIX ${TENSORFLOW_SOURCES_DIR}
-    # URL https://github.com/Oneflow-Inc/tensorflow/archive/1f_dep_v2.3.0r4.zip
-    URL file:///tensorflow-src
+    URL ${XRT_TF_URL}
     CONFIGURE_COMMAND ""
     BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
                   bazel build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so

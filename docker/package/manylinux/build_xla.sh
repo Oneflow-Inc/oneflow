@@ -18,4 +18,5 @@ bash docker/package/manylinux/build_wheel.sh \
     --cache-dir $cache_dir \
     --house-dir $wheelhouse_dir \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
+    -DXRT_TF_URL="file:///tensorflow-src" \
     -DWITH_XLA=ON
