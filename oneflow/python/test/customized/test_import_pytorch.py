@@ -41,11 +41,11 @@ class Net(nn.Module):
         self.label = torch.tensor([3, 1], device=torch.device("cuda"))
 
     def forward(self, x):
-        # x = self.bn(self.conv(x))
-        # x = self.pool(x)
+        x = self.bn(self.conv(x))
+        x = self.pool(x)
         x = torch.flatten(x, 1)
-        # x = self.linear(x)
-        # x = self.loss(x, self.label)
+        x = self.linear(x)
+        x = self.loss(x, self.label)
         return x
 
 

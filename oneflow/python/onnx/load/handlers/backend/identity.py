@@ -16,13 +16,13 @@ limitations under the License.
 import tensorflow as tf
 
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
-from oneflow.python.onnx.load.handlers.handler import onnx_op
-from oneflow.python.onnx.load.handlers.handler import tf_func
+from oneflow.python.onnx.handler import onnx_op
+from oneflow.python.onnx.handler import tf_func
 
 
 @onnx_op("Identity")
 @tf_func(tf.identity)
 class Identity(BackendHandler):
     @classmethod
-    def version_1(cls, node, **kwargs):
-        return [cls.make_tensor_from_onnx_node(node, **kwargs)]
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls.run_onnx_node(node, tensor_dict, **kwargs)

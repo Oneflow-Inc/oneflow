@@ -15,14 +15,13 @@ limitations under the License.
 """
 from oneflow.python.ops import linalg
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
-from oneflow.python.onnx.load.handlers.handler import onnx_op
+from oneflow.python.onnx.handler import onnx_op
 
 
 @onnx_op("Gemm")
 class Gemm(BackendHandler):
     @classmethod
-    def _common(cls, node, **kwargs):
-        tensor_dict = kwargs["tensor_dict"]
+    def _common(cls, node, tensor_dict, **kwargs):
         x = tensor_dict[node.input_tensor_names[0]]
         y = tensor_dict[node.input_tensor_names[1]]
 
@@ -42,21 +41,21 @@ class Gemm(BackendHandler):
         ]
 
     @classmethod
-    def version_1(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_6(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_6(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_7(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_7(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_9(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_9(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_11(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_11(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)

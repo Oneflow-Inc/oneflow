@@ -16,8 +16,8 @@ limitations under the License.
 
 from oneflow.python.ops import layers
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
-from oneflow.python.onnx.load.handlers.handler import onnx_op
-from oneflow.python.onnx.load.handlers.handler import tf_func
+from oneflow.python.onnx.handler import onnx_op
+from oneflow.python.onnx.handler import tf_func
 import string
 import random
 
@@ -32,9 +32,7 @@ class BatchNormalization(BackendHandler):
         }
 
     @classmethod
-    def _common(cls, node, **kwargs):
-        tensor_dict = kwargs["tensor_dict"]
-
+    def _common(cls, node, tensor_dict, **kwargs):
         def randomString(stringLength=8):
             letters = string.ascii_lowercase
             return "".join(random.choice(letters) for i in range(stringLength))
@@ -48,21 +46,21 @@ class BatchNormalization(BackendHandler):
         node.input_tensor_names = node.input_tensor_names[:1]
 
         return [
-            cls.make_tensor_from_onnx_node(node, name=name, **kwargs, attrs={"axis": 1})
+            cls.run_onnx_node(node, tensor_dict, name=name, **kwargs, attrs={"axis": 1})
         ]
 
     @classmethod
-    def version_1(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_6(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_6(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_7(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_7(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_9(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_9(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)

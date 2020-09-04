@@ -15,18 +15,17 @@ limitations under the License.
 """
 from oneflow.python.ops import nn_ops
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
-from oneflow.python.onnx.load.handlers.handler import onnx_op
-from oneflow.python.onnx.load.handlers.handler import tf_func
+from oneflow.python.onnx.handler import onnx_op
+from oneflow.python.onnx.handler import tf_func
 
 
 @onnx_op("SoftmaxCrossEntropyLoss")
 @tf_func(nn_ops.sparse_softmax_cross_entropy_with_logits)
 class SoftmaxCrossEntropyLoss(BackendHandler):
     @classmethod
-    def version_12(cls, node, **kwargs):
-        tensor_dict = kwargs.get("tensor_dict", {})
+    def version_12(cls, node, tensor_dict, **kwargs):
         inputs = (
             tensor_dict[node.input_tensor_names[1]],
             tensor_dict[node.input_tensor_names[0]],
         )
-        return [cls.make_tensor_from_onnx_node(node, inputs=inputs, **kwargs)]
+        return cls.run_onnx_node(node, tensor_dict, inputs=inputs, **kwargs)

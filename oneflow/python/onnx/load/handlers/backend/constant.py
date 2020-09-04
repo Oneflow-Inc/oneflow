@@ -22,8 +22,8 @@ import oneflow as flow
 from oneflow.python.ops import get_variable
 from oneflow.python.onnx import util
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
-from oneflow.python.onnx.load.handlers.handler import onnx_op
-from oneflow.python.onnx.load.handlers.handler import tf_func
+from oneflow.python.onnx.handler import onnx_op
+from oneflow.python.onnx.handler import tf_func
 
 import os
 
@@ -40,7 +40,7 @@ class Constant(BackendHandler):
         if len(shape) == 0:
             shape = (1,)
         return [
-            cls.make_tensor_from_onnx_node(
+            cls.run_onnx_node(
                 node,
                 # inputs=[value],
                 # attrs={"dtype": dtype}
@@ -97,5 +97,5 @@ class Constant(BackendHandler):
             value = node.attrs["value_strings"]
             dtype = tf.string
         return [
-            cls.make_tensor_from_onnx_node(node, inputs=[value], attrs={"dtype": dtype})
+            cls.run_onnx_node(node, inputs=[value], attrs={"dtype": dtype})
         ]

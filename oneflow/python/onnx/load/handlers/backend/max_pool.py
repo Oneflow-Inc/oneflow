@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
-from oneflow.python.onnx.load.handlers.handler import onnx_op
-from oneflow.python.onnx.load.handlers.handler import partial_support
-from oneflow.python.onnx.load.handlers.handler import ps_description
+from oneflow.python.onnx.handler import onnx_op
+from oneflow.python.onnx.handler import partial_support
+from oneflow.python.onnx.handler import ps_description
 from .pool_mixin import PoolMixin
 
 
@@ -30,28 +30,28 @@ from .pool_mixin import PoolMixin
 )
 class MaxPool(PoolMixin, BackendHandler):
     @classmethod
-    def _common(cls, node, **kwargs):
+    def _common(cls, node, tensor_dict, **kwargs):
         pool_type = "MAX" if len(node.output_tensor_names) == 1 else "MAX_WITH_ARGMAX"
         return cls.pool(
-            node, kwargs["tensor_dict"], pool_type, kwargs.get("strict", True)
+            node, tensor_dict, pool_type, kwargs.get("strict", True)
         )
 
     @classmethod
-    def version_1(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_8(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_8(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_10(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_10(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_11(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_11(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_12(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_12(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
