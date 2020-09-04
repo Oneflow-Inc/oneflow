@@ -51,14 +51,17 @@ def make_py_job(input_shape, dtype=flow.float32):
 
 def test_py_sigmoid(test_case):
     x = np.ones((1, 10), dtype=np.float32)
+
     sig_job = make_job(x.shape)
     py_sig_job = make_py_job(x.shape)
+
     sig = sig_job(x).get().numpy()
     py_sig = py_sig_job(x).get().numpy()
     numpy_sig = numpy_sigmoid(x)
     print("sig : ", sig)
     print("py_sig : ", py_sig)
     print("numpy_sig : ", numpy_sig)
+
     test_case.assertTrue(np.allclose(
         sig, py_sig, rtol=1e-03, atol=1e-05))
     test_case.assertTrue(np.allclose(

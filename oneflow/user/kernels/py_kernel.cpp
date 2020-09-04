@@ -20,21 +20,23 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void MakePyInputs(user_op::KernelComputeContext* ctx, PyObject* py_inputs) {
+void MakePyInputs(user_op::KernelComputeContext* ctx, PyObject** py_inputs) {
   size_t in_num = ctx->inputs().size();
   LOG(INFO) << "input num " << in_num;
   PyObject* py_list = PyList_New(in_num);
+  CHECK(py_list);
 
   FOR_RANGE(size_t, i, 0, in_num) {
     PyObject* arg = nullptr;
     const std::string& arg_name = ctx->inputs().at(i).first;
     LOG(INFO) << "input arg_name " << arg_name;
     int32_t index = 0;
-    TensorToNumpy<T>(ctx->Tensor4ArgNameAndIndex(arg_name, index), arg);
+    TensorToNumpy<T>(ctx->Tensor4ArgNameAndIndex(arg_name, index), &arg);
     arg = PyArray_Return(reinterpret_cast<PyArrayObject*>(arg));
     PyList_SetItem(py_list, i, arg);
   }
-  py_inputs = Py_BuildValue("(N)", py_list);
+  *py_inputs = Py_BuildValue("(N)", py_list);
+  CHECK(*py_inputs);
 }
 
 template<typename T>
@@ -50,6 +52,7 @@ void GetPyOutputs(user_op::KernelComputeContext* ctx, PyObject* py_outputs) {
     }
   } else if (PyArray_Check(py_outputs)) {
     const std::string& arg_name = ctx->outputs().at(0).first;
+    LOG(INFO) << "output arg_name " << arg_name;
     int32_t index = 0;
     NumpyToTensor<T>(py_outputs, ctx->Tensor4ArgNameAndIndex(arg_name, index));
   } else {
@@ -67,7 +70,7 @@ class PyKernel : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    if (!PyEval_ThreadsInitialized()) { PyEval_InitThreads(); }
+    // if (!PyEval_ThreadsInitialized()) { PyEval_InitThreads(); }
     PyGILState_STATE py_gil_st;
     py_gil_st = PyGILState_Ensure();
     if (PyArray_API == nullptr) { _import_array(); }
@@ -90,18 +93,16 @@ class PyKernel : public user_op::OpKernel {
     }
 
     // input
-    MakePyInputs<T>(ctx, py_inputs);
+    MakePyInputs<T>(ctx, &py_inputs);
 
     // call func
-    LOG(INFO) << "call python";
-    py_outputs = PyObject_CallObject(py_func, py_inputs);
-    LOG(INFO) << "after call python";
+    py_outputs = PyEval_CallObject(py_func, py_inputs);
     Py_DECREF(py_inputs);
 
     // output
-    // GetPyOutputs<T>(ctx, py_outputs);
+    GetPyOutputs<T>(ctx, py_outputs);
 
-    // Py_DECREF(py_outputs);
+    Py_DECREF(py_outputs);
     Py_XDECREF(py_func);
     Py_DECREF(py_module);
 

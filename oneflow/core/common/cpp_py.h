@@ -16,14 +16,14 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_CPP_PY_H_
 #define ONEFLOW_CORE_COMMON_CPP_PY_H_
 
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/framework/util.h"
-#include "oneflow/core/framework/tensor.h"
-extern "C" {
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
-}
+
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/framework/util.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
 namespace {
@@ -38,9 +38,10 @@ void OFDataTypeToNumpyType(DataType of_data_type, int* out_numpy_type) {
     case DataType::kFloat16: *out_numpy_type = NPY_FLOAT16; break;
     default:
       LOG(FATAL) << "OneFlow data type " << DataType_Name(of_data_type)
-                 << " is not valid to numpy data type.";
+                 << " is not valid to Numpy data type.";
   }
 }
+
 void NumpyTypeToOFDataType(PyArrayObject* array, DataType* of_data_type) {
   int py_array_type = PyArray_TYPE(array);
   switch (py_array_type) {
@@ -58,23 +59,26 @@ void NumpyTypeToOFDataType(PyArrayObject* array, DataType* of_data_type) {
 }  // namespace
 
 template<typename T>
-void TensorToNumpy(const user_op::Tensor* tensor, PyObject* arg) {
+void TensorToNumpy(const user_op::Tensor* tensor, PyObject** arg_ptr) {
   if (tensor == nullptr) {
     Py_INCREF(Py_None);
-    arg = Py_None;
+    *arg_ptr = Py_None;
     return;
   }
   int type_num = -1;
   OFDataTypeToNumpyType(tensor->data_type(), &type_num);
+  LOG(INFO) << "Tensor data type " << DataType_Name(tensor->data_type()) << " Numpy type "
+            << type_num;
   int dim_size = tensor->shape().NumAxes();
   npy_intp dims[dim_size];
   FOR_RANGE(size_t, i, 0, dim_size) { dims[i] = tensor->shape().At(i); }
   void* data = static_cast<void*>(const_cast<T*>(tensor->dptr<T>()));
   auto* np_array =
       reinterpret_cast<PyArrayObject*>(PyArray_SimpleNewFromData(dim_size, dims, type_num, data));
+  void* ptr = PyArray_DATA(np_array);
   // Numpy will not release the data
   PyArray_CLEARFLAGS(np_array, NPY_ARRAY_OWNDATA);
-  arg = reinterpret_cast<PyObject*>(np_array);
+  *arg_ptr = reinterpret_cast<PyObject*>(np_array);
 }
 
 template<typename T>
