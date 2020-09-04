@@ -16,8 +16,8 @@ limitations under the License.
 import oneflow as flow
 
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
-from oneflow.python.onnx.load.handlers.handler import onnx_op
-from oneflow.python.onnx.load.handlers.handler import tf_func
+from oneflow.python.onnx.handler import onnx_op
+from oneflow.python.onnx.handler import tf_func
 from oneflow.python.ops import math_ops
 from .math_mixin import ArithmeticMixin
 
@@ -26,13 +26,13 @@ from .math_mixin import ArithmeticMixin
 @tf_func(math_ops.add)
 class Add(ArithmeticMixin, BackendHandler):
     @classmethod
-    def version_1(cls, node, **kwargs):
-        return cls.limited_broadcast(node, **kwargs)
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls.limited_broadcast(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_6(cls, node, **kwargs):
-        return cls.limited_broadcast(node, **kwargs)
+    def version_6(cls, node, tensor_dict, **kwargs):
+        return cls.limited_broadcast(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_7(cls, node, **kwargs):
-        return [cls.make_tensor_from_onnx_node(node, **kwargs)]
+    def version_7(cls, node, tensor_dict, **kwargs):
+        return [cls.run_onnx_node(node, tensor_dict, **kwargs)]

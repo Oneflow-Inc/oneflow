@@ -15,17 +15,17 @@ limitations under the License.
 """
 from oneflow.python.ops import linalg
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
-from oneflow.python.onnx.load.handlers.handler import onnx_op
-from oneflow.python.onnx.load.handlers.handler import tf_func
+from oneflow.python.onnx.handler import onnx_op
+from oneflow.python.onnx.handler import tf_func
 
 
 @onnx_op("MatMul")
 @tf_func(linalg.matmul)
 class MatMul(BackendHandler):
     @classmethod
-    def version_1(cls, node, **kwargs):
-        return [cls.make_tensor_from_onnx_node(node, **kwargs)]
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls.run_onnx_node(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_9(cls, node, **kwargs):
-        return [cls.make_tensor_from_onnx_node(node, **kwargs)]
+    def version_9(cls, node, tensor_dict, **kwargs):
+        return cls.run_onnx_node(node, tensor_dict, **kwargs)

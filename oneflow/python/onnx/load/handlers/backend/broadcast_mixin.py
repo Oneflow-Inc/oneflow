@@ -47,11 +47,10 @@ class BroadcastMixin(object):
         return new_y
 
     @classmethod
-    def limited_broadcast(cls, node, **kwargs):
-        tensor_dict = kwargs["tensor_dict"]
+    def limited_broadcast(cls, node, tensor_dict, **kwargs):
         x = tensor_dict[node.inputs[0]]
         y = tensor_dict[node.inputs[1]]
         if node.attrs.get("broadcast") == 1:
             y = cls.explicit_broadcast([x, y], node.attrs.get("axis", None))
-            return [cls.make_tensor_from_onnx_node(node, inputs=[x, y], **kwargs)]
-        return [cls.make_tensor_from_onnx_node(node, **kwargs)]
+            return [cls.run_onnx_node(node, inputs=[x, y], **kwargs)]
+        return [cls.run_onnx_node(node, **kwargs)]

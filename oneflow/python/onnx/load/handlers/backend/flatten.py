@@ -40,7 +40,7 @@ class Flatten(BackendHandler):
             )
             # cal_shape = (tf.reduce_prod(shape[0:axis]),
             # tf.reduce_prod(shape[axis:tf.size(shape)]))
-        return [array_ops.reshape(x, cal_shape)]
+        return array_ops.reshape(x, cal_shape)
 
     @classmethod
     def version_1(cls, node, tensor_dict, **kwargs):

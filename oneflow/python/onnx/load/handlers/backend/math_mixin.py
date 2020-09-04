@@ -36,4 +36,4 @@ class ReductionMixin(BroadcastMixin):
         attrs["axis"] = axis
         # https://github.com/onnx/onnx/issues/585
         attrs["keepdims"] = attrs.pop("keepdims", 1) == 1
-        return [cls.make_tensor_from_onnx_node(node, attrs=attrs, **kwargs)]
+        return [cls.run_onnx_node(node, attrs=attrs, **kwargs)]

@@ -18,20 +18,20 @@ import copy
 import tensorflow as tf
 
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
-from oneflow.python.onnx.load.handlers.handler import onnx_op
-from oneflow.python.onnx.load.handlers.handler import tf_func
+from oneflow.python.onnx.handler import onnx_op
+from oneflow.python.onnx.handler import tf_func
 
 
 @onnx_op("Reshape")
 @tf_func(tf.reshape)
 class Reshape(BackendHandler):
     @classmethod
-    def _common(cls, node, **kwargs):
-        tensor = kwargs["tensor_dict"][node.inputs[0]]
+    def _common(cls, node, tensor_dict, **kwargs):
+        tensor = tensor_dict[node.inputs[0]]
         if cls.SINCE_VERSION == 1:
             shape = tf.constant(node.attrs["shape"], dtype=tf.int64)
         else:  # since_version >= 5
-            shape = tf.cast(kwargs["tensor_dict"][node.inputs[1]], tf.int64)
+            shape = tf.cast(tensor_dict[node.inputs[1]], tf.int64)
         input_shape = tf.shape(tensor, out_type=tf.int64)
 
         # Extract indicies of the shape parameter where
@@ -50,15 +50,15 @@ class Reshape(BackendHandler):
         attrs = copy.deepcopy(node.attrs)
         attrs.pop("shape", None)
         return [
-            cls.make_tensor_from_onnx_node(
-                node, inputs=[tensor, copied_shape], attrs=attrs, **kwargs
+            cls.run_onnx_node(
+                node, tensor_dict, inputs=[tensor, copied_shape], attrs=attrs, **kwargs
             )
         ]
 
     @classmethod
-    def version_1(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_5(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_5(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)

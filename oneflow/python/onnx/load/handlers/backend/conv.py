@@ -14,16 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
-from oneflow.python.onnx.load.handlers.handler import onnx_op
+from oneflow.python.onnx.handler import onnx_op
 from .conv_mixin import ConvMixin
 
 
 @onnx_op("Conv")
 class Conv(ConvMixin, BackendHandler):
     @classmethod
-    def version_1(cls, node, **kwargs):
-        return cls.conv(node, kwargs["tensor_dict"])
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls.conv(node, tensor_dict)
 
     @classmethod
-    def version_11(cls, node, **kwargs):
-        return cls.conv(node, kwargs["tensor_dict"])
+    def version_11(cls, node, tensor_dict, **kwargs):
+        return cls.conv(node, tensor_dict)

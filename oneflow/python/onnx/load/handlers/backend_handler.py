@@ -92,15 +92,14 @@ class BackendHandler(Handler):
         return attrs
 
     @classmethod
-    def make_tensor_from_onnx_node(
+    def run_onnx_node(
         cls,
         node,
-        tf_func=None,
+        tensor_dict,
+        flow_func=None,
         inputs=None,
         attrs=None,
         name="",
-        c_first_cuda_only=False,
-        c_last_only=False,
         **kwargs
     ):
         """ Helper method to make tensor.
@@ -110,17 +109,11 @@ class BackendHandler(Handler):
     :param inputs: Inputs tensor. Default is got from node.inputs.
     :param attrs: Attributes. Default is node.attrs.
     :param name: Node name.
-    :param c_first_cuda_only: If channel first is only supported by cuda.
-    If true and not cuda, do pre and post transpose.
-    :param c_last_only: If only channel last is support,
-    do pre and post transpose.
     :param kwargs: Other args.
     :return: Tensor.
     """
-        tensor_dict = kwargs.get("tensor_dict", {})
-        tf_func = tf_func or cls.TF_FUNC
-        if tf_func is None:
-            raise RuntimeError("No Tensorflow function is given.")
+        if flow_func is None:
+            flow_func = cls.TF_FUNC
         if inputs is None:
             inputs = [tensor_dict.get(inp, None) for inp in node.input_tensor_names]
         if attrs is None:
@@ -129,62 +122,7 @@ class BackendHandler(Handler):
         if name != "":
             attrs["name"] = name
 
-        if c_first_cuda_only and c_last_only:
-            raise ValueError("c_first_cuda_only and c_last_only can not both be True.")
-
-        if c_first_cuda_only:
-            return cls.c_first_cuda_only(tf_func, inputs, attrs)
-        elif c_last_only:
-            return cls.c_last_only(tf_func, inputs, attrs)
-
-        return cls._run_tf_func(tf_func, inputs, attrs)
-
-    @classmethod
-    def c_first_cuda_only(cls, tf_func, inputs, attrs):
-        """ Handle operator that channel first is only supported by CUDA.
-    When using CPU, two transposes should be added.
-
-    :param tf_func: Callable Tf function.
-    :param inputs: Inputs tensor.
-    :param attrs: Attributes.
-    :return: Tensor.
-    """
-        support_cuda = supports_device("CUDA")
-        if not support_cuda:
-            return cls._tuck_transpose(tf_func, inputs, attrs)
-        return cls._run_tf_func(tf_func, inputs, attrs)
-
-    @classmethod
-    def c_last_only(cls, tf_func, inputs, attrs):
-        """ Handle operator that channel last only is supported.
-    Add two transposes anyway.
-
-    :param tf_func: Callable Tf function.
-    :param inputs: Inputs tensor.
-    :param attrs: Attributes.
-    :return: Tensor.
-    """
-        storage_format, compute_format = get_data_format(len(inputs[0].get_shape()))
-        compute_format = compute_format.replace("C", "") + "C"
-        return cls._tuck_transpose(
-            tf_func, inputs, attrs, (storage_format, compute_format)
-        )
-
-    @classmethod
-    def _tuck_transpose(cls, tf_func, inputs, attrs, data_format=None):
-        x = inputs[0]
-        x_rank = len(x.get_shape())
-        if not data_format:
-            data_format = get_data_format(x_rank)
-        pre_perm = get_perm_from_formats(data_format[0], data_format[1])
-        post_perm = get_perm_from_formats(data_format[1], data_format[0])
-        attrs["data_format"] = data_format[1]
-        if pre_perm != list(range(x_rank)):
-            x_t = tf.transpose(x, perm=pre_perm)
-            y = cls._run_tf_func(tf_func, [x_t] + inputs[1:], attrs)
-            y_t = tf.transpose(y, perm=post_perm)
-            return y_t
-        return cls._run_tf_func(tf_func, inputs, attrs)
+        return cls._run_tf_func(flow_func, inputs, attrs)
 
     @classmethod
     def _run_tf_func(cls, tf_func, inputs, attrs):

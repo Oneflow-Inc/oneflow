@@ -38,8 +38,7 @@ from oneflow.python.onnx.load.common import get_unique_suffix
 from oneflow.python.onnx.load.common import supports_device as common_supports_device
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
 
-# TODO(daquexian):
-from oneflow.python.onnx.load.handlers.backend import flatten
+from oneflow.python.onnx.load.handlers.backend import *
 from oneflow.python.onnx.graph import Node as OnnxNode
 import oneflow.python.onnx.load.common as common
 import io
