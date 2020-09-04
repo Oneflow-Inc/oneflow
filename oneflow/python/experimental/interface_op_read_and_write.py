@@ -25,6 +25,15 @@ import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
 
 
+lazy_blob_cache = {}
+
+
+def _GetLazyRefBlobObject(builder, op_name):
+    if op_name not in lazy_blob_cache:
+        lazy_blob_cache[op_name] = builder.MakeLazyRefBlobObject(op_name)
+    return lazy_blob_cache[op_name]
+
+
 def GetEagerInterfaceBlob(op_name):
     flow.sync_default_session()
 
@@ -33,7 +42,7 @@ def GetEagerInterfaceBlob(op_name):
 
     def AsyncGetInterfaceBlob(Yield):
         def build(builder):
-            blob_object = builder.MakeLazyRefBlobObject(op_name)
+            blob_object = _GetLazyRefBlobObject(builder, op_name)
             lbi = logical_blob_id_util.LogicalBlobId()
             lbi.op_name = op_name
             op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
@@ -64,7 +73,7 @@ def GetInterfaceBlobValue(op_name):
 
     def AsyncGetInterfaceBlobValue(Yield):
         def build(builder):
-            blob_object = builder.MakeLazyRefBlobObject(op_name)
+            blob_object = _GetLazyRefBlobObject(builder, op_name)
             lbi = logical_blob_id_util.LogicalBlobId()
             lbi.op_name = op_name
             op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
@@ -96,7 +105,7 @@ def FeedValueToInterfaceBlob(op_name, ndarray):
 
     def AsyncFeedValueToInterfaceBlob(Yield):
         def build(builder):
-            blob_object = builder.MakeLazyRefBlobObject(op_name)
+            blob_object = _GetLazyRefBlobObject(builder, op_name)
             if blob_object.op_arg_blob_attr.is_tensor_list:
                 input_blob_def = input_blob_def_util.MirroredTensorListDef(
                     [x.shape for x in ndarray],
