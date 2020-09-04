@@ -31,7 +31,7 @@ from oneflow.python.experimental import interface_op_read_and_write
 from oneflow.python.framework.remote_blob import EagerBlobTrait
 
 from oneflow.python.oneflow_export import oneflow_export
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Sequence, Optional
 
 
 @oneflow_export("train.CheckPoint")
@@ -235,12 +235,8 @@ class SnapshotManager(object):
 META_INFO_FILENAME = "meta"
 
 
-def _ReadValueAsNumPyFromFile(path, dtype, shape):
-    return np.fromfile(path, dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(dtype)).reshape(shape)
-
-
 class FileBackendVariableBlob:
-    def __init__(self, name: str, root_dir:str):
+    def __init__(self, name: str, root_dir: str, dtype: Optional[dtype_util.dtype] = None, shape: Optional[Sequence[int]] = None):
         self.name_ = name
         self.root_dir_ = root_dir
         meta_info_path = os.path.join(self.root_dir_, META_INFO_FILENAME)
@@ -256,16 +252,32 @@ class FileBackendVariableBlob:
             self.has_meta_info_ = False
 
         if self.has_meta_info_:
+            assert dtype is None and shape is None
             self.shape_ = tuple(meta_infos.name2meta_info[name].shape.dim)
-            self.dtype_ = dtype_util.convert_proto_dtype_to_oneflow_dtype(meta_infos.name2meta_info[name].data_type)
+            self.dtype_ = dtype_util.convert_proto_dtype_to_oneflow_dtype(
+                meta_infos.name2meta_info[name].data_type
+            )
         else:
-            self.shape_ = None
-            self.dtype_ = None
+            if shape is not None and dtype is not None:
+                self.shape_ = shape
+                self.dtype_ = dtype
+                self.has_meta_info_ = True
+            elif shape is not None or dtype is not None:
+                raise RuntimeError("both or neither of shape and dtype should be None")
+
+    def read_slice_as_numpy(self):
+        SLICE_LEN = 8192
+        with open(self.file_path_, 'rb') as f:
+            while True:
+                slice = f.read(SLICE_LEN)
+                if not slice:
+                    break
+                yield np.frombuffer(slice, dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype))
 
     @property
     def file_path_(self):
-        return os.path.join(self.root_dir_, self.name, 'out')
-    
+        return os.path.join(self.root_dir_, self.name, "out")
+
     def _NumpyFriendlyToRepr(self):
         return self.numpy()
 
@@ -298,10 +310,10 @@ class FileBackendVariableBlob:
 
     def numpy(self) -> np.ndarray:
         if self._IsTooLarge():
-            raise RuntimeError("too large")
+            raise RuntimeError('Blob "{}" is too large'.format(self.name))
         if not self.has_meta_info_:
-            raise RuntimeError("The variable does not have meta info")
-        return _ReadValueAsNumPyFromFile(self.file_path_, self.dtype, self.shape)
+            raise RuntimeError('The variable "{}" does not have meta info'.format(self.name))
+        return np.fromfile(self.file_path_, dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype)).reshape(self.shape)
 
 
 @oneflow_export("get_all_variables")
@@ -328,41 +340,56 @@ def load(path):
     return var_dict
 
 
-@oneflow_export("checkpoint.save_all_variables")
-def save_all_variables(path):
+def read_slice_from_blob(blob):
+    #TODO(daquexian): implement real read_slice_from_blob after dynamic network is implemented
+    yield blob.numpy()
+
+
+@oneflow_export("save")
+def save(var_dict, path):
     os.makedirs(path, exist_ok=True)
     meta_infos = variable_meta_info_pb.VariableMetaInfos()
-    for name, var in get_all_variables().items():
+    for name, var in var_dict.items():
         meta_info = meta_infos.name2meta_info[name]
         meta_info.shape.dim[:] = var.shape
         meta_info.data_type = var.dtype.oneflow_proto_dtype
-        param_path = os.path.join(path, name, 'out')
+        param_path = os.path.join(path, name, "out")
         os.makedirs(os.path.dirname(param_path), exist_ok=True)
-        # TODO: large tensor / multi matchine support
-        var.numpy().tofile(param_path)
-    with open(os.path.join(path, META_INFO_FILENAME), 'w') as f:
+        with open(param_path, 'wb') as f:
+            for slice in read_slice_from_blob(var):
+                f.write(slice.tobytes())
+    with open(os.path.join(path, META_INFO_FILENAME), "w") as f:
         f.write(text_format.MessageToString(meta_infos))
 
 
+def slice_assign(slice_id, slice, var_name):
+    #TODO(daquexian): replace it with real slice_assign
+    assert slice_id == 0
+    var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
+    slice = np.reshape(slice, var_blob.shape)
+    interface_op_read_and_write.FeedValueToInterfaceBlob(
+        var_name, slice
+    )
+
+
 def _FeedValueToVariable(var_name, value_blob):
-    # TODO: large tensor / multi matchine support
     if isinstance(value_blob, EagerBlobTrait):
-        interface_op_read_and_write.FeedValueToInterfaceBlob(var_name, value_blob.numpy())
+        raise NotImplementedError("Loading value from another blob has not been implemented")
     elif isinstance(value_blob, FileBackendVariableBlob):
-        if value_blob.has_meta_info_:
-            interface_op_read_and_write.FeedValueToInterfaceBlob(var_name, value_blob.numpy())
-        else:
+        if not value_blob.has_meta_info_:
             var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
-            interface_op_read_and_write.FeedValueToInterfaceBlob(var_name, _ReadValueAsNumPyFromFile(value_blob.file_path_, var_blob.dtype, var_blob.shape))
+            value_blob = FileBackendVariableBlob(value_blob.name, value_blob.root_dir_, var_blob.dtype, var_blob.shape)
+        for slice_id, slice in enumerate(value_blob.read_slice_as_numpy()):
+            slice_assign(slice_id, slice, var_name)
     else:
-        raise RuntimeError("")
+        raise RuntimeError("Unknown value_blob type: " + type(value_blob).__name__)
 
 
 @oneflow_export("checkpoint.load_variables")
-def load_variables(var_dict, ignore_errors=False):
+def load_variables(var_dict, ignore_mismatch=False):
     for name, var in var_dict.items():
         if name in get_all_variables():
             _FeedValueToVariable(name, var)
         else:
-            if not ignore_errors:
-                raise RuntimeError("")
+            if not ignore_mismatch:
+                raise RuntimeError('"{}" is not a variable name'.format(name))

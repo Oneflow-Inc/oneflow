@@ -44,19 +44,25 @@ def add() -> tp.Numpy:
 check_point = flow.train.CheckPoint()
 check_point.init()
 
-print(flow.get_all_variables())
+all_vars = flow.get_all_variables()
+print(all_vars)
+print('--------')
 
-save_dir = "/tmp/legacy_cp"
-
-# flow.checkpoint.save_all_variables(save_dir)
-check_point.save(save_dir)
-flow.sync_default_session()
+legacy = False
+if legacy:
+    save_dir = "/tmp/legacy_cp"
+    shutil.rmtree(save_dir)
+    check_point.save(save_dir)
+    flow.sync_default_session()
+else:
+    save_dir = "/tmp/cp"
+    flow.save(all_vars, save_dir)
 
 vars = flow.load(save_dir)
 print(vars)
-flow.checkpoint.load_variables({'y': vars['x']})
+print('--------')
+flow.checkpoint.load_variables({"y": vars["x"]})
 
 print(flow.get_all_variables())
 print(add())
 
-shutil.rmtree(save_dir)
