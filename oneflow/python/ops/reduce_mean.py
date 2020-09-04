@@ -62,9 +62,9 @@ def reduce_mean(
         x = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).astype(np.float32)
         out = reduce_mean_Job(x)
 
-        # output [[2.]
-        #         [5.]
-        #         [8.]]
+        # out [[2.]
+        #      [5.]
+        #      [8.]]
 
     """
     reduce_sum = flow.math.reduce_sum(

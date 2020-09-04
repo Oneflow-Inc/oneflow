@@ -73,7 +73,8 @@ def abs(
         x = np.array([-1, 2, -3]).astype(np.float32)
         out = abs_Job(x)
 
-        # output [1. 2. 3.]
+        # out [1. 2. 3.]
+
     """
     return build_unary_elemwise_math_op("abs", x, name)
 
@@ -109,9 +110,10 @@ def acos(
         x = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         out = acos_Job(x)
 
-        # output [1.0471976 0.9272952 0.7953989]
+        # out [1.0471976 0.9272952 0.7953989]
         # We take the first value as an example 
         # (arccos(0.5) * pi) / 180 = 1.0471976
+        
     """
     return build_unary_elemwise_math_op("acos", x, name)
 
@@ -153,7 +155,7 @@ def acosh(
         x = np.array([2, 3, 4]).astype(np.float32)
         out = acosh_Job(x)
 
-        # output [1.316958  1.7627473 2.063437 ]
+        # out [1.316958  1.7627473 2.063437 ]
 
     """
     return build_unary_elemwise_math_op("acosh", x, name)
@@ -190,7 +192,7 @@ def asin(
         x = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         out = asin_Job(x)
 
-        # output [0.5235988  0.64350116 0.7753975 ]
+        # out [0.5235988  0.64350116 0.7753975 ]
         # We take the first value as an example 
         # (arcsin(0.5) * pi) / 180 = 0.5235988
 
@@ -235,7 +237,7 @@ def asinh(
         x = np.array([2, 3, 4]).astype(np.float32)
         out = asinh_Job(x)
 
-        # output [1.4436355 1.8184464 2.0947125]
+        # out [1.4436355 1.8184464 2.0947125]
         
     """
     return build_unary_elemwise_math_op("asinh", x, name)
@@ -271,9 +273,10 @@ def atan(
         x = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         out = atan_Job(x)
 
-        # output [0.4636476  0.5404195  0.61072594]
+        # out [0.4636476  0.5404195  0.61072594]
         # We take the first value as an example 
         # (arctan(0.5) * pi) / 180 = 0.4636476
+
     """
     return build_unary_elemwise_math_op("atan", x, name)
 
@@ -315,7 +318,7 @@ def atanh(
         x = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         out = atanh_Job(x)
 
-        # output [0.54930615 0.6931472  0.8673005 ]
+        # out [0.54930615 0.6931472  0.8673005 ]
 
     """
     return build_unary_elemwise_math_op("atanh", x, name)
@@ -352,7 +355,7 @@ def ceil(
         x = np.array([1.3, 1.5, 2.7]).astype(np.float32)
         out = ceil_Job(x)
 
-        # output [2. 2. 3.]
+        # out [2. 2. 3.]
 
     """
     return build_unary_elemwise_math_op("ceil", x, name)
@@ -388,7 +391,7 @@ def cos(
         x = np.array([1/3*np.pi, 0.25*np.pi, 1.25*np.pi]).astype(np.float32)
         out = cos_Job(x)
 
-        # output [ 0.49999997  0.70710677 -0.7071068 ]
+        # out [ 0.49999997  0.70710677 -0.7071068 ]
 
     """
     return build_unary_elemwise_math_op("cos", x, name)
@@ -431,7 +434,7 @@ def cosh(
         x = np.array([1, 2, 3]).astype(np.float32)
         out = cosh_Job(x)
 
-        # output [ 1.5430806  3.7621958 10.067662 ]
+        # out [ 1.5430806  3.7621958 10.067662 ]
 
     """
     return build_unary_elemwise_math_op("cosh", x, name)
@@ -474,7 +477,7 @@ def erf(
         x = np.array([1, 2, 3]).astype(np.float32)
         out = erf_Job(x)
 
-        # output [0.8427008 0.9953223 0.9999779]
+        # out [0.8427008 0.9953223 0.9999779]
 
     """
     return build_unary_elemwise_math_op("erf", x, name)
@@ -512,7 +515,7 @@ def erfc(
         x = np.array([1, 2, 3]).astype(np.float32)
         out = erfc_Job(x)
 
-        # output [1.5729921e-01 4.6777353e-03 2.2090495e-05]
+        # out [1.5729921e-01 4.6777353e-03 2.2090495e-05]
 
     """
     return build_unary_elemwise_math_op("erfc", x, name)
@@ -554,7 +557,7 @@ def exp(
         x = np.array([1, 2, 3]).astype(np.float32)
         out = exp_Job(x)
 
-        # output [ 2.7182817  7.389056  20.085537 ]
+        # out [ 2.7182817  7.389056  20.085537 ]
 
     """
     return build_unary_elemwise_math_op("exp", x, name)
@@ -591,7 +594,7 @@ def expm1(
         x = np.array([1, 2, 3]).astype(np.float32)
         out = expm1_Job(x)
 
-        # output [ 1.7182819  6.389056  19.085537 ]
+        # out [ 1.7182819  6.389056  19.085537 ]
 
     """
     return build_unary_elemwise_math_op("expm1", x, name)
@@ -628,7 +631,7 @@ def floor(
         x = np.array([1.3, 1.5, 2.7]).astype(np.float32)
         out = floor_Job(x)
 
-        # output [1. 1. 2.]
+        # out [1. 1. 2.]
 
     """
     return build_unary_elemwise_math_op("floor", x, name)
@@ -671,7 +674,8 @@ def lgamma(
         x = np.array([1.3, 1.5, 2.7]).astype(np.float32)
         out = lgamma_Job(x)
 
-        # output [-0.1081748  -0.12078223  0.4348206 ]
+        # out [-0.1081748  -0.12078223  0.4348206 ]
+
     """
     return build_unary_elemwise_math_op("lgamma", x, name)
 
@@ -707,7 +711,7 @@ def log(
         x = np.array([1.3, 1.5, 2.7]).astype(np.float32)
         out = log_Job(x)
 
-        # output [0.26236424 0.40546513 0.9932518 ]
+        # out [0.26236424 0.40546513 0.9932518 ]
 
     """
     return build_unary_elemwise_math_op("log", x, name)
@@ -744,7 +748,7 @@ def log1p(
         x = np.array([1.3, 1.5, 2.7]).astype(np.float32)
         out = log1p_Job(x)
 
-        # output [0.8329091  0.91629076 1.3083328 ]
+        # out [0.8329091  0.91629076 1.3083328 ]
 
     """
     return build_unary_elemwise_math_op("log1p", x, name)
@@ -787,7 +791,7 @@ def log_sigmoid(
         x = np.array([1.3, 1.5, 2.7]).astype(np.float32)
         out = log_sigmoid_Job(x)
 
-        # output [-0.24100842 -0.20141333 -0.0650436 ]
+        # out [-0.24100842 -0.20141333 -0.0650436 ]
 
     """
     return build_unary_elemwise_math_op("log_sigmoid", x, name)
@@ -824,7 +828,7 @@ def negative(
         x = np.array([1.3, 1.5, 2.7]).astype(np.float32)
         out = negative_Job(x)
 
-        # output [-1.3 -1.5 -2.7]
+        # out [-1.3 -1.5 -2.7]
 
     """
     return build_unary_elemwise_math_op("negative", x, name)
@@ -867,7 +871,7 @@ def reciprocal(
         x = np.array([1, 2, 4]).astype(np.float32)
         out = reciprocal_Job(x)
 
-        # output [1.   0.5  0.25]
+        # out [1.   0.5  0.25]
 
     """
     return build_unary_elemwise_math_op("reciprocal", x, name)
@@ -905,7 +909,7 @@ def reciprocal_no_nan(
         x = np.array([0, 2, 4]).astype(np.float32)
         out = reciprocal_no_nan_Job(x)
 
-        # output [0.   0.5  0.25]
+        # out [0.   0.5  0.25]
 
     """
     return build_unary_elemwise_math_op("reciprocal_no_nan", x, name)
@@ -942,7 +946,7 @@ def rint(
         x = np.array([1.49999, 1.500001, 2.7]).astype(np.float32)
         out = rint_Job(x)
 
-        # output [1. 2. 3.]
+        # out [1. 2. 3.]
 
     """
     return build_unary_elemwise_math_op("rint", x, name)
@@ -979,7 +983,8 @@ def round(
         x = np.array([1.49999, 1.500001, 2.7]).astype(np.float32)
         out = round_Job(x)
 
-        # output [1. 2. 3.]
+        # out [1. 2. 3.]
+
     """
     return build_unary_elemwise_math_op("round", x, name)
 
@@ -1021,7 +1026,7 @@ def rsqrt(
         x = np.array([4, 16, 25]).astype(np.float32)
         out = rsqrt_Job(x)
 
-        # output [0.5  0.25 0.2 ]
+        # out [0.5  0.25 0.2 ]
 
     """
     return build_unary_elemwise_math_op("rsqrt", x, name)
@@ -1063,7 +1068,7 @@ def sigmoid_v2(
         x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         out = sigmoidv2_Job(x)
 
-        # output [0.37754068 0.5        0.62245935]
+        # out [0.37754068 0.5        0.62245935]
 
     """
     return build_unary_elemwise_math_op("sigmoid_v2", x, name)
@@ -1100,7 +1105,7 @@ def sign(
         x = np.array([-2, 0, 2]).astype(np.float32)
         out = sign_Job(x)
 
-        # output [-1.  0.  1.]
+        # out [-1.  0.  1.]
 
     """
     return build_unary_elemwise_math_op("sign", x, name)
@@ -1137,7 +1142,7 @@ def sin(
         x = np.array([-1/6*np.pi, 0, 1/6*np.pi]).astype(np.float32)
         out = sin_Job(x)
 
-        # output [-0.5  0.   0.5]
+        # out [-0.5  0.   0.5]
 
     """
     return build_unary_elemwise_math_op("sin", x, name)
@@ -1180,7 +1185,7 @@ def sinh(
         x = np.array([-1, 0, 1]).astype(np.float32)
         out = sinh_Job(x)
 
-        # output [-1.1752012  0.         1.1752012]
+        # out [-1.1752012  0.         1.1752012]
 
     """
     return build_unary_elemwise_math_op("sinh", x, name)
@@ -1223,7 +1228,7 @@ def softplus(
         x = np.array([-1, 0, 1]).astype(np.float32)
         out = softplus_Job(x)
 
-        # output [0.31326166 0.6931472  1.3132616 ]
+        # out [0.31326166 0.6931472  1.3132616 ]
 
     """
     return build_unary_elemwise_math_op("softplus", x, name)
@@ -1260,7 +1265,7 @@ def sqrt(
         x = np.array([4, 16, 25]).astype(np.float32)
         out = sqrt_Job(x)
 
-        # output [2. 4. 5.]
+        # out [2. 4. 5.]
 
     """
     return build_unary_elemwise_math_op("sqrt", x, name)
@@ -1297,7 +1302,7 @@ def square(
         x = np.array([2, 3, 4]).astype(np.float32)
         out = square_Job(x)
 
-        # output [ 4.  9. 16.]
+        # out [ 4.  9. 16.]
 
     """
     return build_unary_elemwise_math_op("square", x, name)
@@ -1334,7 +1339,7 @@ def tan(
         x = np.array([-1/4*np.pi, 0, 1/4*np.pi]).astype(np.float32)
         out = tan_Job(x)
 
-        # output [-1.  0.  1.]
+        # out [-1.  0.  1.]
 
     """
     return build_unary_elemwise_math_op("tan", x, name)
@@ -1377,7 +1382,7 @@ def tanh_v2(
         x = np.array([-1, 0, 1]).astype(np.float32)
         out = tanhv2_Job(x)
     
-        # output [-0.7615942  0.         0.7615942]
+        # out [-0.7615942  0.         0.7615942]
 
     """
     return build_unary_elemwise_math_op("tanh_v2", x, name)
