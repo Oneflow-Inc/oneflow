@@ -100,9 +100,9 @@ def reduce_sum(
         x = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).astype(np.float32)
         out = reduce_sum_Job(x)
 
-        # output [[ 6.]
-        #         [15.]
-        #         [24.]]
+        # out [[ 6.]
+        #      [15.]
+        #      [24.]]
 
     """
     name = _gen_unique_name_if_need(name, "ReduceSum_")
@@ -163,9 +163,9 @@ def reduce_any(
         x = np.array([[1, 0, 0], [0, 0, 0], [1, 0, 1]]).astype(np.int8)
         out = reduce_any_Job(x)
 
-        # output [[1]
-        #         [0]
-        #         [1]]
+        # out [[1]
+        #      [0]
+        #      [1]]
 
     """
     name = _gen_unique_name_if_need(name, "ReduceAny_")
@@ -211,9 +211,9 @@ def reduce_min(
         x = np.array([[2, 1, 3], [5, 3, 6], [7, 4, 9]]).astype(np.float32)
         out = reduce_min_Job(x)
 
-        # output [[1.]
-        #         [3.]
-        #         [4.]]
+        # out [[1.]
+        #      [3.]
+        #      [4.]]
 
     """
     name = _gen_unique_name_if_need(name, "ReduceMin_")
@@ -259,9 +259,9 @@ def reduce_max(
         x = np.array([[2, 1, 4], [5, 3, 7], [7, 4, 9]]).astype(np.float32)
         out = reduce_max_Job(x)
         
-        # output [[4.]
-        #         [7.]
-        #         [9.]]
+        # out [[4.]
+        #      [7.]
+        #      [9.]]
 
     """
     name = _gen_unique_name_if_need(name, "ReduceMax_")
@@ -307,9 +307,9 @@ def reduce_prod(
         x = np.array([[1, 2, 3], [3, 4, 5], [6, 3, 2]]).astype(np.float32)
         out = reduce_product_Job(x)
 
-        # output [[ 6.]
-        #         [60.]
-        #         [36.]]
+        # out [[ 6.]
+        #      [60.]
+        #      [36.]]
 
     """
     name = _gen_unique_name_if_need(name, "ReduceProd_")
@@ -359,9 +359,9 @@ def reduce_all(
         x = np.array([[1, 0, 0], [0, 0, 0], [1, 1, 1]]).astype(np.int8)
         out = reduce_all_Job(x)
 
-        # output [[0]
-        #         [0]
-        #         [1]]
+        # out [[0]
+        #      [0]
+        #      [1]]
 
     """
     name = _gen_unique_name_if_need(name, "ReduceAll_")
@@ -413,9 +413,9 @@ def reduce_euclidean_norm(
         x = np.array([[3, 4], [5, 12], [8, 15]]).astype(np.float32)
         out = reduce_euclidean_norm_Job(x)
 
-        # output [[ 5.]
-        #         [13.]
-        #         [17.]]
+        # out [[ 5.]
+        #      [13.]
+        #      [17.]]
 
     """
     name = _gen_unique_name_if_need(name, "ReduceEuclideanNorm_")
@@ -473,9 +473,9 @@ def reduce_logsumexp(
         x = np.array([[0, 0], [1, 1], [2, 2]]).astype(np.float32)
         out = reduce_logsumexp_Job(x)
 
-        # output [[0.6931472]
-        #         [1.6931472]
-        #         [2.6931472]]
+        # out [[0.6931472]
+        #      [1.6931472]
+        #      [2.6931472]]
 
     """
     name = _gen_unique_name_if_need(name, "ReduceLogSumExp_")
@@ -533,9 +533,9 @@ def reduce_std(
         x = np.array([[0, 5, 10], [5, 5, 5], [12, 3, 0]]).astype(np.float32)
         out = reduce_std_Job(x)
 
-        # output [[4.0824833]
-        #         [0.       ]
-        #         [5.0990195]]
+        # out [[4.0824833]
+        #      [0.       ]
+        #      [5.0990195]]
 
     """
     name = _gen_unique_name_if_need(name, "ReduceStd_")
@@ -594,9 +594,9 @@ def reduce_variance(
         x = np.array([[0, 5, 10], [5, 5, 5], [12, 3, 0]]).astype(np.float32)
         out = reduce_variance_Job(x)
 
-        # output [[16.666668]
-        #         [ 0.      ]
-        #         [26.      ]]
+        # out [[16.666668]
+        #      [ 0.      ]
+        #      [26.      ]]
 
     """
     name = _gen_unique_name_if_need(name, "ReduceVariance_")
