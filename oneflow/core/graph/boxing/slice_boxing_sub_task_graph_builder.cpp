@@ -58,6 +58,12 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
+  LOG(INFO) << "SliceBoxingSubTskGphBuilder, lbi: " << lbi.op_name() << "/" << lbi.blob_name()
+            << ", src_sbp_parallel: " << PbMessage2TxtString(src_sbp_parallel)
+            << ", dst_sbp_parallel: " << PbMessage2TxtString(dst_sbp_parallel)
+            << ", src_parallel_num: " << src_parallel_desc.parallel_num()
+            << ", dst_parallel_num: " << dst_parallel_desc.parallel_num()
+            << ", blob_desc shape: " << logical_blob_desc.shape().ToString();
   if (SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)) {
     return Error::BoxingNotSupportedError();
   }

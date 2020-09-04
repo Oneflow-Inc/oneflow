@@ -441,7 +441,7 @@ Maybe<void> OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
 
   ParallelContext parallel_ctx;
   parallel_ctx.set_parallel_id(0);
-  parallel_ctx.set_parallel_num(1);
+  parallel_ctx.set_parallel_num(op_node->parallel_desc().parallel_num());
   JUST(op_node->op().InferOutBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &op_node->sbp_signature(),
                                          [](OpContext*) {}));
   return Maybe<void>::Ok();

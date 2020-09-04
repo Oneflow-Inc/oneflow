@@ -54,6 +54,8 @@ def compare_with_tensorflow(
                 trainable=True,
             )
 
+        print("x shape", x.shape)
+        print("labels shape", labels.shape)
         with flow.scope.placement(device_type, "0:0-3"):
             lebels_distribute = flow.distribute.broadcast()
             logits_distribute = flow.distribute.split(len(x.shape) - 1)

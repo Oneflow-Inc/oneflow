@@ -16,30 +16,57 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/reduce_sbp_util.h"
 #include "oneflow/core/ndarray/binary_func.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
 namespace {
 
+Shape ConvertShapeLogicalToPhysical(const Shape& shape, const ParallelContext& parallel,
+                                    const SbpParallel& sbp) {
+  Shape out_shape(shape);
+  if (sbp.has_split_parallel()) {
+    int64_t split_axis = sbp.split_parallel().axis();
+    CHECK_GE(split_axis, 0);
+    CHECK_LT(split_axis, shape.NumAxes());
+    CHECK_GE(shape.At(split_axis), parallel.parallel_num());
+    BalancedSplitter bs(shape.At(split_axis), parallel.parallel_num());
+    out_shape.Set(split_axis, bs.At(parallel.parallel_id()).size());
+  }
+  return out_shape;
+}
+
 Maybe<void> InferReduceDeviceStageTensorDescFn(user_op::InferContext* ctx) {
-  Shape* input_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+  const Shape& input_shape = *ctx->Shape4ArgNameAndIndex("in", 0);
   const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-  Shape* output_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+  const SbpParallel& input_sbp = ctx->SbpParallel4ArgNameAndIndex("in", 0);
+  const SbpParallel& output_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+
+  Shape phy_input_shape =
+      ConvertShapeLogicalToPhysical(input_shape, ctx->parallel_ctx(), input_sbp);
+  Shape output_shape;
   if (axis.empty()) {
-    *output_shape = Shape::Ones(input_shape->NumAxes());
+    output_shape = Shape::Ones(phy_input_shape.NumAxes());
   } else {
     const AxisVector axis_vec = {axis.begin(), axis.end()};
-    const Shape& reduced_shape = CreateReducedShape(*input_shape, axis_vec);
-    *output_shape = reduced_shape;
+    output_shape = CreateReducedShape(phy_input_shape, axis_vec);
+  }
+
+  if (output_sbp.has_split_parallel()) {
+    int64_t split_axis = output_sbp.split_parallel().axis();
+    CHECK_EQ(output_shape.At(split_axis), 1);
+    output_shape.Set(split_axis, ctx->parallel_ctx().parallel_num());
   }
 
   *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-  *ctx->Shape4ArgNameAndIndex("mask", 0) = *input_shape;
+  *ctx->Shape4ArgNameAndIndex("mask", 0) = phy_input_shape;
   *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
 
-  *ctx->Shape4ArgNameAndIndex("count", 0) = *output_shape;
+  *ctx->Shape4ArgNameAndIndex("count", 0) = output_shape;
   *ctx->Dtype4ArgNameAndIndex("count", 0) = DataType::kInt32;
 
+  LOG(INFO) << "InferReduceDeviceStageTensorDescFn, output_shape: " << output_shape.ToString()
+            << ", input_shape: " << input_shape.ToString();
   return Maybe<void>::Ok();
 }
 
