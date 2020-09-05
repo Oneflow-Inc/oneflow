@@ -4,7 +4,10 @@ set(GRPC_INCLUDE_DIR ${THIRD_PARTY_DIR}/grpc/include)
 set(GRPC_LIBRARY_DIR ${THIRD_PARTY_DIR}/grpc/lib)
 
 set(GRPC_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
-set(GRPC_URL ${THIRD_PARTY_SUBMODULE_DIR}/grpc/src/grpc)
+# set(GRPC_URL ${THIRD_PARTY_SUBMODULE_DIR}/grpc/src/grpc)
+SET(GRPC_TAR_URL https://github.com/grpc/grpc/archive/v1.27.3.tar.gz)
+set(GRPC_URL_HASH 0c6c3fc8682d4262dd0e5e6fabe1a7e2)
+SET(GRPC_SOURCE_DIR ${THIRD_PARTY_SUBMODULE_DIR}/grpc)
 
 if(WIN32)
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
@@ -28,9 +31,10 @@ endforeach()
 if(THIRD_PARTY)
 
 ExternalProject_Add(grpc
-    PREFIX grpc
-    DEPENDS protobuf zlib zlib_copy_headers_to_destination
-    URL ${GRPC_URL}
+    PREFIX ${GRPC_SOURCE_DIR}
+    DEPENDS protobuf absl cares zlib zlib_copy_headers_to_destination
+    URL ${GRPC_TAR_URL}
+    URL_HASH MD5=${GRPC_URL_HASH}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""
@@ -41,9 +45,15 @@ ExternalProject_Add(grpc
         -DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}
         -DCMAKE_C_FLAGS_RELEASE:STRING=${CMAKE_C_FLAGS_RELEASE}
         -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF
-        -DPROTOBUF_INCLUDE_DIRS:STRING=${PROTOBUF_SRC_DIR}
-        -DPROTOBUF_LIBRARIES:STRING=${protobuf_STATIC_LIBRARIES}
-        -DZLIB_INCLUDE_DIRS:STRING=${ZLIB_INCLUDE_DIR}
+        -DgRPC_BUILD_TESTS:BOOL=OFF
+        -DgRPC_ABSL_PROVIDER:STRING=package
+        -Dabsl_DIR:PATH=${THIRD_PARTY_DIR}/absl/lib/cmake/absl
+        -DgRPC_PROTOBUF_PROVIDER:STRING=config
+        -DProtobuf_DIR:PATH=${THIRD_PARTY_SUBMODULE_DIR}/protobuf/src/protobuf/cmake
+        -DgRPC_CARES_PROVIDER:STRING=package
+        -Dc-ares_DIR:PATH=${THIRD_PARTY_DIR}/cares/lib/cmake/c-ares
+        -DgRPC_SSL_PROVIDER:STRING=package
+        -DOPENSSL_ROOT_DIR:PATH=${OPENSSL_ROOT_DIR}
 )
 
 add_copy_headers_target(NAME grpc SRC ${GRPC_INCLUDE_DIRS} DST ${GRPC_INCLUDE_DIR} DEPS grpc INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/grpc_headers.txt")
