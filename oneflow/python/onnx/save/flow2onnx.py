@@ -43,7 +43,7 @@ import oneflow.python.onnx
 from oneflow.python.onnx import constants, schemas, util, handler
 from oneflow.python.onnx.save import optimizer
 from oneflow.python.onnx.onnx_wrapper import Graph
-import oneflow.python.onnx.save.onnx_opset  # pylint: disable=unused-import
+import oneflow.python.onnx.save.handlers  # pylint: disable=unused-import
 
 logger = logging.getLogger(__name__)
 

@@ -13,19 +13,39 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
+from oneflow.python.ops import linalg
+from oneflow.python.onnx.load.backend_handler import BackendHandler
 from oneflow.python.onnx.handler import onnx_op
-from .pool_mixin import PoolMixin
 
 
-@onnx_op("AveragePool")
-class AveragePool(PoolMixin, BackendHandler):
+@onnx_op("Gemm")
+class Gemm(BackendHandler):
     @classmethod
     def _common(cls, node, tensor_dict, **kwargs):
-        return cls.pool(node, tensor_dict, "AVG", kwargs.get("strict", True))
+        x = tensor_dict[node.input_tensor_names[0]]
+        y = tensor_dict[node.input_tensor_names[1]]
+
+        if len(node.input_tensor_names) > 2:
+            z = tensor_dict[node.input_tensor_names[2]]
+        else:
+            z = 0
+
+        transA = False if node.attrs.get("transA", 0) == 0 else True
+        transB = False if node.attrs.get("transB", 0) == 0 else True
+        alpha = node.attrs.get("alpha", 1.0)
+        beta = node.attrs.get("beta", 1.0)
+
+        return [
+            alpha * linalg.matmul(x, y, transpose_a=transA, transpose_b=transB)
+            + beta * z
+        ]
 
     @classmethod
     def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_6(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
@@ -33,7 +53,7 @@ class AveragePool(PoolMixin, BackendHandler):
         return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_10(cls, node, tensor_dict, **kwargs):
+    def version_9(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod

@@ -17,7 +17,7 @@ import numpy as np
 import tensorflow as tf
 
 import oneflow.python.ops.pad as pad
-from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
+from oneflow.python.onnx.load.backend_handler import BackendHandler
 from oneflow.python.onnx.handler import onnx_op
 from oneflow.python.onnx.handler import tf_func
 

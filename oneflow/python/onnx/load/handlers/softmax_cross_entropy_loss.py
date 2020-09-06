@@ -13,19 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.python.ops import linalg
-from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
+from oneflow.python.ops import nn_ops
+from oneflow.python.onnx.load.backend_handler import BackendHandler
 from oneflow.python.onnx.handler import onnx_op
 from oneflow.python.onnx.handler import tf_func
 
 
-@onnx_op("MatMul")
-@tf_func(linalg.matmul)
-class MatMul(BackendHandler):
+@onnx_op("SoftmaxCrossEntropyLoss")
+@tf_func(nn_ops.sparse_softmax_cross_entropy_with_logits)
+class SoftmaxCrossEntropyLoss(BackendHandler):
     @classmethod
-    def version_1(cls, node, tensor_dict, **kwargs):
-        return cls.run_onnx_node(node, tensor_dict, **kwargs)
-
-    @classmethod
-    def version_9(cls, node, tensor_dict, **kwargs):
-        return cls.run_onnx_node(node, tensor_dict, **kwargs)
+    def version_12(cls, node, tensor_dict, **kwargs):
+        inputs = (
+            tensor_dict[node.input_tensor_names[1]],
+            tensor_dict[node.input_tensor_names[0]],
+        )
+        return cls.run_onnx_node(node, tensor_dict, inputs=inputs, **kwargs)

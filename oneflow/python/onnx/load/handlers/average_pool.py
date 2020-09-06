@@ -13,26 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-
-from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
+from oneflow.python.onnx.load.backend_handler import BackendHandler
 from oneflow.python.onnx.handler import onnx_op
-from oneflow.python.onnx.handler import tf_func
-from oneflow.python.ops import math_ops
-from .math_mixin import ArithmeticMixin
+from .pool_mixin import PoolMixin
 
 
-@onnx_op("Add")
-@tf_func(math_ops.add)
-class Add(ArithmeticMixin, BackendHandler):
+@onnx_op("AveragePool")
+class AveragePool(PoolMixin, BackendHandler):
+    @classmethod
+    def _common(cls, node, tensor_dict, **kwargs):
+        return cls.pool(node, tensor_dict, "AVG", kwargs.get("strict", True))
+
     @classmethod
     def version_1(cls, node, tensor_dict, **kwargs):
-        return cls.limited_broadcast(node, tensor_dict, **kwargs)
-
-    @classmethod
-    def version_6(cls, node, tensor_dict, **kwargs):
-        return cls.limited_broadcast(node, tensor_dict, **kwargs)
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
     def version_7(cls, node, tensor_dict, **kwargs):
-        return [cls.run_onnx_node(node, tensor_dict, **kwargs)]
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_10(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_11(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)

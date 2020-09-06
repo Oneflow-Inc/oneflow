@@ -13,19 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.python.ops import math_ops
-from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
+import tensorflow as tf
+
+from oneflow.python.onnx.load.backend_handler import BackendHandler
 from oneflow.python.onnx.handler import onnx_op
 from oneflow.python.onnx.handler import tf_func
 
 
-@onnx_op("Relu")
-@tf_func(math_ops.relu)
-class Relu(BackendHandler):
+@onnx_op("Identity")
+@tf_func(tf.identity)
+class Identity(BackendHandler):
     @classmethod
     def version_1(cls, node, tensor_dict, **kwargs):
-        return cls.run_onnx_node(node, tensor_dict, **kwargs)
-
-    @classmethod
-    def version_6(cls, node, tensor_dict, **kwargs):
         return cls.run_onnx_node(node, tensor_dict, **kwargs)

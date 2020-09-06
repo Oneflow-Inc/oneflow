@@ -13,10 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import os
-import pkgutil
+from oneflow.python.onnx.load.backend_handler import BackendHandler
+from oneflow.python.onnx.handler import onnx_op
+from .conv_mixin import ConvMixin
 
-__all__ = [
-    modname
-    for _, modname, _ in pkgutil.walk_packages(path=[os.path.split(__file__)[0]])
-]
+
+@onnx_op("Conv")
+class Conv(ConvMixin, BackendHandler):
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls.conv(node, tensor_dict)
+
+    @classmethod
+    def version_11(cls, node, tensor_dict, **kwargs):
+        return cls.conv(node, tensor_dict)

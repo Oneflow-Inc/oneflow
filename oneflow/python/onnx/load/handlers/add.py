@@ -13,17 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
+import oneflow as flow
+
+from oneflow.python.onnx.load.backend_handler import BackendHandler
 from oneflow.python.onnx.handler import onnx_op
-from .conv_mixin import ConvMixin
+from oneflow.python.onnx.handler import tf_func
+from oneflow.python.ops import math_ops
+from .math_mixin import ArithmeticMixin
 
 
-@onnx_op("Conv")
-class Conv(ConvMixin, BackendHandler):
+@onnx_op("Add")
+@tf_func(math_ops.add)
+class Add(ArithmeticMixin, BackendHandler):
     @classmethod
     def version_1(cls, node, tensor_dict, **kwargs):
-        return cls.conv(node, tensor_dict)
+        return cls.limited_broadcast(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_11(cls, node, tensor_dict, **kwargs):
-        return cls.conv(node, tensor_dict)
+    def version_6(cls, node, tensor_dict, **kwargs):
+        return cls.limited_broadcast(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_7(cls, node, tensor_dict, **kwargs):
+        return [cls.run_onnx_node(node, tensor_dict, **kwargs)]
