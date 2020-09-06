@@ -96,6 +96,4 @@ class Constant(BackendHandler):
         elif "value_strings" in node.attrs:
             value = node.attrs["value_strings"]
             dtype = tf.string
-        return [
-            cls.run_onnx_node(node, inputs=[value], attrs={"dtype": dtype})
-        ]
+        return [cls.run_onnx_node(node, inputs=[value], attrs={"dtype": dtype})]

@@ -23,12 +23,11 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
-__all__ = ["util", "graph", "graph_builder", "loader", "flow2onnx", "schemas"]
+__all__ = ["util", "onnx_wrapper", "schemas", "save"]
 
 from oneflow.python.onnx import (
-    flow2onnx,
     util,
-    graph,
-    graph_builder,
+    onnx_wrapper,
     schemas,
+    save,
 )  # pylint: disable=wrong-import-order
