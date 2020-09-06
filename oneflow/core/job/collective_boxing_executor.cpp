@@ -377,7 +377,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
           OF_NCCL_CHECK(ncclBroadcast(send_buff, recv_buff, elem_cnt, nccl_data_type,
                                       op_desc.root(), comm, device_ctx->stream));
         } else if (op_type == OpType::kOpTypeAll2All) {
-          for (int32_t j = 0; j < num_ranks; ++j) {
+          for (int64_t j = 0; j < num_ranks; ++j) {
             const int64_t dtype_size = GetSizeOfDataType(op_desc.data_type());
             OF_NCCL_CHECK(ncclSend(
                 reinterpret_cast<const void*>(reinterpret_cast<const char*>(send_buff)

@@ -41,8 +41,9 @@ void BoxingPackKernel<device_type, T>::ForwardDataContent(
     const Shape transpose_in_shape(boxing_pack_conf.transpose_in_shape());
     const Shape transpose_out_shape(boxing_pack_conf.transpose_out_shape());
     NewKernelUtil<device_type>::Transpose(
-        ctx.device_ctx, transpose_in_shape.NumAxes(), transpose_in_shape, transpose_out_shape, boxing_pack_conf.transpose_perm(),
-        transpose_in_shape.elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
+        ctx.device_ctx, transpose_in_shape.NumAxes(), transpose_in_shape, transpose_out_shape,
+        boxing_pack_conf.transpose_perm(), transpose_in_shape.elem_cnt(), in->dptr<T>(),
+        out->mut_dptr<T>());
   } else {
     out->CopyDataContentFrom(ctx.device_ctx, in);
   }
@@ -51,7 +52,7 @@ void BoxingPackKernel<device_type, T>::ForwardDataContent(
 #ifdef WITH_CUDA
 #define REGISTER_BOXING_PACK_KERNEL(dtype)                                                      \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBoxingPackConf, DeviceType::kGPU, dtype, \
-                                        BoxingPackKernel<DeviceType::kGPU, dtype>)              
+                                        BoxingPackKernel<DeviceType::kGPU, dtype>)
 REGISTER_BOXING_PACK_KERNEL(float);
 REGISTER_BOXING_PACK_KERNEL(double);
 REGISTER_BOXING_PACK_KERNEL(int8_t);

@@ -30,7 +30,7 @@ void BoxingUnpackCompTaskNode::Init(const CompTaskNode* src_node, const LogicalB
   set_area_id(src_node->area_id());
   need_transpose_ = need_transpose;
   const int64_t parallel_num = parallel_ctx()->parallel_num();
-  if(need_transpose_) {
+  if (need_transpose_) {
     DimVector dim_vec = logical_shape.dim_vec();
     dim_vec[src_split_axis] = dim_vec.at(src_split_axis) / parallel_num;
     dim_vec[dst_split_axis] = dim_vec.at(dst_split_axis) / parallel_num;
@@ -71,9 +71,10 @@ void BoxingUnpackCompTaskNode::BuildExecGphAndRegst() {
   op_conf.mutable_boxing_unpack_conf()->set_need_transpose(need_transpose_);
   *op_conf.mutable_boxing_unpack_conf()->mutable_lbi() = lbi_;
   dst_shape_.ToProto(op_conf.mutable_boxing_unpack_conf()->mutable_dst_shape());
-  if(need_transpose_) { 
+  if (need_transpose_) {
     transpose_in_shape_.ToProto(op_conf.mutable_boxing_unpack_conf()->mutable_transpose_in_shape());
-    transpose_out_shape_.ToProto(op_conf.mutable_boxing_unpack_conf()->mutable_transpose_out_shape()); 
+    transpose_out_shape_.ToProto(
+        op_conf.mutable_boxing_unpack_conf()->mutable_transpose_out_shape());
     FOR_RANGE(int64_t, i, 0, perm_.size()) {
       op_conf.mutable_boxing_unpack_conf()->add_transpose_perm(perm_.at(i));
     }

@@ -19,9 +19,9 @@ limitations under the License.
 
 namespace oneflow {
 
-void BoxingPackCompTaskNode::Init(const CompTaskNode* src_node, const LogicalBlobId& lbi, const Shape& logical_shape,
-                                  const bool need_transpose, const int64_t src_split_axis,
-                                  const int64_t dst_split_axis) {
+void BoxingPackCompTaskNode::Init(const CompTaskNode* src_node, const LogicalBlobId& lbi,
+                                  const Shape& logical_shape, const bool need_transpose,
+                                  const int64_t src_split_axis, const int64_t dst_split_axis) {
   lbi_ = lbi;
   set_logical_node(src_node->logical_node());
   *mut_parallel_ctx() = *src_node->parallel_ctx();
@@ -29,7 +29,7 @@ void BoxingPackCompTaskNode::Init(const CompTaskNode* src_node, const LogicalBlo
   set_thrd_id(src_node->thrd_id());
   set_area_id(src_node->area_id());
   need_transpose_ = need_transpose;
-  if(need_transpose_) {
+  if (need_transpose_) {
     const int64_t parallel_num = parallel_ctx()->parallel_num();
     DimVector dim_vec;
     FOR_RANGE(int64_t, i, 0, logical_shape.NumAxes()) {
@@ -75,9 +75,9 @@ void BoxingPackCompTaskNode::BuildExecGphAndRegst() {
   op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
   op_conf.mutable_boxing_pack_conf()->set_need_transpose(need_transpose_);
   *op_conf.mutable_boxing_pack_conf()->mutable_lbi() = lbi_;
-  if(need_transpose_) { 
+  if (need_transpose_) {
     transpose_in_shape_.ToProto(op_conf.mutable_boxing_pack_conf()->mutable_transpose_in_shape());
-    transpose_out_shape_.ToProto(op_conf.mutable_boxing_pack_conf()->mutable_transpose_out_shape()); 
+    transpose_out_shape_.ToProto(op_conf.mutable_boxing_pack_conf()->mutable_transpose_out_shape());
     FOR_RANGE(int64_t, i, 0, perm_.size()) {
       op_conf.mutable_boxing_pack_conf()->add_transpose_perm(perm_.at(i));
     }
