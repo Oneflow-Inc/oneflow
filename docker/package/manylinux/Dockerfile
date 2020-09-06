@@ -45,7 +45,6 @@ RUN curl -L https://github.com/bazelbuild/bazel/releases/download/3.4.1/bazel-3.
     && chmod +x /usr/local/bin/bazel \
     && bazel
 
-RUN echo "source scl_source enable devtoolset-7" >> /etc/bashrc
-RUN source /etc/bashrc
+RUN echo "source scl_source enable devtoolset-7" >> ~/.bashrc
 
 CMD ["/oneflow-src/docker/package/manylinux/build_wheel.sh"]
