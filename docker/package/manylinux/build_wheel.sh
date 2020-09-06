@@ -51,6 +51,10 @@ cd $ONEFLOW_SRC_DIR
 # TF requires py3 to build
 export PATH=/opt/python/cp37-cp37m/bin:$PATH
 python --version
+gcc --version
+
+# specify a mounted dir as bazel cache dir
+export TEST_TMPDIR=$CACHE_DIR/bazel_cache
 
 THIRD_PARTY_BUILD_DIR=$CACHE_DIR/build-third-party
 THIRD_PARTY_INSTALL_DIR=$CACHE_DIR/build-third-party-install

@@ -37,7 +37,7 @@ function release_xla() {
     fi
     docker build --build-arg from=nvidia/cuda:$1-cudnn${cudnn_version}-devel-centos7 -f docker/package/manylinux/Dockerfile -t $docker_tag .
     docker run --rm -it -v `pwd`:/oneflow-src -w /oneflow-src $docker_tag \
-        /oneflow-src/docker/package/manylinux/build_wheel.sh --cache-dir /oneflow-src/manylinux2014-build-cache-cuda-$1-xla \
+        bash -l /oneflow-src/docker/package/manylinux/build_wheel.sh --cache-dir /oneflow-src/manylinux2014-build-cache-cuda-$1-xla \
         --house-dir $wheelhouse_dir-xla \
         --package-name ${package_name}_cu`echo $1 | tr -d .`_xla \
         -DWITH_XLA=ON
