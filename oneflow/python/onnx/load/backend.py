@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+# TODO(daquexian): move it to onnx2flow.py
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -39,7 +40,7 @@ from oneflow.python.onnx.load.common import supports_device as common_supports_d
 from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
 
 from oneflow.python.onnx.load.handlers.backend import *
-from oneflow.python.onnx.graph import Node as OnnxNode
+from oneflow.python.onnx.onnx_wrapper import Node as OnnxNode
 import oneflow.python.onnx.load.common as common
 import io
 import tempfile

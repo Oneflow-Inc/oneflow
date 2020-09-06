@@ -32,9 +32,7 @@ class MaxPool(PoolMixin, BackendHandler):
     @classmethod
     def _common(cls, node, tensor_dict, **kwargs):
         pool_type = "MAX" if len(node.output_tensor_names) == 1 else "MAX_WITH_ARGMAX"
-        return cls.pool(
-            node, tensor_dict, pool_type, kwargs.get("strict", True)
-        )
+        return cls.pool(node, tensor_dict, pool_type, kwargs.get("strict", True))
 
     @classmethod
     def version_1(cls, node, tensor_dict, **kwargs):
