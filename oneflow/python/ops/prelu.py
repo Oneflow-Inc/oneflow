@@ -33,6 +33,99 @@ def prelu(
     name: str = "PRelu",
     model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
 ) -> remote_blob_util.BlobDef:
+    r"""The Prelu(Parametric Rectified Linear Unit) activation. 
+    
+    The :math:`\alpha` is a parameter that can be trained in network
+
+    The equation is
+
+    .. math:: 
+
+        out = max(0, x) + \alpha*min(0, x)
+
+    Args:
+        inputs (remote_blob_util.BlobDef): The input Blob. 
+        alpha_initializer (Optional[op_conf_util.InitializerConf], optional): The initializer of alpha. Defaults to None.
+        alpha_regularizer (Optional[op_conf_util.RegularizerConf], optional): The regularizer of alpha. Defaults to None.
+        shared_axes (Optional[Sequence[int]], optional): The axis along which to share learnable parameters for the prelu activation function. Defaults to None.
+        trainable (bool, optional): Whether to train the parameter :math:`\alpha`. Defaults to True.
+        name (str, optional): The name for the operation. Defaults to "PRelu".
+        model_distribute (distribute_util.Distribute, optional): Define the way to ditribute the model. Defaults to distribute_util.broadcast().
+
+    Returns:
+        remote_blob_util.BlobDef: The activated Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        BATCH_SIZE = 100
+
+
+        def lenet(data, train=False):
+            initializer = flow.truncated_normal(0.1)
+            conv1 = flow.layers.conv2d(
+                data,
+                32,
+                5,
+                padding="SAME",
+                name="conv1",
+                kernel_initializer=initializer,
+            )
+            prelu1 = flow.layers.prelu(conv1,
+                                    alpha_initializer=initializer,
+                                    shared_axes=[2, 3],
+                                    name="Prelu1")
+            pool1 = flow.nn.max_pool2d(
+                prelu1, ksize=2, strides=2, padding="SAME", name="pool1", data_format="NCHW"
+            )
+            conv2 = flow.layers.conv2d(
+                pool1,
+                64,
+                5,
+                padding="SAME",
+                name="conv2",
+                kernel_initializer=initializer,
+            )
+            prelu2 = flow.layers.prelu(conv2,
+                                    alpha_initializer=initializer,
+                                    shared_axes=[2, 3],
+                                    name="Prelu2")
+            pool2 = flow.nn.max_pool2d(
+                prelu2, ksize=2, strides=2, padding="SAME", name="pool2", data_format="NCHW"
+            )
+            reshape = flow.reshape(pool2, [pool2.shape[0], -1])
+            hidden = flow.layers.dense(
+                reshape,
+                512,
+                activation=flow.nn.relu,
+                kernel_initializer=initializer,
+                name="dense1",
+            )
+            if train:
+                hidden = flow.nn.dropout(hidden, rate=0.5, name="dropout")
+            return flow.layers.dense(hidden, 10, kernel_initializer=initializer, name="dense2")
+
+
+        @flow.global_function(type="train")
+        def train_job(
+                images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+                labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
+            flow.optimizer.SGD(lr_scheduler, momentum=0.9).minimize(loss)
+            return loss
+
+    """
     alpha_shape = list(inputs.shape[1:])
     if shared_axes is not None:
         for i in shared_axes:

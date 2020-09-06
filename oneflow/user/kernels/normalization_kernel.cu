@@ -185,9 +185,23 @@ class NormalizationInferenceKernel final : public user_op::OpKernel {
     desc_helper.CheckParamTensor(moving_mean);
     desc_helper.CheckParamTensor(moving_variance);
 
+    const void* sp_alpha = CudnnSPOnePtr<T>();
+    const void* sp_beta;
+    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->data_type(), y->data_type());
+      CHECK_EQ(add_to_output->shape(), y->shape());
+      Memcpy<DeviceType::kGPU>(
+          ctx->device_ctx(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
+          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+      sp_beta = CudnnSPOnePtr<T>();
+    } else {
+      sp_beta = CudnnSPZeroPtr<T>();
+    }
+
     OF_CUDNN_CHECK(cudnnBatchNormalizationForwardInference(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL, CudnnSPOnePtr<T>(),
-        CudnnSPZeroPtr<T>(), desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
+        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL, sp_alpha, sp_beta,
+        desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
         desc_helper.param_desc(), gamma->dptr(), beta->dptr(), moving_mean->dptr(),
         moving_variance->dptr(), epsilon));
   }
@@ -195,12 +209,19 @@ class NormalizationInferenceKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BN_INFERENCE_KERNEL(dtype)                                          \
-  REGISTER_USER_KERNEL("normalization")                                              \
-      .SetCreateFn<NormalizationInferenceKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                            \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobAttr<bool>("training") == false));
+#define REGISTER_BN_INFERENCE_KERNEL(dtype)                                                     \
+  REGISTER_USER_KERNEL("normalization")                                                         \
+      .SetCreateFn<NormalizationInferenceKernel<dtype>>()                                       \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)            \
+                       & (user_op::HobAttr<bool>("training") == false))                         \
+      .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+          OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "_add_to_output", 0, true));           \
+        }                                                                                       \
+        return Maybe<void>::Ok();                                                               \
+      });
 
 REGISTER_BN_INFERENCE_KERNEL(float16)
 REGISTER_BN_INFERENCE_KERNEL(float)
@@ -280,6 +301,20 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
     desc_helper.CheckParamTensor(mean);
     desc_helper.CheckParamTensor(inv_variance);
 
+    const void* sp_alpha = CudnnSPOnePtr<T>();
+    const void* sp_beta;
+    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->data_type(), y->data_type());
+      CHECK_EQ(add_to_output->shape(), y->shape());
+      Memcpy<DeviceType::kGPU>(
+          ctx->device_ctx(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
+          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+      sp_beta = CudnnSPOnePtr<T>();
+    } else {
+      sp_beta = CudnnSPZeroPtr<T>();
+    }
+
 #if defined(BN_ENABLE_EX_API)
     size_t workspace_size;
     OF_CUDNN_CHECK(cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize(
@@ -294,30 +329,30 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
     if (reserve_space_size == 0 && workspace_size <= workspace->shape().elem_cnt()) {
       OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTrainingEx(
           ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
-          CUDNN_BATCHNORM_OPS_BN, CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), desc_helper.xy_desc(),
-          x->dptr(), nullptr, nullptr, desc_helper.xy_desc(), y->mut_dptr(),
-          desc_helper.param_desc(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
-          moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon, mean->mut_dptr(),
-          inv_variance->mut_dptr(), nullptr, workspace->mut_dptr(), workspace->shape().elem_cnt(),
-          nullptr, 0));
+          CUDNN_BATCHNORM_OPS_BN, sp_alpha, sp_beta, desc_helper.xy_desc(), x->dptr(), nullptr,
+          nullptr, desc_helper.xy_desc(), y->mut_dptr(), desc_helper.param_desc(), gamma->dptr(),
+          beta->dptr(), 1.0 - momentum, moving_mean->mut_dptr(), moving_variance->mut_dptr(),
+          epsilon, mean->mut_dptr(), inv_variance->mut_dptr(), nullptr, workspace->mut_dptr(),
+          workspace->shape().elem_cnt(), nullptr, 0));
     } else {
       OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTraining(
-          ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, CudnnSPOnePtr<T>(),
-          CudnnSPZeroPtr<T>(), desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(),
-          y->mut_dptr(), desc_helper.param_desc(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
+          ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, sp_alpha, sp_beta,
+          desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
+          desc_helper.param_desc(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
           moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon, mean->mut_dptr(),
           inv_variance->mut_dptr()));
     }
 #else
     OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTraining(
-        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, CudnnSPOnePtr<T>(),
-        CudnnSPZeroPtr<T>(), desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
+        ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, sp_alpha, sp_beta,
+        desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
         desc_helper.param_desc(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
         moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon, mean->mut_dptr(),
         inv_variance->mut_dptr()));
 #endif
 
     if (ctx->user_op_conf().op_type_name() == "normalization_add_relu") {
+      CHECK(!ctx->user_op_conf().has_input("_add_to_output", 0));
       const int64_t elem_cnt = x->shape().elem_cnt();
       if (ctx->user_op_conf().has_input("addend", 0)) {
         const auto* addend = ctx->Tensor4ArgNameAndIndex("addend", 0);
@@ -332,13 +367,20 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BN_TRAIN_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("normalization")                                              \
-      .SetCreateFn<NormalizationTrainKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                            \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobAttr<bool>("training") == true))               \
-      .SetInferTmpSizeFn(InferTrainTmpSize);
+#define REGISTER_BN_TRAIN_KERNEL(dtype)                                                         \
+  REGISTER_USER_KERNEL("normalization")                                                         \
+      .SetCreateFn<NormalizationTrainKernel<dtype>>()                                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)            \
+                       & (user_op::HobAttr<bool>("training") == true))                          \
+      .SetInferTmpSizeFn(InferTrainTmpSize)                                                     \
+      .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+          OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "_add_to_output", 0, true));           \
+        }                                                                                       \
+        return Maybe<void>::Ok();                                                               \
+      });
 
 REGISTER_BN_TRAIN_KERNEL(float16)
 REGISTER_BN_TRAIN_KERNEL(float)

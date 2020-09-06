@@ -36,7 +36,7 @@ class ClipGradientConf:
 
 
 @oneflow_export("optimizer.grad_clipping.by_global_norm")
-class ClipByGlobalNorm(ClipGradientConf):
+class by_global_norm(ClipGradientConf):
     r"""This operator limits the norm of `Input` with `clip_norm`. 
 
     If the norm of `Input` is less than the `clip_norm`, 
@@ -49,7 +49,7 @@ class ClipByGlobalNorm(ClipGradientConf):
 
     .. math:: 
     
-        Out = \frac{clip\_norm*Input}{norm(Input)}
+        Output = \frac{clip\_norm*Input}{norm(Input)}
     
     Args:
         clip_norm (float): The maximum norm value. 
@@ -101,7 +101,7 @@ class WarmupConf:
 
 
 @oneflow_export("optimizer.warmup.constant")
-class ConstantWarmup(WarmupConf):
+class constant(WarmupConf):
     r"""This operator use the constant warmup strategy to adjust the learning rate. 
 
     Before the steps are specified by user, the learning rate is: 
@@ -161,7 +161,7 @@ class ConstantWarmup(WarmupConf):
 
 
 @oneflow_export("optimizer.warmup.linear")
-class LinearWarmup(WarmupConf):
+class linear(WarmupConf):
     r"""This operator uses the linear warmup strategy to adjust the learning rate.
 
     When current train step is less than warmup steps, the learning rate will be updated as: 

@@ -86,6 +86,9 @@ Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
   split_args.emplace_back("x", 0);
   split_args.emplace_back("y", 0);
   if (ctx->user_op_conf().has_input("addend", 0)) { split_args.emplace_back("addend", 0); }
+  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    split_args.emplace_back("_add_to_output", 0);
+  }
   std::vector<user_op::OpArg> broadcast_args;
   broadcast_args.emplace_back("moving_mean", 0);
   broadcast_args.emplace_back("moving_variance", 0);
@@ -117,6 +120,11 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn(
       const auto* addend = ctx->TensorDesc4ArgNameAndIndex("addend", 0);
       CHECK_EQ_OR_RETURN(addend->data_type(), data_type);
       CHECK_EQ_OR_RETURN(addend->shape(), x_shape);
+    }
+    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ_OR_RETURN(add_to_output->data_type(), data_type);
+      CHECK_EQ_OR_RETURN(add_to_output->shape(), x_shape);
     }
     *ctx->TensorDesc4ArgNameAndIndex("y", 0) = *x;
     const auto axis = ctx->Attr<int32_t>("axis");
@@ -152,6 +160,7 @@ REGISTER_USER_OP("normalization")
     .Input("moving_variance")
     .Input("gamma")
     .Input("beta")
+    .OptionalInput("_add_to_output")
     .Output("y")
     .OptionalOutput("mean")
     .OptionalOutput("inv_variance")
