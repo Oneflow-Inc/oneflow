@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type>
+template<DeviceType device_type, typename T>
 class BoxingUnpackKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingUnpackKernel);
@@ -31,43 +31,32 @@ class BoxingUnpackKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)>) const override;
 };
 
-template<DeviceType device_type>
-void BoxingUnpackKernel<device_type>::ForwardDataContent(
+template<DeviceType device_type, typename T>
+void BoxingUnpackKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
   const BoxingUnpackOpConf& boxing_unpack_conf = this->op_conf().boxing_unpack_conf();
   if (boxing_unpack_conf.need_transpose()) {
-    const int64_t parallel_num = boxing_unpack_conf.parallel_num();
-    const int64_t src_split_axis = boxing_unpack_conf.src_split_axis();
-    const int64_t dst_split_axis = boxing_unpack_conf.dst_split_axis();
-    const Shape src_shape(boxing_unpack_conf.src_shape());
-    const Shape dst_shape(boxing_unpack_conf.dst_shape());
-
-    Shape transpose_in_shape = Shape(src_shape.dim_vec());
-    std::vector<int32_t> perm;
-    DimVector out_dim_vec;
-    FOR_RANGE(int64_t, i, 1, transpose_in_shape.NumAxes()) {
-      perm.push_back(i);
-      out_dim_vec.push_back(transpose_in_shape.At(i));
-    }
-    // transpose axis 0 to src_split_axis
-    perm.insert(perm.begin() + src_split_axis, 0);
-    out_dim_vec.insert(out_dim_vec.begin() + src_split_axis, transpose_in_shape.At(0));
-
-    Shape transpose_out_shape = Shape(out_dim_vec);
-
+    const Shape transpose_in_shape(boxing_unpack_conf.transpose_in_shape());
+    const Shape transpose_out_shape(boxing_unpack_conf.transpose_out_shape());
     NewKernelUtil<device_type>::Transpose(
-        ctx.device_ctx, transpose_in_shape.NumAxes(), transpose_in_shape, transpose_out_shape, perm,
-        transpose_in_shape.elem_cnt(), in->dptr<float>(), out->mut_dptr<float>());
+        ctx.device_ctx, transpose_in_shape.NumAxes(), transpose_in_shape, transpose_out_shape, boxing_unpack_conf.transpose_perm(),
+        transpose_in_shape.elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
   } else {
     out->CopyDataContentFrom(ctx.device_ctx, in);
   }
 }
 
 #ifdef WITH_CUDA
-REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kBoxingUnpackConf, DeviceType::kGPU,
-                            BoxingUnpackKernel<DeviceType::kGPU>);
+#define REGISTER_BOXING_UNPACK_KERNEL(dtype)                                                    \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBoxingUnpackConf, DeviceType::kGPU, dtype, \
+                                        BoxingUnpackKernel<DeviceType::kGPU, dtype>)              
+REGISTER_BOXING_UNPACK_KERNEL(float);
+REGISTER_BOXING_UNPACK_KERNEL(double);
+REGISTER_BOXING_UNPACK_KERNEL(int8_t);
+REGISTER_BOXING_UNPACK_KERNEL(int32_t);
+REGISTER_BOXING_UNPACK_KERNEL(int64_t);
 #endif
 
 }  // namespace oneflow

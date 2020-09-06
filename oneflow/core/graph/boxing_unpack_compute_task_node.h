@@ -27,8 +27,7 @@ class BoxingUnpackCompTaskNode : public CompTaskNode {
   ~BoxingUnpackCompTaskNode() override = default;
 
   void Init(const CompTaskNode* src_node, const LogicalBlobId& lbi, const Shape& logical_shape,
-            const bool need_transpose, const int64_t src_split_axis, const int64_t dst_split_axis,
-            const int64_t parallel_num);
+            const bool need_transpose, const int64_t src_split_axis, const int64_t dst_split_axis);
 
   TaskType GetTaskType() const override { return TaskType::kBoxingUnpack; }
 
@@ -38,11 +37,10 @@ class BoxingUnpackCompTaskNode : public CompTaskNode {
   void ConsumeAllRegsts() final;
   void InferProducedDataRegstTimeShape() final;
   bool need_transpose_;
-  int64_t src_split_axis_;
-  int64_t dst_split_axis_;
-  int64_t parallel_num_;
   LogicalBlobId lbi_;
-  Shape src_shape_;
+  Shape transpose_in_shape_;
+  Shape transpose_out_shape_;
+  std::vector<int32_t> perm_;
   Shape dst_shape_;
 };
 

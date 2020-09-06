@@ -65,7 +65,6 @@ Maybe<void> BoxingUnpackOp::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(this->op_conf().boxing_unpack_conf().dst_shape());
-  // out_blob_desc->mut_shape() = Shape({3,9});
   return Maybe<void>::Ok();
 }
 

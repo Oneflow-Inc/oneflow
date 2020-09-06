@@ -252,8 +252,8 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
 
         BoxingPackCompTaskNode* in_pack_node = ctx->task_graph()->NewNode<BoxingPackCompTaskNode>();
         in_pack_node->Init(
-            src_node, lbi, in_need_transpose, src_sbp_parallel.split_parallel().axis(),
-            dst_sbp_parallel.split_parallel().axis(), src_parallel_desc.parallel_num());
+            src_node, lbi, logical_blob_desc.shape(), in_need_transpose, src_sbp_parallel.split_parallel().axis(),
+            dst_sbp_parallel.split_parallel().axis());
         Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), in_pack_node);
 
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
@@ -265,8 +265,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
             ctx->task_graph()->NewNode<BoxingUnpackCompTaskNode>();
         out_unpack_node->Init(src_node, lbi, logical_blob_desc.shape(), out_need_transpose,
                               src_sbp_parallel.split_parallel().axis(),
-                              dst_sbp_parallel.split_parallel().axis(),
-                              src_parallel_desc.parallel_num());
+                              dst_sbp_parallel.split_parallel().axis());
 
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), out_unpack_node);
         Connect<TaskNode>(out_unpack_node, ctx->task_graph()->NewEdge(), dst_node);
