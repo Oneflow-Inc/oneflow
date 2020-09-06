@@ -37,9 +37,9 @@ from oneflow.python.onnx import util
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.onnx.load.common import get_unique_suffix
 from oneflow.python.onnx.load.common import supports_device as common_supports_device
-from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
+from oneflow.python.onnx.load.backend_handler import BackendHandler
 
-from oneflow.python.onnx.load.handlers.backend import *
+from oneflow.python.onnx.load.handlers import *
 from oneflow.python.onnx.onnx_wrapper import Node as OnnxNode
 import oneflow.python.onnx.load.common as common
 import io

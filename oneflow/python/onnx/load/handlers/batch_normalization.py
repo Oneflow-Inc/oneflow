@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 from oneflow.python.ops import layers
-from oneflow.python.onnx.load.handlers.backend_handler import BackendHandler
+from oneflow.python.onnx.load.backend_handler import BackendHandler
 from oneflow.python.onnx.handler import onnx_op
 from oneflow.python.onnx.handler import tf_func
 import string
