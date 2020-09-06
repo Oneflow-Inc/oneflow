@@ -48,6 +48,10 @@ fi
 
 cd $ONEFLOW_SRC_DIR
 
+# TF requires py3 to build
+export PATH=/opt/python/cp37-cp37m/bin:$PATH
+python --version
+
 THIRD_PARTY_BUILD_DIR=$CACHE_DIR/build-third-party
 THIRD_PARTY_INSTALL_DIR=$CACHE_DIR/build-third-party-install
 COMMON_CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release -DBUILD_RDMA=ON -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR"

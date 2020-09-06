@@ -11,11 +11,13 @@ python --version
 source scl_source enable devtoolset-7
 
 cache_dir=$ONEFLOW_SRC_DIR/manylinux2014-build-cache-cuda-10.2-xla
+cache_dir=$ONEFLOW_SRC_DIR/manylinux2014-build-cache-cuda-11.0-xla
 export TEST_TMPDIR=$cache_dir/bazel_cache
+gcc --version
+
 bash docker/package/manylinux/build_wheel.sh \
     --python3.6 \
     --cache-dir $cache_dir \
     --house-dir $wheelhouse_dir \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
-    -DXRT_TF_URL="file:///tensorflow-src" \
     -DWITH_XLA=ON

@@ -25,7 +25,8 @@ ENV SSL_CERT_FILE=/opt/_internal/certs.pem
 RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
     rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
     yum update -y && yum install -y epel-release && \
-    yum install -y intel-mkl-64bit-2020.0-088 nasm swig rdma-core-devel
+    yum -y install centos-release-scl && \
+    yum install -y intel-mkl-64bit-2020.0-088 nasm swig rdma-core-devel devtoolset-7-gcc*
 
 ENV TUNA_INDEX="-i https://pypi.tuna.tsinghua.edu.cn/simple"
 RUN /opt/python/cp35-cp35m/bin/pip install $TUNA_INDEX -U cmake && ln -s /opt/_internal/cpython-3.5.9/bin/cmake /usr/bin/cmake
@@ -44,9 +45,6 @@ RUN curl -L https://github.com/bazelbuild/bazel/releases/download/3.4.1/bazel-3.
     && chmod +x /usr/local/bin/bazel \
     && bazel
 
-RUN yum -y update --exclude=kernel-devel
-RUN yum -y install centos-release-scl
-RUN yum -y install devtoolset-7-gcc*
 RUN echo "source scl_source enable devtoolset-7" >> /etc/bashrc
 RUN source /etc/bashrc
 

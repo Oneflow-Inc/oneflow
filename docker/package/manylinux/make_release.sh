@@ -27,11 +27,34 @@ function release_cpu() {
         --package-name "${package_name}_cpu"
 }
 
-release_cpu
-release 11.0
-release 10.2
-release 10.1
-release 10.0
-release 9.2
-release 9.1
-release 9.0
+function release_xla() {
+    set -ex
+    docker_tag=oneflow:rel-manylinux2014-cuda-$1
+    if [ "$1" == "11.0" ]; then
+        cudnn_version=8
+    else
+        cudnn_version=7
+    fi
+    docker build --build-arg from=nvidia/cuda:$1-cudnn${cudnn_version}-devel-centos7 -f docker/package/manylinux/Dockerfile -t $docker_tag .
+    docker run --rm -it -v `pwd`:/oneflow-src -w /oneflow-src $docker_tag \
+        /oneflow-src/docker/package/manylinux/build_wheel.sh --cache-dir /oneflow-src/manylinux2014-build-cache-cuda-$1-xla \
+        --house-dir $wheelhouse_dir-xla \
+        --package-name ${package_name}_cu`echo $1 | tr -d .`_xla \
+        -DWITH_XLA=ON
+}
+
+# release_cpu
+# release 11.0
+# release 10.2
+# release 10.1
+# release 10.0
+# release 9.2
+# release 9.1
+# release 9.0
+release_xla 11.0
+release_xla 10.2
+release_xla 10.1
+release_xla 10.0
+release_xla 9.2
+release_xla 9.1
+release_xla 9.0
