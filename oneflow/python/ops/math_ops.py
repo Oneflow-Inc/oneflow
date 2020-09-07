@@ -1820,9 +1820,7 @@ def tril(
 
 @oneflow_export("math.polyval")
 def polyval(
-    coeffs: Sequence,
-    x: remote_blob_util.BlobDef,
-    name: Optional[str] = None
+    coeffs: Sequence, x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Computes the elementwise value of a polynomial.
 
@@ -1856,11 +1854,12 @@ def polyval(
     if name is None:
         name = id_util.UniqueStr("Polyval_")
     if not isinstance(coeffs, list):
-        raise ValueError("Argument coeffs must be list type "
-                         "found {}".format(type(coeffs)))
+        raise ValueError(
+            "Argument coeffs must be list type " "found {}".format(type(coeffs))
+        )
     if len(coeffs) < 1:
-        return flow.zeros_like(x, name = name)
-    p = flow.zeros_like(x, name = name)
+        return flow.zeros_like(x, name=name)
+    p = flow.zeros_like(x, name=name)
     for c in coeffs:
-        p = flow.math.add(c,flow.math.multiply(p,x))
+        p = flow.math.add(c, flow.math.multiply(p, x))
     return p

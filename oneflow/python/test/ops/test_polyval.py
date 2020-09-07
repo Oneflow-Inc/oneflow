@@ -37,9 +37,7 @@ def compare_with_tensorflow(device_type, in_shape, data_type):
     func_config.default_data_type(flow_data_type)
 
     @flow.global_function(function_config=func_config)
-    def PolyValJob0(
-        x: tp.Numpy.Placeholder(in_shape, dtype=flow_data_type)
-    ):
+    def PolyValJob0(x: tp.Numpy.Placeholder(in_shape, dtype=flow_data_type)):
         return flow.math.polyval([], x)
 
     @flow.global_function(function_config=func_config)
@@ -47,21 +45,21 @@ def compare_with_tensorflow(device_type, in_shape, data_type):
         x: tp.Numpy.Placeholder(in_shape, dtype=flow_data_type),
         coeffs0: tp.Numpy.Placeholder((1,), dtype=flow_data_type),
         coeffs1: tp.Numpy.Placeholder((1,), dtype=flow_data_type),
-        coeffs2: tp.Numpy.Placeholder((1,), dtype=flow_data_type)
+        coeffs2: tp.Numpy.Placeholder((1,), dtype=flow_data_type),
     ):
         return flow.math.polyval([coeffs0, coeffs1, coeffs2], x)
 
-    x = (np.random.random(in_shape) *
-         100).astype(type_name_to_np_type[data_type])
+    x = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
 
-    coeffs = [(np.random.random(1)*100).astype(type_name_to_np_type[data_type])
-              for i in range(3)]
+    coeffs = [
+        (np.random.random(1) * 100).astype(type_name_to_np_type[data_type])
+        for i in range(3)
+    ]
 
     # OneFlow
     of_out = []
     of_out.append(PolyValJob0(x).get().numpy())
-    of_out.append(PolyValJob3(
-        x, coeffs[0], coeffs[1], coeffs[2]).get().numpy())
+    of_out.append(PolyValJob3(x, coeffs[0], coeffs[1], coeffs[2]).get().numpy())
     # TensorFlow
     tf_out = []
     tf_out.append(tf.math.polyval([], x).numpy())
