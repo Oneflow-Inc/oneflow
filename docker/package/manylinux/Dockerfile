@@ -1,4 +1,6 @@
 ARG from
+ARG use_tuna_yum=1
+ARG pip_args="-i https://pypi.tuna.tsinghua.edu.cn/simple"
 FROM ${from}
 LABEL maintainer="OneFlow Maintainers"
 
@@ -13,8 +15,8 @@ ENV LD_LIBRARY_PATH /usr/local/lib64:/usr/local/lib
 ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
 
 # use tuna mirror
-COPY docker/package/manylinux/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo
-RUN yum makecache
+COPY docker/package/manylinux/CentOS-Base.repo /tmp/CentOS-Base.repo
+RUN if [ "${use_tuna}" = "1" ]; then mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/ && yum makecache ; fi
 
 ARG MANYLINUX_SHA=f5da004
 RUN yum -y install unzip && curl -L -o manylinux.zip https://github.com/pypa/manylinux/archive/${MANYLINUX_SHA}.zip && unzip manylinux.zip -d tmp && cp -r tmp/*/docker/build_scripts /build_scripts && bash build_scripts/build.sh && rm -r build_scripts tmp manylinux.zip
@@ -28,8 +30,7 @@ RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproduct
     yum -y install centos-release-scl && \
     yum install -y intel-mkl-64bit-2020.0-088 nasm swig rdma-core-devel devtoolset-7-gcc*
 
-ENV TUNA_INDEX="-i https://pypi.tuna.tsinghua.edu.cn/simple"
-RUN /opt/python/cp35-cp35m/bin/pip install $TUNA_INDEX -U cmake && ln -s /opt/_internal/cpython-3.5.9/bin/cmake /usr/bin/cmake
+RUN /opt/python/cp35-cp35m/bin/pip install $pip_args -U cmake && ln -s /opt/_internal/cpython-3.5.9/bin/cmake /usr/bin/cmake
 
 # overwrite patchelf to fix "maximum size exceed" problem
 RUN mkdir -p /tmp && curl -L -o 0.11.zip https://github.com/NixOS/patchelf/archive/0.11.zip && unzip 0.11.zip && cd patchelf-0.11 && sed -i 's/32/64/g' src/patchelf.cc && ./bootstrap.sh && ./configure && make -j`nproc` && make install && cd .. && rm -rf patchelf-0.11 0.11.zip

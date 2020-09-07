@@ -4,6 +4,9 @@ wheelhouse_dir=/oneflow-src/wheelhouse
 
 package_name=oneflow
 
+tuna_build_args=""
+tuna_build_args="--build-arg use_tuna_yum=0 --build-arg pip_args="""
+
 function release() {
     set -ex
     docker_tag=oneflow:rel-manylinux2014-cuda-$1
@@ -12,7 +15,9 @@ function release() {
     else
         cudnn_version=7
     fi
-    docker build --build-arg from=nvidia/cuda:$1-cudnn${cudnn_version}-devel-centos7 -f docker/package/manylinux/Dockerfile -t $docker_tag .
+    docker build --build-arg from=nvidia/cuda:$1-cudnn${cudnn_version}-devel-centos7 \
+        ${tuna_build_args} \
+        -f docker/package/manylinux/Dockerfile -t $docker_tag .
     docker run --rm -it -v `pwd`:/oneflow-src -w /oneflow-src $docker_tag \
         /oneflow-src/docker/package/manylinux/build_wheel.sh --cache-dir /oneflow-src/manylinux2014-build-cache-cuda-$1 \
         --house-dir $wheelhouse_dir \
@@ -35,7 +40,9 @@ function release_xla() {
     else
         cudnn_version=7
     fi
-    docker build --build-arg from=nvidia/cuda:$1-cudnn${cudnn_version}-devel-centos7 -f docker/package/manylinux/Dockerfile -t $docker_tag .
+    docker build --build-arg from=nvidia/cuda:$1-cudnn${cudnn_version}-devel-centos7 \
+        ${tuna_build_args} \
+        -f docker/package/manylinux/Dockerfile -t $docker_tag .
     docker run --rm -it -v `pwd`:/oneflow-src -w /oneflow-src $docker_tag \
         bash -l /oneflow-src/docker/package/manylinux/build_wheel.sh --cache-dir /oneflow-src/manylinux2014-build-cache-cuda-$1-xla \
         --house-dir $wheelhouse_dir-xla \
