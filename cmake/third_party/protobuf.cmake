@@ -6,7 +6,7 @@ set(PROTOBUF_BINARY_DIR ${THIRD_PARTY_DIR}/protobuf/bin)
 
 set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
 if(WITH_XLA)
-  set(PROTOBUF_URL "https://storage.googleapis.com/mirror.tensorflow.org/github.com/protocolbuffers/protobuf/archive/310ba5ee72661c081129eb878c1bbcec936b20f0.tar.gz")
+  set(PROTOBUF_URL "https://github.com/protocolbuffers/protobuf/archive/v3.9.2.zip")
 else()
   set(PROTOBUF_URL ${THIRD_PARTY_SUBMODULE_DIR}/protobuf/src/protobuf)
 endif()
