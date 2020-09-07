@@ -137,10 +137,11 @@ std::shared_ptr<Executable> XlaGraphCompiler::BuildExecutable(
   xla::ExecutableBuildOptions build_options;
   build_options.set_device_ordinal(this->device_ordinal_);
   build_options.set_result_layout(xla_output_shape);
-  MOLA_CHECK_AND_ASSIGN(auto executable,
+  MOLA_CHECK_AND_ASSIGN(auto executables,
                         client->Compile(computation, argument_layouts, build_options));
-  return std::make_shared<XlaExecutable>(builder_->name(), this->device_, xla_input_shapes, xla_output_shape,
-                                         std::move(executable));
+  CHECK(executables.size() == 1);
+  return std::make_shared<XlaExecutable>(builder_->name(), this->device_, xla_input_shapes,
+                                         xla_output_shape, std::move(executables.at(0)));
 }
 
 void XlaGraphCompiler::BuildEntryParameters(const std::vector<Parameter> &entry_params,
