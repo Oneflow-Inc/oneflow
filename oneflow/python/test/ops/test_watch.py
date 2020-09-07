@@ -32,6 +32,7 @@ def test_simple(test_case):
     ReluJob(data)
 
 
+@flow.unittest.num_gpus_per_node_required(2)
 def test_two_device(test_case):
     flow.config.gpu_device_num(2)
     data = np.ones((10,), dtype=np.float32)

@@ -21,6 +21,7 @@ import random
 import oneflow.typing as oft
 
 
+@flow.unittest.num_gpus_per_node_required(2)
 def test_shape(test_case):
     flow.clear_default_session()
     flow.config.gpu_device_num(2)

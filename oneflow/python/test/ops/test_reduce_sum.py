@@ -97,6 +97,7 @@ def test_scalar(test_case):
         compare_with_tensorflow(*arg)
 
 
+@flow.unittest.num_gpus_per_node_required(2)
 def test_batch_axis_reduced(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()

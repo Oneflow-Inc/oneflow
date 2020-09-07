@@ -23,7 +23,7 @@ namespace oneflow {
 GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
   set_thrd_id(thrd_id);
   mut_actor_thread() = std::thread([this, dev_id]() {
-    OF_CUDA_CHECK(cudaSetDevice(dev_id));
+    OF_CUDA_CHECK(cudaSetDevice(dev_id)) << "dev_id: " << dev_id;
     ThreadCtx ctx;
     ctx.g_cuda_stream.reset(new CudaStreamHandle(&cb_event_chan_));
     ctx.cb_event_chan = &cb_event_chan_;

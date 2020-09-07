@@ -71,6 +71,7 @@ def test_mirror_ccrelu(test_case):
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.num_gpus_per_node_required(2)
 def test_1n2c_mirror_dynamic_ccrelu(test_case):
     flow.config.gpu_device_num(2)
     func_config = flow.FunctionConfig()

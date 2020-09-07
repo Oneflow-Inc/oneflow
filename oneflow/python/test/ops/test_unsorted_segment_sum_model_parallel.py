@@ -100,6 +100,7 @@ def _test_unsorted_segment_sum_model_parallel_fw(
     test_case.assertTrue(np.allclose(out1.numpy(), out_arr))
 
 
+@flow.unittest.num_gpus_per_node_required(4)
 def test_unsorted_segment_sum_model_parallel_fw(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]

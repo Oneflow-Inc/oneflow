@@ -218,7 +218,7 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
 
     return where_fn([input]).get().numpy_list()[0]
 
-
+@flow.unittest.num_gpus_per_node_required(4)
 def test_where(test_case):
     arg_dict = OrderedDict()
     arg_dict["cond_shape"] = [[5, 10]]
@@ -229,7 +229,7 @@ def test_where(test_case):
     for arg in GenArgDict(arg_dict):
         _compare_with_np(test_case, **arg)
 
-
+@flow.unittest.num_gpus_per_node_required(4)
 def test_where_case_1(test_case):
     arg_dict = OrderedDict()
     arg_dict["cond_shape"] = [[4, 5, 8]]
@@ -240,7 +240,7 @@ def test_where_case_1(test_case):
     for arg in GenArgDict(arg_dict):
         _compare_with_np(test_case, **arg)
 
-
+@flow.unittest.num_gpus_per_node_required(4)
 def test_where_case_2(test_case):
     arg_dict = OrderedDict()
     arg_dict["cond_shape"] = [[10, 7, 9]]
@@ -251,7 +251,7 @@ def test_where_case_2(test_case):
     for arg in GenArgDict(arg_dict):
         _compare_with_np(test_case, **arg)
 
-
+@flow.unittest.num_gpus_per_node_required(4)
 def test_where_case_3(test_case):
     arg_dict = OrderedDict()
     arg_dict["cond_shape"] = [[12, 25, 6]]

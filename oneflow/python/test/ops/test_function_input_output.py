@@ -51,6 +51,7 @@ def test_FixedTensorDef_no_batch_axis(test_case):
     Foo(np.ones((2, 5), dtype=np.float32)).get()
 
 
+@flow.unittest.num_gpus_per_node_required(2)
 def test_FixedTensorDef_2_device(test_case):
     flow.config.gpu_device_num(2)
 

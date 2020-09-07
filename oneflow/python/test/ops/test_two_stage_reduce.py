@@ -75,6 +75,7 @@ def _test_two_stage_reduce(
     _compare_with_numpy(test_case, np_func, x, y, axis=tuple(axis))
 
 
+@flow.unittest.num_gpus_per_node_required(4)
 def test_two_stage_reduce_max(test_case):
     arg_dict = OrderedDict()
     arg_dict["flow_func"] = [flow.math.two_stage_reduce_max]

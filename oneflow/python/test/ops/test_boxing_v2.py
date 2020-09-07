@@ -49,6 +49,7 @@ def _test_split_to_split(
     test_case.assertTrue(np.array_equal(x, y))
 
 
+@flow.unittest.num_gpus_per_node_required(4)
 def test_split_to_split(test_case):
     arg_dict = OrderedDict()
     arg_dict["src_device_type"] = ["cpu", "gpu"]
@@ -88,6 +89,7 @@ def _test_split_to_broadcast(
     test_case.assertTrue(np.array_equal(x, y))
 
 
+@flow.unittest.num_gpus_per_node_required(4)
 def test_split_to_broadcast(test_case):
     arg_dict = OrderedDict()
     arg_dict["src_device_type"] = ["cpu", "gpu"]
@@ -126,6 +128,7 @@ def _test_broadcast_to_split(
     test_case.assertTrue(np.array_equal(x, y))
 
 
+@flow.unittest.num_gpus_per_node_required(4)
 def test_broadcast_to_split(test_case):
     arg_dict = OrderedDict()
     arg_dict["src_device_type"] = ["cpu", "gpu"]
@@ -165,6 +168,7 @@ def _test_partial_sum_to_split(
     test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
 
 
+@flow.unittest.num_gpus_per_node_required(4)
 def test_partial_sum_to_split(test_case):
     arg_dict = OrderedDict()
     arg_dict["src_device_type"] = ["cpu", "gpu"]
@@ -199,6 +203,7 @@ def _test_partial_sum_to_broadcast(
     test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
 
 
+@flow.unittest.num_gpus_per_node_required(4)
 def test_partial_sum_to_broadcast(test_case):
     arg_dict = OrderedDict()
     arg_dict["src_device_type"] = ["cpu", "gpu"]
@@ -231,6 +236,7 @@ def _test_broadcast_to_broadcast(
     test_case.assertTrue(np.array_equal(x, y))
 
 
+@flow.unittest.num_gpus_per_node_required(4)
 def test_broadcast_to_broadcast(test_case):
     arg_dict = OrderedDict()
     arg_dict["src_device_type"] = ["cpu", "gpu"]
@@ -274,6 +280,7 @@ def _test_multi_lbi(
     test_case.assertTrue(np.array_equal(x, r2))
 
 
+@flow.unittest.num_gpus_per_node_required(4)
 def test_multi_lbi(test_case):
     arg_dict = OrderedDict()
     arg_dict["src_device_type"] = ["cpu", "gpu"]

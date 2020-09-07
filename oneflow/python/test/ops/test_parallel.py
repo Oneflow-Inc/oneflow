@@ -23,6 +23,7 @@ def test_1n1c(test_case):
     NaiveTest(test_case)
 
 
+@flow.unittest.num_gpus_per_node_required(2)
 def test_1n2c(test_case):
     flow.config.gpu_device_num(2)
     NaiveTest(test_case)

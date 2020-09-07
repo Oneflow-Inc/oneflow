@@ -18,6 +18,7 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
+@flow.unittest.num_gpus_per_node_required(2)
 def test_non_distribute_optimizer(test_case):
     flow.config.gpu_device_num(2)
     flow.config.enable_debug_mode(True)

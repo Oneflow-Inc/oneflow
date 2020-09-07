@@ -22,6 +22,8 @@ from absl.testing import absltest
 from absl import flags
 import multiprocessing
 import unittest
+import hashlib
+import socket
 
 FLAGS = flags.FLAGS
 
@@ -43,16 +45,17 @@ def define_flags():
 define_flags()
 
 
-def random_port():
-    from socket import socket
-
-    ret = -1
-    with socket() as s:
-        s.bind(("", 0))
-        ret = int(s.getsockname()[1])
-        s.close()
-    assert ret > -1
-    return ret
+def random_port(s, total):
+    port = 1024 + int(hashlib.sha1(s.encode("utf-8")).hexdigest(), 16) % total
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    while port <= 65535:
+        try:
+            sock.bind(("", port))
+            sock.close()
+            return port
+        except OSError:
+            port += 1
+    raise IOError("no free ports")
 
 
 def main(argv):
@@ -67,29 +70,37 @@ def main(argv):
             filter_by_num_gpus=lambda x: x == 1,
             base_class=absltest.TestCase,
         )
-        ray.init()
+        ray.init(num_cpus=4, num_gpus=4)
         futures = []
 
-        num_cpus = 4
-        total_num_gpus = len(ray.get_gpu_ids())
-        if total_num_gpus > 0:
-            num_cpus = multiprocessing.cpu_count() / total_num_gpus
         if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             num_gpus = 0
         else:
             num_gpus = 1
         for k, v in single_gpu.items():
 
-            @ray.remote(num_cpus=num_cpus, num_gpus=num_gpus, max_retries=0)
+            @ray.remote(num_cpus=1, num_gpus=num_gpus, max_retries=0)
             def do_test():
-                print("running on ray: {}".format(k))
+                print(
+                    "running: {}".format(k),
+                    "ray.get_gpu_ids(): {}".format(ray.get_gpu_ids()),
+                    "CUDA_VISIBLE_DEVICES: {}".format(
+                        os.environ["CUDA_VISIBLE_DEVICES"]
+                    ),
+                )
                 flow.env.init()
-                flow.env.data_port(random_port())
-                flow.env.ctrl_port(random_port())
+                flow.env.data_port(random_port(k, 8))
+                flow.env.ctrl_port(random_port(k, 8))
                 runner = unittest.TextTestRunner()
-                runner.run(v())
 
-                return 0
+                def runner_run():
+                    # runner.run(v())
+                    print("k: {}".format(k))
+
+                p = multiprocessing.Process(target=runner_run)
+                p.start()
+                p.join()
+                return p.exitcode
 
             futures.append(do_test.remote())
         ray.get(futures)
