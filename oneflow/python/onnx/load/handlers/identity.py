@@ -13,15 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import tensorflow as tf
-
 from oneflow.python.onnx.load.backend_handler import BackendHandler
 from oneflow.python.onnx.handler import onnx_op
 from oneflow.python.onnx.handler import tf_func
+from oneflow.python.ops import array_ops
 
 
 @onnx_op("Identity")
-@tf_func(tf.identity)
+@tf_func(array_ops.identity)
 class Identity(BackendHandler):
     @classmethod
     def version_1(cls, node, tensor_dict, **kwargs):

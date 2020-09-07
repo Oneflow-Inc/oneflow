@@ -26,7 +26,7 @@ from .pool_mixin import PoolMixin
     "MaxPoolWithArgmax with pad is None or incompatible mode, or "
     + "MaxPoolWithArgmax with 4D or higher input, or"
     + "MaxPoolWithArgmax with column major "
-    + "are not supported in Tensorflow."
+    + "are not supported in Oneflow."
 )
 class MaxPool(PoolMixin, BackendHandler):
     @classmethod

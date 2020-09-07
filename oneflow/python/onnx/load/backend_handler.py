@@ -22,12 +22,6 @@ from __future__ import unicode_literals
 import copy
 import inspect
 
-import tensorflow as tf
-
-from oneflow.python.onnx.load.common import IS_PYTHON3
-from oneflow.python.onnx.load.common import get_data_format
-from oneflow.python.onnx.load.common import get_perm_from_formats
-from oneflow.python.onnx.load.common import supports_device
 from oneflow.python.onnx.handler import Handler
 import os
 import shutil
@@ -123,11 +117,11 @@ class BackendHandler(Handler):
         if name != "":
             attrs["name"] = name
 
-        return cls._run_tf_func(flow_func, inputs, attrs)
+        return cls._run_flow_func(flow_func, inputs, attrs)
 
     @classmethod
-    def _run_tf_func(cls, tf_func, inputs, attrs):
-        """ Run Tensorflow function.
+    def _run_flow_func(cls, tf_func, inputs, attrs):
+        """ Run Oneflow function.
     Use only acceptable attributes of function from attrs.
 
     :param tf_func: Tensorflow function.
@@ -135,16 +129,7 @@ class BackendHandler(Handler):
     :param attrs: Attributes.
     :return: Tensor.
     """
-        if IS_PYTHON3:
-            params = list(inspect.signature(tf_func).parameters.keys())
-        else:
-            # use closure to get args for function using decorator
-            if tf_func.__closure__ is not None:
-                while "__wrapped__" in tf_func.func_dict:
-                    tf_func = tf_func.func_dict["__wrapped__"]
-                params = inspect.getargspec(tf_func).args
-            else:
-                params = inspect.getargspec(tf_func).args
+        params = list(inspect.signature(tf_func).parameters.keys())
 
         attrs = cls._process_attrs(attrs)
         attrs = {p: v for p, v in attrs.items() if p in params}

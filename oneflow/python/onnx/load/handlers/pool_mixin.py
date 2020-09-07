@@ -14,12 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import numpy as np
-import tensorflow as tf
 
 from oneflow.python.ops import nn_ops
-from oneflow.python.onnx.load.common import get_data_format
-from oneflow.python.onnx.load.common import get_perm_from_formats
-from oneflow.python.onnx.load.common import logger
 
 
 class PoolMixin(object):
@@ -44,14 +40,6 @@ class PoolMixin(object):
             pads = node.attrs.get("pads", [0] * spatial_size * 2)
             pads = np.reshape(pads, [2, spatial_size]).T.tolist()
             pads = [[0, 0], [0, 0]] + pads
-            # # In case shape is fully defined, check if pads match
-            # # SAME padding in Tensorflow
-            # if x.shape.is_fully_defined() and pads != [0] * spatial_size * 2:
-            #   in_shape = x.get_shape()
-            #   same_paddings = calc_pads_same(in_shape[1:x_rank-1], kernel_shape,
-            #              strides, dilations, "SAME_UPPER")
-            #   if pads == same_paddings:
-            #     pads = "SAME_UPPER"
 
         count_include_pad = bool(node.attrs.get("count_include_pad", 0))
         if count_include_pad != 0:
