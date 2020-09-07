@@ -38,10 +38,17 @@ template<DeviceType device_type, typename T>
 class RMSPropMdUpdateKernelUtil final {
  public:
   // mean_square = (1 - decay_rate) * model_diff ^ 2 + decay_rate * mean_square
-  // model = model - learning_rate * model_diff / sqrt(mean_square + epsilon)
-  static void UpdateModel(DeviceCtx*, int64_t n, const int64_t* train_step,
-                          const float* learning_rate, T decay_rate, T epsilon, T weight_decay,
-                          const T* model_diff, T* model, T* mean_square);
+  // if (centered) {
+  //    mean_gradient = (1 - decay_rate) * model_diff + decay_rate * mean_gradient
+  //    denom_t = mean_square - mean_gradient ^ 2
+  // } else {
+  //    denom_t = mean_square
+  // }
+  // model = model - learning_rate * model_diff / sqrt(denom_t + epsilon)
+  static void UpdateModel(DeviceCtx* ctx, int64_t n, const int64_t* train_step,
+                          const float* learning_rate, T decay_rate, T epsilon, bool centered,
+                          T weight_decay, const T* model_diff, T* model, T* mean_square,
+                          T* mean_gradient);
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(RMSProp);
