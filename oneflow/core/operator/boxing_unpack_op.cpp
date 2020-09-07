@@ -61,10 +61,14 @@ const PbMessage& BoxingUnpackOp::GetCustomizedConf() const {
 Maybe<void> BoxingUnpackOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  const BoxingUnpackOpConf& boxing_unpack_conf = this->op_conf().boxing_unpack_conf();
+  const int64_t dst_split_axis = boxing_unpack_conf.dst_split_axis();
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  *out_blob_desc = *in_blob_desc;
-  out_blob_desc->mut_shape() = Shape(this->op_conf().boxing_unpack_conf().dst_shape());
+  *out_blob_desc = *GetBlobDesc4BnInOp("in");
+
+  Shape out_shape(boxing_unpack_conf.logical_shape());
+  out_shape.Set(dst_split_axis, out_shape.At(dst_split_axis) / boxing_unpack_conf.parallel_num());
+  out_blob_desc->mut_shape() = out_shape;
   return Maybe<void>::Ok();
 }
 

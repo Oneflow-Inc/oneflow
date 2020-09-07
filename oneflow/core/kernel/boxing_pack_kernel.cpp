@@ -37,14 +37,37 @@ void BoxingPackKernel<device_type, T>::ForwardDataContent(
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
   const BoxingPackOpConf& boxing_pack_conf = this->op_conf().boxing_pack_conf();
+  const int64_t dst_split_axis = boxing_pack_conf.dst_split_axis();
+  const int64_t parallel_num = boxing_pack_conf.parallel_num();
   if (boxing_pack_conf.need_transpose()) {
-    const Shape transpose_in_shape(boxing_pack_conf.transpose_in_shape());
-    const Shape transpose_out_shape(boxing_pack_conf.transpose_out_shape());
+    DimVector dim_vec;
+    const ShapeView& in_shape = in->shape();
+    FOR_RANGE(int64_t, i, 0, in_shape.NumAxes()) {
+      if (i == dst_split_axis) {
+        dim_vec.push_back(parallel_num);
+        dim_vec.push_back(in_shape.At(i) / parallel_num);
+      } else {
+        dim_vec.push_back(in_shape.At(i));
+      }
+    }
+    Shape transpose_in_shape = Shape(dim_vec);
+
+    DimVector out_dim_vec;
+    std::vector<int32_t> perm;
+    perm.push_back(dst_split_axis);
+    out_dim_vec.push_back(transpose_in_shape.At(dst_split_axis));
+    FOR_RANGE(int64_t, i, 0, transpose_in_shape.NumAxes()) {
+      if (i != dst_split_axis) {
+        perm.push_back(i);
+        out_dim_vec.push_back(transpose_in_shape.At(i));
+      }
+    }
+    Shape transpose_out_shape = Shape(out_dim_vec);
     NewKernelUtil<device_type>::Transpose(
-        ctx.device_ctx, transpose_in_shape.NumAxes(), transpose_in_shape, transpose_out_shape,
-        boxing_pack_conf.transpose_perm(), transpose_in_shape.elem_cnt(), in->dptr<T>(),
-        out->mut_dptr<T>());
+        ctx.device_ctx, transpose_in_shape.NumAxes(), transpose_in_shape, transpose_out_shape, perm,
+        transpose_in_shape.elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
   } else {
+    CHECK_EQ(dst_split_axis, 0);
     out->CopyDataContentFrom(ctx.device_ctx, in);
   }
 }

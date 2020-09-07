@@ -251,8 +251,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         CompTaskNode* dst_node = sorted_dst_comp_tasks.at(i);
 
         BoxingPackCompTaskNode* in_pack_node = ctx->task_graph()->NewNode<BoxingPackCompTaskNode>();
-        in_pack_node->Init(src_node, lbi, logical_blob_desc.shape(), in_need_transpose,
-                           src_sbp_parallel.split_parallel().axis(),
+        in_pack_node->Init(src_node, lbi, in_need_transpose,
                            dst_sbp_parallel.split_parallel().axis());
         Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), in_pack_node);
 

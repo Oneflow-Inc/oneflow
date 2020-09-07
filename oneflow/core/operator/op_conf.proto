@@ -968,18 +968,17 @@ message CastToStaticShapeOpConf {
 message BoxingPackOpConf {
   required LogicalBlobId lbi = 1;
   required bool need_transpose = 2;
-  optional ShapeProto transpose_in_shape = 3;
-  optional ShapeProto transpose_out_shape = 4;
-  repeated int32 transpose_perm = 5;
+  required int64 dst_split_axis = 3;
+  required int64 parallel_num = 4;
 }
 
 message BoxingUnpackOpConf {
   required LogicalBlobId lbi = 1;
   required bool need_transpose = 2;
-  optional ShapeProto transpose_in_shape = 3;
-  optional ShapeProto transpose_out_shape = 4;
-  repeated int32 transpose_perm = 5;
-  required ShapeProto dst_shape = 6;
+  required int64 src_split_axis = 3;
+  required int64 dst_split_axis = 4;
+  required int64 parallel_num = 5;
+  required ShapeProto logical_shape = 6;
 }
 
 message OperatorConf {

@@ -36,12 +36,12 @@ class BoxingUnpackCompTaskNode : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() final;
   void InferProducedDataRegstTimeShape() final;
-  bool need_transpose_;
+
   LogicalBlobId lbi_;
-  Shape transpose_in_shape_;
-  Shape transpose_out_shape_;
-  std::vector<int32_t> perm_;
-  Shape dst_shape_;
+  Shape logical_shape_;
+  bool need_transpose_;
+  int64_t src_split_axis_;
+  int64_t dst_split_axis_;
 };
 
 }  // namespace oneflow

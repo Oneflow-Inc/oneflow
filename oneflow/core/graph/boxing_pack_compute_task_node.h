@@ -26,8 +26,8 @@ class BoxingPackCompTaskNode : public CompTaskNode {
   BoxingPackCompTaskNode() = default;
   ~BoxingPackCompTaskNode() override = default;
 
-  void Init(const CompTaskNode* src_node, const LogicalBlobId& lbi, const Shape& logical_shape,
-            const bool need_transpose, const int64_t src_split_axis, const int64_t dst_split_axis);
+  void Init(const CompTaskNode* src_node, const LogicalBlobId& lbi, const bool need_transpose,
+            const int64_t dst_split_axis);
   TaskType GetTaskType() const override { return TaskType::kBoxingPack; }
 
  private:
@@ -36,9 +36,7 @@ class BoxingPackCompTaskNode : public CompTaskNode {
   void ConsumeAllRegsts() final;
   void InferProducedDataRegstTimeShape() final;
   bool need_transpose_;
-  Shape transpose_in_shape_;
-  Shape transpose_out_shape_;
-  std::vector<int32_t> perm_;
+  int64_t dst_split_axis_;
   LogicalBlobId lbi_;
 };
 
