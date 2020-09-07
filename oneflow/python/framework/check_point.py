@@ -236,7 +236,13 @@ META_INFO_FILENAME = "meta"
 
 
 class FileBackendVariableBlob:
-    def __init__(self, name: str, root_dir: str, dtype: Optional[dtype_util.dtype] = None, shape: Optional[Sequence[int]] = None):
+    def __init__(
+        self,
+        name: str,
+        root_dir: str,
+        dtype: Optional[dtype_util.dtype] = None,
+        shape: Optional[Sequence[int]] = None,
+    ):
         self.name_ = name
         self.root_dir_ = root_dir
         meta_info_path = os.path.join(self.root_dir_, META_INFO_FILENAME)
@@ -267,12 +273,15 @@ class FileBackendVariableBlob:
 
     def read_slice_as_numpy(self):
         SLICE_LEN = 8192
-        with open(self.file_path_, 'rb') as f:
+        with open(self.file_path_, "rb") as f:
             while True:
                 slice = f.read(SLICE_LEN)
                 if not slice:
                     break
-                yield np.frombuffer(slice, dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype))
+                yield np.frombuffer(
+                    slice,
+                    dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype),
+                )
 
     @property
     def file_path_(self):
@@ -312,8 +321,13 @@ class FileBackendVariableBlob:
         if self._IsTooLarge():
             raise RuntimeError('Blob "{}" is too large'.format(self.name))
         if not self.has_meta_info_:
-            raise RuntimeError('The variable "{}" does not have meta info'.format(self.name))
-        return np.fromfile(self.file_path_, dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype)).reshape(self.shape)
+            raise RuntimeError(
+                'The variable "{}" does not have meta info'.format(self.name)
+            )
+        return np.fromfile(
+            self.file_path_,
+            dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype),
+        ).reshape(self.shape)
 
 
 @oneflow_export("get_all_variables")
@@ -341,7 +355,7 @@ def load(path):
 
 
 def read_slice_from_blob(blob):
-    #TODO(daquexian): implement real read_slice_from_blob after dynamic network is implemented
+    # TODO(daquexian): implement real read_slice_from_blob after dynamic network is implemented
     yield blob.numpy()
 
 
@@ -355,7 +369,7 @@ def save(var_dict, path):
         meta_info.data_type = var.dtype.oneflow_proto_dtype
         param_path = os.path.join(path, name, "out")
         os.makedirs(os.path.dirname(param_path), exist_ok=True)
-        with open(param_path, 'wb') as f:
+        with open(param_path, "wb") as f:
             for slice in read_slice_from_blob(var):
                 f.write(slice.tobytes())
     with open(os.path.join(path, META_INFO_FILENAME), "w") as f:
@@ -363,22 +377,24 @@ def save(var_dict, path):
 
 
 def slice_assign(slice_id, slice, var_name):
-    #TODO(daquexian): replace it with real slice_assign
+    # TODO(daquexian): replace it with real slice_assign
     assert slice_id == 0
     var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
     slice = np.reshape(slice, var_blob.shape)
-    interface_op_read_and_write.FeedValueToInterfaceBlob(
-        var_name, slice
-    )
+    interface_op_read_and_write.FeedValueToInterfaceBlob(var_name, slice)
 
 
 def _FeedValueToVariable(var_name, value_blob):
     if isinstance(value_blob, EagerBlobTrait):
-        raise NotImplementedError("Loading value from another blob has not been implemented")
+        raise NotImplementedError(
+            "Loading value from another blob has not been implemented"
+        )
     elif isinstance(value_blob, FileBackendVariableBlob):
         if not value_blob.has_meta_info_:
             var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
-            value_blob = FileBackendVariableBlob(value_blob.name, value_blob.root_dir_, var_blob.dtype, var_blob.shape)
+            value_blob = FileBackendVariableBlob(
+                value_blob.name, value_blob.root_dir_, var_blob.dtype, var_blob.shape
+            )
         for slice_id, slice in enumerate(value_blob.read_slice_as_numpy()):
             slice_assign(slice_id, slice, var_name)
     else:

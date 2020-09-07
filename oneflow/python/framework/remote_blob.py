@@ -263,7 +263,7 @@ class EagerBlobTrait(object):
         return self.numpy()
 
     def __repr__(self):
-        return '({}, shape={}, dtype={})'.format(
+        return "({}, shape={}, dtype={})".format(
             self._NumpyFriendlyToRepr(), self.shape, self.dtype
         )
 

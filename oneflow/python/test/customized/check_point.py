@@ -46,7 +46,7 @@ check_point.init()
 
 all_vars = flow.get_all_variables()
 print(all_vars)
-print('--------')
+print("--------")
 
 legacy = False
 if legacy:
@@ -60,9 +60,8 @@ else:
 
 vars = flow.load(save_dir)
 print(vars)
-print('--------')
+print("--------")
 flow.checkpoint.load_variables({"y": vars["x"]})
 
 print(flow.get_all_variables())
 print(add())
-
