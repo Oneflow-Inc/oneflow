@@ -1,6 +1,6 @@
 set -ex
 
-wheelhouse_dir=/oneflow-src/wheelhouse-0.1.11b1
+wheelhouse_dir=`pwd`/wheelhouse-0.1.11b1
 
 package_name=oneflow
 
@@ -18,15 +18,15 @@ function release() {
     docker build --build-arg from=nvidia/cuda:$1-cudnn${cudnn_version}-devel-centos7 \
         ${tuna_build_args} \
         -f docker/package/manylinux/Dockerfile -t $docker_tag .
-    docker run --rm -it -v `pwd`:/oneflow-src -w /oneflow-src $docker_tag \
-        /oneflow-src/docker/package/manylinux/build_wheel.sh --cache-dir /oneflow-src/manylinux2014-build-cache-cuda-$1 \
+    docker run --rm -it -v `pwd`:`pwd` -w `pwd` $docker_tag \
+        docker/package/manylinux/build_wheel.sh --cache-dir `pwd`/manylinux2014-build-cache-cuda-$1 \
         --house-dir $wheelhouse_dir \
         --package-name ${package_name}_cu`echo $1 | tr -d .`
 }
 
 function release_cpu() {
-    docker run --rm -it -v `pwd`:/oneflow-src -w /oneflow-src oneflow:rel-manylinux2014-cuda-10.2 \
-        /oneflow-src/docker/package/manylinux/build_wheel.sh --cache-dir /oneflow-src/manylinux2014-build-cache-cpu \
+    docker run --rm -it -v `pwd`:`pwd` -w `pwd` oneflow:rel-manylinux2014-cuda-10.2 \
+        docker/package/manylinux/build_wheel.sh --cache-dir `pwd`/manylinux2014-build-cache-cpu \
         --house-dir $wheelhouse_dir \
         -DBUILD_CUDA=OFF \
         --package-name "${package_name}_cpu"
@@ -43,8 +43,8 @@ function release_xla() {
     docker build --build-arg from=nvidia/cuda:$1-cudnn${cudnn_version}-devel-centos7 \
         ${tuna_build_args} \
         -f docker/package/manylinux/Dockerfile -t $docker_tag .
-    docker run --rm -it -v `pwd`:/oneflow-src -w /oneflow-src $docker_tag \
-        bash -l /oneflow-src/docker/package/manylinux/build_wheel.sh --cache-dir /oneflow-src/manylinux2014-build-cache-cuda-$1-xla \
+    docker run --rm -it -v `pwd`:`pwd` -w `pwd` $docker_tag \
+        bash -l docker/package/manylinux/build_wheel.sh --cache-dir `pwd`/manylinux2014-build-cache-cuda-$1-xla \
         --house-dir $wheelhouse_dir-xla \
         --package-name ${package_name}_cu`echo $1 | tr -d .`_xla \
         -DWITH_XLA=ON
