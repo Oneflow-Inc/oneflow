@@ -39,6 +39,8 @@ class BatchNormalization(BackendHandler):
 
         name = "bn_" + randomString()
 
+        # update oneflow layers.batch_normalization to avoid this
+        # it does not work on model with mulitple bn
         cls.copy_variable_file(node.input_tensor_names[1], name + "-gamma")
         cls.copy_variable_file(node.input_tensor_names[2], name + "-beta")
         cls.copy_variable_file(node.input_tensor_names[3], name + "-moving_mean")

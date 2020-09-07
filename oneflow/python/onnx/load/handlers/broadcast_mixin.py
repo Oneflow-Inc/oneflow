@@ -14,19 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import numpy as np
-import tensorflow as tf
+
+import oneflow.python.framework.remote_blob as remote_blob_util
 
 
 class BroadcastMixin(object):
     @classmethod
     def explicit_broadcast(cls, inputs, axis=None, tensor_dict=None):
-        x = inputs[0] if isinstance(inputs[0], tf.Tensor) else tensor_dict[inputs[0]]
-        y = inputs[1] if isinstance(inputs[1], tf.Tensor) else tensor_dict[inputs[1]]
+        x = (
+            inputs[0]
+            if isinstance(inputs[0], remote_blob_util.BlobDef)
+            else tensor_dict[inputs[0]]
+        )
+        y = (
+            inputs[1]
+            if isinstance(inputs[1], remote_blob_util.BlobDeftf.Tensor)
+            else tensor_dict[inputs[1]]
+        )
 
         if np.prod(y.shape) == 1:
             return y
 
-        if not isinstance(x, tf.Tensor) or not isinstance(y, tf.Tensor):
+        if not isinstance(x, remote_blob_util.BlobDef) or not isinstance(
+            y, remote_blob_util.BlobDef
+        ):
             raise ValueError("Targets for explicit broadcasting need to be Tensor.")
 
         if axis is None:
@@ -43,7 +54,8 @@ class BroadcastMixin(object):
         new_y = y
         for i in range(total_num_dim):
             if i not in dims:
-                new_y = tf.expand_dims(new_y, i)
+                raise NotImplementedError()
+                # new_y = tf.expand_dims(new_y, i)
         return new_y
 
     @classmethod
