@@ -87,7 +87,9 @@ def compare_with_tensorflow_rmsprop(
         gradients = tape.gradient(loss, var)
         opt.apply_gradients(zip([gradients], [var]))
 
-    assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-3, atol=1e-3,)
+    assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-3, atol=1e-3,), (
+        x.flatten() - var.numpy().flatten()
+    )
 
 
 def compare_with_tensorflow_adam(
