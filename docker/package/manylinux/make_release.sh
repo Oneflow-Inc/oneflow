@@ -1,6 +1,6 @@
 set -ex
 
-wheelhouse_dir=/oneflow-src/wheelhouse
+wheelhouse_dir=/oneflow-src/wheelhouse-0.1.11b1
 
 package_name=oneflow
 
