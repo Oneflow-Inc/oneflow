@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/collective_boxing_task_node.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
-#include "oneflow/core/graph/boxing_pack_compute_task_node.h"
+#include "oneflow/core/graph/boxing_all2all_pack_compute_task_node.h"
 #include "oneflow/core/graph/boxing_unpack_compute_task_node.h"
 
 namespace oneflow {
@@ -250,7 +250,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         CompTaskNode* src_node = sorted_src_comp_tasks.at(i);
         CompTaskNode* dst_node = sorted_dst_comp_tasks.at(i);
 
-        BoxingPackCompTaskNode* in_pack_node = ctx->task_graph()->NewNode<BoxingPackCompTaskNode>();
+        BoxingAll2AllPackCompTaskNode* in_pack_node = ctx->task_graph()->NewNode<BoxingAll2AllPackCompTaskNode>();
         in_pack_node->Init(src_node, lbi, in_need_transpose,
                            dst_sbp_parallel.split_parallel().axis());
         Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), in_pack_node);

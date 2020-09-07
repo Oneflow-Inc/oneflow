@@ -19,11 +19,11 @@ limitations under the License.
 
 namespace oneflow {
 
-class BoxingPackOp : public Operator {
+class BoxingAll2AllPackOp : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingPackOp);
-  BoxingPackOp() = default;
-  ~BoxingPackOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(BoxingAll2AllPackOp);
+  BoxingAll2AllPackOp() = default;
+  ~BoxingAll2AllPackOp() override = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -42,21 +42,21 @@ class BoxingPackOp : public Operator {
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };
 
-void BoxingPackOp::InitFromOpConf() {
+void BoxingAll2AllPackOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
 }
 
-LogicalBlobId BoxingPackOp::lbi4ibn(const std::string& input_bn) const {
-  return this->op_conf().boxing_pack_conf().lbi();
+LogicalBlobId BoxingAll2AllPackOp::lbi4ibn(const std::string& input_bn) const {
+  return this->op_conf().boxing_all2all_pack_conf().lbi();
 }
 
-LogicalBlobId BoxingPackOp::lbi4obn(const std::string& output_bn) const {
-  return this->op_conf().boxing_pack_conf().lbi();
+LogicalBlobId BoxingAll2AllPackOp::lbi4obn(const std::string& output_bn) const {
+  return this->op_conf().boxing_all2all_pack_conf().lbi();
 }
-const PbMessage& BoxingPackOp::GetCustomizedConf() const { return op_conf().boxing_pack_conf(); }
+const PbMessage& BoxingAll2AllPackOp::GetCustomizedConf() const { return op_conf().boxing_all2all_pack_conf(); }
 
-Maybe<void> BoxingPackOp::InferBlobDescs(
+Maybe<void> BoxingAll2AllPackOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
@@ -66,6 +66,6 @@ Maybe<void> BoxingPackOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP(OperatorConf::kBoxingPackConf, BoxingPackOp);
+REGISTER_OP(OperatorConf::kBoxingAll2AllPackConf, BoxingAll2AllPackOp);
 
 }  // namespace oneflow
