@@ -53,9 +53,6 @@ void Operator::Init(const OperatorConf& op_conf, const JobDesc* conf_job_desc) {
   OperatorConf* this_op_conf = op_attribute_.mutable_op_conf();
   *this_op_conf = op_conf;
   if (has_job_desc() && job_desc().IsPredict()) { this_op_conf->set_trainable(false); }
-  if (has_job_desc() && this_op_conf->has_enable_cudnn() == false) {
-    this_op_conf->set_enable_cudnn(job_desc().EnableCudnn());
-  }
   InitFromOpConf();
 }
 
@@ -457,17 +454,6 @@ void Operator::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
-}
-
-int64_t Operator::cudnn_buf_limit_byte() const {
-  int64_t cudnn_buf_limit_mbyte = 0;
-  if (op_conf().has_cudnn_buf_limit_mbyte()) {
-    cudnn_buf_limit_mbyte = op_conf().cudnn_buf_limit_mbyte();
-  } else {
-    CHECK(has_job_desc());
-    cudnn_buf_limit_mbyte = job_desc().cudnn_buf_limit_mbyte();
-  }
-  return cudnn_buf_limit_mbyte * 1024 * 1024;
 }
 
 std::string Operator::Bn2ConfName(const std::string& bn) const {

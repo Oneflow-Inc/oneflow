@@ -47,5 +47,9 @@ class WhereKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_KERNEL, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ)
+#ifdef WITH_CUDA
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_KERNEL, (DeviceType::kGPU), FLOAT16_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ)
+#endif
 
 }  // namespace oneflow
