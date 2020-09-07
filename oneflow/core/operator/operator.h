@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 #define ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 
+#include <iostream>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
@@ -237,7 +238,20 @@ class Operator {
       const ParallelDesc& parallel_desc) const;
   // a virtual function to get Sbp signatures. Should be implemented for a specific op.
   virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-    UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
+    // UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
+    // std::cout << " GetSbpSignatures implemented, op name: " << op_name() << std::endl;
+    SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Broadcast(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+      SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+      SbpSignatureBuilder()
+      .Broadcast(input_bns())
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
   virtual Maybe<void> InferMirroredSignature(

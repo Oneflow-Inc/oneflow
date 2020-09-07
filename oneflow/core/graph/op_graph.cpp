@@ -394,8 +394,8 @@ Maybe<void> OpGraph::Init(const Job& job) {
   std::cout << "test job complete. \n";
   SbpConstructor sbp_constructor;
   sbp_constructor.constructSbpGraph(*this, job);
-  SbpConstructor sbp_constructor_im(true);
-  sbp_constructor_im.constructSbpGraph(*this, job);
+  // SbpConstructor sbp_constructor_im(true);
+  // sbp_constructor_im.constructSbpGraph(*this, job);
 
   ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
   return Maybe<void>::Ok();
@@ -511,6 +511,9 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const OptInt64*> {
     return op_node->op().BatchAxis4BnInOp(bn_in_op);
   };
+  if (op_node->op().op_name().find("Return_72") != std::string::npos) {
+    std::cout << op_node->op().op_name() << std::endl;
+  }
   CHECK_JUST(InferOpSbpSignature(op_node->mut_op(), sbp_sig_conf, op_node->parallel_desc(),
                                  ibn2sbp_infer_hint, BatchAxis4BnInOp));
   op_node->InitLbi2SbpParallel();
