@@ -97,7 +97,7 @@ do
     cmake -DTHIRD_PARTY=OFF -DONEFLOW=ON \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
         $COMMON_CMAKE_ARGS \
-        -DPython3_EXECUTABLE=PY_BIN \
+        -DPython3_EXECUTABLE=${PY_BIN} \
         $EXTRA_ONEFLOW_CMAKE_ARGS \
         $ONEFLOW_SRC_DIR
     cmake --build . -j `nproc`
