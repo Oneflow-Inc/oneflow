@@ -27,7 +27,7 @@ function release() {
 function release_cpu() {
     docker run --rm -it -v `pwd`:`pwd` -w `pwd` oneflow:rel-manylinux2014-cuda-10.2 \
         docker/package/manylinux/build_wheel.sh --cache-dir `pwd`/manylinux2014-build-cache-cpu \
-        --house-dir $wheelhouse_dir \
+        --house-dir $wheelhouse_dir-cpu \
         -DBUILD_CUDA=OFF \
         --package-name "${package_name}_cpu"
 }
@@ -50,18 +50,19 @@ function release_xla() {
         -DWITH_XLA=ON
 }
 
-# release_cpu
 # release 11.0
 # release 10.2
-# release 10.1
+release 10.1
 # release 10.0
 # release 9.2
 # release 9.1
 # release 9.0
-release_xla 11.0
-release_xla 10.2
-release_xla 10.1
-release_xla 10.0
-release_xla 9.2
-release_xla 9.1
-release_xla 9.0
+
+# release_cpu
+
+# release_xla 11.0
+# release_xla 10.2
+# release_xla 10.1
+# release_xla 10.0
+
+# failed to build XLA with CUDA 9.X
