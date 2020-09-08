@@ -1835,13 +1835,19 @@ def tril(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-@oneflow_export("math.in_top_k","in_top_k")
+
+
+@oneflow_export("math.in_top_k", "in_top_k")
 def in_top_k(predictions, targets, k=1, name=None):
     if name is None:
         name = id_util.UniqueStr("intopk_")
-    return flow.user_op_builder(name).Op("in_top_k")\
-            .Input("predictions",[predictions])\
-            .Input("targets",[targets])\
-            .SetAttr("k", k, "AttrTypeInt32",)\
-            .Output("out")\
-            .Build().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name)
+        .Op("in_top_k")
+        .Input("predictions", [predictions])
+        .Input("targets", [targets])
+        .SetAttr("k", k, "AttrTypeInt32",)
+        .Output("out")
+        .Build()
+        .RemoteBlobList()[0]
+    )
