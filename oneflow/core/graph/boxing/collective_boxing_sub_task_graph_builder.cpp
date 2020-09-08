@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/graph/collective_boxing_task_node.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/boxing_all2all_pack_compute_task_node.h"
-#include "oneflow/core/graph/boxing_unpack_compute_task_node.h"
+#include "oneflow/core/graph/boxing_all2all_unpack_compute_task_node.h"
 
 namespace oneflow {
 
@@ -250,24 +250,24 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         CompTaskNode* src_node = sorted_src_comp_tasks.at(i);
         CompTaskNode* dst_node = sorted_dst_comp_tasks.at(i);
 
-        BoxingAll2AllPackCompTaskNode* in_pack_node = ctx->task_graph()->NewNode<BoxingAll2AllPackCompTaskNode>();
-        in_pack_node->Init(src_node, lbi, in_need_transpose,
+        BoxingAll2AllPackCompTaskNode* all2all_pack_node = ctx->task_graph()->NewNode<BoxingAll2AllPackCompTaskNode>();
+        all2all_pack_node->Init(src_node, lbi, in_need_transpose,
                            dst_sbp_parallel.split_parallel().axis());
-        Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), in_pack_node);
+        Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), all2all_pack_node);
 
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, dst_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAll2All, -1);
-        Connect<TaskNode>(in_pack_node, ctx->task_graph()->NewEdge(), collective_node);
+        Connect<TaskNode>(all2all_pack_node, ctx->task_graph()->NewEdge(), collective_node);
 
-        BoxingUnpackCompTaskNode* out_unpack_node =
-            ctx->task_graph()->NewNode<BoxingUnpackCompTaskNode>();
-        out_unpack_node->Init(src_node, lbi, logical_blob_desc.shape(), out_need_transpose,
+        BoxingAll2AllUnpackCompTaskNode* all2all_unpack_node =
+            ctx->task_graph()->NewNode<BoxingAll2AllUnpackCompTaskNode>();
+        all2all_unpack_node->Init(src_node, lbi, logical_blob_desc.shape(), out_need_transpose,
                               src_sbp_parallel.split_parallel().axis(),
                               dst_sbp_parallel.split_parallel().axis());
 
-        Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), out_unpack_node);
-        Connect<TaskNode>(out_unpack_node, ctx->task_graph()->NewEdge(), dst_node);
+        Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), all2all_unpack_node);
+        Connect<TaskNode>(all2all_unpack_node, ctx->task_graph()->NewEdge(), dst_node);
       }
       return TRY(BuildSubTskGphBuilderStatus(
           sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,

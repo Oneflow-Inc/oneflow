@@ -29,7 +29,7 @@ void NaiveActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 
 REGISTER_ACTOR(TaskType::kSliceBoxing, NaiveActor);
 REGISTER_ACTOR(TaskType::kBoxingIdentity, NaiveActor);
-REGISTER_ACTOR(TaskType::kBoxingPack, NaiveActor);
-REGISTER_ACTOR(TaskType::kBoxingUnpack, NaiveActor);
+REGISTER_ACTOR(TaskType::kBoxingAll2AllPack, NaiveActor);
+REGISTER_ACTOR(TaskType::kBoxingAll2AllUnpack, NaiveActor);
 
 }  // namespace oneflow

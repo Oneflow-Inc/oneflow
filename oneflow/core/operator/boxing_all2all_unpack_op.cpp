@@ -19,11 +19,11 @@ limitations under the License.
 
 namespace oneflow {
 
-class BoxingUnpackOp : public Operator {
+class BoxingAll2AllUnpackOp : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingUnpackOp);
-  BoxingUnpackOp() = default;
-  ~BoxingUnpackOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(BoxingAll2AllUnpackOp);
+  BoxingAll2AllUnpackOp() = default;
+  ~BoxingAll2AllUnpackOp() override = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -42,36 +42,36 @@ class BoxingUnpackOp : public Operator {
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };
 
-void BoxingUnpackOp::InitFromOpConf() {
+void BoxingAll2AllUnpackOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
 }
 
-LogicalBlobId BoxingUnpackOp::lbi4ibn(const std::string& input_bn) const {
-  return this->op_conf().boxing_unpack_conf().lbi();
+LogicalBlobId BoxingAll2AllUnpackOp::lbi4ibn(const std::string& input_bn) const {
+  return this->op_conf().boxing_all2all_unpack_conf().lbi();
 }
 
-LogicalBlobId BoxingUnpackOp::lbi4obn(const std::string& output_bn) const {
-  return this->op_conf().boxing_unpack_conf().lbi();
+LogicalBlobId BoxingAll2AllUnpackOp::lbi4obn(const std::string& output_bn) const {
+  return this->op_conf().boxing_all2all_unpack_conf().lbi();
 }
-const PbMessage& BoxingUnpackOp::GetCustomizedConf() const {
-  return op_conf().boxing_unpack_conf();
+const PbMessage& BoxingAll2AllUnpackOp::GetCustomizedConf() const {
+  return op_conf().boxing_all2all_unpack_conf();
 }
 
-Maybe<void> BoxingUnpackOp::InferBlobDescs(
+Maybe<void> BoxingAll2AllUnpackOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const BoxingUnpackOpConf& boxing_unpack_conf = this->op_conf().boxing_unpack_conf();
-  const int64_t dst_split_axis = boxing_unpack_conf.dst_split_axis();
+  const BoxingAll2AllUnpackOpConf& boxing_all2all_unpack_conf = this->op_conf().boxing_all2all_unpack_conf();
+  const int64_t dst_split_axis = boxing_all2all_unpack_conf.dst_split_axis();
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *GetBlobDesc4BnInOp("in");
 
-  Shape out_shape(boxing_unpack_conf.logical_shape());
-  out_shape.Set(dst_split_axis, out_shape.At(dst_split_axis) / boxing_unpack_conf.parallel_num());
+  Shape out_shape(boxing_all2all_unpack_conf.logical_shape());
+  out_shape.Set(dst_split_axis, out_shape.At(dst_split_axis) / boxing_all2all_unpack_conf.parallel_num());
   out_blob_desc->mut_shape() = out_shape;
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP(OperatorConf::kBoxingUnpackConf, BoxingUnpackOp);
+REGISTER_OP(OperatorConf::kBoxingAll2AllUnpackConf, BoxingAll2AllUnpackOp);
 
 }  // namespace oneflow

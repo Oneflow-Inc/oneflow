@@ -972,7 +972,7 @@ message BoxingAll2AllPackOpConf {
   required int64 parallel_num = 4;
 }
 
-message BoxingUnpackOpConf {
+message BoxingAll2AllUnpackOpConf {
   required LogicalBlobId lbi = 1;
   required bool need_transpose = 2;
   required int64 src_split_axis = 3;
@@ -1044,7 +1044,7 @@ message OperatorConf {
     CastToStaticShapeOpConf cast_to_static_shape_conf = 173;
     UserOpConf user_conf = 199;
     BoxingAll2AllPackOpConf boxing_all2all_pack_conf = 174;
-    BoxingUnpackOpConf boxing_unpack_conf = 175;
+    BoxingAll2AllUnpackOpConf boxing_all2all_unpack_conf = 175;
     
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

@@ -36,7 +36,7 @@ enum TaskType {
   kCollectiveBoxingGeneric = 58;
   kBoxingIdentity = 59;
   kBoxingAll2AllPack = 60;
-  kBoxingUnpack = 61;
+  kBoxingAll2AllUnpack = 61;
 };
 
 enum AreaType {
