@@ -34,8 +34,34 @@ class sigmoid_py(flow.PyOp):
         return 1/(1 + np.exp(-x))
 
     @staticmethod
+    def ForwardOpConf():
+        return (
+            flow.py_op_builder("sigmoid_py")
+            .Input("in", in_shape)
+            .Output("out", out_shape)
+            .Build())
+
+    @staticmethod
     def Backward(y, dy):
         return y * (1 - y) * dy
+
+    @staticmethod
+    def BackwardOpConf():
+        return (
+            flow.py_op_builder("sigmoid_py_grad")
+            .Input("y", y_shape)
+            .Input("dy", dy_shape)
+            .Output("dx", dx_shape)
+            .Build())
+
+    @staticmethod
+    def BPConf():
+        return (
+            flow.bp_conf_builder("sigmoid_py_grad")
+            .InputBind("y", "out")
+            .InputBind("dy", grad("out"))
+            .OutputBind("dx", "in")
+            .Build())
 
 
 func_config.add_py_op(sigmoid_py)
