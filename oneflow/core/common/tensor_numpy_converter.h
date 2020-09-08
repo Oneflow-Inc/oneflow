@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_CPP_PY_H_
-#define ONEFLOW_CORE_COMMON_CPP_PY_H_
+#ifndef ONEFLOW_CORE_COMMON_TENSOR_NUMPY_CONVERTER_H_
+#define ONEFLOW_CORE_COMMON_TENSOR_NUMPY_CONVERTER_H_
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
@@ -104,4 +104,4 @@ void NumpyToTensor(PyObject* arg, user_op::Tensor* tensor) {
 }
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_CPP_PY_H_
+#endif  // ONEFLOW_CORE_COMMON_TENSOR_NUMPY_CONVERTER_H_
