@@ -13,14 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-
 import operator
 from functools import reduce
 
+from oneflow.python.onnx.load.handler import BackendHandler
+from oneflow.python.onnx.load.handler import onnx_op
+from oneflow.python.onnx.load.handler import flow_func
 from oneflow.python.ops import array_ops
-from oneflow.python.onnx.load.backend_handler import BackendHandler
-from oneflow.python.onnx.handler import onnx_op
+
+
+@onnx_op("Identity")
+@flow_func(array_ops.identity)
+class Identity(BackendHandler):
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls.run_onnx_node(node, tensor_dict, **kwargs)
 
 
 @onnx_op("Flatten")
@@ -53,3 +60,5 @@ class Flatten(BackendHandler):
     @classmethod
     def version_11(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
+
+    

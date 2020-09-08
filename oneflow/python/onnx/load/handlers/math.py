@@ -13,9 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow as flow
+from oneflow.python.onnx.load.handler import BackendHandler
+from oneflow.python.onnx.load.handler import onnx_op
+from oneflow.python.onnx.load.handler import flow_func
+from oneflow.python.ops import math_ops
 from oneflow.python.ops import linalg
-from oneflow.python.onnx.load.backend_handler import BackendHandler
-from oneflow.python.onnx.handler import onnx_op
+from .math_mixin import ArithmeticMixin
+
+
+@onnx_op("Add")
+@flow_func(math_ops.add)
+class Add(ArithmeticMixin, BackendHandler):
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls.limited_broadcast(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_6(cls, node, tensor_dict, **kwargs):
+        return cls.limited_broadcast(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_7(cls, node, tensor_dict, **kwargs):
+        return [cls.run_onnx_node(node, tensor_dict, **kwargs)]
 
 
 @onnx_op("Gemm")
@@ -59,3 +79,15 @@ class Gemm(BackendHandler):
     @classmethod
     def version_11(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
+
+
+@onnx_op("MatMul")
+@flow_func(linalg.matmul)
+class MatMul(BackendHandler):
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls.run_onnx_node(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_9(cls, node, tensor_dict, **kwargs):
+        return cls.run_onnx_node(node, tensor_dict, **kwargs)

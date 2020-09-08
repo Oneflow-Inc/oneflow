@@ -23,7 +23,7 @@ from __future__ import absolute_import
 
 import logging
 
-from oneflow.python.onnx.handler import flow_op
+from oneflow.python.onnx.save.handler import flow_op
 
 
 logger = logging.getLogger(__name__)

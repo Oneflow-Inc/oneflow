@@ -20,15 +20,15 @@ from onnx import numpy_helper
 import oneflow as flow
 from oneflow.python.ops import get_variable
 from oneflow.python.onnx import util
-from oneflow.python.onnx.load.backend_handler import BackendHandler
-from oneflow.python.onnx.handler import onnx_op
-from oneflow.python.onnx.handler import tf_func
+from oneflow.python.onnx.load.handler import BackendHandler
+from oneflow.python.onnx.load.handler import onnx_op
+from oneflow.python.onnx.load.handler import flow_func
 
 import os
 
 
 @onnx_op("Constant")
-@tf_func(get_variable.api_get_variable)
+@flow_func(get_variable.api_get_variable)
 class Constant(BackendHandler):
     @classmethod
     def _common(cls, node, **kwargs):
