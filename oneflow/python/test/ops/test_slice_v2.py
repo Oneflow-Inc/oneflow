@@ -112,6 +112,46 @@ def _make_slice_update_func(
     return slice_update_job
 
 
+def _make_slice_update_grad_func(
+    slice_tup_list,
+    input_shape,
+    update_shape,
+    diff_watcher_maker=None,
+    dtype=flow.float32,
+    func_cfg=None,
+):
+    @flow.global_function(type="train", function_config=func_cfg)
+    def slice_update_train_job(
+        x: otp.Numpy.Placeholder(shape=input_shape, dtype=dtype),
+        update: otp.Numpy.Placeholder(shape=update_shape, dtype=dtype),
+    ) -> otp.Numpy:
+        x_var = flow.get_variable(
+            shape=input_shape,
+            dtype=dtype,
+            initializer=flow.constant_initializer(0.0),
+            name="x",
+        )
+        update_var = flow.get_variable(
+            shape=update_shape,
+            dtype=dtype,
+            initializer=flow.constant_initializer(0.0),
+            name="update",
+        )
+        x = x + x_var
+        update = update + update_var
+        if callable(diff_watcher_maker):
+            flow.watch_diff(x, diff_watcher_maker(input_shape))
+            flow.watch_diff(update, diff_watcher_maker(update_shape))
+
+        y = flow.slice_update(x, update, slice_tup_list)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+        ).minimize(y)
+        return y
+
+    return slice_update_train_job
+
+
 def _test_slice(
     test_case,
     input,
@@ -247,6 +287,51 @@ def _test_slice_update(
         print("of_output:\n{}".format(of_output))
 
     test_case.assertTrue(np.array_equal(output, of_output))
+
+
+def _test_slice_update_grad(
+    test_case,
+    input,
+    update,
+    slice_args,
+    output,
+    input_diff,
+    update_diff,
+    dtype=flow.float32,
+    device_tag=DEFAULT_DEVICE_TAG,
+    verbose=False,
+):
+    input = input.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
+    update = update.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
+    output = output.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
+    input_diff = input_diff.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
+    update_diff = update_diff.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
+
+    if verbose:
+        print("dtype: {}".format(dtype))
+        print("device_tag: {}".format(device_tag))
+        print("input: {}\n{}\n".format(input.shape, input))
+        print("output: {}\n{}\n".format(output.shape, output))
+
+    def _make_diff_watcher(shape):
+        def _watch_diff(diff: otp.Numpy):
+            if shape == input_diff.shape:
+                test_case.assertTrue(np.array_equal(diff, input_diff))
+            elif shape == update_diff.shape:
+                test_case.assertTrue(np.array_equal(diff, update_diff))
+
+        return _watch_diff
+
+    flow.clear_default_session()
+    func_cfg = flow.FunctionConfig()
+    func_cfg.default_data_type(dtype)
+    func_cfg.default_placement_scope(flow.scope.placement(device_tag, "0:0"))
+    slice_func = _make_slice_update_grad_func(
+        slice_args, input.shape, update.shape, _make_diff_watcher, dtype, func_cfg
+    )
+
+    ret = slice_func(input, update)
+    test_case.assertTrue(np.array_equal(ret, output))
 
 
 def test_slice_base(test_case):
@@ -487,3 +572,31 @@ def test_slice_update(test_case):
     arg_dict["verbose"] = [False]
     for kwarg in test_util.GenArgDict(arg_dict):
         _test_slice_update(test_case, input, update, slice_tup_list, output, **kwarg)
+
+
+def test_slice_update_grad(test_case):
+    input = np.random.rand(2, 7)
+    update = input[:, 1:4]
+    update = np.random.rand(*update.shape)
+    update_diff = np.ones(update.shape)
+    input_diff = np.ones(input.shape)
+    input_diff[:, 1:4] = 0
+    output = np.copy(input)
+    output[:, 1:4] = update
+    slice_tup_list = [(None, None, None), (1, 4, None)]
+
+    arg_dict = collections.OrderedDict()
+    arg_dict["dtype"] = [flow.float32, flow.float64]
+    arg_dict["device_tag"] = ["cpu", "gpu"]
+    arg_dict["verbose"] = [False]
+    for kwarg in test_util.GenArgDict(arg_dict):
+        _test_slice_update_grad(
+            test_case,
+            input,
+            update,
+            slice_tup_list,
+            output,
+            input_diff,
+            update_diff,
+            **kwarg
+        )

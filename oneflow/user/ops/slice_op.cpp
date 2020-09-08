@@ -277,6 +277,9 @@ void GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
     return builder.OpTypeName("slice_update")
         .InputBind("x", ctx->FwOp().output_grad("y", 0))
         .InputBind("update", ctx->GetOp(zero_grad_op_name).output("out", 0))
+        .Attr("start", ctx->FwOp().attr<std::vector<int64_t>>("start"))
+        .Attr("stop", ctx->FwOp().attr<std::vector<int64_t>>("stop"))
+        .Attr("step", ctx->FwOp().attr<std::vector<int64_t>>("step"))
         .Output("y")
         .Build();
   });
