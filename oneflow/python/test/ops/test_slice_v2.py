@@ -99,6 +99,19 @@ def _make_slice_with_grad_func(
     return slice_with_grad_job
 
 
+def _make_slice_update_func(
+    slice_tup_list, input_shape, update_shape, dtype=flow.float32, func_cfg=None
+):
+    @flow.global_function(type="predict", function_config=func_cfg)
+    def slice_update_job(
+        x: otp.Numpy.Placeholder(shape=input_shape, dtype=dtype),
+        update: otp.Numpy.Placeholder(shape=update_shape, dtype=dtype),
+    ) -> otp.Numpy:
+        return flow.slice_update(x, update, slice_tup_list)
+
+    return slice_update_job
+
+
 def _test_slice(
     test_case,
     input,
@@ -198,6 +211,41 @@ def _test_slice_with_grad(
     of_output = slice_func(input)
     if verbose:
         print("of_output: {}\n{}\n".format(of_output.shape, of_output))
+    test_case.assertTrue(np.array_equal(output, of_output))
+
+
+def _test_slice_update(
+    test_case,
+    input,
+    update,
+    slice_args,
+    output,
+    dtype=flow.float32,
+    device_tag=DEFAULT_DEVICE_TAG,
+    verbose=False,
+):
+    input = input.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
+    update = update.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
+    output = output.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
+
+    flow.clear_default_session()
+    func_cfg = flow.FunctionConfig()
+    func_cfg.default_data_type(dtype)
+    func_cfg.default_placement_scope(flow.scope.placement(device_tag, "0:0"))
+    slice_func = _make_slice_update_func(
+        slice_args, input.shape, update.shape, dtype, func_cfg
+    )
+    of_output = slice_func(input, update)
+
+    if verbose:
+        print("input:\n{}".format(input))
+        print("update:\n{}".format(update))
+        print("slice_args:", slice_args)
+        print("output:\n{}".format(output))
+        print("dtype:", dtype)
+        print("device_tag:", device_tag)
+        print("of_output:\n{}".format(of_output))
+
     test_case.assertTrue(np.array_equal(output, of_output))
 
 
@@ -423,3 +471,19 @@ def test_slice_with_grad(test_case):
     arg_dict["verbose"] = [False]
     for kwarg in test_util.GenArgDict(arg_dict):
         _test_slice_with_grad(test_case, input, slice_tup_list, output, diff, **kwarg)
+
+
+def test_slice_update(test_case):
+    input = np.random.rand(10, 5, 4)
+    update = input[5:, :-1, ::2]
+    update = np.random.rand(*update.shape)
+    output = np.copy(input)
+    output[5:, :-1, ::2] = update
+    slice_tup_list = [(5, None, None), (None, -1, None), (None, None, 2)]
+
+    arg_dict = collections.OrderedDict()
+    arg_dict["dtype"] = [flow.float32, flow.float64]
+    arg_dict["device_tag"] = ["cpu", "gpu"]
+    arg_dict["verbose"] = [False]
+    for kwarg in test_util.GenArgDict(arg_dict):
+        _test_slice_update(test_case, input, update, slice_tup_list, output, **kwarg)
