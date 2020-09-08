@@ -28,6 +28,19 @@ func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 
+class sigmoid_py(flow.PyOp):
+    @staticmethod
+    def Forward(x):
+        return 1/(1 + np.exp(-x))
+
+    @staticmethod
+    def Backward(y, dy):
+        return y * (1 - y) * dy
+
+
+func_config.add_py_op(sigmoid_py)
+
+
 def numpy_sigmoid(x):
     return 1/(1 + np.exp(-x))
 
@@ -44,7 +57,7 @@ def make_py_job(input_shape, dtype=flow.float32):
     @flow.global_function(function_config=func_config)
     def py_sigmoid_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
         with flow.scope.placement("cpu", "0:0"):
-            return flow.math.sigmoid_py(x)
+            return flow.py_op("sigmoid_py", x)
 
     return py_sigmoid_job
 
