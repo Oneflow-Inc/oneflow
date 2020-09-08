@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# TODO(daquexian): remove this class
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -21,21 +20,97 @@ from __future__ import unicode_literals
 
 import copy
 import inspect
-
-from oneflow.python.onnx.handler import Handler
 import os
 import shutil
 
+from onnx import defs
 
-class BackendHandler(Handler):
-    """ This class is base backend handler class.
-  All backend operator handler class MUST inherit this class.
-  In backend, operator handler class's name should be pascal case of file name
-  which should be snake case.
-  Use ONNX operator name as class name.
+
+class BackendHandler:
+    """
+  All operator handler MUST put decorator @onnx_op to register corresponding op.
   """
 
-    TF_FUNC = None
+    ONNX_OP = None
+
+    DOMAIN = defs.ONNX_DOMAIN
+    VERSION = 0
+    SINCE_VERSION = 0
+    PARTIAL_SUPPORT = False
+    PS_DESCRIPTION = ""
+
+    @classmethod
+    def check_cls(cls):
+        if not cls.ONNX_OP:
+            common.logger.warning(
+                "{} doesn't have ONNX_OP. "
+                "Please use BackendHandler.onnx_op decorator to register ONNX_OP.".format(
+                    cls.__name__
+                )
+            )
+
+    @classmethod
+    def handle(cls, node, tensor_dict, **kwargs):
+        """ Main method in handler. It will find corresponding versioned handle method,
+    whose name format is `version_%d`. So prefix `version_` is reserved in onnx-tensorflow.
+    DON'T use it for other purpose.
+
+    :param node: NodeProto for backend.
+    :param kwargs: Other args.
+    :return: TensorflowNode for backend.
+    """
+        ver_handle = getattr(cls, "version_{}".format(cls.SINCE_VERSION), None)
+        if ver_handle:
+            return ver_handle(node, tensor_dict, **kwargs)
+        raise ValueError(
+            'node "{}" of version {} is not supported'.format(
+                node.op_type, cls.SINCE_VERSION
+            )
+        )
+        return None
+
+    @classmethod
+    def get_versions(cls):
+        """ Get all support versions.
+
+    :return: Version list.
+    """
+        versions = []
+        for k, v in inspect.getmembers(cls, inspect.ismethod):
+            if k.startswith("version_"):
+                versions.append(int(k.replace("version_", "")))
+        return versions
+
+    @staticmethod
+    def onnx_op(op):
+        return BackendHandler.property_register("ONNX_OP", op)
+
+    @staticmethod
+    def flow_func(func):
+        return BackendHandler.property_register("FLOW_FUNC", func)
+
+    @staticmethod
+    def domain(d):
+        return BackendHandler.property_register("DOMAIN", d)
+
+    @staticmethod
+    def partial_support(ps):
+        return BackendHandler.property_register("PARTIAL_SUPPORT", ps)
+
+    @staticmethod
+    def ps_description(psd):
+        return BackendHandler.property_register("PS_DESCRIPTION", psd)
+
+    @staticmethod
+    def property_register(name, value):
+        def deco(cls):
+            setattr(cls, name, value)
+            return cls
+
+        return deco
+
+
+    FLOW_FUNC = None
     WEIGHT_SAVE_DIR = None
 
     @classmethod
@@ -100,7 +175,7 @@ class BackendHandler(Handler):
         """ Helper method to make tensor.
 
     :param node: OnnxNode object.
-    :param tf_func: Callable Tf function. Default is cls.TF_FUNC.
+    :param flow_func: Callable Tf function. Default is cls.FLOW_FUNC.
     :param inputs: Inputs tensor. Default is got from node.inputs.
     :param attrs: Attributes. Default is node.attrs.
     :param name: Node name.
@@ -108,7 +183,7 @@ class BackendHandler(Handler):
     :return: Tensor.
     """
         if flow_func is None:
-            flow_func = cls.TF_FUNC
+            flow_func = cls.FLOW_FUNC
         if inputs is None:
             inputs = [tensor_dict.get(inp, None) for inp in node.input_tensor_names]
         if attrs is None:
@@ -120,16 +195,16 @@ class BackendHandler(Handler):
         return cls._run_flow_func(flow_func, inputs, attrs)
 
     @classmethod
-    def _run_flow_func(cls, tf_func, inputs, attrs):
+    def _run_flow_func(cls, flow_func, inputs, attrs):
         """ Run Oneflow function.
     Use only acceptable attributes of function from attrs.
 
-    :param tf_func: Tensorflow function.
+    :param flow_func: Tensorflow function.
     :param inputs: Inputs.
     :param attrs: Attributes.
     :return: Tensor.
     """
-        params = list(inspect.signature(tf_func).parameters.keys())
+        params = list(inspect.signature(flow_func).parameters.keys())
 
         attrs = cls._process_attrs(attrs)
         attrs = {p: v for p, v in attrs.items() if p in params}
@@ -138,6 +213,15 @@ class BackendHandler(Handler):
             kwargs.get(p) is not None and v is not None for p, v in attrs.items()
         )
         if ambiguous_arguments:
-            raise TypeError("Ambiguous arguments for {}()".format(tf_func.__name__))
+            raise TypeError("Ambiguous arguments for {}()".format(flow_func.__name__))
         kwargs.update((p, v) for p, v in attrs.items() if v is not None)
-        return tf_func(**kwargs)
+        return flow_func(**kwargs)
+
+
+domain = BackendHandler.domain
+onnx_op = BackendHandler.onnx_op
+flow_func = BackendHandler.flow_func
+partial_support = BackendHandler.partial_support
+ps_description = BackendHandler.ps_description
+
+

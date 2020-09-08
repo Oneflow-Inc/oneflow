@@ -40,8 +40,8 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.onnx
-from oneflow.python.onnx import constants, schemas, util, handler
-from oneflow.python.onnx.save import optimizer
+from oneflow.python.onnx import constants, schemas, util
+from oneflow.python.onnx.save import handler, optimizer
 from oneflow.python.onnx.onnx_wrapper import Graph
 import oneflow.python.onnx.save.handlers  # pylint: disable=unused-import
 
