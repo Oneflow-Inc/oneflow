@@ -214,6 +214,18 @@ void HostMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
 
 #ifdef WITH_CUDA
 
+void CudaAsyncMemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
+                                 const MemoryCopyNdDesc& desc) const {
+  CheckMemoryCopyNdDesc(desc);
+  const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);
+  if (num_axes == 1) {
+    Copy1D(ctx, (unsigned char*)dst + desc.dst_pos.At(0), (unsigned char*)src + desc.src_pos.At(0),
+           desc.extent.At(0));
+  } else {
+    CopyND(ctx, dst, src, desc);
+  }
+}
+
 void CudaAsyncMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const {
   OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, count, cudaMemcpyDefault, ctx->cuda_stream()));
 }
@@ -241,7 +253,11 @@ void CudaAsyncMemoryCopier::Copy3D(DeviceCtx* ctx, void* dst, const void* src,
 void CudaAsyncMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
                                    const MemoryCopyNdDesc& desc) const {
   const int32_t num_axes = desc.src_shape.NumAxes();
-  if (num_axes == 4) {
+  if (num_axes == 2) {
+    CopyNDGpuImpl<2>(ctx, dst, src, desc);
+  } else if (num_axes == 3) {
+    CopyNDGpuImpl<3>(ctx, dst, src, desc);
+  } else if (num_axes == 4) {
     CopyNDGpuImpl<4>(ctx, dst, src, desc);
   } else if (num_axes == 5) {
     CopyNDGpuImpl<5>(ctx, dst, src, desc);
