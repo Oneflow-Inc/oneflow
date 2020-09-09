@@ -69,6 +69,61 @@ def api_ofrecord_image_decoder_random_crop(
     random_aspect_ratio: Sequence[float] = [0.75, 1.333333],
     name: str = "OFRecordImageDecoderRandomCrop",
 ) -> BlobDef:
+    """This operator is an image decoder with random crop. 
+
+    Args:
+        input_blob (BlobDef): The input Blob
+        blob_name (str): The name of the Blob
+        color_space (str, optional): The color space, such as "RGB", "BGR". Defaults to "BGR".
+        num_attempts (int, optional): The maximum number of random cropping attempts. Defaults to 10.
+        seed (Optional[int], optional): The random seed. Defaults to None.
+        random_area (Sequence[float], optional): The random cropping area. Defaults to [0.08, 1.0].
+        random_aspect_ratio (Sequence[float], optional): The random scaled ratio. Defaults to [0.75, 1.333333].
+        name (str, optional): The name for the operation. Defaults to "OFRecordImageDecoderRandomCrop".
+
+    Returns:
+        BlobDef: The random cropped Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        from typing import Tuple
+
+
+        @flow.global_function(type="predict")
+        def ofrecord_reader_job() -> Tuple[tp.Numpy, tp.Numpy]:
+            batch_size = 16
+            color_space = "RGB"
+            # our ofrecord file path is "./dataset/part-0"
+            ofrecord = flow.data.ofrecord_reader(
+                "./imgdataset",
+                batch_size=batch_size,
+                data_part_num=1,
+                part_name_suffix_length=-1,
+                part_name_prefix='part-', 
+                random_shuffle=True,
+                shuffle_after_epoch=True,
+            )
+            image = flow.data.OFRecordImageDecoderRandomCrop(
+                    ofrecord, "encoded", color_space=color_space
+                )
+            res_image, scale, new_size = flow.image.Resize(
+                    image, target_size=(224, 224)
+                )
+            label = flow.data.OFRecordRawDecoder(
+                ofrecord, "class/label", shape=(1, ), dtype=flow.int32
+            )
+            
+            return res_image, label
+
+        if __name__ == "__main__":
+            images, labels = ofrecord_reader_job()
+            # images.shape (16, 224, 224, 3)
+
+    """
     assert isinstance(name, str)
     if seed is not None:
         assert name is not None
@@ -137,6 +192,57 @@ def OFRecordImageDecoder(
     color_space: str = "BGR",
     name: Optional[str] = None,
 ) -> BlobDef:
+    """This operator is an image decoder. 
+
+    Args:
+        input_blob (BlobDef): The input Blob
+        blob_name (str): The name of the input Blob
+        color_space (str, optional): The color space, such as "RGB", "BGR". Defaults to "BGR".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        BlobDef: The result Blob 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        from typing import Tuple
+
+
+        @flow.global_function(type="predict")
+        def image_decoder_job() -> Tuple[tp.Numpy, tp.Numpy]:
+            batch_size = 16
+            color_space = "RGB"
+            # our ofrecord file path is "./dataset/part-0"
+            ofrecord = flow.data.ofrecord_reader(
+                "./imgdataset",
+                batch_size=batch_size,
+                data_part_num=1,
+                part_name_suffix_length=-1,
+                part_name_prefix='part-', 
+                random_shuffle=True,
+                shuffle_after_epoch=True,
+            )
+            image = flow.data.OFRecordImageDecoder(
+                    ofrecord, "encoded", color_space=color_space
+                )
+            res_image, scale, new_size = flow.image.Resize(
+                    image, target_size=(224, 224)
+                )
+            label = flow.data.OFRecordRawDecoder(
+                ofrecord, "class/label", shape=(1, ), dtype=flow.int32
+            )
+            
+            return res_image, label
+
+        if __name__ == "__main__":
+            images, labels = image_decoder_job()
+            # image.shape (16, 224, 224, 3)
+
+    """
     if name is None:
         name = id_util.UniqueStr("OFRecordImageDecoder_")
     return (
@@ -175,42 +281,65 @@ def api_image_resize(
 
     Args:
         image: A `Tensor` consists of images to be resized.
-        target_size: A list or tuple when `keep_aspect_ratio` is false or an int when
-            `keep_aspect_ratio` is true. When `keep_aspect_ratio` is false, `target_size` has
-            a form of `(target_width, target_height)` that image will resize to. When
-            `keep_aspect_ratio` is true, the longer side or shorter side of the image
-            will be resized to target size.
-        min_size: An int, optional. Only works when `keep_aspect_ratio` is true and `resize_side`
-            is "longer". If `min_size` is not None, the shorter side must be greater than or
-            equal to `min_size`. Default is None.
-        max_size: An int, optional. Only works when `keep_aspect_ratio` is true and `resize_side`
-            is "shorter". If `max_size` is not None, the longer side must be less than or equal
-            to `max_size`. Default is None.
-        keep_aspect_ratio: A bool. If is false, indicate that image will be resized to fixed
-            width and height, otherwise image will be resized keeping aspect ratio.
-        resize_side: A str of "longer" or "shorter". Only works when `keep_aspect_ratio` is True.
-            If `resize_side` is "longer", the longer side of image will be resized to `target_size`.
-            If `resize_side` is "shorter", the shorter side of image will be resized to
-            `target_size`.
+        target_size: A list or tuple when `keep_aspect_ratio` is false or an int when `keep_aspect_ratio` is true. When `keep_aspect_ratio` is false, `target_size` has a form of `(target_width, target_height)` that image will resize to. When `keep_aspect_ratio` is true, the longer side or shorter side of the image will be resized to target size.
+        min_size: An int, optional. Only works when `keep_aspect_ratio` is true and `resize_side` is "longer". If `min_size` is not None, the shorter side must be greater than or equal to `min_size`. Default is None.
+        max_size: An int, optional. Only works when `keep_aspect_ratio` is true and `resize_side` is "shorter". If `max_size` is not None, the longer side must be less than or equal to `max_size`. Default is None.
+        keep_aspect_ratio: A bool. If is false, indicate that image will be resized to fixed width and height, otherwise image will be resized keeping aspect ratio.
+        resize_side: A str of "longer" or "shorter". Only works when `keep_aspect_ratio` is True. If `resize_side` is "longer", the longer side of image will be resized to `target_size`. If `resize_side` is "shorter", the shorter side of image will be resized to `target_size`.
         channels: An int. how many channels an image has
         dtype: `oneflow.dtype`. Indicate output resized image data type.
-        interpolation_type: A str of "auto", "bilinear", "nearest_neighbor", "bicubic" or "area".
-            Indicate interpolation method used to resize image.
+        interpolation_type: A str of "auto", "bilinear", "nearest_neighbor", "bicubic" or "area". Indicate interpolation method used to resize image.
         name: A str, optional. Name for the operation.
         color_space: Deprecated, a str of "RGB", "BGR" or "GRAY". Please use `channels` instead.
-        interp_type: Deprecated, s str of "Linear", "Cubic" or "NN". Please use `interpolation_type`
-            instead.
-        resize_shorter: Deprecated, a int. Indicate target size that the shorter side of image will
-            resize to. Please use `target_size` and `resize_side` instead.
-        resize_x: Deprecated, a int. Indicate the target size that the width of image will resize to.
-            Please use `target_size` instead.
-        resize_y: Deprecated, a int. Indicate the target size that the height of image will resize to.
-            Please use `target_size` instead.
+        interp_type: Deprecated, s str of "Linear", "Cubic" or "NN". Please use `interpolation_type` instead.
+        resize_shorter: Deprecated, a int. Indicate target size that the shorter side of image will resize to. Please use `target_size` and `resize_side` instead.
+        resize_x: Deprecated, a int. Indicate the target size that the width of image will resize to. Please use `target_size` instead.
+        resize_y: Deprecated, a int. Indicate the target size that the height of image will resize to. Please use `target_size` instead.
 
     Returns:
         Tuple of resized images `Blob`, width and height scales `Blob` and new width and height `Blob`
         (new width and height `Blob` will be None when keep_aspect_ratio is false).
         If deprecated params are used, a single resized images `Blob` will be returned.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        from typing import Tuple
+
+
+        @flow.global_function(type="predict")
+        def ofrecord_reader_job() -> Tuple[tp.Numpy, tp.Numpy]:
+            batch_size = 16
+            color_space = "RGB"
+            # our ofrecord file path is "./dataset/part-0"
+            ofrecord = flow.data.ofrecord_reader(
+                "./imgdataset",
+                batch_size=batch_size,
+                data_part_num=1,
+                part_name_suffix_length=-1,
+                part_name_prefix='part-', 
+                random_shuffle=True,
+                shuffle_after_epoch=True,
+            )
+            image = flow.data.OFRecordImageDecoderRandomCrop(
+                    ofrecord, "encoded", color_space=color_space
+                )
+            res_image, scale, new_size = flow.image.Resize(
+                    image, target_size=(224, 224)
+                )
+            label = flow.data.OFRecordRawDecoder(
+                ofrecord, "class/label", shape=(1, ), dtype=flow.int32
+            )
+            
+            return res_image, label
+
+        if __name__ == "__main__":
+            images, labels = ofrecord_reader_job()
+            # image.shape (16, 224, 224, 3)
+
     """
     # process deprecated params
     deprecated_param_used = False
@@ -351,6 +480,95 @@ def api_image_target_resize(
     interpolation_type: str = "auto",
     name: Optional[str] = None,
 ) -> Sequence[BlobDef]:
+    """This operator resizes image to target size. 
+
+    Args:
+        images (BlobDef): The input Blob. Its type should be `kTensorBuffer`. More details please refer to the code example. 
+        target_size (int): An int, the target size. 
+        min_size (Optional[int], optional): If `min_size` is not None, the shorter side must be greater than or equal to `min_size`. Default is None. Defaults to None.
+        max_size (Optional[int], optional): If `max_size` is not None, the longer side must be less than or equal to `max_size`. Defaults to None.
+        resize_side (str, optional): A str of "longer" or "shorter". Only works when `keep_aspect_ratio` is True. If `resize_side` is "longer", the longer side of image will be resized to `target_size`. If `resize_side` is "shorter", the shorter side of image will be resized to `target_size`. Defaults to "shorter".
+        interpolation_type (str, optional): A str of "auto", "bilinear", "nearest_neighbor", "bicubic" or "area". Indicate interpolation method used to resize image. Defaults to "auto".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        Sequence[BlobDef]: A Sequence includes the result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        from typing import Tuple
+        import numpy as np
+        import cv2
+
+
+        def _read_images_by_cv(image_files):
+            images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
+            return [np.expand_dims(image, axis=0) for image in images]
+
+
+        def _get_images_static_shape(images):
+            image_shapes = [image.shape for image in images]
+            image_static_shape = np.amax(image_shapes, axis=0)
+            assert isinstance(
+                image_static_shape, np.ndarray
+            ), "image_shapes: {}, image_static_shape: {}".format(
+                str(image_shapes), str(image_static_shape)
+            )
+            image_static_shape = image_static_shape.tolist()
+            assert image_static_shape[0] == 1, str(image_static_shape)
+            image_static_shape[0] = len(image_shapes)
+            return image_static_shape
+
+        def _of_image_target_resize(images, image_static_shape, target_size, max_size):
+            func_config = flow.FunctionConfig()
+            func_config.default_data_type(flow.float)
+            func_config.default_logical_view(flow.scope.mirrored_view())
+
+            @flow.global_function(function_config=func_config)
+            def image_target_resize_job(images_def: tp.ListListNumpy.Placeholder(shape=image_static_shape, dtype=flow.float)
+            ) -> Tuple[tp.ListListNumpy, tp.ListNumpy, tp.ListNumpy]: 
+                # The input Blob type should be "kTensorBuffer"
+                # So we use oneflow.tensor_list_to_tensor_buffer to convert
+                images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
+
+                resized_images_buffer, size, scale = flow.image_target_resize(
+                    images_buffer,
+                    target_size=target_size,
+                    max_size=max_size,
+                    resize_side="shorter",
+                )
+                # We convert back to "tensorlist" type
+                resized_images = flow.tensor_buffer_to_tensor_list(
+                    resized_images_buffer,
+                    shape=(target_size, max_size, image_static_shape[-1]),
+                    dtype=flow.float,
+                )
+                return resized_images, size, scale
+
+            resized_images, size, scale = image_target_resize_job([images])
+            resized_image = resized_images[0]
+            size = size[0]
+            scale = scale[0]
+
+            return resized_images, size, scale
+
+        if __name__ == "__main__": 
+            img = _read_images_by_cv(['./img/1.jpg'])
+            img_shape = _get_images_static_shape(img) # In example is [1, 349, 367, 3]
+            target_size = 256
+            max_size = 512
+            resized_images, size, scale = _of_image_target_resize(img, tuple(img_shape), target_size, max_size)
+            # Here the shorter side is "349", we resize it to target_size(256)
+            # The scale is 256 / 349 = 0.73
+            # The longer side will be resized to 367 * scale = 269
+            # get the first element from the resized_images (its type is `list.list`)
+            print(resized_images[0][0].shape) # (1, 256, 269, 3)
+
+    """
     if name is None:
         name = id_util.UniqueStr("ImageTargetResize_")
 
@@ -382,6 +600,92 @@ def CropMirrorNormalize(
     output_dtype: dtype_util.dtype = dtype_util.float,
     name: Optional[str] = None,
 ) -> BlobDef:
+    """This operator performs the cropping, normalization, and horizontal flip for input Blob. 
+
+    If `crop_h` and `crop_w` are provided, the image cropping position is specified by "crop_pos_y" and "crop_pos_x". 
+
+    The position is computed as follows: 
+
+    .. math:: 
+
+        & crop_x = crop\_pos\_x*(Width-crop\_w)
+
+        & crop_y = crop\_pos\_y*(Height-crop\_h)
+
+    The `Width` and `Height` is the width and height of input Blob. 
+
+    Args:
+        input_blob (BlobDef): The input Blob. 
+        mirror_blob (Optional[BlobDef], optional): The operation for horizontal flip, if it is `None`, the operator will not perform the horizontal flip. Defaults to None.
+        color_space (str, optional): The color space for input Blob. Defaults to "BGR".
+        output_layout (str, optional): The output format. Defaults to "NCHW".
+        crop_h (int, optional): The image cropping window height. Defaults to 0.
+        crop_w (int, optional): The image cropping window width. Defaults to 0.
+        crop_pos_y (float, optional): The vertical position of the image cropping window, the value range is normalized to (0.0, 1.0). Defaults to 0.5.
+        crop_pos_x (float, optional): The horizontal position of the image cropping window, the value range is normalized to (0.0, 1.0). Defaults to 0.5.
+        mean (Sequence[float], optional): The mean value for normalization. Defaults to [0.0].
+        std (Sequence[float], optional): The standard deviation values for normalization. Defaults to [1.0].
+        output_dtype (dtype_util.dtype, optional): The datatype of output Blob. Defaults to dtype_util.float.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Raises:
+        NotImplementedError: The data type of input Blob should be `tensor_buffer` or `uint8`
+
+    Returns:
+        BlobDef: The result Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        from typing import Tuple
+
+
+        @flow.global_function(type="predict")
+        def crop_mirror_job() -> Tuple[tp.Numpy, tp.Numpy]:
+            batch_size = 1
+            color_space = "RGB"
+            # our ofrecord file path is "./dataset/part-0"
+            ofrecord = flow.data.ofrecord_reader(
+                "./imgdataset",
+                batch_size=batch_size,
+                data_part_num=1,
+                part_name_suffix_length=-1,
+                part_name_prefix='part-', 
+                shuffle_after_epoch=True,
+            )
+            image = flow.data.OFRecordImageDecoder(
+                    ofrecord, "encoded", color_space=color_space
+                )
+            res_image, scale, new_size = flow.image.Resize(
+                    image, target_size=(512, 512)
+                )
+            label = flow.data.OFRecordRawDecoder(
+                ofrecord, "class/label", shape=(1, ), dtype=flow.int32
+            )
+            rng = flow.random.CoinFlip(batch_size=batch_size)
+            normal = flow.image.CropMirrorNormalize(
+                    res_image,
+                    mirror_blob=rng,
+                    color_space=color_space,
+                    crop_h= 256,
+                    crop_w= 256,
+                    crop_pos_y=0.5,
+                    crop_pos_x=0.5,
+                    mean=[123.68, 116.779, 103.939],
+                    std=[58.393, 57.12, 57.375],
+                    output_dtype=flow.float,
+                )
+
+            return normal, label
+
+        if __name__ == "__main__":
+            images, labels = crop_mirror_job()
+            # images.shape (1, 3, 256, 256)
+
+    """
     if name is None:
         name = id_util.UniqueStr("CropMirrorNormalize_")
     op_type_name = ""
@@ -426,6 +730,83 @@ def api_image_random_crop(
     random_aspect_ratio: Sequence[float] = None,
     name: str = "ImageRandomCrop",
 ) -> BlobDef:
+    """This operator crops the input image randomly. 
+
+    Args:
+        input_blob (BlobDef): The input Blob. 
+        num_attempts (int, optional): The maximum number of random cropping attempts. Defaults to 10.
+        seed (Optional[int], optional): The random seed. Defaults to None.
+        random_area (Sequence[float], optional): The random cropping area. Defaults to None.
+        random_aspect_ratio (Sequence[float], optional): The random scaled ratio. Defaults to None.
+        name (str, optional): The name for the operation. Defaults to "ImageRandomCrop".
+
+    Returns:
+        BlobDef: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+        import cv2
+
+
+        def _read_images_by_cv(image_files):
+            images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
+            return [np.expand_dims(image, axis=0) for image in images]
+
+
+        def _get_images_static_shape(images):
+            image_shapes = [image.shape for image in images]
+            image_static_shape = np.amax(image_shapes, axis=0)
+            assert isinstance(
+                image_static_shape, np.ndarray
+            ), "image_shapes: {}, image_static_shape: {}".format(
+                str(image_shapes), str(image_static_shape)
+            )
+            image_static_shape = image_static_shape.tolist()
+            assert image_static_shape[0] == 1, str(image_static_shape)
+            image_static_shape[0] = len(image_shapes)
+            return image_static_shape
+
+        def _of_image_random_crop(images, image_static_shape):
+            func_config = flow.FunctionConfig()
+            func_config.default_data_type(flow.float)
+            func_config.default_logical_view(flow.scope.mirrored_view())
+
+            @flow.global_function(function_config=func_config)
+            def image_random_crop_job(images_def: tp.ListListNumpy.Placeholder(shape=image_static_shape, dtype=flow.float)
+            ) -> tp.ListListNumpy: 
+                # The input Blob type should be "kTensorBuffer"
+                # So we use oneflow.tensor_list_to_tensor_buffer to convert
+                images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
+                # Do the random crop
+                random_crop_buffer = flow.image.random_crop(
+                    images_buffer,
+                    random_area=[0.15, 0.80],
+                    random_aspect_ratio=[0.75, 1.55],
+                )
+                # We convert back to "tensorlist" type
+                random_crop_images = flow.tensor_buffer_to_tensor_list(
+                    random_crop_buffer,
+                    shape=(image_static_shape[1], image_static_shape[2], image_static_shape[-1]),
+                    dtype=flow.float,
+                )
+                return random_crop_images
+
+            random_crop_images = image_random_crop_job([images])
+
+            return random_crop_images
+
+        if __name__ == "__main__": 
+            img = _read_images_by_cv(['./img/1.jpg'])
+            img_shape = _get_images_static_shape(img) # In example is (1, 234, 346, 3)
+            random_crop_images = _of_image_random_crop(img, tuple(img_shape)) 
+            # random_crop_images.shape is (234, 346, 3)
+
+    """
     assert isinstance(name, str)
     if seed is not None:
         assert name is not None
@@ -492,6 +873,71 @@ def api_coin_flip(
     probability: float = 0.5,
     name: str = "CoinFlip",
 ) -> BlobDef:
+    """This operator performs the horizontal flip. 
+
+    Args:
+        batch_size (int, optional): [description]. Defaults to 1.
+        seed (Optional[int], optional): [description]. Defaults to None.
+        probability (float, optional): [description]. Defaults to 0.5.
+        name (str, optional): [description]. Defaults to "CoinFlip".
+
+    Returns:
+        BlobDef: [description]
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        from typing import Tuple
+
+
+        @flow.global_function(type="predict")
+        def coin_flip_job() -> Tuple[tp.Numpy, tp.Numpy]:
+            batch_size = 1
+            color_space = "RGB"
+            # our ofrecord file path is "./dataset/part-0"
+            ofrecord = flow.data.ofrecord_reader(
+                "./imgdataset",
+                batch_size=batch_size,
+                data_part_num=1,
+                part_name_suffix_length=-1,
+                part_name_prefix='part-', 
+                shuffle_after_epoch=True,
+            )
+            image = flow.data.OFRecordImageDecoder(
+                    ofrecord, "encoded", color_space=color_space
+                )
+            res_image, scale, new_size = flow.image.Resize(
+                    image, target_size=(512, 512)
+                )
+            label = flow.data.OFRecordRawDecoder(
+                ofrecord, "class/label", shape=(1, ), dtype=flow.int32
+            )
+            coin_flip = flow.random.CoinFlip(
+                batch_size=batch_size, 
+                probability=0.8
+            )
+            normal = flow.image.CropMirrorNormalize(
+                    res_image,
+                    mirror_blob=coin_flip,
+                    color_space=color_space,
+                    crop_h= 256,
+                    crop_w= 256,
+                    crop_pos_y=0.5,
+                    crop_pos_x=0.5,
+                    mean=[123.68, 116.779, 103.939],
+                    std=[58.393, 57.12, 57.375],
+                    output_dtype=flow.float,
+                )
+
+            return normal, label
+
+        if __name__ == "__main__":
+            images, labels = coin_flip_job()
+
+    """
     assert isinstance(name, str)
     if seed is not None:
         assert name is not None
