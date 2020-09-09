@@ -78,7 +78,7 @@ def atan2(
         out = atan2Job(x, y)
 
 
-        # output [0.24497867 0.4636476  0.6435011 ]
+        # out [0.24497867 0.4636476  0.6435011 ]
         # We take the first value as an example
         # (arctan(1/4) * pi) / 180 = 0.24497867
 
@@ -125,7 +125,7 @@ def pow(
         y = np.array([2, 3, 4]).astype(np.float32)
         out = powJob(x, y)
 
-        # output [  4.  27. 256.]
+        # out [  4.  27. 256.]
     """
     return build_math_binary_elementwise_op("pow", x, y, name)
 
@@ -164,7 +164,7 @@ def floordiv(
         y = np.array([3, 2, 2]).astype(np.float32)
         out = floor_div_Job(x, y)
 
-        # output [1. 1. 2.]
+        # out [1. 1. 2.]
     """
     return build_math_binary_elementwise_op("floordiv", x, y, name)
 
@@ -203,7 +203,7 @@ def xdivy(
         y = np.array([3, 2, 2]).astype(np.float32)
         out = xdivy_Job(x, y)
 
-        # output [1.3333334 1.5       2.5      ]
+        # out [1.3333334 1.5       2.5      ]
 
     """
     return build_math_binary_elementwise_op("xdivy", x, y, name)
@@ -243,6 +243,6 @@ def xlogy(
         y = np.array([4, 8, 16]).astype(np.float32)
         out = xlogy_Job(x, y)
 
-        # output [2.7725887 4.158883  5.5451775]
+        # out [2.7725887 4.158883  5.5451775]
     """
     return build_math_binary_elementwise_op("xlogy", x, y, name)
