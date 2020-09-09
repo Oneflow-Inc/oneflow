@@ -225,10 +225,15 @@ class OneflowBackend(Backend):
             input_dict_items = cls._onnx_initializer_to_input_dict_items(
                 graph_def.initializer
             )
-            initialized = {init.name for init in graph_def.initializer}
+            initialized = {init.name: onnx.numpy_helper.to_array(init) for init in graph_def.initializer}
         else:
             input_dict_items = []
-            initialized = set()
+            initialized = {}
+
+        for node in graph_def.node:
+            node = OnnxNode(node)
+            if node.op_type == 'Constant':
+                initialized[node.output_tensor_names[0]] = numpy_helper.to_array(node.attrs['value'])
 
         # creating placeholders for currently unknown inputs
         for value_info in graph_def.input:
@@ -256,7 +261,7 @@ class OneflowBackend(Backend):
         for node in graph_def.node:
             onnx_node = OnnxNode(node)
             output_ops = cls._onnx_node_to_oneflow_op(
-                onnx_node, tensor_dict, handlers, opset=opset, strict=strict
+                onnx_node, tensor_dict, initialized, handlers, opset=opset, strict=strict
             )
             curr_node_output_map = dict(zip(onnx_node.output_tensor_names, output_ops))
             tensor_dict.update(curr_node_output_map)
@@ -291,7 +296,7 @@ class OneflowBackend(Backend):
 
     @classmethod
     def _onnx_node_to_oneflow_op(
-        cls, node, tensor_dict, handlers=None, opset=None, strict=True
+        cls, node, tensor_dict, init_dict, handlers=None, opset=None, strict=True
     ):
         """
     Convert onnx node to oneflow op.
@@ -309,7 +314,7 @@ class OneflowBackend(Backend):
         handlers = handlers or cls._get_handlers(opset)
         handler = handlers[node.domain].get(node.op_type, None)
         if handler:
-            output = handler.handle(node, tensor_dict, strict=strict)
+            output = handler.handle(node, tensor_dict, init_dict=init_dict, strict=strict)
             if not isinstance(output, (list, tuple)):
                 output = [output]
             return output

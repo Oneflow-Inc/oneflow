@@ -31,7 +31,7 @@ import os
 @flow_func(get_variable.api_get_variable)
 class Constant(BackendHandler):
     @classmethod
-    def _common(cls, node, **kwargs):
+    def _common(cls, node, tensor_dict, **kwargs):
         attr_value = node.attrs["value"]
         dtype = util.Onnx2FlowDtype(attr_value.data_type)
         shape = numpy_helper.to_array(attr_value).shape
@@ -41,6 +41,7 @@ class Constant(BackendHandler):
         return [
             cls.run_onnx_node(
                 node,
+                tensor_dict,
                 # inputs=[value],
                 # attrs={"dtype": dtype}
                 name=node.output_tensor_names[0],
@@ -54,23 +55,23 @@ class Constant(BackendHandler):
         ]
 
     @classmethod
-    def version_1(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_9(cls, node, **kwargs):
-        return cls._common(node, **kwargs)
+    def version_9(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
-    def version_11(cls, node, **kwargs):
+    def version_11(cls, node, tensor_dict, **kwargs):
         # either value or sparse_value
         if "value" in node.attrs:
-            return cls._common(node, **kwargs)
+            return cls._common(node, tensor_dict, **kwargs)
         else:
             raise NotImplementedError("sparse tensor is not supported")
 
     @classmethod
-    def version_12(cls, node, **kwargs):
+    def version_12(cls, node, tensor_dict, **kwargs):
         if "value" in node.attrs or "sparse_value" in node.attrs:
-            return cls.version_11(node, **kwargs)
+            return cls.version_11(node, tensor_dict, **kwargs)
         raise NotImplementedError("opset 12 constant is not supported")
