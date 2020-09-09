@@ -13,16 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import torch
-from torch import nn
+import os
+import numpy
+from absl import app
+from absl.testing import absltest
+import oneflow as flow
 
-from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
+flow.unittest.register_test_cases(
+    scope=globals(),
+    directory=os.path.join(os.path.dirname(os.path.realpath(__file__)), "models"),
+    filter_by_num_nodes=lambda x: True,
+    base_class=absltest.TestCase,
+)
 
 
-def test_flatten(test_case):
-    class Net(nn.Module):
-        def forward(self, x):
-            x = torch.flatten(x, 1)
-            return x
+def main(argv):
+    flow.env.init()
+    absltest.main()
 
-    load_pytorch_module_and_check(test_case, Net)
+
+if __name__ == "__main__":
+    app.run(main)

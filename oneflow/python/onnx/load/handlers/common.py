@@ -19,7 +19,7 @@ import numpy as np
 
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.ops import nn_ops
-from oneflow.python.ops.pad import pad as flow_pad
+from oneflow.python.ops import pad
 
 
 class BroadcastMixin(object):
@@ -167,7 +167,7 @@ class PadMixin(object):
         # flow_pads = [0, 0, 0, 0] + flow_pads.flatten().tolist()
         flow_pads = [(0, 0), (0, 0)] + flow_pads
 
-        return flow_pad(x, flow_pads)
+        return pad.pad(x, flow_pads)
 
 
 class BasicMathMixin(BroadcastMixin):

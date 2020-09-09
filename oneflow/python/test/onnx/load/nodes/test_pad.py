@@ -15,14 +15,25 @@ limitations under the License.
 """
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
 
-def test_flatten(test_case):
+def test_pad(test_case):
     class Net(nn.Module):
         def forward(self, x):
-            x = torch.flatten(x, 1)
+            x = F.pad(x, (2, 3))
             return x
 
     load_pytorch_module_and_check(test_case, Net)
+
+
+def test_pad_with_value(test_case):
+    class Net(nn.Module):
+        def forward(self, x):
+            x = F.pad(x, (2, 3), value=3.5)
+            return x
+
+    load_pytorch_module_and_check(test_case, Net)
+

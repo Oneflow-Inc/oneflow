@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from collections import OrderedDict
 import tempfile
 import os
@@ -9,6 +24,7 @@ import onnx
 import torch
 
 import oneflow as flow
+import oneflow.typing as tp
 
 
 def load_pytorch_module_and_check(test_case, pt_module_class, input_size=None):
@@ -16,9 +32,10 @@ def load_pytorch_module_and_check(test_case, pt_module_class, input_size=None):
         input_size = (2, 4, 3, 5)
     pt_module = pt_module_class()
 
-    model_weight_save_dir = '/tmp/tmp'
-    @flow.global_function(type='train')
-    def job(x=flow.FixedTensorDef(input_size)):
+    model_weight_save_dir = "/tmp/tmp"
+
+    @flow.global_function(type="train")
+    def job(x: tp.Numpy.Placeholder(input_size)) -> tp.Numpy:
         x += flow.get_variable(
             name="trick",
             shape=(1,),
@@ -31,14 +48,13 @@ def load_pytorch_module_and_check(test_case, pt_module_class, input_size=None):
         flow.optimizer.SGD(lr_scheduler).minimize(y)
         return y
 
-
     checkpoint = flow.train.CheckPoint()
     checkpoint.load(model_weight_save_dir)
 
     pt_module = pt_module.to("cuda")
-    ipt1 = np.random.uniform(low=-1000, high=1000, size=input_size).astype(np.float32)
+    ipt1 = np.random.uniform(low=-10, high=10, size=input_size).astype(np.float32)
     # flow_res = temp_job(ipt1).get().ndarray()
-    flow_res = job(ipt1).get().ndarray()
+    flow_res = job(ipt1)
     pytorch_res = pt_module(torch.tensor(ipt1).to("cuda")).cpu().detach().numpy()
 
     a, b = flow_res.flatten(), pytorch_res.flatten()
