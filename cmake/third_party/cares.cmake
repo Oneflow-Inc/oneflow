@@ -2,10 +2,11 @@ include(ExternalProject)
 set(CARES_TAR_URL https://github.com/c-ares/c-ares/releases/download/cares-1_15_0/c-ares-1.15.0.tar.gz)
 set(CARES_URL_HASH d2391da274653f7643270623e822dff7)
 set(CARES_INSTALL ${THIRD_PARTY_DIR}/cares)
-SET(CARES_SOURCE_DIR ${THIRD_PARTY_SUBMODULE_DIR}/cares)
+set(CARES_SOURCE_DIR ${THIRD_PARTY_SUBMODULE_DIR}/cares)
 
 list(APPEND CARES_LIBRARIES ${ZLIB_LIBRARY_DIR}/libcares.so)
 
+if(THIRD_PARTY)
 ExternalProject_Add(cares
   PREFIX ${CARES_SOURCE_DIR}
   URL ${CARES_TAR_URL}
@@ -17,3 +18,4 @@ ExternalProject_Add(cares
       -DCMAKE_INSTALL_PREFIX:STRING=${CARES_INSTALL}
       -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
 )
+endif()
