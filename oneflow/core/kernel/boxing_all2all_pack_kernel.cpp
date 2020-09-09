@@ -36,7 +36,8 @@ void BoxingAll2AllPackKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
-  const BoxingAll2AllPackOpConf& boxing_all2all_pack_conf = this->op_conf().boxing_all2all_pack_conf();
+  const BoxingAll2AllPackOpConf& boxing_all2all_pack_conf =
+      this->op_conf().boxing_all2all_pack_conf();
   const int64_t dst_split_axis = boxing_all2all_pack_conf.dst_split_axis();
   const int64_t parallel_num = boxing_all2all_pack_conf.parallel_num();
   if (boxing_all2all_pack_conf.need_transpose()) {
@@ -73,9 +74,10 @@ void BoxingAll2AllPackKernel<device_type, T>::ForwardDataContent(
 }
 
 #ifdef WITH_CUDA
-#define REGISTER_BOXING_ALL2ALL_PACK_KERNEL(dtype)                                                      \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBoxingAll2AllPackConf, DeviceType::kGPU, dtype, \
-                                        BoxingAll2AllPackKernel<DeviceType::kGPU, dtype>)
+#define REGISTER_BOXING_ALL2ALL_PACK_KERNEL(dtype)                                              \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBoxingAll2AllPackConf, DeviceType::kGPU, \
+                                        dtype, BoxingAll2AllPackKernel<DeviceType::kGPU, dtype>)
+REGISTER_BOXING_ALL2ALL_PACK_KERNEL(float16);
 REGISTER_BOXING_ALL2ALL_PACK_KERNEL(float);
 REGISTER_BOXING_ALL2ALL_PACK_KERNEL(double);
 REGISTER_BOXING_ALL2ALL_PACK_KERNEL(int8_t);

@@ -54,7 +54,9 @@ LogicalBlobId BoxingAll2AllPackOp::lbi4ibn(const std::string& input_bn) const {
 LogicalBlobId BoxingAll2AllPackOp::lbi4obn(const std::string& output_bn) const {
   return this->op_conf().boxing_all2all_pack_conf().lbi();
 }
-const PbMessage& BoxingAll2AllPackOp::GetCustomizedConf() const { return op_conf().boxing_all2all_pack_conf(); }
+const PbMessage& BoxingAll2AllPackOp::GetCustomizedConf() const {
+  return op_conf().boxing_all2all_pack_conf();
+}
 
 Maybe<void> BoxingAll2AllPackOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

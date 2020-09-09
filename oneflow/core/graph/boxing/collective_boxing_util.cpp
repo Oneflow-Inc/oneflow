@@ -33,8 +33,9 @@ Shape GetSplitShape(const RankDesc& rank_desc) {
 
 Shape GetFlattenShape(const RankDesc& rank_desc) {
   Shape shape(rank_desc.op_desc().shape());
+  CHECK_GT(shape.NumAxes(), 0);
+  CHECK(shape.elem_cnt() % rank_desc.op_desc().num_ranks() == 0);
   Shape return_shape({shape.elem_cnt() / rank_desc.op_desc().num_ranks()});
-  CHECK_GT(return_shape.NumAxes(), 0);
   return return_shape;
 }
 

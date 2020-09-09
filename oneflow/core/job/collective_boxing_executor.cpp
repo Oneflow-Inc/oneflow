@@ -23,6 +23,9 @@ limitations under the License.
 #include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_pool.h"
+#ifdef WITH_CUDA
+#include <nccl.h>
+#endif
 
 namespace oneflow {
 
@@ -376,6 +379,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
         } else if (op_type == OpType::kOpTypeBroadcast) {
           OF_NCCL_CHECK(ncclBroadcast(send_buff, recv_buff, elem_cnt, nccl_data_type,
                                       op_desc.root(), comm, device_ctx->stream));
+#if NCCL_VERSION_CODE > 2700
         } else if (op_type == OpType::kOpTypeAll2All) {
           for (int64_t j = 0; j < num_ranks; ++j) {
             const int64_t dtype_size = GetSizeOfDataType(op_desc.data_type());
@@ -388,6 +392,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
                                         + dtype_size * j * elem_cnt / num_ranks / num_ranks),
                 elem_cnt / num_ranks / num_ranks, nccl_data_type, j, comm, device_ctx->stream));
           }
+#endif
         } else {
           UNIMPLEMENTED();
         }

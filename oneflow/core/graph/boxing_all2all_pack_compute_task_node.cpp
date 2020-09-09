@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 
 void BoxingAll2AllPackCompTaskNode::Init(const CompTaskNode* src_node, const LogicalBlobId& lbi,
-                                  const bool need_transpose, const int64_t dst_split_axis) {
+                                         const bool need_transpose, const int64_t dst_split_axis) {
   lbi_ = lbi;
   set_logical_node(src_node->logical_node());
   *mut_parallel_ctx() = *src_node->parallel_ctx();
