@@ -25,6 +25,9 @@ from oneflow.python.onnx.load.handlers.common import ConvMixin
 from oneflow.python.ops import nn_ops
 from oneflow.python.ops import math_ops
 from oneflow.python.ops import layers
+from oneflow.python.ops import reduce_mean
+from oneflow.python.ops import reduce_ops
+from oneflow.python.ops import pad
 
 
 @onnx_op("Conv")
@@ -98,9 +101,6 @@ class PoolMixin(object):
         kernel_shape = node.attrs["kernel_shape"]
         strides = node.attrs.get("strides", [1] * spatial_size)
         dilations = node.attrs.get("dilations", [1] * spatial_size)
-        ceil_mode = bool(node.attrs.get("ceil_mode", 0))
-        if ceil_mode != 0:
-            raise ValueError("ceil_mode != 0 is not supported")
         pads = node.attrs.get("auto_pad", "NOTSET")
         if pads == "NOTSET":
             pads = node.attrs.get("pads", [0] * spatial_size * 2)
@@ -195,8 +195,56 @@ class Relu(BackendHandler):
 class SoftmaxCrossEntropyLoss(BackendHandler):
     @classmethod
     def version_12(cls, node, tensor_dict, **kwargs):
-        inputs = (
-            tensor_dict[node.input_tensor_names[1]],
-            tensor_dict[node.input_tensor_names[0]],
-        )
-        return cls.run_onnx_node(node, tensor_dict, inputs=inputs, **kwargs)
+        if len(node.input_tensor_names) == 3:
+            raise NotImplementedError("SoftmaxCrossEntropyLoss with weight is not supported")
+        # Swap the inputs
+        node.input_tensor_names[0], node.input_tensor_names[1] = node.input_tensor_names[1], node.input_tensor_names[0]
+        output = cls.run_onnx_node(node, tensor_dict, **kwargs)
+        reduction = node.attrs['reduction']
+        if reduction == 'mean':
+            output = reduce_mean.reduce_mean(output)
+        elif reduction == 'sum':
+            output = reduce_ops.reduce_sum(output)
+        elif reduction == 'none':
+            pass
+        else:
+            raise NotImplementedError('Unknown "reduction" value: "{}"'.format(reduction))
+        return output
+
+
+@onnx_op("Pad")
+@flow_func(pad.pad)
+class Pad(BackendHandler):
+    @classmethod
+    def _common(cls, node, tensor_dict, **kwargs):
+        x = tensor_dict[node.input_tensor_names[0]]
+        mode = node.attrs.pop("mode", "constant")
+        if mode != 'constant':
+            raise NotImplementedError('Padding mode "{}" is not supported'.format(mode))
+
+        if cls.SINCE_VERSION < 11:  # for opset 1 and opset 2
+            node.attrs['paddings'] = node.attrs.pop("pads", None)
+            node.attrs['constant_value'] = node.attrs.pop("value", 0.)
+
+        else:  # for opset 11
+            init_dict = kwargs['init_dict']
+            paddings = init_dict[node.input_tensor_names[1]].reshape(2, -1).transpose((1, 0)).tolist()
+            constant_values = init_dict[node.input_tensor_names[2]].item() if len(
+                node.input_tensor_names) == 3 else 0
+
+        return [
+            cls.run_onnx_node(
+                node, tensor_dict, inputs=[x, paddings, constant_values], **kwargs)
+        ]
+
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_2(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_11(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)

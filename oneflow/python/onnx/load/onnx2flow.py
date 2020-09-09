@@ -45,12 +45,17 @@ import numpy as np
 import onnx
 import torch
 import logging
+try:
+    import onnxsim
+    has_onnxsim = True
+except ImportError:
+    has_onnxsim = False
 
 logger = logging.getLogger(__name__)
 
 
 @oneflow_export("from_pytorch")
-def from_pytorch(torch_model, inputs, model_weight_dir='/tmp/tmp'):
+def from_pytorch(torch_model, inputs, model_weight_dir="/tmp/tmp", do_onnxsim=True):
     if type(inputs) is not list:
         inputs = [inputs]
     torch_model = torch_model.to("cpu")
@@ -68,7 +73,10 @@ def from_pytorch(torch_model, inputs, model_weight_dir='/tmp/tmp'):
     with open("/home/dev/files/temp.onnx", "wb") as f:
         f.write(model_str)
     onnx_model = onnx.load_model_from_string(model_str)
-
+    if do_onnxsim and has_onnxsim:
+        onnx_model, _ = onnxsim.simplify(onnx_model, skip_shape_inference=True)
+    elif do_onnxsim:
+        logger.info("We recommend installing onnx-simplifier so that OneFlow can remove the redundant ONNX nodes")
     if os.path.exists(model_weight_dir):
         shutil.rmtree(model_weight_dir)
     BackendHandler.WEIGHT_SAVE_DIR = model_weight_dir
@@ -225,15 +233,20 @@ class OneflowBackend(Backend):
             input_dict_items = cls._onnx_initializer_to_input_dict_items(
                 graph_def.initializer
             )
-            initialized = {init.name: onnx.numpy_helper.to_array(init) for init in graph_def.initializer}
+            initialized = {
+                init.name: onnx.numpy_helper.to_array(init)
+                for init in graph_def.initializer
+            }
         else:
             input_dict_items = []
             initialized = {}
 
         for node in graph_def.node:
             node = OnnxNode(node)
-            if node.op_type == 'Constant':
-                initialized[node.output_tensor_names[0]] = numpy_helper.to_array(node.attrs['value'])
+            if node.op_type == "Constant":
+                initialized[node.output_tensor_names[0]] = numpy_helper.to_array(
+                    node.attrs["value"]
+                )
 
         # creating placeholders for currently unknown inputs
         for value_info in graph_def.input:
@@ -261,7 +274,12 @@ class OneflowBackend(Backend):
         for node in graph_def.node:
             onnx_node = OnnxNode(node)
             output_ops = cls._onnx_node_to_oneflow_op(
-                onnx_node, tensor_dict, initialized, handlers, opset=opset, strict=strict
+                onnx_node,
+                tensor_dict,
+                initialized,
+                handlers,
+                opset=opset,
+                strict=strict,
             )
             curr_node_output_map = dict(zip(onnx_node.output_tensor_names, output_ops))
             tensor_dict.update(curr_node_output_map)
@@ -314,7 +332,9 @@ class OneflowBackend(Backend):
         handlers = handlers or cls._get_handlers(opset)
         handler = handlers[node.domain].get(node.op_type, None)
         if handler:
-            output = handler.handle(node, tensor_dict, init_dict=init_dict, strict=strict)
+            output = handler.handle(
+                node, tensor_dict, init_dict=init_dict, strict=strict
+            )
             if not isinstance(output, (list, tuple)):
                 output = [output]
             return output

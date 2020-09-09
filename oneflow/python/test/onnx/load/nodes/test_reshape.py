@@ -19,10 +19,12 @@ from torch import nn
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
 
-def test_flatten(test_case):
+#TODO(daquexian): add tests for 0 and -1 after flow.reshape supports it
+def test_reshape(test_case):
     class Net(nn.Module):
         def forward(self, x):
-            x = torch.flatten(x, 1)
+            x = torch.reshape(x, (5, 12))
             return x
 
-    load_pytorch_module_and_check(test_case, Net)
+    load_pytorch_module_and_check(test_case, Net, (2, 5, 3, 2))
+

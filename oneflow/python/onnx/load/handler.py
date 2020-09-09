@@ -109,7 +109,6 @@ class BackendHandler:
 
         return deco
 
-
     FLOW_FUNC = None
     WEIGHT_SAVE_DIR = None
 
@@ -188,7 +187,6 @@ class BackendHandler:
             inputs = [tensor_dict.get(inp, None) for inp in node.input_tensor_names]
         if attrs is None:
             attrs = copy.deepcopy(node.attrs)
-        name = name or node.name
         if name != "":
             attrs["name"] = name
 
@@ -223,5 +221,3 @@ onnx_op = BackendHandler.onnx_op
 flow_func = BackendHandler.flow_func
 partial_support = BackendHandler.partial_support
 ps_description = BackendHandler.ps_description
-
-
