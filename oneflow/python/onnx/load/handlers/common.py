@@ -13,11 +13,63 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+import copy
 
+import numpy as np
+
+import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.ops import nn_ops
-from .broadcast_mixin import BroadcastMixin
-from .pad_mixin import PadMixin
+from oneflow.python.ops.pad import pad as flow_pad
+
+
+class BroadcastMixin(object):
+    @classmethod
+    def explicit_broadcast(cls, inputs, axis=None, tensor_dict=None):
+        x = (
+            inputs[0]
+            if isinstance(inputs[0], remote_blob_util.BlobDef)
+            else tensor_dict[inputs[0]]
+        )
+        y = (
+            inputs[1]
+            if isinstance(inputs[1], remote_blob_util.BlobDeftf.Tensor)
+            else tensor_dict[inputs[1]]
+        )
+
+        if np.prod(y.shape) == 1:
+            return y
+
+        if not isinstance(x, remote_blob_util.BlobDef) or not isinstance(
+            y, remote_blob_util.BlobDef
+        ):
+            raise ValueError("Targets for explicit broadcasting need to be Tensor.")
+
+        if axis is None:
+            return y
+
+        total_num_dim = len(x.get_shape())
+        if axis < 0:
+            axis += total_num_dim
+
+        if axis + len(y.get_shape()) == total_num_dim:
+            return y
+
+        dims = [axis + i for i in range(len(y.get_shape()))]
+        new_y = y
+        for i in range(total_num_dim):
+            if i not in dims:
+                raise NotImplementedError()
+                # new_y = tf.expand_dims(new_y, i)
+        return new_y
+
+    @classmethod
+    def limited_broadcast(cls, node, tensor_dict, **kwargs):
+        x = tensor_dict[node.inputs[0]]
+        y = tensor_dict[node.inputs[1]]
+        if node.attrs.get("broadcast") == 1:
+            y = cls.explicit_broadcast([x, y], node.attrs.get("axis", None))
+            return [cls.run_onnx_node(node, inputs=[x, y], **kwargs)]
+        return [cls.run_onnx_node(node, **kwargs)]
 
 
 class ConvMixin(BroadcastMixin):
@@ -102,3 +154,38 @@ class ConvMixin(BroadcastMixin):
             output = nn_ops.bias_add(conv, bias)
 
         return [output]
+
+
+class PadMixin(object):
+    @classmethod
+    def get_padding_as_op(cls, x, pads):
+        num_dim = int(len(pads) / 2)
+
+        flow_pads = (
+            np.transpose(np.array(pads).reshape([2, num_dim])).astype(np.int32).tolist()
+        )
+        # flow_pads = [0, 0, 0, 0] + flow_pads.flatten().tolist()
+        flow_pads = [(0, 0), (0, 0)] + flow_pads
+
+        return flow_pad(x, flow_pads)
+
+
+class BasicMathMixin(BroadcastMixin):
+    pass
+
+
+class ArithmeticMixin(BroadcastMixin):
+    pass
+
+
+class ReductionMixin(BroadcastMixin):
+    @classmethod
+    def _common(cls, node, **kwargs):
+        attrs = copy.deepcopy(node.attrs)
+        axis = attrs.pop("axes", None)
+        if isinstance(axis, (list, tuple)) and len(axis) == 1:
+            axis = axis[0]
+        attrs["axis"] = axis
+        # https://github.com/onnx/onnx/issues/585
+        attrs["keepdims"] = attrs.pop("keepdims", 1) == 1
+        return [cls.run_onnx_node(node, attrs=attrs, **kwargs)]

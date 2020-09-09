@@ -30,6 +30,31 @@ class Identity(BackendHandler):
         return cls.run_onnx_node(node, tensor_dict, **kwargs)
 
 
+@onnx_op("Reshape")
+@flow_func(array_ops.reshape)
+class Reshape(BackendHandler):
+    @classmethod
+    def _common(cls, node, tensor_dict, **kwargs):
+        init_dict = kwargs['init_dict']
+        x = tensor_dict[node.input_tensor_names[0]]
+        if cls.SINCE_VERSION == 1:
+          shape = node.attrs["shape"]
+        else:  # since_version >= 5
+          shape = init_dict[node.input_tensor_names[1]]
+          node.attrs['shape'] = shape.tolist()
+          del node.input_tensor_names[1]
+        # TODO(daquexian)): update oneflow reshape to support 0 and np.ndarray
+        return [cls.run_onnx_node(node, tensor_dict, **kwargs)]
+
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_5(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    
 @onnx_op("Flatten")
 class Flatten(BackendHandler):
     @classmethod

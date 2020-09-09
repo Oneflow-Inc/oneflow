@@ -19,7 +19,7 @@ from oneflow.python.onnx.load.handler import onnx_op
 from oneflow.python.onnx.load.handler import flow_func
 from oneflow.python.ops import math_ops
 from oneflow.python.ops import linalg
-from .math_mixin import ArithmeticMixin
+from oneflow.python.onnx.load.handlers.common import ArithmeticMixin
 
 
 @onnx_op("Add")
