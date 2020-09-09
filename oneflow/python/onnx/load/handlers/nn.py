@@ -248,3 +248,22 @@ class Pad(BackendHandler):
     @classmethod
     def version_11(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
+
+
+@onnx_op("GlobalMaxPool")
+class GlobalMaxPool(BackendHandler):
+  @classmethod
+  def version_1(cls, node, tensor_dict, **kwargs):
+    x = tensor_dict[node.input_tensor_names[0]]
+    spatial_dims = list(range(2, len(x.shape)))
+    return reduce_ops.reduce_max(x, spatial_dims, keepdims=True)
+
+
+@onnx_op("GlobalAveragePool")
+class GlobalAverageMaxPool(BackendHandler):
+  @classmethod
+  def version_1(cls, node, tensor_dict, **kwargs):
+    x = tensor_dict[node.input_tensor_names[0]]
+    spatial_dims = list(range(2, len(x.shape)))
+    return reduce_mean.reduce_mean(x, spatial_dims, keepdims=True)
+
