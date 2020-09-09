@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 
 @oneflow_export("from_pytorch")
-def from_pytorch(torch_model, inputs):
+def from_pytorch(torch_model, inputs, model_weight_dir='/tmp/tmp'):
     if type(inputs) is not list:
         inputs = [inputs]
     torch_model = torch_model.to("cpu")
@@ -69,43 +69,43 @@ def from_pytorch(torch_model, inputs):
         f.write(model_str)
     onnx_model = onnx.load_model_from_string(model_str)
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        tmpdirname = "/tmp/tmp2/"
-        BackendHandler.WEIGHT_SAVE_DIR = tmpdirname
-        for x in onnx_model.graph.initializer:
-            dir_name = os.path.join(tmpdirname, x.name)
-            if not os.path.exists(dir_name):
-                os.makedirs(dir_name)
-            with open(os.path.join(dir_name, "out"), "wb") as f:
-                value = numpy_helper.to_array(x)
-                f.write(value.tobytes())
-        for node in onnx_model.graph.node:
-            node = OnnxNode(node)
-            if node.op_type == "Constant":
-                attr_value = node.attrs["value"]
-                value = numpy_helper.to_array(attr_value)
-                # we do not support 0d tensor
-                if len(value.shape) == 0:
-                    value = np.reshape(value, (1,))
-                dir_name = os.path.join(tmpdirname, node.output_tensor_names[0])
-                if not os.path.exists(dir_name):
-                    os.makedirs(dir_name)
-                with open(os.path.join(dir_name, "out"), "wb") as f:
-                    f.write(value.tobytes())
-
-        def write_fake_data(var_name, value):
-            dir_name = os.path.join(tmpdirname, var_name)
+    if os.path.exists(model_weight_dir):
+        shutil.rmtree(model_weight_dir)
+    BackendHandler.WEIGHT_SAVE_DIR = model_weight_dir
+    for x in onnx_model.graph.initializer:
+        dir_name = os.path.join(model_weight_dir, x.name)
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+        with open(os.path.join(dir_name, "out"), "wb") as f:
+            value = numpy_helper.to_array(x)
+            f.write(value.tobytes())
+    for node in onnx_model.graph.node:
+        node = OnnxNode(node)
+        if node.op_type == "Constant":
+            attr_value = node.attrs["value"]
+            value = numpy_helper.to_array(attr_value)
+            # we do not support 0d tensor
+            if len(value.shape) == 0:
+                value = np.reshape(value, (1,))
+            dir_name = os.path.join(model_weight_dir, node.output_tensor_names[0])
             if not os.path.exists(dir_name):
                 os.makedirs(dir_name)
             with open(os.path.join(dir_name, "out"), "wb") as f:
                 f.write(value.tobytes())
 
-        train_step_name = "System-Train-TrainStep-temp_job"
-        write_fake_data(train_step_name, np.array([0]))
-        write_fake_data("v1", np.array([0], dtype=np.float32))
+    def write_fake_data(var_name, value):
+        dir_name = os.path.join(model_weight_dir, var_name)
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+        with open(os.path.join(dir_name, "out"), "wb") as f:
+            f.write(value.tobytes())
 
-        d = prepare(onnx_model, blob_dict=dict(zip(input_names, inputs)))
-        return d["y"]
+    train_step_name = "System-Train-TrainStep-temp_job"
+    write_fake_data(train_step_name, np.array([0]))
+    write_fake_data("v1", np.array([0], dtype=np.float32))
+
+    d = prepare(onnx_model, blob_dict=dict(zip(input_names, inputs)))
+    return d["y"]
 
 
 def get_all_backend_handlers(opset_dict):
