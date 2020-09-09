@@ -91,3 +91,48 @@ class MatMul(BackendHandler):
     @classmethod
     def version_9(cls, node, tensor_dict, **kwargs):
         return cls.run_onnx_node(node, tensor_dict, **kwargs)
+
+
+@onnx_op("Clip")
+class Clip(BackendHandler):
+  @classmethod
+  def _common(cls, node, tensor_dict, **kwargs):
+    x = tensor_dict[node.input_tensor_names[0]]
+    x_dtype = x.dtype
+
+    if cls.SINCE_VERSION < 11:
+      # min/max were required and passed as attributes
+      clip_value_min = node.attrs.get("min", None)
+      clip_value_max = node.attrs.get("max", None)
+    else:
+      # min/max are optional and passed as input_tensor_names
+      init_dict = kwargs['init_dict']
+      clip_value_min = init_dict[node.input_tensor_names[1]].item() if len(
+          node.input_tensor_names) > 1 and node.input_tensor_names[1] != '' else None
+      clip_value_max = init_dict[node.input_tensor_names[2]].item() if len(
+          node.input_tensor_names) > 2 and node.input_tensor_names[2] != '' else None
+
+    y = math_ops.clip_by_value(x, clip_value_min, clip_value_max)
+
+    return y
+
+  @classmethod
+  def version_1(cls, node, tensor_dict, **kwargs):
+    return cls._common(node, tensor_dict, **kwargs)
+
+  @classmethod
+  def version_6(cls, node, tensor_dict, **kwargs):
+    return cls._common(node, tensor_dict, **kwargs)
+
+  @classmethod
+  def version_11(cls, node, tensor_dict, **kwargs):
+    return cls._common(node, tensor_dict, **kwargs)
+
+  @classmethod
+  def version_12(cls, node, tensor_dict, **kwargs):
+    return cls._common(node, tensor_dict, **kwargs)
+
+  @classmethod
+  def version_13(cls, node, tensor_dict, **kwargs):
+    return cls._common(node, tensor_dict, **kwargs)
+
