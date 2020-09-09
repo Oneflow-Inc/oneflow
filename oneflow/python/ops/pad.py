@@ -30,6 +30,51 @@ def pad(
     constant_value: Union[int, float] = 0,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """This operator pads the input blob with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`. 
+
+    Args:
+        x (remote_blob_util.BlobDef): The input Blob
+        paddings (Sequence[int]): A list of integers to specify the padding width, its length must equal with the length of `x.shape`. 
+        constant_value (Union[int, float], optional): The constant value to pad. Defaults to 0.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Raises:
+        ValueError: The parameter `paddings` must be a tuple or a list. 
+
+    Returns:
+        remote_blob_util.BlobDef: The Blob after padding.  
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np 
+
+
+        @flow.global_function()
+        def pad_Job(x: tp.Numpy.Placeholder((3, 3))
+        ) -> tp.Numpy:
+            return flow.pad(x, 
+                            paddings=((2, 2), (1, 1)), 
+                            constant_value=5)
+
+
+        x = np.array([[1, 1, 1], 
+                    [1, 1, 1], 
+                    [1, 1, 1]]).astype(np.float32)
+        out = pad_Job(x)
+
+        # out [[5. 5. 5. 5. 5.]
+        #      [5. 5. 5. 5. 5.]
+        #      [5. 1. 1. 1. 5.]
+        #      [5. 1. 1. 1. 5.]
+        #      [5. 1. 1. 1. 5.]
+        #      [5. 5. 5. 5. 5.]
+        #      [5. 5. 5. 5. 5.]]
+
+    """
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):
@@ -99,8 +144,58 @@ def pad_grad(
 
 @oneflow_export("same_padding")
 def same_padding(
-    x, padding, data_format, kernel_size, strides, dilation_rate, name=None,
-):
+    x: remote_blob_util.BlobDef,
+    padding: Sequence[int],
+    data_format: str,
+    kernel_size: Sequence[int],
+    strides: Sequence[int],
+    dilation_rate: Sequence[int],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator do the padding in "SAME" mode, It can computes the pad width according to the `kernel_size` and `strides` to keep the size of feature map unchanged after convolution or other operations. 
+
+    Args:
+        x (remote_blob_util.BlobDef): The input blob. 
+        padding (Sequence[int]): The padding mode. It should be "SAME_UPPER" or "SAME_LOWER" 
+        data_format ([type]): The data format of input Blob. If the string starts with "NC", it means the data format is `channel first`, else the data format is `channel last`. 
+        kernel_size (Sequence[int]): The kernel size of operations. Its type should be tuple or list. 
+        strides (Sequence[int]): The strides of operations. Its type should be tuple or list. 
+        dilation_rate (Sequence[int]): The dilation rate of operations. Its type should be tuple or list.  
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The Blob after padding. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np 
+
+
+        @flow.global_function()
+        def same_pad_Job(x: tp.Numpy.Placeholder((1, 1, 3, 3))
+        ) -> tp.Numpy:
+            return flow.same_padding(x, 
+                                    padding="SAME_UPPER", 
+                                    data_format="NCHW", 
+                                    kernel_size=(3, 3), 
+                                    strides=(1, 1), 
+                                    dilation_rate=(1, 1))
+
+
+        x = np.ones(shape=(1, 1, 3, 3)).astype(np.float32)
+        out = same_pad_Job(x)
+
+        # out [[[[0. 0. 0. 0. 0.]
+        #        [0. 1. 1. 1. 0.]
+        #        [0. 1. 1. 1. 0.]
+        #        [0. 1. 1. 1. 0.]
+        #        [0. 0. 0. 0. 0.]]]]
+
+    """
     assert isinstance(padding, str) and (
         padding.upper() == "SAME_LOWER" or padding.upper() == "SAME_UPPER"
     ), 'padding must be "SAME_LOWER" or "SAME_UPPER".'
