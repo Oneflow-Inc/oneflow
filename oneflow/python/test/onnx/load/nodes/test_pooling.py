@@ -103,3 +103,24 @@ def test_avgpool_k43s2p21(test_case):
     _test_k43s2p21(test_case, nn.AvgPool2d)
 
 
+def _test_global_pooling(test_case, pt_pool):
+    class Net(nn.Module):
+        def __init__(self):
+            super(Net, self).__init__()
+            self.pool = pt_pool((1, 1))
+
+        def forward(self, x):
+            x = self.pool(x)
+            return x
+
+    load_pytorch_module_and_check(test_case, Net, input_size=(2, 4, 10, 9))
+
+
+def test_global_avg_pooling(test_case):
+    _test_global_pooling(test_case, nn.AdaptiveAvgPool2d)
+
+
+def test_global_max_pooling(test_case):
+    _test_global_pooling(test_case, nn.AdaptiveMaxPool2d)
+
+
