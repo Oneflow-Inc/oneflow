@@ -16,6 +16,7 @@ include(re2)
 include(json)
 include(absl)
 include (cares)
+include (openssl)
 include(grpc)
 
 if (WITH_XLA)

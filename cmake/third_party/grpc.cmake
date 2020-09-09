@@ -7,7 +7,7 @@ set(GRPC_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
 # set(GRPC_URL ${THIRD_PARTY_SUBMODULE_DIR}/grpc/src/grpc)
 SET(GRPC_TAR_URL https://github.com/grpc/grpc/archive/v1.27.3.tar.gz)
 set(GRPC_URL_HASH 0c6c3fc8682d4262dd0e5e6fabe1a7e2)
-SET(GRPC_SOURCE_DIR ${THIRD_PARTY_SUBMODULE_DIR}/grpc)
+SET(GRPC_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc)
 
 if(WIN32)
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
@@ -32,11 +32,12 @@ if(THIRD_PARTY)
 
 ExternalProject_Add(grpc
     PREFIX ${GRPC_SOURCE_DIR}
-    DEPENDS protobuf absl cares zlib zlib_copy_headers_to_destination
+    DEPENDS protobuf absl cares openssl zlib zlib_copy_headers_to_destination
     URL ${GRPC_TAR_URL}
     URL_HASH MD5=${GRPC_URL_HASH}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
+    BUILD_COMMAND make -j${PROC_NUM} grpc grpc_unsecure grpc++_unsecure
     INSTALL_COMMAND ""
     CMAKE_CACHE_ARGS
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
@@ -52,8 +53,10 @@ ExternalProject_Add(grpc
         -DProtobuf_DIR:PATH=${THIRD_PARTY_SUBMODULE_DIR}/protobuf/src/protobuf/cmake
         -DgRPC_CARES_PROVIDER:STRING=package
         -Dc-ares_DIR:PATH=${THIRD_PARTY_DIR}/cares/lib/cmake/c-ares
+        -DgRPC_ZLIB_PROVIDER:STRING=package
+        -Dzlib_DIR=:PATH=${THIRD_PARTY_SUBMODULE_DIR}/zlib/install
         -DgRPC_SSL_PROVIDER:STRING=package
-        -DOPENSSL_ROOT_DIR:PATH=${OPENSSL_ROOT_DIR}
+        -DOPENSSL_ROOT_DIR:PATH=${THIRD_PARTY_DIR}/openssl
 )
 
 add_copy_headers_target(NAME grpc SRC ${GRPC_INCLUDE_DIRS} DST ${GRPC_INCLUDE_DIR} DEPS grpc INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/grpc_headers.txt")
