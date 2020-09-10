@@ -27,6 +27,9 @@ class LazyRefBlobObject : public BlobObject {
   LazyRefBlobObject(LazyRefBlobObject&&) = delete;
   LazyRefBlobObject(Blob* blob)
       : BlobObject(std::make_shared<MemoryCase>(blob->mem_case()), blob->data_type()) {
+    const auto& rt_blob_desc = blob->blob_desc();
+    *mut_blob_desc() = BlobDesc(rt_blob_desc.body(), rt_blob_desc.is_tensor_list(),
+                                rt_blob_desc.is_body_disabled(), rt_blob_desc.is_dynamic());
     ref_blob_ = blob;
   }
   virtual ~LazyRefBlobObject() override = default;
