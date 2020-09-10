@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MESSAGE_H_
-#define ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MESSAGE_H_
+#ifndef ONEFLOW_CORE_NETWORKER_NETWORKER_MESSAGE_H_
+#define ONEFLOW_CORE_NETWORKER_NETWORKER_MESSAGE_H_
 
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/util.h"
@@ -31,48 +31,26 @@ limitations under the License.
 #include <sys/types.h>
 #include <unistd.h>
 #include "oneflow/core/actor/actor_message.h"
-#include "oneflow/core/networker/networker_message.h"
 
 namespace oneflow {
 
-#define SOCKET_MSG_TYPE_SEQ                         \
-  OF_PP_MAKE_TUPLE_SEQ(RequestWrite, request_write) \
-  OF_PP_MAKE_TUPLE_SEQ(RequestRead, request_read)   \
-  OF_PP_MAKE_TUPLE_SEQ(Actor, actor)                \
-  OF_PP_MAKE_TUPLE_SEQ(Networker, networker)
-
-enum class SocketMsgType {
-#define MAKE_ENTRY(x, y) k##x,
-  OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ)
-#undef MAKE_ENTRY
+enum class NetworkerMsgType {
+  kSend,
+  kRecv,
+  kAck,
 };
 
-struct RequestWriteMsg {
-  void* src_token;
+struct NetworkerMsg {
+  uint64_t token;
+  void* src_mem_token;
+  void* dst_mem_token;
+  std::size_t size;
   int64_t dst_machine_id;
-  void* dst_token;
-  void* read_id;
+  NetworkerMsgType type;
 };
-
-struct RequestReadMsg {
-  void* src_token;
-  void* dst_token;
-  void* read_id;
-};
-
-struct SocketMsg {
-  SocketMsgType msg_type;
-  union {
-#define MAKE_ENTRY(x, y) x##Msg y##_msg;
-    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ)
-#undef MAKE_ENTRY
-  };
-};
-
-using CallBackList = std::list<std::function<void()>>;
 
 }  // namespace oneflow
 
 #endif  // PLATFORM_POSIX
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MESSAGE_H_
+#endif  // ONEFLOW_CORE_NETWORKER_NETWORKER_MESSAGE_H_

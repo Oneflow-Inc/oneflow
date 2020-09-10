@@ -16,6 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
 #define ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
 
+// #define DEPRECATED(func) func __attribute__((deprecated))
+#define DEPRECATED __attribute__((deprecated))
+
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/job/plan.pb.h"
@@ -34,7 +37,6 @@ struct CommNetItem {
 class CommNet {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CommNet);
-  CommNet() = delete;
   virtual ~CommNet();
 
   // "RegisterMemory" will return a Token, after "RegisterMemoryDone",
@@ -54,7 +56,8 @@ class CommNet {
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
 
  protected:
-  CommNet(const Plan& plan);
+  DEPRECATED CommNet(const Plan& plan);
+  CommNet();
 
   virtual void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) = 0;
   const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }

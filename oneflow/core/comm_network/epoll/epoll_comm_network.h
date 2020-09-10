@@ -29,7 +29,9 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   OF_DISALLOW_COPY_AND_MOVE(EpollCommNet);
   ~EpollCommNet();
 
-  static void Init(const Plan& plan) { Global<CommNet>::SetAllocated(new EpollCommNet(plan)); }
+  DEPRECATED static void Init(const Plan& plan) {
+    Global<CommNet>::SetAllocated(new EpollCommNet(plan));
+  }
 
   void RegisterMemoryDone() override;
 
@@ -49,11 +51,14 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   HashMap<int, SocketHelper*> sockfd2helper_;
 };
 
+/*
+ * DEPRECATED
 template<>
 class Global<EpollCommNet> final {
  public:
   static EpollCommNet* Get() { return static_cast<EpollCommNet*>(Global<CommNet>::Get()); }
 };
+*/
 
 }  // namespace oneflow
 
