@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/control/cluster_control.h"
-#include "oneflow/core/control/cluster_control.pb.h"
+#include "oneflow/core/job/cluster_control.h"
+#include "oneflow/core/job/cluster_control.pb.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
