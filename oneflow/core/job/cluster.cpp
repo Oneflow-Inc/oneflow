@@ -28,7 +28,7 @@ namespace oneflow {
 
 namespace {
 
-void RunLazyJobSet(ThreadPool* lazy_runtime_thread) {
+void AsyncRunLazyJobSet(ThreadPool* lazy_runtime_thread) {
   lazy_runtime_thread->AddWork([] {
     ConfigProto config_proto;
     Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
@@ -66,7 +66,7 @@ Maybe<void> Cluster::WorkerLoop() {
       if (cluster_instruction.has_cluster_ctrl_halt()) {
         break;
       } else if (cluster_instruction.has_cluster_ctrl_session_start()) {
-        RunLazyJobSet(&lazy_runtime_thread);
+        AsyncRunLazyJobSet(&lazy_runtime_thread);
       } else {
         OF_UNIMPLEMENTED();
       }
