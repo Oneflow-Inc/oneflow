@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/cluster_control.h"
-#include "oneflow/core/job/cluster_control.pb.h"
+#include "oneflow/core/job/cluster_instruction.h"
+#include "oneflow/core/job/cluster_instruction.pb.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
@@ -43,30 +43,29 @@ std::string GetHaltOrSessionStartCtrlKey() {
 
 }  // namespace
 
-void ClusterControl::MasterSendSessionStart() {
+void ClusterInstruction::MasterSendSessionStart() {
   BarrierClear();
-  ClusterControlProto cluster_control;
-  cluster_control.set_cmd(kClusterCtrlCmdSessionStart);
-  Global<CtrlClient>::Get()->PushKV(GetHaltOrSessionStartCtrlKey(), cluster_control);
+  ClusterInstructionProto cluster_instruction;
+  cluster_instruction.mutable_cluster_ctrl_session_start();
+  Global<CtrlClient>::Get()->PushKV(GetHaltOrSessionStartCtrlKey(), cluster_instruction);
 }
 
-void ClusterControl::MasterSendHalt() {
+void ClusterInstruction::MasterSendHalt() {
   BarrierClear();
-  ClusterControlProto cluster_control;
-  cluster_control.set_cmd(kClusterCtrlCmdHalt);
-  Global<CtrlClient>::Get()->PushKV(GetHaltOrSessionStartCtrlKey(), cluster_control);
+  ClusterInstructionProto cluster_instruction;
+  cluster_instruction.mutable_cluster_ctrl_halt();
+  Global<CtrlClient>::Get()->PushKV(GetHaltOrSessionStartCtrlKey(), cluster_instruction);
   HaltBarrier();
 }
 
-bool ClusterControl::WorkerReceiveHalt() {
+bool ClusterInstruction::WorkerReceiveHalt(ClusterInstructionProto* cluster_instruction) {
   BarrierClear();
-  ClusterControlProto cluster_control;
-  Global<CtrlClient>::Get()->PullKV(GetHaltOrSessionStartCtrlKey(), &cluster_control);
-  if (cluster_control.cmd() == kClusterCtrlCmdHalt) { return true; }
-  CHECK_EQ(cluster_control.cmd(), kClusterCtrlCmdSessionStart);
+  Global<CtrlClient>::Get()->PullKV(GetHaltOrSessionStartCtrlKey(), cluster_instruction);
+  if (cluster_instruction->has_cluster_ctrl_halt()) { return true; }
+  CHECK(cluster_instruction->has_cluster_ctrl_session_start());
   return false;
 }
 
-void ClusterControl::HaltBarrier() { OF_BARRIER_ALL(); }
+void ClusterInstruction::HaltBarrier() { OF_BARRIER_ALL(); }
 
 }  // namespace oneflow

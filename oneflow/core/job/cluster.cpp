@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/cluster.h"
-#include "oneflow/core/job/cluster_control.pb.h"
-#include "oneflow/core/job/cluster_control.h"
+#include "oneflow/core/job/cluster_instruction.pb.h"
+#include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/machine_context.h"
@@ -27,7 +27,8 @@ namespace oneflow {
 
 Maybe<void> Cluster::WorkerLoop() {
   CHECK_OR_RETURN(!Global<MachineCtx>::Get()->IsThisMachineMaster());
-  while (ClusterControl::WorkerReceiveHalt() == false) {
+  ClusterInstructionProto cluster_instruction;
+  while (ClusterInstruction::WorkerReceiveHalt(&cluster_instruction) == false) {
     ConfigProto config_proto;
     Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
     int32_t machine_num = config_proto.resource().machine_num();
@@ -43,7 +44,7 @@ Maybe<void> Cluster::WorkerLoop() {
     }
     Global<SessionGlobalObjectsScope>::Delete();
   }
-  ClusterControl::HaltBarrier();
+  ClusterInstruction::HaltBarrier();
   Global<EnvGlobalObjectsScope>::Delete();
   exit(0);
 }

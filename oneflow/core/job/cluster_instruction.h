@@ -16,11 +16,13 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_CLUSTER_CONTROL_H_
 #define ONEFLOW_CORE_JOB_CLUSTER_CONTROL_H_
 
+#include "oneflow/core/job/cluster_instruction.pb.h"
+
 namespace oneflow {
 
-struct ClusterControl final {
+struct ClusterInstruction final {
   static void MasterSendSessionStart();
-  static bool WorkerReceiveHalt();
+  static bool WorkerReceiveHalt(ClusterInstructionProto* cluster_instruction);
   static void MasterSendHalt();
   static void HaltBarrier();
 };
