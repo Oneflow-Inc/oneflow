@@ -32,6 +32,7 @@ import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.vm_util as vm_util
+from oneflow.python.experimental import interface_op_read_and_write
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.framework.function_desc import FunctionDesc
 import oneflow.python.framework.module as module_util
@@ -231,6 +232,7 @@ class Session(object):
         assert len(self.job_name2var_name2var_blob_) == 0
         del self.var_name2var_blob_
         del self.job_name2module_name2module_
+        interface_op_read_and_write.ReleaseLazyRefBlob()
         self.ForceReleaseEagerBlobs()
         c_api_util.StopGlobalSession()
         c_api_util.DestroyGlobalSession()

@@ -23,24 +23,26 @@ import oneflow.typing as tp
 
 
 flow.config.gpu_device_num(2)
-
+flow.enable_eager_execution(False)
 
 @flow.global_function()
 def add() -> tp.Numpy:
     with flow.scope.placement("gpu", "0:0-1"):
         x = flow.get_variable(
-            name="x", shape=(2, 3), initializer=flow.random_uniform_initializer(),
+            name="x", shape=(2, 3), initializer=flow.random_normal_initializer(),
         )
         y = flow.get_variable(
             name="y", shape=(2, 3), initializer=flow.random_uniform_initializer(),
         )
         z = flow.get_variable(
-            name="z", shape=(2, 3), initializer=flow.random_uniform_initializer(),
+            name="z", shape=(2, 3), initializer=flow.xavier_uniform_initializer(),
         )
         return flow.math.add_n([x, y, z])
         return z
 
 
+if flow.eager_execution_enabled():
+    add()
 check_point = flow.train.CheckPoint()
 check_point.init()
 

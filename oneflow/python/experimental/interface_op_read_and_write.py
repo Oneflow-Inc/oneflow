@@ -17,6 +17,7 @@ import oneflow as flow
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.async_util as async_util
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.input_blob_def as input_blob_def_util
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -28,10 +29,17 @@ from oneflow.python.oneflow_export import oneflow_export
 lazy_blob_cache = {}
 
 
-def _GetLazyRefBlobObject(builder, op_name):
+def _GetInterfaceBlobObject(builder, op_name):
+    if c_api_util.EagerExecutionEnabled():
+        return session_ctx.GetDefaultSession().var_name2var_blob[op_name].blob_object
     if op_name not in lazy_blob_cache:
         lazy_blob_cache[op_name] = builder.MakeLazyRefBlobObject(op_name)
     return lazy_blob_cache[op_name]
+
+
+def ReleaseLazyRefBlob():
+    for blob in lazy_blob_cache.values():
+        blob.__del__()
 
 
 def GetEagerInterfaceBlob(op_name):
@@ -42,7 +50,7 @@ def GetEagerInterfaceBlob(op_name):
 
     def AsyncGetInterfaceBlob(Yield):
         def build(builder):
-            blob_object = _GetLazyRefBlobObject(builder, op_name)
+            blob_object = _GetInterfaceBlobObject(builder, op_name)
             lbi = logical_blob_id_util.LogicalBlobId()
             lbi.op_name = op_name
             op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
@@ -73,7 +81,7 @@ def GetInterfaceBlobValue(op_name):
 
     def AsyncGetInterfaceBlobValue(Yield):
         def build(builder):
-            blob_object = _GetLazyRefBlobObject(builder, op_name)
+            blob_object = _GetInterfaceBlobObject(builder, op_name)
             lbi = logical_blob_id_util.LogicalBlobId()
             lbi.op_name = op_name
             op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
@@ -105,7 +113,7 @@ def FeedValueToInterfaceBlob(op_name, ndarray):
 
     def AsyncFeedValueToInterfaceBlob(Yield):
         def build(builder):
-            blob_object = _GetLazyRefBlobObject(builder, op_name)
+            blob_object = _GetInterfaceBlobObject(builder, op_name)
             if blob_object.op_arg_blob_attr.is_tensor_list:
                 input_blob_def = input_blob_def_util.MirroredTensorListDef(
                     [x.shape for x in ndarray],
