@@ -36,7 +36,7 @@ std::string GetHaltAckCtrlKey(int64_t machine_id) {
 
 // return unique sequential key
 // because ctrl key is not allowed to push/pull twice
-std::string GetHaltOrSessionStartCtrlKey() {
+std::string GetClusterInstructionKey() {
   static int64_t seq = 0;
   return "HaltOrSessionStart/" + std::to_string(seq++);
 }
@@ -47,23 +47,20 @@ void ClusterInstruction::MasterSendSessionStart() {
   BarrierClear();
   ClusterInstructionProto cluster_instruction;
   cluster_instruction.mutable_cluster_ctrl_session_start();
-  Global<CtrlClient>::Get()->PushKV(GetHaltOrSessionStartCtrlKey(), cluster_instruction);
+  Global<CtrlClient>::Get()->PushKV(GetClusterInstructionKey(), cluster_instruction);
 }
 
 void ClusterInstruction::MasterSendHalt() {
   BarrierClear();
   ClusterInstructionProto cluster_instruction;
   cluster_instruction.mutable_cluster_ctrl_halt();
-  Global<CtrlClient>::Get()->PushKV(GetHaltOrSessionStartCtrlKey(), cluster_instruction);
+  Global<CtrlClient>::Get()->PushKV(GetClusterInstructionKey(), cluster_instruction);
   HaltBarrier();
 }
 
-bool ClusterInstruction::WorkerReceiveHalt(ClusterInstructionProto* cluster_instruction) {
+void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction) {
   BarrierClear();
-  Global<CtrlClient>::Get()->PullKV(GetHaltOrSessionStartCtrlKey(), cluster_instruction);
-  if (cluster_instruction->has_cluster_ctrl_halt()) { return true; }
-  CHECK(cluster_instruction->has_cluster_ctrl_session_start());
-  return false;
+  Global<CtrlClient>::Get()->PullKV(GetClusterInstructionKey(), cluster_instruction);
 }
 
 void ClusterInstruction::HaltBarrier() { OF_BARRIER_ALL(); }
