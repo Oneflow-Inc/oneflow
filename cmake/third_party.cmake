@@ -112,6 +112,8 @@ set(oneflow_third_party_libs
     ${COCOAPI_STATIC_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
     ${ZLIB_STATIC_LIBRARIES}
+    ${CARES_STATIC_LIBRARIES}
+    ${ABSL_LIBRARIES}
 )
 
 if (NOT WITH_XLA)
@@ -222,7 +224,7 @@ endif()
 
 if(WITH_TENSORRT)
   if (NOT WITH_XLA)
-    list(APPEND oneflow_third_party_libs ${ABSL_LIBRARIES})
+    # list(APPEND oneflow_third_party_libs ${ABSL_LIBRARIES})
   endif()
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
 endif()

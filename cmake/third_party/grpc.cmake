@@ -12,15 +12,15 @@ SET(GRPC_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc)
 if(WIN32)
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
     set(GRPC_LIBRARY_NAMES grpc++_unsecure.lib
-      grpc_unsecure.lib gpr.lib)
+      grpc_unsecure.lib gpr.lib upb.lib address_sorting.lib)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
     set(GRPC_LIBRARY_NAMES libgrpc++_unsecure.a
-      libgrpc_unsecure.a libgpr.a)
+      libgrpc_unsecure.a libgpr.a libupb.a libaddress_sorting.a)
 else()
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc)
     set(GRPC_LIBRARY_NAMES libgrpc++_unsecure.a
-      libgrpc_unsecure.a libgpr.a)
+      libgrpc_unsecure.a libgpr.a libupb.a libaddress_sorting.a)
 endif()
 
 foreach(LIBRARY_NAME ${GRPC_LIBRARY_NAMES})
