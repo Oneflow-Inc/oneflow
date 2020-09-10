@@ -21,60 +21,127 @@ namespace oneflow {
 
 namespace {
 
-template<int32_t NDIMS>
-struct Int32Array {
-  int32_t val[NDIMS];
+template<int32_t NDIMS, typename I>
+struct SOA {
+  I val[NDIMS];
 };
 
-template<int32_t NDIMS>
-__global__ void CopyNDGpu(const int n, void* dst, const void* src,
-                          NdIndexOffsetHelper<int64_t, NDIMS> dst_helper,
-                          NdIndexOffsetHelper<int64_t, NDIMS> src_helper,
-                          NdIndexOffsetHelper<int64_t, NDIMS> copy_helper,
-                          Int32Array<NDIMS> dst_pos, Int32Array<NDIMS> src_pos) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    int64_t copy_idx[NDIMS];
-    int64_t src_idx[NDIMS];
-    int64_t dst_idx[NDIMS];
+template<int32_t NDIMS, typename T, typename I>
+__global__ void CopyNDGpu(const int n, T* dst, const T* src,
+                          NdIndexOffsetHelper<I, NDIMS> dst_helper,
+                          NdIndexOffsetHelper<I, NDIMS> src_helper,
+                          NdIndexOffsetHelper<I, NDIMS> copy_helper, SOA<NDIMS, I> dst_pos,
+                          SOA<NDIMS, I> src_pos) {
+  CUDA_1D_KERNEL_LOOP_T(I, i, n) {
+    I copy_idx[NDIMS];
+    I src_idx[NDIMS];
+    I dst_idx[NDIMS];
     copy_helper.OffsetToNdIndex(i, copy_idx);
 #pragma unroll
-    for (int64_t j = 0; j < NDIMS; j++) {
+    for (I j = 0; j < NDIMS; j++) {
       src_idx[j] = src_pos.val[j] + copy_idx[j];
       dst_idx[j] = dst_pos.val[j] + copy_idx[j];
     }
-    const int64_t src_offset = src_helper.NdIndexToOffset(src_idx);
-    const int64_t dst_offset = dst_helper.NdIndexToOffset(dst_idx);
-    unsigned char* dst_ptr = reinterpret_cast<unsigned char*>(dst) + dst_offset;
-    const unsigned char* src_ptr = reinterpret_cast<const unsigned char*>(src) + src_offset;
-    *dst_ptr = *src_ptr;
+    const I src_offset = src_helper.NdIndexToOffset(src_idx);
+    const I dst_offset = dst_helper.NdIndexToOffset(dst_idx);
+    dst[dst_offset] = src[src_offset];
+  }
+}
+
+size_t GetPackSize(const MemoryCopyNdDesc& desc, const void* dst, const void* src) {
+  const int64_t mask = desc.src_shape.dim_vec().back() | desc.dst_shape.dim_vec().back()
+                       | desc.extent.dim_vec().back() | desc.src_pos.dim_vec().back()
+                       | desc.dst_pos.dim_vec().back()
+                       | static_cast<int64_t>(reinterpret_cast<uintptr_t>(dst))
+                       | static_cast<int64_t>(reinterpret_cast<uintptr_t>(src));
+  if ((mask & 0xF) == 0) {
+    return 16;
+  } else if ((mask & 0x7) == 0) {
+    return 8;
+  } else if ((mask & 0x3) == 0) {
+    return 4;
+  } else if ((mask & 0x1) == 0) {
+    return 2;
+  } else {
+    return 1;
   }
 }
 
 }  // namespace
 
-template<int32_t NDIMS>
-void CopyNDGpuImpl(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc) {
+template<int32_t NDIMS, typename P, typename I>
+void CopyNDByPackByIndexTypeGpu(DeviceCtx* ctx, void* dst, const void* src,
+                                const MemoryCopyNdDesc& desc) {
   CHECK_EQ(desc.dst_pos.NumAxes(), NDIMS);
   CHECK_EQ(desc.src_pos.NumAxes(), NDIMS);
   CHECK_EQ(desc.dst_shape.NumAxes(), NDIMS);
   CHECK_EQ(desc.src_shape.NumAxes(), NDIMS);
   CHECK_EQ(desc.extent.NumAxes(), NDIMS);
-  NdIndexOffsetHelper<int64_t, NDIMS> src_helper(desc.src_shape.dim_vec().data());
-  NdIndexOffsetHelper<int64_t, NDIMS> dst_helper(desc.dst_shape.dim_vec().data());
-  NdIndexOffsetHelper<int64_t, NDIMS> copy_helper(desc.extent.dim_vec().data());
-  Int32Array<NDIMS> src_pos;
-  Int32Array<NDIMS> dst_pos;
+  constexpr size_t pack_size = sizeof(P);
+  I dst_shape_dim_arr[NDIMS];
+  I src_shape_dim_arr[NDIMS];
+  I extent_dim_arr[NDIMS];
+  SOA<NDIMS, I> src_pos;
+  SOA<NDIMS, I> dst_pos;
   FOR_RANGE(int64_t, i, 0, NDIMS) {
-    dst_pos.val[i] = desc.dst_pos.At(i);
-    src_pos.val[i] = desc.src_pos.At(i);
+    if (i == NDIMS - 1) {
+      dst_pos.val[i] = desc.dst_pos.dim_vec().at(i) / pack_size;
+      src_pos.val[i] = desc.src_pos.dim_vec().at(i) / pack_size;
+      dst_shape_dim_arr[i] = desc.dst_shape.dim_vec().at(i) / pack_size;
+      src_shape_dim_arr[i] = desc.src_shape.dim_vec().at(i) / pack_size;
+      extent_dim_arr[i] = desc.extent.dim_vec().at(i) / pack_size;
+    } else {
+      dst_pos.val[i] = desc.dst_pos.dim_vec().at(i);
+      src_pos.val[i] = desc.src_pos.dim_vec().at(i);
+      dst_shape_dim_arr[i] = desc.dst_shape.dim_vec().at(i);
+      src_shape_dim_arr[i] = desc.src_shape.dim_vec().at(i);
+      extent_dim_arr[i] = desc.extent.dim_vec().at(i);
+    }
   }
-  RUN_CUDA_KERNEL((CopyNDGpu<NDIMS>), ctx, desc.extent.elem_cnt(), desc.extent.elem_cnt(), dst, src,
-                  dst_helper, src_helper, copy_helper, dst_pos, src_pos);
+  NdIndexOffsetHelper<I, NDIMS> dst_helper(dst_shape_dim_arr);
+  NdIndexOffsetHelper<I, NDIMS> src_helper(src_shape_dim_arr);
+  NdIndexOffsetHelper<I, NDIMS> copy_helper(extent_dim_arr);
+  const int64_t elem_cnt = desc.extent.elem_cnt() / pack_size;
+  CopyNDGpu<NDIMS, P, I>
+      <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          elem_cnt, reinterpret_cast<P*>(dst), reinterpret_cast<const P*>(src), dst_helper,
+          src_helper, copy_helper, dst_pos, src_pos);
+}
+
+template<int32_t NDIMS, typename P>
+void CopyNDByPackGpu(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc) {
+  if (std::max(desc.dst_shape.elem_cnt(), desc.src_shape.elem_cnt())
+      > static_cast<int64_t>(GetMaxVal<int32_t>() / 2)) {
+    CopyNDByPackByIndexTypeGpu<NDIMS, P, int64_t>(ctx, dst, src, desc);
+  } else {
+    CopyNDByPackByIndexTypeGpu<NDIMS, P, int32_t>(ctx, dst, src, desc);
+  }
+}
+
+template<int32_t NDIMS>
+void CopyNDGpuImpl(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc) {
+  const size_t pack_size = GetPackSize(desc, dst, src);
+  if (pack_size == 1) {
+    CopyNDByPackGpu<NDIMS, uint8_t>(ctx, dst, src, desc);
+  } else if (pack_size == 2) {
+    CopyNDByPackGpu<NDIMS, uint16_t>(ctx, dst, src, desc);
+  } else if (pack_size == 4) {
+    CopyNDByPackGpu<NDIMS, uint32_t>(ctx, dst, src, desc);
+  } else if (pack_size == 8) {
+    CopyNDByPackGpu<NDIMS, uint64_t>(ctx, dst, src, desc);
+  } else if (pack_size == 16) {
+    static_assert(sizeof(uint4) == 16, "");
+    CopyNDByPackGpu<NDIMS, uint4>(ctx, dst, src, desc);
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 #define SPECIALIZE_COPY_ND_GPU_IMPL(NDIMS)                                        \
   template void CopyNDGpuImpl<NDIMS>(DeviceCtx * ctx, void* dst, const void* src, \
                                      const MemoryCopyNdDesc& desc);
+SPECIALIZE_COPY_ND_GPU_IMPL(2)
+SPECIALIZE_COPY_ND_GPU_IMPL(3)
 SPECIALIZE_COPY_ND_GPU_IMPL(4)
 SPECIALIZE_COPY_ND_GPU_IMPL(5)
 SPECIALIZE_COPY_ND_GPU_IMPL(6)
