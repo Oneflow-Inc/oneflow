@@ -85,6 +85,7 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
     output = xla::ConvertElementType(output, DataTypeToPrimitiveType(output_type));
   }
 
+  // TODO(Tsai): why HasOutput("normalized_0") is a condition not a check here
   if (ctx->Attr<bool>("scale") && ctx->HasOutput("normalized_0")) {
     ctx->SetOutput("normalized_0", Reshape(output, input_shape));
   }
