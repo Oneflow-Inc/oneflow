@@ -38,7 +38,7 @@ std::string GetHaltAckCtrlKey(int64_t machine_id) {
 // because ctrl key is not allowed to push/pull twice
 std::string GetClusterInstructionKey() {
   static int64_t seq = 0;
-  return "HaltOrSessionStart/" + std::to_string(seq++);
+  return "ClusterInstructionKey/" + std::to_string(seq++);
 }
 
 }  // namespace
