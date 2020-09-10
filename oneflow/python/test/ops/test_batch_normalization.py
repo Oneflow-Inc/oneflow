@@ -416,3 +416,159 @@ def test_batchnorm_fp16(test_case):
             x_diff_rtol=1e-3,
             x_diff_atol=1e-3
         )
+
+
+def _test_batchnorm_add_relu(test_case, input_shape, axis, data_type):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.consistent_view())
+    func_config.default_data_type(flow.float32)
+
+    @flow.global_function(type="train", function_config=func_config)
+    def test_job(
+        x: oft.Numpy.Placeholder(input_shape, dtype=flow.float32),
+        addend: oft.Numpy.Placeholder(input_shape, dtype=flow.float32),
+    ):
+        v = flow.get_variable(
+            name="v",
+            shape=(1,),
+            dtype=flow.float32,
+            initializer=flow.zeros_initializer(),
+        )
+
+        x = x + v
+        addend = addend + v
+
+        x1 = flow.identity(x)
+        x2 = flow.identity(x)
+
+        addend1 = flow.identity(addend)
+        addend2 = flow.identity(addend)
+
+        flow.watch_diff(x1, test_global_storage.Setter("x1_diff"))
+        flow.watch_diff(x2, test_global_storage.Setter("x2_diff"))
+
+        flow.watch_diff(addend1, test_global_storage.Setter("addend1_diff"))
+        flow.watch_diff(addend2, test_global_storage.Setter("addend2_diff"))
+
+        x1 = flow.cast(x1, data_type)
+        x2 = flow.cast(x2, data_type)
+
+        addend1 = flow.cast(addend1, data_type)
+        addend2 = flow.cast(addend2, data_type)
+
+        y1 = flow.layers.batch_normalization_add_relu(
+            x1, addend=addend1, axis=axis, name="BN1"
+        )
+        y2 = flow.math.relu(
+            flow.layers.batch_normalization(x2, axis=axis, name="BN2") + addend2
+        )
+
+        y1 = flow.cast(y1, flow.float32)
+        y2 = flow.cast(y2, flow.float32)
+
+        flow.watch(y1, test_global_storage.Setter("y1"))
+        flow.watch(y2, test_global_storage.Setter("y2"))
+
+        loss = flow.math.reduce_mean(y1 + y2)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
+        ).minimize(flow.math.reduce_sum(loss))
+
+        return loss
+
+    x = np.random.rand(*input_shape).astype(np.float32)
+    addend = np.random.rand(*input_shape).astype(np.float32)
+
+    test_job(x, addend).get()
+
+    test_case.assertTrue(
+        np.allclose(test_global_storage.Get("y1"), test_global_storage.Get("y2"))
+    )
+    test_case.assertTrue(
+        np.allclose(
+            test_global_storage.Get("x1_diff"), test_global_storage.Get("x2_diff")
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            test_global_storage.Get("addend1_diff"),
+            test_global_storage.Get("addend2_diff"),
+        )
+    )
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+def test_batchnorm_add_relu(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["input_shape"] = [(12, 16, 24, 32), (5, 7, 9, 11)]
+    arg_dict["axis"] = [0, 1, 2, 3]
+    arg_dict["data_type"] = [flow.float32, flow.float16]
+    for arg in GenArgDict(arg_dict):
+        _test_batchnorm_add_relu(test_case, **arg)
+
+
+def _test_batchnorm_relu(test_case, input_shape, axis, data_type):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.consistent_view())
+    func_config.default_data_type(flow.float32)
+
+    @flow.global_function(type="train", function_config=func_config)
+    def test_job(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float32),):
+        v = flow.get_variable(
+            name="v",
+            shape=(1,),
+            dtype=flow.float32,
+            initializer=flow.zeros_initializer(),
+        )
+
+        x = x + v
+
+        x1 = flow.identity(x)
+        x2 = flow.identity(x)
+
+        flow.watch_diff(x1, test_global_storage.Setter("x1_diff"))
+        flow.watch_diff(x2, test_global_storage.Setter("x2_diff"))
+
+        x1 = flow.cast(x1, data_type)
+        x2 = flow.cast(x2, data_type)
+
+        y1 = flow.layers.batch_normalization_relu(x1, axis=axis, name="BN1")
+        y2 = flow.math.relu(flow.layers.batch_normalization(x2, axis=axis, name="BN2"))
+
+        y1 = flow.cast(y1, flow.float32)
+        y2 = flow.cast(y2, flow.float32)
+
+        flow.watch(y1, test_global_storage.Setter("y1"))
+        flow.watch(y2, test_global_storage.Setter("y2"))
+
+        loss = flow.math.reduce_mean(y1 + y2)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
+        ).minimize(flow.math.reduce_sum(loss))
+
+        return loss
+
+    x = np.random.rand(*input_shape).astype(np.float32)
+
+    test_job(x).get()
+
+    test_case.assertTrue(
+        np.allclose(test_global_storage.Get("y1"), test_global_storage.Get("y2"))
+    )
+    test_case.assertTrue(
+        np.allclose(
+            test_global_storage.Get("x1_diff"), test_global_storage.Get("x2_diff")
+        )
+    )
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+def test_batchnorm_relu(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["input_shape"] = [(12, 16, 24, 32), (5, 7, 9, 11)]
+    arg_dict["axis"] = [0, 1, 2, 3]
+    arg_dict["data_type"] = [flow.float32, flow.float16]
+    for arg in GenArgDict(arg_dict):
+        _test_batchnorm_relu(test_case, **arg)

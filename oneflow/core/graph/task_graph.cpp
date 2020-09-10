@@ -133,7 +133,7 @@ bool IsInplaceAllowed(
     if (first_blob == nullptr) {
       first_blob = blob_desc;
     } else {
-      if (!(first_blob->shape() == blob_desc->shape()
+      if (!(first_blob->shape().elem_cnt() == blob_desc->shape().elem_cnt()
             && first_blob->data_type() == blob_desc->data_type())) {
         return false;
       }
