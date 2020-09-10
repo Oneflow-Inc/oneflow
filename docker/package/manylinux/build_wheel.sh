@@ -11,6 +11,7 @@ PY_VERS=()
 while [[ "$#" > 0 ]]; do
     case $1 in
         --skip-third-party) SKIP_THIRD_PARTY=1; ;;
+        --skip-wheel) SKIP_WHEEL=1; ;;
         --cache-dir) CACHE_DIR=$2; shift ;;
         --house-dir) HOUSE_DIR=$2; shift ;;
         --package-name) PACKAGE_NAME=$2; shift ;;
@@ -103,8 +104,10 @@ do
     cmake --build . -j `nproc`
     popd
     trap cleanup EXIT
-    rm -rf $ONEFLOW_BUILD_DIR/python_scripts/*.egg-info
-    $PY_BIN setup.py bdist_wheel -d tmp_wheel --build_dir $ONEFLOW_BUILD_DIR --package_name $PACKAGE_NAME
-    auditwheel repair tmp_wheel/*.whl --wheel-dir $HOUSE_DIR
+    if [[ $SKIP_WHEEL != 1 ]]; then
+        rm -rf $ONEFLOW_BUILD_DIR/python_scripts/*.egg-info
+        $PY_BIN setup.py bdist_wheel -d tmp_wheel --build_dir $ONEFLOW_BUILD_DIR --package_name $PACKAGE_NAME
+        auditwheel repair tmp_wheel/*.whl --wheel-dir $HOUSE_DIR
+    fi
     cleanup
 done
