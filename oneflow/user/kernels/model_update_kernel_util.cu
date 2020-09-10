@@ -73,8 +73,8 @@ __global__ void MomentumUpdateGpu(int64_t n, float scale, float l1, float l2, fl
                                   const G* model_diff, T* model, T* momentum) {
   const T lr = *learning_rate;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    MomentumUpdateFunctor<T, G>()(model_diff + i, model + i, beta == 0 ? nullptr : momentum + i,
-                                  scale, l1, l2, beta, weight_decay, lr);
+    MomentumUpdateFunctor<T, G>()(model_diff + i, model + i, momentum + i, scale, l1, l2, beta,
+                                  weight_decay, lr);
   }
 }
 
