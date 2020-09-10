@@ -24,7 +24,7 @@ from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import random
 
 def compare_with_tensorflow(device_type, in_shape, data_type):
-    assert device_type in ["cpu"]
+    assert device_type in ["cpu", "gpu"]
     assert data_type in ["int32", "int64"]
     assert len(in_shape) == 1
     flow.clear_default_session()
@@ -37,6 +37,7 @@ def compare_with_tensorflow(device_type, in_shape, data_type):
             return flow.math.invert_permutation(x)
 
     x = np.array(random.sample(range(0, in_shape[0]), in_shape[0])).astype(type_name_to_np_type[data_type])
+
     # OneFlow
     of_out = InvertJob(x).get().numpy()
     # TensorFlow
@@ -47,7 +48,7 @@ def compare_with_tensorflow(device_type, in_shape, data_type):
 
 def gen_arg_list():
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu",]
+    arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["in_shape"] = [
         (5,),
         (10,)
@@ -56,6 +57,6 @@ def gen_arg_list():
 
     return GenArgList(arg_dict)
 
-def test_argmax(test_case):
+def test_invertpermutation(test_case):
     for arg in gen_arg_list():
         compare_with_tensorflow(*arg)
