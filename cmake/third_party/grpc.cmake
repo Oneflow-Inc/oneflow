@@ -28,6 +28,20 @@ foreach(LIBRARY_NAME ${GRPC_LIBRARY_NAMES})
     list(APPEND GRPC_BUILD_STATIC_LIBRARIES ${GRPC_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
+if (EXISTS ${PROJECT_SOURCE_DIR}/build/protobuf/src/protobuf/lib64)
+  set(PROTOBUF_CONFIG_DIR "${PROJECT_SOURCE_DIR}/build/protobuf/src/protobuf/lib64/cmake/protobuf")
+else()
+  set(PROTOBUF_CONFIG_DIR "${PROJECT_SOURCE_DIR}/build/protobuf/src/protobuf/lib/cmake/protobuf")
+endif()
+message("grpc using Protobuf_DIR : " ${PROTOBUF_PACKAGE_DIR})
+
+if (EXISTS ${THIRD_PARTY_DIR}/absl/lib64)
+  set(ABSL_CONFIG_DIR "${THIRD_PARTY_DIR}/absl/lib64/cmake/absl")
+else()
+  set(ABSL_CONFIG_DIR "${THIRD_PARTY_DIR}/absl/lib/cmake/absl")
+endif()
+message("grpc using absl_DIR : " ${ABSL_CONFIG_DIR})
+
 if(THIRD_PARTY)
 
 ExternalProject_Add(grpc
@@ -48,13 +62,14 @@ ExternalProject_Add(grpc
         -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF
         -DgRPC_BUILD_TESTS:BOOL=OFF
         -DgRPC_ABSL_PROVIDER:STRING=package
-        -Dabsl_DIR:PATH=${THIRD_PARTY_DIR}/absl/lib/cmake/absl
-        -DgRPC_PROTOBUF_PROVIDER:STRING=config
-        -DProtobuf_DIR:PATH=${THIRD_PARTY_SUBMODULE_DIR}/protobuf/src/protobuf/cmake
+        -Dabsl_DIR:PATH=${ABSL_CONFIG_DIR}
+        -DgRPC_PROTOBUF_PROVIDER:STRING=package
+        -DgRPC_PROTOBUF_PACKAGE_TYPE:STRING=CONFIG
+        -DProtobuf_DIR:PATH=${PROTOBUF_CONFIG_DIR}
         -DgRPC_CARES_PROVIDER:STRING=package
         -Dc-ares_DIR:PATH=${THIRD_PARTY_DIR}/cares/lib/cmake/c-ares
         -DgRPC_ZLIB_PROVIDER:STRING=package
-        -Dzlib_DIR=:PATH=${THIRD_PARTY_SUBMODULE_DIR}/zlib/install
+        -DZLIB_ROOT:PATH=${ZLIB_INSTALL}
         -DgRPC_SSL_PROVIDER:STRING=package
         -DOPENSSL_ROOT_DIR:PATH=${THIRD_PARTY_DIR}/openssl
 )

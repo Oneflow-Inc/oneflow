@@ -149,23 +149,6 @@ def data_port(val):
     assert type(val) is int
     default_env_proto.data_port = val
 
-
-@oneflow_export("env.grpc_use_no_signal")
-def api_grpc_use_no_signal(val: bool = True) -> None:
-    r"""Set rpc use signal or not
-
-    Args:
-        val (bool, optional): True or False. Defaults to True.
-    """
-    return enable_if.unique([grpc_use_no_signal, do_nothing])(val=val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def grpc_use_no_signal(val=True):
-    assert type(val) is bool
-    default_env_proto.grpc_use_no_signal = val
-
-
 @oneflow_export("env.log_dir")
 def api_log_dir(val: str) -> None:
     r"""Specify a dir to store OneFlow's logging files. If not specified, it is `./log` by default.
@@ -258,7 +241,6 @@ def _DefaultEnvProto():
     machine = env_proto.machine.add()
     machine.id = 0
     machine.addr = "127.0.0.1"
-    env_proto.grpc_use_no_signal = True
     return env_proto
 
 
