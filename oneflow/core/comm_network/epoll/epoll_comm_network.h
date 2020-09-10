@@ -41,7 +41,9 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
  private:
   SocketMemDesc* NewMemDesc(void* ptr, size_t byte_size) override;
 
-  EpollCommNet(const Plan& plan);
+  friend class Global<EpollCommNet>;
+  EpollCommNet();
+  DEPRECATED EpollCommNet(const Plan& plan);
   void InitSockets();
   SocketHelper* GetSocketHelper(int64_t machine_id);
   void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;

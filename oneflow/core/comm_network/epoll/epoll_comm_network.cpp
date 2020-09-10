@@ -105,6 +105,13 @@ SocketMemDesc* EpollCommNet::NewMemDesc(void* ptr, size_t byte_size) {
   return mem_desc;
 }
 
+EpollCommNet::EpollCommNet() {
+  pollers_.resize(Global<ResourceDesc, ForSession>::Get()->CommNetWorkerNum(), nullptr);
+  for (size_t i = 0; i < pollers_.size(); ++i) { pollers_[i] = new IOEventPoller; }
+  InitSockets();
+  for (IOEventPoller* poller : pollers_) { poller->Start(); }
+}
+
 EpollCommNet::EpollCommNet(const Plan& plan) : CommNetIf(plan) {
   pollers_.resize(Global<ResourceDesc, ForSession>::Get()->CommNetWorkerNum(), nullptr);
   for (size_t i = 0; i < pollers_.size(); ++i) { pollers_[i] = new IOEventPoller; }

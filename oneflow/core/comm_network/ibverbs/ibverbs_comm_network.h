@@ -47,7 +47,7 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
     return new IBVerbsMemDesc(pd_, ptr, byte_size);
   }
 
-  IBVerbsCommNet(const Plan&);
+  DEPRECATED IBVerbsCommNet(const Plan&);
   void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
   void PollCQ();
 
@@ -62,15 +62,12 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   std::thread poll_thread_;
 };
 
-/*
- *
- * DEPRECATED
+// DEPRECATED
 template<>
 class Global<IBVerbsCommNet> final {
  public:
   static IBVerbsCommNet* Get() { return static_cast<IBVerbsCommNet*>(Global<CommNet>::Get()); }
 };
-*/
 
 }  // namespace oneflow
 

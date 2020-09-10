@@ -56,8 +56,8 @@ class CommNet {
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
 
  protected:
-  DEPRECATED CommNet(const Plan& plan);
   CommNet();
+  DEPRECATED CommNet(const Plan& plan);
 
   virtual void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) = 0;
   const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }
@@ -83,8 +83,8 @@ template<typename MemDescType>
 class CommNetIf : public CommNet {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CommNetIf);
-  CommNetIf() = delete;
-  CommNetIf(const Plan& plan) : CommNet(plan) {}
+  CommNetIf() = default;
+  DEPRECATED CommNetIf(const Plan& plan) : CommNet(plan) {}
   virtual ~CommNetIf() {}
 
   void* RegisterMemory(void* ptr, size_t byte_size) override {

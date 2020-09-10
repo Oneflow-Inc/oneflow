@@ -100,16 +100,19 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
       && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
+  // this code should be called before Runtime::NewAllGlobal, maybe after Eager ENV init
   if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
 #ifdef PLATFORM_POSIX
+    Global<EpollCommNet>::New();
     if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
+      // DEPRECATED
       IBVerbsCommNet::Init(plan);
 #else
       LOG(FATAL) << "RDMA components not found";
 #endif
     } else {
-      EpollCommNet::Init(plan);
+      Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
     }
 #endif
   }
