@@ -101,6 +101,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
     Global<ActEventLogger>::New(is_experiment_phase);
   }
   // this code should be called before Runtime::NewAllGlobal, maybe after Eager ENV init
+  // and should be called before Global<Networker>::New()
   if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
 #ifdef PLATFORM_POSIX
     Global<EpollCommNet>::New();
@@ -134,6 +135,8 @@ void Runtime::DeleteAllGlobal() {
   Global<RegstMgr>::Delete();
   Global<MemoryAllocator>::Delete();
   Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
+  // should be called after Global<Networker>::Delete()
+  Global<EpollCommNet>::Delete();
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();

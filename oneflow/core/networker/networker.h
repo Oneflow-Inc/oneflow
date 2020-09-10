@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_NETWORKER_NETWORKER_H_
 
 #include "oneflow/core/common/channel.h"
+#include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/networker/networker_message.h"
 
 namespace oneflow {
@@ -28,10 +29,23 @@ struct NetworkerStatus {
   bool is_recv_ready;
   void* src_mem_token;
   void* dst_mem_token;
-  const void* src_ptr;
+  void* src_ptr;
   void* dst_ptr;
   std::size_t size;
+  int64_t src_machine_id;
   int64_t dst_machine_id;
+  NetworkerStatus(uint64_t tk)
+      : token(tk),
+        callback(nullptr),
+        is_send_ready(false),
+        is_recv_ready(false),
+        src_mem_token(nullptr),
+        dst_mem_token(nullptr),
+        src_ptr(nullptr),
+        dst_ptr(nullptr),
+        size(-1),
+        src_machine_id(-1),
+        dst_machine_id(-1) {}
 };
 
 class Networker {
@@ -47,13 +61,23 @@ class Networker {
 
  private:
   void PollMsgChannel();
+  void HandlerPrepareSend(const NetworkerMsg& msg);
+  void HandlerPrepareRecv(const NetworkerMsg& msg);
+  void HandlerSend(const NetworkerMsg& msg);
+  void HandlerAck(const NetworkerMsg& msg);
+
   friend class Global<Networker>;
   Networker();
+  // std::mutex status_lock_;
   HashMap<uint64_t, NetworkerStatus> token2status_;
   void* read_id_;
 
   Channel<NetworkerMsg> msg_channel_;
   std::thread msg_poller_;
+  Channel<std::function<void()>> callback_channel_;
+  std::thread callback_poller_;
+  EpollCommNet* comm_net_;
+  int64_t this_machine_id_;
 };
 
 }  // namespace oneflow
