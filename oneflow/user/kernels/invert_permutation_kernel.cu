@@ -20,7 +20,6 @@ namespace oneflow {
 
 namespace {
 
-
 template<typename T>
 __global__ void InvertPermutationGpu(const int64_t n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[x[i]] = i; }
