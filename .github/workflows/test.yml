@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     steps:
+    - uses: actions/checkout@v2
     - name: Check license and format (please run 'make of_format' if failed)
       uses: ./.github/actions/fmt
 
