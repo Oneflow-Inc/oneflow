@@ -20,7 +20,7 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
-    - uses: .github/actions/clean
+    - uses: ./.github/actions/clean
     - uses: actions/checkout@v2
     - name: Check license (please run 'make of_format' if failed)
       run: |
@@ -113,7 +113,7 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
-    - uses: .github/actions/clean
+    - uses: ./.github/actions/clean
     - uses: actions/checkout@v2
     - name: Setup environment
       run: |
