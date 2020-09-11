@@ -27,9 +27,9 @@ __global__ void InvertPermutationGpu(const int64_t n, const T* x, T* y) {
 }
 
 template<typename T>
-void InvertPermutation(DeviceCtx* ctx, const int64_t n, const T* x, T* y)
-{
-  InvertPermutationGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+void InvertPermutation(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  InvertPermutationGpu<T>
+    <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 
 template<typename T>
