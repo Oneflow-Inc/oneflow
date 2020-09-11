@@ -942,7 +942,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
     JUST(DoPass("AddLbiDiffWatcherOpConfs"));
     JUST(DoPass("PruneParallelCastOpsPass"));
-    // JUST(DoPass("FuseUpdateOpsPass"));
+    JUST(DoPass("FuseUpdateOpsPass"));
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpTimeShapeAndBlobParallelConfPass"));
