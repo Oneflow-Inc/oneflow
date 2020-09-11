@@ -1875,4 +1875,3 @@ def invert_permutation(
         .RemoteBlobList()[0]
     )
 
-    
