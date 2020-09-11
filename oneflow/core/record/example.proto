@@ -1,0 +1,13 @@
+syntax = "proto3";
+package oneflow;
+
+import "oneflow/core/record/feature.proto";
+
+message Example {
+  Features features = 1;
+}
+
+message SequenceExample {
+  Features context = 1;
+  FeatureLists feature_lists = 2;
+}
