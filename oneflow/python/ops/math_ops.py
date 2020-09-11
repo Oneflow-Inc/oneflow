@@ -1864,7 +1864,9 @@ def invert_permutation(
         # out [2 4 3 0 1]
     """
     return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("InvertPermutation_"))
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("InvertPermutation_")
+        )
         .Op("invert_permutation")
         .Input("in", [input])
         .Output("out")
