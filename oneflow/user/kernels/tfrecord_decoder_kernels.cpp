@@ -87,8 +87,9 @@ class TFRecordRawDecoderKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("tfrecord_raw_decoder")                                  \
       .SetCreateFn<TFRecordRawDecoderKernel<dtype>>()                           \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                       \
-                       & (user_op::HobDataType("in", 0) == DataType::kOFRecord) \ //kTFRecord to be added...
+                       & (user_op::HobDataType("in", 0) == DataType::kOFRecord) \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+//kTFRecord to be added...
 
 REGISTER_RAW_DECODER_KERNEL(char)
 REGISTER_RAW_DECODER_KERNEL(float)

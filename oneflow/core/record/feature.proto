@@ -1,6 +1,5 @@
 syntax = "proto3";
-
-package oneflow;
+package tensorflow;
 
 message BytesList {
   repeated bytes value = 1;

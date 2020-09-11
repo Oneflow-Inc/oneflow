@@ -1,5 +1,5 @@
 syntax = "proto3";
-package oneflow;
+package tensorflow;
 
 import "oneflow/core/record/feature.proto";
 

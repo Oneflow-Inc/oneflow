@@ -28,15 +28,15 @@ class TFRecordReaderWrapper final : public user_op::OpKernelState {
   void Read(user_op::KernelComputeContext* ctx) { reader_.Read(ctx); }
 
  private:
-  data::OFRecordDataReader reader_;
+  data::TFRecordDataReader reader_;
 };
 
 }  // namespace
 
-class OFRecordReaderKernel final : public user_op::OpKernel {
+class TFRecordReaderKernel final : public user_op::OpKernel {
  public:
-  OFRecordReaderKernel() = default;
-  ~OFRecordReaderKernel() override = default;
+  TFRecordReaderKernel() = default;
+  ~TFRecordReaderKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -53,7 +53,7 @@ class OFRecordReaderKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("TFRecordReader")
-    .SetCreateFn<OFRecordReaderKernel>()
+    .SetCreateFn<TFRecordReaderKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("out", 0) == DataType::kOFRecord));
 
