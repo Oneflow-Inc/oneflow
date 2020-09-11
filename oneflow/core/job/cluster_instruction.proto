@@ -1,0 +1,12 @@
+syntax = "proto2";
+package oneflow;
+
+message ClusterCtrlSessionStart {}
+message ClusterCtrlHalt {}
+
+message ClusterInstructionProto {
+  oneof instruction_type {
+    ClusterCtrlSessionStart cluster_ctrl_session_start = 1;
+    ClusterCtrlHalt cluster_ctrl_halt = 2;
+  }
+}
