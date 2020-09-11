@@ -24,9 +24,6 @@ if (WITH_XLA)
 endif()
 
 if (WITH_TENSORRT)
-  if (NOT WITH_XLA)
-    # include(absl)
-  endif()
   include(tensorrt)
 endif()
 
@@ -223,9 +220,6 @@ if(WITH_XLA)
 endif()
 
 if(WITH_TENSORRT)
-  if (NOT WITH_XLA)
-    # list(APPEND oneflow_third_party_libs ${ABSL_LIBRARIES})
-  endif()
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
 endif()
 

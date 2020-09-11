@@ -4,7 +4,6 @@ set(GRPC_INCLUDE_DIR ${THIRD_PARTY_DIR}/grpc/include)
 set(GRPC_LIBRARY_DIR ${THIRD_PARTY_DIR}/grpc/lib)
 
 set(GRPC_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
-# set(GRPC_URL ${THIRD_PARTY_SUBMODULE_DIR}/grpc/src/grpc)
 SET(GRPC_TAR_URL https://github.com/grpc/grpc/archive/v1.27.3.tar.gz)
 set(GRPC_URL_HASH 0c6c3fc8682d4262dd0e5e6fabe1a7e2)
 SET(GRPC_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc)
@@ -28,19 +27,7 @@ foreach(LIBRARY_NAME ${GRPC_LIBRARY_NAMES})
     list(APPEND GRPC_BUILD_STATIC_LIBRARIES ${GRPC_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
-if (EXISTS ${PROJECT_SOURCE_DIR}/build/protobuf/src/protobuf/lib64)
-  set(PROTOBUF_CONFIG_DIR "${PROJECT_SOURCE_DIR}/build/protobuf/src/protobuf/lib64/cmake/protobuf")
-else()
-  set(PROTOBUF_CONFIG_DIR "${PROJECT_SOURCE_DIR}/build/protobuf/src/protobuf/lib/cmake/protobuf")
-endif()
-message("grpc using Protobuf_DIR : " ${PROTOBUF_PACKAGE_DIR})
-
-if (EXISTS ${THIRD_PARTY_DIR}/absl/lib64)
-  set(ABSL_CONFIG_DIR "${THIRD_PARTY_DIR}/absl/lib64/cmake/absl")
-else()
-  set(ABSL_CONFIG_DIR "${THIRD_PARTY_DIR}/absl/lib/cmake/absl")
-endif()
-message("grpc using absl_DIR : " ${ABSL_CONFIG_DIR})
+set (PROTOBUF_CONFIG_DIR ${PROTOBUF_BUILD_LIBRARY_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/protobuf)
 
 if(THIRD_PARTY)
 
@@ -62,7 +49,7 @@ ExternalProject_Add(grpc
         -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF
         -DgRPC_BUILD_TESTS:BOOL=OFF
         -DgRPC_ABSL_PROVIDER:STRING=package
-        -Dabsl_DIR:PATH=${ABSL_CONFIG_DIR}
+        -Dabsl_DIR:PATH=${THIRD_PARTY_DIR}/absl/lib/cmake/absl
         -DgRPC_PROTOBUF_PROVIDER:STRING=package
         -DgRPC_PROTOBUF_PACKAGE_TYPE:STRING=CONFIG
         -DProtobuf_DIR:PATH=${PROTOBUF_CONFIG_DIR}
