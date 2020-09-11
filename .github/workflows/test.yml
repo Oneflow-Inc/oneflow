@@ -24,9 +24,10 @@ jobs:
       run: |
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
     - uses: actions/checkout@v2
-    - uses: ./.github/actions/clean
-    - uses: ./.github/actions/fmt
-    - uses: ./.github/actions/setup
+    - name: Check license and format (please run 'make of_format' if failed)
+      uses: ./.github/actions/fmt
+    - name: Setup submodule
+      uses: ./.github/actions/setup
     - name: Build OneFlow
       run: |
         ONEFLOW_CI_PACKAGE_APPENDIX="_cu102" \
@@ -100,8 +101,8 @@ jobs:
       run: |
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
     - uses: actions/checkout@v2
-    - uses: ./.github/actions/clean
-    - uses: ./.github/actions/setup
+    - name: Setup submodule
+      uses: ./.github/actions/setup
     - name: Build OneFlow
       run: |
         export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DBUILD_CUDA=OFF"
