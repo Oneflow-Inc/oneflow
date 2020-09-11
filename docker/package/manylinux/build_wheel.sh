@@ -78,7 +78,10 @@ ONEFLOW_BUILD_DIR=$CACHE_DIR/build-oneflow
 
 function cleanup {
   set -x
-  rm  -rf tmp_wheel
+  rm -rf $ONEFLOW_BUILD_DIR/python_scripts/oneflow/*.so
+  rm -rf build/bdist.linux-x86_64
+  rm -rf build/lib
+  rm -rf tmp_wheel
 }
 
 for PY_VER in ${PY_VERS[@]}
@@ -92,9 +95,7 @@ do
     fi
     PY_ROOT=/opt/python/${PY_ABI}
     PY_BIN=${PY_ROOT}/bin/python
-    rm -rf $ONEFLOW_BUILD_DIR/python_scripts/oneflow/*.so
-    rm -rf $ONEFLOW_SRC_DIR/build/bdist.linux-x86_64
-    rm -rf $ONEFLOW_SRC_DIR/build/lib
+    cleanup
     cmake -DTHIRD_PARTY=OFF -DONEFLOW=ON \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
         $COMMON_CMAKE_ARGS \

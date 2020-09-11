@@ -25,13 +25,12 @@ docker build -f $src_dir/docker/package/manylinux/Dockerfile \
 
 cd -
 
-docker run --rm \
-    -v $tmp_dir:/ci-tmp \
-    -w $tmp_dir:/ci-tmp busybox rm -rf /ci-tmp/wheelhouse
-
 # build function
 function build() {
     set -x
+    docker run --rm \
+        -v $tmp_dir:/ci-tmp \
+        -w $tmp_dir:/ci-tmp busybox rm -rf /ci-tmp/wheelhouse
     docker run \
         $docker_proxy_run_args \
         --rm $docker_it \
@@ -41,6 +40,7 @@ function build() {
         "$docker_tag" \
         /oneflow-src/docker/package/manylinux/build_wheel.sh \
             --python3.6 \
+            --house-dir /ci-tmp/wheelhouse \
             --package-name oneflow${package_appendix} \
             $extra_oneflow_cmake_args
 }
