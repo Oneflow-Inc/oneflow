@@ -29,7 +29,7 @@ __global__ void InvertPermutationGpu(const int64_t n, const T* x, T* y) {
 template<typename T>
 void InvertPermutation(DeviceCtx* ctx, const int64_t n, const T* x, T* y)
 {
-    InvertPermutationGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+  InvertPermutationGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 
 template<typename T>
@@ -46,7 +46,7 @@ class GpuInvertPermutationKernel final : public user_op::OpKernel {
     const int64_t elem_cnt = in->shape().elem_cnt();
     const T* x_ptr = in->dptr<T>();
     T* y_ptr = out->mut_dptr<T>();
-        
+
     cudaMemset(y_ptr, -1, elem_cnt * sizeof(T));
 
     InvertPermutation<T>(ctx->device_ctx(), elem_cnt, x_ptr, y_ptr);
