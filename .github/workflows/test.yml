@@ -98,10 +98,6 @@ jobs:
           --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
-    - name: Clean up files created by root
-      if: ${{ always() }}
-      run: |
-        bash ci/build/clean.sh
 
   build_and_test_cpu:
 
@@ -140,8 +136,3 @@ jobs:
           --env ONEFLOW_TEST_CPU_ONLY=1 \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
-    - name: Clean up files created by root
-      if: ${{ always() }}
-      run: |
-        ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-cpu \
-        bash ci/build/clean.sh
