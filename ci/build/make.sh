@@ -40,6 +40,7 @@ function build() {
         "$docker_tag" \
         /oneflow-src/docker/package/manylinux/build_wheel.sh \
             --python3.6 \
+            --house-dir /ci-tmp/wheelhouse \
             --package-name oneflow${package_appendix} \
             $extra_oneflow_cmake_args
 }
