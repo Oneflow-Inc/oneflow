@@ -7,5 +7,4 @@ runs:
   steps:
     - run: |
         rm -rf build/third_party
-        bash ci/build/clean.sh
       shell: bash
