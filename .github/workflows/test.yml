@@ -25,15 +25,7 @@ jobs:
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
     - uses: actions/checkout@v2
     - uses: ./.github/actions/clean
-    - name: Check license (please run 'make of_format' if failed)
-      run: |
-        python3 ci/check/run_license_format.py -i oneflow -c
-    - name: Check C++ format (please run 'make of_format' if failed)
-      run: |
-        python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
-    - name: Check python format (please run 'make of_format' if failed)
-      run: |
-        docker run --rm -v $PWD:$PWD --entrypoint "/bin/sh" cytopia/black@sha256:ea649b81bf6a64aaa34f4abba803da83528135b5d12bed9b485bcabb37480d33 -c "python3 $PWD/ci/check/run_py_format.py --source_dir $PWD"
+    - uses: ./.github/actions/fmt
     - uses: ./.github/actions/setup
     - name: Build OneFlow
       run: |
