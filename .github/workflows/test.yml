@@ -20,30 +20,14 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
-    - name: Clean environment
+    - name: Fix permissions
       run: |
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
-        rm -rf build/third_party
-        bash ci/build/clean.sh
     - uses: actions/checkout@v2
-    - name: Check license (please run 'make of_format' if failed)
-      run: |
-        python3 ci/check/run_license_format.py -i oneflow -c
-    - name: Check C++ format (please run 'make of_format' if failed)
-      run: |
-        python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
-    - name: Check python format (please run 'make of_format' if failed)
-      run: |
-        docker run --rm -v $PWD:$PWD --entrypoint "/bin/sh" cytopia/black@sha256:ea649b81bf6a64aaa34f4abba803da83528135b5d12bed9b485bcabb37480d33 -c "python3 $PWD/ci/check/run_py_format.py --source_dir $PWD"
-    - name: Setup environment
-      run: |
-        echo $HOSTNAME
-        bash ci/setup_submodule.sh
-    - name: Checkout submodules
-      shell: bash
-      run: |
-        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
-        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
+    - name: Check license and format (please run 'make of_format' if failed)
+      uses: ./.github/actions/fmt
+    - name: Setup submodule
+      uses: ./.github/actions/setup
     - name: Build OneFlow
       run: |
         ONEFLOW_CI_PACKAGE_APPENDIX="_cu102" \
@@ -107,31 +91,18 @@ jobs:
           --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
-    - name: Clean up files created by root
-      if: ${{ always() }}
-      run: |
-        bash ci/build/clean.sh
 
   build_and_test_cpu:
 
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
-    - name: Clean environment
+    - name: Fix permissions
       run: |
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
-        rm -rf build/third_party
-        bash ci/build/clean.sh
     - uses: actions/checkout@v2
-    - name: Setup environment
-      run: |
-        echo $HOSTNAME
-        bash ci/setup_submodule.sh
-    - name: Checkout submodules
-      shell: bash
-      run: |
-        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
-        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
+    - name: Setup submodule
+      uses: ./.github/actions/setup
     - name: Build OneFlow
       run: |
         export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DBUILD_CUDA=OFF"
@@ -158,8 +129,3 @@ jobs:
           --env ONEFLOW_TEST_CPU_ONLY=1 \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
-    - name: Clean up files created by root
-      if: ${{ always() }}
-      run: |
-        ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-cpu \
-        bash ci/build/clean.sh
