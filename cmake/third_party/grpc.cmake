@@ -17,6 +17,7 @@ elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
     set(GRPC_LIBRARY_NAMES libgrpc++_unsecure.a
       libgrpc_unsecure.a libgpr.a libupb.a libaddress_sorting.a)
 else()
+    include(GNUInstallDirs)
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc)
     set(GRPC_LIBRARY_NAMES libgrpc++_unsecure.a
       libgrpc_unsecure.a libgpr.a libupb.a libaddress_sorting.a)
