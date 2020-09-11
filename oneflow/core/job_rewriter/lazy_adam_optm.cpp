@@ -37,6 +37,13 @@ OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::s
   return helper_variable_op;
 }
 
+void SetScalarShapeAndSbpConf(OperatorConf* op_conf) {
+  op_conf->mutable_variable_conf()->mutable_shape()->clear_dim();
+  op_conf->mutable_variable_conf()->mutable_shape()->add_dim(1);
+  op_conf->mutable_variable_conf()->mutable_split_axis()->clear_value();
+  CHECK_NE(op_conf->name(), std::string(""));
+}
+
 void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
                              JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
   const auto& train_conf = job_builder->job().job_conf().train_conf();
@@ -50,7 +57,7 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
 
   user_op::UserOpConfWrapperBuilder adam_update_op_builder(op.op_name() + "_optimizer");
   const LazyAdamModelUpdateConf& lazy_adam_conf = model_update_conf.lazy_adam_conf();
-  const bool do_bias_correction = false;
+  const bool do_bias_correction = true;
   adam_update_op_builder.OpTypeName("adam_update")
       .Input("model", GenLogicalBlobName(op.BnInOp2Lbi("out")))
       .Input("model_diff", GenLogicalBlobName(diff_lbi_of_var_out))
@@ -63,6 +70,18 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
       .Attr<bool>("do_bias_correction", do_bias_correction)
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
+  if (do_bias_correction) {
+    OperatorConf beta1_t_var;
+    OperatorConf beta2_t_var;
+    beta1_t_var = GenerateAdamHelperVariableOpConf(op, "beta1_t", lazy_adam_conf.beta1());
+    SetScalarShapeAndSbpConf(&beta1_t_var);
+    beta2_t_var = GenerateAdamHelperVariableOpConf(op, "beta2_t", lazy_adam_conf.beta2());
+    SetScalarShapeAndSbpConf(&beta2_t_var);
+    job_builder->AddOps(parallel_conf, {beta1_t_var, beta2_t_var});
+    adam_update_op_builder.Input("beta1_t", GenVariableOutputLbn(beta1_t_var));
+    adam_update_op_builder.Input("beta2_t", GenVariableOutputLbn(beta2_t_var));
+  }
+
   const auto adam_update_op = adam_update_op_builder.Build();
   job_builder->AddOps(parallel_conf, {adam_update_op.op_conf()});
 }
