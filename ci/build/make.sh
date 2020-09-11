@@ -25,13 +25,12 @@ docker build -f $src_dir/docker/package/manylinux/Dockerfile \
 
 cd -
 
-docker run --rm \
-    -v $tmp_dir:/ci-tmp \
-    -w $tmp_dir:/ci-tmp busybox rm -rf /ci-tmp/wheelhouse
-
 # build function
 function build() {
     set -x
+    docker run --rm \
+        -v $tmp_dir:/ci-tmp \
+        -w $tmp_dir:/ci-tmp busybox rm -rf /ci-tmp/wheelhouse
     docker run \
         $docker_proxy_run_args \
         --rm $docker_it \
