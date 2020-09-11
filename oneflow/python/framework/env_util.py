@@ -155,7 +155,7 @@ def api_grpc_use_no_signal(val: bool = True) -> None:
     r"""Set rpc use signal or not (deprecate)
 
     Args:
-         val (bool, optional): True or False. Defaults to True.
+        val (bool, optional): True or False. Defaults to True.
     """
     print(
         "WARNING:",
