@@ -13,6 +13,9 @@
 [submodule "googletest"]
 	path = build/third_party/googletest/src/googletest
 	url = https://github.com/google/googletest
+[submodule "grpc"]
+	path = build/third_party/grpc/src/grpc
+	url = https://github.com/yuanms2/grpc
 [submodule "libjpeg-turbo"]
 	path = build/third_party/libjpeg-turbo/src/libjpeg-turbo
 	url = https://github.com/libjpeg-turbo/libjpeg-turbo

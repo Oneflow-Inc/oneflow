@@ -25,7 +25,7 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 
 
 @oneflow_export("enable_eager_execution")
@@ -148,6 +148,20 @@ def api_data_port(val: int) -> None:
 def data_port(val):
     assert type(val) is int
     default_env_proto.data_port = val
+
+@oneflow_export("env.grpc_use_no_signal")
+@oneflow_deprecate()
+def api_grpc_use_no_signal(val: bool = True) -> None:
+    r"""Set rpc use signal or not (deprecate)
+
+    Args:
+         val (bool, optional): True or False. Defaults to True.
+    """
+    print(
+        "WARNING:",
+        "oneflow.env.grpc_use_no_signal is deprecated, users no longer need to set rpc use signal or not. \n"
+    )
+    return None
 
 @oneflow_export("env.log_dir")
 def api_log_dir(val: str) -> None:
