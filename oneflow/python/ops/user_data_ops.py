@@ -876,10 +876,10 @@ def api_coin_flip(
     """This operator performs the horizontal flip. 
 
     Args:
-        batch_size (int, optional): [description]. Defaults to 1.
-        seed (Optional[int], optional): [description]. Defaults to None.
-        probability (float, optional): [description]. Defaults to 0.5.
-        name (str, optional): [description]. Defaults to "CoinFlip".
+        batch_size (int, optional): The batch size. Defaults to 1.
+        seed (Optional[int], optional): The random seed. Defaults to None.
+        probability (float, optional): The flip probability. Defaults to 0.5.
+        name (str, optional): The name for the operation. Defaults to "CoinFlip".
 
     Returns:
         BlobDef: [description]
@@ -992,6 +992,61 @@ def image_decode(
     color_space: str = "BGR",
     name: Optional[str] = None,
 ) -> BlobDef:
+    """This operator decode the image. 
+
+    Args:
+        images_bytes_buffer (BlobDef): The input Blob. Its type should be `kTensorBuffer`. More details please refer to the code example. 
+        dtype (dtype_util.dtype, optional): The data type. Defaults to dtype_util.uint8.
+        color_space (str, optional): The color space. Defaults to "BGR".
+        name (Optional[str], optional): The name for the opreation. Defaults to None.
+
+    Returns:
+        BlobDef: The decoded image list. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+        from PIL import Image
+
+        def _of_image_decode(images):
+            image_files = [open(im, "rb") for im in images]
+            images_bytes = [imf.read() for imf in image_files]
+            static_shape = (len(images_bytes), max([len(bys) for bys in images_bytes]))
+            for imf in image_files:
+                imf.close()
+
+            func_config = flow.FunctionConfig()
+            func_config.default_data_type(flow.float)
+            func_config.default_logical_view(flow.scope.mirrored_view())
+
+            @flow.global_function(function_config=func_config)
+            def image_decode_job(
+                images_def: tp.ListListNumpy.Placeholder(shape=static_shape, dtype=flow.int8)
+            ):
+                # convert to tensor buffer
+                images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
+                decoded_images_buffer = flow.image_decode(images_buffer)
+                # Remember to set a shape
+                # convert back to tensor list
+                return flow.tensor_buffer_to_tensor_list(
+                    decoded_images_buffer, shape=(640, 640, 3), dtype=flow.uint8
+                )
+
+            images_np_arr = [
+                np.frombuffer(bys, dtype=np.byte).reshape(1, -1) for bys in images_bytes
+            ]
+            decoded_images = image_decode_job([images_np_arr]).get().numpy_lists()
+            return decoded_images[0]
+
+        if __name__ == "__main__": 
+            img = _of_image_decode(['./img/1.jpg'])
+            print(img[0].shape) # Our image shape is (1, 349, 367, 3)
+
+    """
     # TODO: check color_space valiad
     if name is None:
         name = id_util.UniqueStr("ImageDecode_")
