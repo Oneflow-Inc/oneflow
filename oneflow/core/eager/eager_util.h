@@ -17,9 +17,12 @@ limitations under the License.
 #define ONEFLOW_CORE_EAGER_EAGER_UTIL_H_
 
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/job/cluster_instruction.pb.h"
 
 namespace oneflow {
 namespace eager {
+
+Maybe<void> RunLogicalInstruction(const ClusterInstructionProto& cluster_instruction);
 
 Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_proto_str,
                                    const std::string& eager_symbol_list_str);

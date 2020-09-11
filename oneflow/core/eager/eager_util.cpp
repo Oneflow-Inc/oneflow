@@ -52,12 +52,6 @@ void StorageAdd(const EagerSymbol& symbol) {
   }
 }
 
-Maybe<void> RunLogicalInstruction(const vm::InstructionListProto& instruction_list_proto,
-                                  const EagerSymbolList& eager_symbol_list) {
-  for (const auto& eager_symbol : eager_symbol_list.eager_symbol()) { StorageAdd(eager_symbol); }
-  return vm::Run(instruction_list_proto);
-}
-
 Maybe<void> RunPhysicalInstruction(const vm::InstructionListProto& instruction_list_proto,
                                    const EagerSymbolList& eager_symbol_list) {
   for (const auto& eager_symbol : eager_symbol_list.eager_symbol()) { StorageAdd(eager_symbol); }
@@ -77,15 +71,27 @@ Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_proto_str
   return RunPhysicalInstruction(instruction_list_proto, eager_symbol_list);
 }
 
+Maybe<void> RunLogicalInstruction(const ClusterInstructionProto& cluster_instruction) {
+  const vm::InstructionListProto& instruction_list_proto =
+      cluster_instruction.eager_instruction().instruction_list();
+  const EagerSymbolList& eager_symbol_list =
+      cluster_instruction.eager_instruction().eager_symbol_list();
+  for (const auto& eager_symbol : eager_symbol_list.eager_symbol()) { StorageAdd(eager_symbol); }
+  return vm::Run(instruction_list_proto);
+}
+
 Maybe<void> RunLogicalInstruction(const std::string& instruction_list_proto_str,
                                   const std::string& eager_symbol_list_str) {
-  vm::InstructionListProto instruction_list_proto;
-  CHECK_OR_RETURN(TxtString2PbMessage(instruction_list_proto_str, &instruction_list_proto))
+  ClusterInstructionProto cluster_instruction;
+  vm::InstructionListProto* instruction_list_proto =
+      cluster_instruction.mutable_eager_instruction()->mutable_instruction_list();
+  CHECK_OR_RETURN(TxtString2PbMessage(instruction_list_proto_str, instruction_list_proto))
       << "InstructionListProto parse failed";
-  EagerSymbolList eager_symbol_list;
-  CHECK_OR_RETURN(TxtString2PbMessage(eager_symbol_list_str, &eager_symbol_list))
+  EagerSymbolList* eager_symbol_list =
+      cluster_instruction.mutable_eager_instruction()->mutable_eager_symbol_list();
+  CHECK_OR_RETURN(TxtString2PbMessage(eager_symbol_list_str, eager_symbol_list))
       << "EagerSymbolList parse failed";
-  return RunLogicalInstruction(instruction_list_proto, eager_symbol_list);
+  return RunLogicalInstruction(cluster_instruction);
 }
 
 }  // namespace eager
