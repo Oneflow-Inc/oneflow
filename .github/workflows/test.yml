@@ -34,15 +34,7 @@ jobs:
     - name: Check python format (please run 'make of_format' if failed)
       run: |
         docker run --rm -v $PWD:$PWD --entrypoint "/bin/sh" cytopia/black@sha256:ea649b81bf6a64aaa34f4abba803da83528135b5d12bed9b485bcabb37480d33 -c "python3 $PWD/ci/check/run_py_format.py --source_dir $PWD"
-    - name: Setup environment
-      run: |
-        echo $HOSTNAME
-        bash ci/setup_submodule.sh
-    - name: Checkout submodules
-      shell: bash
-      run: |
-        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
-        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
+    - uses: ./.github/actions/setup
     - name: Build OneFlow
       run: |
         ONEFLOW_CI_PACKAGE_APPENDIX="_cu102" \
@@ -121,15 +113,7 @@ jobs:
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
     - uses: actions/checkout@v2
     - uses: ./.github/actions/clean
-    - name: Setup environment
-      run: |
-        echo $HOSTNAME
-        bash ci/setup_submodule.sh
-    - name: Checkout submodules
-      shell: bash
-      run: |
-        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
-        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
+    - uses: ./.github/actions/setup
     - name: Build OneFlow
       run: |
         export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DBUILD_CUDA=OFF"
