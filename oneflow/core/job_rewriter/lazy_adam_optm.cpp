@@ -14,59 +14,57 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/optimizer.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
 namespace {
 
-OperatorConf GenerateLazyAdamHelperVariableOpConf(const VariableOp& op, const std::string& name,
-                                                  const float initial_value) {
+std::string GenVariableOutputLbn(const OperatorConf& op_conf) {
+  CHECK(op_conf.has_variable_conf());
+  return GenLogicalBlobName(op_conf.name(), op_conf.variable_conf().out());
+}
+
+OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::string& name,
+                                              const float initial_value) {
   OperatorConf helper_variable_op(op.op_conf());
   helper_variable_op.set_name(op.op_name() + "-" + name);
   helper_variable_op.mutable_variable_conf()->set_out("out");
   InitializerConf constant_initializer;
   constant_initializer.mutable_constant_conf()->set_value(initial_value);
   *(helper_variable_op.mutable_variable_conf()->mutable_initializer()) = constant_initializer;
+  helper_variable_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
   return helper_variable_op;
-}
-
-void SetScalarShapeAndSbpConf(OperatorConf* op_conf) {
-  op_conf->mutable_variable_conf()->mutable_shape()->clear_dim();
-  op_conf->mutable_variable_conf()->mutable_shape()->add_dim(1);
-  op_conf->mutable_variable_conf()->mutable_split_axis()->clear_value();
-  CHECK_NE(op_conf->name(), std::string(""));
 }
 
 void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
                              JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
-  OperatorConf m_var(GenerateLazyAdamHelperVariableOpConf(op, "m", 0.f));
-  OperatorConf v_var(GenerateLazyAdamHelperVariableOpConf(op, "v", 0.f));
+  const auto& train_conf = job_builder->job().job_conf().train_conf();
+  const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
+
+  OperatorConf m_var(GenerateAdamHelperVariableOpConf(op, "m", 0.f));
+  OperatorConf v_var(GenerateAdamHelperVariableOpConf(op, "v", 0.f));
   m_var.set_scope_symbol_id(op.op_conf().scope_symbol_id());
   v_var.set_scope_symbol_id(op.op_conf().scope_symbol_id());
   job_builder->AddOps(parallel_conf, {m_var, v_var});
 
-  OperatorConf mdupdt_op;
-  mdupdt_op.set_name(op.op_name() + "_optimizer");
-  auto* mdupdt_op_conf = mdupdt_op.mutable_lazy_adam_model_update_conf();
-  *(mdupdt_op_conf->mutable_user_conf()) =
-      GlobalJobDesc().job_conf().train_conf().model_update_conf();
-  OperatorConf beta1_t_var;
-  OperatorConf beta2_t_var;
-  const LazyAdamModelUpdateConf& lazy_adam_conf = mdupdt_op_conf->user_conf().lazy_adam_conf();
-  beta1_t_var = GenerateLazyAdamHelperVariableOpConf(op, "beta1_t", lazy_adam_conf.beta1());
-  SetScalarShapeAndSbpConf(&beta1_t_var);
-  beta2_t_var = GenerateLazyAdamHelperVariableOpConf(op, "beta2_t", lazy_adam_conf.beta2());
-  SetScalarShapeAndSbpConf(&beta2_t_var);
-  beta1_t_var.set_scope_symbol_id(op.op_conf().scope_symbol_id());
-  beta2_t_var.set_scope_symbol_id(op.op_conf().scope_symbol_id());
-  job_builder->AddOps(parallel_conf, {beta1_t_var, beta2_t_var});
-  ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, job_builder, mdupdt_op_conf);
-  mdupdt_op_conf->set_m(m_var.name() + "/out");
-  mdupdt_op_conf->set_v(v_var.name() + "/out");
-  mdupdt_op_conf->set_beta1_t(beta1_t_var.name() + "/out");
-  mdupdt_op_conf->set_beta2_t(beta2_t_var.name() + "/out");
-  mdupdt_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
-  job_builder->AddOps(parallel_conf, {mdupdt_op});
+  user_op::UserOpConfWrapperBuilder adam_update_op_builder(op.op_name() + "_optimizer");
+  const LazyAdamModelUpdateConf& lazy_adam_conf = model_update_conf.lazy_adam_conf();
+  const bool do_bias_correction = false;
+  adam_update_op_builder.OpTypeName("adam_update")
+      .Input("model", GenLogicalBlobName(op.BnInOp2Lbi("out")))
+      .Input("model_diff", GenLogicalBlobName(diff_lbi_of_var_out))
+      .Input("learning_rate", train_conf.primary_lr_lbn())
+      .Input("m", GenVariableOutputLbn(m_var))
+      .Input("v", GenVariableOutputLbn(v_var))
+      .Attr<float>("beta1", lazy_adam_conf.beta1())
+      .Attr<float>("beta2", lazy_adam_conf.beta2())
+      .Attr<float>("epsilon", lazy_adam_conf.epsilon())
+      .Attr<bool>("do_bias_correction", do_bias_correction)
+      .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
+      .ScopeSymbolId(op.op_conf().scope_symbol_id());
+  const auto adam_update_op = adam_update_op_builder.Build();
+  job_builder->AddOps(parallel_conf, {adam_update_op.op_conf()});
 }
 
 }  // namespace
