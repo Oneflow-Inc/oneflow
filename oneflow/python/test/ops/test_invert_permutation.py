@@ -41,8 +41,7 @@ def compare_with_tensorflow(device_type, in_shape, data_type):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.invert_permutation(x)
 
-    x = np.array(random.sample(range(0, in_shape[0]), in_shape[0]))
-          .astype(type_name_to_np_type[data_type])
+    x = np.array(random.sample(range(0, in_shape[0]), in_shape[0])).astype(type_name_to_np_type[data_type])
     # OneFlow
     of_out = InvertJob(x).get().numpy()
     # TensorFlow
