@@ -6,7 +6,6 @@ runs:
   using: "composite"
   steps:
     - run: |
-        docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
         rm -rf build/third_party
         bash ci/build/clean.sh
       shell: bash

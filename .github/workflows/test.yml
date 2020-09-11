@@ -20,8 +20,11 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
-    - uses: ./.github/actions/clean
+    - name: Fix permissions
+      run: |
+        docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
     - uses: actions/checkout@v2
+    - uses: ./.github/actions/clean
     - name: Check license (please run 'make of_format' if failed)
       run: |
         python3 ci/check/run_license_format.py -i oneflow -c
@@ -113,8 +116,11 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
-    - uses: ./.github/actions/clean
+    - name: Fix permissions
+      run: |
+        docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
     - uses: actions/checkout@v2
+    - uses: ./.github/actions/clean
     - name: Setup environment
       run: |
         echo $HOSTNAME
