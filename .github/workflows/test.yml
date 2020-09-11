@@ -15,6 +15,14 @@ on:
         required: false
 jobs:
 
+  check_license_and_format:
+
+    runs-on: [linux]
+    if: github.event.pull_request.draft == false
+    steps:
+    - name: Check license and format (please run 'make of_format' if failed)
+      uses: ./.github/actions/fmt
+
   build_and_test:
 
     runs-on: [self-hosted, linux, gpu]
@@ -24,8 +32,6 @@ jobs:
       run: |
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
     - uses: actions/checkout@v2
-    - name: Check license and format (please run 'make of_format' if failed)
-      uses: ./.github/actions/fmt
     - name: Setup submodule
       uses: ./.github/actions/setup
     - name: Build OneFlow
