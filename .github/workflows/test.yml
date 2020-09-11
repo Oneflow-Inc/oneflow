@@ -17,7 +17,7 @@ jobs:
 
   check_license_and_format:
 
-    runs-on: [linux]
+    runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     steps:
     - name: Check license and format (please run 'make of_format' if failed)
