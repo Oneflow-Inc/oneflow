@@ -898,6 +898,7 @@ def masked_fill(
         name (Optional[str], optional): The name for the operation. Defaults to None.
     Attention:
         x and mask must be broadcastable to each other.
+        mask must be int type (int8/int32/int64).
 
     Returns:
         remote_blob_util.BlobDef: The value-filled Blob
@@ -911,14 +912,14 @@ def masked_fill(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def masked_fill_Job(x: tp.Numpy.Placeholder((4, ), mask: tp.Numpy.Placeholder((4, ))
-        )->tp.Numpy:
+        def masked_fill_Job(x: tp.Numpy.Placeholder((4, ), mask: tp.Numpy.Placeholder((4, ),
+                            dtype = flow.int8))->tp.Numpy:
             return flow.masked_fill(x, mask, value=5)
 
         x = np.array([1, 2, 3, 4], dtype=np.float32)
-        mask = np.array([1, 0, 0, 1], dtype=np.float32)
+        mask = np.array([1, 0, 0, 1], dtype=np.int8)
 
-        out = masked_fill_Job(x, mask).get()
+        out = masked_fill_Job(x, mask)
         
         # output [5 2 3 5]
 
