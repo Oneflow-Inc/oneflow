@@ -1835,3 +1835,42 @@ def tril(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("math.invert_permutation")
+def invert_permutation(
+    input: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""The op computes the inverse permutation of a Blob.
+    Args:
+        input (remote_blob_util.BlobDef): Input Blob.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    Returns:
+        remote_blob_util.BlobDef: A Blob, has the same type of input.
+
+    For example:
+    .. code-block:: python
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+        @flow.global_function()
+        def Invert_Job(x: tp.Numpy.Placeholder((5,), dtype=flow.int32)
+        )->tp.Numpy:
+            with flow.scope.placement("cpu", "0:0"):
+                return flow.math.invert_permutation(x, "xx_i_p")
+        x = np.array([3, 4, 0, 2, 1]).astype(np.int32)
+        out = Invert_Job(x)
+
+        # out [2 4 3 0 1]
+    """
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("InvertPermutation_")
+        )
+        .Op("invert_permutation")
+        .Input("in", [input])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
