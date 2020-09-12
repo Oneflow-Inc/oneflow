@@ -16,7 +16,7 @@ on:
 jobs:
 
   check_license_and_format:
-    name: Check license and format
+    name: License and format
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     steps:
@@ -25,7 +25,7 @@ jobs:
       uses: ./.github/actions/fmt
 
   build_and_test:
-    name: Build CUDA OneFlow and run tests
+    name: CUDA
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
@@ -100,7 +100,7 @@ jobs:
           bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
 
   build_and_test_cpu:
-    name: Build CPU-only OneFlow and run tests
+    name: CPU-only
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
@@ -138,7 +138,7 @@ jobs:
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
 
   build_and_test_xla:
-    name: Build OneFlow with XLA and run tests
+    name: XLA
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
