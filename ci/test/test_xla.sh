@@ -8,4 +8,4 @@ mkdir -p $test_tmp_dir
 cp -r $src_dir/oneflow/python/test/xrt $test_tmp_dir
 cd $test_tmp_dir
 
-for f in *.py; do python3 "$f"; done
+for f in $src_dir/oneflow/python/test/xrt/*.py; do python3 "$f"; done
