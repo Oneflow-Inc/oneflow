@@ -38,7 +38,7 @@ function build() {
         -v $tmp_dir:/ci-tmp \
         -w /ci-tmp \
         "$docker_tag" \
-        /oneflow-src/docker/package/manylinux/build_wheel.sh \
+        bash -l /oneflow-src/docker/package/manylinux/build_wheel.sh \
             --python3.6 \
             --house-dir /ci-tmp/wheelhouse \
             --package-name oneflow${package_appendix} \
