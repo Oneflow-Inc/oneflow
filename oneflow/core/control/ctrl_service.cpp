@@ -22,7 +22,7 @@ namespace {
 template<size_t method_index>
 const grpc::internal::RpcMethod BuildOneRpcMethod(std::shared_ptr<grpc::ChannelInterface> channel) {
   return grpc::internal::RpcMethod(GetMethodName(static_cast<CtrlMethod>(method_index)),
-                         grpc::internal::RpcMethod::NORMAL_RPC, channel);
+                                   grpc::internal::RpcMethod::NORMAL_RPC, channel);
 }
 
 template<size_t... method_indices>
@@ -47,7 +47,7 @@ std::unique_ptr<CtrlService::Stub> CtrlService::NewStub(const std::string& addr)
 CtrlService::AsyncService::AsyncService() {
   for (int32_t i = 0; i < kCtrlMethodNum; ++i) {
     AddMethod(new grpc::internal::RpcServiceMethod(GetMethodName(static_cast<CtrlMethod>(i)),
-                                         grpc::internal::RpcMethod::NORMAL_RPC, nullptr));
+                                                   grpc::internal::RpcMethod::NORMAL_RPC, nullptr));
     grpc::Service::MarkMethodAsync(i);
   }
 }

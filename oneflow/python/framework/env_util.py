@@ -149,6 +149,7 @@ def data_port(val):
     assert type(val) is int
     default_env_proto.data_port = val
 
+
 @oneflow_export("env.grpc_use_no_signal")
 @oneflow_deprecate()
 def api_grpc_use_no_signal(val: bool = True) -> None:
@@ -159,9 +160,10 @@ def api_grpc_use_no_signal(val: bool = True) -> None:
     """
     print(
         "WARNING:",
-        "oneflow.env.grpc_use_no_signal is deprecated, users no longer need to set rpc use signal or not. \n"
+        "oneflow.env.grpc_use_no_signal is deprecated, users no longer need to set rpc use signal or not. \n",
     )
     return None
+
 
 @oneflow_export("env.log_dir")
 def api_log_dir(val: str) -> None:
