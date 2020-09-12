@@ -1839,6 +1839,7 @@ def tril(
 
 @oneflow_export("math.invert_permutation")
 def invert_permutation(
-    input: remote_blob_util.BlobDef, name: Optional[str] = None
+    input: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
 
