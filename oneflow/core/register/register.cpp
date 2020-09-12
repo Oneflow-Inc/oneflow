@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-const std::vector<int64_t>& Regst::consumers_actor_id() const {
+const std::vector<int64_t> &Regst::consumers_actor_id() const {
   return regst_desc_->consumers_actor_id();
 }
 
@@ -33,10 +33,12 @@ Regst::Regst() {
 }
 
 Regst::~Regst() {
-  if (comm_net_token_ != nullptr) { Global<CommNet>::Get()->UnRegisterMemory(comm_net_token_); }
+  if (comm_net_token_ != nullptr) {
+    Global<CommNet>::Get()->UnRegisterMemory(comm_net_token_);
+  }
 }
 
-Blob* Regst::GetBlobByLbi(const LogicalBlobId& lbi) {
+Blob *Regst::GetBlobByLbi(const LogicalBlobId &lbi) {
   auto it = lbi2blob_.find(lbi);
   if (it != lbi2blob_.end()) {
     return it->second.get();
@@ -47,20 +49,20 @@ Blob* Regst::GetBlobByLbi(const LogicalBlobId& lbi) {
   }
 }
 
-void Regst::set_regst_desc(const RtRegstDesc* regst_desc) {
+void Regst::set_regst_desc(const RtRegstDesc *regst_desc) {
   CHECK(regst_desc_ == nullptr);
   regst_desc_ = regst_desc;
   status_.regst_desc_id = regst_desc_->regst_desc_id();
 }
 
-Blob* Regst::GetMutSoleBlob() {
+Blob *Regst::GetMutSoleBlob() {
   CHECK_EQ(GetBlobSize(), 1);
   return lbi2blob_.begin()->second.get();
 }
 
-const Blob* Regst::GetSoleBlob() const {
+const Blob *Regst::GetSoleBlob() const {
   CHECK_EQ(GetBlobSize(), 1);
   return lbi2blob_.begin()->second.get();
 }
 
-}  // namespace oneflow
+} // namespace oneflow

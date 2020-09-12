@@ -23,29 +23,32 @@ void LARSModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
 }
 
 Maybe<void> LARSModelUpdateOp::MdUpdtVirtualInferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
+    std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+    const ParallelContext *parallel_ctx) const {
+  const BlobDesc *model_blob_desc = GetBlobDesc4BnInOp("model");
   CHECK_OR_RETURN(*GetBlobDesc4BnInOp("momentum") == *model_blob_desc);
 
   // lars_data_tmp for gpu compute
-  // lars_data_tmp[0] for model_norm, lars_data_tmp[1] for model_diff_norm, lars_data_tmp[2] for
+  // lars_data_tmp[0] for model_norm, lars_data_tmp[1] for model_diff_norm,
+  // lars_data_tmp[2] for
   // local_learning_rate
   *GetBlobDesc4BnInOp("lars_data_tmp") = *model_blob_desc;
   GetBlobDesc4BnInOp("lars_data_tmp")->mut_shape() = Shape({3});
   return Maybe<void>::Ok();
 }
 
-const PbMessage& LARSModelUpdateOp::GetCustomizedConf() const {
+const PbMessage &LARSModelUpdateOp::GetCustomizedConf() const {
   return op_conf().lars_model_update_conf();
 }
 
-const HashSet<std::string> LARSModelUpdateOp::AlwaysBroadcastParallelBns() const {
+const HashSet<std::string>
+LARSModelUpdateOp::AlwaysBroadcastParallelBns() const {
   return HashSet<std::string>{"lars_data_tmp"};
 }
 
-REGISTER_CLASS(NormalModelUpdateOpUserConf::kLarsConf, NormalModelUpdtOp, LARSModelUpdateOp);
+REGISTER_CLASS(NormalModelUpdateOpUserConf::kLarsConf, NormalModelUpdtOp,
+               LARSModelUpdateOp);
 
 REGISTER_OP(OperatorConf::kLarsModelUpdateConf, LARSModelUpdateOp);
 
-}  // namespace oneflow
+} // namespace oneflow

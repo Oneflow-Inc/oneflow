@@ -20,12 +20,12 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
+template <DeviceType device_type, typename T>
 struct L1L2RegularizeGradientKernelUtil {
-  static void RegularizeGradient(DeviceCtx* ctx, int64_t n, const T* model, const T* model_diff,
-                                 T* out, T l1, T l2);
+  static void RegularizeGradient(DeviceCtx *ctx, int64_t n, const T *model,
+                                 const T *model_diff, T *out, T l1, T l2);
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_L1_L2_REGULARIZE_GRADIENT_KERNEL_UTIL_H_
+#endif // ONEFLOW_USER_KERNELS_L1_L2_REGULARIZE_GRADIENT_KERNEL_UTIL_H_

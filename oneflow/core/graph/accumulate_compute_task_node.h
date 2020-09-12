@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class AccumulateCompTaskNode : public CompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(AccumulateCompTaskNode);
   AccumulateCompTaskNode() = default;
   virtual ~AccumulateCompTaskNode() = default;
@@ -30,9 +30,9 @@ class AccumulateCompTaskNode : public CompTaskNode {
   void ConsumeAllRegsts() override;
   virtual void BuildExecGphAndRegst() override;
 
- private:
+private:
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_ACCUMULATE_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_ACCUMULATE_COMPUTE_TASK_NODE_H_

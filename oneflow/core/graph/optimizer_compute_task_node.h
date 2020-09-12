@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class OptimizerCompTaskNode final : public CompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(OptimizerCompTaskNode);
   OptimizerCompTaskNode() = default;
   ~OptimizerCompTaskNode() = default;
@@ -38,11 +38,11 @@ class OptimizerCompTaskNode final : public CompTaskNode {
 #endif
   }
 
- private:
+private:
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_OPTIMIZER_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_OPTIMIZER_COMPUTE_TASK_NODE_H_

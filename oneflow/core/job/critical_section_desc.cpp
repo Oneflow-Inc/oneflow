@@ -15,13 +15,14 @@ limitations under the License.
 */
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include <google/protobuf/text_format.h>
 #include <cstdint>
+#include <google/protobuf/text_format.h>
 #include <string>
 
 namespace oneflow {
 
-void CriticalSectionDesc::AddCriticalSection(std::unique_ptr<CriticalSection>&& critical_section) {
+void CriticalSectionDesc::AddCriticalSection(
+    std::unique_ptr<CriticalSection> &&critical_section) {
   CHECK_EQ(inited_, false);
   critical_sections_.emplace_back(std::move(critical_section));
 }
@@ -31,12 +32,14 @@ void CriticalSectionDesc::Done() {
   UpdateJobId2CriticalSectionIds();
   UpdateJobId2TotalJobCriticalSectionId();
   UpdateCriticalSectionIds2IntersectingIds();
-  CHECK_EQ(job_id2critical_section_ids_.size(), job_id2total_job_critical_section_id_.size());
-  CHECK_EQ(critical_sections_.size(), critical_section_id2intersecting_ids_.size());
+  CHECK_EQ(job_id2critical_section_ids_.size(),
+           job_id2total_job_critical_section_id_.size());
+  CHECK_EQ(critical_sections_.size(),
+           critical_section_id2intersecting_ids_.size());
   inited_ = true;
   std::string all_output;
   int32_t i = 0;
-  for (const auto& cs : critical_sections_) {
+  for (const auto &cs : critical_sections_) {
     all_output += "CriticalSection " + std::to_string(i) + "\n";
     std::string output;
     google::protobuf::TextFormat::PrintToString(*cs, &output);
@@ -47,26 +50,31 @@ void CriticalSectionDesc::Done() {
   TeePersistentLogStream::Create("critical_section_desc")->Write(all_output);
 }
 
-const CriticalSection& CriticalSectionDesc::GetCriticalSection(int64_t critical_section_id) const {
+const CriticalSection &
+CriticalSectionDesc::GetCriticalSection(int64_t critical_section_id) const {
   CHECK(inited_);
   return *critical_sections_.at(critical_section_id);
 }
 
-CriticalSection* CriticalSectionDesc::MutCriticalSection(int64_t critical_section_id) const {
+CriticalSection *
+CriticalSectionDesc::MutCriticalSection(int64_t critical_section_id) const {
   CHECK_EQ(inited_, false);
   return critical_sections_.at(critical_section_id).get();
 }
 
-const std::vector<int64_t>& CriticalSectionDesc::CriticalSectionIds4JobId(int64_t job_id) const {
+const std::vector<int64_t> &
+CriticalSectionDesc::CriticalSectionIds4JobId(int64_t job_id) const {
   CHECK(inited_);
   return job_id2critical_section_ids_.at(job_id);
 }
 
-void CriticalSectionDesc::DumpCriticalSectionId2IntersectinIds(PbRpf<Int64List>* id2id_list) const {
+void CriticalSectionDesc::DumpCriticalSectionId2IntersectinIds(
+    PbRpf<Int64List> *id2id_list) const {
   CHECK(inited_);
   FOR_RANGE(int64_t, i, 0, critical_sections_.size()) {
-    *id2id_list->Add()->mutable_value() = {critical_section_id2intersecting_ids_.at(i).begin(),
-                                           critical_section_id2intersecting_ids_.at(i).end()};
+    *id2id_list->Add()->mutable_value() = {
+        critical_section_id2intersecting_ids_.at(i).begin(),
+        critical_section_id2intersecting_ids_.at(i).end()};
   }
 }
 
@@ -75,7 +83,7 @@ void CriticalSectionDesc::UpdateJobId2CriticalSectionIds() {
   job_id2critical_section_ids_.resize(critical_sections_.size());
   int64_t max_job_id = -1;
   FOR_RANGE(int64_t, i, 0, critical_sections_.size()) {
-    const auto& critical_section = *critical_sections_.at(i);
+    const auto &critical_section = *critical_sections_.at(i);
     int64_t job_id = critical_section.job_id();
     job_id2critical_section_ids_[job_id].push_back(i);
     max_job_id = std::max(max_job_id, job_id);
@@ -88,7 +96,7 @@ void CriticalSectionDesc::UpdateJobId2TotalJobCriticalSectionId() {
   HashSet<int64_t> unique_check;
   job_id2total_job_critical_section_id_.resize(critical_sections_.size());
   FOR_RANGE(int64_t, i, 0, critical_sections_.size()) {
-    const auto& critical_section = *critical_sections_.at(i);
+    const auto &critical_section = *critical_sections_.at(i);
     if (critical_section.has_total_job_critical_section()) {
       CHECK(unique_check.emplace(critical_section.job_id()).second);
       job_id2total_job_critical_section_id_.at(critical_section.job_id()) = i;
@@ -110,7 +118,7 @@ void CriticalSectionDesc::UpdateCriticalSectionIds2IntersectingIds() {
       chunk_id2critical_section_ids[chunk_id].insert(i);
     }
   }
-  for (const auto& pair : mem_block_id2critical_section_ids) {
+  for (const auto &pair : mem_block_id2critical_section_ids) {
     for (int64_t first_id : pair.second) {
       for (int64_t second_id : pair.second) {
         if (first_id != second_id) {
@@ -119,7 +127,7 @@ void CriticalSectionDesc::UpdateCriticalSectionIds2IntersectingIds() {
       }
     }
   }
-  for (const auto& pair : chunk_id2critical_section_ids) {
+  for (const auto &pair : chunk_id2critical_section_ids) {
     for (int64_t first_id : pair.second) {
       for (int64_t second_id : pair.second) {
         if (first_id != second_id) {
@@ -130,4 +138,4 @@ void CriticalSectionDesc::UpdateCriticalSectionIds2IntersectingIds() {
   }
 }
 
-}  // namespace oneflow
+} // namespace oneflow

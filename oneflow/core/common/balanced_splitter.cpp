@@ -31,8 +31,8 @@ Range BalancedSplitter::At(int64_t idx) const {
     left_bound = (base_part_size_ + 1) * idx;
     right_bound = left_bound + (base_part_size_ + 1);
   } else {
-    left_bound =
-        (base_part_size_ + 1) * base_begin_idx_ + base_part_size_ * (idx - base_begin_idx_);
+    left_bound = (base_part_size_ + 1) * base_begin_idx_ +
+                 base_part_size_ * (idx - base_begin_idx_);
     right_bound = left_bound + base_part_size_;
   }
   return Range(left_bound, right_bound);
@@ -46,4 +46,4 @@ Range BalancedSplitter::At(int64_t first_idx, int64_t last_idx) const {
   return Range(first_range.begin(), last_range.end());
 }
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -15,8 +15,8 @@ limitations under the License.
 */
 #include "oneflow/user/summary/histogram.h"
 #include "oneflow/core/common/maybe.h"
-#include <cfloat>
 #include <algorithm>
+#include <cfloat>
 
 namespace oneflow {
 
@@ -701,7 +701,9 @@ static std::vector<double> defalut_container = {-DBL_MAX,
 Histogram::Histogram() {
   max_constainers_ = defalut_container;
   containers_.resize(max_constainers_.size());
-  for (size_t idx = 0; idx < max_constainers_.size(); idx++) { containers_.at(idx) = 0; }
+  for (size_t idx = 0; idx < max_constainers_.size(); idx++) {
+    containers_.at(idx) = 0;
+  }
   value_sum_ = 0;
   sum_value_squares_ = 0;
   max_value_ = -DBL_MAX;
@@ -713,15 +715,20 @@ void Histogram::AppendValue(double value) {
   value_sum_ += value;
   value_count_++;
   sum_value_squares_ += value * value;
-  if (max_value_ < value) { max_value_ = value; }
-  if (min_value_ > value) { min_value_ = value; }
-  int idx = std::upper_bound(max_constainers_.begin(), max_constainers_.end(), value)
-            - max_constainers_.begin();
+  if (max_value_ < value) {
+    max_value_ = value;
+  }
+  if (min_value_ > value) {
+    min_value_ = value;
+  }
+  int idx = std::upper_bound(max_constainers_.begin(), max_constainers_.end(),
+                             value) -
+            max_constainers_.begin();
   CHECK_GT(containers_.size(), idx);
   containers_.at(idx) += 1.0;
 }
 
-void Histogram::AppendToProto(HistogramProto* hist_proto) {
+void Histogram::AppendToProto(HistogramProto *hist_proto) {
   hist_proto->Clear();
   hist_proto->set_num(value_count_);
   hist_proto->set_sum(value_sum_);
@@ -744,6 +751,6 @@ void Histogram::AppendToProto(HistogramProto* hist_proto) {
   }
 }
 
-}  // namespace summary
+} // namespace summary
 
-}  // namespace oneflow
+} // namespace oneflow

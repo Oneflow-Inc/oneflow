@@ -19,12 +19,12 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
+Maybe<void> InferTensorDesc4Matmul(user_op::InferContext *ctx) {
   bool transpose_a = ctx->Attr<bool>("transpose_a");
   bool transpose_b = ctx->Attr<bool>("transpose_b");
 
-  user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);
-  user_op::TensorDesc* b = ctx->TensorDesc4ArgNameAndIndex("b", 0);
+  user_op::TensorDesc *a = ctx->TensorDesc4ArgNameAndIndex("a", 0);
+  user_op::TensorDesc *b = ctx->TensorDesc4ArgNameAndIndex("b", 0);
   CHECK_EQ_OR_RETURN(a->shape().NumAxes(), b->shape().NumAxes());
   CHECK_GE_OR_RETURN(a->shape().NumAxes(), 2);
   size_t num_axes = a->shape().NumAxes();
@@ -35,9 +35,9 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
     }
   }
 
-  user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  user_op::TensorDesc *out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   *out = *a;
-  int64_t m, n, k;  // tensor a (no trans): m*k, tensor b (no trans): k*n
+  int64_t m, n, k; // tensor a (no trans): m*k, tensor b (no trans): k*n
   if (!transpose_a) {
     m = a->shape().At(num_axes - 2);
     k = a->shape().At(num_axes - 1);
@@ -57,12 +57,13 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::UserOpWrapper& op,
+void GenBackwardOpConf4Matmul(const std::string &op_type_name,
+                              const user_op::UserOpWrapper &op,
                               user_op::AddOpFn AddOp) {
   bool transpose_a = op.attr<bool>("transpose_a");
   bool transpose_b = op.attr<bool>("transpose_b");
-  auto HandleGradOp = [&](user_op::UserOpConfWrapper&& grad_op,
-                          std::string&& input_arg_name) -> void {
+  auto HandleGradOp = [&](user_op::UserOpConfWrapper &&grad_op,
+                          std::string &&input_arg_name) -> void {
     op.BindGradTensorWithOpInput(grad_op.output("out", 0), input_arg_name, 0);
     AddOp(grad_op);
   };
@@ -119,7 +120,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
   }
 }
 
-}  // namespace
+} // namespace
 
 REGISTER_USER_OP("matmul")
     .Input("a")
@@ -128,8 +129,9 @@ REGISTER_USER_OP("matmul")
     .Attr<bool>("transpose_a", UserOpAttrType::kAtBool, false)
     .Attr<bool>("transpose_b", UserOpAttrType::kAtBool, false)
     .SetTensorDescInferFn(InferTensorDesc4Matmul)
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      auto BatchAxis4BnInOp = [&ctx](const std::string& arg_name) -> OptInt64* {
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
+      auto BatchAxis4BnInOp =
+          [&ctx](const std::string &arg_name) -> OptInt64 * {
         return ctx->BatchAxis4ArgNameAndIndex(arg_name, 0);
       };
       OptInt64 a_batch_axis(*BatchAxis4BnInOp("a"));
@@ -149,7 +151,7 @@ REGISTER_USER_OP("matmul")
       }
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
       // (m, k_a) * (k_b, n) where k_a == k_b
       int32_t m_axis = -1;
       int32_t k_a_axis = -1;
@@ -197,10 +199,11 @@ REGISTER_USER_OP("matmul")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("matmul").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) {
-  return GenBackwardOpConf4Matmul("matmul", op, AddOp);
-});
+REGISTER_USER_OP_GRAD("matmul")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
+      return GenBackwardOpConf4Matmul("matmul", op, AddOp);
+    });
 
 REGISTER_USER_OP("batch_matmul")
     .Input("a")
@@ -209,8 +212,9 @@ REGISTER_USER_OP("batch_matmul")
     .Attr<bool>("transpose_a", UserOpAttrType::kAtBool, false)
     .Attr<bool>("transpose_b", UserOpAttrType::kAtBool, false)
     .SetTensorDescInferFn(InferTensorDesc4Matmul)
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      auto BatchAxis4BnInOp = [&ctx](const std::string& arg_name) -> OptInt64* {
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
+      auto BatchAxis4BnInOp =
+          [&ctx](const std::string &arg_name) -> OptInt64 * {
         return ctx->BatchAxis4ArgNameAndIndex(arg_name, 0);
       };
       if (BatchAxis4BnInOp("a")->has_value()) {
@@ -222,17 +226,22 @@ REGISTER_USER_OP("batch_matmul")
       }
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& a_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0);
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc &a_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0);
       FOR_RANGE(int64_t, i, 0, a_tensor.shape().NumAxes() - 2) {
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+        ctx->NewBuilder()
+            .Split(ctx->inputs(), i)
+            .Split(ctx->outputs(), i)
+            .Build();
       }
       return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("batch_matmul")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
       return GenBackwardOpConf4Matmul("batch_matmul", op, AddOp);
     });
 
-}  // namespace oneflow
+} // namespace oneflow

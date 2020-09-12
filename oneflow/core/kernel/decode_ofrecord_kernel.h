@@ -27,20 +27,22 @@ struct DecodeStatus {
 };
 
 class DecodeOFRecordKernel final : public KernelIf<DeviceType::kCPU> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(DecodeOFRecordKernel);
   DecodeOFRecordKernel() = default;
   ~DecodeOFRecordKernel() = default;
 
-  void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void Forward(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override {
     ForwardDataContent(ctx, BnInOp2Blob);
   }
 
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
 
- private:
+private:
   void VirtualKernelInit() override;
   int32_t NextRandomInt() const;
 
@@ -48,6 +50,6 @@ class DecodeOFRecordKernel final : public KernelIf<DeviceType::kCPU> {
   std::unique_ptr<std::uniform_int_distribution<int32_t>> distribution_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_DECODE_OFRECORD_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_DECODE_OFRECORD_KERNEL_H_

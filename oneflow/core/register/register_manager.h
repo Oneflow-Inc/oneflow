@@ -22,36 +22,40 @@ limitations under the License.
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/memory/memory_allocator.h"
+#include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
 #include "oneflow/core/register/register.h"
-#include "oneflow/core/record/record.pb.h"
 
 namespace oneflow {
 
 class RegstMgr final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(RegstMgr);
   RegstMgr() = delete;
   ~RegstMgr() = default;
 
-  void NewRegsts(const RegstDescProto& regst_desc_proto, std::function<void(Regst*)> OneRegstDone);
-  const RtRegstDesc& RegstDesc4RegstDescId(int64_t regst_desc_id) const;
-  Blob* Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id);
+  void NewRegsts(const RegstDescProto &regst_desc_proto,
+                 std::function<void(Regst *)> OneRegstDone);
+  const RtRegstDesc &RegstDesc4RegstDescId(int64_t regst_desc_id) const;
+  Blob *Blob4LbiAndParallelId(const LogicalBlobId &lbi,
+                              const int64_t parallel_id);
 
- private:
+private:
   friend class Global<RegstMgr>;
 
-  explicit RegstMgr(const Plan& plan);
-  void NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regst*, const RtRegstDesc*,
-                          char* main_mem_ptr, char* separated_header_mem_ptr);
-  HashMap<int64_t, std::unique_ptr<const RtRegstDesc>> regst_desc_id2rt_regst_desc_;
-  HashMap<LogicalBlobId, HashMap<int64_t, Blob*>> lbi2parallel_id2blob_;
-  HashMap<int64_t, char*> mem_block_id2ptr_;
+  explicit RegstMgr(const Plan &plan);
+  void NewBlobsInOneRegst(const std::vector<LbiBlobDescPair> &lbis, Regst *,
+                          const RtRegstDesc *, char *main_mem_ptr,
+                          char *separated_header_mem_ptr);
+  HashMap<int64_t, std::unique_ptr<const RtRegstDesc>>
+      regst_desc_id2rt_regst_desc_;
+  HashMap<LogicalBlobId, HashMap<int64_t, Blob *>> lbi2parallel_id2blob_;
+  HashMap<int64_t, char *> mem_block_id2ptr_;
   HashMap<int64_t, ParallelContext> regst_desc_id2parallel_ctx_;
   std::mutex mutex_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_REGISTER_REGISTER_MANAGER_H_
+#endif // ONEFLOW_CORE_REGISTER_REGISTER_MANAGER_H_

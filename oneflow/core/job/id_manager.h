@@ -17,14 +17,14 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_ID_MANAGER_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
 class IDMgr final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
   ~IDMgr() = default;
 
@@ -41,15 +41,22 @@ class IDMgr final {
   int64_t BaseIndependentThrdId() const;
   void UpdateBaseIndependentThrdId(int64_t val);
 
-  int64_t NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id);
+  int64_t NewTaskId(int64_t machine_id, int64_t thrd_id,
+                    int64_t local_work_stream_id);
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
   int64_t NewMemBlockId() { return mem_block_id_count_++; }
   int64_t NewChunkId() { return chunk_id_count_++; }
 
   // MemZoneId
-  int64_t CpuMemZoneId() const { return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum(); }
-  bool IsCpuMemZone(int64_t mem_zone_id) const { return mem_zone_id == CpuMemZoneId(); }
-  bool IsGpuMemZone(int64_t mem_zone_id) const { return mem_zone_id < gpu_device_num_; }
+  int64_t CpuMemZoneId() const {
+    return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
+  }
+  bool IsCpuMemZone(int64_t mem_zone_id) const {
+    return mem_zone_id == CpuMemZoneId();
+  }
+  bool IsGpuMemZone(int64_t mem_zone_id) const {
+    return mem_zone_id < gpu_device_num_;
+  }
   int64_t GpuMemZoneId(int64_t dev_phy_id) const { return dev_phy_id; }
   int64_t GetGpuPhyIdFromMemZoneId(int64_t mem_zone_id) const {
     CHECK_LT(mem_zone_id, gpu_device_num_);
@@ -85,7 +92,7 @@ class IDMgr final {
   int64_t AllocateChainId(int64_t global_work_stream_id);
   int64_t PickCpuThrdIdEvenly(int64_t machine_id);
 
- private:
+private:
   friend class Global<IDMgr>;
   IDMgr();
   int64_t GetMachineThrdId(int64_t machine_id, int64_t thrd_id);
@@ -110,6 +117,6 @@ class IDMgr final {
   static const int64_t task_id_bit_num_ = 21;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_ID_MANAGER_H_
+#endif // ONEFLOW_CORE_JOB_ID_MANAGER_H_

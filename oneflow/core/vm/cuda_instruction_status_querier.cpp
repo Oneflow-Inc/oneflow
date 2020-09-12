@@ -26,14 +26,15 @@ bool CudaInstrStatusQuerier::event_completed() const {
   return cudaEventQuery(event_) == cudaSuccess;
 }
 
-void CudaInstrStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
+void CudaInstrStatusQuerier::SetLaunched(DeviceCtx *device_ctx) {
   cudaSetDevice(device_id_);
-  OF_CUDA_CHECK(cudaEventCreateWithFlags(&event_, cudaEventBlockingSync | cudaEventDisableTiming));
+  OF_CUDA_CHECK(cudaEventCreateWithFlags(&event_, cudaEventBlockingSync |
+                                                      cudaEventDisableTiming));
   OF_CUDA_CHECK(cudaEventRecord(event_, device_ctx->cuda_stream()));
   launched_ = true;
 }
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
 #endif

@@ -20,13 +20,15 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T>
-class OFRecordEncoderImpl<EncodeCase::kJpeg, T> final : public OFRecordEncoderIf {
- private:
-  void EncodeOneCol(DeviceCtx*, const Blob* in_blob, int64_t in_offset, Feature&,
-                    const std::string& field_name, int64_t one_col_elem_num) const override;
+template <typename T>
+class OFRecordEncoderImpl<EncodeCase::kJpeg, T> final
+    : public OFRecordEncoderIf {
+private:
+  void EncodeOneCol(DeviceCtx *, const Blob *in_blob, int64_t in_offset,
+                    Feature &, const std::string &field_name,
+                    int64_t one_col_elem_num) const override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_RECORD_OFRECORD_JPEG_ENCODER_H_
+#endif // ONEFLOW_CORE_RECORD_OFRECORD_JPEG_ENCODER_H_

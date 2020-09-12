@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/vm/thread_ctx.msg.h"
 
 namespace oneflow {
 namespace vm {
@@ -25,9 +25,10 @@ void ThreadCtx::LoopRun() {
 }
 
 ObjectMsgConditionListStatus ThreadCtx::ReceiveAndRun() {
-  const StreamType& stream_type = stream_rt_desc().stream_type();
+  const StreamType &stream_type = stream_rt_desc().stream_type();
   OBJECT_MSG_LIST(Instruction, pending_instruction_link) tmp_list;
-  ObjectMsgConditionListStatus status = mut_pending_instruction_list()->MoveTo(&tmp_list);
+  ObjectMsgConditionListStatus status =
+      mut_pending_instruction_list()->MoveTo(&tmp_list);
   OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, instruction) {
     stream_type.Run(instruction);
     tmp_list.Erase(instruction);
@@ -36,9 +37,10 @@ ObjectMsgConditionListStatus ThreadCtx::ReceiveAndRun() {
 }
 
 ObjectMsgConditionListStatus ThreadCtx::TryReceiveAndRun() {
-  const StreamType& stream_type = stream_rt_desc().stream_type();
+  const StreamType &stream_type = stream_rt_desc().stream_type();
   OBJECT_MSG_LIST(Instruction, pending_instruction_link) tmp_list;
-  ObjectMsgConditionListStatus status = mut_pending_instruction_list()->TryMoveTo(&tmp_list);
+  ObjectMsgConditionListStatus status =
+      mut_pending_instruction_list()->TryMoveTo(&tmp_list);
   OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, instruction) {
     CHECK_GT(instruction->ref_cnt(), 1);
     tmp_list.Erase(instruction);
@@ -47,5 +49,5 @@ ObjectMsgConditionListStatus ThreadCtx::TryReceiveAndRun() {
   return status;
 }
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow

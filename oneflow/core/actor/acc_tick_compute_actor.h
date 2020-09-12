@@ -21,16 +21,16 @@ limitations under the License.
 namespace oneflow {
 
 class AccTickCompActor : public CompActor {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(AccTickCompActor);
   AccTickCompActor() = default;
   virtual ~AccTickCompActor() = default;
 
- protected:
-  void VirtualCompActorInit(const TaskProto& proto) override;
+protected:
+  void VirtualCompActorInit(const TaskProto &proto) override;
   int64_t ActNumForEachOutput(int64_t regst_desc_id) const override;
 
- private:
+private:
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 
@@ -38,6 +38,6 @@ class AccTickCompActor : public CompActor {
   int32_t max_acc_cnt_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_ACC_TICK_COMPUTE_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_ACC_TICK_COMPUTE_ACTOR_H_

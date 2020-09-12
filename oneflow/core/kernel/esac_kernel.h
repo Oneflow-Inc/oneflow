@@ -20,18 +20,19 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T>
+template <typename T>
 class EsacKernel final : public KernelIf<DeviceType::kCPU> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(EsacKernel);
   EsacKernel() = default;
   ~EsacKernel() override = default;
 
- private:
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+private:
+  void
+  ForwardDataContent(const KernelCtx &,
+                     std::function<Blob *(const std::string &)>) const override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_ESAC_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_ESAC_KERNEL_H_

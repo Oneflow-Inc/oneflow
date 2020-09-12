@@ -21,17 +21,18 @@ limitations under the License.
 namespace oneflow {
 
 class NormalForwardCompActor final : public CompActor {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(NormalForwardCompActor);
   NormalForwardCompActor() = default;
   ~NormalForwardCompActor() override = default;
 
- private:
-  void VirtualCompActorInit(const TaskProto&) override;
+private:
+  void VirtualCompActorInit(const TaskProto &) override;
   void Act() override;
-  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName()
-      override {
-    return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{"const_buf"});
+  std::pair<RegstNameType, HashSet<std::string>>
+  GetNaiveOrCustomizedProducedRegstDescName() override {
+    return std::make_pair(RegstNameType::kCustomized,
+                          HashSet<std::string>{"const_buf"});
   }
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void VirtualAsyncSendInplaceProducedRegstMsgToConsumer() override;
@@ -41,10 +42,10 @@ class NormalForwardCompActor final : public CompActor {
 
   // customized produced
   int64_t const_buf_regst_desc_id_;
-  Regst* const_buf_regst_;
+  Regst *const_buf_regst_;
   bool send_const_buf_regst_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_NORMAL_FORWARD_COMPUTE_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_NORMAL_FORWARD_COMPUTE_ACTOR_H_

@@ -14,41 +14,51 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/persistence/file_system.h"
-#include <errno.h>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 #include "oneflow/core/persistence/posix/posix_file_system.h"
-#include "oneflow/core/job/job_set.pb.h"
+#include <errno.h>
 
 namespace oneflow {
 
 namespace fs {
 
-void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
-  if (IsDirectory(dirname)) { return; }
+void FileSystem::CreateDirIfNotExist(const std::string &dirname) {
+  if (IsDirectory(dirname)) {
+    return;
+  }
   CreateDir(dirname);
 }
 
-void FileSystem::RecursivelyCreateDirIfNotExist(const std::string& dirname) {
-  if (IsDirectory(dirname)) { return; }
+void FileSystem::RecursivelyCreateDirIfNotExist(const std::string &dirname) {
+  if (IsDirectory(dirname)) {
+    return;
+  }
   RecursivelyCreateDir(dirname);
 }
 
-bool FileSystem::IsDirEmpty(const std::string& dirname) { return ListDir(dirname).empty(); }
+bool FileSystem::IsDirEmpty(const std::string &dirname) {
+  return ListDir(dirname).empty();
+}
 
-std::string FileSystem::TranslateName(const std::string& name) const { return CleanPath(name); }
+std::string FileSystem::TranslateName(const std::string &name) const {
+  return CleanPath(name);
+}
 
-void FileSystem::MakeEmptyDir(const std::string& dirname) {
-  if (IsDirectory(dirname)) { RecursivelyDeleteDir(dirname); }
+void FileSystem::MakeEmptyDir(const std::string &dirname) {
+  if (IsDirectory(dirname)) {
+    RecursivelyDeleteDir(dirname);
+  }
   RecursivelyCreateDir(dirname);
 }
 
-void FileSystem::RecursivelyDeleteDir(const std::string& dirname) {
+void FileSystem::RecursivelyDeleteDir(const std::string &dirname) {
   CHECK(FileExists(dirname));
-  std::deque<std::string> dir_q;      // Queue for the BFS
-  std::vector<std::string> dir_list;  // List of all dirs discovered
+  std::deque<std::string> dir_q;     // Queue for the BFS
+  std::vector<std::string> dir_list; // List of all dirs discovered
   dir_q.push_back(dirname);
   // ret : Status to be returned.
   // Do a BFS on the directory to discover all the sub-directories. Remove all
@@ -60,7 +70,7 @@ void FileSystem::RecursivelyDeleteDir(const std::string& dirname) {
     dir_list.push_back(dir);
     // GetChildren might fail if we don't have appropriate permissions.
     std::vector<std::string> children = ListDir(dir);
-    for (const std::string& child : children) {
+    for (const std::string &child : children) {
       const std::string child_path = JoinPath(dir, child);
       // If the child is a directory add it to the queue, otherwise delete it.
       if (IsDirectory(child_path)) {
@@ -75,19 +85,21 @@ void FileSystem::RecursivelyDeleteDir(const std::string& dirname) {
   // Now reverse the list of directories and delete them. The BFS ensures that
   // we can delete the directories in this order.
   std::reverse(dir_list.begin(), dir_list.end());
-  for (const std::string& dir : dir_list) {
+  for (const std::string &dir : dir_list) {
     // Delete dir might fail because of permissions issues or might be
     // unimplemented.
     DeleteDir(dir);
   }
 }
 
-void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
+void FileSystem::RecursivelyCreateDir(const std::string &dirname) {
   std::string remaining_dir = dirname;
   std::vector<std::string> sub_dirs;
   while (!remaining_dir.empty()) {
     bool status = FileExists(remaining_dir);
-    if (status) { break; }
+    if (status) {
+      break;
+    }
     // Basename returns "" for / ending dirs.
     if (remaining_dir[remaining_dir.length() - 1] != '/') {
       sub_dirs.push_back(Basename(remaining_dir));
@@ -100,29 +112,29 @@ void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
 
   // Now create the directories.
   std::string built_path = remaining_dir;
-  for (const std::string& sub_dir : sub_dirs) {
+  for (const std::string &sub_dir : sub_dirs) {
     built_path = JoinPath(built_path, sub_dir);
     CreateDir(built_path);
   }
 }
 
-}  // namespace fs
+} // namespace fs
 
-fs::FileSystem* LocalFS() {
+fs::FileSystem *LocalFS() {
 #ifdef PLATFORM_POSIX
-  static fs::FileSystem* fs = new fs::PosixFileSystem;
+  static fs::FileSystem *fs = new fs::PosixFileSystem;
 #endif
   return fs;
 }
 
-fs::FileSystem* NetworkFS() { return LocalFS(); }
+fs::FileSystem *NetworkFS() { return LocalFS(); }
 
-fs::FileSystem* HadoopFS(const HdfsConf& hdfs_conf) {
-  static fs::FileSystem* fs = new fs::HadoopFileSystem(hdfs_conf);
+fs::FileSystem *HadoopFS(const HdfsConf &hdfs_conf) {
+  static fs::FileSystem *fs = new fs::HadoopFileSystem(hdfs_conf);
   return fs;
 }
 
-fs::FileSystem* GetFS(const FileSystemConf& file_system_conf) {
+fs::FileSystem *GetFS(const FileSystemConf &file_system_conf) {
   if (file_system_conf.has_localfs_conf()) {
     return LocalFS();
   } else if (file_system_conf.has_networkfs_conf()) {
@@ -134,6 +146,10 @@ fs::FileSystem* GetFS(const FileSystemConf& file_system_conf) {
   }
 }
 
-fs::FileSystem* DataFS() { return GetFS(Global<const IOConf>::Get()->data_fs_conf()); }
-fs::FileSystem* SnapshotFS() { return GetFS(Global<const IOConf>::Get()->snapshot_fs_conf()); }
-}  // namespace oneflow
+fs::FileSystem *DataFS() {
+  return GetFS(Global<const IOConf>::Get()->data_fs_conf());
+}
+fs::FileSystem *SnapshotFS() {
+  return GetFS(Global<const IOConf>::Get()->snapshot_fs_conf());
+}
+} // namespace oneflow

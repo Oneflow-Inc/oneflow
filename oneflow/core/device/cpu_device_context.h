@@ -22,21 +22,27 @@ limitations under the License.
 namespace oneflow {
 
 class CpuDeviceCtx final : public DeviceCtx {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtx);
   CpuDeviceCtx() = default;
   ~CpuDeviceCtx() = default;
 
-  std::unique_ptr<DeviceCtx> Copy() const { return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx()); }
+  std::unique_ptr<DeviceCtx> Copy() const {
+    return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx());
+  }
 
   void SyncDevice() override {}
-  void AddCallBack(std::function<void()> callback) const override { callback(); }
+  void AddCallBack(std::function<void()> callback) const override {
+    callback();
+  }
 
-  vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
+  vm::Allocator *mut_allocator() override {
+    return Global<vm::CpuAllocator>::Get();
+  }
 
- private:
-};  // namespace oneflow
+private:
+}; // namespace oneflow
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DEVICE_CPU_DEVICE_CONTEXT_H_
+#endif // ONEFLOW_CORE_DEVICE_CPU_DEVICE_CONTEXT_H_

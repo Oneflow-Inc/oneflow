@@ -17,16 +17,19 @@ limitations under the License.
 
 namespace oneflow {
 
-std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> CollectiveBoxingDeviceCtx::AddCheckpoint() {
+std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint>
+CollectiveBoxingDeviceCtx::AddCheckpoint() {
   std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> checkpoint =
-      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Get()->CreateCheckpoint();
+      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Get()
+          ->CreateCheckpoint();
   current_checkpoint_ = checkpoint;
   return checkpoint;
 }
 
-void CollectiveBoxingDeviceCtx::AddCallBack(std::function<void()> callback) const {
-  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Get()->Enqueue(current_checkpoint_,
-                                                                              callback);
+void CollectiveBoxingDeviceCtx::AddCallBack(
+    std::function<void()> callback) const {
+  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Get()->Enqueue(
+      current_checkpoint_, callback);
 }
 
-}  // namespace oneflow
+} // namespace oneflow

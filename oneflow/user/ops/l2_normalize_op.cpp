@@ -23,10 +23,10 @@ REGISTER_USER_OP("l2_normalize")
     .Output("square_x_sum")
     .Attr("axis", UserOpAttrType::kAtInt32)
     .Attr("epsilon", UserOpAttrType::kAtFloat)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      Shape* square_x_sum_shape = ctx->Shape4ArgNameAndIndex("square_x_sum", 0);
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      const Shape *x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+      Shape *y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+      Shape *square_x_sum_shape = ctx->Shape4ArgNameAndIndex("square_x_sum", 0);
       const int32_t axis = ctx->Attr<int32_t>("axis");
       const float epsilon = ctx->Attr<float>("epsilon");
       CHECK_GE_OR_RETURN(axis, 0);
@@ -37,9 +37,11 @@ REGISTER_USER_OP("l2_normalize")
       square_x_sum_shape->Set(axis, 1);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      if (ctx->BatchAxis4ArgNameAndIndex("x", 0)->value() != ctx->Attr<int32_t>("axis")) {
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("y", 0) =
+          *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      if (ctx->BatchAxis4ArgNameAndIndex("x", 0)->value() !=
+          ctx->Attr<int32_t>("axis")) {
         *ctx->BatchAxis4ArgNameAndIndex("square_x_sum", 0) =
             *ctx->BatchAxis4ArgNameAndIndex("x", 0);
       } else {
@@ -47,8 +49,9 @@ REGISTER_USER_OP("l2_normalize")
       }
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc &x_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       const int32_t axis = ctx->Attr<int32_t>("axis");
       FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
         if (i != axis) {
@@ -69,11 +72,12 @@ REGISTER_USER_OP("l2_normalize_grad")
     .Output("dx")
     .Attr("axis", UserOpAttrType::kAtInt32)
     .Attr("epsilon", UserOpAttrType::kAtFloat)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      const Shape* square_x_sum_shape = ctx->Shape4ArgNameAndIndex("square_x_sum", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      const Shape *dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
+      const Shape *y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+      const Shape *square_x_sum_shape =
+          ctx->Shape4ArgNameAndIndex("square_x_sum", 0);
+      Shape *dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
       const int32_t axis = ctx->Attr<int32_t>("axis");
       const float epsilon = ctx->Attr<float>("epsilon");
       CHECK_EQ_OR_RETURN(*dy_shape, *y_shape);
@@ -90,12 +94,14 @@ REGISTER_USER_OP("l2_normalize_grad")
       *dx_shape = *dy_shape;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) =
+          *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc &y_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
       const int32_t axis = ctx->Attr<int32_t>("axis");
       FOR_RANGE(int64_t, i, 0, y_tensor.shape().NumAxes()) {
         if (i != axis) {
@@ -111,7 +117,8 @@ REGISTER_USER_OP("l2_normalize_grad")
     });
 
 REGISTER_USER_OP_GRAD("l2_normalize")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -128,4 +135,4 @@ REGISTER_USER_OP_GRAD("l2_normalize")
       }
     });
 
-}  // namespace oneflow
+} // namespace oneflow

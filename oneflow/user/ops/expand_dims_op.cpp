@@ -26,50 +26,55 @@ int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
   return axis;
 }
 
-}  // namespace
+} // namespace
 
 REGISTER_USER_OP("expand_dims")
     .Input("in")
     .Output("out")
     .Attr("axis", UserOpAttrType::kAtInt32)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape->NumAxes());
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      const Shape *in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      Shape *out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      const int32_t axis = TransformNegativeAxisToPositive(
+          ctx->Attr<int32_t>("axis"), in_shape->NumAxes());
 
       auto dim_vec = in_shape->dim_vec();
       dim_vec.insert(dim_vec.begin() + axis, 1);
       *out_shape = Shape(dim_vec);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->Dtype4ArgNameAndIndex("out", 0) =
+          *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      const auto& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
-      const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_desc.shape().NumAxes());
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
+      const auto &in_desc =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      const auto *in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
+      auto *out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
+      const int32_t axis = TransformNegativeAxisToPositive(
+          ctx->Attr<int32_t>("axis"), in_desc.shape().NumAxes());
 
       if (in_batch_axis->has_value()) {
-        out_batch_axis->set_value(axis <= static_cast<int32_t>(in_batch_axis->value())
-                                      ? in_batch_axis->value() + 1
-                                      : in_batch_axis->value());
+        out_batch_axis->set_value(
+            axis <= static_cast<int32_t>(in_batch_axis->value())
+                ? in_batch_axis->value() + 1
+                : in_batch_axis->value());
       } else {
         out_batch_axis->clear_value();
       }
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_tensor.shape().NumAxes());
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc &in_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      const int32_t axis = TransformNegativeAxisToPositive(
+          ctx->Attr<int32_t>("axis"), in_tensor.shape().NumAxes());
 
       auto dim_vec = in_tensor.shape().dim_vec();
       FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("in", 0), in_axis)
-            .Split(user_op::OpArg("out", 0), in_axis < axis ? in_axis : in_axis + 1)
+            .Split(user_op::OpArg("out", 0),
+                   in_axis < axis ? in_axis : in_axis + 1)
             .Build();
       }
       ctx->NewBuilder()
@@ -80,7 +85,8 @@ REGISTER_USER_OP("expand_dims")
     });
 
 REGISTER_USER_OP_GRAD("expand_dims")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -94,4 +100,4 @@ REGISTER_USER_OP_GRAD("expand_dims")
       }
     });
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -20,15 +20,16 @@ limitations under the License.
 namespace oneflow {
 namespace eager {
 class GpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
- public:
+public:
   GpuLazyReferenceInstructionType() = default;
   ~GpuLazyReferenceInstructionType() override = default;
 
   using stream_type = vm::CudaStreamType;
 };
 
-COMMAND(vm::RegisterInstructionType<GpuLazyReferenceInstructionType>("gpu.LazyReference"));
+COMMAND(vm::RegisterInstructionType<GpuLazyReferenceInstructionType>(
+    "gpu.LazyReference"));
 
-}  // namespace eager
-}  // namespace oneflow
+} // namespace eager
+} // namespace oneflow
 #endif

@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/operator/esac_op.h"
-#include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -24,9 +24,10 @@ void EsacOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-Maybe<void> EsacOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx) const {
-  BlobDesc* out = GetBlobDesc4BnInOp("out");
+Maybe<void> EsacOp::InferBlobDescs(
+    std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+    const ParallelContext *parallel_ctx) const {
+  BlobDesc *out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape({1});
   const DataType data_type = op_conf().esac_conf().data_type();
   CHECK_OR_RETURN(IsIntegralDataType(data_type));
@@ -34,22 +35,27 @@ Maybe<void> EsacOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   return Maybe<void>::Ok();
 }
 
-const PbMessage& EsacOp::GetCustomizedConf() const { return op_conf().esac_conf(); }
+const PbMessage &EsacOp::GetCustomizedConf() const {
+  return op_conf().esac_conf();
+}
 
 Maybe<void> EsacOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+    std::function<OptInt64 *(const std::string &)> BatchAxis4BnInOp) const {
   BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> EsacOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    const std::function<Maybe<const BlobDesc &>(const std::string &)>
+        &LogicalBlobDesc4Ibn,
+    SbpSignatureList *sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 
-LogicalNode* EsacOp::NewProperLogicalNode() const { return new EsacLogicalNode(); }
+LogicalNode *EsacOp::NewProperLogicalNode() const {
+  return new EsacLogicalNode();
+}
 
 REGISTER_CPU_OP(OperatorConf::kEsacConf, EsacOp);
 
-}  // namespace oneflow
+} // namespace oneflow

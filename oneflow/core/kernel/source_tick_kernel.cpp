@@ -19,4 +19,4 @@ namespace oneflow {
 
 REGISTER_KERNEL(OperatorConf::kSourceTickConf, SourceTickKernel);
 
-}  // namespace oneflow
+} // namespace oneflow

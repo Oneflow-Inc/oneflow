@@ -21,18 +21,18 @@ limitations under the License.
 namespace oneflow {
 
 class SinkCompTaskNode : public CompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(SinkCompTaskNode);
   SinkCompTaskNode() = default;
   virtual ~SinkCompTaskNode() = default;
 
- private:
+private:
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() final{};
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_SINK_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_SINK_COMPUTE_TASK_NODE_H_

@@ -16,22 +16,22 @@ limitations under the License.
 #ifndef ONEFLOW_USER_SUMMARY_HISTOGRAM_H_
 #define ONEFLOW_USER_SUMMARY_HISTOGRAM_H_
 
-#include <vector>
 #include "oneflow/core/summary/summary.pb.h"
+#include <vector>
 
 namespace oneflow {
 
 namespace summary {
 
 class Histogram {
- public:
+public:
   Histogram();
   ~Histogram() {}
 
   void AppendValue(double value);
-  void AppendToProto(HistogramProto* proto);
+  void AppendToProto(HistogramProto *proto);
 
- private:
+private:
   double value_count_;
   double value_sum_;
   double sum_value_squares_;
@@ -42,8 +42,8 @@ class Histogram {
   std::vector<double> containers_;
 };
 
-}  // namespace summary
+} // namespace summary
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_SUMMARY_HISTOGRAM_H_
+#endif // ONEFLOW_USER_SUMMARY_HISTOGRAM_H_

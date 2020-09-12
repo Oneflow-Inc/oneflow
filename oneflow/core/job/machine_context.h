@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class MachineCtx final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(MachineCtx);
   MachineCtx() = delete;
   ~MachineCtx() = default;
@@ -32,13 +32,13 @@ class MachineCtx final {
   std::string GetMasterCtrlAddr() const { return GetCtrlAddr(0); }
   std::string GetCtrlAddr(int64_t machine_id) const;
 
- private:
+private:
   friend class Global<MachineCtx>;
   explicit MachineCtx(int64_t this_mchn_id);
 
   int64_t this_machine_id_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_MACHINE_CONTEXT_H_
+#endif // ONEFLOW_CORE_JOB_MACHINE_CONTEXT_H_

@@ -19,4 +19,4 @@ namespace oneflow {
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kAccTickConf, AccTickKernel);
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -21,12 +21,12 @@ limitations under the License.
 namespace oneflow {
 
 class RuntimeBufferManagersScope final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(RuntimeBufferManagersScope);
   RuntimeBufferManagersScope();
   ~RuntimeBufferManagersScope();
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_RUNTIME_BUFFER_MANAGERS_SCOPE_H_
+#endif // ONEFLOW_CORE_JOB_RUNTIME_BUFFER_MANAGERS_SCOPE_H_

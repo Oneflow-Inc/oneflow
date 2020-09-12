@@ -24,14 +24,16 @@ void AccumulateOp::InitFromOpConf() {
   EnrollOutputBn("acc", false);
 }
 
-const PbMessage& AccumulateOp::GetCustomizedConf() const { return op_conf().accumulate_conf(); }
+const PbMessage &AccumulateOp::GetCustomizedConf() const {
+  return op_conf().accumulate_conf();
+}
 
 Maybe<void> AccumulateOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+    std::function<OptInt64 *(const std::string &)> BatchAxis4BnInOp) const {
   BatchAxis4BnInOp("acc")->clear_value();
   return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kAccumulateConf, AccumulateOp);
 
-}  // namespace oneflow
+} // namespace oneflow

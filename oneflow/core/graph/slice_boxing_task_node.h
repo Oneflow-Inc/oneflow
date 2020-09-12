@@ -28,30 +28,32 @@ enum SliceBoxingTaskMode {
 };
 
 class SliceBoxingTaskNode final : public TaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(SliceBoxingTaskNode);
   SliceBoxingTaskNode() = default;
   ~SliceBoxingTaskNode() override = default;
 
-  void Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice, SliceBoxingTaskMode mode,
-            int64_t machine_id, int64_t thrd_id, int64_t mem_zone_id);
-  void Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice, SliceBoxingTaskMode mode,
-            int64_t machine_id, int64_t thrd_id);
+  void Init(const LogicalBlobId &lbi, const TensorSliceView &out_slice,
+            SliceBoxingTaskMode mode, int64_t machine_id, int64_t thrd_id,
+            int64_t mem_zone_id);
+  void Init(const LogicalBlobId &lbi, const TensorSliceView &out_slice,
+            SliceBoxingTaskMode mode, int64_t machine_id, int64_t thrd_id);
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   TaskType GetTaskType() const override { return TaskType::kSliceBoxing; }
-  void SetInDataEdgeSlice(const TaskEdge* edge, const TensorSliceView& slice);
-  void ConnectToSrcNodeWithSlice(TaskNode* src, TaskEdge* edge, const TensorSliceView& slice);
-  void SetOutShape(const Shape& shape);
+  void SetInDataEdgeSlice(const TaskEdge *edge, const TensorSliceView &slice);
+  void ConnectToSrcNodeWithSlice(TaskNode *src, TaskEdge *edge,
+                                 const TensorSliceView &slice);
+  void SetOutShape(const Shape &shape);
 
- private:
+private:
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
   OperatorConf GetBoxingOpConf();
-  void InitProducedRegstMemCase(MemoryCase*) override;
+  void InitProducedRegstMemCase(MemoryCase *) override;
 
-  HashMap<const TaskEdge*, TensorSliceView> in_data_edge2slice_;
-  std::vector<const TaskEdge*> ordered_in_data_edges_;
+  HashMap<const TaskEdge *, TensorSliceView> in_data_edge2slice_;
+  std::vector<const TaskEdge *> ordered_in_data_edges_;
   LogicalBlobId lbi_;
   TensorSliceView out_slice_;
   Shape out_shape_;
@@ -59,6 +61,6 @@ class SliceBoxingTaskNode final : public TaskNode {
   int64_t mem_zone_id_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_SLICE_BOXING_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_SLICE_BOXING_TASK_NODE_H_

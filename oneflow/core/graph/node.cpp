@@ -27,4 +27,4 @@ int64_t NewEdgeId() {
   return edge_id++;
 }
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
+#include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/foreign_job_instance.h"
 
 namespace oneflow {
@@ -29,4 +29,4 @@ RuntimeBufferManagersScope::~RuntimeBufferManagersScope() {
   Global<BufferMgr<int64_t>>::Delete();
 }
 
-}  // namespace oneflow
+} // namespace oneflow

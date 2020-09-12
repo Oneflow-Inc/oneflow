@@ -24,28 +24,32 @@ void CheckSizeAndCopyBlob(DeviceCtx *ctx, Blob *dst, const Blob *src) {
   dst->CopyValidDataContentFrom(ctx, src);
 }
 
-}  // namespace
+} // namespace
 
-template<DeviceType device_type>
+template <DeviceType device_type>
 class DistributeConcatKernel final : public KernelIf<device_type> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(DistributeConcatKernel);
   DistributeConcatKernel() = default;
   ~DistributeConcatKernel() = default;
 
- private:
-  void ForwardDataContent(const KernelCtx &,
-                          std::function<Blob *(const std::string &)>) const override;
-  const Blob *GetInBlob(std::function<Blob *(const std::string &)> BnInOp2Blob) const;
+private:
+  void
+  ForwardDataContent(const KernelCtx &,
+                     std::function<Blob *(const std::string &)>) const override;
+  const Blob *
+  GetInBlob(std::function<Blob *(const std::string &)> BnInOp2Blob) const;
 };
 
-template<DeviceType device_type>
+template <DeviceType device_type>
 void DistributeConcatKernel<device_type>::ForwardDataContent(
-    const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
-  CheckSizeAndCopyBlob(ctx.device_ctx, BnInOp2Blob("out"), GetInBlob(BnInOp2Blob));
+    const KernelCtx &ctx,
+    std::function<Blob *(const std::string &)> BnInOp2Blob) const {
+  CheckSizeAndCopyBlob(ctx.device_ctx, BnInOp2Blob("out"),
+                       GetInBlob(BnInOp2Blob));
 }
 
-template<DeviceType device_type>
+template <DeviceType device_type>
 const Blob *DistributeConcatKernel<device_type>::GetInBlob(
     std::function<Blob *(const std::string &)> BnInOp2Blob) const {
   const Blob *in_blob = nullptr;
@@ -59,6 +63,7 @@ const Blob *DistributeConcatKernel<device_type>::GetInBlob(
   return in_blob;
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kDistributeConcatConf, DistributeConcatKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kDistributeConcatConf,
+                               DistributeConcatKernel);
 
-}  // namespace oneflow
+} // namespace oneflow

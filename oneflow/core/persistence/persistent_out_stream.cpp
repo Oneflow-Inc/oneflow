@@ -20,7 +20,8 @@ limitations under the License.
 
 namespace oneflow {
 
-PersistentOutStream::PersistentOutStream(fs::FileSystem* fs, const std::string& file_path) {
+PersistentOutStream::PersistentOutStream(fs::FileSystem *fs,
+                                         const std::string &file_path) {
   std::string file_dir = Dirname(file_path);
   OfCallOnce(Global<MachineCtx>::Get()->GetThisCtrlAddr() + "/" + file_dir, fs,
              &fs::FileSystem::RecursivelyCreateDirIfNotExist, file_dir);
@@ -29,11 +30,11 @@ PersistentOutStream::PersistentOutStream(fs::FileSystem* fs, const std::string& 
 
 PersistentOutStream::~PersistentOutStream() { file_->Close(); }
 
-PersistentOutStream& PersistentOutStream::Write(const char* s, size_t n) {
+PersistentOutStream &PersistentOutStream::Write(const char *s, size_t n) {
   file_->Append(s, n);
   return *this;
 }
 
 void PersistentOutStream::Flush() { file_->Flush(); }
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -26,6 +26,6 @@ struct UserOpCtx : public OpContext {
   SbpSignature sbp_sig;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_USER_OP_UTIL_H_
+#endif // ONEFLOW_CORE_OPERATOR_USER_OP_UTIL_H_

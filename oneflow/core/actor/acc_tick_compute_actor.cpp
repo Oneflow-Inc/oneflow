@@ -17,13 +17,15 @@ limitations under the License.
 
 namespace oneflow {
 
-void AccTickCompActor::VirtualCompActorInit(const TaskProto& proto) {
-  const Shape& one_time_shape = Global<RegstMgr>::Get()
-                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("one"))
-                                    .data_regst_time_shape();
-  const Shape& acc_time_shape = Global<RegstMgr>::Get()
-                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("acc"))
-                                    .data_regst_time_shape();
+void AccTickCompActor::VirtualCompActorInit(const TaskProto &proto) {
+  const Shape &one_time_shape =
+      Global<RegstMgr>::Get()
+          ->RegstDesc4RegstDescId(Name2SoleRegstDescId("one"))
+          .data_regst_time_shape();
+  const Shape &acc_time_shape =
+      Global<RegstMgr>::Get()
+          ->RegstDesc4RegstDescId(Name2SoleRegstDescId("acc"))
+          .data_regst_time_shape();
   CHECK_EQ(one_time_shape.elem_cnt() % acc_time_shape.elem_cnt(), 0);
 
   acc_cnt_ = 0;
@@ -46,4 +48,4 @@ void AccTickCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 
 REGISTER_ACTOR(TaskType::kAccTick, AccTickCompActor);
 
-}  // namespace oneflow
+} // namespace oneflow

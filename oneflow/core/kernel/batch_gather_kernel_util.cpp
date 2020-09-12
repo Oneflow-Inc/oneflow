@@ -19,37 +19,41 @@ namespace oneflow {
 
 namespace {
 
-Shape GetFlatShape(const ShapeView& shape, const int64_t axis) {
+Shape GetFlatShape(const ShapeView &shape, const int64_t axis) {
   CHECK_GT(shape.NumAxes(), 0);
   CHECK_GE(axis, 0);
   CHECK_LT(axis, shape.NumAxes());
   return Shape({shape.Count(0, axis), shape.At(axis), shape.Count(axis + 1)});
 }
 
-template<DeviceType device_type, typename T, typename K>
-void BatchGatherForward(DeviceCtx* ctx, const Blob* in, const Blob* indices, Blob* out) {
+template <DeviceType device_type, typename T, typename K>
+void BatchGatherForward(DeviceCtx *ctx, const Blob *in, const Blob *indices,
+                        Blob *out) {
   const int64_t axis = indices->shape().NumAxes() - 1;
   const Shape flat_out_shape = GetFlatShape(out->shape(), axis);
-  BatchGatherKernelUtilImpl<device_type, T, K>::Forward(ctx, in->dptr<T>(), indices->dptr<K>(),
-                                                        flat_out_shape, in->shape().At(axis),
-                                                        out->mut_dptr<T>());
+  BatchGatherKernelUtilImpl<device_type, T, K>::Forward(
+      ctx, in->dptr<T>(), indices->dptr<K>(), flat_out_shape,
+      in->shape().At(axis), out->mut_dptr<T>());
 }
 
-template<DeviceType device_type, typename T, typename K>
-void BatchGatherBackward(DeviceCtx* ctx, const Blob* out_diff, const Blob* indices, Blob* in_diff) {
-  Memset<device_type>(ctx, in_diff->mut_dptr<T>(), 0, in_diff->ByteSizeOfBlobBody());
+template <DeviceType device_type, typename T, typename K>
+void BatchGatherBackward(DeviceCtx *ctx, const Blob *out_diff,
+                         const Blob *indices, Blob *in_diff) {
+  Memset<device_type>(ctx, in_diff->mut_dptr<T>(), 0,
+                      in_diff->ByteSizeOfBlobBody());
   const int64_t axis = indices->shape().NumAxes() - 1;
   const Shape flat_out_diff_shape = GetFlatShape(out_diff->shape(), axis);
   BatchGatherKernelUtilImpl<device_type, T, K>::Backward(
-      ctx, out_diff->dptr<T>(), indices->dptr<K>(), flat_out_diff_shape, in_diff->shape().At(axis),
-      in_diff->mut_dptr<T>());
+      ctx, out_diff->dptr<T>(), indices->dptr<K>(), flat_out_diff_shape,
+      in_diff->shape().At(axis), in_diff->mut_dptr<T>());
 }
 
-template<DeviceType device_type, typename T>
+template <DeviceType device_type, typename T>
 struct BatchGatherSwitchUtil final {
-#define MAKE_BATCH_GATHER_SWITCH_ENTRY(func_name, K) func_name<device_type, T, K>
-#define DEFINE_BATCH_GATHER_STATIC_SWITCH_FUNC(func_name)                    \
-  DEFINE_STATIC_SWITCH_FUNC(void, func_name, MAKE_BATCH_GATHER_SWITCH_ENTRY, \
+#define MAKE_BATCH_GATHER_SWITCH_ENTRY(func_name, K)                           \
+  func_name<device_type, T, K>
+#define DEFINE_BATCH_GATHER_STATIC_SWITCH_FUNC(func_name)                      \
+  DEFINE_STATIC_SWITCH_FUNC(void, func_name, MAKE_BATCH_GATHER_SWITCH_ENTRY,   \
                             MAKE_DATA_TYPE_CTRV_SEQ(INT_DATA_TYPE_SEQ));
   DEFINE_BATCH_GATHER_STATIC_SWITCH_FUNC(BatchGatherForward);
   DEFINE_BATCH_GATHER_STATIC_SWITCH_FUNC(BatchGatherBackward);
@@ -57,36 +61,40 @@ struct BatchGatherSwitchUtil final {
 #undef MAKE_BATCH_GATHER_SWITCH_ENTRY
 };
 
-}  // namespace
+} // namespace
 
-template<DeviceType device_type, typename T>
-void BatchGatherKernelUtil<device_type, T>::Forward(DeviceCtx* ctx, const Blob* in,
-                                                    const Blob* indices, Blob* out) {
-  BatchGatherSwitchUtil<device_type, T>::SwitchBatchGatherForward(SwitchCase(indices->data_type()),
-                                                                  ctx, in, indices, out);
+template <DeviceType device_type, typename T>
+void BatchGatherKernelUtil<device_type, T>::Forward(DeviceCtx *ctx,
+                                                    const Blob *in,
+                                                    const Blob *indices,
+                                                    Blob *out) {
+  BatchGatherSwitchUtil<device_type, T>::SwitchBatchGatherForward(
+      SwitchCase(indices->data_type()), ctx, in, indices, out);
 }
 
-template<DeviceType device_type, typename T>
-void BatchGatherKernelUtil<device_type, T>::Backward(DeviceCtx* ctx, const Blob* out_diff,
-                                                     const Blob* indices, Blob* in_diff) {
-  BatchGatherSwitchUtil<device_type, T>::SwitchBatchGatherBackward(SwitchCase(indices->data_type()),
-                                                                   ctx, out_diff, indices, in_diff);
+template <DeviceType device_type, typename T>
+void BatchGatherKernelUtil<device_type, T>::Backward(DeviceCtx *ctx,
+                                                     const Blob *out_diff,
+                                                     const Blob *indices,
+                                                     Blob *in_diff) {
+  BatchGatherSwitchUtil<device_type, T>::SwitchBatchGatherBackward(
+      SwitchCase(indices->data_type()), ctx, out_diff, indices, in_diff);
 }
 
-template<typename T, typename K>
+template <typename T, typename K>
 struct BatchGatherKernelUtilImpl<DeviceType::kCPU, T, K> final {
-  static void Forward(DeviceCtx* ctx, const T* in, const K* indices, const Shape& flat_out_shape,
-                      int64_t gather_dim_size, T* out);
-  static void Backward(DeviceCtx* ctx, const T* out_diff, const K* indices,
-                       const Shape& flat_out_diff_shape, int64_t gather_dim_size, T* in_diff);
+  static void Forward(DeviceCtx *ctx, const T *in, const K *indices,
+                      const Shape &flat_out_shape, int64_t gather_dim_size,
+                      T *out);
+  static void Backward(DeviceCtx *ctx, const T *out_diff, const K *indices,
+                       const Shape &flat_out_diff_shape,
+                       int64_t gather_dim_size, T *in_diff);
 };
 
-template<typename T, typename K>
-void BatchGatherKernelUtilImpl<DeviceType::kCPU, T, K>::Forward(DeviceCtx* ctx, const T* in,
-                                                                const K* indices,
-                                                                const Shape& flat_out_shape,
-                                                                const int64_t gather_dim_size,
-                                                                T* out) {
+template <typename T, typename K>
+void BatchGatherKernelUtilImpl<DeviceType::kCPU, T, K>::Forward(
+    DeviceCtx *ctx, const T *in, const K *indices, const Shape &flat_out_shape,
+    const int64_t gather_dim_size, T *out) {
   const int64_t batch_num = flat_out_shape.At(0);
   const int64_t indices_num = flat_out_shape.At(1);
   const int64_t instance_size = flat_out_shape.At(2);
@@ -94,19 +102,19 @@ void BatchGatherKernelUtilImpl<DeviceType::kCPU, T, K>::Forward(DeviceCtx* ctx, 
     FOR_RANGE(int64_t, i, 0, indices_num) {
       const K idx = indices[batch_idx * indices_num + i];
       CHECK(idx >= 0 && idx < gather_dim_size);
-      const T* from = in + batch_idx * gather_dim_size * instance_size + idx * instance_size;
-      T* to = out + batch_idx * indices_num * instance_size + i * instance_size;
+      const T *from = in + batch_idx * gather_dim_size * instance_size +
+                      idx * instance_size;
+      T *to = out + batch_idx * indices_num * instance_size + i * instance_size;
       std::copy(from, from + instance_size, to);
     }
   }
 }
 
-template<typename T, typename K>
-void BatchGatherKernelUtilImpl<DeviceType::kCPU, T, K>::Backward(DeviceCtx* ctx, const T* out_diff,
-                                                                 const K* indices,
-                                                                 const Shape& flat_out_diff_shape,
-                                                                 const int64_t gather_dim_size,
-                                                                 T* in_diff) {
+template <typename T, typename K>
+void BatchGatherKernelUtilImpl<DeviceType::kCPU, T, K>::Backward(
+    DeviceCtx *ctx, const T *out_diff, const K *indices,
+    const Shape &flat_out_diff_shape, const int64_t gather_dim_size,
+    T *in_diff) {
   const int64_t batch_num = flat_out_diff_shape.At(0);
   const int64_t indices_num = flat_out_diff_shape.At(1);
   const int64_t instance_size = flat_out_diff_shape.At(2);
@@ -114,24 +122,29 @@ void BatchGatherKernelUtilImpl<DeviceType::kCPU, T, K>::Backward(DeviceCtx* ctx,
     FOR_RANGE(int64_t, i, 0, indices_num) {
       const int64_t idx = indices[batch_idx * indices_num + i];
       CHECK(idx >= 0 && idx < gather_dim_size);
-      const T* from = out_diff + batch_idx * indices_num * instance_size + i * instance_size;
-      T* to = in_diff + batch_idx * gather_dim_size * instance_size + idx * instance_size;
+      const T *from = out_diff + batch_idx * indices_num * instance_size +
+                      i * instance_size;
+      T *to = in_diff + batch_idx * gather_dim_size * instance_size +
+              idx * instance_size;
       std::transform(from, from + instance_size, to, to, std::plus<T>());
     }
   }
 }
 
-#define INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_CPU(in_type_pair, index_type_pair)          \
-  template struct BatchGatherKernelUtilImpl<DeviceType::kCPU, OF_PP_PAIR_FIRST(in_type_pair), \
-                                            OF_PP_PAIR_FIRST(index_type_pair)>;
+#define INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_CPU(in_type_pair,            \
+                                                      index_type_pair)         \
+  template struct BatchGatherKernelUtilImpl<                                   \
+      DeviceType::kCPU, OF_PP_PAIR_FIRST(in_type_pair),                        \
+      OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_CPU,
                                  FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ);
 #undef INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_CPU
 
-#define INSTANTIATE_BATCH_GATHER_KERNEL_UTIL(device_type, in_type_pair) \
-  template struct BatchGatherKernelUtil<device_type, OF_PP_PAIR_FIRST(in_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BATCH_GATHER_KERNEL_UTIL, DEVICE_TYPE_SEQ,
-                                 FLOATING_DATA_TYPE_SEQ);
+#define INSTANTIATE_BATCH_GATHER_KERNEL_UTIL(device_type, in_type_pair)        \
+  template struct BatchGatherKernelUtil<device_type,                           \
+                                        OF_PP_PAIR_FIRST(in_type_pair)>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BATCH_GATHER_KERNEL_UTIL,
+                                 DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ);
 #undef INSTANTIATE_BATCH_GATHER_KERNEL_UTIL
 
-}  // namespace oneflow
+} // namespace oneflow

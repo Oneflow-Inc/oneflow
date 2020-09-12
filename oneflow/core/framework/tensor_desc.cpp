@@ -19,9 +19,9 @@ namespace oneflow {
 
 namespace user_op {
 
-TensorDesc::TensorDesc(const TensorDesc& rhs) { *this = rhs; }
+TensorDesc::TensorDesc(const TensorDesc &rhs) { *this = rhs; }
 
-TensorDesc& TensorDesc::operator=(const TensorDesc& rhs) {
+TensorDesc &TensorDesc::operator=(const TensorDesc &rhs) {
   shape_ = rhs.shape_;
   data_type_ = rhs.data_type_;
   is_dynamic_ = rhs.is_dynamic_;
@@ -29,9 +29,9 @@ TensorDesc& TensorDesc::operator=(const TensorDesc& rhs) {
   return *this;
 }
 
-TensorDesc::TensorDesc(const BlobDescProto& proto) { *this = proto; }
+TensorDesc::TensorDesc(const BlobDescProto &proto) { *this = proto; }
 
-TensorDesc& TensorDesc::operator=(const BlobDescProto& proto) {
+TensorDesc &TensorDesc::operator=(const BlobDescProto &proto) {
   CHECK(proto.header_is_opaque() == false);
   data_type_ = proto.body().data_type();
   shape_ = Shape(proto.body().shape());
@@ -40,11 +40,12 @@ TensorDesc& TensorDesc::operator=(const BlobDescProto& proto) {
   return *this;
 }
 
-bool TensorDesc::operator==(const TensorDesc& rhs) const {
-  return (shape_ == rhs.shape_) && (data_type_ == rhs.data_type_)
-         && (is_dynamic_ == rhs.is_dynamic_) && (is_tensor_list_ == rhs.is_tensor_list_);
+bool TensorDesc::operator==(const TensorDesc &rhs) const {
+  return (shape_ == rhs.shape_) && (data_type_ == rhs.data_type_) &&
+         (is_dynamic_ == rhs.is_dynamic_) &&
+         (is_tensor_list_ == rhs.is_tensor_list_);
 }
 
-}  // namespace user_op
+} // namespace user_op
 
-}  // namespace oneflow
+} // namespace oneflow

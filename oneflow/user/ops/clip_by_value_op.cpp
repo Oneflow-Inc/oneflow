@@ -19,38 +19,45 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferClipTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> InferClipTensorDesc(user_op::InferContext *ctx) {
   *ctx->Shape4ArgNameAndIndex("y", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
   *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferClipBatchAxis(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+Maybe<void> InferClipBatchAxis(user_op::BatchAxisContext *ctx) {
+  *ctx->BatchAxis4ArgNameAndIndex("y", 0) =
+      *ctx->BatchAxis4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetClipSbpSignature(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+Maybe<void> GetClipSbpSignature(user_op::SbpContext *ctx) {
+  const user_op::TensorDesc &x_tensor =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
-    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("y", 0), i)
+        .Build();
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferClipGradTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> InferClipGradTensorDesc(user_op::InferContext *ctx) {
   *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
   *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferClipGradBatchAxis(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+Maybe<void> InferClipGradBatchAxis(user_op::BatchAxisContext *ctx) {
+  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) =
+      *ctx->BatchAxis4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetClipGradSbpSignature(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+Maybe<void> GetClipGradSbpSignature(user_op::SbpContext *ctx) {
+  const user_op::TensorDesc &x_tensor =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("dy", 0), i)
@@ -66,7 +73,7 @@ Maybe<void> GetClipGradSbpSignature(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-}  // namespace
+} // namespace
 
 REGISTER_USER_OP("clip_by_scalar")
     .Input("x")
@@ -130,7 +137,8 @@ REGISTER_USER_OP("clip_by_scalar_max_grad")
     .SetGetSbpFn(GetClipGradSbpSignature);
 
 REGISTER_USER_OP_GRAD("clip_by_scalar")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -149,7 +157,8 @@ REGISTER_USER_OP_GRAD("clip_by_scalar")
     });
 
 REGISTER_USER_OP_GRAD("clip_by_scalar_min")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -166,7 +175,8 @@ REGISTER_USER_OP_GRAD("clip_by_scalar_min")
     });
 
 REGISTER_USER_OP_GRAD("clip_by_scalar_max")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -182,4 +192,4 @@ REGISTER_USER_OP_GRAD("clip_by_scalar_max")
       }
     });
 
-}  // namespace oneflow
+} // namespace oneflow

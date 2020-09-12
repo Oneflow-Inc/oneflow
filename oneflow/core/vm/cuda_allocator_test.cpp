@@ -15,8 +15,8 @@ limitations under the License.
 */
 #ifdef WITH_CUDA
 #include "oneflow/core/vm/cuda_allocator.h"
-#include "oneflow/core/vm/thread_safe_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/vm/thread_safe_allocator.h"
 
 namespace oneflow {
 namespace vm {
@@ -34,15 +34,16 @@ TEST(CudaAllocator, cuda_allocator) {
   const size_t remain_bytes = 50 * 1048576;
   ASSERT_TRUE(cudaSuccess == cudaMemGetInfo(&free_bytes, &total_bytes));
   if (free_bytes <= remain_bytes || free_bytes - remain_bytes < remain_bytes) {
-    LOG(INFO) << "CudaAllocator Test: Skip because of allocator mem bytes less than 50MiB in GPU 0";
+    LOG(INFO) << "CudaAllocator Test: Skip because of allocator mem bytes less "
+                 "than 50MiB in GPU 0";
     return;
   }
   std::unique_ptr<Allocator> allo(new CudaAllocator(0));
   allo.reset(new SingleThreadOnlyAllocator(std::move(allo)));
-  Allocator* a = allo.get();
-  std::vector<char*> ptrs;
+  Allocator *a = allo.get();
+  std::vector<char *> ptrs;
   for (int i = 0; i < 512; ++i) {
-    char* ptr = nullptr;
+    char *ptr = nullptr;
     a->Allocate(&ptr, 1);
     ASSERT_TRUE(ptr != nullptr);
     ptrs.push_back(ptr);
@@ -51,14 +52,15 @@ TEST(CudaAllocator, cuda_allocator) {
   for (int i = 0; i < 512; ++i) {
     if (i > 0) {
       ASSERT_TRUE(ptrs.at(i) != ptrs.at(i - 1));
-      ASSERT_TRUE(std::abs(ptrs.at(i) - ptrs.at(i - 1)) >= kCudaMemAllocAlignSize);
+      ASSERT_TRUE(std::abs(ptrs.at(i) - ptrs.at(i - 1)) >=
+                  kCudaMemAllocAlignSize);
     }
     a->Deallocate(ptrs.at(i), 1);
   }
 
   ptrs.clear();
   for (int i = 0; i < 2048; ++i) {
-    char* ptr = nullptr;
+    char *ptr = nullptr;
     a->Allocate(&ptr, 10000);
     ASSERT_TRUE(ptr != nullptr);
     ptrs.push_back(ptr);
@@ -67,15 +69,16 @@ TEST(CudaAllocator, cuda_allocator) {
   for (int i = 0; i < 2048; ++i) {
     if (i > 0) {
       ASSERT_TRUE(ptrs.at(i) != ptrs.at(i - 1));
-      ASSERT_TRUE(std::abs(ptrs.at(i) - ptrs.at(i - 1)) >= kCudaMemAllocAlignSize);
+      ASSERT_TRUE(std::abs(ptrs.at(i) - ptrs.at(i - 1)) >=
+                  kCudaMemAllocAlignSize);
     }
     a->Deallocate(ptrs.at(i), 10000);
   }
 
-  char* data_ptr_1 = nullptr;
+  char *data_ptr_1 = nullptr;
   a->Allocate(&data_ptr_1, 2048 * sizeof(float));
 
-  char* data_ptr_2 = nullptr;
+  char *data_ptr_2 = nullptr;
   a->Allocate(&data_ptr_2, 4096 * sizeof(double));
 
   ASSERT_TRUE(data_ptr_1 != data_ptr_2);
@@ -89,7 +92,7 @@ TEST(CudaAllocator, cuda_allocator) {
   a->Deallocate(data_ptr_1, 2048 * sizeof(float));
 }
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // WITH_CUDA
+#endif // WITH_CUDA

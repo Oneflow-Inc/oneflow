@@ -23,8 +23,8 @@ namespace oneflow {
 class OpGraph;
 class Job;
 
-void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder);
+void GroupBoxingByDstParallel(const OpGraph &op_graph, JobBuilder *job_builder);
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_REWRITER_GROUP_BOXING_BY_DST_PARALLEL_H_
+#endif // ONEFLOW_CORE_JOB_REWRITER_GROUP_BOXING_BY_DST_PARALLEL_H_

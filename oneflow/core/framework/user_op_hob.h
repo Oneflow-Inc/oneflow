@@ -29,67 +29,78 @@ hob::BoolFunctorPtr<KernelRegContext> HobTrue();
 
 hob::BoolFunctorPtr<KernelRegContext> HobFalse();
 
-hob::HobContextGetter<KernelRegContext, DataType> HobDataType(const std::string& tensor_name,
-                                                              int tensor_idx);
+hob::HobContextGetter<KernelRegContext, DataType>
+HobDataType(const std::string &tensor_name, int tensor_idx);
 
-template<typename T>
+template <typename T>
 hob::HobContextGetter<user_op::KernelRegContext, T> HobCtxGetter(
-    const std::string& debug_str,
-    const std::function<T(const user_op::KernelRegContext&)> hob_func) {
-  return hob::HobContextGetter<user_op::KernelRegContext, T>(debug_str, hob_func);
+    const std::string &debug_str,
+    const std::function<T(const user_op::KernelRegContext &)> hob_func) {
+  return hob::HobContextGetter<user_op::KernelRegContext, T>(debug_str,
+                                                             hob_func);
 }
 
-template<typename T>
-hob::HobContextGetter<user_op::KernelRegContext, T> HobAttr(const std::string& attr_name) {
-  return user_op::HobCtxGetter<T>(attr_name, [attr_name](const user_op::KernelRegContext& ctx) {
-    return ctx.Attr<T>(attr_name);
-  });
+template <typename T>
+hob::HobContextGetter<user_op::KernelRegContext, T>
+HobAttr(const std::string &attr_name) {
+  return user_op::HobCtxGetter<T>(
+      attr_name, [attr_name](const user_op::KernelRegContext &ctx) {
+        return ctx.Attr<T>(attr_name);
+      });
 }
 
-template<typename ContextT>
-class HobStringContextGetter final {
- public:
-  HobStringContextGetter(const DeviceType& device_type) {
+template <typename ContextT> class HobStringContextGetter final {
+public:
+  HobStringContextGetter(const DeviceType &device_type) {
     auto str = std::make_shared<std::string>(ToString(device_type));
     debug_str_ = *str;
-    context_getter_ = [str](const ContextT&) -> const std::string& { return *str; };
+    context_getter_ = [str](const ContextT &) -> const std::string & {
+      return *str;
+    };
   }
-  HobStringContextGetter(const char* const_value) {
+  HobStringContextGetter(const char *const_value) {
     auto str = std::make_shared<std::string>(const_value);
     debug_str_ = *str;
-    context_getter_ = [str](const ContextT&) -> const std::string& { return *str; };
+    context_getter_ = [str](const ContextT &) -> const std::string & {
+      return *str;
+    };
   }
-  HobStringContextGetter(const std::string& const_value) {
+  HobStringContextGetter(const std::string &const_value) {
     auto str = std::make_shared<std::string>(const_value);
     debug_str_ = *str;
-    context_getter_ = [str](const ContextT&) -> const std::string& { return *str; };
+    context_getter_ = [str](const ContextT &) -> const std::string & {
+      return *str;
+    };
   }
 
-  HobStringContextGetter(const std::string& debug_str,
-                         const std::function<const std::string&(const ContextT&)>& context_getter)
+  HobStringContextGetter(const std::string &debug_str,
+                         const std::function<const std::string &(
+                             const ContextT &)> &context_getter)
       : debug_str_(debug_str), context_getter_(context_getter) {}
 
-  hob::BoolFunctorPtr<ContextT> operator==(const HobStringContextGetter& other) const {
+  hob::BoolFunctorPtr<ContextT>
+  operator==(const HobStringContextGetter &other) const {
     std::ostringstream string_stream;
     string_stream << debug_str_ << " == " << other.debug_str_;
-    std::function<std::string(const ContextT&)> l_fn = this->context_getter_;
-    std::function<std::string(const ContextT&)> r_fn = other.context_getter_;
+    std::function<std::string(const ContextT &)> l_fn = this->context_getter_;
+    std::function<std::string(const ContextT &)> r_fn = other.context_getter_;
     std::shared_ptr<const hob::BoolFunctor<ContextT>> krbf_ptr =
         std::make_shared<const hob::HighOrderBoolFunctor<ContextT>>(
-            string_stream.str(),
-            [l_fn, r_fn](const ContextT& ctx) { return l_fn(ctx) == r_fn(ctx); });
+            string_stream.str(), [l_fn, r_fn](const ContextT &ctx) {
+              return l_fn(ctx) == r_fn(ctx);
+            });
     return krbf_ptr;
   }
 
- private:
+private:
   std::string debug_str_;
-  std::function<const std::string&(const ContextT&)> context_getter_;
+  std::function<const std::string &(const ContextT &)> context_getter_;
 };
 
 HobStringContextGetter<KernelRegContext> HobDeviceTag();
 
-}  // namespace user_op
+} // namespace user_op
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_USER_OP_HOB_H_
+#endif // ONEFLOW_CORE_FRAMEWORK_USER_OP_HOB_H_

@@ -21,16 +21,15 @@ limitations under the License.
 namespace oneflow {
 
 struct MemcpyParam {
-  void* dst;
-  const void* src;
+  void *dst;
+  const void *src;
   size_t count;
 };
 
-template<DeviceType device_type>
-struct BatchMemcpyKernelUtil final {
-  static void Copy(DeviceCtx* ctx, const std::vector<MemcpyParam>& params);
+template <DeviceType device_type> struct BatchMemcpyKernelUtil final {
+  static void Copy(DeviceCtx *ctx, const std::vector<MemcpyParam> &params);
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_BATCH_MEMCPY_KERNEL_UTIL_H_
+#endif // ONEFLOW_CORE_KERNEL_BATCH_MEMCPY_KERNEL_UTIL_H_

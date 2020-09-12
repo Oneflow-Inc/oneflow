@@ -14,20 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/persistence/binary_in_stream_with_local_copy.h"
 #include "oneflow/core/persistence/binary_in_stream_without_local_copy.h"
-#include "oneflow/core/job/job_set.pb.h"
 #include <cstring>
 
 namespace oneflow {
 
 namespace {
 
-constexpr size_t kDefaultBufferSize = 32 * 1024;  // 32KB
+constexpr size_t kDefaultBufferSize = 32 * 1024; // 32KB
 
 size_t GetBufferSize() {
   if (Global<const IOConf>::Get()->has_persistence_buf_byte()) {
-    const int64_t buffer_size = Global<const IOConf>::Get()->persistence_buf_byte();
+    const int64_t buffer_size =
+        Global<const IOConf>::Get()->persistence_buf_byte();
     CHECK_GT(buffer_size, 0);
     return buffer_size;
   } else {
@@ -35,14 +36,16 @@ size_t GetBufferSize() {
   }
 }
 
-}  // namespace
+} // namespace
 
-PersistentInStream::PersistentInStream(fs::FileSystem* fs,
-                                       const std::vector<std::string>& file_paths, uint64_t offset,
-                                       bool cyclic, bool with_local_copy) {
-  if (with_local_copy) { CHECK_EQ(offset, 0); }
+PersistentInStream::PersistentInStream(
+    fs::FileSystem *fs, const std::vector<std::string> &file_paths,
+    uint64_t offset, bool cyclic, bool with_local_copy) {
+  if (with_local_copy) {
+    CHECK_EQ(offset, 0);
+  }
   std::vector<std::shared_ptr<BinaryInStream>> streams;
-  for (auto& file_path : file_paths) {
+  for (auto &file_path : file_paths) {
     if (with_local_copy) {
       streams.emplace_back(new BinaryInStreamWithLocalCopy(fs, file_path));
     } else {
@@ -61,25 +64,31 @@ PersistentInStream::PersistentInStream(fs::FileSystem* fs,
   *cur_buf_end_ = '\0';
 }
 
-PersistentInStream::PersistentInStream(fs::FileSystem* fs,
-                                       const std::vector<std::string>& file_paths, bool cyclic,
-                                       bool with_local_copy)
+PersistentInStream::PersistentInStream(
+    fs::FileSystem *fs, const std::vector<std::string> &file_paths, bool cyclic,
+    bool with_local_copy)
     : PersistentInStream(fs, file_paths, 0, cyclic, with_local_copy) {}
 
-PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& file_path,
-                                       uint64_t offset, bool cyclic, bool with_local_copy)
-    : PersistentInStream(fs, std::vector<std::string>({file_path}), offset, cyclic,
-                         with_local_copy) {}
+PersistentInStream::PersistentInStream(fs::FileSystem *fs,
+                                       const std::string &file_path,
+                                       uint64_t offset, bool cyclic,
+                                       bool with_local_copy)
+    : PersistentInStream(fs, std::vector<std::string>({file_path}), offset,
+                         cyclic, with_local_copy) {}
 
-PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& file_path,
+PersistentInStream::PersistentInStream(fs::FileSystem *fs,
+                                       const std::string &file_path,
                                        uint64_t offset)
     : PersistentInStream(fs, file_path, offset, false, false) {}
 
-PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& file_path)
+PersistentInStream::PersistentInStream(fs::FileSystem *fs,
+                                       const std::string &file_path)
     : PersistentInStream(fs, file_path, 0, false, false) {}
 
-int32_t PersistentInStream::ReadLine(std::string* l) {
-  if (IsEof()) { return -1; }
+int32_t PersistentInStream::ReadLine(std::string *l) {
+  if (IsEof()) {
+    return -1;
+  }
   l->clear();
   while (*cur_buf_begin_ != '\n') {
     if (cur_buf_begin_ == cur_buf_end_) {
@@ -96,12 +105,17 @@ int32_t PersistentInStream::ReadLine(std::string* l) {
   return 0;
 }
 
-int32_t PersistentInStream::ReadFully(char* s, size_t n) {
-  if (IsEof()) { return -1; }
+int32_t PersistentInStream::ReadFully(char *s, size_t n) {
+  if (IsEof()) {
+    return -1;
+  }
   while (n) {
-    if (cur_buf_begin_ == cur_buf_end_) { UpdateBuffer(); }
+    if (cur_buf_begin_ == cur_buf_end_) {
+      UpdateBuffer();
+    }
     CHECK_LT(cur_buf_begin_, cur_buf_end_);
-    int64_t copy_size = std::min(cur_buf_end_ - cur_buf_begin_, static_cast<int64_t>(n));
+    int64_t copy_size =
+        std::min(cur_buf_end_ - cur_buf_begin_, static_cast<int64_t>(n));
     std::memcpy(s, cur_buf_begin_, static_cast<size_t>(copy_size));
     s += copy_size;
     cur_buf_begin_ += copy_size;
@@ -121,4 +135,4 @@ void PersistentInStream::UpdateBuffer() {
 bool PersistentInStream::IsEof() const {
   return cur_buf_begin_ == cur_buf_end_ && stream_scanner_->IsEof();
 }
-}  // namespace oneflow
+} // namespace oneflow

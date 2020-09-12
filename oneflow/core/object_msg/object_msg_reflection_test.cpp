@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <sstream>
-#include <iostream>
-#include "oneflow/core/object_msg/dss.h"
 #include "oneflow/core/object_msg/object_msg.h"
-#include "oneflow/core/object_msg/object_msg_reflection.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/object_msg/dss.h"
+#include "oneflow/core/object_msg/object_msg_reflection.h"
+#include <iostream>
+#include <sstream>
 
 namespace oneflow {
 
@@ -26,16 +26,16 @@ namespace test {
 
 namespace {
 
-#define DSS_DEFINE_TEST_UNION_FIELD(field_counter)                      \
-  DSS_DEFINE_FIELD(field_counter, "demo dss", UnionField, union_field); \
-  DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, union_case,             \
-                                 OF_PP_MAKE_TUPLE_SEQ(int32_t, x, 1)    \
+#define DSS_DEFINE_TEST_UNION_FIELD(field_counter)                             \
+  DSS_DEFINE_FIELD(field_counter, "demo dss", UnionField, union_field);        \
+  DSS_DEFINE_UNION_FIELD_VISITOR(field_counter, union_case,                    \
+                                 OF_PP_MAKE_TUPLE_SEQ(int32_t, x, 1)           \
                                      OF_PP_MAKE_TUPLE_SEQ(int64_t, y, 2));
 
 struct TestDssUnion {
   DSS_BEGIN(DSS_GET_FIELD_COUNTER(), TestDssUnion);
 
- public:
+public:
   struct UnionField {
     int32_t union_case;
     union {
@@ -50,10 +50,12 @@ struct TestDssUnion {
 
 TEST(ObjectMsgReflection, ReflectObjectMsgFields) {
   ObjectMsgFieldList obj_msg_field_list;
-  ObjectMsgReflection<TestDssUnion>().ReflectObjectMsgFields(&obj_msg_field_list);
+  ObjectMsgReflection<TestDssUnion>().ReflectObjectMsgFields(
+      &obj_msg_field_list);
   ASSERT_EQ(obj_msg_field_list.object_msg_field().size(), 1);
   ASSERT_TRUE(obj_msg_field_list.object_msg_field(0).has_union_field_list());
-  const auto& union_field_list = obj_msg_field_list.object_msg_field(0).union_field_list();
+  const auto &union_field_list =
+      obj_msg_field_list.object_msg_field(0).union_field_list();
   ASSERT_EQ(union_field_list.union_name(), "union_field");
   ASSERT_EQ(union_field_list.union_field(0).field_name(), "x");
   ASSERT_EQ(union_field_list.union_field(1).field_name(), "y");
@@ -84,12 +86,17 @@ OBJECT_MSG_END(FooBar);
 
 TEST(ObjectMsgReflection, RecursivelyReflectObjectMsgFields) {
   std::unordered_map<std::string, ObjectMsgFieldList> name2field_list;
-  ObjectMsgReflection<FooBar>().RecursivelyReflectObjectMsgFields(&name2field_list);
+  ObjectMsgReflection<FooBar>().RecursivelyReflectObjectMsgFields(
+      &name2field_list);
   ASSERT_EQ(name2field_list.size(), 4);
-  ASSERT_TRUE(name2field_list.find(typeid(FooBar).name()) != name2field_list.end());
-  ASSERT_TRUE(name2field_list.find(typeid(Foo).name()) != name2field_list.end());
-  ASSERT_TRUE(name2field_list.find(typeid(Bar).name()) != name2field_list.end());
-  ASSERT_TRUE(name2field_list.find(typeid(FooListItem).name()) != name2field_list.end());
+  ASSERT_TRUE(name2field_list.find(typeid(FooBar).name()) !=
+              name2field_list.end());
+  ASSERT_TRUE(name2field_list.find(typeid(Foo).name()) !=
+              name2field_list.end());
+  ASSERT_TRUE(name2field_list.find(typeid(Bar).name()) !=
+              name2field_list.end());
+  ASSERT_TRUE(name2field_list.find(typeid(FooListItem).name()) !=
+              name2field_list.end());
 }
 
 TEST(ObjectMsgFieldListUtil, ToDot) {
@@ -97,8 +104,8 @@ TEST(ObjectMsgFieldListUtil, ToDot) {
   //  std::cout << ObjectMsgListReflection<FooBar>().ToDot() << std::endl;
   //  std::cout << std::endl;
 }
-}  // namespace
+} // namespace
 
-}  // namespace test
+} // namespace test
 
-}  // namespace oneflow
+} // namespace oneflow

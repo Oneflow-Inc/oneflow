@@ -224,8 +224,8 @@ TEST(FlatMsgView, last_field_repeated_many_failed) {
   ASSERT_TRUE(!view.Match(variant_list));
 }
 
-}  // namespace
+} // namespace
 
-}  // namespace test
+} // namespace test
 
-}  // namespace oneflow
+} // namespace oneflow

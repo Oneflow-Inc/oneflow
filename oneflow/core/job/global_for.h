@@ -25,6 +25,6 @@ class ForEnv {};
 
 class EagerExecution {};
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_GLOBAL_FOR_H_
+#endif // ONEFLOW_CORE_JOB_GLOBAL_FOR_H_

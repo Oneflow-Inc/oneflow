@@ -19,29 +19,32 @@ limitations under the License.
 
 namespace oneflow {
 
-template<>
-void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
-                              cudaMemcpyKind kind
+template <>
+void Memcpy<DeviceType::kCPU>(DeviceCtx *ctx, void *dst, const void *src,
+                              size_t sz, cudaMemcpyKind kind
 
-) {
-  if (dst == src) { return; }
+                              ) {
+  if (dst == src) {
+    return;
+  }
   memcpy(dst, src, sz);
 }
 
-template<>
-void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
+template <>
+void Memset<DeviceType::kCPU>(DeviceCtx *ctx, void *dst, const char value,
+                              size_t sz) {
   memset(dst, value, sz);
 }
 
-void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
-                                         std::function<void(Blob*)> Callback) {
+void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx *ctx, Blob *blob,
+                                         std::function<void(Blob *)> Callback) {
 #ifdef WITH_CUDA
-  char* host_raw_dptr = nullptr;
+  char *host_raw_dptr = nullptr;
   OF_CUDA_CHECK(cudaMallocHost(&host_raw_dptr, blob->AlignedTotalByteSize()));
   Blob host_blob(MemoryCase(), &blob->blob_desc(), host_raw_dptr);
   Callback(&host_blob);
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(), blob->ByteSizeOfBlobBody(),
-                           cudaMemcpyHostToDevice);
+  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(),
+                           blob->ByteSizeOfBlobBody(), cudaMemcpyHostToDevice);
   OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
   OF_CUDA_CHECK(cudaFreeHost(host_raw_dptr));
 #else
@@ -49,4 +52,4 @@ void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
 #endif
 }
 
-}  // namespace oneflow
+} // namespace oneflow

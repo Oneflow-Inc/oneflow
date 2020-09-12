@@ -18,15 +18,15 @@ limitations under the License.
 
 namespace oneflow {
 
-void DecodeRandomActor::VirtualCompActorInit(const TaskProto& task_proto) {
+void DecodeRandomActor::VirtualCompActorInit(const TaskProto &task_proto) {
   OF_SET_MSG_HANDLER(&DecodeRandomActor::HandlerNormal);
 }
 
 void DecodeRandomActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }
 
 void DecodeRandomActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  Regst* in_regst = GetNaiveCurReadable("in");
-  HandleProducedNaiveDataRegstToConsumer([&](Regst* out_regst) {
+  Regst *in_regst = GetNaiveCurReadable("in");
+  HandleProducedNaiveDataRegstToConsumer([&](Regst *out_regst) {
     out_regst->set_piece_id(in_regst->piece_id());
     return true;
   });
@@ -34,4 +34,4 @@ void DecodeRandomActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 
 REGISTER_ACTOR(kDecodeRandom, DecodeRandomActor);
 
-}  // namespace oneflow
+} // namespace oneflow

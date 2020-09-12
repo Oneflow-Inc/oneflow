@@ -14,16 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
-#include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
-#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/resource_desc.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
 namespace oneflow {
 
-IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv_cq) {
+IBVerbsQP::IBVerbsQP(ibv_context *ctx, ibv_pd *pd, ibv_cq *send_cq,
+                     ibv_cq *recv_cq) {
   // ctx_, pd_
   ctx_ = ctx;
   pd_ = pd;
@@ -31,7 +32,8 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   ibv_device_attr device_attr;
   CHECK_EQ(ibv_query_device(ctx, &device_attr), 0);
   uint32_t max_recv_wr =
-      Global<ResourceDesc, ForSession>::Get()->rdma_recv_msg_buf_byte() / sizeof(ActorMsg);
+      Global<ResourceDesc, ForSession>::Get()->rdma_recv_msg_buf_byte() /
+      sizeof(ActorMsg);
   max_recv_wr = std::min<uint32_t>(max_recv_wr, device_attr.max_qp_wr);
   ibv_qp_init_attr qp_init_attr;
   qp_init_attr.qp_context = nullptr;
@@ -49,7 +51,9 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   CHECK(qp_);
   // recv_msg_buf_
   recv_msg_buf_.assign(max_recv_wr, nullptr);
-  FOR_RANGE(size_t, i, 0, recv_msg_buf_.size()) { recv_msg_buf_.at(i) = new ActorMsgMR(pd_); }
+  FOR_RANGE(size_t, i, 0, recv_msg_buf_.size()) {
+    recv_msg_buf_.at(i) = new ActorMsgMR(pd_);
+  }
   // send_msg_buf_
   CHECK(send_msg_buf_.empty());
 }
@@ -60,10 +64,12 @@ IBVerbsQP::~IBVerbsQP() {
     delete send_msg_buf_.front();
     send_msg_buf_.pop();
   }
-  for (ActorMsgMR* msg_mr : recv_msg_buf_) { delete msg_mr; }
+  for (ActorMsgMR *msg_mr : recv_msg_buf_) {
+    delete msg_mr;
+  }
 }
 
-void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
+void IBVerbsQP::Connect(const IBVerbsConnectionInfo &peer_info) {
   ibv_port_attr port_attr;
   CHECK_EQ(ibv_query_port(ctx_, 1, &port_attr), 0);
   ibv_qp_attr qp_attr;
@@ -74,8 +80,8 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.port_num = 1;
   qp_attr.qp_access_flags =
       IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ;
-  CHECK_EQ(ibv_modify_qp(qp_, &qp_attr,
-                         IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS),
+  CHECK_EQ(ibv_modify_qp(qp_, &qp_attr, IBV_QP_STATE | IBV_QP_PKEY_INDEX |
+                                            IBV_QP_PORT | IBV_QP_ACCESS_FLAGS),
            0);
   // IBV_QPS_RTR
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
@@ -97,8 +103,9 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.max_dest_rd_atomic = 1;
   qp_attr.min_rnr_timer = 12;
   CHECK_EQ(ibv_modify_qp(qp_, &qp_attr,
-                         IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN
-                             | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER),
+                         IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU |
+                             IBV_QP_DEST_QPN | IBV_QP_RQ_PSN |
+                             IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER),
            0);
   // IBV_QPS_RTS
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
@@ -108,58 +115,62 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.retry_cnt = 7;
   qp_attr.rnr_retry = 7;
   qp_attr.timeout = 14;
-  CHECK_EQ(ibv_modify_qp(qp_, &qp_attr,
-                         IBV_QP_STATE | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC | IBV_QP_RETRY_CNT
-                             | IBV_QP_RNR_RETRY | IBV_QP_TIMEOUT),
+  CHECK_EQ(ibv_modify_qp(qp_, &qp_attr, IBV_QP_STATE | IBV_QP_SQ_PSN |
+                                            IBV_QP_MAX_QP_RD_ATOMIC |
+                                            IBV_QP_RETRY_CNT |
+                                            IBV_QP_RNR_RETRY | IBV_QP_TIMEOUT),
 
            0);
 }
 
 void IBVerbsQP::PostAllRecvRequest() {
-  for (ActorMsgMR* msg_mr : recv_msg_buf_) { PostRecvRequest(msg_mr); }
+  for (ActorMsgMR *msg_mr : recv_msg_buf_) {
+    PostRecvRequest(msg_mr);
+  }
 }
 
-void IBVerbsQP::PostReadRequest(const IBVerbsMemDescProto& remote_mem,
-                                const IBVerbsMemDesc& local_mem, void* read_id) {
+void IBVerbsQP::PostReadRequest(const IBVerbsMemDescProto &remote_mem,
+                                const IBVerbsMemDesc &local_mem,
+                                void *read_id) {
   CHECK_EQ(remote_mem.mem_ptr_size(), local_mem.sge_vec().size());
-  WorkRequestId* wr_id = NewWorkRequestId();
+  WorkRequestId *wr_id = NewWorkRequestId();
   wr_id->outstanding_sge_cnt = local_mem.sge_vec().size();
   wr_id->read_id = read_id;
   FOR_RANGE(size_t, i, 0, local_mem.sge_vec().size()) {
     ibv_send_wr wr;
     wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
     wr.next = nullptr;
-    wr.sg_list = const_cast<ibv_sge*>(&(local_mem.sge_vec().at(i)));
+    wr.sg_list = const_cast<ibv_sge *>(&(local_mem.sge_vec().at(i)));
     wr.num_sge = 1;
     wr.opcode = IBV_WR_RDMA_READ;
     wr.send_flags = 0;
     wr.imm_data = 0;
     wr.wr.rdma.remote_addr = remote_mem.mem_ptr(i);
     wr.wr.rdma.rkey = remote_mem.mr_rkey(i);
-    ibv_send_wr* bad_wr = nullptr;
+    ibv_send_wr *bad_wr = nullptr;
     CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
   }
 }
 
-void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
-  ActorMsgMR* msg_mr = GetOneSendMsgMRFromBuf();
+void IBVerbsQP::PostSendRequest(const ActorMsg &msg) {
+  ActorMsgMR *msg_mr = GetOneSendMsgMRFromBuf();
   msg_mr->set_msg(msg);
-  WorkRequestId* wr_id = NewWorkRequestId();
+  WorkRequestId *wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
   ibv_send_wr wr;
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   wr.next = nullptr;
-  wr.sg_list = const_cast<ibv_sge*>(&(msg_mr->mem_desc().sge_vec().at(0)));
+  wr.sg_list = const_cast<ibv_sge *>(&(msg_mr->mem_desc().sge_vec().at(0)));
   wr.num_sge = 1;
   wr.opcode = IBV_WR_SEND;
   wr.send_flags = 0;
   wr.imm_data = 0;
   memset(&(wr.wr), 0, sizeof(wr.wr));
-  ibv_send_wr* bad_wr = nullptr;
+  ibv_send_wr *bad_wr = nullptr;
   CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
 }
 
-void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
+void IBVerbsQP::ReadDone(WorkRequestId *wr_id) {
   CHECK_GE(wr_id->outstanding_sge_cnt, 1);
   wr_id->outstanding_sge_cnt -= 1;
   if (wr_id->outstanding_sge_cnt == 0) {
@@ -168,7 +179,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
   }
 }
 
-void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
+void IBVerbsQP::SendDone(WorkRequestId *wr_id) {
   {
     std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
     send_msg_buf_.push(wr_id->msg_mr);
@@ -176,34 +187,36 @@ void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
   DeleteWorkRequestId(wr_id);
 }
 
-void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
+void IBVerbsQP::RecvDone(WorkRequestId *wr_id) {
   Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(wr_id->msg_mr->msg());
   PostRecvRequest(wr_id->msg_mr);
   DeleteWorkRequestId(wr_id);
 }
 
-void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
-  WorkRequestId* wr_id = NewWorkRequestId();
+void IBVerbsQP::PostRecvRequest(ActorMsgMR *msg_mr) {
+  WorkRequestId *wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
   ibv_recv_wr wr;
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   wr.next = nullptr;
-  wr.sg_list = const_cast<ibv_sge*>(&(msg_mr->mem_desc().sge_vec().at(0)));
+  wr.sg_list = const_cast<ibv_sge *>(&(msg_mr->mem_desc().sge_vec().at(0)));
   wr.num_sge = 1;
-  ibv_recv_wr* bad_wr = nullptr;
+  ibv_recv_wr *bad_wr = nullptr;
   CHECK_EQ(ibv_post_recv(qp_, &wr, &bad_wr), 0);
 }
 
-ActorMsgMR* IBVerbsQP::GetOneSendMsgMRFromBuf() {
+ActorMsgMR *IBVerbsQP::GetOneSendMsgMRFromBuf() {
   std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
-  if (send_msg_buf_.empty()) { send_msg_buf_.push(new ActorMsgMR(pd_)); }
-  ActorMsgMR* msg_mr = send_msg_buf_.front();
+  if (send_msg_buf_.empty()) {
+    send_msg_buf_.push(new ActorMsgMR(pd_));
+  }
+  ActorMsgMR *msg_mr = send_msg_buf_.front();
   send_msg_buf_.pop();
   return msg_mr;
 }
 
-WorkRequestId* IBVerbsQP::NewWorkRequestId() {
-  WorkRequestId* wr_id = new WorkRequestId;
+WorkRequestId *IBVerbsQP::NewWorkRequestId() {
+  WorkRequestId *wr_id = new WorkRequestId;
   wr_id->qp = this;
   wr_id->outstanding_sge_cnt = 0;
   wr_id->read_id = nullptr;
@@ -211,11 +224,11 @@ WorkRequestId* IBVerbsQP::NewWorkRequestId() {
   return wr_id;
 }
 
-void IBVerbsQP::DeleteWorkRequestId(WorkRequestId* wr_id) {
+void IBVerbsQP::DeleteWorkRequestId(WorkRequestId *wr_id) {
   CHECK_EQ(wr_id->qp, this);
   delete wr_id;
 }
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // WITH_RDMA && PLATFORM_POSIX
+#endif // WITH_RDMA && PLATFORM_POSIX

@@ -25,7 +25,7 @@ limitations under the License.
 namespace oneflow {
 
 class RuntimeCtx final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(RuntimeCtx);
   RuntimeCtx() = delete;
   ~RuntimeCtx() = default;
@@ -33,14 +33,15 @@ class RuntimeCtx final {
   int64_t total_piece_num() const { return total_piece_num_; }
   bool is_experiment_phase() const { return is_experiment_phase_; }
   bool NeedCollectActEvent() const {
-    return is_experiment_phase_ || Global<const ProfilerConf>::Get()->collect_act_event();
+    return is_experiment_phase_ ||
+           Global<const ProfilerConf>::Get()->collect_act_event();
   }
 
-  void NewCounter(const std::string& name, int64_t val);
-  void DecreaseCounter(const std::string& name);
-  void WaitUntilCntEqualZero(const std::string& name);
+  void NewCounter(const std::string &name, int64_t val);
+  void DecreaseCounter(const std::string &name);
+  void WaitUntilCntEqualZero(const std::string &name);
 
- private:
+private:
   friend class Global<RuntimeCtx>;
   RuntimeCtx(int64_t total_piece_num, bool is_experiment_phase);
 
@@ -49,6 +50,6 @@ class RuntimeCtx final {
   HashMap<std::string, std::unique_ptr<BlockingCounter>> counters_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_RUNTIME_CONTEXT_H_
+#endif // ONEFLOW_CORE_JOB_RUNTIME_CONTEXT_H_

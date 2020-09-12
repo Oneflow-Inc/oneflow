@@ -75,7 +75,7 @@ FLAT_MSG_BEGIN(MirroredObjectId);
 FLAT_MSG_END(MirroredObjectId);
 // clang-format on
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID_MSG_H_
+#endif // ONEFLOW_CORE_VM_MIRRORED_OBJECT_ID_MSG_H_

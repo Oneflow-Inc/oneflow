@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_OPKERNEL_INSTRUCTION_MSG_H_
 #define ONEFLOW_CORE_EAGER_OPKERNEL_INSTRUCTION_MSG_H_
 
-#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 
 namespace oneflow {
@@ -86,7 +86,7 @@ FLAT_MSG_VIEW_BEGIN(RemoveForeignCallbackInstrOperand);
 FLAT_MSG_VIEW_END(RemoveForeignCallbackInstrOperand);
 // clang-format on
 
-}  // namespace eager
-}  // namespace oneflow
+} // namespace eager
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EAGER_OPKERNEL_INSTRUCTION_MSG_H_
+#endif // ONEFLOW_CORE_EAGER_OPKERNEL_INSTRUCTION_MSG_H_

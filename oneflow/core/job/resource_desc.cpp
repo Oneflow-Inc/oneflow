@@ -24,7 +24,7 @@ size_t ResourceDesc::TotalMachineNum() const {
   return resource_.machine_num();
 }
 
-const Machine& ResourceDesc::machine(int32_t idx) const {
+const Machine &ResourceDesc::machine(int32_t idx) const {
   CHECK_LT(idx, TotalMachineNum());
   return Global<EnvDesc>::Get()->machine(idx);
 }
@@ -39,7 +39,8 @@ int32_t ResourceDesc::ComputeThreadPoolSize() const {
 }
 
 bool ResourceDesc::enable_debug_mode() const {
-  return std::getenv("ONEFLOW_DEBUG_MODE") != nullptr || resource_.enable_debug_mode();
+  return std::getenv("ONEFLOW_DEBUG_MODE") != nullptr ||
+         resource_.enable_debug_mode();
 }
 
 CollectiveBoxingConf ResourceDesc::collective_boxing_conf() const {
@@ -50,4 +51,4 @@ CollectiveBoxingConf ResourceDesc::collective_boxing_conf() const {
   }
 }
 
-}  // namespace oneflow
+} // namespace oneflow

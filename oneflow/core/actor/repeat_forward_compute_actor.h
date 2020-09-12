@@ -21,13 +21,13 @@ limitations under the License.
 namespace oneflow {
 
 class RepeatForwardCompActor final : public CompActor {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(RepeatForwardCompActor);
   RepeatForwardCompActor() = default;
   ~RepeatForwardCompActor() override = default;
 
- private:
-  void VirtualCompActorInit(const TaskProto& proto) override;
+private:
+  void VirtualCompActorInit(const TaskProto &proto) override;
   void Act() override;
   void VirtualAsyncSendNaiveConsumedRegstMsgToProducer() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
@@ -38,6 +38,6 @@ class RepeatForwardCompActor final : public CompActor {
   int64_t cur_piece_id_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_REPEAT_FORWARD_COMPUTE_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_REPEAT_FORWARD_COMPUTE_ACTOR_H_

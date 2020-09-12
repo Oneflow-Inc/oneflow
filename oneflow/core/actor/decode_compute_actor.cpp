@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-void DecodeCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+void DecodeCompActor::VirtualCompActorInit(const TaskProto &task_proto) {
   piece_id_ = 0;
   decode_status_.cur_col_id_ = 0;
   decode_status_.max_col_id_ = 0;
@@ -32,8 +32,8 @@ void DecodeCompActor::Act() {
 }
 
 void DecodeCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  Regst* in_regst = GetNaiveCurReadable("record");
-  HandleProducedNaiveDataRegstToConsumer([this, in_regst](Regst* regst) {
+  Regst *in_regst = GetNaiveCurReadable("record");
+  HandleProducedNaiveDataRegstToConsumer([this, in_regst](Regst *regst) {
     regst->set_piece_id(in_regst->piece_id());
     regst->set_col_id(decode_status_.cur_col_id_);
     regst->set_max_col_id(decode_status_.max_col_id_);
@@ -49,9 +49,9 @@ void DecodeCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 
 void DecodeCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
   HandleConsumedNaiveDataRegstToProducer(
-      [this](Regst*) { return decode_status_.cur_col_id_ == 0; });
+      [this](Regst *) { return decode_status_.cur_col_id_ == 0; });
 }
 
 REGISTER_ACTOR(kDecode, DecodeCompActor);
 
-}  // namespace oneflow
+} // namespace oneflow

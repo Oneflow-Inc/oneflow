@@ -19,24 +19,30 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
+Maybe<void> InferTensorDesc(user_op::InferContext *ctx) {
+  const user_op::TensorDesc *model =
+      ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  const user_op::TensorDesc *model_diff =
+      ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
   CHECK_EQ_OR_RETURN(model_diff->data_type(), model->data_type());
   CHECK_EQ_OR_RETURN(model_diff->shape(), model->shape());
   *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *model;
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+Maybe<void> GetSbpSignatures(user_op::SbpContext *ctx) {
+  const user_op::TensorDesc &model =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
   FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-    ctx->NewBuilder().Split(ctx->inputs(), axis).Split(ctx->outputs(), axis).Build();
+    ctx->NewBuilder()
+        .Split(ctx->inputs(), axis)
+        .Split(ctx->outputs(), axis)
+        .Build();
   }
   return Maybe<void>::Ok();
 }
 
-}  // namespace
+} // namespace
 
 REGISTER_USER_OP("l1_l2_regularize_gradient")
     .Input("model")
@@ -48,4 +54,4 @@ REGISTER_USER_OP("l1_l2_regularize_gradient")
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn(GetSbpSignatures);
 
-}  // namespace oneflow
+} // namespace oneflow

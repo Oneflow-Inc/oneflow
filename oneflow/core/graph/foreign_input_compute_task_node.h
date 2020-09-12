@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class ForeignInputCompTaskNode final : public ForeignIOCompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(ForeignInputCompTaskNode);
   ForeignInputCompTaskNode() = default;
   ~ForeignInputCompTaskNode() override = default;
@@ -29,6 +29,6 @@ class ForeignInputCompTaskNode final : public ForeignIOCompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kForeignInput; }
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_FOREIGN_INPUT_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_FOREIGN_INPUT_COMPUTE_TASK_NODE_H_

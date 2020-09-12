@@ -23,12 +23,12 @@ limitations under the License.
 namespace oneflow {
 
 struct SocketMemDesc {
-  void* mem_ptr;
+  void *mem_ptr;
   size_t byte_size;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif // PLATFORM_POSIX
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MEMORY_DESC_H_
+#endif // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MEMORY_DESC_H_

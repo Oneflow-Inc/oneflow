@@ -17,13 +17,13 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_MIRRORED_OBJECT_MSG_H_
 
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/mirrored_object_id.msg.h"
-#include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/object.h"
-#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/vm/stream_desc.msg.h"
 
 namespace oneflow {
 
@@ -120,8 +120,8 @@ OBJECT_MSG_BEGIN(LogicalObject);
 OBJECT_MSG_END(LogicalObject);
 // clang-format on
 
-}  // namespace vm
+} // namespace vm
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_MIRRORED_OBJECT_MSG_H_
+#endif // ONEFLOW_CORE_VM_MIRRORED_OBJECT_MSG_H_

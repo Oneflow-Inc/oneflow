@@ -20,7 +20,7 @@ namespace oneflow {
 
 namespace user_op {
 
-UserOpDefWrapper::UserOpDefWrapper(const UserOpDef& def)
+UserOpDefWrapper::UserOpDefWrapper(const UserOpDef &def)
     : def_(def), inputs_(), outputs_(), attrs_() {
   for (int32_t i = 0; i < def_.input_size(); ++i) {
     inputs_.emplace(def_.input(i).name(), def_.mutable_input(i));
@@ -33,58 +33,65 @@ UserOpDefWrapper::UserOpDefWrapper(const UserOpDef& def)
   }
 }
 
-bool UserOpDefWrapper::IsInputArgName(const std::string& name) const {
+bool UserOpDefWrapper::IsInputArgName(const std::string &name) const {
   return inputs_.find(name) != inputs_.end();
 }
 
-bool UserOpDefWrapper::IsOutputArgName(const std::string& name) const {
+bool UserOpDefWrapper::IsOutputArgName(const std::string &name) const {
   return outputs_.find(name) != outputs_.end();
 }
 
-bool UserOpDefWrapper::IsAttrName(const std::string& name) const {
+bool UserOpDefWrapper::IsAttrName(const std::string &name) const {
   return attrs_.find(name) != attrs_.end();
 }
 
-bool UserOpDefWrapper::IsArgOptional(const std::string& name) const {
-  const UserOpDef::ArgDef* arg_def = GetArgPointer(name);
+bool UserOpDefWrapper::IsArgOptional(const std::string &name) const {
+  const UserOpDef::ArgDef *arg_def = GetArgPointer(name);
   CHECK_NOTNULL(arg_def);
   return arg_def->is_optional();
 }
 
-std::pair<int32_t, bool> UserOpDefWrapper::ArgNumAndIsMin(const std::string& name) const {
-  const UserOpDef::ArgDef* arg_def = GetArgPointer(name);
+std::pair<int32_t, bool>
+UserOpDefWrapper::ArgNumAndIsMin(const std::string &name) const {
+  const UserOpDef::ArgDef *arg_def = GetArgPointer(name);
   CHECK_NOTNULL(arg_def);
   return std::make_pair(arg_def->num(), arg_def->num_as_min());
 }
 
-const UserOpDef::ArgDef* UserOpDefWrapper::GetArgPointer(const std::string& name) const {
+const UserOpDef::ArgDef *
+UserOpDefWrapper::GetArgPointer(const std::string &name) const {
   auto it = inputs_.find(name);
-  if (it != inputs_.end()) { return it->second; }
+  if (it != inputs_.end()) {
+    return it->second;
+  }
   it = outputs_.find(name);
-  if (it != outputs_.end()) { return it->second; }
+  if (it != outputs_.end()) {
+    return it->second;
+  }
   return nullptr;
 }
 
-UserOpAttrType UserOpDefWrapper::GetAttrType(const std::string& name) const {
+UserOpAttrType UserOpDefWrapper::GetAttrType(const std::string &name) const {
   return attrs_.at(name)->type();
 }
 
-bool UserOpDefWrapper::AttrHasDefaultVal(const std::string& name) const {
+bool UserOpDefWrapper::AttrHasDefaultVal(const std::string &name) const {
   return attrs_.at(name)->has_default_val();
 }
 
-#define ATTR_TYPE_SPECIALIZATION(field, cpp_type, attr_type)                              \
-  template<>                                                                              \
-  cpp_type UserOpDefWrapper::GetAttrDefaultVal<cpp_type>(const std::string& name) const { \
-    CHECK(AttrHasDefaultVal(name));                                                       \
-    const UserOpAttrVal& default_val = attrs_.at(name)->default_val();                    \
-    CHECK_EQ(static_cast<int>(attr_type), default_val.value_case());                      \
-    return AttrValAccessor<cpp_type>::Attr(default_val);                                  \
+#define ATTR_TYPE_SPECIALIZATION(field, cpp_type, attr_type)                   \
+  template <>                                                                  \
+  cpp_type UserOpDefWrapper::GetAttrDefaultVal<cpp_type>(                      \
+      const std::string &name) const {                                         \
+    CHECK(AttrHasDefaultVal(name));                                            \
+    const UserOpAttrVal &default_val = attrs_.at(name)->default_val();         \
+    CHECK_EQ(static_cast<int>(attr_type), default_val.value_case());           \
+    return AttrValAccessor<cpp_type>::Attr(default_val);                       \
   }
 
 OF_PP_FOR_EACH_TUPLE(ATTR_TYPE_SPECIALIZATION, ATTR_SEQ)
 
 #undef ATTR_TYPE_SPECIALIZATION
-}  // namespace user_op
+} // namespace user_op
 
-}  // namespace oneflow
+} // namespace oneflow

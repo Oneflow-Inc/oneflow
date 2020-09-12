@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class PrintCompTaskNode final : public SinkCompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(PrintCompTaskNode);
   PrintCompTaskNode() = default;
   ~PrintCompTaskNode() = default;
@@ -29,9 +29,9 @@ class PrintCompTaskNode final : public SinkCompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kPrint; }
   bool IsIndependent() const override { return true; }
 
- private:
+private:
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_PRINT_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_PRINT_COMPUTE_TASK_NODE_H_

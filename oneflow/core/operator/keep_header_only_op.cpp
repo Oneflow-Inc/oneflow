@@ -26,11 +26,11 @@ void KeepHeaderOnlyOp::InitFromOpConf() {
 }
 
 Maybe<void> KeepHeaderOnlyOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+    const ParallelContext *parallel_ctx) const {
   size_t in_num = GetPbRpfFromCustomizedConf<std::string>("in").size();
   for (size_t i = 0; i < in_num; ++i) {
-    BlobDesc* out = GetBlobDesc4BnInOp(GenRepeatedBn("out", i));
+    BlobDesc *out = GetBlobDesc4BnInOp(GenRepeatedBn("out", i));
     *out = *GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
     out->set_is_body_disabled(true);
   }
@@ -38,17 +38,19 @@ Maybe<void> KeepHeaderOnlyOp::InferBlobDescs(
 }
 
 Maybe<void> KeepHeaderOnlyOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+    std::function<OptInt64 *(const std::string &)> BatchAxis4BnInOp) const {
   size_t in_num = GetPbRpfFromCustomizedConf<std::string>("in").size();
   for (size_t i = 0; i < in_num; ++i) {
-    *BatchAxis4BnInOp(GenRepeatedBn("out", i)) = *BatchAxis4BnInOp(GenRepeatedBn("in", i));
+    *BatchAxis4BnInOp(GenRepeatedBn("out", i)) =
+        *BatchAxis4BnInOp(GenRepeatedBn("in", i));
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> KeepHeaderOnlyOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    const std::function<Maybe<const BlobDesc &>(const std::string &)>
+        &LogicalBlobDesc4Ibn,
+    SbpSignatureList *sbp_sig_list) const {
   int64_t num_axes = JUST(LogicalBlobDesc4Ibn(SoleIbn())).shape().NumAxes();
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
@@ -64,4 +66,4 @@ Maybe<void> KeepHeaderOnlyOp::GetSbpSignatures(
 
 REGISTER_OP(OperatorConf::kKeepHeaderOnlyConf, KeepHeaderOnlyOp);
 REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kKeepHeaderOnlyConf, 100);
-}  // namespace oneflow
+} // namespace oneflow

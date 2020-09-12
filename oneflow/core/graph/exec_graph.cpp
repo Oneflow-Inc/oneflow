@@ -18,27 +18,37 @@ limitations under the License.
 
 namespace oneflow {
 
-void ExecNode::BindBnWithRegst(const std::string& bn, std::shared_ptr<RegstDesc> regst) {
+void ExecNode::BindBnWithRegst(const std::string &bn,
+                               std::shared_ptr<RegstDesc> regst) {
   CHECK(bn_in_op2regst_.emplace(bn, regst).second);
 }
 
-void ExecNode::BindBnsWithRegst(const PbRpf<std::string>& (Operator::*bns_getter)() const,
-                                std::shared_ptr<RegstDesc> regst) {
-  for (const std::string& bn : (op_.get()->*bns_getter)()) { BindBnWithRegst(bn, regst); }
+void ExecNode::BindBnsWithRegst(
+    const PbRpf<std::string> &(Operator::*bns_getter)() const,
+    std::shared_ptr<RegstDesc> regst) {
+  for (const std::string &bn : (op_.get()->*bns_getter)()) {
+    BindBnWithRegst(bn, regst);
+  }
 }
 
-void ExecNode::AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_getter)() const,
-                                     std::shared_ptr<RegstDesc> regst) {
-  for (const std::string& bn : (op_.get()->*bns_getter)()) { regst->AddLbi(op_->BnInOp2Lbi(bn)); }
+void ExecNode::AddBnToRegstAndBindIt(
+    const PbRpf<std::string> &(Operator::*bns_getter)() const,
+    std::shared_ptr<RegstDesc> regst) {
+  for (const std::string &bn : (op_.get()->*bns_getter)()) {
+    regst->AddLbi(op_->BnInOp2Lbi(bn));
+  }
   BindBnsWithRegst(bns_getter, regst);
 }
 
-void ExecNode::BindBnWithOneOfTheRegsts(const std::string& bn,
-                                        const std::list<std::shared_ptr<RegstDesc>>& regsts) {
-  const LogicalBlobId& lbi = op()->BnInOp2Lbi(bn);
+void ExecNode::BindBnWithOneOfTheRegsts(
+    const std::string &bn,
+    const std::list<std::shared_ptr<RegstDesc>> &regsts) {
+  const LogicalBlobId &lbi = op()->BnInOp2Lbi(bn);
   bool has_binded = false;
   for (std::shared_ptr<RegstDesc> regst : regsts) {
-    if (regst->GetBlobDesc(lbi) == nullptr) { continue; }
+    if (regst->GetBlobDesc(lbi) == nullptr) {
+      continue;
+    }
     BindBnWithRegst(bn, regst);
     has_binded = true;
     break;
@@ -48,18 +58,23 @@ void ExecNode::BindBnWithOneOfTheRegsts(const std::string& bn,
 
 void ExecNode::UnbindBnWithEmptyRegst() {
   EraseIf<std::string, std::shared_ptr<RegstDesc>>(
-      &bn_in_op2regst_, [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
-        return it->second->regst_desc_type().has_data_regst_desc() && it->second->NumOfLbi() == 0;
+      &bn_in_op2regst_,
+      [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
+        return it->second->regst_desc_type().has_data_regst_desc() &&
+               it->second->NumOfLbi() == 0;
       });
 }
 
-void ExecNode::ToProto(const ParallelContext* parallel_ctx, ExecNodeProto* ret) const {
-  const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op_->op_name());
-  const ParallelDesc* parallel_desc = op_node == nullptr ? nullptr : &op_node->parallel_desc();
-  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx, ret->mutable_kernel_conf(),
-                     op_context(), GetLogicalBlobDesc4BnInOpFunc(), parallel_desc);
-  for (const auto& bn_regst : bn_in_op2regst_) {
-    const std::string& bn_in_op = bn_regst.first;
+void ExecNode::ToProto(const ParallelContext *parallel_ctx,
+                       ExecNodeProto *ret) const {
+  const OpNode *op_node = Global<OpGraph>::Get()->OpNode4OpName(op_->op_name());
+  const ParallelDesc *parallel_desc =
+      op_node == nullptr ? nullptr : &op_node->parallel_desc();
+  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx,
+                     ret->mutable_kernel_conf(), op_context(),
+                     GetLogicalBlobDesc4BnInOpFunc(), parallel_desc);
+  for (const auto &bn_regst : bn_in_op2regst_) {
+    const std::string &bn_in_op = bn_regst.first;
     auto regst = bn_regst.second;
     CHECK(regst);
     PbMapPair<std::string, int64_t> pair{bn_in_op, regst->regst_desc_id()};
@@ -67,43 +82,56 @@ void ExecNode::ToProto(const ParallelContext* parallel_ctx, ExecNodeProto* ret) 
   }
 }
 
-void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
+void ExecNode::InferBlobDescs(const ParallelContext *parallel_ctx) {
   auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
-  const SbpSignature* sbp_signature = nullptr;
+  const SbpSignature *sbp_signature = nullptr;
   {
-    const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op()->op_name());
-    if (op_node != nullptr) { sbp_signature = &op_node->sbp_signature(); }
+    const OpNode *op_node =
+        Global<OpGraph>::Get()->OpNode4OpName(op()->op_name());
+    if (op_node != nullptr) {
+      sbp_signature = &op_node->sbp_signature();
+    }
   }
-  CHECK_JUST(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature,
-                                   [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); }));
-  Global<OpGraph>::Get()->CheckBlobDescs(op_->op_name(), GetBlobDesc4BnInOp, parallel_ctx);
+  CHECK_JUST(op_->InferBlobDescsIf(
+      GetBlobDesc4BnInOp, parallel_ctx, sbp_signature,
+      [this](OpContext *op_ctx) { op_ctx_.reset(op_ctx); }));
+  Global<OpGraph>::Get()->CheckBlobDescs(op_->op_name(), GetBlobDesc4BnInOp,
+                                         parallel_ctx);
 }
 
-std::function<const BlobDesc&(const std::string&)> ExecNode::GetLogicalBlobDesc4BnInOpFunc() const {
-  const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op()->op_name());
+std::function<const BlobDesc &(const std::string &)>
+ExecNode::GetLogicalBlobDesc4BnInOpFunc() const {
+  const OpNode *op_node =
+      Global<OpGraph>::Get()->OpNode4OpName(op()->op_name());
   if (op_node == nullptr) {
-    return [](const std::string& bn_in_op) -> const BlobDesc& {
+    return [](const std::string &bn_in_op) -> const BlobDesc & {
       UNIMPLEMENTED();
-      return *(const BlobDesc*)nullptr;
+      return *(const BlobDesc *)nullptr;
     };
   }
-  return [op_node, this](const std::string& bn_in_op) -> const BlobDesc& {
+  return [op_node, this](const std::string &bn_in_op) -> const BlobDesc & {
     return op_node->LogicalBlobDesc4Lbi(op()->BnInOp2Lbi(bn_in_op));
   };
 }
 
-std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() const {
-  return [this](const std::string& bn_in_op) -> BlobDesc* {
+std::function<BlobDesc *(const std::string &)>
+ExecNode::GetBlobDesc4BnInOpFunc() const {
+  return [this](const std::string &bn_in_op) -> BlobDesc * {
     auto it = bn_in_op2regst_.find(bn_in_op);
-    if (it == bn_in_op2regst_.end()) { return nullptr; }
+    if (it == bn_in_op2regst_.end()) {
+      return nullptr;
+    }
     std::shared_ptr<RegstDesc> regst = it->second;
     CHECK(regst);
     return regst->MutBlobDesc(op()->BnInOp2Lbi(bn_in_op));
   };
 }
 
-void ExecGraph::ToExecSequence(const ParallelContext* parallel_ctx, ExecSequence* ret) const {
-  TopoForEachNode([&](ExecNode* node) { node->ToProto(parallel_ctx, ret->add_exec_node()); });
+void ExecGraph::ToExecSequence(const ParallelContext *parallel_ctx,
+                               ExecSequence *ret) const {
+  TopoForEachNode([&](ExecNode *node) {
+    node->ToProto(parallel_ctx, ret->add_exec_node());
+  });
 }
 
-}  // namespace oneflow
+} // namespace oneflow

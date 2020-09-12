@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class NormalForwardCompTaskNode final : public CompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(NormalForwardCompTaskNode);
   NormalForwardCompTaskNode() = default;
   ~NormalForwardCompTaskNode() = default;
@@ -33,10 +33,11 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kNormalForward; }
   bool HasBackwardCompTaskNode();
 
- private:
+private:
   bool IsAllOutNodeNormalForward() const;
   bool CanProduceSeperatedRegstsForEachOutBlob() const;
-  void ProduceOutRegstByNameAndBlockNum(const std::string& name, size_t mem_block_num);
+  void ProduceOutRegstByNameAndBlockNum(const std::string &name,
+                                        size_t mem_block_num);
   void BuildExecGphAndRegst() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
@@ -44,6 +45,6 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
   void InferProducedDataRegstTimeShape() override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_NORMAL_FORWARD_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_NORMAL_FORWARD_COMPUTE_TASK_NODE_H_

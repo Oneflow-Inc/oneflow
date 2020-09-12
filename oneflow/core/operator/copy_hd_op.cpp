@@ -18,34 +18,37 @@ limitations under the License.
 namespace oneflow {
 
 class CopyHdOp final : public Operator {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdOp);
   CopyHdOp() = default;
   ~CopyHdOp() override = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const;
+  const PbMessage &GetCustomizedConf() const override;
+  Maybe<void> InferBlobDescs(
+      std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+      const ParallelContext *parallel_ctx) const;
 
- private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+private:
+  Maybe<void> InferBatchAxis(std::function<OptInt64 *(const std::string &)>
+                                 BatchAxis4BnInOp) const override {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
   Maybe<void> InferSbpSignature(
-      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    const SbpParallel& sbp_parallel = JUST(SbpInferHint4Ibn(input_bns().Get(0)))->sbp_parallel();
+      SbpSignature *sbp_signature, const SbpSignature &sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature &)> &CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint *>(const std::string &)>
+          SbpInferHint4Ibn,
+      const ParallelDesc &parallel_desc) const {
+    auto *bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    const SbpParallel &sbp_parallel =
+        JUST(SbpInferHint4Ibn(input_bns().Get(0)))->sbp_parallel();
     (*bn2sbp)[input_bns().Get(0)] = sbp_parallel;
     (*bn2sbp)[output_bns().Get(0)] = sbp_parallel;
     return Maybe<void>::Ok();
   }
-  LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
-  LogicalBlobId lbi4obn(const std::string& output_bn) const override;
+  LogicalBlobId lbi4ibn(const std::string &input_bn) const override;
+  LogicalBlobId lbi4obn(const std::string &output_bn) const override;
 };
 
 void CopyHdOp::InitFromOpConf() {
@@ -54,15 +57,17 @@ void CopyHdOp::InitFromOpConf() {
 }
 
 Maybe<void> CopyHdOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+    const ParallelContext *parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
   return Maybe<void>::Ok();
 }
 
-const PbMessage& CopyHdOp::GetCustomizedConf() const { return op_conf().copy_hd_conf(); }
+const PbMessage &CopyHdOp::GetCustomizedConf() const {
+  return op_conf().copy_hd_conf();
+}
 
-LogicalBlobId CopyHdOp::lbi4ibn(const std::string& input_bn) const {
+LogicalBlobId CopyHdOp::lbi4ibn(const std::string &input_bn) const {
   if (this->op_conf().copy_hd_conf().has_lbi()) {
     return this->op_conf().copy_hd_conf().lbi();
   } else {
@@ -70,7 +75,7 @@ LogicalBlobId CopyHdOp::lbi4ibn(const std::string& input_bn) const {
   }
 }
 
-LogicalBlobId CopyHdOp::lbi4obn(const std::string& output_bn) const {
+LogicalBlobId CopyHdOp::lbi4obn(const std::string &output_bn) const {
   if (this->op_conf().copy_hd_conf().has_lbi()) {
     return this->op_conf().copy_hd_conf().lbi();
   } else {
@@ -80,4 +85,4 @@ LogicalBlobId CopyHdOp::lbi4obn(const std::string& output_bn) const {
 
 REGISTER_OP(OperatorConf::kCopyHdConf, CopyHdOp);
 
-}  // namespace oneflow
+} // namespace oneflow

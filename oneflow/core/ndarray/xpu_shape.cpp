@@ -20,7 +20,9 @@ namespace oneflow {
 XpuShape::XpuShape(const int64_t dim[], int num_axes) {
   num_axes_ = num_axes;
   int i = 0;
-  for (; i < num_axes_; ++i) { dim_[i] = dim[i]; }
+  for (; i < num_axes_; ++i) {
+    dim_[i] = dim[i];
+  }
   UpdateDimElemNumAndElemNum();
   for (; i < sizeof(dim_) / sizeof(dim_[0]); ++i) {
     dim_[i] = 1;
@@ -28,10 +30,12 @@ XpuShape::XpuShape(const int64_t dim[], int num_axes) {
   }
 }
 
-XpuShape::XpuShape(const Shape& shape) {
+XpuShape::XpuShape(const Shape &shape) {
   num_axes_ = shape.NumAxes();
   int i = 0;
-  for (; i < num_axes_; ++i) { dim_[i] = shape.At(i); }
+  for (; i < num_axes_; ++i) {
+    dim_[i] = shape.At(i);
+  }
   UpdateDimElemNumAndElemNum();
   for (; i < sizeof(dim_) / sizeof(dim_[0]); ++i) {
     dim_[i] = 1;
@@ -39,10 +43,12 @@ XpuShape::XpuShape(const Shape& shape) {
   }
 }
 
-XpuShape::XpuShape(const ShapeView& shape) {
+XpuShape::XpuShape(const ShapeView &shape) {
   num_axes_ = shape.NumAxes();
   int i = 0;
-  for (; i < num_axes_; ++i) { dim_[i] = shape.At(i); }
+  for (; i < num_axes_; ++i) {
+    dim_[i] = shape.At(i);
+  }
   UpdateDimElemNumAndElemNum();
   for (; i < sizeof(dim_) / sizeof(dim_[0]); ++i) {
     dim_[i] = 1;
@@ -50,13 +56,17 @@ XpuShape::XpuShape(const ShapeView& shape) {
   }
 }
 
-XpuShape::XpuShape(const ShapeView& shape, int ndims_left_extend_to) {
+XpuShape::XpuShape(const ShapeView &shape, int ndims_left_extend_to) {
   CHECK_LE(shape.NumAxes(), ndims_left_extend_to);
   num_axes_ = ndims_left_extend_to;
   size_t left_ones_num = num_axes_ - shape.NumAxes();
   int i = 0;
-  for (; i < left_ones_num; ++i) { dim_[i] = 1; }
-  for (; i < num_axes_; ++i) { dim_[i] = shape.At(i - left_ones_num); }
+  for (; i < left_ones_num; ++i) {
+    dim_[i] = 1;
+  }
+  for (; i < num_axes_; ++i) {
+    dim_[i] = shape.At(i - left_ones_num);
+  }
   UpdateDimElemNumAndElemNum();
   for (; i < sizeof(dim_) / sizeof(dim_[0]); ++i) {
     dim_[i] = 1;
@@ -64,25 +74,33 @@ XpuShape::XpuShape(const ShapeView& shape, int ndims_left_extend_to) {
   }
 }
 
-bool XpuShape::operator==(const XpuShape& rhs) const {
-  if (num_axes_ != rhs.num_axes_) { return false; }
-  if (elem_num_ != rhs.elem_num_) { return false; }
+bool XpuShape::operator==(const XpuShape &rhs) const {
+  if (num_axes_ != rhs.num_axes_) {
+    return false;
+  }
+  if (elem_num_ != rhs.elem_num_) {
+    return false;
+  }
   for (int i = 0; i < num_axes_; ++i) {
-    if (dim_[i] != rhs.dim_[i]) { return false; }
-    if (dim_elem_num_[i] != rhs.dim_elem_num_[i]) { return false; }
+    if (dim_[i] != rhs.dim_[i]) {
+      return false;
+    }
+    if (dim_elem_num_[i] != rhs.dim_elem_num_[i]) {
+      return false;
+    }
   }
   return true;
 }
 
-void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& b, DimVector* simplified_y,
-                             DimVector* simplified_b) {
+void SimplifyBroadcastShapes(const XpuShape &y, const XpuShape &b,
+                             DimVector *simplified_y, DimVector *simplified_b) {
   DimVector simplified_a;
   SimplifyBroadcastShapes(y, y, b, simplified_y, &simplified_a, simplified_b);
 }
 
-void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& a, const XpuShape& b,
-                             DimVector* simplified_y, DimVector* simplified_a,
-                             DimVector* simplified_b) {
+void SimplifyBroadcastShapes(const XpuShape &y, const XpuShape &a,
+                             const XpuShape &b, DimVector *simplified_y,
+                             DimVector *simplified_a, DimVector *simplified_b) {
   CHECK_EQ(y.NumAxes(), a.NumAxes());
   CHECK_EQ(b.NumAxes(), a.NumAxes());
   CHECK(simplified_y->empty());
@@ -97,11 +115,13 @@ void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& a, const XpuShap
     const int64_t y_dim = y.At(i);
     const int64_t a_dim = a.At(i);
     const int64_t b_dim = b.At(i);
-    if ((a_dim == 1) && (b_dim == 1)) { continue; }
+    if ((a_dim == 1) && (b_dim == 1)) {
+      continue;
+    }
     const bool a_cur_axis_is_broadcast = (a_dim == 1);
     const bool b_cur_axis_is_broadcast = (b_dim == 1);
-    if (a_prev_axis_is_broadcast == a_cur_axis_is_broadcast
-        && b_prev_axis_is_broadcast == b_cur_axis_is_broadcast) {
+    if (a_prev_axis_is_broadcast == a_cur_axis_is_broadcast &&
+        b_prev_axis_is_broadcast == b_cur_axis_is_broadcast) {
       simplified_y->back() *= y_dim;
       simplified_a->back() *= a_dim;
       simplified_b->back() *= b_dim;
@@ -115,4 +135,4 @@ void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& a, const XpuShap
   }
 }
 
-}  // namespace oneflow
+} // namespace oneflow

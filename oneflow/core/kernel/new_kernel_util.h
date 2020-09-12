@@ -28,36 +28,33 @@ enum cudaMemcpyKind {
 };
 #endif
 
-template<DeviceType deivce_type>
+template <DeviceType deivce_type>
 struct NewKernelUtil : public DnnIf<deivce_type>,
                        public BlasIf<deivce_type>,
                        public ArithemeticIf<deivce_type> {};
 
-template<DeviceType device_type>
-struct GetCudaMemcpyKind;
+template <DeviceType device_type> struct GetCudaMemcpyKind;
 
-template<>
-struct GetCudaMemcpyKind<DeviceType::kCPU> {
+template <> struct GetCudaMemcpyKind<DeviceType::kCPU> {
   static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyHostToHost;
 };
 
 #ifdef WITH_CUDA
-template<>
-struct GetCudaMemcpyKind<DeviceType::kGPU> {
+template <> struct GetCudaMemcpyKind<DeviceType::kGPU> {
   static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
 };
-#endif  // WITH_CUDA
+#endif // WITH_CUDA
 
-template<DeviceType device_type>
-void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,
+template <DeviceType device_type>
+void Memcpy(DeviceCtx *, void *dst, const void *src, size_t sz,
             cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val);
 
-template<DeviceType device_type>
-void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
+template <DeviceType device_type>
+void Memset(DeviceCtx *, void *dst, const char value, size_t sz);
 
-void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
-                                         std::function<void(Blob*)> Callback);
+void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx *ctx, Blob *blob,
+                                         std::function<void(Blob *)> Callback);
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_NEW_KERNEL_UTIL_H_
+#endif // ONEFLOW_CORE_KERNEL_NEW_KERNEL_UTIL_H_

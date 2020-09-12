@@ -16,18 +16,19 @@ limitations under the License.
 #ifndef ONEFLOW_USER_DATA_BATCH_DATASET_H_
 #define ONEFLOW_USER_DATA_BATCH_DATASET_H_
 
-#include "oneflow/user/data/dataset.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/user/data/dataset.h"
 
 namespace oneflow {
 namespace data {
 
-template<typename LoadTarget>
+template <typename LoadTarget>
 class BatchDataset final : public Dataset<LoadTarget> {
- public:
+public:
   using LoadTargetPtr = std::shared_ptr<LoadTarget>;
   using LoadTargetPtrList = std::vector<LoadTargetPtr>;
-  BatchDataset(int32_t batch_size, std::unique_ptr<Dataset<LoadTarget>>&& data_set)
+  BatchDataset(int32_t batch_size,
+               std::unique_ptr<Dataset<LoadTarget>> &&data_set)
       : batch_size_(batch_size), loader_(std::move(data_set)) {}
   ~BatchDataset() = default;
 
@@ -42,12 +43,12 @@ class BatchDataset final : public Dataset<LoadTarget> {
     return ret;
   }
 
- private:
+private:
   int32_t batch_size_;
   std::unique_ptr<Dataset<LoadTarget>> loader_;
 };
 
-}  // namespace data
-}  // namespace oneflow
+} // namespace data
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_DATA_BATCH_DATASET_H_
+#endif // ONEFLOW_USER_DATA_BATCH_DATASET_H_

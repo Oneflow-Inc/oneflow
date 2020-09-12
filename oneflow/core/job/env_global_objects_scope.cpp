@@ -15,35 +15,35 @@ limitations under the License.
 */
 #ifdef WITH_CUDA
 #include <cuda.h>
-#endif  // WITH_CUDA
-#include <thread>
-#include "oneflow/core/thread/thread_pool.h"
-#include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/control/ctrl_server.h"
+#endif // WITH_CUDA
+#include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/job/eager_nccl_comm_manager.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/job/global_for.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/file_system.h"
-#include "oneflow/core/common/str_util.h"
-#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/vm/virtual_machine_scope.h"
-#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
-#include "oneflow/core/job/eager_nccl_comm_manager.h"
+#include <thread>
 
 namespace oneflow {
 
 namespace {
 
-std::string LogDir(const std::string& log_dir) {
+std::string LogDir(const std::string &log_dir) {
   char hostname[255];
   CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
   std::string v = log_dir + "/" + std::string(hostname);
   return v;
 }
 
-void InitLogging(const CppLoggingConf& logging_conf) {
+void InitLogging(const CppLoggingConf &logging_conf) {
   FLAGS_log_dir = LogDir(logging_conf.log_dir());
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
@@ -63,7 +63,7 @@ int32_t GetDefaultGpuDeviceNum() {
 #endif
 }
 
-Resource GetDefaultResource(const EnvProto& env_proto) {
+Resource GetDefaultResource(const EnvProto &env_proto) {
   Resource resource;
   resource.set_machine_num(env_proto.machine_size());
   resource.set_cpu_device_num(GetDefaultCpuDeviceNum());
@@ -71,9 +71,9 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   return resource;
 }
 
-}  // namespace
+} // namespace
 
-Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
+Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto &env_proto) {
   InitLogging(env_proto.cpp_logging_conf());
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
@@ -81,13 +81,15 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
   Global<CtrlClient>::New();
-  int64_t this_mchn_id =
-      Global<EnvDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
+  int64_t this_mchn_id = Global<EnvDesc>::Get()->GetMachineId(
+      Global<CtrlServer>::Get()->this_machine_addr());
   Global<MachineCtx>::New(this_mchn_id);
   Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));
-  Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
-  Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
+  Global<ThreadPool>::New(
+      Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
+  Global<vm::VirtualMachineScope>::New(
+      Global<ResourceDesc, ForSession>::Get()->resource());
   Global<EagerJobBuildAndInferCtxMgr>::New();
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
@@ -119,4 +121,4 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #endif
 }
 
-}  // namespace oneflow
+} // namespace oneflow

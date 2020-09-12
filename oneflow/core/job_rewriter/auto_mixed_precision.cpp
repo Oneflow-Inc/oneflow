@@ -22,8 +22,8 @@ limitations under the License.
 
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job_rewriter/op_graph_pass.h"
 
 namespace oneflow {
 
@@ -31,23 +31,25 @@ namespace {
 
 #define INSERT_CHECK(expr) CHECK(expr.second)
 
-template<typename MapT, typename KeyT>
-bool IsKeyFound(const MapT& m, const KeyT& k) {
+template <typename MapT, typename KeyT>
+bool IsKeyFound(const MapT &m, const KeyT &k) {
   return m.find(k) != m.end();
 }
 
-bool IsNodeInList(const AMPList& amp_list, OpNode* node) {
-  if (node->op().op_conf().has_user_conf() == false) { return false; }
+bool IsNodeInList(const AMPList &amp_list, OpNode *node) {
+  if (node->op().op_conf().has_user_conf() == false) {
+    return false;
+  }
   const std::string op_type = node->op().op_conf().user_conf().op_type_name();
   return IsKeyFound(amp_list, op_type);
 }
 
-template<typename ContainerT, typename ElemT>
-std::string Container2Str(const ContainerT& container,
-                          std::function<std::string(const ElemT&)> elem2str) {
+template <typename ContainerT, typename ElemT>
+std::string Container2Str(const ContainerT &container,
+                          std::function<std::string(const ElemT &)> elem2str) {
   std::string ret;
   bool is_first = true;
-  for (const ElemT& elem : container) {
+  for (const ElemT &elem : container) {
     if (is_first) {
       is_first = false;
     } else {
@@ -58,69 +60,86 @@ std::string Container2Str(const ContainerT& container,
   return ret;
 }
 
-void VerifyAMPList(const AMPList& amp_list) {
-  for (const auto& op_type : amp_list) {
-    CHECK(user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type) != nullptr)
-        << "Cannot find " << op_type << " of AutoMixedPrecision list in OpRegistry.";
+void VerifyAMPList(const AMPList &amp_list) {
+  for (const auto &op_type : amp_list) {
+    CHECK(user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type) !=
+          nullptr)
+        << "Cannot find " << op_type
+        << " of AutoMixedPrecision list in OpRegistry.";
   }
 }
 
 using OpArg = std::pair<std::string, int32_t>;
 using NoCastRegistry = std::multimap<std::string, OpArg>;
 
-NoCastRegistry* GetNoCastRegistry() {
+NoCastRegistry *GetNoCastRegistry() {
   static NoCastRegistry s_registry;
   return &s_registry;
 }
 
-bool FindInNoCastRegisry(const std::string& op_type, const OpArg& op_arg) {
+bool FindInNoCastRegisry(const std::string &op_type, const OpArg &op_arg) {
   auto range = GetNoCastRegistry()->equal_range(op_type);
   for (auto it = range.first; it != range.second; ++it) {
-    if (it->second == op_arg) { return true; }
+    if (it->second == op_arg) {
+      return true;
+    }
   }
   return false;
 }
 
-void DfsTopoGraphTraversal(const OpGraph& graph, bool reversed,
-                           std::function<bool(OpNode*)> IsCurNodeStartNode,
-                           std::function<bool(OpNode*)> IsCurNodeSatisfied,
-                           std::function<bool(OpNode*)> IsFatherNodeSatisfied,
-                           std::function<void(OpNode*)> NodeHandler) {
+void DfsTopoGraphTraversal(const OpGraph &graph, bool reversed,
+                           std::function<bool(OpNode *)> IsCurNodeStartNode,
+                           std::function<bool(OpNode *)> IsCurNodeSatisfied,
+                           std::function<bool(OpNode *)> IsFatherNodeSatisfied,
+                           std::function<void(OpNode *)> NodeHandler) {
   auto start_nodes = reversed ? graph.sink_nodes() : graph.source_nodes();
-  std::function<void(OpNode*, std::function<void(OpNode*)>)> NodeOnInEdge =
+  std::function<void(OpNode *, std::function<void(OpNode *)>)> NodeOnInEdge =
       reversed ? &OpNode::ForEachNodeOnOutEdge : &OpNode::ForEachNodeOnInEdge;
-  std::function<void(OpNode*, std::function<void(OpNode*)>)> NodeOnOutEdge =
+  std::function<void(OpNode *, std::function<void(OpNode *)>)> NodeOnOutEdge =
       reversed ? &OpNode::ForEachNodeOnInEdge : &OpNode::ForEachNodeOnOutEdge;
-  graph.DfsTopoForEachNode(start_nodes, NodeOnInEdge, NodeOnOutEdge, [&](OpNode* node) {
-    if (IsCurNodeStartNode(node)) {
-      NodeHandler(node);
-      return;
-    }
-    if (IsCurNodeSatisfied(node)) {
-      bool is_one_father_of_node_satisfied = false;
-      NodeOnInEdge(node, [&](OpNode* father_node) {
-        if (is_one_father_of_node_satisfied) { return; }
-        if (IsFatherNodeSatisfied(father_node)) { is_one_father_of_node_satisfied = true; }
-      });
-      if (is_one_father_of_node_satisfied) { NodeHandler(node); }
-    }
-  });
+  graph.DfsTopoForEachNode(start_nodes, NodeOnInEdge, NodeOnOutEdge,
+                           [&](OpNode *node) {
+                             if (IsCurNodeStartNode(node)) {
+                               NodeHandler(node);
+                               return;
+                             }
+                             if (IsCurNodeSatisfied(node)) {
+                               bool is_one_father_of_node_satisfied = false;
+                               NodeOnInEdge(node, [&](OpNode *father_node) {
+                                 if (is_one_father_of_node_satisfied) {
+                                   return;
+                                 }
+                                 if (IsFatherNodeSatisfied(father_node)) {
+                                   is_one_father_of_node_satisfied = true;
+                                 }
+                               });
+                               if (is_one_father_of_node_satisfied) {
+                                 NodeHandler(node);
+                               }
+                             }
+                           });
 }
 
-std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph& op_graph) {
-  auto allowed_set = std::make_shared<HashSet<OpNode*>>();
-  op_graph.ForEachNode([&](OpNode* node) {
-    if (node->parallel_desc().device_type() != DeviceType::kGPU) { return; }
-    for (const std::string& obn : node->op().output_bns()) {
+std::function<bool(OpNode *)>
+MakePredicatorIsAllowedToRunWithHalf(const OpGraph &op_graph) {
+  auto allowed_set = std::make_shared<HashSet<OpNode *>>();
+  op_graph.ForEachNode([&](OpNode *node) {
+    if (node->parallel_desc().device_type() != DeviceType::kGPU) {
+      return;
+    }
+    for (const std::string &obn : node->op().output_bns()) {
       LogicalBlobId lbi = node->op().BnInOp2Lbi(obn);
-      // TODO(niuchong): this isn't right for fw-bw-opgraph, but right for fw-opgraph
+      // TODO(niuchong): this isn't right for fw-bw-opgraph, but right for
+      // fw-opgraph
       if (CHECK_JUST(node->BatchAxis4Lbi(lbi))->has_value()) {
         INSERT_CHECK(allowed_set->insert(node));
         return;
       }
     }
   });
-  return [allowed_set](OpNode* node) -> bool { return IsKeyFound(*allowed_set, node); };
+  return [allowed_set](OpNode *node) -> bool {
+    return IsKeyFound(*allowed_set, node);
+  };
 }
 
 std::string ReplaceSlashToDash4Lbn(std::string lbn) {
@@ -128,33 +147,36 @@ std::string ReplaceSlashToDash4Lbn(std::string lbn) {
   return lbn;
 }
 
-void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
-                      JobBuilder* job_builder) {
-  HashSet<OpEdge*> white_set_edges;
+void InsertCastOpImpl(bool f2h, const OpGraph &op_graph,
+                      const HashSet<OpNode *> &white_set,
+                      JobBuilder *job_builder) {
+  HashSet<OpEdge *> white_set_edges;
   {
-    std::function<const std::unordered_set<OpEdge*>&(OpNode*)> Node2Edges =
+    std::function<const std::unordered_set<OpEdge *> &(OpNode *)> Node2Edges =
         f2h ? &OpNode::in_edges : &OpNode::out_edges;
-    std::function<OpNode*(OpEdge*)> OppositeNode = f2h ? &OpEdge::src_node : &OpEdge::dst_node;
-    op_graph.ForEachNode([&](OpNode* node) {
+    std::function<OpNode *(OpEdge *)> OppositeNode =
+        f2h ? &OpEdge::src_node : &OpEdge::dst_node;
+    op_graph.ForEachNode([&](OpNode *node) {
       if (IsKeyFound(white_set, node)) {
-        for (OpEdge* edge : Node2Edges(node)) {
+        for (OpEdge *edge : Node2Edges(node)) {
           if (!IsKeyFound(white_set, OppositeNode(edge))) {
             INSERT_CHECK(white_set_edges.insert(edge));
           }
         }
       }
     });
-    auto EdgeName4Edge = [](OpEdge* const& edge) {
-      return std::string("edge of\t") + edge->src_node()->op().op_name() + "\tto\t"
-             + edge->dst_node()->op().op_name();
+    auto EdgeName4Edge = [](OpEdge *const &edge) {
+      return std::string("edge of\t") + edge->src_node()->op().op_name() +
+             "\tto\t" + edge->dst_node()->op().op_name();
     };
     VLOG(3) << "white_set_edges for f2h value: " << f2h << " is "
-            << Container2Str<HashSet<OpEdge*>, OpEdge*>(white_set_edges, EdgeName4Edge);
+            << Container2Str<HashSet<OpEdge *>, OpEdge *>(white_set_edges,
+                                                          EdgeName4Edge);
   }
 
-  HashMap<std::string, std::vector<OpEdge*>> edges_group_by_lbn;
+  HashMap<std::string, std::vector<OpEdge *>> edges_group_by_lbn;
   {
-    for (OpEdge* edge : white_set_edges) {
+    for (OpEdge *edge : white_set_edges) {
       CHECK_EQ(1, edge->lbis().size());
       std::string lbn = GenLogicalBlobName(edge->lbis().front());
       edges_group_by_lbn[lbn].push_back(edge);
@@ -162,13 +184,14 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
   }
 
   HashMap<std::string, OperatorConf> dst_op_name2dst_op_confs;
-  for (auto& pair : edges_group_by_lbn) {
-    const std::string& lbn = pair.first;
-    OpNode* src_node = pair.second.front()->src_node();
+  for (auto &pair : edges_group_by_lbn) {
+    const std::string &lbn = pair.first;
+    OpNode *src_node = pair.second.front()->src_node();
 
     std::string cast_suffix = f2h ? "-cast_f2h" : "-cast_h2f";
     DataType cast_data_type = f2h ? DataType::kFloat16 : DataType::kFloat;
-    auto cast_op = user_op::UserOpConfWrapperBuilder(ReplaceSlashToDash4Lbn(lbn) + cast_suffix)
+    auto cast_op = user_op::UserOpConfWrapperBuilder(
+                       ReplaceSlashToDash4Lbn(lbn) + cast_suffix)
                        .Op("cast")
                        .Input("in", lbn)
                        .Output("out")
@@ -176,32 +199,36 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
                        .Build();
 
     bool cast_is_consumed = false;
-    for (OpEdge* edge : pair.second) {
+    for (OpEdge *edge : pair.second) {
       CHECK(src_node == edge->src_node());
-      OpNode* dst_node = edge->dst_node();
+      OpNode *dst_node = edge->dst_node();
       LogicalBlobId cur_lbi = edge->lbis().front();
       CHECK_EQ(lbn, GenLogicalBlobName(cur_lbi));
       CHECK_EQ(1, edge->lbi2ibns().at(cur_lbi).size());
-      const std::string& dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
+      const std::string &dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
 
       if (dst_node->op().op_conf().has_user_conf()) {
-        const std::string& op_type = dst_node->op().op_conf().user_conf().op_type_name();
-        const auto& op_arg = GenUnRepeatedBn(dst_ibn);
-        if (FindInNoCastRegisry(op_type, op_arg)) { continue; }
+        const std::string &op_type =
+            dst_node->op().op_conf().user_conf().op_type_name();
+        const auto &op_arg = GenUnRepeatedBn(dst_ibn);
+        if (FindInNoCastRegisry(op_type, op_arg)) {
+          continue;
+        }
       }
 
       cast_is_consumed = true;
 
-      const std::string& dst_op_name = dst_node->op().op_name();
+      const std::string &dst_op_name = dst_node->op().op_name();
       if (!IsKeyFound(dst_op_name2dst_op_confs, dst_op_name)) {
-        INSERT_CHECK(
-            dst_op_name2dst_op_confs.insert(std::make_pair(dst_op_name, dst_node->op().op_conf())));
+        INSERT_CHECK(dst_op_name2dst_op_confs.insert(
+            std::make_pair(dst_op_name, dst_node->op().op_conf())));
       }
-      OperatorConf& dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
-      PbMessage* dst_op_type_conf =
+      OperatorConf &dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
+      PbMessage *dst_op_type_conf =
           MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
       std::string new_lbn = cast_op.op_name() + "/out_0";
-      ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
+      ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn,
+                                        new_lbn);
     }
 
     if (cast_is_consumed) {
@@ -212,13 +239,16 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
   }
 
   std::vector<OperatorConf> dst_op_confs;
-  for (const auto& pair : dst_op_name2dst_op_confs) { dst_op_confs.push_back(pair.second); }
-  // make sure an op_conf can only be udpated once, cuz later update will override before
+  for (const auto &pair : dst_op_name2dst_op_confs) {
+    dst_op_confs.push_back(pair.second);
+  }
+  // make sure an op_conf can only be udpated once, cuz later update will
+  // override before
   job_builder->MutOpsOnlyOnce(dst_op_confs);
 }
 
 class AutoMixedPrecision final : public OpGraphPass {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(AutoMixedPrecision);
   AutoMixedPrecision()
       : white_list_(AutoMixedPrecisionLists::WhiteList()),
@@ -227,28 +257,35 @@ class AutoMixedPrecision final : public OpGraphPass {
         clear_list_(AutoMixedPrecisionLists::ClearList()) {}
   ~AutoMixedPrecision() = default;
 
-  bool IsEnabled() const override { return GlobalJobDesc().enable_auto_mixed_precision(); }
+  bool IsEnabled() const override {
+    return GlobalJobDesc().enable_auto_mixed_precision();
+  }
 
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph &op_graph,
+                    JobBuilder *job_builder) const override;
 
- private:
-  void FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const;
-  void FillWhiteSet(const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
-                    const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) const;
-  void PropagateWhiteThroughClearNodes(const OpGraph& op_graph,
-                                       std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
-                                       const HashSet<OpNode*>& black_set,
-                                       HashSet<OpNode*>* white_set) const;
-  void InsertCastOp(const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
-                    JobBuilder* job_builder) const;
+private:
+  void FillBlackSet(const OpGraph &op_graph,
+                    HashSet<OpNode *> *black_set) const;
+  void FillWhiteSet(const OpGraph &op_graph,
+                    std::function<bool(OpNode *)> IsAllowedToRunWithHalf,
+                    const HashSet<OpNode *> &black_set,
+                    HashSet<OpNode *> *white_set) const;
+  void PropagateWhiteThroughClearNodes(
+      const OpGraph &op_graph,
+      std::function<bool(OpNode *)> IsAllowedToRunWithHalf,
+      const HashSet<OpNode *> &black_set, HashSet<OpNode *> *white_set) const;
+  void InsertCastOp(const OpGraph &op_graph, const HashSet<OpNode *> &white_set,
+                    JobBuilder *job_builder) const;
 
-  const AMPList& white_list_;
-  const AMPList& black_list_;
-  const AMPList& gray_list_;
-  const AMPList& clear_list_;
+  const AMPList &white_list_;
+  const AMPList &black_list_;
+  const AMPList &gray_list_;
+  const AMPList &clear_list_;
 };
 
-Maybe<void> AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> AutoMixedPrecision::Apply(const OpGraph &op_graph,
+                                      JobBuilder *job_builder) const {
   CHECK_GE(CUDA_VERSION, 10000);
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
 
@@ -257,38 +294,42 @@ Maybe<void> AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_b
   VerifyAMPList(gray_list_);
   VerifyAMPList(clear_list_);
 
-  std::function<std::string(OpNode* const&)> OpName4Node = [](OpNode* const& node) {
-    return node->op().op_name();
-  };
-  HashSet<OpNode*> black_set;
-  HashSet<OpNode*> white_set;
+  std::function<std::string(OpNode * const &)> OpName4Node =
+      [](OpNode *const &node) { return node->op().op_name(); };
+  HashSet<OpNode *> black_set;
+  HashSet<OpNode *> white_set;
 
   FillBlackSet(op_graph, &black_set);
   VLOG(1) << "BlackSet include: "
-          << Container2Str<HashSet<OpNode*>, OpNode*>(black_set, OpName4Node);
+          << Container2Str<HashSet<OpNode *>, OpNode *>(black_set, OpName4Node);
 
   auto IsAllowedToRunWithHalf = MakePredicatorIsAllowedToRunWithHalf(op_graph);
   FillWhiteSet(op_graph, IsAllowedToRunWithHalf, black_set, &white_set);
   VLOG(2) << "WhiteSet Before Propagate include: "
-          << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
-  PropagateWhiteThroughClearNodes(op_graph, IsAllowedToRunWithHalf, black_set, &white_set);
+          << Container2Str<HashSet<OpNode *>, OpNode *>(white_set, OpName4Node);
+  PropagateWhiteThroughClearNodes(op_graph, IsAllowedToRunWithHalf, black_set,
+                                  &white_set);
   VLOG(1) << "WhiteSet include: "
-          << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
+          << Container2Str<HashSet<OpNode *>, OpNode *>(white_set, OpName4Node);
 
   InsertCastOp(op_graph, white_set, job_builder);
   return Maybe<void>::Ok();
 }
 
-void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const {
-  HashSet<OpNode*> upstream_or_part_of_black_and_gray;
+void AutoMixedPrecision::FillBlackSet(const OpGraph &op_graph,
+                                      HashSet<OpNode *> *black_set) const {
+  HashSet<OpNode *> upstream_or_part_of_black_and_gray;
   DfsTopoGraphTraversal(
       op_graph, true,
-      [&](OpNode* node) {
-        return IsNodeInList(black_list_, node) || IsNodeInList(gray_list_, node);
+      [&](OpNode *node) {
+        return IsNodeInList(black_list_, node) ||
+               IsNodeInList(gray_list_, node);
       },
-      [&](OpNode* node) { return IsNodeInList(clear_list_, node); },
-      [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_black_and_gray, node); },
-      [&](OpNode* node) {
+      [&](OpNode *node) { return IsNodeInList(clear_list_, node); },
+      [&](OpNode *node) {
+        return IsKeyFound(upstream_or_part_of_black_and_gray, node);
+      },
+      [&](OpNode *node) {
         INSERT_CHECK(upstream_or_part_of_black_and_gray.insert(node));
         VLOG(3) << "FillBlackSet(): Insert " << node->op().op_name()
                 << " to upstream_or_part_of_black_and_gray";
@@ -296,90 +337,100 @@ void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>*
 
   // propagate black through upstream_or_part_of_black_and_gray
   DfsTopoGraphTraversal(
-      op_graph, false, [&](OpNode* node) { return IsNodeInList(black_list_, node); },
-      [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_black_and_gray, node); },
-      [&](OpNode* node) { return IsKeyFound(*black_set, node); },
-      [&](OpNode* node) {
+      op_graph, false,
+      [&](OpNode *node) { return IsNodeInList(black_list_, node); },
+      [&](OpNode *node) {
+        return IsKeyFound(upstream_or_part_of_black_and_gray, node);
+      },
+      [&](OpNode *node) { return IsKeyFound(*black_set, node); },
+      [&](OpNode *node) {
         INSERT_CHECK(black_set->insert(node));
-        VLOG(2) << "FillBlackSet(): Insert " << node->op().op_name() << " to black_set";
+        VLOG(2) << "FillBlackSet(): Insert " << node->op().op_name()
+                << " to black_set";
       });
 }
 
-void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
-                                      std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
-                                      const HashSet<OpNode*>& black_set,
-                                      HashSet<OpNode*>* white_set) const {
-  HashSet<OpNode*> upstream_or_part_of_white;
-  auto IsWhiteAndAllowedToRunHalf = [&](OpNode* node) {
+void AutoMixedPrecision::FillWhiteSet(
+    const OpGraph &op_graph,
+    std::function<bool(OpNode *)> IsAllowedToRunWithHalf,
+    const HashSet<OpNode *> &black_set, HashSet<OpNode *> *white_set) const {
+  HashSet<OpNode *> upstream_or_part_of_white;
+  auto IsWhiteAndAllowedToRunHalf = [&](OpNode *node) {
     return IsAllowedToRunWithHalf(node) && IsNodeInList(white_list_, node);
   };
   DfsTopoGraphTraversal(
       op_graph, true, IsWhiteAndAllowedToRunHalf,
-      [&](OpNode* node) {
-        return !IsKeyFound(black_set, node) && IsAllowedToRunWithHalf(node)
-               && (IsNodeInList(gray_list_, node) || IsNodeInList(clear_list_, node));
+      [&](OpNode *node) {
+        return !IsKeyFound(black_set, node) && IsAllowedToRunWithHalf(node) &&
+               (IsNodeInList(gray_list_, node) ||
+                IsNodeInList(clear_list_, node));
       },
-      [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
-      [&](OpNode* node) {
+      [&](OpNode *node) { return IsKeyFound(upstream_or_part_of_white, node); },
+      [&](OpNode *node) {
         INSERT_CHECK(upstream_or_part_of_white.insert(node));
         VLOG(3) << "FillWhiteSet(): Insert " << node->op().op_name()
                 << " to upstream_or_part_of_white";
       });
 
-  DfsTopoGraphTraversal(op_graph, false, IsWhiteAndAllowedToRunHalf,
-                        [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
-                        [&](OpNode* node) { return IsKeyFound(*white_set, node); },
-                        [&](OpNode* node) {
-                          INSERT_CHECK(white_set->insert(node));
-                          VLOG(2) << "FillWhiteSet(): Insert " << node->op().op_name()
-                                  << " to white_set";
-                        });
+  DfsTopoGraphTraversal(
+      op_graph, false, IsWhiteAndAllowedToRunHalf,
+      [&](OpNode *node) { return IsKeyFound(upstream_or_part_of_white, node); },
+      [&](OpNode *node) { return IsKeyFound(*white_set, node); },
+      [&](OpNode *node) {
+        INSERT_CHECK(white_set->insert(node));
+        VLOG(2) << "FillWhiteSet(): Insert " << node->op().op_name()
+                << " to white_set";
+      });
 }
 
 void AutoMixedPrecision::PropagateWhiteThroughClearNodes(
-    const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
-    const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) const {
+    const OpGraph &op_graph,
+    std::function<bool(OpNode *)> IsAllowedToRunWithHalf,
+    const HashSet<OpNode *> &black_set, HashSet<OpNode *> *white_set) const {
   auto PropagateIntoOneDirection = [&](bool is_downward) {
-    DfsTopoGraphTraversal(op_graph, !is_downward, [&](OpNode* node) { return false; },
-                          [&](OpNode* node) {
-                            return !IsKeyFound(*white_set, node) && !IsKeyFound(black_set, node)
-                                   && IsNodeInList(clear_list_, node)
-                                   && IsAllowedToRunWithHalf(node);
-                          },
-                          [&](OpNode* node) { return IsKeyFound(*white_set, node); },
-                          [&](OpNode* node) {
-                            INSERT_CHECK(white_set->insert(node));
-                            VLOG(2) << "PropagateWhiteThroughNonListNodes(): Insert "
-                                    << node->op().op_name() << " to white_set";
-                          });
+    DfsTopoGraphTraversal(
+        op_graph, !is_downward, [&](OpNode *node) { return false; },
+        [&](OpNode *node) {
+          return !IsKeyFound(*white_set, node) &&
+                 !IsKeyFound(black_set, node) &&
+                 IsNodeInList(clear_list_, node) &&
+                 IsAllowedToRunWithHalf(node);
+        },
+        [&](OpNode *node) { return IsKeyFound(*white_set, node); },
+        [&](OpNode *node) {
+          INSERT_CHECK(white_set->insert(node));
+          VLOG(2) << "PropagateWhiteThroughNonListNodes(): Insert "
+                  << node->op().op_name() << " to white_set";
+        });
   };
   PropagateIntoOneDirection(true);
   PropagateIntoOneDirection(false);
 }
 
-void AutoMixedPrecision::InsertCastOp(const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
-                                      JobBuilder* job_builder) const {
+void AutoMixedPrecision::InsertCastOp(const OpGraph &op_graph,
+                                      const HashSet<OpNode *> &white_set,
+                                      JobBuilder *job_builder) const {
   InsertCastOpImpl(true, op_graph, white_set, job_builder);
   InsertCastOpImpl(false, op_graph, white_set, job_builder);
 }
 
 REGISTER_FUNCTION_PASS("AutoMixedPrecision", AutoMixedPrecision);
 
-}  // namespace
+} // namespace
 
 namespace {
 
 struct NoCastRegistrar final {
-  NoCastRegistrar(const std::string& op_type, OpArg&& op_arg) {
-    auto* registry = GetNoCastRegistry();
+  NoCastRegistrar(const std::string &op_type, OpArg &&op_arg) {
+    auto *registry = GetNoCastRegistry();
     registry->emplace(std::make_pair(op_type, std::move(op_arg)));
   }
   ~NoCastRegistrar() = default;
 };
 
-#define REGISTER_NO_CAST_REGISTRY(op_type, input_arg_name, idx)       \
-  static NoCastRegistrar OF_PP_CAT(g_registrar, __COUNTER__)(op_type, \
-                                                             std::make_pair(input_arg_name, idx));
+#define REGISTER_NO_CAST_REGISTRY(op_type, input_arg_name, idx)                \
+  static NoCastRegistrar OF_PP_CAT(g_registrar, __COUNTER__)(                  \
+      op_type, std::make_pair(input_arg_name, idx));
 
 // For Example:
 // REGISTER_NO_CAST_REGISTRY("matmul", "b", 0);
@@ -394,8 +445,8 @@ REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "moving_variance", 0)
 REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "gamma", 0)
 REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "beta", 0)
 
-}  // namespace
+} // namespace
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // WITH_CUDA
+#endif // WITH_CUDA

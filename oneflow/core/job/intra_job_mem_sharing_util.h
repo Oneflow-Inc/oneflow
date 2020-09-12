@@ -16,15 +16,17 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_IN_JOB_MEM_SHARING_UTIL_H_
 #define ONEFLOW_CORE_JOB_IN_JOB_MEM_SHARING_UTIL_H_
 
-#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/graph/plan_task_graph.h"
+#include "oneflow/core/job/plan.pb.h"
 
 namespace oneflow {
 
 struct IntraJobMemSharingUtil {
-  static void InferMemBlockId4MemReusedRegst(Plan* plan, const PlanTaskGraph& plan_task_graph);
+  static void
+  InferMemBlockId4MemReusedRegst(Plan *plan,
+                                 const PlanTaskGraph &plan_task_graph);
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_IN_JOB_MEM_SHARING_UTIL_H_
+#endif // ONEFLOW_CORE_JOB_IN_JOB_MEM_SHARING_UTIL_H_

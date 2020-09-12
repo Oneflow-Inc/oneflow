@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/job/global_for.h"
-#include "oneflow/core/thread/cpu_thread.h"
-#include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/thread/cpu_thread.h"
+#include "oneflow/core/thread/gpu_thread.h"
 
 namespace oneflow {
 
@@ -34,36 +34,42 @@ ThreadMgr::~ThreadMgr() {
   }
 }
 
-Thread* ThreadMgr::GetThrd(int64_t thrd_id) { return threads_.at(thrd_id); }
+Thread *ThreadMgr::GetThrd(int64_t thrd_id) { return threads_.at(thrd_id); }
 
-ThreadMgr::ThreadMgr(const Plan& plan) {
+ThreadMgr::ThreadMgr(const Plan &plan) {
   int64_t thrd_id = 0;
 
 #ifdef WITH_CUDA
   FOR_RANGE(int64_t, i, 0, GetCudaWorkTypeSize()) {
-    FOR_RANGE(int64_t, dev_phy_id, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
+    FOR_RANGE(int64_t, dev_phy_id, 0,
+              (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
       threads_.push_back(new GpuThread(thrd_id++, dev_phy_id));
     }
   }
 #endif
-  FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum())) {
+  FOR_RANGE(int64_t, i, 0,
+            (Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum())) {
     threads_.push_back(new CpuThread(thrd_id++));
   }
-  threads_.push_back(new CpuThread(thrd_id++));  // comm_net
+  threads_.push_back(new CpuThread(thrd_id++)); // comm_net
   CreatePersistenceThrd(plan, thrd_id);
 }
 
-void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {
+void ThreadMgr::CreatePersistenceThrd(const Plan &plan, int64_t thrd_id) {
   const int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
 
   int64_t max_thrd_id = 0;
-  for (const TaskProto& task : plan.task()) {
+  for (const TaskProto &task : plan.task()) {
     if (task.machine_id() == this_machine_id) {
-      if (max_thrd_id < task.thrd_id()) { max_thrd_id = task.thrd_id(); }
+      if (max_thrd_id < task.thrd_id()) {
+        max_thrd_id = task.thrd_id();
+      }
     }
   }
 
-  for (int64_t i = thrd_id; i <= max_thrd_id; i++) { threads_.push_back(new CpuThread(i)); }
+  for (int64_t i = thrd_id; i <= max_thrd_id; i++) {
+    threads_.push_back(new CpuThread(i));
+  }
 }
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
@@ -77,11 +83,13 @@ void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
   BlockingCounter bc(thread_num);
   FOR_RANGE(size_t, range_id, 0, thread_num) {
     Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, Callback] {
-      FOR_RANGE(size_t, i, bs.At(range_id).begin(), bs.At(range_id).end()) { Callback(i); }
+      FOR_RANGE(size_t, i, bs.At(range_id).begin(), bs.At(range_id).end()) {
+        Callback(i);
+      }
       bc.Decrease();
     });
   }
   bc.WaitUntilCntEqualZero();
 }
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_STREAM_RUNTIME_DESC_MSG_H_
 #define ONEFLOW_CORE_VM_STREAM_RUNTIME_DESC_MSG_H_
 
-#include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
+#include "oneflow/core/vm/stream_desc.msg.h"
 
 namespace oneflow {
 namespace vm {
@@ -41,7 +41,7 @@ OBJECT_MSG_BEGIN(StreamRtDesc);
 OBJECT_MSG_END(StreamRtDesc);
 // clang-format on
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_STREAM_RUNTIME_DESC_MSG_H_
+#endif // ONEFLOW_CORE_VM_STREAM_RUNTIME_DESC_MSG_H_

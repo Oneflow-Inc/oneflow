@@ -26,13 +26,14 @@ limitations under the License.
 namespace oneflow {
 
 class EagerNcclCommMgr final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(EagerNcclCommMgr);
   ~EagerNcclCommMgr();
 
-  ncclComm_t GetCommForDevice(const std::set<std::pair<int64_t, int64_t>>& device_set);
+  ncclComm_t
+  GetCommForDevice(const std::set<std::pair<int64_t, int64_t>> &device_set);
 
- private:
+private:
   friend class Global<EagerNcclCommMgr>;
   EagerNcclCommMgr() = default;
 
@@ -41,8 +42,8 @@ class EagerNcclCommMgr final {
   std::mutex mutex_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // WITH_CUDA
+#endif // WITH_CUDA
 
-#endif  // ONEFLOW_CORE_JOB_EAGER_NCCL_COMM_MANAGER_H_
+#endif // ONEFLOW_CORE_JOB_EAGER_NCCL_COMM_MANAGER_H_

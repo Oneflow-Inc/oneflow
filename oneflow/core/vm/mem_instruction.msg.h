@@ -35,7 +35,7 @@ FLAT_MSG_VIEW_BEGIN(FreeInstruction);
 FLAT_MSG_VIEW_END(FreeInstruction);
 // clang-format on
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_MEM_INSTRUCTION_H_
+#endif // ONEFLOW_CORE_VM_MEM_INSTRUCTION_H_

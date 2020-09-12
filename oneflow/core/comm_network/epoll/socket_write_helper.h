@@ -24,18 +24,18 @@ limitations under the License.
 namespace oneflow {
 
 class SocketWriteHelper final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(SocketWriteHelper);
   SocketWriteHelper() = delete;
   ~SocketWriteHelper();
 
-  SocketWriteHelper(int sockfd, IOEventPoller* poller);
+  SocketWriteHelper(int sockfd, IOEventPoller *poller);
 
-  void AsyncWrite(const SocketMsg& msg);
+  void AsyncWrite(const SocketMsg &msg);
 
   void NotifyMeSocketWriteable();
 
- private:
+private:
   void SendQueueNotEmptyEvent();
   void ProcessQueueNotEmptyEvent();
 
@@ -55,19 +55,19 @@ class SocketWriteHelper final {
   int sockfd_;
   int queue_not_empty_fd_;
 
-  std::queue<SocketMsg>* cur_msg_queue_;
+  std::queue<SocketMsg> *cur_msg_queue_;
 
   std::mutex pending_msg_queue_mtx_;
-  std::queue<SocketMsg>* pending_msg_queue_;
+  std::queue<SocketMsg> *pending_msg_queue_;
 
   SocketMsg cur_msg_;
   bool (SocketWriteHelper::*cur_write_handle_)();
-  const char* write_ptr_;
+  const char *write_ptr_;
   size_t write_size_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif // PLATFORM_POSIX
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_WRITE_HELPER_H_
+#endif // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_WRITE_HELPER_H_

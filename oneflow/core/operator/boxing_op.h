@@ -21,38 +21,43 @@ limitations under the License.
 namespace oneflow {
 
 class BoxingOp final : public Operator {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingOp);
   BoxingOp() = default;
   ~BoxingOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
+  const PbMessage &GetCustomizedConf() const override;
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferBlobDescs(
+      std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+      const ParallelContext *parallel_ctx) const override;
 
- protected:
-  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx,
-                            KernelConf* kernel_conf) const override;
+protected:
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+      const ParallelContext *parallel_ctx,
+      KernelConf *kernel_conf) const override;
 
- private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
+private:
+  Maybe<void> InferBatchAxis(std::function<OptInt64 *(const std::string &)>
+                                 BatchAxis4BnInOp) const override;
   Maybe<void> InferSbpSignature(
-      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const;
-  LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
-  LogicalBlobId lbi4obn(const std::string& output_bn) const override;
-  Maybe<void> InferTmpBlobDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               DimVector* data_tmp_vec_ptr) const;
+      SbpSignature *sbp_signature, const SbpSignature &sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature &)> &CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint *>(const std::string &)>
+          SbpInferHint4Ibn,
+      const ParallelDesc &parallel_desc) const;
+  LogicalBlobId lbi4ibn(const std::string &input_bn) const override;
+  LogicalBlobId lbi4obn(const std::string &output_bn) const override;
+  Maybe<void> InferTmpBlobDesc(
+      std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+      DimVector *data_tmp_vec_ptr) const;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
-  void EmplaceLbi2Obn(const LogicalBlobId& lbi, const std::string& obn) override {}
+  void EmplaceLbi2Obn(const LogicalBlobId &lbi,
+                      const std::string &obn) override {}
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_BOXING_OP_H_
+#endif // ONEFLOW_CORE_OPERATOR_BOXING_OP_H_

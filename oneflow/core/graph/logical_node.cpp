@@ -14,24 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/logical_node.h"
-#include "oneflow/core/graph/normal_forward_compute_task_node.h"
-#include "oneflow/core/graph/optimizer_compute_task_node.h"
-#include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/distribute_concat_compute_task_node.h"
 #include "oneflow/core/graph/distribute_split_compute_task_node.h"
+#include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/optimizer_compute_task_node.h"
+#include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
 namespace {
 
-const LogicalEdge* GetConnectedEdge(const LogicalNode* src_node, const LogicalNode* dst_node) {
-  LogicalEdge* connect_edge = nullptr;
-  for (LogicalEdge* edge : src_node->out_edges()) {
+const LogicalEdge *GetConnectedEdge(const LogicalNode *src_node,
+                                    const LogicalNode *dst_node) {
+  LogicalEdge *connect_edge = nullptr;
+  for (LogicalEdge *edge : src_node->out_edges()) {
     if (edge->dst_node() == dst_node) {
       CHECK(connect_edge == nullptr);
       connect_edge = edge;
@@ -40,72 +41,84 @@ const LogicalEdge* GetConnectedEdge(const LogicalNode* src_node, const LogicalNo
   return connect_edge;
 }
 
-static bool IsConnectedLbisAllSameSbpParallel(const LogicalNode* src_node,
-                                              const LogicalNode* dst_node) {
-  if (src_node->parallel_desc()->parallel_num() != dst_node->parallel_desc()->parallel_num()) {
+static bool IsConnectedLbisAllSameSbpParallel(const LogicalNode *src_node,
+                                              const LogicalNode *dst_node) {
+  if (src_node->parallel_desc()->parallel_num() !=
+      dst_node->parallel_desc()->parallel_num()) {
     return false;
   }
-  const LogicalEdge* connect_edge = GetConnectedEdge(src_node, dst_node);
+  const LogicalEdge *connect_edge = GetConnectedEdge(src_node, dst_node);
   CHECK_NOTNULL(connect_edge);
   CHECK_GT(connect_edge->lbis().size(), 0);
-  const std::string& src_op_name = src_node->SoleOp()->op_name();
-  const std::string& dst_op_name = dst_node->SoleOp()->op_name();
+  const std::string &src_op_name = src_node->SoleOp()->op_name();
+  const std::string &dst_op_name = dst_node->SoleOp()->op_name();
   HashSet<bool> predicators;
-  for (const LogicalBlobId& lbi : connect_edge->lbis()) {
-    const auto& src_sbp = Global<OpGraph>::Get()->GetSbpParallel(src_op_name, lbi);
-    const auto& dst_sbp = Global<OpGraph>::Get()->GetSbpParallel(dst_op_name, lbi);
+  for (const LogicalBlobId &lbi : connect_edge->lbis()) {
+    const auto &src_sbp =
+        Global<OpGraph>::Get()->GetSbpParallel(src_op_name, lbi);
+    const auto &dst_sbp =
+        Global<OpGraph>::Get()->GetSbpParallel(dst_op_name, lbi);
     predicators.insert(src_sbp == dst_sbp);
   }
   CHECK_EQ(predicators.size(), 1);
   return *predicators.begin();
 }
 
-bool HasSoleIdentityOp(const LogicalNode* logical_node) {
-  const auto& op_conf = logical_node->SoleOp()->op_conf();
-  return logical_node->op_vec().size() == 1 && op_conf.has_tuple_identity_conf();
+bool HasSoleIdentityOp(const LogicalNode *logical_node) {
+  const auto &op_conf = logical_node->SoleOp()->op_conf();
+  return logical_node->op_vec().size() == 1 &&
+         op_conf.has_tuple_identity_conf();
 }
 
-std::string ConcatTypeName(const LogicalNode* lhs, const LogicalNode* rhs) {
+std::string ConcatTypeName(const LogicalNode *lhs, const LogicalNode *rhs) {
   return lhs->TypeName() + rhs->TypeName();
 }
 
-using FuncForFindBldSubTskGphMthd =
-    std::function<BldSubTskGphMthd(const LogicalNode* src, const LogicalNode* dst)>;
+using FuncForFindBldSubTskGphMthd = std::function<BldSubTskGphMthd(
+    const LogicalNode *src, const LogicalNode *dst)>;
 
 DEFINE_STATIC_VAR(HashMap<std::string OF_COMMA FuncForFindBldSubTskGphMthd>,
                   GetFuncForFindBldSubTskGphMthd);
 
-void AddFuncForFindBldSubTskGphMthd(const std::string& k, FuncForFindBldSubTskGphMthd v) {
+void AddFuncForFindBldSubTskGphMthd(const std::string &k,
+                                    FuncForFindBldSubTskGphMthd v) {
   CHECK(GetFuncForFindBldSubTskGphMthd()->emplace(k, v).second);
 }
-void AddFuncForFindBldSubTskGphMthd(const std::string& k, std::function<BldSubTskGphMthd()> v) {
-  AddFuncForFindBldSubTskGphMthd(k, [v](const LogicalNode*, const LogicalNode*) { return v(); });
+void AddFuncForFindBldSubTskGphMthd(const std::string &k,
+                                    std::function<BldSubTskGphMthd()> v) {
+  AddFuncForFindBldSubTskGphMthd(
+      k, [v](const LogicalNode *, const LogicalNode *) { return v(); });
 }
-void AddFuncForFindBldSubTskGphMthd(const std::string& k, BldSubTskGphMthd v) {
-  AddFuncForFindBldSubTskGphMthd(k, [v](const LogicalNode*, const LogicalNode*) { return v; });
+void AddFuncForFindBldSubTskGphMthd(const std::string &k, BldSubTskGphMthd v) {
+  AddFuncForFindBldSubTskGphMthd(
+      k, [v](const LogicalNode *, const LogicalNode *) { return v; });
 }
-#define REGISTER_BLD_SUB_TSK_GPH_MTHD(k, v) COMMAND(AddFuncForFindBldSubTskGphMthd(k, v))
+#define REGISTER_BLD_SUB_TSK_GPH_MTHD(k, v)                                    \
+  COMMAND(AddFuncForFindBldSubTskGphMthd(k, v))
 
-}  // namespace
+} // namespace
 
 std::shared_ptr<Operator> LogicalNode::SoleOp() const {
   CHECK_EQ(op_vec_.size(), 1);
   return op_vec_.front();
 }
 
-std::vector<LogicalBlobId> LogicalNode::GetLbisTo(const LogicalNode* dst) const {
+std::vector<LogicalBlobId>
+LogicalNode::GetLbisTo(const LogicalNode *dst) const {
   auto it = dst2data_lbis_.find(dst);
   CHECK(it != dst2data_lbis_.end());
   return it->second;
 }
 
-void LogicalNode::SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>& lbis) {
+void LogicalNode::SetDataLbisTo(const LogicalNode *dst,
+                                const std::vector<LogicalBlobId> &lbis) {
   CHECK(dst2data_lbis_.emplace(dst, lbis).second);
 }
 
-bool LogicalNode::IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const {
-  for (const auto& pair : dst2data_lbis_) {
-    if (std::find(pair.second.begin(), pair.second.end(), lbi) != pair.second.end()) {
+bool LogicalNode::IsDataLbiOnOutEdge(const LogicalBlobId &lbi) const {
+  for (const auto &pair : dst2data_lbis_) {
+    if (std::find(pair.second.begin(), pair.second.end(), lbi) !=
+        pair.second.end()) {
       return true;
     }
   }
@@ -115,52 +128,55 @@ bool LogicalNode::IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const {
 std::string LogicalNode::VisualStr() const {
   std::stringstream ss;
   ss << TypeName();
-  for (std::shared_ptr<Operator> op : op_vec_) { ss << "\\n" << op->op_name(); }
+  for (std::shared_ptr<Operator> op : op_vec_) {
+    ss << "\\n" << op->op_name();
+  }
   return ss.str();
 }
 
 void LogicalNode::GenSortedCompTaskNodes(
-    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
-    std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
-    std::function<void(CompTaskNode*)> Handler) const {
+    std::function<int64_t(const TaskNode *)> AllocateCpuThrdIdEvenly,
+    std::vector<std::pair<int64_t, CompTaskNode *>> *nodes,
+    std::function<void(CompTaskNode *)> Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
   for (int64_t machine_id : parallel_desc_->sorted_machine_ids()) {
     for (int64_t dev_phy_id : parallel_desc_->sorted_dev_phy_ids(machine_id)) {
-      CompTaskNode* comp_task_node = NewCompTaskNode();
+      CompTaskNode *comp_task_node = NewCompTaskNode();
       comp_task_node->set_machine_id(machine_id);
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
-      const IDMgr* id_mgr = Global<IDMgr>::Get();
+      const IDMgr *id_mgr = Global<IDMgr>::Get();
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
         switch (comp_task_node->GetCudaWorkType()) {
-          case CudaWorkType::kCompute: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuComputeThrdId(dev_phy_id));
-            break;
-          }
-          case CudaWorkType::kCopyH2D: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuH2DThrdId(dev_phy_id));
-            break;
-          }
-          case CudaWorkType::kCopyD2H: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuD2HThrdId(dev_phy_id));
-            break;
-          }
-          case CudaWorkType::kNccl: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuNcclThrdId(dev_phy_id));
-            break;
-          }
-          case CudaWorkType::kMix: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
-            break;
-          }
-          case CudaWorkType::kMdUpdt: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuMdUpdtThrdId(dev_phy_id));
-            break;
-          }
-          default: UNIMPLEMENTED();
+        case CudaWorkType::kCompute: {
+          comp_task_node->set_thrd_id(id_mgr->GetGpuComputeThrdId(dev_phy_id));
+          break;
+        }
+        case CudaWorkType::kCopyH2D: {
+          comp_task_node->set_thrd_id(id_mgr->GetGpuH2DThrdId(dev_phy_id));
+          break;
+        }
+        case CudaWorkType::kCopyD2H: {
+          comp_task_node->set_thrd_id(id_mgr->GetGpuD2HThrdId(dev_phy_id));
+          break;
+        }
+        case CudaWorkType::kNccl: {
+          comp_task_node->set_thrd_id(id_mgr->GetGpuNcclThrdId(dev_phy_id));
+          break;
+        }
+        case CudaWorkType::kMix: {
+          comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
+          break;
+        }
+        case CudaWorkType::kMdUpdt: {
+          comp_task_node->set_thrd_id(id_mgr->GetGpuMdUpdtThrdId(dev_phy_id));
+          break;
+        }
+        default:
+          UNIMPLEMENTED();
         }
 #else
         UNIMPLEMENTED();
@@ -180,27 +196,32 @@ void LogicalNode::GenSortedCompTaskNodes(
   }
 }
 
-bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) const {
+bool LogicalNode::HasOpWithCondition(
+    std::function<bool(const Operator *)> cond) const {
   for (std::shared_ptr<const Operator> op : op_vec_) {
-    if (cond(op.get())) { return true; }
+    if (cond(op.get())) {
+      return true;
+    }
   }
   return false;
 }
 
-BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const LogicalNode* dst_node) {
+BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode *src_node,
+                                        const LogicalNode *dst_node) {
   std::shared_ptr<const ParallelDesc> src_pd = src_node->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst_node->parallel_desc();
   if (src_node->op_vec().size() == 1 && dst_node->op_vec().size() == 1) {
-    if (src_node->SoleOp()->op_conf().has_record_load_conf()
-        && dst_node->SoleOp()->op_conf().has_tick_conf()) {
+    if (src_node->SoleOp()->op_conf().has_record_load_conf() &&
+        dst_node->SoleOp()->op_conf().has_tick_conf()) {
       CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
     }
-    auto IsTickNode = [&](const LogicalNode* node) {
-      return IsClassRegistered<IsTickTockOpTypeCase>(node->SoleOp()->op_conf().op_type_case());
+    auto IsTickNode = [&](const LogicalNode *node) {
+      return IsClassRegistered<IsTickTockOpTypeCase>(
+          node->SoleOp()->op_conf().op_type_case());
     };
     if (IsTickNode(src_node) || IsTickNode(dst_node)) {
-      if (src_pd->parallel_num() > 1 && dst_pd->parallel_num() == 1
-          && src_node->SoleOp()->op_conf().has_partial_tick_conf()) {
+      if (src_pd->parallel_num() > 1 && dst_pd->parallel_num() == 1 &&
+          src_node->SoleOp()->op_conf().has_partial_tick_conf()) {
         CHECK(dst_node->SoleOp()->op_conf().has_sink_tick_conf());
         return &TaskGraph::BldSubTskGphByBoxing;
       } else {
@@ -226,9 +247,11 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   if (it == GetFuncForFindBldSubTskGphMthd()->end()) {
     it = GetFuncForFindBldSubTskGphMthd()->find("*" + dst_node->TypeName());
   }
-  if (it != GetFuncForFindBldSubTskGphMthd()->end()) { return it->second(src_node, dst_node); }
-  if (src_pd->parallel_num() == dst_pd->parallel_num()
-      && IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
+  if (it != GetFuncForFindBldSubTskGphMthd()->end()) {
+    return it->second(src_node, dst_node);
+  }
+  if (src_pd->parallel_num() == dst_pd->parallel_num() &&
+      IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
   return &TaskGraph::BldSubTskGphByBoxing;
@@ -246,24 +269,28 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("DistributeSplit"
                               "*",
                               &TaskGraph::BldSubTskGphByPartialOutLbiConnect);
 
-#define LOGICAL_TYPE_SEQ                                   \
-  OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)    \
-  OF_PP_MAKE_TUPLE_SEQ(DistributeConcat, kDataForwardArea) \
-  OF_PP_MAKE_TUPLE_SEQ(DistributeSplit, kDataForwardArea)  \
-  OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)    \
-  OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)  \
+#define LOGICAL_TYPE_SEQ                                                       \
+  OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)                        \
+  OF_PP_MAKE_TUPLE_SEQ(DistributeConcat, kDataForwardArea)                     \
+  OF_PP_MAKE_TUPLE_SEQ(DistributeSplit, kDataForwardArea)                      \
+  OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)                        \
+  OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)                            \
+  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)                      \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)
 
-#define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
-  std::string x##LogicalNode::TypeName() const { return #x; }                           \
-  CompTaskNode* x##LogicalNode::NewCompTaskNode() const { return new x##CompTaskNode; } \
+#define DEFINE_VIRTUAL_METHOD(x, area_type)                                    \
+  std::string x##LogicalNode::TypeName() const { return #x; }                  \
+  CompTaskNode *x##LogicalNode::NewCompTaskNode() const {                      \
+    return new x##CompTaskNode;                                                \
+  }                                                                            \
   int64_t x##LogicalNode::GetAreaId() const { return area_type; }
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, LOGICAL_TYPE_SEQ);
 
 std::string OptimizerLogicalNode::TypeName() const { return "Optimizer"; }
 
-CompTaskNode* OptimizerLogicalNode::NewCompTaskNode() const { return new OptimizerCompTaskNode; }
+CompTaskNode *OptimizerLogicalNode::NewCompTaskNode() const {
+  return new OptimizerCompTaskNode;
+}
 
 int64_t OptimizerLogicalNode::GetAreaId() const { return kMdUpdtArea; }
 
@@ -272,4 +299,4 @@ int64_t NewAreaId() {
   return ++next_area_id;
 }
 
-}  // namespace oneflow
+} // namespace oneflow

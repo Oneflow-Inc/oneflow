@@ -21,28 +21,34 @@ REGISTER_USER_OP("cast_like")
     .Input("in")
     .Input("dtype_like")
     .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* input_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const user_op::TensorDesc* dtype_like_tensor_desc =
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc *input_tensor_desc =
+          ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc *dtype_like_tensor_desc =
           ctx->TensorDesc4ArgNameAndIndex("dtype_like", 0);
-      user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc *output_tensor_desc =
+          ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *output_tensor_desc = *input_tensor_desc;
-      *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc->data_type();
+      *output_tensor_desc->mut_data_type() =
+          dtype_like_tensor_desc->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* dtype_like_modifier = GetInputArgModifierFn("dtype_like", 0);
+                            const user_op::UserOpConfWrapper &) {
+      user_op::InputArgModifier *dtype_like_modifier =
+          GetInputArgModifierFn("dtype_like", 0);
       CHECK_NOTNULL(dtype_like_modifier);
       dtype_like_modifier->set_use_header_only(true);
       dtype_like_modifier->set_requires_grad(false);
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("out", 0) =
+          *ctx->BatchAxis4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      const auto &in_shape =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
       for (int i = 0; i < in_shape.NumAxes(); ++i) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("in", 0), i)
@@ -68,4 +74,4 @@ REGISTER_USER_OP("cast_like")
       return Maybe<void>::Ok();
     });
 
-}  // namespace oneflow
+} // namespace oneflow

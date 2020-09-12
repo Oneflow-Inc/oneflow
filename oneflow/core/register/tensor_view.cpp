@@ -14,25 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/register/tensor_view.h"
-#include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
-int64_t NumAxes4Blob(const Blob* blob) { return blob->static_shape().NumAxes(); }
+int64_t NumAxes4Blob(const Blob *blob) {
+  return blob->static_shape().NumAxes();
+}
 
-const MemoryCase& MemCase4Blob(const Blob* blob) { return blob->mem_case(); }
-DataType DataType4Blob(const Blob* blob) { return blob->data_type(); }
+const MemoryCase &MemCase4Blob(const Blob *blob) { return blob->mem_case(); }
+DataType DataType4Blob(const Blob *blob) { return blob->data_type(); }
 
-FullyMutTensorView::FullyMutTensorView(const Blob* blob, int64_t* shape_ptr, char* dptr)
+FullyMutTensorView::FullyMutTensorView(const Blob *blob, int64_t *shape_ptr,
+                                       char *dptr)
     : MutTensorView<MutShapeView>(blob, shape_ptr, dptr) {}
 
-void FullyMutTensorView::set_shape(const Shape& shape) {
+void FullyMutTensorView::set_shape(const Shape &shape) {
   CheckCapacity(shape.elem_cnt());
   shape_view_ptr()->set_shape(shape);
 }
 
-void FullyMutTensorView::set_shape(const ShapeView& shape) {
+void FullyMutTensorView::set_shape(const ShapeView &shape) {
   CheckCapacity(shape.elem_cnt());
   shape_view_ptr()->set_shape(shape);
 }
@@ -43,4 +46,4 @@ void FullyMutTensorView::CheckCapacity(size_t shape_elem_cnt) const {
   CHECK_LE(shape_elem_cnt * GetSizeOfDataType(data_type()), capacity);
 }
 
-}  // namespace oneflow
+} // namespace oneflow

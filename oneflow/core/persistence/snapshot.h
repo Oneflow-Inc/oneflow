@@ -25,39 +25,39 @@ namespace oneflow {
 class Blob;
 
 class SnapshotReader final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(SnapshotReader);
   SnapshotReader() = delete;
-  explicit SnapshotReader(const std::string& snapshot_root_path);
+  explicit SnapshotReader(const std::string &snapshot_root_path);
   ~SnapshotReader() = default;
 
-  void Read(const std::string& key, const Shape& logical_blob_shape, DataType data_type,
-            const TensorSliceView& slice, char* dst) const;
-  void Read(const std::string& key, const Shape& logical_blob_shape, const TensorSliceView& slice,
-            Blob* blob) const;
-  void Read(const std::string& key, Blob* blob) const;
-  bool HasKey(const std::string& key) const;
+  void Read(const std::string &key, const Shape &logical_blob_shape,
+            DataType data_type, const TensorSliceView &slice, char *dst) const;
+  void Read(const std::string &key, const Shape &logical_blob_shape,
+            const TensorSliceView &slice, Blob *blob) const;
+  void Read(const std::string &key, Blob *blob) const;
+  bool HasKey(const std::string &key) const;
   void Close();
 
- private:
+private:
   const std::string root_path_;
 };
 
 class SnapshotWriter final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(SnapshotWriter);
   SnapshotWriter() = delete;
-  explicit SnapshotWriter(const std::string& snapshot_root_path);
+  explicit SnapshotWriter(const std::string &snapshot_root_path);
   ~SnapshotWriter() = default;
 
-  void Write(const std::string& key, const char* data, size_t size);
-  void Write(const std::string& key, const Blob* blob);
+  void Write(const std::string &key, const char *data, size_t size);
+  void Write(const std::string &key, const Blob *blob);
   void Close();
 
- private:
+private:
   const std::string root_path_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
+#endif // ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_

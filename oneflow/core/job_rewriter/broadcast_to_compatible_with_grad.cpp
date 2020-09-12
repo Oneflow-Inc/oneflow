@@ -13,23 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job_rewriter/autograd.h"
 
 namespace oneflow {
 
 namespace {
 
 Maybe<void> GenBroadcastToCompatibleWithGradOpConf(
-    const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
+    const Operator &op, std::vector<OperatorConf> *op_confs,
+    const std::function<LogicalBlobId *(const std::string &)> &DiffLbi4BnInOp,
+    const std::function<const BlobDesc &(const std::string &)>
+        &LogicalBlobDesc4BnInOp) {
   CHECK(op.op_conf().has_broadcast_to_compatible_with_conf());
   if (DiffLbi4BnInOp("x") != nullptr) {
-    const Shape& x_shape = LogicalBlobDesc4BnInOp("x").shape();
-    const Shape& y_shape = LogicalBlobDesc4BnInOp("y").shape();
-    Shape x_extend_shape = CreateLeftExtendedShape(ShapeView(x_shape), y_shape.NumAxes());
+    const Shape &x_shape = LogicalBlobDesc4BnInOp("x").shape();
+    const Shape &y_shape = LogicalBlobDesc4BnInOp("y").shape();
+    Shape x_extend_shape =
+        CreateLeftExtendedShape(ShapeView(x_shape), y_shape.NumAxes());
     std::vector<int32_t> reduced_axes;
     FOR_RANGE(int64_t, i, 0, y_shape.NumAxes()) {
       if (x_extend_shape.At(i) == 1 && y_shape.At(i) != 1) {
@@ -52,9 +54,9 @@ Maybe<void> GenBroadcastToCompatibleWithGradOpConf(
   return Maybe<void>::Ok();
 }
 
-}  // namespace
+} // namespace
 
 REGISTER_OP_GRAD(OperatorConf::kBroadcastToCompatibleWithConf,
                  &GenBroadcastToCompatibleWithGradOpConf);
 
-}  // namespace oneflow
+} // namespace oneflow

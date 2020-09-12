@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_USER_DATA_COCO_DATASET_H_
 #define ONEFLOW_USER_DATA_COCO_DATASET_H_
 
-#include "oneflow/user/data/dataset.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/user/data/dataset.h"
 
 namespace oneflow {
 namespace data {
@@ -33,22 +33,23 @@ struct COCOImage {
 class COCOMeta;
 
 class COCODataset final : public RandomAccessDataset<COCOImage> {
- public:
+public:
   using LoadTargetShdPtr = std::shared_ptr<COCOImage>;
   using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
 
-  COCODataset(user_op::KernelInitContext* ctx, const std::shared_ptr<const COCOMeta>& meta)
+  COCODataset(user_op::KernelInitContext *ctx,
+              const std::shared_ptr<const COCOMeta> &meta)
       : meta_(meta) {}
   ~COCODataset() = default;
 
   LoadTargetShdPtrVec At(int64_t index) const override;
   size_t Size() const override;
 
- private:
+private:
   std::shared_ptr<const COCOMeta> meta_;
 };
 
-}  // namespace data
-}  // namespace oneflow
+} // namespace data
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_DATA_COCO_DATASET_H_
+#endif // ONEFLOW_USER_DATA_COCO_DATASET_H_

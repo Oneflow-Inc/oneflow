@@ -18,16 +18,16 @@ limitations under the License.
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
 #define private public
-#include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/object_msg/object_msg_reflection.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/vm/control_stream_type.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
-#include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/common/cached_object_msg_allocator.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/object_msg/object_msg_reflection.h"
+#include "oneflow/core/vm/control_stream_type.h"
+#include "oneflow/core/vm/test_util.h"
+#include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/vm_desc.msg.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 namespace vm {
@@ -43,7 +43,8 @@ TEST(VmDesc, ToDot) {
 
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
-ObjectMsgPtr<VirtualMachine> NewTestVirtualMachine(int64_t* object_id, size_t size) {
+ObjectMsgPtr<VirtualMachine> NewTestVirtualMachine(int64_t *object_id,
+                                                   size_t size) {
   Resource resource;
   resource.set_machine_num(1);
   resource.set_gpu_device_num(1);
@@ -51,7 +52,9 @@ ObjectMsgPtr<VirtualMachine> NewTestVirtualMachine(int64_t* object_id, size_t si
   auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   *object_id = TestUtil::NewObject(&list, "cpu", "0:0");
-  list.EmplaceBack(NewInstruction("Malloc")->add_mut_operand(*object_id)->add_int64_operand(size));
+  list.EmplaceBack(NewInstruction("Malloc")
+                       ->add_mut_operand(*object_id)
+                       ->add_int64_operand(size));
   vm->Receive(&list);
   return vm;
 }
@@ -73,13 +76,17 @@ TEST(VmDesc, basic) {
                    ->add_int64_operand(size));
   while (!(vm0->Empty() && vm1->Empty())) {
     vm0->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH(vm0->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    OBJECT_MSG_LIST_FOR_EACH(vm0->mut_thread_ctx_list(), t) {
+      t->TryReceiveAndRun();
+    }
     vm1->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH(vm1->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    OBJECT_MSG_LIST_FOR_EACH(vm1->mut_thread_ctx_list(), t) {
+      t->TryReceiveAndRun();
+    }
   }
 }
 
-}  // namespace test
+} // namespace test
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow

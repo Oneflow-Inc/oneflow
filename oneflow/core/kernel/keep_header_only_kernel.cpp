@@ -17,6 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kKeepHeaderOnlyConf, KeepHeaderOnlyKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kKeepHeaderOnlyConf,
+                               KeepHeaderOnlyKernel);
 
-}  // namespace oneflow
+} // namespace oneflow

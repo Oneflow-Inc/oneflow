@@ -24,14 +24,14 @@ namespace oneflow {
 typedef HashSet<std::string> AMPList;
 
 class AutoMixedPrecisionLists final {
- public:
+public:
   // TODO(niuchong): list include grad
-  static const AMPList& WhiteList();
-  static const AMPList& BlackList();
-  static const AMPList& GrayList();
-  static const AMPList& ClearList();
+  static const AMPList &WhiteList();
+  static const AMPList &BlackList();
+  static const AMPList &GrayList();
+  static const AMPList &ClearList();
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_REWRITER_AUTO_MIXED_PRECISION_LISTS_H_
+#endif // ONEFLOW_CORE_JOB_REWRITER_AUTO_MIXED_PRECISION_LISTS_H_

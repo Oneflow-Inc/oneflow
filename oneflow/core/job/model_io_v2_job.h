@@ -21,10 +21,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void MakeModelIoV2Jobs(const std::vector<std::shared_ptr<Job>>& jobs,
-                       const HashMap<std::string, ParallelBlobConf>& var_op_name2parallel_blob_conf,
-                       const std::function<void(Job*)>& Handler);
+void MakeModelIoV2Jobs(const std::vector<std::shared_ptr<Job>> &jobs,
+                       const HashMap<std::string, ParallelBlobConf>
+                           &var_op_name2parallel_blob_conf,
+                       const std::function<void(Job *)> &Handler);
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_MODEL_IO_V2_JOB_
+#endif // ONEFLOW_CORE_JOB_MODEL_IO_V2_JOB_

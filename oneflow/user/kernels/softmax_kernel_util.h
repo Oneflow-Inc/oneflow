@@ -20,16 +20,17 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-struct SoftmaxKernelUtil {
+template <DeviceType device_type, typename T> struct SoftmaxKernelUtil {
   static size_t GetComputeProbTempStorageSizeInBytes(int64_t n, int64_t w);
   static size_t GetComputeDiffTempStorageSizeInBytes(int64_t n, int64_t w);
-  static void ComputeProb(DeviceCtx* ctx, int64_t n, int64_t w, const T* in, T* prob,
-                          void* temp_storage, size_t temp_storage_bytes);
-  static void ComputeDiff(DeviceCtx* ctx, int64_t n, int64_t w, const T* dy, const T* out, T* dx,
-                          void* temp_storage, size_t temp_storage_bytes);
+  static void ComputeProb(DeviceCtx *ctx, int64_t n, int64_t w, const T *in,
+                          T *prob, void *temp_storage,
+                          size_t temp_storage_bytes);
+  static void ComputeDiff(DeviceCtx *ctx, int64_t n, int64_t w, const T *dy,
+                          const T *out, T *dx, void *temp_storage,
+                          size_t temp_storage_bytes);
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_SOFTMAX_KERNEL_UTIL_H_
+#endif // ONEFLOW_USER_KERNELS_SOFTMAX_KERNEL_UTIL_H_

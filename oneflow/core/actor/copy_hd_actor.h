@@ -23,19 +23,19 @@ namespace oneflow {
 #ifdef WITH_CUDA
 
 class CopyHdActor final : public Actor {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdActor);
   CopyHdActor() = default;
   ~CopyHdActor() = default;
 
- private:
-  void VirtualActorInit(const TaskProto&) override;
+private:
+  void VirtualActorInit(const TaskProto &) override;
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };
 
 #endif
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_COPY_HD_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_COPY_HD_ACTOR_H_

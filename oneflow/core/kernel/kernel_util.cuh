@@ -20,38 +20,30 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-template<typename T>
-__device__ T gpu_atomic_add(T* address, const T val);
+template <typename T> __device__ T gpu_atomic_add(T *address, const T val);
 
-template<typename T>
-__device__ T gpu_atomic_max(T* address, const T val);
+template <typename T> __device__ T gpu_atomic_max(T *address, const T val);
 
-template<typename T>
-__host__ __device__ T MaxWithLogThreshold(T x) {
+template <typename T> __host__ __device__ T MaxWithLogThreshold(T x) {
   const T threshold = 1e-20;
   return x > threshold ? x : threshold;
 }
 
-template<typename T>
-__host__ __device__ T SafeLog(T x) {
+template <typename T> __host__ __device__ T SafeLog(T x) {
   return logf(MaxWithLogThreshold(x));
 }
 
 #else
 
-template<typename T>
-T MaxWithLogThreshold(T x) {
+template <typename T> T MaxWithLogThreshold(T x) {
   const T threshold = 1e-20;
   return x > threshold ? x : threshold;
 }
 
-template<typename T>
-T SafeLog(T x) {
-  return logf(MaxWithLogThreshold(x));
-}
+template <typename T> T SafeLog(T x) { return logf(MaxWithLogThreshold(x)); }
 
-#endif  // WITH_CUDA
+#endif // WITH_CUDA
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_CUH_
+#endif // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_CUH_

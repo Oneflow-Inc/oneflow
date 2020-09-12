@@ -29,11 +29,12 @@ IOEventPoller::IOEventPoller() {
   io_handlers_.clear();
   break_epoll_loop_fd_ = eventfd(0, 0);
   PCHECK(break_epoll_loop_fd_ != -1);
-  AddFdWithOnlyReadHandler(break_epoll_loop_fd_, []() { LOG(INFO) << "Break Epoll Loop"; });
+  AddFdWithOnlyReadHandler(break_epoll_loop_fd_,
+                           []() { LOG(INFO) << "Break Epoll Loop"; });
 }
 
 IOEventPoller::~IOEventPoller() {
-  for (IOHandler* handler : io_handlers_) {
+  for (IOHandler *handler : io_handlers_) {
     PCHECK(close(handler->fd) == 0);
     delete handler;
   }
@@ -46,11 +47,14 @@ void IOEventPoller::AddFd(int fd, std::function<void()> read_handler,
   AddFd(fd, &read_handler, &write_handler);
 }
 
-void IOEventPoller::AddFdWithOnlyReadHandler(int fd, std::function<void()> read_handler) {
+void IOEventPoller::AddFdWithOnlyReadHandler(
+    int fd, std::function<void()> read_handler) {
   AddFd(fd, &read_handler, nullptr);
 }
 
-void IOEventPoller::Start() { thread_ = std::thread(&IOEventPoller::EpollLoop, this); }
+void IOEventPoller::Start() {
+  thread_ = std::thread(&IOEventPoller::EpollLoop, this);
+}
 
 void IOEventPoller::Stop() {
   uint64_t break_epoll_loop_event = 1;
@@ -58,8 +62,8 @@ void IOEventPoller::Stop() {
   thread_.join();
 }
 
-void IOEventPoller::AddFd(int fd, std::function<void()>* read_handler,
-                          std::function<void()>* write_handler) {
+void IOEventPoller::AddFd(int fd, std::function<void()> *read_handler,
+                          std::function<void()> *write_handler) {
   // Set Fd NONBLOCK
   int opt = fcntl(fd, F_GETFL);
   PCHECK(opt != -1);
@@ -69,16 +73,24 @@ void IOEventPoller::AddFd(int fd, std::function<void()>* read_handler,
   PCHECK(opt != -1);
   PCHECK(fcntl(fd, F_SETFD, opt | FD_CLOEXEC) == 0);
   // New IOHandler on Heap
-  IOHandler* io_handler = new IOHandler;
-  if (read_handler) { io_handler->read_handler = *read_handler; }
-  if (write_handler) { io_handler->write_handler = *write_handler; }
+  IOHandler *io_handler = new IOHandler;
+  if (read_handler) {
+    io_handler->read_handler = *read_handler;
+  }
+  if (write_handler) {
+    io_handler->write_handler = *write_handler;
+  }
   io_handler->fd = fd;
   io_handlers_.push_front(io_handler);
   // Add Fd to Epoll
   epoll_event ep_event;
   ep_event.events = EPOLLET;
-  if (read_handler) { ep_event.events |= EPOLLIN; }
-  if (write_handler) { ep_event.events |= EPOLLOUT; }
+  if (read_handler) {
+    ep_event.events |= EPOLLIN;
+  }
+  if (write_handler) {
+    ep_event.events |= EPOLLOUT;
+  }
   ep_event.data.ptr = io_handler;
   PCHECK(epoll_ctl(epfd_, EPOLL_CTL_ADD, fd, &ep_event) == 0);
 }
@@ -90,11 +102,13 @@ void IOEventPoller::EpollLoop() {
       PCHECK(errno == EINTR);
       continue;
     }
-    const epoll_event* cur_event = ep_events_;
+    const epoll_event *cur_event = ep_events_;
     for (int event_idx = 0; event_idx < event_num; ++event_idx, ++cur_event) {
-      auto io_handler = static_cast<IOHandler*>(cur_event->data.ptr);
+      auto io_handler = static_cast<IOHandler *>(cur_event->data.ptr);
       PCHECK(!(cur_event->events & EPOLLERR)) << "fd: " << io_handler->fd;
-      if (io_handler->fd == break_epoll_loop_fd_) { return; }
+      if (io_handler->fd == break_epoll_loop_fd_) {
+        return;
+      }
       if (cur_event->events & EPOLLIN) {
         if (cur_event->events & EPOLLRDHUP) {
           LOG(FATAL) << "fd " << io_handler->fd << " closed by peer";
@@ -102,11 +116,13 @@ void IOEventPoller::EpollLoop() {
           io_handler->read_handler();
         }
       }
-      if (cur_event->events & EPOLLOUT) { io_handler->write_handler(); }
+      if (cur_event->events & EPOLLOUT) {
+        io_handler->write_handler();
+      }
     }
   }
 }
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif // PLATFORM_POSIX

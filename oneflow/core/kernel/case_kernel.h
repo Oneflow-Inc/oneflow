@@ -35,18 +35,19 @@ struct CaseStatus final {
   HashMap<int64_t, int64_t> select_id2request_cnt;
 };
 
-template<typename T>
+template <typename T>
 class CaseKernel final : public KernelIf<DeviceType::kCPU> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CaseKernel);
   CaseKernel() = default;
   ~CaseKernel() override = default;
 
- private:
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+private:
+  void
+  ForwardDataContent(const KernelCtx &,
+                     std::function<Blob *(const std::string &)>) const override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_CASE_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_CASE_KERNEL_H_

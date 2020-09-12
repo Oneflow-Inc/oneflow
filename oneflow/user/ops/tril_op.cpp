@@ -21,21 +21,26 @@ REGISTER_USER_OP("tril")
     .Input("in")
     .Output("out")
     .Attr("diagonal", UserOpAttrType::kAtInt64)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc *in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc *out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_GE_OR_RETURN(in->shape().NumAxes(), 2);
       *out = *in;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("out", 0) =
+          *ctx->BatchAxis4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc &in =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       FOR_RANGE(int64_t, i, 0, in.shape().NumAxes() - 2) {
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+        ctx->NewBuilder()
+            .Split(ctx->inputs(), i)
+            .Split(ctx->outputs(), i)
+            .Build();
       }
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("in", 0))
@@ -44,18 +49,20 @@ REGISTER_USER_OP("tril")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("tril").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                        user_op::AddOpFn AddOp) {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op = builder.Op("tril")
-                                             .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                                             .Output("out")
-                                             .Attr("diagonal", op.attr<int64_t>("diagonal"))
-                                             .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
-    AddOp(grad_op);
-  }
-});
+REGISTER_USER_OP_GRAD("tril")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("in", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("tril")
+                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+                .Output("out")
+                .Attr("diagonal", op.attr<int64_t>("diagonal"))
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
+        AddOp(grad_op);
+      }
+    });
 
-}  // namespace oneflow
+} // namespace oneflow

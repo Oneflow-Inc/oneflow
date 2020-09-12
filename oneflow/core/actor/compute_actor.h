@@ -21,19 +21,21 @@ limitations under the License.
 namespace oneflow {
 
 class CompActor : public Actor {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CompActor);
   virtual ~CompActor() = default;
 
- protected:
+protected:
   CompActor() = default;
 
-  virtual void VirtualCompActorInit(const TaskProto& task_proto) {}
+  virtual void VirtualCompActorInit(const TaskProto &task_proto) {}
 
- private:
-  void VirtualActorInit(const TaskProto& task_proto) override { VirtualCompActorInit(task_proto); }
+private:
+  void VirtualActorInit(const TaskProto &task_proto) override {
+    VirtualCompActorInit(task_proto);
+  }
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_COMPUTE_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_COMPUTE_ACTOR_H_

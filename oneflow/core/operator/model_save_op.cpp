@@ -13,33 +13,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
 class ModelSaveOp final : public Operator {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(ModelSaveOp);
   ModelSaveOp() = default;
   ~ModelSaveOp() override = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
-  LogicalNode* NewProperLogicalNode() const override { return new PrintLogicalNode; }
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override {
+  const PbMessage &GetCustomizedConf() const override;
+  LogicalNode *NewProperLogicalNode() const override {
+    return new PrintLogicalNode;
+  }
+  Maybe<void> InferBlobDescs(
+      std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+      const ParallelContext *parallel_ctx) const override {
     return Maybe<void>::Ok();
   }
 
- private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+private:
+  Maybe<void> InferBatchAxis(std::function<OptInt64 *(const std::string &)>
+                                 BatchAxis4BnInOp) const override {
     return Maybe<void>::Ok();
   }
-  Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
+  Maybe<void> GetSbpSignatures(const std::function<Maybe<const BlobDesc &>(
+                                   const std::string &)> &LogicalBlobDesc4Ibn,
+                               SbpSignatureList *sbp_sig_list) const override {
     return Maybe<void>::Ok();
   };
 };
@@ -50,8 +53,10 @@ void ModelSaveOp::InitFromOpConf() {
   EnrollRepeatedInputBn("in", false);
 }
 
-const PbMessage& ModelSaveOp::GetCustomizedConf() const { return op_conf().model_save_conf(); }
+const PbMessage &ModelSaveOp::GetCustomizedConf() const {
+  return op_conf().model_save_conf();
+}
 
 REGISTER_CPU_OP(OperatorConf::kModelSaveConf, ModelSaveOp);
 
-}  // namespace oneflow
+} // namespace oneflow

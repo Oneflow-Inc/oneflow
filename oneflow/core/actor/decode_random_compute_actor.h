@@ -21,17 +21,17 @@ limitations under the License.
 namespace oneflow {
 
 class DecodeRandomActor final : public CompActor {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(DecodeRandomActor);
   DecodeRandomActor() = default;
   ~DecodeRandomActor() = default;
 
- private:
-  void VirtualCompActorInit(const TaskProto&) override;
+private:
+  void VirtualCompActorInit(const TaskProto &) override;
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_DECODE_RANDOM_COMPUTE_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_DECODE_RANDOM_COMPUTE_ACTOR_H_

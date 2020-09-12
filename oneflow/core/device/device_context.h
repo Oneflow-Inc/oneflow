@@ -24,35 +24,37 @@ namespace vm {
 
 class Allocator;
 
-}  // namespace vm
+} // namespace vm
 
 class DeviceCtx {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtx);
   virtual ~DeviceCtx() = default;
 
 #ifdef WITH_CUDA
-  virtual const cudaStream_t& cuda_stream() const { UNIMPLEMENTED(); }
-  virtual const cublasHandle_t& cublas_pmh_handle() const { UNIMPLEMENTED(); }
-  virtual const cublasHandle_t& cublas_pmd_handle() const { UNIMPLEMENTED(); }
-  virtual const cublasHandle_t& cublas_tensor_op_math_handle() const { UNIMPLEMENTED(); }
-  virtual const cudnnHandle_t& cudnn_handle() const { UNIMPLEMENTED(); }
+  virtual const cudaStream_t &cuda_stream() const { UNIMPLEMENTED(); }
+  virtual const cublasHandle_t &cublas_pmh_handle() const { UNIMPLEMENTED(); }
+  virtual const cublasHandle_t &cublas_pmd_handle() const { UNIMPLEMENTED(); }
+  virtual const cublasHandle_t &cublas_tensor_op_math_handle() const {
+    UNIMPLEMENTED();
+  }
+  virtual const cudnnHandle_t &cudnn_handle() const { UNIMPLEMENTED(); }
 #endif
 
   virtual void SyncDevice() { UNIMPLEMENTED(); }
   virtual void AddCallBack(std::function<void()>) const { UNIMPLEMENTED(); }
 
-  virtual vm::Allocator* mut_allocator() {
+  virtual vm::Allocator *mut_allocator() {
     UNIMPLEMENTED();
     return nullptr;
   }
 
- protected:
+protected:
   DeviceCtx() = default;
 
- private:
+private:
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
+#endif // ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_

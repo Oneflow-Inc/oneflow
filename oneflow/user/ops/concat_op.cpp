@@ -19,19 +19,21 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* first_in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+Maybe<void> InferTensorDesc(user_op::InferContext *ctx) {
+  const user_op::TensorDesc *first_in_desc =
+      ctx->TensorDesc4ArgNameAndIndex("in", 0);
   const int64_t axis = ctx->Attr<int64_t>("axis");
   CHECK_GE_OR_RETURN(axis, 0);
   CHECK_LT_OR_RETURN(axis, first_in_desc->shape().NumAxes());
   DimVector out_dim_vec = first_in_desc->shape().dim_vec();
   out_dim_vec.at(axis) = 0;
   int64_t dynamic_dim_size = 0;
-  for (const auto& in_arg_pair : ctx->inputs()) {
-    const user_op::TensorDesc* in_desc =
+  for (const auto &in_arg_pair : ctx->inputs()) {
+    const user_op::TensorDesc *in_desc =
         ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
     CHECK_EQ_OR_RETURN(in_desc->data_type(), first_in_desc->data_type());
-    CHECK_EQ_OR_RETURN(in_desc->shape().NumAxes(), first_in_desc->shape().NumAxes());
+    CHECK_EQ_OR_RETURN(in_desc->shape().NumAxes(),
+                       first_in_desc->shape().NumAxes());
     FOR_RANGE(int64_t, i, 0, in_desc->shape().NumAxes()) {
       if (i == axis) {
         if (in_desc->is_dynamic()) {
@@ -45,7 +47,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     }
   }
 
-  user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  user_op::TensorDesc *out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   const int64_t max_dim_size = ctx->Attr<int64_t>("max_dim_size");
   CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size);
   if (dynamic_dim_size == 0) {
@@ -59,31 +61,42 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
+Maybe<void> GetSbpSignature(user_op::SbpContext *ctx) {
   const int64_t axis = ctx->Attr<int64_t>("axis");
-  const user_op::TensorDesc& first_in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  const user_op::TensorDesc &first_in_desc =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, first_in_desc.shape().NumAxes()) {
-    if (i == axis) { continue; }
+    if (i == axis) {
+      continue;
+    }
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
-  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  ctx->NewBuilder()
+      .PartialSum(ctx->inputs())
+      .PartialSum(ctx->outputs())
+      .Build();
   return Maybe<void>::Ok();
 }
 
-void GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+void GenGrapOp(const user_op::UserOpWrapper &op, user_op::AddOpFn AddOp) {
   bool need_grad = false;
   const int32_t in_size = op.input_size("in");
   FOR_RANGE(int32_t, i, 0, in_size) {
-    if (op.NeedGenGradTensor4OpInput("in", i)) { need_grad = true; }
+    if (op.NeedGenGradTensor4OpInput("in", i)) {
+      need_grad = true;
+    }
   }
   if (need_grad) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     builder = builder.Op("split_like");
-    FOR_RANGE(int32_t, i, 0, in_size) { builder = builder.Input("like", op.input("in", i)); }
-    user_op::UserOpConfWrapper grad_op = builder.Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                                             .Output("out", in_size)
-                                             .Attr("axis", op.attr<int64_t>("axis"))
-                                             .Build();
+    FOR_RANGE(int32_t, i, 0, in_size) {
+      builder = builder.Input("like", op.input("in", i));
+    }
+    user_op::UserOpConfWrapper grad_op =
+        builder.Input("in", op.GetGradTensorWithOpOutput("out", 0))
+            .Output("out", in_size)
+            .Attr("axis", op.attr<int64_t>("axis"))
+            .Build();
 
     FOR_RANGE(int32_t, i, 0, in_size) {
       if (op.NeedGenGradTensor4OpInput("in", i)) {
@@ -94,7 +107,7 @@ void GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   }
 }
 
-}  // namespace
+} // namespace
 
 REGISTER_USER_OP("concat")
     .InputWithMinimum("in", 2)
@@ -107,4 +120,4 @@ REGISTER_USER_OP("concat")
 
 REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn(GenGrapOp);
 
-}  // namespace oneflow
+} // namespace oneflow

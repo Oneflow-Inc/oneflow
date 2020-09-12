@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_NDARRAY_XPU_UTIL_H_
 #define ONEFLOW_CORE_NDARRAY_XPU_UTIL_H_
 
-#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -28,12 +28,12 @@ namespace oneflow {
 #endif
 
 #if defined(__CUDACC__)
-#define XPU_BLOAD_THREAD_2D_KERNEL_LOOP(i, j, m, n)     \
-  for (int64_t i = blockIdx.x; i < (m); i += gridDim.x) \
+#define XPU_BLOAD_THREAD_2D_KERNEL_LOOP(i, j, m, n)                            \
+  for (int64_t i = blockIdx.x; i < (m); i += gridDim.x)                        \
     for (int64_t j = threadIdx.x; j < (n); j += blockDim.x)
 #else
-#define XPU_BLOAD_THREAD_2D_KERNEL_LOOP(i, j, m, n) \
-  for (int64_t i = 0; i < (m); ++i)                 \
+#define XPU_BLOAD_THREAD_2D_KERNEL_LOOP(i, j, m, n)                            \
+  for (int64_t i = 0; i < (m); ++i)                                            \
     for (int64_t j = 0; j < (n); ++j)
 #endif
 
@@ -51,6 +51,6 @@ namespace oneflow {
 #define GET_SEQ_4 GET_SEQ_3 OF_PP_MAKE_TUPLE_SEQ(4)
 #define GET_SEQ_5 GET_SEQ_4 OF_PP_MAKE_TUPLE_SEQ(5)
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NDARRAY_XPU_UTIL_H_
+#endif // ONEFLOW_CORE_NDARRAY_XPU_UTIL_H_

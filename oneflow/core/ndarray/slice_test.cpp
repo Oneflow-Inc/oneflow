@@ -40,6 +40,6 @@ TEST(Slice, is_covering_all) {
   ASSERT_TRUE(slice.IsContiguous());
 }
 
-}  // namespace test
+} // namespace test
 
-}  // namespace oneflow
+} // namespace oneflow

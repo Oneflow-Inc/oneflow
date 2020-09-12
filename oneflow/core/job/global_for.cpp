@@ -21,4 +21,4 @@ namespace oneflow {
 
 COMMAND(Global<bool, EagerExecution>::SetAllocated(new bool(false)));
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
+RtRegstDesc::RtRegstDesc(const RegstDescProto &proto) {
   regst_desc_id_ = proto.regst_desc_id();
   producer_actor_id_ = proto.producer_task_id();
   consumers_actor_id_ = PbRf2StdVec(proto.consumer_task_id());
@@ -26,8 +26,9 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   mem_case_ = proto.mem_case();
   regst_desc_type_ = proto.regst_desc_type();
   if (proto.regst_desc_type().has_data_regst_desc()) {
-    const DataRegstDesc& data_regst_desc = proto.regst_desc_type().data_regst_desc();
-    for (const LbiBlobDescPair& pair : data_regst_desc.lbi2blob_desc()) {
+    const DataRegstDesc &data_regst_desc =
+        proto.regst_desc_type().data_regst_desc();
+    for (const LbiBlobDescPair &pair : data_regst_desc.lbi2blob_desc()) {
       auto blob_desc = std::make_unique<RtBlobDesc>(pair.blob_desc());
       CHECK(lbi2blob_desc_.emplace(pair.lbi(), std::move(blob_desc)).second);
     }
@@ -39,7 +40,8 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   }
 }
 
-const RtBlobDesc* RtRegstDesc::GetRtBlobDescFromLbi(const LogicalBlobId& lbi) const {
+const RtBlobDesc *
+RtRegstDesc::GetRtBlobDescFromLbi(const LogicalBlobId &lbi) const {
   auto it = lbi2blob_desc_.find(lbi);
   if (it == lbi2blob_desc_.end()) {
     CHECK(lbi.is_packed_id());
@@ -85,24 +87,24 @@ size_t RtRegstDesc::SeparatedHeaderByteSize4OneRegst() const {
   }
 }
 
-const Shape& RtRegstDesc::data_regst_time_shape() const {
+const Shape &RtRegstDesc::data_regst_time_shape() const {
   CHECK(regst_desc_type_.has_data_regst_desc());
   CHECK(data_regst_time_shape_);
   return *data_regst_time_shape_;
 }
 
 void RtRegstDesc::ForEachBlobDescOffsetInOnRegst(
-    const std::vector<LbiBlobDescPair>& lbis,
-    const std::function<void(const LbiBlobDescPair&, int64_t body_offset, int64_t header_offset)>&
-        Handler) const {
+    const std::vector<LbiBlobDescPair> &lbis,
+    const std::function<void(const LbiBlobDescPair &, int64_t body_offset,
+                             int64_t header_offset)> &Handler) const {
   int64_t cur_body_offset = 0;
   int64_t cur_header_offset = 0;
-  for (const LbiBlobDescPair& lbi : lbis) {
+  for (const LbiBlobDescPair &lbi : lbis) {
     Handler(lbi, cur_body_offset, cur_header_offset);
-    const RtBlobDesc* blob_desc = GetRtBlobDescFromLbi(lbi.lbi());
+    const RtBlobDesc *blob_desc = GetRtBlobDescFromLbi(lbi.lbi());
     cur_body_offset += blob_desc->AlignedByteSizeOfBlobBody();
     cur_header_offset += blob_desc->ByteSizeOfBlobHeader();
   }
 }
 
-}  // namespace oneflow
+} // namespace oneflow

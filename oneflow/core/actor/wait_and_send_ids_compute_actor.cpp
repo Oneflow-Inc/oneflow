@@ -19,7 +19,8 @@ limitations under the License.
 
 namespace oneflow {
 
-void WaitAndSendIdsCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+void WaitAndSendIdsCompActor::VirtualCompActorInit(
+    const TaskProto &task_proto) {
   wait_and_send_ids_status_.buffer_status_ = kBufferStatusSuccess;
   wait_and_send_ids_status_.in_id_ = 0;
   wait_and_send_ids_status_.out_idx_ = 0;
@@ -28,13 +29,15 @@ void WaitAndSendIdsCompActor::VirtualCompActorInit(const TaskProto& task_proto) 
 }
 
 void WaitAndSendIdsCompActor::Act() {
-  CHECK_LE(wait_and_send_ids_status_.out_idx_, wait_and_send_ids_status_.out_num_);
+  CHECK_LE(wait_and_send_ids_status_.out_idx_,
+           wait_and_send_ids_status_.out_num_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = &wait_and_send_ids_status_;
   AsyncLaunchKernel(kernel_ctx);
 }
 
-void WaitAndSendIdsCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+void WaitAndSendIdsCompActor::
+    VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (wait_and_send_ids_status_.buffer_status_ == kBufferStatusSuccess) {
     HandleProducedNaiveDataRegstToConsumer();
   }
@@ -44,7 +47,7 @@ bool WaitAndSendIdsCompActor::IsCustomizedReadReady() const {
   return wait_and_send_ids_status_.buffer_status_ == kBufferStatusSuccess;
 }
 
-int WaitAndSendIdsCompActor::HandlerWaitToStart(const ActorMsg& msg) {
+int WaitAndSendIdsCompActor::HandlerWaitToStart(const ActorMsg &msg) {
   CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
   OF_SET_MSG_HANDLER(&WaitAndSendIdsCompActor::HandlerNormal);
   return ProcessMsg(msg);
@@ -52,4 +55,4 @@ int WaitAndSendIdsCompActor::HandlerWaitToStart(const ActorMsg& msg) {
 
 REGISTER_ACTOR(kWaitAndSendIds, WaitAndSendIdsCompActor);
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -31,7 +31,8 @@ TEST(fixed_vector, constructor_0) {
 TEST(fixed_vector, constructor_1) {
   int value = 30;
   FixedVec a(8, value);
-  ASSERT_TRUE(std::all_of(a.begin(), a.end(), [value](const int x) { return x == value; }));
+  ASSERT_TRUE(std::all_of(a.begin(), a.end(),
+                          [value](const int x) { return x == value; }));
 }
 
 TEST(fixed_vector, constructor_2) {
@@ -87,7 +88,8 @@ TEST(fixed_vector, assign_0) {
   int value = 30;
   FixedVec a;
   a.assign(8, value);
-  ASSERT_TRUE(std::all_of(a.begin(), a.end(), [value](const int x) { return x == value; }));
+  ASSERT_TRUE(std::all_of(a.begin(), a.end(),
+                          [value](const int x) { return x == value; }));
 }
 
 TEST(fixed_vector, assign_1) {
@@ -383,7 +385,9 @@ TEST(fixed_vector, swap) {
   ASSERT_TRUE(std::equal(a_1.begin(), a_1.end(), vec_1.begin()));
 }
 
-void WithTwoVector(std::function<void(const std::vector<int>&, const std::vector<int>&)> Handler) {
+void WithTwoVector(
+    std::function<void(const std::vector<int> &, const std::vector<int> &)>
+        Handler) {
   std::vector<int> a{0, 1, 2, 3, 4};
   std::vector<int> b{0, 1, 2, 3};
   std::vector<int> c{4, 3, 2};
@@ -398,12 +402,14 @@ void WithTwoVector(std::function<void(const std::vector<int>&, const std::vector
   Handler(c, c);
 }
 
-#define TEST_LOGICAL_OPERATOR(test_name, logical_op)                                             \
-  TEST(fixed_vector, test_name) {                                                                \
-    WithTwoVector([](const std::vector<int>& lhs, const std::vector<int>& rhs) {                 \
-      ASSERT_EQ((lhs logical_op rhs),                                                            \
-                (FixedVec(lhs.begin(), lhs.end()) logical_op FixedVec(rhs.begin(), rhs.end()))); \
-    });                                                                                          \
+#define TEST_LOGICAL_OPERATOR(test_name, logical_op)                           \
+  TEST(fixed_vector, test_name) {                                              \
+    WithTwoVector(                                                             \
+        [](const std::vector<int> &lhs, const std::vector<int> &rhs) {         \
+          ASSERT_EQ((lhs logical_op rhs),                                      \
+                    (FixedVec(lhs.begin(), lhs.end())                          \
+                         logical_op FixedVec(rhs.begin(), rhs.end())));        \
+        });                                                                    \
   }
 
 TEST_LOGICAL_OPERATOR(eq, ==);
@@ -413,6 +419,6 @@ TEST_LOGICAL_OPERATOR(ge, >=);
 TEST_LOGICAL_OPERATOR(lt, <);
 TEST_LOGICAL_OPERATOR(le, <=);
 
-}  // namespace test
+} // namespace test
 
-}  // namespace oneflow
+} // namespace oneflow

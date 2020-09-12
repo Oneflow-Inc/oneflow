@@ -21,15 +21,15 @@ limitations under the License.
 namespace oneflow {
 
 class AccCompActor final : public AccumulateCompActor {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(AccCompActor);
   AccCompActor() = default;
   ~AccCompActor() = default;
 
- private:
-  void VirtualCompActorInit(const TaskProto& proto) override;
+private:
+  void VirtualCompActorInit(const TaskProto &proto) override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_ACC_COMPUTE_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_ACC_COMPUTE_ACTOR_H_

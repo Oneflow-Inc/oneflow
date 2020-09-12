@@ -21,8 +21,9 @@ namespace oneflow {
 
 namespace user_op {
 
-OpKernelInferCache::OpKernelInferCache(const KernelConf& kernel_conf, const JobDesc& job_desc) {
-  const OperatorConf& op_conf = kernel_conf.op_attribute().op_conf();
+OpKernelInferCache::OpKernelInferCache(const KernelConf &kernel_conf,
+                                       const JobDesc &job_desc) {
+  const OperatorConf &op_conf = kernel_conf.op_attribute().op_conf();
   std::shared_ptr<Operator> op = ConstructOp(op_conf, &job_desc);
   cache_key_.job_desc = &job_desc;
   cache_key_.op_conf_sym = op->GetOpConfWithoutOpNameAndLbn();
@@ -43,32 +44,36 @@ OpKernelInferCache::ValueType OpKernelInferCache::GetCacheValue() const {
   return cached_key2value_.at(ptr_wrapper);
 }
 
-void OpKernelInferCache::UpdateCacheKey(KernelInferContext* ctx) {
-  auto GetSymbolOfShape = [&](const std::string& arg_name, int32_t arg_index) -> Symbol<Shape> {
+void OpKernelInferCache::UpdateCacheKey(KernelInferContext *ctx) {
+  auto GetSymbolOfShape = [&](const std::string &arg_name,
+                              int32_t arg_index) -> Symbol<Shape> {
     Shape shape;
     ctx->ShapeView4ArgNameAndIndex(arg_name, arg_index).ToShape(&shape);
     return SymbolOf(shape);
   };
-  const auto& inputs = ctx->inputs();
+  const auto &inputs = ctx->inputs();
   FOR_RANGE(int, i, 0, inputs.size()) {
-    const auto& arg_pair = inputs.at(i);
-    cache_key_.ibn_idx2shape_sym.at(i) = GetSymbolOfShape(arg_pair.first, arg_pair.second);
+    const auto &arg_pair = inputs.at(i);
+    cache_key_.ibn_idx2shape_sym.at(i) =
+        GetSymbolOfShape(arg_pair.first, arg_pair.second);
   }
 }
 
-void OpKernelInferCache::UpdateCacheValue(KernelInferContext* ctx) {
-  if (cached_key2value_.size() >= max_size_) { Reset(); }
-  auto* cache_value = new OpInferCacheValue();
+void OpKernelInferCache::UpdateCacheValue(KernelInferContext *ctx) {
+  if (cached_key2value_.size() >= max_size_) {
+    Reset();
+  }
+  auto *cache_value = new OpInferCacheValue();
   cache_value->obn_idx2shape_sym.resize(ctx->outputs().size());
   FOR_RANGE(int, i, 0, ctx->outputs().size()) {
-    const auto& out_arg_pair = ctx->outputs().at(i);
-    const ShapeView& out_shape_view =
+    const auto &out_arg_pair = ctx->outputs().at(i);
+    const ShapeView &out_shape_view =
         ctx->ShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
     Shape out_shape;
     out_shape_view.ToShape(&out_shape);
     cache_value->obn_idx2shape_sym.at(i).reset(out_shape);
   }
-  KeyType* new_key = new KeyType(cache_key_);
+  KeyType *new_key = new KeyType(cache_key_);
   key_storage_.emplace_back(new_key);
   size_t hash_value = std::hash<KeyType>()(cache_key_);
   HashEqTraitPtr<const KeyType> ptr_wrapper(new_key, hash_value);
@@ -86,7 +91,7 @@ void OpKernelInferCache::Reset() {
     to_release_key_storage.clear();
   } else {
     std::thread(
-        [](HashMap&& cache, KeyStorage&& key_storage) {
+        [](HashMap &&cache, KeyStorage &&key_storage) {
           cache.clear();
           key_storage.clear();
         },
@@ -94,6 +99,6 @@ void OpKernelInferCache::Reset() {
   }
 }
 
-}  // namespace user_op
+} // namespace user_op
 
-}  // namespace oneflow
+} // namespace oneflow

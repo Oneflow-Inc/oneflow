@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/vm/id_util.h"
 #include <climits>
 #include <glog/logging.h>
-#include "oneflow/core/vm/id_util.h"
 
 namespace oneflow {
 namespace vm {
@@ -33,16 +33,20 @@ int64_t ObjectIdCounter() {
   return (counter += kMachineNumberLimit);
 }
 
-int64_t NewLogicalObjectIdFromCounter() { return ObjectIdCounter() + kMachineNumberLimit - 1; }
+int64_t NewLogicalObjectIdFromCounter() {
+  return ObjectIdCounter() + kMachineNumberLimit - 1;
+}
 
 int64_t NewPhysicalObjectIdFromCounter(int32_t machine_id) {
   CHECK_LT(machine_id, kMachineNumberLimit - 1);
   return ObjectIdCounter() + machine_id;
 }
 
-}  // namespace
+} // namespace
 
-int64_t IdUtil::IsErrorId(int64_t id) { return id >= -kErrorCodeLimit && id <= kErrorCodeLimit; }
+int64_t IdUtil::IsErrorId(int64_t id) {
+  return id >= -kErrorCodeLimit && id <= kErrorCodeLimit;
+}
 
 int64_t IdUtil::NewLogicalValueObjectId() {
   int64_t val = NewLogicalObjectIdFromCounter();
@@ -69,23 +73,31 @@ int64_t IdUtil::NewPhysicalValueSymbolId(int32_t machine_id) {
   return NewPhysicalObjectIdFromCounter(machine_id) + kObjectIdMaximumValue;
 }
 
-bool IdUtil::IsObjectId(int64_t object_id) { return object_id < kObjectIdMaximumValue; }
+bool IdUtil::IsObjectId(int64_t object_id) {
+  return object_id < kObjectIdMaximumValue;
+}
 
-bool IdUtil::IsSymbolId(int64_t symbol_id) { return symbol_id > kObjectIdMaximumValue; }
+bool IdUtil::IsSymbolId(int64_t symbol_id) {
+  return symbol_id > kObjectIdMaximumValue;
+}
 
 int64_t IdUtil::GetTypeId(int64_t id) {
-  if (IsTypeId(id)) { return id; }
+  if (IsTypeId(id)) {
+    return id;
+  }
   return -id;
 }
 
 bool IdUtil::IsTypeId(int64_t id) { return id < 0; }
 
 int64_t IdUtil::GetValueId(int64_t id) {
-  if (IsValueId(id)) { return id; }
+  if (IsValueId(id)) {
+    return id;
+  }
   return -id;
 }
 
 bool IdUtil::IsValueId(int64_t id) { return id > 0; }
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow

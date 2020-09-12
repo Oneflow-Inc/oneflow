@@ -14,18 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/user/kernels/slice_util.h"
 
 namespace oneflow {
 
 namespace {
 
-SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_op::Tensor* entire,
-                                 const user_op::Tensor* sliced) {
-  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
-  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
-  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
+SliceParams ConstructSliceParams(user_op::KernelComputeContext *ctx,
+                                 const user_op::Tensor *entire,
+                                 const user_op::Tensor *sliced) {
+  const auto &start_vec = ctx->Attr<std::vector<int64_t>>("start");
+  const auto &stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
+  const auto &step_vec = ctx->Attr<std::vector<int64_t>>("step");
   const int64_t ndim = entire->shape().NumAxes();
   CHECK_LE(ndim, kSliceMaxDims);
   CHECK_EQ(sliced->shape().NumAxes(), ndim);
@@ -56,59 +57,65 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
   return params;
 }
 
-}  // namespace
+} // namespace
 
-template<DeviceType device_type, typename T>
+template <DeviceType device_type, typename T>
 class SliceKernel final : public user_op::OpKernel {
- public:
+public:
   SliceKernel() = default;
   ~SliceKernel() = default;
 
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+private:
+  void Compute(user_op::KernelComputeContext *ctx) const override {
+    const user_op::Tensor *x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor *y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     SliceParams params = ConstructSliceParams(ctx, x_tensor, y_tensor);
-    SliceKernelUtil<device_type, T>::Forward(ctx->device_ctx(), params, x_tensor->dptr<T>(),
+    SliceKernelUtil<device_type, T>::Forward(ctx->device_ctx(), params,
+                                             x_tensor->dptr<T>(),
                                              y_tensor->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device_type, typename T>
+template <DeviceType device_type, typename T>
 class SliceGradKernel final : public user_op::OpKernel {
- public:
+public:
   SliceGradKernel() = default;
   ~SliceGradKernel() = default;
 
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
+private:
+  void Compute(user_op::KernelComputeContext *ctx) const override {
+    const user_op::Tensor *dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor *dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     size_t dx_byte_size = dx_tensor->shape().elem_cnt() * sizeof(T);
-    Memset<device_type>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0, dx_byte_size);
+    Memset<device_type>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
+                        dx_byte_size);
     SliceParams params = ConstructSliceParams(ctx, dx_tensor, dy_tensor);
-    SliceKernelUtil<device_type, T>::Backward(ctx->device_ctx(), params, dy_tensor->dptr<T>(),
+    SliceKernelUtil<device_type, T>::Backward(ctx->device_ctx(), params,
+                                              dy_tensor->dptr<T>(),
                                               dx_tensor->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SLICE_KERNELS(device, dtype)                                              \
-  REGISTER_USER_KERNEL("slice").SetCreateFn<SliceKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                  \
-      & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));                      \
-  REGISTER_USER_KERNEL("slice_grad")                                                       \
-      .SetCreateFn<SliceGradKernel<device, dtype>>()                                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                 \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_SLICE_KERNELS(device, dtype)                                  \
+  REGISTER_USER_KERNEL("slice")                                                \
+      .SetCreateFn<SliceKernel<device, dtype>>()                               \
+      .SetIsMatchedHob(                                                        \
+          (user_op::HobDeviceTag() == device) &                                \
+          (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));        \
+  REGISTER_USER_KERNEL("slice_grad")                                           \
+      .SetCreateFn<SliceGradKernel<device, dtype>>()                           \
+      .SetIsMatchedHob(                                                        \
+          (user_op::HobDeviceTag() == device) &                                \
+          (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_SLICE_KERNELS_WITH_DEVICE(device) \
-  REGISTER_SLICE_KERNELS(device, float)            \
-  REGISTER_SLICE_KERNELS(device, double)           \
-  REGISTER_SLICE_KERNELS(device, int32_t)          \
-  REGISTER_SLICE_KERNELS(device, int64_t)          \
-  REGISTER_SLICE_KERNELS(device, int8_t)           \
+#define REGISTER_SLICE_KERNELS_WITH_DEVICE(device)                             \
+  REGISTER_SLICE_KERNELS(device, float)                                        \
+  REGISTER_SLICE_KERNELS(device, double)                                       \
+  REGISTER_SLICE_KERNELS(device, int32_t)                                      \
+  REGISTER_SLICE_KERNELS(device, int64_t)                                      \
+  REGISTER_SLICE_KERNELS(device, int8_t)                                       \
   REGISTER_SLICE_KERNELS(device, uint8_t)
 
 REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kCPU)
@@ -117,4 +124,4 @@ REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kGPU)
 REGISTER_SLICE_KERNELS(DeviceType::kGPU, float16)
 #endif
 
-}  // namespace oneflow
+} // namespace oneflow

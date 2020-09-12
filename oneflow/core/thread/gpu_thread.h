@@ -23,20 +23,20 @@ namespace oneflow {
 #ifdef WITH_CUDA
 
 class GpuThread final : public Thread {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(GpuThread);
   GpuThread() = delete;
   ~GpuThread();
 
   GpuThread(int64_t thrd_id, int64_t dev_id);
 
- private:
+private:
   Channel<CudaCBEvent> cb_event_chan_;
   std::thread cb_event_poller_;
 };
 
 #endif
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_THREAD_GPU_THREAD_H_
+#endif // ONEFLOW_CORE_THREAD_GPU_THREAD_H_

@@ -16,42 +16,42 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_BOXING_LOGGER_H_
 #define ONEFLOW_CORE_GRAPH_BOXING_LOGGER_H_
 
-#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_status_util.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
 
 class BoxingLogger {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingLogger);
   BoxingLogger() = default;
   virtual ~BoxingLogger() = default;
 
-  virtual void Log(const SubTskGphBuilderStatus& status) = 0;
+  virtual void Log(const SubTskGphBuilderStatus &status) = 0;
 };
 
 class NullBoxingLogger final : public BoxingLogger {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(NullBoxingLogger);
   NullBoxingLogger() = default;
   ~NullBoxingLogger() override = default;
 
-  void Log(const SubTskGphBuilderStatus& status) override{};
+  void Log(const SubTskGphBuilderStatus &status) override{};
 };
 
 class CsvBoxingLogger final : public BoxingLogger {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CsvBoxingLogger);
   CsvBoxingLogger() = delete;
   CsvBoxingLogger(std::string path);
   ~CsvBoxingLogger() override;
 
-  void Log(const SubTskGphBuilderStatus& status) override;
+  void Log(const SubTskGphBuilderStatus &status) override;
 
- private:
+private:
   std::unique_ptr<TeePersistentLogStream> log_stream_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_BOXING_LOGGER_H_
+#endif // ONEFLOW_CORE_GRAPH_BOXING_LOGGER_H_

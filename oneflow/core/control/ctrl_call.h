@@ -21,47 +21,49 @@ limitations under the License.
 namespace oneflow {
 
 class CtrlCallIf {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CtrlCallIf);
   virtual ~CtrlCallIf() = default;
 
   virtual void Process() = 0;
   virtual void SendResponse() = 0;
 
- protected:
+protected:
   CtrlCallIf() = default;
 
- private:
+private:
 };
 
-template<CtrlMethod ctrl_method>
-class CtrlCall final : public CtrlCallIf {
- public:
+template <CtrlMethod ctrl_method> class CtrlCall final : public CtrlCallIf {
+public:
   OF_DISALLOW_COPY_AND_MOVE(CtrlCall);
-  CtrlCall() : status_(Status::kBeforeHandleRequest), responder_(&server_ctx_) {}
+  CtrlCall()
+      : status_(Status::kBeforeHandleRequest), responder_(&server_ctx_) {}
   ~CtrlCall() = default;
 
   static constexpr const size_t value = (size_t)ctrl_method;
 
-  const CtrlRequest<ctrl_method>& request() const { return request_; }
-  CtrlRequest<ctrl_method>* mut_request() { return &request_; }
-  CtrlResponse<ctrl_method>* mut_response() { return &response_; }
-  grpc::ServerContext* mut_server_ctx() { return &server_ctx_; }
-  grpc::ServerAsyncResponseWriter<CtrlResponse<ctrl_method>>* mut_responder() {
+  const CtrlRequest<ctrl_method> &request() const { return request_; }
+  CtrlRequest<ctrl_method> *mut_request() { return &request_; }
+  CtrlResponse<ctrl_method> *mut_response() { return &response_; }
+  grpc::ServerContext *mut_server_ctx() { return &server_ctx_; }
+  grpc::ServerAsyncResponseWriter<CtrlResponse<ctrl_method>> *mut_responder() {
     return &responder_;
   }
-  void set_request_handler(std::function<void()> val) { request_handler_ = val; }
+  void set_request_handler(std::function<void()> val) {
+    request_handler_ = val;
+  }
 
   void Process() override {
     switch (status_) {
-      case Status::kBeforeHandleRequest: {
-        request_handler_();
-        return;
-      }
-      case Status::kBeforeDelete: {
-        delete this;
-        return;
-      }
+    case Status::kBeforeHandleRequest: {
+      request_handler_();
+      return;
+    }
+    case Status::kBeforeDelete: {
+      delete this;
+      return;
+    }
     }
   }
 
@@ -70,7 +72,7 @@ class CtrlCall final : public CtrlCallIf {
     status_ = Status::kBeforeDelete;
   }
 
- private:
+private:
   enum class Status { kBeforeHandleRequest, kBeforeDelete };
 
   Status status_;
@@ -81,6 +83,6 @@ class CtrlCall final : public CtrlCallIf {
   std::function<void()> request_handler_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CONTROL_CTRL_CALL_H_
+#endif // ONEFLOW_CORE_CONTROL_CTRL_CALL_H_

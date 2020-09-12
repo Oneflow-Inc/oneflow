@@ -21,20 +21,22 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type>
+template <DeviceType device_type>
 class TupleIdentityKernel final : public KernelIf<device_type> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(TupleIdentityKernel);
   TupleIdentityKernel() = default;
   ~TupleIdentityKernel() = default;
 
- private:
-  void ForwardHeader(const KernelCtx& ctx,
-                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+private:
+  void ForwardHeader(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
+  void
+  ForwardDataContent(const KernelCtx &,
+                     std::function<Blob *(const std::string &)>) const override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_TUPLE_IDENTITY_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_TUPLE_IDENTITY_KERNEL_H_

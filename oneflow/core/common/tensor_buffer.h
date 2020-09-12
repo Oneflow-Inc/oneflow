@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_TENSOR_BUFFER_H_
 #define ONEFLOW_CORE_COMMON_TENSOR_BUFFER_H_
 
-#include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/memory/memory_allocator.h"
 
@@ -29,24 +29,29 @@ inline void CheckTensorBufferDataType(DataType val) {
 }
 
 class TensorBuffer {
- public:
+public:
   struct Deleter {
-    void operator()(void* ptr) { MemoryAllocatorImpl::DeallocateUnPinnedHostMem(ptr); }
+    void operator()(void *ptr) {
+      MemoryAllocatorImpl::DeallocateUnPinnedHostMem(ptr);
+    }
   };
   typedef std::unique_ptr<void, Deleter> BufferType;
 
   OF_DISALLOW_COPY_AND_MOVE(TensorBuffer);
   TensorBuffer()
-      : data_(nullptr), num_bytes_(0), shape_(Shape()), data_type_(DataType::kInvalidDataType) {}
+      : data_(nullptr), num_bytes_(0), shape_(Shape()),
+        data_type_(DataType::kInvalidDataType) {}
   virtual ~TensorBuffer() = default;
 
-  const Shape& shape() const { return shape_; }
+  const Shape &shape() const { return shape_; }
 
   DataType data_type() const { return data_type_; }
 
   void set_data_type(DataType val) {
     CheckTensorBufferDataType(val);
-    if (data_type_ == val) { return; }
+    if (data_type_ == val) {
+      return;
+    }
     if (val == DataType::kInvalidDataType) {
       data_type_ = val;
       return;
@@ -55,18 +60,20 @@ class TensorBuffer {
     }
   }
 
-  template<typename T = void>
-  inline T* mut_data() {
-    if (data_ == nullptr) { return nullptr; }
+  template <typename T = void> inline T *mut_data() {
+    if (data_ == nullptr) {
+      return nullptr;
+    }
     CheckDataType<T>(data_type_);
-    return static_cast<T*>(data_.get());
+    return static_cast<T *>(data_.get());
   }
 
-  template<typename T = void>
-  inline const T* data() const {
-    if (data_ == nullptr) { return nullptr; }
+  template <typename T = void> inline const T *data() const {
+    if (data_ == nullptr) {
+      return nullptr;
+    }
     CheckDataType<T>(data_type_);
-    return static_cast<const T*>(data_.get());
+    return static_cast<const T *>(data_.get());
   }
 
   void reset() {
@@ -77,7 +84,9 @@ class TensorBuffer {
   }
 
   void reserve(size_t new_num_bytes) {
-    if (new_num_bytes <= num_bytes_) { return; }
+    if (new_num_bytes <= num_bytes_) {
+      return;
+    }
     data_.reset();
     data_.reset(MemoryAllocatorImpl::AllocateUnPinnedHostMem(new_num_bytes));
     num_bytes_ = new_num_bytes;
@@ -89,11 +98,13 @@ class TensorBuffer {
 
   size_t capacity() const { return num_bytes_; }
 
-  void Resize(const Shape& new_shape) { Resize(new_shape, data_type_); }
+  void Resize(const Shape &new_shape) { Resize(new_shape, data_type_); }
 
-  void Resize(const Shape& new_shape, DataType new_type) {
+  void Resize(const Shape &new_shape, DataType new_type) {
     int64_t elem_cnt = new_shape.elem_cnt();
-    if (new_type == DataType::kInvalidDataType || elem_cnt == 0) { return; }
+    if (new_type == DataType::kInvalidDataType || elem_cnt == 0) {
+      return;
+    }
     CheckTensorBufferDataType(new_type);
 
     data_type_ = new_type;
@@ -103,7 +114,8 @@ class TensorBuffer {
     new_num_bytes = RoundUp(new_num_bytes, kTensorBufferAlignedSize);
     if (new_num_bytes > num_bytes_) {
       new_num_bytes =
-          std::max(new_num_bytes, RoundUp(num_bytes_ * growth_factor_, kTensorBufferAlignedSize));
+          std::max(new_num_bytes, RoundUp(num_bytes_ * growth_factor_,
+                                          kTensorBufferAlignedSize));
       reserve(new_num_bytes);
     } else if (new_num_bytes < num_bytes_ * shrink_threshold_) {
       data_.reset();
@@ -112,20 +124,22 @@ class TensorBuffer {
     }
   }
 
-  void CopyFrom(const TensorBuffer& src) {
-    if (&src == this) { return; }
+  void CopyFrom(const TensorBuffer &src) {
+    if (&src == this) {
+      return;
+    }
     Resize(src.shape(), src.data_type());
     memcpy(mut_data(), src.data(), nbytes());
   }
 
-  void Swap(TensorBuffer* lhs) {
+  void Swap(TensorBuffer *lhs) {
     data_.swap(lhs->data_);
     std::swap(num_bytes_, lhs->num_bytes_);
     std::swap(shape_, lhs->shape_);
     std::swap(data_type_, lhs->data_type_);
   }
 
- private:
+private:
   // TODO(chengcheng)
   static double growth_factor_;
   static double shrink_threshold_;
@@ -137,14 +151,17 @@ class TensorBuffer {
   DataType data_type_;
 };
 
-#define BUFFER_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(TensorBuffer, DataType::kTensorBuffer)
+#define BUFFER_DATA_TYPE_SEQ                                                   \
+  OF_PP_MAKE_TUPLE_SEQ(TensorBuffer, DataType::kTensorBuffer)
 
-template<>
-struct GetDataType<TensorBuffer> : std::integral_constant<DataType, DataType::kTensorBuffer> {};
-inline TensorBuffer GetTypeByDataType(std::integral_constant<DataType, DataType::kTensorBuffer>) {
+template <>
+struct GetDataType<TensorBuffer>
+    : std::integral_constant<DataType, DataType::kTensorBuffer> {};
+inline TensorBuffer GetTypeByDataType(
+    std::integral_constant<DataType, DataType::kTensorBuffer>) {
   return {};
 }
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_TENSOR_BUFFER_H_
+#endif // ONEFLOW_CORE_COMMON_TENSOR_BUFFER_H_

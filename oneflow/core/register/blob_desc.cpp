@@ -14,18 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/register/blob_desc.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
-    const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc) {
+    const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> &lbi2blob_desc) {
   // TODO(niuchong) : remove PackedBlob
   int64_t body_byte_size = 0;
   StructPodDesc opaque_header_pod_desc;
   std::unique_ptr<BlobDesc> ret;
-  for (const auto& pair : lbi2blob_desc) {
+  for (const auto &pair : lbi2blob_desc) {
     if (lbi2blob_desc.size() == 1) {
       ret.reset(new BlobDesc(*(pair.second)));
       break;
@@ -34,7 +34,8 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     // CHECK(!rt_blob_desc.is_dynamic());
     CHECK(!rt_blob_desc.is_body_disabled());
     body_byte_size += rt_blob_desc.AlignedByteSizeOfBlobBody();
-    *opaque_header_pod_desc.MutStructField(NewFieldId(pair.first)) = rt_blob_desc.header_pod_desc();
+    *opaque_header_pod_desc.MutStructField(NewFieldId(pair.first)) =
+        rt_blob_desc.header_pod_desc();
   }
   if (lbi2blob_desc.size() > 1) {
     ret.reset(new BlobDesc(Shape(DimVector{body_byte_size}), DataType::kChar));
@@ -43,20 +44,18 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   return ret;
 }
 
-bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs) {
+bool CompareLbiBlobDescPair(const LbiBlobDescPair &lhs,
+                            const LbiBlobDescPair &rhs) {
   return lhs.lbi() < rhs.lbi();
 }
 
-BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
-    : body_(shape, dtype),
-      is_tensor_list_(false),
-      is_body_disabled_(false),
-      is_dynamic_(false),
-      opaque_header_() {}
+BlobDesc::BlobDesc(const Shape &shape, DataType dtype)
+    : body_(shape, dtype), is_tensor_list_(false), is_body_disabled_(false),
+      is_dynamic_(false), opaque_header_() {}
 
-BlobDesc::BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
+BlobDesc::BlobDesc(const BlobDescProto &proto) { InitFromProto(proto); }
 
-BlobDesc::BlobDesc(const BlobDesc& other) {
+BlobDesc::BlobDesc(const BlobDesc &other) {
   // *body_.mut_shape() = other.body_.shape();
   // body_.set_data_type(other.body_.data_type());
   // header_ = other.header_;
@@ -67,7 +66,7 @@ BlobDesc::BlobDesc(const BlobDesc& other) {
   InitFromProto(proto);
 }
 
-void BlobDesc::InitFromProto(const BlobDescProto& proto) {
+void BlobDesc::InitFromProto(const BlobDescProto &proto) {
   body_.InitFromProto(proto.body());
   is_tensor_list_ = proto.is_tensor_list();
   is_body_disabled_ = proto.is_body_disabled();
@@ -79,7 +78,7 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   }
 }
 
-void BlobDesc::ToProto(BlobDescProto* proto) const {
+void BlobDesc::ToProto(BlobDescProto *proto) const {
   body_.ToProto(proto->mutable_body());
   proto->set_is_tensor_list(is_tensor_list_);
   proto->set_is_body_disabled(is_body_disabled_);
@@ -99,39 +98,41 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
                     TensorPodDesc(Shape(DimVector{1LL}), DataType::kInt64));
     int64_t shape_list_size = 1;
     if (is_tensor_list_ && shape().NumAxes() > 0) {
-      int32_t batch_axis = 0;  // TODO: batch_axis isn't always 0
+      int32_t batch_axis = 0; // TODO: batch_axis isn't always 0
       shape_list_size = shape().At(batch_axis);
     }
     header.AddField(
         FieldKey::kTensorShapeList,
-        TensorPodDesc(Shape(DimVector{shape_list_size * shape_num_axes}), DataType::kInt64));
-    header.AddField(FieldKey::kTensorListSlices,
-                    TensorPodDesc(Shape(DimVector{shape_list_size}), DataType::kInt64));
+        TensorPodDesc(Shape(DimVector{shape_list_size * shape_num_axes}),
+                      DataType::kInt64));
+    header.AddField(
+        FieldKey::kTensorListSlices,
+        TensorPodDesc(Shape(DimVector{shape_list_size}), DataType::kInt64));
     header.ToProto(proto->mutable_header());
     proto->set_header_is_opaque(false);
   }
 }
 
-BlobDesc& BlobDesc::operator=(const BlobDesc& rhs) {
-  CHECK(rhs.is_body_disabled() == false);  // prevent from misuse
+BlobDesc &BlobDesc::operator=(const BlobDesc &rhs) {
+  CHECK(rhs.is_body_disabled() == false); // prevent from misuse
   this->CopyFrom(rhs);
   return *this;
 }
 
-void BlobDesc::CopyFrom(const BlobDesc& other) {
+void BlobDesc::CopyFrom(const BlobDesc &other) {
   BlobDescProto proto;
   other.ToProto(&proto);
   this->InitFromProto(proto);
 }
 
 // TODO(niuchong) : remove is_body_disabled from blob into register
-void BlobDesc::CopyMetaFrom(const BlobDesc& other) {
+void BlobDesc::CopyMetaFrom(const BlobDesc &other) {
   bool tmp = is_body_disabled_;
   CopyFrom(other);
   is_body_disabled_ = tmp;
 }
 
-void BlobDesc::SetOpaqueHeader(const StructPodDesc& header_pod_desc) {
+void BlobDesc::SetOpaqueHeader(const StructPodDesc &header_pod_desc) {
   CHECK(!is_dynamic_);
   CHECK_EQ(is_tensor_list_, false);
   CHECK_GT(header_pod_desc.ByteSize(), 0);
@@ -139,14 +140,17 @@ void BlobDesc::SetOpaqueHeader(const StructPodDesc& header_pod_desc) {
 }
 
 void BlobDesc::set_is_dynamic(bool is_dynamic) {
-  if (!is_dynamic) { CHECK_EQ(false, is_tensor_list_); }
+  if (!is_dynamic) {
+    CHECK_EQ(false, is_tensor_list_);
+  }
   is_dynamic_ = is_dynamic;
 }
 
-bool BlobDesc::operator==(const BlobDesc& rhs) const {
-  return (body_ == rhs.body_) && (is_tensor_list_ == rhs.is_tensor_list_)
-         && (is_body_disabled_ == rhs.is_body_disabled_) && (is_dynamic_ == rhs.is_dynamic_)
-         && (opaque_header_ == rhs.opaque_header_);
+bool BlobDesc::operator==(const BlobDesc &rhs) const {
+  return (body_ == rhs.body_) && (is_tensor_list_ == rhs.is_tensor_list_) &&
+         (is_body_disabled_ == rhs.is_body_disabled_) &&
+         (is_dynamic_ == rhs.is_dynamic_) &&
+         (opaque_header_ == rhs.opaque_header_);
 }
 
-}  // namespace oneflow
+} // namespace oneflow

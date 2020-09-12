@@ -20,11 +20,10 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T>
-inline std::string ToString(const T& value) {
+template <typename T> inline std::string ToString(const T &value) {
   return std::to_string(value);
 }
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_TO_STRING_H_
+#endif // ONEFLOW_CORE_COMMON_TO_STRING_H_

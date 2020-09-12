@@ -20,33 +20,37 @@ namespace oneflow {
 
 namespace {
 
-class OFRecordImageClassificationReaderKernelState final : public user_op::OpKernelState {
- public:
-  explicit OFRecordImageClassificationReaderKernelState(user_op::KernelInitContext* ctx)
+class OFRecordImageClassificationReaderKernelState final
+    : public user_op::OpKernelState {
+public:
+  explicit OFRecordImageClassificationReaderKernelState(
+      user_op::KernelInitContext *ctx)
       : reader_(ctx) {}
   ~OFRecordImageClassificationReaderKernelState() override = default;
 
-  void Read(user_op::KernelComputeContext* ctx) { reader_.Read(ctx); }
+  void Read(user_op::KernelComputeContext *ctx) { reader_.Read(ctx); }
 
- private:
+private:
   data::OFRecordImageClassificationDataReader reader_;
 };
 
-}  // namespace
+} // namespace
 
 class OFRecordImageClassificationReaderKernel final : public user_op::OpKernel {
- public:
+public:
   OFRecordImageClassificationReaderKernel() = default;
   ~OFRecordImageClassificationReaderKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelState>
+  CreateOpKernelState(user_op::KernelInitContext *ctx) const override {
     return std::make_shared<OFRecordImageClassificationReaderKernelState>(ctx);
   }
 
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* reader = dynamic_cast<OFRecordImageClassificationReaderKernelState*>(state);
+private:
+  void Compute(user_op::KernelComputeContext *ctx,
+               user_op::OpKernelState *state) const override {
+    auto *reader =
+        dynamic_cast<OFRecordImageClassificationReaderKernelState *>(state);
     CHECK_NOTNULL(reader);
     reader->Read(ctx);
   }
@@ -55,8 +59,9 @@ class OFRecordImageClassificationReaderKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("ofrecord_image_classification_reader")
     .SetCreateFn<OFRecordImageClassificationReaderKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)
-                     & (user_op::HobDataType("image", 0) == DataType::kTensorBuffer)
-                     & (user_op::HobDataType("label", 0) == DataType::kTensorBuffer));
+    .SetIsMatchedHob(
+        (user_op::HobDeviceTag() == DeviceType::kCPU) &
+        (user_op::HobDataType("image", 0) == DataType::kTensorBuffer) &
+        (user_op::HobDataType("label", 0) == DataType::kTensorBuffer));
 
-}  // namespace oneflow
+} // namespace oneflow

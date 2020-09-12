@@ -22,27 +22,28 @@ limitations under the License.
 namespace oneflow {
 
 class OFRecordEncoderIf {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(OFRecordEncoderIf);
   virtual ~OFRecordEncoderIf() = default;
 
-  static void EncodeOneDataId(DeviceCtx* ctx, const char* data_id_str, OFRecord& record) {
+  static void EncodeOneDataId(DeviceCtx *ctx, const char *data_id_str,
+                              OFRecord &record) {
     Feature tmp_feature;
     tmp_feature.mutable_bytes_list()->add_value(data_id_str);
     CHECK(record.mutable_feature()->insert({"data_id", tmp_feature}).second);
   }
-  virtual void EncodeOneCol(DeviceCtx*, const Blob* in_blob, int64_t in_offset, Feature&,
-                            const std::string& field_name, int64_t one_col_elem_num) const = 0;
+  virtual void EncodeOneCol(DeviceCtx *, const Blob *in_blob, int64_t in_offset,
+                            Feature &, const std::string &field_name,
+                            int64_t one_col_elem_num) const = 0;
 
- protected:
+protected:
   OFRecordEncoderIf() = default;
 };
 
-template<EncodeCase encode_case, typename T>
-class OFRecordEncoderImpl;
+template <EncodeCase encode_case, typename T> class OFRecordEncoderImpl;
 
-OFRecordEncoderIf* GetOFRecordEncoder(EncodeCase, DataType);
+OFRecordEncoderIf *GetOFRecordEncoder(EncodeCase, DataType);
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_RECORD_OFRECORD_ENCODER_H_
+#endif // ONEFLOW_CORE_RECORD_OFRECORD_ENCODER_H_

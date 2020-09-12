@@ -26,27 +26,30 @@ class TaskGraph;
 class TaskNode;
 
 class SubTskGphBuilderCtx final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(SubTskGphBuilderCtx);
-  explicit SubTskGphBuilderCtx(TaskGraph* task_graph);
+  explicit SubTskGphBuilderCtx(TaskGraph *task_graph);
   virtual ~SubTskGphBuilderCtx() = default;
 
-  virtual TaskGraph* task_graph();
-  TaskNode* GetProxyNode(TaskNode* src_node, int64_t src_mem_zone_id, int64_t dst_machine_id,
-                         int64_t dst_mem_zone_id);
-  template<typename T1, typename T2>
-  void ConnectAll121(const std::vector<T1*>& src_nodes, const std::vector<T2*>& dst_nodes) {
+  virtual TaskGraph *task_graph();
+  TaskNode *GetProxyNode(TaskNode *src_node, int64_t src_mem_zone_id,
+                         int64_t dst_machine_id, int64_t dst_mem_zone_id);
+  template <typename T1, typename T2>
+  void ConnectAll121(const std::vector<T1 *> &src_nodes,
+                     const std::vector<T2 *> &dst_nodes) {
     CHECK_EQ(src_nodes.size(), dst_nodes.size());
     FOR_RANGE(int64_t, i, 0, dst_nodes.size()) {
-      Connect<TaskNode>(src_nodes.at(i), task_graph()->NewEdge(), dst_nodes.at(i));
+      Connect<TaskNode>(src_nodes.at(i), task_graph()->NewEdge(),
+                        dst_nodes.at(i));
     }
   }
 
- private:
-  TaskGraph* task_graph_;
-  HashMap<TaskNode*, HashMap<std::pair<int64_t, int64_t>, TaskNode*>> node2proxies_;
+private:
+  TaskGraph *task_graph_;
+  HashMap<TaskNode *, HashMap<std::pair<int64_t, int64_t>, TaskNode *>>
+      node2proxies_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_CONTEXT_H_
+#endif // ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_CONTEXT_H_

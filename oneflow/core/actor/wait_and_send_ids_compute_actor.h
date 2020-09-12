@@ -22,27 +22,29 @@ limitations under the License.
 namespace oneflow {
 
 class WaitAndSendIdsCompActor final : public CompActor {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(WaitAndSendIdsCompActor);
   WaitAndSendIdsCompActor() = default;
   ~WaitAndSendIdsCompActor() = default;
 
- private:
-  void VirtualCompActorInit(const TaskProto&) override;
+private:
+  void VirtualCompActorInit(const TaskProto &) override;
   void Act() override;
-  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
-      override {
+  std::pair<RegstNameType, HashSet<std::string>>
+  GetNaiveOrCustomizedConsumedRegstDescName() override {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   bool IsCustomizedReadReady() const override;
-  bool IsCustomizedReadAlwaysUnReadyFromNow() const override { return !IsCustomizedReadReady(); }
+  bool IsCustomizedReadAlwaysUnReadyFromNow() const override {
+    return !IsCustomizedReadReady();
+  }
 
-  int HandlerWaitToStart(const ActorMsg&);
+  int HandlerWaitToStart(const ActorMsg &);
 
   WaitAndSendIdsStatus wait_and_send_ids_status_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_RECORD_LOAD_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_RECORD_LOAD_ACTOR_H_

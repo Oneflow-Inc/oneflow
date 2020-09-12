@@ -22,30 +22,32 @@ namespace oneflow {
 namespace vm {
 
 class Transporter {
- public:
-  Transporter(const Transporter&) = delete;
-  Transporter(Transporter&&) = delete;
+public:
+  Transporter(const Transporter &) = delete;
+  Transporter(Transporter &&) = delete;
   virtual ~Transporter() = default;
 
   virtual void MakeSendTransportRequest(
-      const TransportDataToken& data_token, const char* data_ptr, size_t data_size,
-      std::atomic<int64_t>* incomplete_cnt,
-      TransportKey2SendRequest* transport_key2send_request) const = 0;
+      const TransportDataToken &data_token, const char *data_ptr,
+      size_t data_size, std::atomic<int64_t> *incomplete_cnt,
+      TransportKey2SendRequest *transport_key2send_request) const = 0;
 
   virtual void MakeReceiveTransportRequest(
-      const TransportDataToken& data_token, char* data_ptr, size_t data_size,
-      std::atomic<int64_t>* incomplete_cnt,
-      TransportKey2ReceiveRequest* transport_key2send_request) const = 0;
+      const TransportDataToken &data_token, char *data_ptr, size_t data_size,
+      std::atomic<int64_t> *incomplete_cnt,
+      TransportKey2ReceiveRequest *transport_key2send_request) const = 0;
 
-  virtual void Transport(TransportKey2SendRequest* transport_key2send_request) const = 0;
-  virtual void Transport(TransportKey2ReceiveRequest* transport_key2receive_request) const = 0;
+  virtual void
+  Transport(TransportKey2SendRequest *transport_key2send_request) const = 0;
+  virtual void Transport(
+      TransportKey2ReceiveRequest *transport_key2receive_request) const = 0;
 
- protected:
+protected:
   Transporter() = default;
 };
 
-}  // namespace vm
+} // namespace vm
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_TRANSPORTER_H_
+#endif // ONEFLOW_CORE_VM_TRANSPORTER_H_

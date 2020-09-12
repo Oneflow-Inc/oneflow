@@ -19,24 +19,27 @@ namespace oneflow {
 
 namespace {
 
-template<DeviceType device_type>
+template <DeviceType device_type>
 class InputKernel final : public KernelIf<device_type> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(InputKernel);
   InputKernel() = default;
   ~InputKernel() = default;
 
- private:
-  void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
-  void ForwardHeader(const KernelCtx& ctx,
-                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
+private:
+  void Forward(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override {}
+  void ForwardDataContent(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override {}
+  void ForwardHeader(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override {}
 };
 
-}  // namespace
+} // namespace
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kInputConf, InputKernel);
 
-}  // namespace oneflow
+} // namespace oneflow

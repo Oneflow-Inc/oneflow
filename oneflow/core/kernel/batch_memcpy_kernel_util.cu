@@ -32,54 +32,67 @@ struct BatchMemcpyParam {
 
 __global__ void GpuCopy(BatchMemcpyParam batch_memcpy_param) {
   for (int b = blockIdx.x; b < batch_memcpy_param.batch_size; b += gridDim.x) {
-    const int fast_count = batch_memcpy_param.params[b].count / sizeof(BulkType);
-    BulkType* fast_dst = reinterpret_cast<BulkType*>(batch_memcpy_param.params[b].dst);
-    const BulkType* fast_src = reinterpret_cast<const BulkType*>(batch_memcpy_param.params[b].src);
+    const int fast_count =
+        batch_memcpy_param.params[b].count / sizeof(BulkType);
+    BulkType *fast_dst =
+        reinterpret_cast<BulkType *>(batch_memcpy_param.params[b].dst);
+    const BulkType *fast_src =
+        reinterpret_cast<const BulkType *>(batch_memcpy_param.params[b].src);
 #pragma unroll(5)
-    for (int t = threadIdx.x; t < fast_count; t += blockDim.x) { fast_dst[t] = fast_src[t]; }
+    for (int t = threadIdx.x; t < fast_count; t += blockDim.x) {
+      fast_dst[t] = fast_src[t];
+    }
     const int fast_bytes = fast_count * sizeof(BulkType);
     const int slow_count = batch_memcpy_param.params[b].count - fast_bytes;
-    unsigned char* slow_dst =
-        reinterpret_cast<unsigned char*>(batch_memcpy_param.params[b].dst) + fast_bytes;
-    const unsigned char* slow_src =
-        reinterpret_cast<const unsigned char*>(batch_memcpy_param.params[b].src) + fast_bytes;
-    for (int t = threadIdx.x; t < slow_count; t += blockDim.x) { slow_dst[t] = slow_src[t]; }
+    unsigned char *slow_dst =
+        reinterpret_cast<unsigned char *>(batch_memcpy_param.params[b].dst) +
+        fast_bytes;
+    const unsigned char *slow_src = reinterpret_cast<const unsigned char *>(
+                                        batch_memcpy_param.params[b].src) +
+                                    fast_bytes;
+    for (int t = threadIdx.x; t < slow_count; t += blockDim.x) {
+      slow_dst[t] = slow_src[t];
+    }
   }
 }
 
-}  // namespace
+} // namespace
 
-template<>
-void BatchMemcpyKernelUtil<DeviceType::kGPU>::Copy(DeviceCtx* ctx,
-                                                   const std::vector<MemcpyParam>& params) {
+template <>
+void BatchMemcpyKernelUtil<DeviceType::kGPU>::Copy(
+    DeviceCtx *ctx, const std::vector<MemcpyParam> &params) {
   if (params.size() == 1) {
-    OF_CUDA_CHECK(cudaMemcpyAsync(params.front().dst, params.front().src, params.front().count,
-                                  cudaMemcpyDefault, ctx->cuda_stream()));
+    OF_CUDA_CHECK(cudaMemcpyAsync(params.front().dst, params.front().src,
+                                  params.front().count, cudaMemcpyDefault,
+                                  ctx->cuda_stream()));
   } else {
     int block_size = 0;
     int num_blocks = 0;
-    OF_CUDA_CHECK(cudaOccupancyMaxPotentialBlockSize(&num_blocks, &block_size, GpuCopy));
+    OF_CUDA_CHECK(
+        cudaOccupancyMaxPotentialBlockSize(&num_blocks, &block_size, GpuCopy));
     BatchMemcpyParam batch_memcpy_param{};
     batch_memcpy_param.batch_size = 0;
-    for (const MemcpyParam& param : params) {
-      if (reinterpret_cast<uintptr_t>(param.dst) % sizeof(BulkType) == 0
-          && reinterpret_cast<uintptr_t>(param.src) % sizeof(BulkType) == 0
-          && param.count <= kMaxCopySize) {
+    for (const MemcpyParam &param : params) {
+      if (reinterpret_cast<uintptr_t>(param.dst) % sizeof(BulkType) == 0 &&
+          reinterpret_cast<uintptr_t>(param.src) % sizeof(BulkType) == 0 &&
+          param.count <= kMaxCopySize) {
         batch_memcpy_param.params[batch_memcpy_param.batch_size] = param;
         batch_memcpy_param.batch_size += 1;
         if (batch_memcpy_param.batch_size == kMaxBatchSize) {
-          GpuCopy<<<num_blocks, block_size, 0, ctx->cuda_stream()>>>(batch_memcpy_param);
+          GpuCopy<<<num_blocks, block_size, 0, ctx->cuda_stream()>>>(
+              batch_memcpy_param);
           batch_memcpy_param.batch_size = 0;
         }
       } else {
-        OF_CUDA_CHECK(cudaMemcpyAsync(param.dst, param.src, param.count, cudaMemcpyDefault,
-                                      ctx->cuda_stream()));
+        OF_CUDA_CHECK(cudaMemcpyAsync(param.dst, param.src, param.count,
+                                      cudaMemcpyDefault, ctx->cuda_stream()));
       }
     }
     if (batch_memcpy_param.batch_size != 0) {
-      GpuCopy<<<num_blocks, block_size, 0, ctx->cuda_stream()>>>(batch_memcpy_param);
+      GpuCopy<<<num_blocks, block_size, 0, ctx->cuda_stream()>>>(
+          batch_memcpy_param);
     }
   }
 }
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class CallbackNotifyCompTaskNode final : public SinkCompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CallbackNotifyCompTaskNode);
   CallbackNotifyCompTaskNode() = default;
   ~CallbackNotifyCompTaskNode() = default;
@@ -30,6 +30,6 @@ class CallbackNotifyCompTaskNode final : public SinkCompTaskNode {
   bool IsIndependent() const override { return true; }
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_CALLBACK_NOTIFY_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_CALLBACK_NOTIFY_COMPUTE_TASK_NODE_H_

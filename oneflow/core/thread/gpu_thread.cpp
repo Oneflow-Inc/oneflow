@@ -47,4 +47,4 @@ GpuThread::~GpuThread() {
 
 #endif
 
-}  // namespace oneflow
+} // namespace oneflow

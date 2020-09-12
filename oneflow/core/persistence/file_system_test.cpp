@@ -13,16 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <gtest/gtest.h>
 #include "oneflow/core/common/process_state.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/persistence/posix/posix_file_system.h"
+#include <gtest/gtest.h>
 
 namespace oneflow {
 
 namespace fs {
 
-void TestFileOperation(FileSystem* file_system) {
+void TestFileOperation(FileSystem *file_system) {
   std::string current_dir = GetCwd();
   StringReplace(&current_dir, '\\', '/');
   std::string file_name = JoinPath(current_dir, "/tmp_test_file_asdfasdf");
@@ -50,7 +50,7 @@ void TestFileOperation(FileSystem* file_system) {
   file_system->NewRandomAccessFile(file_name, &random_access_file);
   uint64_t file_size = file_system->GetFileSize(file_name);
   ASSERT_EQ(file_size, 35);
-  char* read_array = new char[file_size];
+  char *read_array = new char[file_size];
   random_access_file->Read(0, file_size, read_array);
   std::string read_content(read_array, file_size);
   ASSERT_EQ(write_content + append_content, read_content);
@@ -58,7 +58,7 @@ void TestFileOperation(FileSystem* file_system) {
   delete[] read_array;
 }
 
-void TestDirOperation(FileSystem* file_system) {
+void TestDirOperation(FileSystem *file_system) {
   std::string current_dir = GetCwd();
   StringReplace(&current_dir, '\\', '/');
   std::string test_root_path = JoinPath(current_dir, "/tmp_test_dir_asdfasdf");
@@ -86,18 +86,18 @@ void TestDirOperation(FileSystem* file_system) {
   ASSERT_TRUE(!file_system->IsDirectory(test_root_path));
 }
 
-void TestFileSystem(FileSystem* file_system) {
+void TestFileSystem(FileSystem *file_system) {
   TestFileOperation(file_system);
   TestDirOperation(file_system);
 }
 
-}  // namespace fs
+} // namespace fs
 
 TEST(file_system, write_and_read) {
 #ifdef PLATFORM_POSIX
-  fs::FileSystem* file_system = new fs::PosixFileSystem();
+  fs::FileSystem *file_system = new fs::PosixFileSystem();
   fs::TestFileSystem(file_system);
 #endif
 }
 
-}  // namespace oneflow
+} // namespace oneflow

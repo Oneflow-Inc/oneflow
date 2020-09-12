@@ -17,20 +17,22 @@ limitations under the License.
 
 namespace oneflow {
 
-OpNodeSignatureDesc::OpNodeSignatureDesc(const OpNodeSignature& op_node_signature)
+OpNodeSignatureDesc::OpNodeSignatureDesc(
+    const OpNodeSignature &op_node_signature)
     : op_node_signature_(op_node_signature) {
-  const auto& logical_blob_desc_sig = op_node_signature.logical_blob_desc_signature();
-  for (const auto& pair : logical_blob_desc_sig.bn_in_op2blob_desc()) {
+  const auto &logical_blob_desc_sig =
+      op_node_signature.logical_blob_desc_signature();
+  for (const auto &pair : logical_blob_desc_sig.bn_in_op2blob_desc()) {
     auto blob_desc = std::make_unique<BlobDesc>(pair.second);
     CHECK(bn_in_op2blob_desc_.emplace(pair.first, std::move(blob_desc)).second);
   }
 }
 
-Maybe<const BlobDesc&> OpNodeSignatureDesc::LogicalBlobDesc4BnInOp(
-    const std::string& bn_in_op) const {
-  const auto& iter = bn_in_op2blob_desc_.find(bn_in_op);
+Maybe<const BlobDesc &>
+OpNodeSignatureDesc::LogicalBlobDesc4BnInOp(const std::string &bn_in_op) const {
+  const auto &iter = bn_in_op2blob_desc_.find(bn_in_op);
   CHECK_OR_RETURN(iter != bn_in_op2blob_desc_.end());
   return *iter->second;
 }
 
-}  // namespace oneflow
+} // namespace oneflow

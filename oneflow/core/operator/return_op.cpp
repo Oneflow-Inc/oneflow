@@ -26,32 +26,38 @@ void ReturnOp::InitFromOpConf() {
 }
 
 Maybe<void> ReturnOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+    const ParallelContext *parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
   return Maybe<void>::Ok();
 }
 
-const PbMessage& ReturnOp::GetCustomizedConf() const { return op_conf().return_conf(); }
+const PbMessage &ReturnOp::GetCustomizedConf() const {
+  return op_conf().return_conf();
+}
 
 Maybe<void> ReturnOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+    std::function<OptInt64 *(const std::string &)> BatchAxis4BnInOp) const {
   *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ReturnOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
-    const ParallelDesc& parallel_desc) const {
-  const auto& in_sbp_infer_hint = *JUST(SbpInferHint4Ibn("in"));
+    SbpSignature *sbp_signature, const SbpSignature &sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature &)> &CalcOrderValue4SbpSig,
+    std::function<Maybe<const SbpInferHint *>(const std::string &)>
+        SbpInferHint4Ibn,
+    const ParallelDesc &parallel_desc) const {
+  const auto &in_sbp_infer_hint = *JUST(SbpInferHint4Ibn("in"));
   CHECK_EQ_OR_RETURN(in_sbp_infer_hint.parallel_desc().parallel_num(),
                      parallel_desc.parallel_num());
   if (in_sbp_infer_hint.sbp_parallel().has_partial_sum_parallel()) {
-    SbpSignatureBuilder().Broadcast(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
+    SbpSignatureBuilder()
+        .Broadcast(input_bns())
+        .Broadcast(output_bns())
+        .Build(sbp_signature);
   } else {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    auto *bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     (*bn2sbp)["in"] = in_sbp_infer_hint.sbp_parallel();
     (*bn2sbp)["out"] = in_sbp_infer_hint.sbp_parallel();
   }
@@ -66,4 +72,4 @@ REGISTER_OP(OperatorConf::kReturnConf, ReturnOp);
 REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kReturnConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kReturnConf);
 
-}  // namespace oneflow
+} // namespace oneflow

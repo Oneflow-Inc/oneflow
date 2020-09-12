@@ -16,72 +16,76 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CXT_MGR_H_
 #define ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CXT_MGR_H_
 
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
+#include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
 
 namespace oneflow {
 
 class JobBuildAndInferCtxMgr {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtxMgr);
   virtual ~JobBuildAndInferCtxMgr() = default;
 
-  Maybe<void> OpenJobBuildAndInferCtx(const std::string& job_name);
-  Maybe<JobBuildAndInferCtx*> FindJobBuildAndInferCtx(const std::string& job_name);
+  Maybe<void> OpenJobBuildAndInferCtx(const std::string &job_name);
+  Maybe<JobBuildAndInferCtx *>
+  FindJobBuildAndInferCtx(const std::string &job_name);
   Maybe<std::string> GetCurrentJobName() const;
   Maybe<void> CloseCurrentJobBuildAndInferCtx();
-  Maybe<void> AddLbiAndDiffWatcherUuidPair(const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) const;
+  Maybe<void> AddLbiAndDiffWatcherUuidPair(
+      const LbiAndDiffWatcherUuidPair &lbi_uuid_pair) const;
 
-  const JobSet& job_set() const { return job_set_; }
+  const JobSet &job_set() const { return job_set_; }
   std::string structure_graph() const;
 
- protected:
-  virtual JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const = 0;
+protected:
+  virtual JobBuildAndInferCtx *NewJobBuildAndInferCtx(Job *job,
+                                                      int64_t job_id) const = 0;
   JobBuildAndInferCtxMgr() : has_cur_job_(false) {}
   virtual void VirtualCloseJob() = 0;
-  JobSet* mut_job_set() { return &job_set_; }
+  JobSet *mut_job_set() { return &job_set_; }
 
   void clear_job_name2infer_ctx() { job_name2infer_ctx_.clear(); }
 
- private:
+private:
   JobSet job_set_;
   bool has_cur_job_;
   std::string cur_job_name_;
-  HashMap<std::string, std::unique_ptr<JobBuildAndInferCtx>> job_name2infer_ctx_;
+  HashMap<std::string, std::unique_ptr<JobBuildAndInferCtx>>
+      job_name2infer_ctx_;
 };
 
 class LazyJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(LazyJobBuildAndInferCtxMgr);
   LazyJobBuildAndInferCtxMgr() : JobBuildAndInferCtxMgr() {}
   ~LazyJobBuildAndInferCtxMgr() override = default;
 
- private:
+private:
   friend class Global<LazyJobBuildAndInferCtxMgr>;
 
   void VirtualCloseJob() override {}
-  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
+  JobBuildAndInferCtx *NewJobBuildAndInferCtx(Job *job, int64_t job_id) const;
 };
 
 class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(EagerJobBuildAndInferCtxMgr);
   EagerJobBuildAndInferCtxMgr() : JobBuildAndInferCtxMgr() {}
   ~EagerJobBuildAndInferCtxMgr() override = default;
 
- private:
+private:
   friend class Global<EagerJobBuildAndInferCtxMgr>;
 
   void VirtualCloseJob() override;
-  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
+  JobBuildAndInferCtx *NewJobBuildAndInferCtx(Job *job, int64_t job_id) const;
 };
 
 bool EagerExecutionEnabled();
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CXT_MGR_H_
+#endif // ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CXT_MGR_H_

@@ -22,37 +22,40 @@ limitations under the License.
 namespace oneflow {
 
 class CaseCompActor final : public CompActor {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CaseCompActor);
   CaseCompActor() = default;
   ~CaseCompActor() override = default;
 
- protected:
+protected:
   bool IsCustomizedReadReady() const override;
   bool IsCustomizedWriteReady() const override;
   bool IsCustomizedReadAlwaysUnReadyFromNow() const override;
-  void UpdtStateAsCustomizedProducedRegst(Regst* regst);
+  void UpdtStateAsCustomizedProducedRegst(Regst *regst);
   void AsyncSendCustomizedProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
-  void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
-  void VirtualCompActorInit(const TaskProto&) override;
+  void ForEachCurCustomizedReadableRegst(
+      std::function<void(const Regst *)>) const override;
+  void VirtualCompActorInit(const TaskProto &) override;
   bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override;
-  void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
-  void NormalProcessCustomizedEordMsg(const ActorMsg&) override {}
+  void NormalProcessCustomizedReadableRegstMsg(const ActorMsg &) override;
+  void NormalProcessCustomizedEordMsg(const ActorMsg &) override {}
   bool CheckOutputActId(int64_t regst_desc_id) const override;
-  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
-      override {
+  std::pair<RegstNameType, HashSet<std::string>>
+  GetNaiveOrCustomizedConsumedRegstDescName() override {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
-  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName()
-      override {
+  std::pair<RegstNameType, HashSet<std::string>>
+  GetNaiveOrCustomizedProducedRegstDescName() override {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
 
- private:
+private:
   void Act() override;
-  void TakeOverConsumedRegst(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
-  void TakeOverProducedRegst(const PbMap<std::string, RegstDescProto>& produced_ids);
+  void
+  TakeOverConsumedRegst(const PbMap<std::string, RegstDescIdSet> &consumed_ids);
+  void
+  TakeOverProducedRegst(const PbMap<std::string, RegstDescProto> &produced_ids);
   bool IsInputOrOutputReady() const;
   int64_t GetCurSelectId() const;
 
@@ -64,6 +67,6 @@ class CaseCompActor final : public CompActor {
   CaseStatus case_status_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_CASE_COMPUTE_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_CASE_COMPUTE_ACTOR_H_

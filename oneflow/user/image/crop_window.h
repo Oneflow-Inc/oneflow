@@ -27,6 +27,6 @@ struct CropWindow {
   CropWindow() : anchor{0, 0}, shape{0, 0} {}
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_IMAGE_CROP_WINDOW_H_
+#endif // ONEFLOW_USER_IMAGE_CROP_WINDOW_H_

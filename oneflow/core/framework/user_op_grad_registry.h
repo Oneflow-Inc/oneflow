@@ -16,16 +16,16 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_USER_OP_GRAD_REGISTRY_H_
 #define ONEFLOW_CORE_FRAMEWORK_USER_OP_GRAD_REGISTRY_H_
 
-#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
 namespace user_op {
 
-using AddOpFn = std::function<void(const UserOpConfWrapper&)>;
-using GenBackwardOpConfFn = std::function<void(const UserOpWrapper&, AddOpFn)>;
-using BackwardOpConfGenFn = std::function<void(BackwardOpConfContext*)>;
+using AddOpFn = std::function<void(const UserOpConfWrapper &)>;
+using GenBackwardOpConfFn = std::function<void(const UserOpWrapper &, AddOpFn)>;
+using BackwardOpConfGenFn = std::function<void(BackwardOpConfContext *)>;
 
 struct OpGradRegistryResult {
   std::string op_type_name;
@@ -34,22 +34,22 @@ struct OpGradRegistryResult {
 };
 
 class OpGradRegistry final {
- public:
-  OpGradRegistry& Name(const std::string& op_type_name);
+public:
+  OpGradRegistry &Name(const std::string &op_type_name);
   // old
-  OpGradRegistry& SetGenBackwardOpConfFn(GenBackwardOpConfFn fn);
+  OpGradRegistry &SetGenBackwardOpConfFn(GenBackwardOpConfFn fn);
   // new
-  OpGradRegistry& SetBackwardOpConfGenFn(BackwardOpConfGenFn fn);
+  OpGradRegistry &SetBackwardOpConfGenFn(BackwardOpConfGenFn fn);
 
-  OpGradRegistry& Finish();
+  OpGradRegistry &Finish();
   OpGradRegistryResult GetResult() { return result_; }
 
- private:
+private:
   OpGradRegistryResult result_;
 };
 
-}  // namespace user_op
+} // namespace user_op
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_USER_OP_GRAD_REGISTRY_H_
+#endif // ONEFLOW_CORE_FRAMEWORK_USER_OP_GRAD_REGISTRY_H_

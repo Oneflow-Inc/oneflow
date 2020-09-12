@@ -22,16 +22,16 @@ limitations under the License.
 namespace oneflow {
 
 class Profiler final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(Profiler);
   Profiler() = default;
   ~Profiler() = default;
 
-  void Profile(const Plan& plan, const std::string& act_event_filepath);
+  void Profile(const Plan &plan, const std::string &act_event_filepath);
 
- private:
+private:
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_PROFILER_H_
+#endif // ONEFLOW_CORE_JOB_PROFILER_H_

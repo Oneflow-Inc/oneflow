@@ -20,18 +20,19 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type>
+template <DeviceType device_type>
 class UnpackKernel final : public KernelIf<device_type> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(UnpackKernel);
   UnpackKernel() = default;
   ~UnpackKernel() = default;
 
- private:
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+private:
+  void ForwardDataContent(
+      const KernelCtx &,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_UNPACK_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_UNPACK_KERNEL_H_

@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class WaitAndSendIdsCompTaskNode final : public CompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(WaitAndSendIdsCompTaskNode);
   WaitAndSendIdsCompTaskNode() = default;
   ~WaitAndSendIdsCompTaskNode() override = default;
@@ -34,10 +34,10 @@ class WaitAndSendIdsCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kWaitAndSendIds; }
   bool IsIndependent() const override { return true; }
 
- private:
+private:
   void InferProducedDataRegstTimeShape() override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_WAIT_AND_SEND_IDS_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_WAIT_AND_SEND_IDS_COMPUTE_TASK_NODE_H_

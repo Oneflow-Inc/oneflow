@@ -20,13 +20,13 @@ limitations under the License.
 
 namespace oneflow {
 
-#define MATH_BINARY_ELEMENTWISE_FUNC_SEQ     \
-  OF_PP_MAKE_TUPLE_SEQ("pow", Pow)           \
-  OF_PP_MAKE_TUPLE_SEQ("atan2", Atan2)       \
-  OF_PP_MAKE_TUPLE_SEQ("floordiv", Floordiv) \
-  OF_PP_MAKE_TUPLE_SEQ("xdivy", Xdivy)       \
+#define MATH_BINARY_ELEMENTWISE_FUNC_SEQ                                       \
+  OF_PP_MAKE_TUPLE_SEQ("pow", Pow)                                             \
+  OF_PP_MAKE_TUPLE_SEQ("atan2", Atan2)                                         \
+  OF_PP_MAKE_TUPLE_SEQ("floordiv", Floordiv)                                   \
+  OF_PP_MAKE_TUPLE_SEQ("xdivy", Xdivy)                                         \
   OF_PP_MAKE_TUPLE_SEQ("xlogy", Xlogy)
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_OPS_MATH_BINARY_ELEMENTWISE_SEQ_H_
+#endif // ONEFLOW_USER_OPS_MATH_BINARY_ELEMENTWISE_SEQ_H_

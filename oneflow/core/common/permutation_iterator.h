@@ -22,33 +22,36 @@ namespace oneflow {
 
 #define ITER_DEVICE_FUNC __host__ __device__ __forceinline__
 
-template<typename T, typename DataIter, typename IndexIter, typename OffsetT = std::ptrdiff_t>
+template <typename T, typename DataIter, typename IndexIter,
+          typename OffsetT = std::ptrdiff_t>
 class PermutationIterator {
- public:
+public:
   using iterator_category = std::random_access_iterator_tag;
   using self_type = PermutationIterator;
   using difference_type = OffsetT;
   using value_type = T;
-  using pointer = T*;
-  using reference = T&;
+  using pointer = T *;
+  using reference = T &;
 
   ITER_DEVICE_FUNC PermutationIterator(DataIter data_iter, IndexIter index_iter)
       : data_iter_(data_iter), index_iter_(index_iter) {}
 
   // const methods
 
-  ITER_DEVICE_FUNC bool operator==(const PermutationIterator& rhs) const {
+  ITER_DEVICE_FUNC bool operator==(const PermutationIterator &rhs) const {
     return index_iter_ == rhs.index_iter_ && data_iter_ == rhs.data_iter_;
   }
 
-  ITER_DEVICE_FUNC bool operator!=(const PermutationIterator& rhs) const { return !(*this == rhs); }
+  ITER_DEVICE_FUNC bool operator!=(const PermutationIterator &rhs) const {
+    return !(*this == rhs);
+  }
 
-  template<typename Int>
+  template <typename Int>
   ITER_DEVICE_FUNC PermutationIterator operator+(Int n) const {
     return PermutationIterator(data_iter_, index_iter_ + n);
   }
 
-  template<typename Int>
+  template <typename Int>
   ITER_DEVICE_FUNC PermutationIterator operator-(Int n) const {
     return PermutationIterator(data_iter_, index_iter_ - n);
   }
@@ -57,11 +60,15 @@ class PermutationIterator {
     return index_iter_ - other.index_iter_;
   }
 
-  ITER_DEVICE_FUNC const pointer operator->() const { return &data_iter_[*index_iter_]; }
+  ITER_DEVICE_FUNC const pointer operator->() const {
+    return &data_iter_[*index_iter_];
+  }
 
-  ITER_DEVICE_FUNC const reference operator*() const { return data_iter_[*index_iter_]; }
+  ITER_DEVICE_FUNC const reference operator*() const {
+    return data_iter_[*index_iter_];
+  }
 
-  template<typename Int>
+  template <typename Int>
   ITER_DEVICE_FUNC const reference operator[](Int n) const {
     return data_iter_[index_iter_[n]];
   }
@@ -90,14 +97,14 @@ class PermutationIterator {
     return *this;
   }
 
-  template<typename Int>
-  ITER_DEVICE_FUNC PermutationIterator& operator+=(Int n) {
+  template <typename Int>
+  ITER_DEVICE_FUNC PermutationIterator &operator+=(Int n) {
     index_iter_ += n;
     return *this;
   }
 
-  template<typename Int>
-  ITER_DEVICE_FUNC PermutationIterator& operator-=(Int n) {
+  template <typename Int>
+  ITER_DEVICE_FUNC PermutationIterator &operator-=(Int n) {
     index_iter_ -= n;
     return *this;
   }
@@ -106,18 +113,17 @@ class PermutationIterator {
 
   ITER_DEVICE_FUNC reference operator*() { return data_iter_[*index_iter_]; }
 
-  template<typename Int>
-  ITER_DEVICE_FUNC reference operator[](Int n) {
+  template <typename Int> ITER_DEVICE_FUNC reference operator[](Int n) {
     return data_iter_[index_iter_[n]];
   }
 
- private:
+private:
   DataIter data_iter_;
   IndexIter index_iter_;
 };
 
 #undef ITER_DEVICE_FUNC
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_PERMUTATION_ITERATOR_H_
+#endif // ONEFLOW_CORE_COMMON_PERMUTATION_ITERATOR_H_

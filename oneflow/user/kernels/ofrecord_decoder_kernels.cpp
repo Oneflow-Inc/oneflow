@@ -13,17 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/tensor_buffer.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/user/image/random_crop_generator.h"
 #include "oneflow/user/image/image_util.h"
-#include "oneflow/user/kernels/random_crop_kernel_state.h"
+#include "oneflow/user/image/random_crop_generator.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/random_crop_kernel_state.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 
 #include <opencv2/opencv.hpp>
@@ -32,31 +32,33 @@ namespace oneflow {
 
 namespace {
 
-template<typename T>
-void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_cnt,
-                          bool dim1_varying_length, bool auto_zero_padding) {
+template <typename T>
+void DecodeOneRawOFRecord(const Feature &feature, T *dptr,
+                          int64_t sample_elem_cnt, bool dim1_varying_length,
+                          bool auto_zero_padding) {
   if (feature.has_bytes_list()) {
     CHECK_EQ(feature.bytes_list().value_size(), 1);
-    const auto& value0 = feature.bytes_list().value(0);
-    auto in_dptr = reinterpret_cast<const int8_t*>(value0.c_str());
+    const auto &value0 = feature.bytes_list().value(0);
+    auto in_dptr = reinterpret_cast<const int8_t *>(value0.c_str());
     sample_elem_cnt = std::min<int64_t>(sample_elem_cnt, value0.size());
     CopyElem<int8_t, T>(in_dptr, dptr, sample_elem_cnt);
   }
-#define DEFINE_ONE_ELIF(PbT, CppT)                                                                \
-  else if (feature.has_##PbT##_list()) {                                                          \
-    const auto& list = feature.PbT##_list();                                                      \
-    const CppT* in_dptr = list.value().data();                                                    \
-    const int64_t padding_elem_num = auto_zero_padding ? sample_elem_cnt - list.value_size() : 0; \
-    if (dim1_varying_length || auto_zero_padding) {                                               \
-      CHECK_LE(list.value_size(), sample_elem_cnt);                                               \
-      sample_elem_cnt = list.value_size();                                                        \
-    } else {                                                                                      \
-      CHECK_EQ(sample_elem_cnt, list.value_size());                                               \
-    }                                                                                             \
-    CopyElem<CppT, T>(in_dptr, dptr, sample_elem_cnt);                                            \
-    if (padding_elem_num > 0) {                                                                   \
-      std::memset(dptr + sample_elem_cnt, 0, padding_elem_num * sizeof(T));                       \
-    }                                                                                             \
+#define DEFINE_ONE_ELIF(PbT, CppT)                                             \
+  else if (feature.has_##PbT##_list()) {                                       \
+    const auto &list = feature.PbT##_list();                                   \
+    const CppT *in_dptr = list.value().data();                                 \
+    const int64_t padding_elem_num =                                           \
+        auto_zero_padding ? sample_elem_cnt - list.value_size() : 0;           \
+    if (dim1_varying_length || auto_zero_padding) {                            \
+      CHECK_LE(list.value_size(), sample_elem_cnt);                            \
+      sample_elem_cnt = list.value_size();                                     \
+    } else {                                                                   \
+      CHECK_EQ(sample_elem_cnt, list.value_size());                            \
+    }                                                                          \
+    CopyElem<CppT, T>(in_dptr, dptr, sample_elem_cnt);                         \
+    if (padding_elem_num > 0) {                                                \
+      std::memset(dptr + sample_elem_cnt, 0, padding_elem_num * sizeof(T));    \
+    }                                                                          \
   }
   DEFINE_ONE_ELIF(float, float)
   DEFINE_ONE_ELIF(double, double)
@@ -68,47 +70,49 @@ void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_c
   }
 }
 
-}  // namespace
+} // namespace
 
-template<typename T>
+template <typename T>
 class OFRecordRawDecoderKernel final : public user_op::OpKernel {
- public:
+public:
   OFRecordRawDecoderKernel() = default;
   ~OFRecordRawDecoderKernel() override = default;
 
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+private:
+  void Compute(user_op::KernelComputeContext *ctx) const override {
+    user_op::Tensor *in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor *out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     // TODO(chengcheng): remove record num in record blob, fix by shape elem cnt
     int64_t record_num = in_blob->shape().At(0);
     int64_t sample_elem_cnt = out_blob->shape().Count(1);
     CHECK(record_num > 0);
-    const OFRecord* records = in_blob->dptr<OFRecord>();
-    T* out_dptr = out_blob->mut_dptr<T>();
-    const std::string& name = ctx->Attr<std::string>("name");
+    const OFRecord *records = in_blob->dptr<OFRecord>();
+    T *out_dptr = out_blob->mut_dptr<T>();
+    const std::string &name = ctx->Attr<std::string>("name");
 
     bool auto_zero_padding = ctx->Attr<bool>("auto_zero_padding");
     bool dim1_varying_length = ctx->Attr<bool>("dim1_varying_length");
 
     MultiThreadLoop(record_num, [&](size_t i) {
-      const OFRecord& record = *(records + i);
-      T* dptr = out_dptr + i * sample_elem_cnt;
+      const OFRecord &record = *(records + i);
+      T *dptr = out_dptr + i * sample_elem_cnt;
       CHECK(record.feature().find(name) != record.feature().end())
           << "Field " << name << " not found";
-      const Feature& feature = record.feature().at(name);
-      DecodeOneRawOFRecord(feature, dptr, sample_elem_cnt, auto_zero_padding, dim1_varying_length);
+      const Feature &feature = record.feature().at(name);
+      DecodeOneRawOFRecord(feature, dptr, sample_elem_cnt, auto_zero_padding,
+                           dim1_varying_length);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_RAW_DECODER_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("ofrecord_raw_decoder")                                  \
-      .SetCreateFn<OFRecordRawDecoderKernel<dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                       \
-                       & (user_op::HobDataType("in", 0) == DataType::kOFRecord) \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+#define REGISTER_RAW_DECODER_KERNEL(dtype)                                     \
+  REGISTER_USER_KERNEL("ofrecord_raw_decoder")                                 \
+      .SetCreateFn<OFRecordRawDecoderKernel<dtype>>()                          \
+      .SetIsMatchedHob(                                                        \
+          (user_op::HobDeviceTag() == "cpu") &                                 \
+          (user_op::HobDataType("in", 0) == DataType::kOFRecord) &             \
+          (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_RAW_DECODER_KERNEL(char)
 REGISTER_RAW_DECODER_KERNEL(float)
@@ -120,20 +124,24 @@ REGISTER_RAW_DECODER_KERNEL(uint8_t)
 
 namespace {
 
-void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* buffer,
-                                        const std::string& name, const std::string& color_space,
-                                        RandomCropGenerator* random_crop_gen) {
-  CHECK(record.feature().find(name) != record.feature().end()) << "Field " << name << " not found";
-  const Feature& feature = record.feature().at(name);
+void DecodeRandomCropImageFromOneRecord(const OFRecord &record,
+                                        TensorBuffer *buffer,
+                                        const std::string &name,
+                                        const std::string &color_space,
+                                        RandomCropGenerator *random_crop_gen) {
+  CHECK(record.feature().find(name) != record.feature().end())
+      << "Field " << name << " not found";
+  const Feature &feature = record.feature().at(name);
   CHECK(feature.has_bytes_list());
   CHECK(feature.bytes_list().value_size() == 1);
-  const std::string& src_data = feature.bytes_list().value(0);
+  const std::string &src_data = feature.bytes_list().value(0);
 
   // cv::_InputArray image_data(src_data.data(), src_data.size());
   // cv::Mat image = cv::imdecode(image_data, cv::IMREAD_ANYCOLOR);
-  cv::Mat image =
-      cv::imdecode(cv::Mat(1, src_data.size(), CV_8UC1, (void*)(src_data.data())),  // NOLINT
-                   ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
+  cv::Mat image = cv::imdecode(
+      cv::Mat(1, src_data.size(), CV_8UC1, (void *)(src_data.data())), // NOLINT
+      ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR
+                                      : cv::IMREAD_GRAYSCALE);
   int W = image.cols;
   int H = image.rows;
 
@@ -173,37 +181,39 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
   memcpy(buffer->mut_data<uint8_t>(), image.ptr(), image_shape.elem_cnt());
 }
 
-}  // namespace
+} // namespace
 
 class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
- public:
+public:
   OFRecordImageDecoderRandomCropKernel() = default;
   ~OFRecordImageDecoderRandomCropKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelState>
+  CreateOpKernelState(user_op::KernelInitContext *ctx) const override {
     return CreateRandomCropKernelState(ctx);
   }
 
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* crop_window_generators = dynamic_cast<RandomCropKernelState*>(state);
+private:
+  void Compute(user_op::KernelComputeContext *ctx,
+               user_op::OpKernelState *state) const override {
+    auto *crop_window_generators = dynamic_cast<RandomCropKernelState *>(state);
     CHECK_NOTNULL(crop_window_generators);
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor *out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t record_num = out_blob->shape().At(0);
     CHECK(record_num > 0);
-    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor *in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK_EQ(out_blob->shape(), in_blob->shape());
-    const OFRecord* records = in_blob->dptr<OFRecord>();
-    TensorBuffer* buffers = out_blob->mut_dptr<TensorBuffer>();
-    const std::string& name = ctx->Attr<std::string>("name");
-    const std::string& color_space = ctx->Attr<std::string>("color_space");
+    const OFRecord *records = in_blob->dptr<OFRecord>();
+    TensorBuffer *buffers = out_blob->mut_dptr<TensorBuffer>();
+    const std::string &name = ctx->Attr<std::string>("name");
+    const std::string &color_space = ctx->Attr<std::string>("color_space");
 
     MultiThreadLoop(record_num, [&](size_t i) {
-      const OFRecord& record = *(records + i);
-      TensorBuffer* buffer = buffers + i;
-      RandomCropGenerator* gen = crop_window_generators->GetGenerator(i);
-      DecodeRandomCropImageFromOneRecord(record, buffer, name, color_space, gen);
+      const OFRecord &record = *(records + i);
+      TensorBuffer *buffer = buffers + i;
+      RandomCropGenerator *gen = crop_window_generators->GetGenerator(i);
+      DecodeRandomCropImageFromOneRecord(record, buffer, name, color_space,
+                                         gen);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -211,31 +221,33 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("ofrecord_image_decoder_random_crop")
     .SetCreateFn<OFRecordImageDecoderRandomCropKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("in", 0) == DataType::kOFRecord)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") &
+                     (user_op::HobDataType("in", 0) == DataType::kOFRecord) &
+                     (user_op::HobDataType("out", 0) ==
+                      DataType::kTensorBuffer));
 
 class OFRecordImageDecoderKernel final : public user_op::OpKernel {
- public:
+public:
   OFRecordImageDecoderKernel() = default;
   ~OFRecordImageDecoderKernel() override = default;
 
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+private:
+  void Compute(user_op::KernelComputeContext *ctx) const override {
+    user_op::Tensor *out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t record_num = out_blob->shape().At(0);
     CHECK(record_num > 0);
-    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor *in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK_EQ(out_blob->shape(), in_blob->shape());
-    const OFRecord* records = in_blob->dptr<OFRecord>();
-    TensorBuffer* buffers = out_blob->mut_dptr<TensorBuffer>();
-    const std::string& name = ctx->Attr<std::string>("name");
-    const std::string& color_space = ctx->Attr<std::string>("color_space");
+    const OFRecord *records = in_blob->dptr<OFRecord>();
+    TensorBuffer *buffers = out_blob->mut_dptr<TensorBuffer>();
+    const std::string &name = ctx->Attr<std::string>("name");
+    const std::string &color_space = ctx->Attr<std::string>("color_space");
 
     MultiThreadLoop(record_num, [&](size_t i) {
-      const OFRecord& record = *(records + i);
-      TensorBuffer* buffer = buffers + i;
-      DecodeRandomCropImageFromOneRecord(record, buffer, name, color_space, nullptr);
+      const OFRecord &record = *(records + i);
+      TensorBuffer *buffer = buffers + i;
+      DecodeRandomCropImageFromOneRecord(record, buffer, name, color_space,
+                                         nullptr);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -243,8 +255,9 @@ class OFRecordImageDecoderKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("ofrecord_image_decoder")
     .SetCreateFn<OFRecordImageDecoderKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("in", 0) == DataType::kOFRecord)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") &
+                     (user_op::HobDataType("in", 0) == DataType::kOFRecord) &
+                     (user_op::HobDataType("out", 0) ==
+                      DataType::kTensorBuffer));
 
-}  // namespace oneflow
+} // namespace oneflow

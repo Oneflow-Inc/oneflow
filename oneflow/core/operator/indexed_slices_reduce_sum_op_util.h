@@ -21,11 +21,12 @@ limitations under the License.
 namespace oneflow {
 
 struct IndexedSlicesReduceSumOpUtil {
-  static void GetReduceSumWorkspaceSizeInBytes(DeviceType device_type, DataType value_type,
-                                               DataType index_type, int64_t n, int64_t m,
-                                               int64_t* workspace_size_in_bytes);
+  static void
+  GetReduceSumWorkspaceSizeInBytes(DeviceType device_type, DataType value_type,
+                                   DataType index_type, int64_t n, int64_t m,
+                                   int64_t *workspace_size_in_bytes);
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_INDEXED_SLICES_REDUCE_SUM_OP_UTIL_H_
+#endif // ONEFLOW_CORE_OPERATOR_INDEXED_SLICES_REDUCE_SUM_OP_UTIL_H_

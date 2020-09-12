@@ -31,8 +31,8 @@ TEST(OBJECT_MSG_DEFINE_STRUCT, basic) {
   ASSERT_TRUE(flag);
 }
 
-}  // namespace
+} // namespace
 
-}  // namespace test
+} // namespace test
 
-}  // namespace oneflow
+} // namespace oneflow

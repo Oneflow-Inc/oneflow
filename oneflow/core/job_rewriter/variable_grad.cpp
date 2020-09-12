@@ -20,13 +20,13 @@ namespace oneflow {
 namespace {
 
 void GenerateBackwardOpConf(
-    const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
+    const Operator &op, std::vector<OperatorConf> *op_confs,
+    const std::function<LogicalBlobId *(const std::string &)> &DiffLbi4BnInOp) {
   // do nothing
 }
 
-}  // namespace
+} // namespace
 
 REGISTER_OP_GRAD(OperatorConf::kVariableConf, &GenerateBackwardOpConf);
 
-}  // namespace oneflow
+} // namespace oneflow

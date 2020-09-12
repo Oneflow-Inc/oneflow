@@ -16,67 +16,73 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_PARALLEL_DESC_H_
 #define ONEFLOW_CORE_JOB_PARALLEL_DESC_H_
 
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/record/record.pb.h"
-#include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 
 class ResourceDesc;
 
-Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
+Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf &parallel_conf);
 
-Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
-                                std::string* device_id_str);
+Maybe<void> ParseDeviceNameConf(const std::string &device_name,
+                                int64_t *mchn_id, std::string *device_id_str);
 
 class ParallelContext;
 
 class ParallelDesc final {
- public:
+public:
   ~ParallelDesc() = default;
 
-  ParallelDesc(const ParallelDesc&) = default;
-  ParallelDesc(const ParallelConf& user_conf);
-  Maybe<void> MaybeInit(const ParallelConf& user_conf);
+  ParallelDesc(const ParallelDesc &) = default;
+  ParallelDesc(const ParallelConf &user_conf);
+  Maybe<void> MaybeInit(const ParallelConf &user_conf);
 
   // Getters
   DeviceType device_type() const { return device_type_; }
   bool HasMachineId(int64_t machine_id) const {
-    return machine_id2sorted_dev_phy_ids_.find(machine_id) != machine_id2sorted_dev_phy_ids_.end();
+    return machine_id2sorted_dev_phy_ids_.find(machine_id) !=
+           machine_id2sorted_dev_phy_ids_.end();
   }
-  const std::vector<int64_t>& sorted_machine_ids() const { return sorted_machine_ids_; }
-  const std::vector<int64_t>& sorted_dev_phy_ids(int64_t machine_id) const {
+  const std::vector<int64_t> &sorted_machine_ids() const {
+    return sorted_machine_ids_;
+  }
+  const std::vector<int64_t> &sorted_dev_phy_ids(int64_t machine_id) const {
     return machine_id2sorted_dev_phy_ids_.at(machine_id);
   }
   int64_t parallel_num() const { return parallel_num_; }
-  int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
-  const ParallelConf& parallel_conf() const { return parallel_conf_; }
+  int64_t device_num_of_each_machine() const {
+    return device_num_of_each_machine_;
+  }
+  const ParallelConf &parallel_conf() const { return parallel_conf_; }
 
-  Maybe<void> GetParallelContext(ParallelContext* parallel_ctx, int64_t machine_id,
-                                 int64_t device_id) const;
+  Maybe<void> GetParallelContext(ParallelContext *parallel_ctx,
+                                 int64_t machine_id, int64_t device_id) const;
 
   // Setters
   void set_device_type(DeviceType device_type);
 
   ParallelConf GetParallelIdOnlyParallelConf(int64_t parallel_id) const;
 
-  bool EqualsIgnoringDeviceType(const ParallelDesc& rhs) const;
-  bool Equals(const ParallelDesc& rhs) const;
-  bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }
-  bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
-  bool Equals(const ParallelDesc* rhs) const { return Equals(*rhs); }
+  bool EqualsIgnoringDeviceType(const ParallelDesc &rhs) const;
+  bool Equals(const ParallelDesc &rhs) const;
+  bool operator==(const ParallelDesc &rhs) const { return Equals(rhs); }
+  bool operator!=(const ParallelDesc &rhs) const { return !(*this == rhs); }
+  bool Equals(const ParallelDesc *rhs) const { return Equals(*rhs); }
   int64_t MachineIdForParallelId(int64_t parallel_id) const;
   int64_t DeviceIdForParallelId(int64_t parallel_id) const;
   bool Containing(int64_t machine_id, int64_t device_id) const;
 
- private:
-  friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
+private:
+  friend Maybe<OFRecord>
+  ParseMachineAndDeviceIdList(const ParallelConf &parallel_conf);
   ParallelDesc() = default;
   void ClearUp();
   Maybe<void> SanityCheck();
-  Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
+  Maybe<void> CheckWithResourceDesc(const ResourceDesc &resource_desc);
 
   DeviceType device_type_;
   ParallelConf parallel_conf_;
@@ -89,27 +95,26 @@ class ParallelDesc final {
   HashMap<int64_t, HashMap<int64_t, int64_t>> machine_id2device_id2parallel_id_;
 };
 
-inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
+inline bool operator==(const ParallelConf &lhs, const ParallelConf &rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);
 }
 
-inline bool operator!=(const ParallelConf& lhs, const ParallelConf& rhs) {
+inline bool operator!=(const ParallelConf &lhs, const ParallelConf &rhs) {
   return ParallelDesc(lhs) != ParallelDesc(rhs);
 }
 
-std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
-    const ParallelContext* parallel_ctx);
+std::tuple<int32_t, int32_t>
+GetPartIdAndPartNumFromParallelCtx(const ParallelContext *parallel_ctx);
 
 ParallelConf GenParallelConfOfCpuZeroOnMaster();
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
 
-}  // namespace oneflow
+} // namespace oneflow
 
 namespace std {
 
-template<>
-struct hash<oneflow::ParallelDesc> {
-  size_t operator()(const oneflow::ParallelDesc& pr) const {
+template <> struct hash<oneflow::ParallelDesc> {
+  size_t operator()(const oneflow::ParallelDesc &pr) const {
     size_t ret = 0;
     int i = 0;
     int shift_roundtrip = (sizeof(size_t) / 2);
@@ -122,13 +127,13 @@ struct hash<oneflow::ParallelDesc> {
   }
 };
 
-template<>
-struct hash<oneflow::ParallelConf> {
-  size_t operator()(const oneflow::ParallelConf& parallel_conf) const {
-    return std::hash<oneflow::ParallelDesc>()(oneflow::ParallelDesc(parallel_conf));
+template <> struct hash<oneflow::ParallelConf> {
+  size_t operator()(const oneflow::ParallelConf &parallel_conf) const {
+    return std::hash<oneflow::ParallelDesc>()(
+        oneflow::ParallelDesc(parallel_conf));
   }
 };
 
-}  // namespace std
+} // namespace std
 
-#endif  // ONEFLOW_CORE_JOB_PARALLEL_DESC_H_
+#endif // ONEFLOW_CORE_JOB_PARALLEL_DESC_H_

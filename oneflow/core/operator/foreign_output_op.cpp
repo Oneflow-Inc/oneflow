@@ -24,27 +24,28 @@ void ForeignOutputOp::InitFromOpConf() {
 }
 
 Maybe<void> ForeignOutputOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+    const ParallelContext *parallel_ctx) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   return Maybe<void>::Ok();
 }
 
-const PbMessage& ForeignOutputOp::GetCustomizedConf() const {
+const PbMessage &ForeignOutputOp::GetCustomizedConf() const {
   return op_conf().foreign_output_conf();
 }
 
 Maybe<void> ForeignOutputOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+    std::function<OptInt64 *(const std::string &)> BatchAxis4BnInOp) const {
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ForeignOutputOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    const std::function<Maybe<const BlobDesc &>(const std::string &)>
+        &LogicalBlobDesc4Ibn,
+    SbpSignatureList *sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kForeignOutputConf, ForeignOutputOp);
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -22,9 +22,9 @@ namespace oneflow {
 
 namespace summary {
 
-void PlanToPhysicalGraphFile(const Plan& plan);
+void PlanToPhysicalGraphFile(const Plan &plan);
 }
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_SUMMARY_PLAN_TO_PHYSICAL_GRAPH_H_
+#endif // ONEFLOW_USER_SUMMARY_PLAN_TO_PHYSICAL_GRAPH_H_

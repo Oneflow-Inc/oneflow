@@ -20,4 +20,4 @@ namespace oneflow {
 
 REGISTER_KERNEL(OperatorConf::kCopyCommNetConf, CopyCommNetKernel);
 
-}  // namespace oneflow
+} // namespace oneflow

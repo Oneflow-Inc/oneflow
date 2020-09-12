@@ -14,27 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/compiler.h"
-#include "oneflow/core/job/global_for.h"
-#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
 
-void Compiler::GenNetTopo(Plan* plan) const {
+void Compiler::GenNetTopo(Plan *plan) const {
   HashMap<int64_t, int64_t> rid2mid;
   HashMap<int64_t, int64_t> tid2mid;
   std::map<int64_t, std::set<int64_t>> net_topo;
 
-  for (const TaskProto& task_proto : plan->task()) {
-    for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
-      rid2mid.emplace(regst_desc_it.second.regst_desc_id(), task_proto.machine_id());
+  for (const TaskProto &task_proto : plan->task()) {
+    for (const auto &regst_desc_it : task_proto.produced_regst_desc()) {
+      rid2mid.emplace(regst_desc_it.second.regst_desc_id(),
+                      task_proto.machine_id());
     }
-    CHECK(tid2mid.emplace(task_proto.task_id(), task_proto.machine_id()).second);
+    CHECK(
+        tid2mid.emplace(task_proto.task_id(), task_proto.machine_id()).second);
   }
 
-  for (const TaskProto& task_proto : plan->task()) {
-    for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
+  for (const TaskProto &task_proto : plan->task()) {
+    for (const auto &regst_desc_it : task_proto.produced_regst_desc()) {
       int64_t rid = regst_desc_it.second.regst_desc_id();
       auto rid2mid_it = rid2mid.find(rid);
       CHECK(rid2mid_it != rid2mid.end());
@@ -50,10 +52,12 @@ void Compiler::GenNetTopo(Plan* plan) const {
   }
 
   HashMap<int64_t, MachineIds> std_net_topo;
-  NetTopo& pb_net_topo = *(plan->mutable_net_topo());
-  for (auto& pair : net_topo) {
+  NetTopo &pb_net_topo = *(plan->mutable_net_topo());
+  for (auto &pair : net_topo) {
     int64_t src_mid = pair.first;
-    if (pair.second.count(src_mid)) { pair.second.erase(src_mid); }
+    if (pair.second.count(src_mid)) {
+      pair.second.erase(src_mid);
+    }
     std::vector<int64_t> peer_mids(pair.second.begin(), pair.second.end());
     MachineIds pb_mids;
     *(pb_mids.mutable_machine_id()) = StdVec2PbRf<int64_t>(peer_mids);
@@ -62,14 +66,18 @@ void Compiler::GenNetTopo(Plan* plan) const {
   *(pb_net_topo.mutable_peer_machine_ids()) = HashMap2PbMap(std_net_topo);
 }
 
-void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
-  const JobDesc& job_desc = GlobalJobDesc();
-  if (need_job_complete) { JobCompleter().Complete(job); }
+void Compiler::Compile(Job *job, Plan *plan, bool need_job_complete) const {
+  const JobDesc &job_desc = GlobalJobDesc();
+  if (need_job_complete) {
+    JobCompleter().Complete(job);
+  }
   Global<OpGraph>::New(*job);
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
-    Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
-                                              + "_op_graph.dot");
+    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))
+        ->Write(*job);
+    Global<OpGraph>::Get()->ToDotWithFilePath(
+        "optimized_dlnet_" + std::to_string(job_desc.job_id()) +
+        "_op_graph.dot");
   }
   auto logical_gph = std::make_unique<LogicalGraph>(*job);
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
@@ -81,20 +89,24 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
   if (job_desc.enable_inplace()) {
-    auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
+    auto IsReachable =
+        Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
     task_gph->EnableInplaceMemSharing(IsReachable);
   }
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
 
-  task_gph->ForEachNode([&](TaskNode* task_node) {
-    if (task_node->IsMeaningLess()) { return; }
+  task_gph->ForEachNode([&](TaskNode *task_node) {
+    if (task_node->IsMeaningLess()) {
+      return;
+    }
     task_node->ToProto(plan->mutable_task()->Add());
   });
   {
-    auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
+    auto *job_id2job_conf =
+        plan->mutable_job_confs()->mutable_job_id2job_conf();
     (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   }
   Global<OpGraph>::Delete();
 }
 
-}  // namespace oneflow
+} // namespace oneflow

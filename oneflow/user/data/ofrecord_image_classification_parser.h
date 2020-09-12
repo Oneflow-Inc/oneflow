@@ -16,44 +16,45 @@ limitations under the License.
 #ifndef ONEFLOW_USER_DATA_OFRECORD_IMAGE_CLASSIFICATION_PARSER_H_
 #define ONEFLOW_USER_DATA_OFRECORD_IMAGE_CLASSIFICATION_PARSER_H_
 
-#include "oneflow/user/data/parser.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/user/data/ofrecord_image_classification_dataset.h"
+#include "oneflow/user/data/parser.h"
 
 namespace oneflow {
 
 namespace data {
 
-class OFRecordImageClassificationParser final : public Parser<ImageClassificationDataInstance> {
- public:
+class OFRecordImageClassificationParser final
+    : public Parser<ImageClassificationDataInstance> {
+public:
   using LoadTargetPtr = std::shared_ptr<ImageClassificationDataInstance>;
   using LoadTargetPtrList = std::vector<LoadTargetPtr>;
   OFRecordImageClassificationParser() = default;
   ~OFRecordImageClassificationParser() override = default;
 
   void Parse(std::shared_ptr<LoadTargetPtrList> batch_data,
-             user_op::KernelComputeContext* ctx) override {
+             user_op::KernelComputeContext *ctx) override {
     const int64_t batch_size = batch_data->size();
-    user_op::Tensor* image_tensor = ctx->Tensor4ArgNameAndIndex("image", 0);
+    user_op::Tensor *image_tensor = ctx->Tensor4ArgNameAndIndex("image", 0);
     CHECK_EQ(image_tensor->shape().NumAxes(), 1);
     CHECK_EQ(image_tensor->shape().At(0), batch_size);
-    auto* image_buffers = image_tensor->mut_dptr<TensorBuffer>();
-    user_op::Tensor* label_tensor = ctx->Tensor4ArgNameAndIndex("label", 0);
+    auto *image_buffers = image_tensor->mut_dptr<TensorBuffer>();
+    user_op::Tensor *label_tensor = ctx->Tensor4ArgNameAndIndex("label", 0);
     CHECK_EQ(label_tensor->shape().NumAxes(), 1);
     CHECK_EQ(label_tensor->shape().At(0), batch_size);
-    auto* label_buffers = label_tensor->mut_dptr<TensorBuffer>();
+    auto *label_buffers = label_tensor->mut_dptr<TensorBuffer>();
     for (int64_t i = 0; i < batch_data->size(); ++i) {
-      const auto& instance = batch_data->at(i);
+      const auto &instance = batch_data->at(i);
       image_buffers[i].Swap(instance->image.get());
       label_buffers[i].Swap(instance->label.get());
     }
   }
 };
 
-}  // namespace data
+} // namespace data
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_DATA_OFRECORD_IMAGE_CLASSIFICATION_PARSER_H_
+#endif // ONEFLOW_USER_DATA_OFRECORD_IMAGE_CLASSIFICATION_PARSER_H_

@@ -21,25 +21,22 @@ limitations under the License.
 namespace oneflow {
 namespace data {
 
-template<typename LoadTarget>
+template <typename LoadTarget>
 class DistributedTrainingDataset final : public Dataset<LoadTarget> {
- public:
+public:
   using BaseDataset = RandomAccessDataset<LoadTarget>;
   using BaseDatasetUnqPtr = std::unique_ptr<BaseDataset>;
   using LoadTargetShdPtr = std::shared_ptr<LoadTarget>;
   using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
 
-  DistributedTrainingDataset(int64_t parallel_num, int64_t parallel_id, bool stride_partition,
-                             bool shuffle, int64_t random_seed, BaseDatasetUnqPtr&& dataset)
-      : base_dataset_(std::move(dataset)),
-        shuffle_(shuffle),
-        stride_partition_(stride_partition),
-        rnd_seed_(random_seed),
-        num_shards_(parallel_num),
-        pos_(0),
-        pos_in_shard_(0),
-        epoch_cnt_(0) {
-    shard_size_ = std::ceil(static_cast<float>(base_dataset_->Size()) / num_shards_);
+  DistributedTrainingDataset(int64_t parallel_num, int64_t parallel_id,
+                             bool stride_partition, bool shuffle,
+                             int64_t random_seed, BaseDatasetUnqPtr &&dataset)
+      : base_dataset_(std::move(dataset)), shuffle_(shuffle),
+        stride_partition_(stride_partition), rnd_seed_(random_seed),
+        num_shards_(parallel_num), pos_(0), pos_in_shard_(0), epoch_cnt_(0) {
+    shard_size_ =
+        std::ceil(static_cast<float>(base_dataset_->Size()) / num_shards_);
     if (stride_partition) {
       pos_ = parallel_id;
     } else {
@@ -77,7 +74,7 @@ class DistributedTrainingDataset final : public Dataset<LoadTarget> {
     return ret;
   }
 
- private:
+private:
   void CheckRanOutOfSize() {
     if (pos_ >= index_seq_.size()) {
       GenNewIndexSequence();
@@ -105,7 +102,7 @@ class DistributedTrainingDataset final : public Dataset<LoadTarget> {
   std::vector<int64_t> index_seq_;
 };
 
-}  // namespace data
-}  // namespace oneflow
+} // namespace data
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_DATA_DISTRIBUTED_TRAINING_DATASET_H_
+#endif // ONEFLOW_USER_DATA_DISTRIBUTED_TRAINING_DATASET_H_

@@ -21,9 +21,10 @@ namespace oneflow {
 
 namespace {
 
-template<typename T>
-__global__ void TrilGpu(const int64_t elem_cnt, const int64_t num_rows, const int64_t num_cols,
-                        const int64_t diagonal, const T* x, const T zero, T* y) {
+template <typename T>
+__global__ void TrilGpu(const int64_t elem_cnt, const int64_t num_rows,
+                        const int64_t num_cols, const int64_t diagonal,
+                        const T *x, const T zero, T *y) {
   int64_t matrix_size = num_rows * num_cols;
   CUDA_1D_KERNEL_LOOP_T(int64_t, k, elem_cnt) {
     int64_t offset_in_matrix = k % matrix_size;
@@ -33,33 +34,35 @@ __global__ void TrilGpu(const int64_t elem_cnt, const int64_t num_rows, const in
   }
 }
 
-}  // namespace
+} // namespace
 
-template<typename T>
-class GpuTrilKernel final : public user_op::OpKernel {
- public:
+template <typename T> class GpuTrilKernel final : public user_op::OpKernel {
+public:
   GpuTrilKernel() = default;
   ~GpuTrilKernel() = default;
 
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
+private:
+  void Compute(user_op::KernelComputeContext *ctx) const override {
+    const user_op::Tensor *x = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto shape = x->shape();
     const int64_t diagonal = ctx->Attr<int64_t>("diagonal");
     const int64_t num_rows = shape.At(shape.NumAxes() - 2);
     const int64_t num_cols = shape.At(shape.NumAxes() - 1);
-    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor *y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t elem_cnt = shape.elem_cnt();
-    RUN_CUDA_KERNEL((TrilGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, num_rows, num_cols,
-                    diagonal, x->dptr<T>(), GetZeroVal<T>(), y->mut_dptr<T>());
+    RUN_CUDA_KERNEL((TrilGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+                    num_rows, num_cols, diagonal, x->dptr<T>(), GetZeroVal<T>(),
+                    y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_TRIL_KERNEL(dtype)                                             \
-  REGISTER_USER_KERNEL("tril").SetCreateFn<GpuTrilKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "gpu")                                            \
-      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+#define REGISTER_GPU_TRIL_KERNEL(dtype)                                        \
+  REGISTER_USER_KERNEL("tril")                                                 \
+      .SetCreateFn<GpuTrilKernel<dtype>>()                                     \
+      .SetIsMatchedHob(                                                        \
+          (user_op::HobDeviceTag() == "gpu") &                                 \
+          (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_TRIL_KERNEL(float)
 REGISTER_GPU_TRIL_KERNEL(double)
@@ -68,4 +71,4 @@ REGISTER_GPU_TRIL_KERNEL(int32_t)
 REGISTER_GPU_TRIL_KERNEL(int64_t)
 REGISTER_GPU_TRIL_KERNEL(float16)
 
-}  // namespace oneflow
+} // namespace oneflow

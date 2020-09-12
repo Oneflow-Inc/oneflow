@@ -20,10 +20,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void InferArgWhereWorkspaceSizeInBytes(DeviceType device_type, DataType value_type,
-                                       DataType index_type, int32_t num_axes, int64_t n,
-                                       int64_t* workspace_bytes);
+void InferArgWhereWorkspaceSizeInBytes(DeviceType device_type,
+                                       DataType value_type, DataType index_type,
+                                       int32_t num_axes, int64_t n,
+                                       int64_t *workspace_bytes);
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_ARG_WHERE_OP_UTIL_H_
+#endif // ONEFLOW_CORE_OPERATOR_ARG_WHERE_OP_UTIL_H_

@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include <pybind11/pybind11.h>
 
 namespace py = pybind11;
 
@@ -24,4 +24,4 @@ PYBIND11_MODULE(oneflow_api, m) {
   m.def("EagerExecutionEnabled", []() { return EagerExecutionEnabled(); });
 }
 
-}  // namespace oneflow
+} // namespace oneflow

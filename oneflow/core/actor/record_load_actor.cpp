@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
+void RecordLoadActor::VirtualCompActorInit(const TaskProto &task_proto) {
   is_eof_ = false;
   OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerNormal);
   record_load_status_.is_eof = false;
@@ -34,8 +34,8 @@ void RecordLoadActor::Act() {
 }
 
 void RecordLoadActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  Regst* in_regst = GetNaiveCurReadable("in");
-  HandleProducedNaiveDataRegstToConsumer([&](Regst* out_regst) {
+  Regst *in_regst = GetNaiveCurReadable("in");
+  HandleProducedNaiveDataRegstToConsumer([&](Regst *out_regst) {
     out_regst->set_piece_id(in_regst->piece_id());
     return true;
   });
@@ -43,4 +43,4 @@ void RecordLoadActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 
 REGISTER_ACTOR(kRecordLoad, RecordLoadActor);
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-void SinkCompActor::VirtualCompActorInit(const TaskProto& proto) {
+void SinkCompActor::VirtualCompActorInit(const TaskProto &proto) {
   OF_SET_MSG_HANDLER(&SinkCompActor::HandlerNormal);
   VirtualSinkCompActorInit(proto);
 }
@@ -29,4 +29,4 @@ void SinkCompActor::Act() {
   DeleteOther(kernel_ctx.other);
 }
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class ForeignIOCompTaskNode : public CompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(ForeignIOCompTaskNode);
   ForeignIOCompTaskNode() = default;
   virtual ~ForeignIOCompTaskNode() override = default;
@@ -33,10 +33,10 @@ class ForeignIOCompTaskNode : public CompTaskNode {
 
   bool IsIndependent() const override { return true; }
 
- private:
+private:
   void InferProducedDataRegstTimeShape() override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_FOREIGN_IO_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_FOREIGN_IO_COMPUTE_TASK_NODE_H_

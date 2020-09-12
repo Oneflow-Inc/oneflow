@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class DeviceTickCompTaskNode final : public CompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceTickCompTaskNode);
   DeviceTickCompTaskNode() = default;
   ~DeviceTickCompTaskNode() = default;
@@ -29,7 +29,7 @@ class DeviceTickCompTaskNode final : public CompTaskNode {
   bool IsMeaningLess() override { return false; }
   TaskType GetTaskType() const override { return TaskType::kDeviceTick; }
 
- private:
+private:
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
@@ -37,6 +37,6 @@ class DeviceTickCompTaskNode final : public CompTaskNode {
   bool IsIndependent() const override { return true; }
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_DEVICE_TICK_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_DEVICE_TICK_COMPUTE_TASK_NODE_H_

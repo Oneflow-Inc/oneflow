@@ -24,8 +24,7 @@ namespace oneflow {
 
 namespace test {
 
-template<typename T, int ndims>
-void test_3d() {
+template <typename T, int ndims> void test_3d() {
   const T d0_max = 3;
   const T d1_max = 4;
   const T d2_max = 5;
@@ -62,7 +61,8 @@ void test_3d() {
           ASSERT_EQ(expected1, dims);
         }
         ASSERT_EQ(offset1, helper.NdIndexToOffset(expected1.data(), 2));
-        ASSERT_EQ(offset1, helper.NdIndexToOffset(expected1.at(0), expected1.at(1)));
+        ASSERT_EQ(offset1,
+                  helper.NdIndexToOffset(expected1.at(0), expected1.at(1)));
       }
       for (T d2 = 0; d2 < d2_max; ++d2) {
         const T offset2 = offset1 + d2;
@@ -86,7 +86,8 @@ void test_3d() {
           }
           ASSERT_EQ(offset2, helper.NdIndexToOffset(expected2.data(), 3));
           ASSERT_EQ(offset2,
-                    helper.NdIndexToOffset(expected2.at(0), expected2.at(1), expected2.at(2)));
+                    helper.NdIndexToOffset(expected2.at(0), expected2.at(1),
+                                           expected2.at(2)));
         }
       }
     }
@@ -105,8 +106,7 @@ TEST(NdIndexOffsetHelper, dynamic_3d) {
   test_3d<int64_t, 8>();
 }
 
-template<typename T>
-void test_constructor() {
+template <typename T> void test_constructor() {
   const T d0 = 3;
   const T d1 = 4;
   const T d2 = 5;
@@ -141,6 +141,6 @@ TEST(NdIndexOffsetHelper, constructor) {
   test_constructor<int64_t>();
 }
 
-}  // namespace test
+} // namespace test
 
-}  // namespace oneflow
+} // namespace oneflow

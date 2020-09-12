@@ -33,11 +33,13 @@ limitations under the License.
 
 #define OF_PP_MAKE_TUPLE_SEQ(...) OF_PP_INTERNAL_MAKE_TUPLE_SEQ(__VA_ARGS__)
 
-#define OF_PP_FOR_EACH_TUPLE(macro, seq) OF_PP_INTERNAL_FOR_EACH_TUPLE(macro, seq)
+#define OF_PP_FOR_EACH_TUPLE(macro, seq)                                       \
+  OF_PP_INTERNAL_FOR_EACH_TUPLE(macro, seq)
 
-#define OF_PP_OUTTER_FOR_EACH_TUPLE(macro, seq) OF_PP_INTERNAL_OUTTER_FOR_EACH_TUPLE(macro, seq)
+#define OF_PP_OUTTER_FOR_EACH_TUPLE(macro, seq)                                \
+  OF_PP_INTERNAL_OUTTER_FOR_EACH_TUPLE(macro, seq)
 
-#define OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(macro, ...) \
+#define OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(macro, ...)                           \
   OF_PP_INTERNAL_SEQ_PRODUCT_FOR_EACH_TUPLE(macro, __VA_ARGS__)
 
 // advanced
@@ -48,12 +50,13 @@ limitations under the License.
 
 #define OF_PP_ATOMIC_TO_TUPLE(x) (x)
 
-#define OF_PP_FOR_EACH_ATOMIC(macro, seq) \
+#define OF_PP_FOR_EACH_ATOMIC(macro, seq)                                      \
   OF_PP_FOR_EACH_TUPLE(macro, OF_PP_SEQ_MAP(OF_PP_ATOMIC_TO_TUPLE, seq))
 
-#define OF_PP_SEQ_PRODUCT(seq0, ...) OF_PP_INTERNAL_SEQ_PRODUCT(seq0, __VA_ARGS__)
+#define OF_PP_SEQ_PRODUCT(seq0, ...)                                           \
+  OF_PP_INTERNAL_SEQ_PRODUCT(seq0, __VA_ARGS__)
 
-#define OF_PP_SEQ_MAP(macro, seq) \
+#define OF_PP_SEQ_MAP(macro, seq)                                              \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OF_PP_I_SEQ_MAP_DO_EACH, (macro), seq)
 #define OF_PP_I_SEQ_MAP_DO_EACH(macro, elem) (macro(elem))
 
@@ -63,4 +66,4 @@ limitations under the License.
 
 #define OF_PP_FORCE(...) OF_PP_TUPLE2VARADIC(OF_PP_CAT((__VA_ARGS__), ))
 
-#endif  // ONEFLOW_CORE_COMMON_PREPROCESSOR_H_
+#endif // ONEFLOW_CORE_COMMON_PREPROCESSOR_H_

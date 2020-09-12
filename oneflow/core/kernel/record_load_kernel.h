@@ -28,20 +28,22 @@ struct RecordLoadStatus {
 };
 
 class RecordLoadKernel final : public KernelIf<DeviceType::kCPU> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(RecordLoadKernel);
   RecordLoadKernel() = default;
   ~RecordLoadKernel() override = default;
 
-  void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void Forward(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override {
     ForwardDataContent(ctx, BnInOp2Blob);
   }
 
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
 
- private:
+private:
   void VirtualKernelInit() override;
 
   std::unique_ptr<PersistentInStream> in_stream_;
@@ -49,6 +51,6 @@ class RecordLoadKernel final : public KernelIf<DeviceType::kCPU> {
   int64_t piece_size_in_one_loader_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_RECORD_LOAD_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_RECORD_LOAD_KERNEL_H_

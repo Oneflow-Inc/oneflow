@@ -13,36 +13,39 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/vm_resource_desc.msg.h"
-#include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/vm/vm_resource_desc.msg.h"
 
 namespace oneflow {
 namespace vm {
 
-void VmResourceDesc::__Init__(const Resource& resource) {
-  __Init__(resource.machine_num(),
-           {{"cpu", resource.cpu_device_num()}, {"gpu", resource.gpu_device_num()}});
+void VmResourceDesc::__Init__(const Resource &resource) {
+  __Init__(resource.machine_num(), {{"cpu", resource.cpu_device_num()},
+                                    {"gpu", resource.gpu_device_num()}});
 }
 
-void VmResourceDesc::__Init__(int64_t machine_num,
-                              const DeviceTag2DeviceNum& device_tag2device_num) {
+void VmResourceDesc::__Init__(
+    int64_t machine_num, const DeviceTag2DeviceNum &device_tag2device_num) {
   set_machine_num(machine_num);
   *mutable_device_tag2device_num() = device_tag2device_num;
 }
 
-void VmResourceDesc::CopyFrom(const VmResourceDesc& vm_resource_desc) {
-  __Init__(vm_resource_desc.machine_num(), vm_resource_desc.device_tag2device_num());
+void VmResourceDesc::CopyFrom(const VmResourceDesc &vm_resource_desc) {
+  __Init__(vm_resource_desc.machine_num(),
+           vm_resource_desc.device_tag2device_num());
 }
 
-int64_t VmResourceDesc::GetGlobalDeviceId(int64_t machine_id, const std::string& device_tag,
+int64_t VmResourceDesc::GetGlobalDeviceId(int64_t machine_id,
+                                          const std::string &device_tag,
                                           int64_t device_id) const {
   int64_t device_num = device_tag2device_num().at(device_tag);
   return machine_id * device_num + device_id;
 }
 
-void VmResourceDesc::GenerateParallelConf(const char* device_tag, ParallelConf* parallel_conf) {
-  const auto& device_num_iter = device_tag2device_num().find(device_tag);
+void VmResourceDesc::GenerateParallelConf(const char *device_tag,
+                                          ParallelConf *parallel_conf) {
+  const auto &device_num_iter = device_tag2device_num().find(device_tag);
   CHECK(device_num_iter != device_tag2device_num().end());
   CHECK(parallel_conf->device_name().empty());
   CHECK_GT(device_num_iter->second, 0);
@@ -53,5 +56,5 @@ void VmResourceDesc::GenerateParallelConf(const char* device_tag, ParallelConf* 
   }
 }
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow

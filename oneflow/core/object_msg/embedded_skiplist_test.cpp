@@ -20,9 +20,10 @@ namespace oneflow {
 
 namespace test {
 
-template<typename ElemKeyField>
-class TestEmbeddedSkipListHead final : public EmbeddedSkipListHead<ElemKeyField> {
- public:
+template <typename ElemKeyField>
+class TestEmbeddedSkipListHead final
+    : public EmbeddedSkipListHead<ElemKeyField> {
+public:
   TestEmbeddedSkipListHead() { this->__Init__(); }
   ~TestEmbeddedSkipListHead() { this->Clear(); }
 };
@@ -34,7 +35,8 @@ struct FooSkipListElem {
   int value;
 };
 
-using FooSkipList = TestEmbeddedSkipListHead<STRUCT_FIELD(FooSkipListElem, key)>;
+using FooSkipList =
+    TestEmbeddedSkipListHead<STRUCT_FIELD(FooSkipListElem, key)>;
 
 TEST(EmbeddedSkipList, empty) {
   FooSkipList skiplist;
@@ -50,11 +52,11 @@ TEST(EmbeddedSkipList, insert_naive) {
   skiplist.Insert(&elem0);
   ASSERT_EQ(skiplist.size(), 1);
   {
-    auto* searched = skiplist.Find(int(0));
+    auto *searched = skiplist.Find(int(0));
     ASSERT_EQ(searched, &elem0);
   }
   {
-    auto* searched = skiplist.Find(int(-1));
+    auto *searched = skiplist.Find(int(-1));
     ASSERT_TRUE(searched == nullptr);
   }
 }
@@ -90,7 +92,9 @@ TEST(EmbeddedSkipList, insert_many) {
   FooSkipListElem exists[100];
   for (int i = 0; i < 100; ++i) {
     int key = i - 50;
-    if (key >= 0) { ++key; }
+    if (key >= 0) {
+      ++key;
+    }
     *exists[i].key.mut_key() = key;
     skiplist.Insert(&exists[i]);
     ASSERT_EQ(skiplist.Find(key), &exists[i]);
@@ -101,11 +105,11 @@ TEST(EmbeddedSkipList, insert_many) {
   skiplist.Insert(&elem0);
   ASSERT_EQ(skiplist.size(), 101);
   {
-    auto* searched = skiplist.Find(int(0));
+    auto *searched = skiplist.Find(int(0));
     ASSERT_EQ(searched, &elem0);
   }
   {
-    auto* searched = skiplist.Find(int(-1001));
+    auto *searched = skiplist.Find(int(-1001));
     ASSERT_TRUE(searched == nullptr);
   }
   skiplist.Clear();
@@ -117,7 +121,9 @@ TEST(EmbeddedSkipList, erase_many_by_key) {
   FooSkipListElem exists[100];
   for (int i = 0; i < 100; ++i) {
     int key = i - 50;
-    if (key >= 0) { ++key; }
+    if (key >= 0) {
+      ++key;
+    }
     *exists[i].key.mut_key() = key;
     skiplist.Insert(&exists[i]);
     ASSERT_EQ(skiplist.Find(key), &exists[i]);
@@ -140,7 +146,9 @@ TEST(EmbeddedSkipList, erase_many_by_elem) {
   FooSkipListElem exists[100];
   for (int i = 0; i < 100; ++i) {
     int key = i - 50;
-    if (key >= 0) { ++key; }
+    if (key >= 0) {
+      ++key;
+    }
     *exists[i].key.mut_key() = key;
     skiplist.Insert(&exists[i]);
     ASSERT_EQ(skiplist.Find(key), &exists[i]);
@@ -158,6 +166,6 @@ TEST(EmbeddedSkipList, erase_many_by_elem) {
   ASSERT_TRUE(skiplist.empty_debug());
 }
 
-}  // namespace test
+} // namespace test
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -45,7 +45,9 @@ struct SliceParams {
   int64_t size[kSliceMaxDims];
 
   int64_t elem_cnt() const {
-    if (ndim == 0) { return 0; }
+    if (ndim == 0) {
+      return 0;
+    }
     int64_t elem_cnt = 1;
     FOR_RANGE(int, i, 0, ndim) { elem_cnt *= size[i]; }
     return elem_cnt;
@@ -54,22 +56,28 @@ struct SliceParams {
   bool IsFullSlice(int dim) const {
     CHECK_GE(dim, 0);
     CHECK_LT(dim, ndim);
-    if (step[dim] != 1) { return false; }
-    if (start[dim] != 0) { return false; }
-    if (size[dim] != dims[dim]) { return false; }
+    if (step[dim] != 1) {
+      return false;
+    }
+    if (start[dim] != 0) {
+      return false;
+    }
+    if (size[dim] != dims[dim]) {
+      return false;
+    }
     return true;
   }
 };
 
-SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params);
+SliceParams FoldContiguousFullSliceDimensions(const SliceParams &params);
 
-template<int NDIM>
-using SliceIndexHelper = NdIndexOffsetHelper<int64_t, NDIM>;
+template <int NDIM> using SliceIndexHelper = NdIndexOffsetHelper<int64_t, NDIM>;
 
-template<int NDIM>
-OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SliceParams& params,
-                                                 const SliceIndexHelper<NDIM>& entire_idx_cvtr,
-                                                 const SliceIndexHelper<NDIM>& sliced_idx_cvtr) {
+template <int NDIM>
+OF_DEVICE_FUNC int64_t
+SliceOffsetToEntireOffset(int64_t offset, const SliceParams &params,
+                          const SliceIndexHelper<NDIM> &entire_idx_cvtr,
+                          const SliceIndexHelper<NDIM> &sliced_idx_cvtr) {
   int64_t nd_index[NDIM] = {0};
   sliced_idx_cvtr.OffsetToNdIndex(offset, nd_index);
 #ifdef __CUDA_ARCH__
@@ -83,22 +91,24 @@ OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SlicePara
   return entire_idx_cvtr.NdIndexToOffset(nd_index);
 }
 
-template<DeviceType device_type, typename T>
-struct SliceKernelUtil {
-  static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced);
-  static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire);
+template <DeviceType device_type, typename T> struct SliceKernelUtil {
+  static void Forward(DeviceCtx *ctx, const SliceParams &params,
+                      const T *entire, T *sliced);
+  static void Backward(DeviceCtx *ctx, const SliceParams &params,
+                       const T *sliced, T *entire);
 };
 
-#define INSTANTIATE_SLICE_KERNEL_UTIL(device, dtype) template struct SliceKernelUtil<device, dtype>;
+#define INSTANTIATE_SLICE_KERNEL_UTIL(device, dtype)                           \
+  template struct SliceKernelUtil<device, dtype>;
 
-#define INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(device) \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, float)            \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, double)           \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, int32_t)          \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, int64_t)          \
-  INSTANTIATE_SLICE_KERNEL_UTIL(device, int8_t)           \
+#define INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(device)                      \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, float)                                 \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, double)                                \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, int32_t)                               \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, int64_t)                               \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, int8_t)                                \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, uint8_t)
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
+#endif // ONEFLOW_USER_KERNELS_SLICE_UTIL_H_

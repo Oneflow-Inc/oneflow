@@ -13,19 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/host_stream_type.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
 namespace vm {
 
-COMMAND(Global<SymbolStorage<std::string>>::SetAllocated(new SymbolStorage<std::string>()));
+COMMAND(Global<SymbolStorage<std::string>>::SetAllocated(
+    new SymbolStorage<std::string>()));
 
 namespace {
 
@@ -35,29 +36,32 @@ FLAT_MSG_VIEW_BEGIN(StringObjectInstrOperand);
 FLAT_MSG_VIEW_END(StringObjectInstrOperand);
 // clang-format on
 
-}  // namespace
+} // namespace
 
 class InitStringSymbolInstructionType final : public InstructionType {
- public:
+public:
   InitStringSymbolInstructionType() = default;
   ~InitStringSymbolInstructionType() override = default;
 
   using stream_type = HostStreamType;
 
-  void Infer(Instruction* instruction) const override {
-    FlatMsgView<StringObjectInstrOperand> args(instruction->instr_msg().operand());
+  void Infer(Instruction *instruction) const override {
+    FlatMsgView<StringObjectInstrOperand> args(
+        instruction->instr_msg().operand());
     FOR_RANGE(int, i, 0, args->string_size()) {
       int64_t logical_object_id = args->string(i).logical_object_id();
-      const auto& str = Global<SymbolStorage<std::string>>::Get()->Get(logical_object_id);
-      auto* rw_mutexed_object = instruction->mut_operand_type(args->string(i));
+      const auto &str =
+          Global<SymbolStorage<std::string>>::Get()->Get(logical_object_id);
+      auto *rw_mutexed_object = instruction->mut_operand_type(args->string(i));
       rw_mutexed_object->Init<StringObject>(str);
     }
   }
-  void Compute(Instruction* instruction) const override {
+  void Compute(Instruction *instruction) const override {
     // do nothing
   }
 };
-COMMAND(RegisterInstructionType<InitStringSymbolInstructionType>("InitStringSymbol"));
+COMMAND(RegisterInstructionType<InitStringSymbolInstructionType>(
+    "InitStringSymbol"));
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow

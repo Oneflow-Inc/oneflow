@@ -22,7 +22,7 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-const cudaStream_t* CudaStreamHandle::cuda_stream() {
+const cudaStream_t *CudaStreamHandle::cuda_stream() {
   if (!cuda_stream_) {
     cuda_stream_.reset(new cudaStream_t);
     OF_CUDA_CHECK(cudaStreamCreate(cuda_stream_.get()));
@@ -30,7 +30,7 @@ const cudaStream_t* CudaStreamHandle::cuda_stream() {
   return cuda_stream_.get();
 }
 
-const cublasHandle_t* CudaStreamHandle::cublas_pmh_handle() {
+const cublasHandle_t *CudaStreamHandle::cublas_pmh_handle() {
   if (!cublas_pmh_handle_) {
     cublas_pmh_handle_.reset(new cublasHandle_t);
     OF_CUBLAS_CHECK(cublasCreate(cublas_pmh_handle_.get()));
@@ -39,27 +39,30 @@ const cublasHandle_t* CudaStreamHandle::cublas_pmh_handle() {
   return cublas_pmh_handle_.get();
 }
 
-const cublasHandle_t* CudaStreamHandle::cublas_pmd_handle() {
+const cublasHandle_t *CudaStreamHandle::cublas_pmd_handle() {
   if (!cublas_pmd_handle_) {
     cublas_pmd_handle_.reset(new cublasHandle_t);
     OF_CUBLAS_CHECK(cublasCreate(cublas_pmd_handle_.get()));
     OF_CUBLAS_CHECK(cublasSetStream(*cublas_pmd_handle_, *cuda_stream()));
-    OF_CUBLAS_CHECK(cublasSetPointerMode(*cublas_pmd_handle_, CUBLAS_POINTER_MODE_DEVICE));
+    OF_CUBLAS_CHECK(
+        cublasSetPointerMode(*cublas_pmd_handle_, CUBLAS_POINTER_MODE_DEVICE));
   }
   return cublas_pmd_handle_.get();
 }
 
-const cublasHandle_t* CudaStreamHandle::cublas_tensor_op_math_handle() {
+const cublasHandle_t *CudaStreamHandle::cublas_tensor_op_math_handle() {
   if (!cublas_tensor_op_math_handle_) {
     cublas_tensor_op_math_handle_.reset(new cublasHandle_t);
     OF_CUBLAS_CHECK(cublasCreate(cublas_tensor_op_math_handle_.get()));
-    OF_CUBLAS_CHECK(cublasSetStream(*cublas_tensor_op_math_handle_, *cuda_stream()));
-    OF_CUBLAS_CHECK(cublasSetMathMode(*cublas_tensor_op_math_handle_, CUBLAS_TENSOR_OP_MATH));
+    OF_CUBLAS_CHECK(
+        cublasSetStream(*cublas_tensor_op_math_handle_, *cuda_stream()));
+    OF_CUBLAS_CHECK(cublasSetMathMode(*cublas_tensor_op_math_handle_,
+                                      CUBLAS_TENSOR_OP_MATH));
   }
   return cublas_tensor_op_math_handle_.get();
 }
 
-const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
+const cudnnHandle_t *CudaStreamHandle::cudnn_handle() {
   if (!cudnn_handle_) {
     if (IsCuda9OnTuringDevice()) {
       OF_CUDA_CHECK(cudaDeviceSynchronize());
@@ -79,18 +82,27 @@ const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
 void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
   CudaCBEvent cb_event;
   cb_event.callback = std::move(callback);
-  OF_CUDA_CHECK(cudaEventCreateWithFlags(&(cb_event.event), cudaEventDisableTiming));
+  OF_CUDA_CHECK(
+      cudaEventCreateWithFlags(&(cb_event.event), cudaEventDisableTiming));
   OF_CUDA_CHECK(cudaEventRecord(cb_event.event, *cuda_stream()));
   cb_event_chan_->Send(cb_event);
 }
 
 CudaStreamHandle::~CudaStreamHandle() {
-  if (cudnn_handle_) { OF_CUDNN_CHECK(cudnnDestroy(*cudnn_handle_)); }
-  if (cublas_pmh_handle_) { OF_CUBLAS_CHECK(cublasDestroy(*cublas_pmh_handle_)); }
-  if (cublas_pmd_handle_) { OF_CUBLAS_CHECK(cublasDestroy(*cublas_pmd_handle_)); }
-  if (cuda_stream_) { OF_CUDA_CHECK(cudaStreamDestroy(*cuda_stream_)); }
+  if (cudnn_handle_) {
+    OF_CUDNN_CHECK(cudnnDestroy(*cudnn_handle_));
+  }
+  if (cublas_pmh_handle_) {
+    OF_CUBLAS_CHECK(cublasDestroy(*cublas_pmh_handle_));
+  }
+  if (cublas_pmd_handle_) {
+    OF_CUBLAS_CHECK(cublasDestroy(*cublas_pmd_handle_));
+  }
+  if (cuda_stream_) {
+    OF_CUDA_CHECK(cudaStreamDestroy(*cuda_stream_));
+  }
 }
 
-#endif  // WITH_CUDA
+#endif // WITH_CUDA
 
-}  // namespace oneflow
+} // namespace oneflow

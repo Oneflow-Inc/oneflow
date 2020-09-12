@@ -17,12 +17,12 @@ limitations under the License.
 
 namespace oneflow {
 
-template<>
-void BatchMemcpyKernelUtil<DeviceType::kCPU>::Copy(DeviceCtx* ctx,
-                                                   const std::vector<MemcpyParam>& params) {
-  for (const MemcpyParam& param : params) {
+template <>
+void BatchMemcpyKernelUtil<DeviceType::kCPU>::Copy(
+    DeviceCtx *ctx, const std::vector<MemcpyParam> &params) {
+  for (const MemcpyParam &param : params) {
     Memcpy<DeviceType::kCPU>(ctx, param.dst, param.src, param.count);
   }
 }
 
-}  // namespace oneflow
+} // namespace oneflow

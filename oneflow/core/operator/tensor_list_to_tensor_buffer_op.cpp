@@ -13,13 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
 class TensorListToTensorBufferOp final : public Operator {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(TensorListToTensorBufferOp);
   TensorListToTensorBufferOp() = default;
   ~TensorListToTensorBufferOp() = default;
@@ -30,27 +30,28 @@ class TensorListToTensorBufferOp final : public Operator {
     EnrollOutputBn("out", false)->set_header_infered_before_compute(false);
   }
 
-  const PbMessage& GetCustomizedConf() const override {
+  const PbMessage &GetCustomizedConf() const override {
     return op_conf().tensor_list_to_tensor_buffer_conf();
   }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-                             std::function<void(OpContext*)> EnrollOpCtx) const override {
-    const BlobDesc* in_desc = GetBlobDesc4BnInOp("in");
+  Maybe<void> InferBlobDescs(
+      std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+      const ParallelContext *parallel_ctx, const SbpSignature *sbp_signature,
+      std::function<void(OpContext *)> EnrollOpCtx) const override {
+    const BlobDesc *in_desc = GetBlobDesc4BnInOp("in");
     CHECK_OR_RETURN(in_desc->is_tensor_list());
     const int64_t N = in_desc->shape().At(0);
-    BlobDesc* out_desc = GetBlobDesc4BnInOp("out");
+    BlobDesc *out_desc = GetBlobDesc4BnInOp("out");
     out_desc->mut_shape() = Shape({N});
     out_desc->set_data_type(DataType::kTensorBuffer);
     out_desc->set_is_dynamic(in_desc->is_dynamic());
     return Maybe<void>::Ok();
   }
 
- private:
-  Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
+private:
+  Maybe<void> GetSbpSignatures(const std::function<Maybe<const BlobDesc &>(
+                                   const std::string &)> &LogicalBlobDesc4Ibn,
+                               SbpSignatureList *sbp_sig_list) const override {
     SbpSignatureBuilder()
         .Split(input_bns(), 0)
         .Split(output_bns(), 0)
@@ -58,8 +59,8 @@ class TensorListToTensorBufferOp final : public Operator {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+  Maybe<void> InferBatchAxis(std::function<OptInt64 *(const std::string &)>
+                                 BatchAxis4BnInOp) const override {
     CHECK_OR_RETURN(BatchAxis4BnInOp("in")->has_value());
     CHECK_EQ_OR_RETURN(BatchAxis4BnInOp("in")->value(), 0);
     BatchAxis4BnInOp("out")->set_value(0);
@@ -67,6 +68,7 @@ class TensorListToTensorBufferOp final : public Operator {
   }
 };
 
-REGISTER_CPU_OP(OperatorConf::kTensorListToTensorBufferConf, TensorListToTensorBufferOp);
+REGISTER_CPU_OP(OperatorConf::kTensorListToTensorBufferConf,
+                TensorListToTensorBufferOp);
 
-}  // namespace oneflow
+} // namespace oneflow

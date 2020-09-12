@@ -21,7 +21,7 @@ void NaiveActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }
 
 void NaiveActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   int64_t piece_id = GetPieceId4NaiveCurReadableDataRegst();
-  HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
+  HandleProducedNaiveDataRegstToConsumer([&](Regst *regst) {
     regst->set_piece_id(piece_id);
     return true;
   });
@@ -30,4 +30,4 @@ void NaiveActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 REGISTER_ACTOR(TaskType::kSliceBoxing, NaiveActor);
 REGISTER_ACTOR(TaskType::kBoxingIdentity, NaiveActor);
 
-}  // namespace oneflow
+} // namespace oneflow

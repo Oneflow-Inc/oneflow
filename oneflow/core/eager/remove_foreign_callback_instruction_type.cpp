@@ -13,35 +13,38 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/host_stream_type.h"
 #include "oneflow/core/eager/opkernel_instruction.msg.h"
 #include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/vm/host_stream_type.h"
+#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction_type.h"
 
 namespace oneflow {
 
 namespace eager {
 
 class RemoveForeignCallbackInstructionType : public vm::InstructionType {
- public:
+public:
   RemoveForeignCallbackInstructionType() = default;
   ~RemoveForeignCallbackInstructionType() override = default;
 
   using stream_type = vm::HostStreamType;
 
-  void Infer(vm::Instruction* instruction) const override {
+  void Infer(vm::Instruction *instruction) const override {
     // do nothing
   }
 
-  void Compute(vm::Instruction* instruction) const override {
-    FlatMsgView<RemoveForeignCallbackInstrOperand> args(instruction->instr_msg().operand());
-    Global<ForeignCallback>::Get()->RemoveForeignCallback(args->unique_callback_id());
+  void Compute(vm::Instruction *instruction) const override {
+    FlatMsgView<RemoveForeignCallbackInstrOperand> args(
+        instruction->instr_msg().operand());
+    Global<ForeignCallback>::Get()->RemoveForeignCallback(
+        args->unique_callback_id());
   }
 };
 
-COMMAND(vm::RegisterInstructionType<RemoveForeignCallbackInstructionType>("RemoveForeignCallback"));
+COMMAND(vm::RegisterInstructionType<RemoveForeignCallbackInstructionType>(
+    "RemoveForeignCallback"));
 
-}  // namespace eager
+} // namespace eager
 
-}  // namespace oneflow
+} // namespace oneflow

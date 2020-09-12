@@ -16,24 +16,25 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_KERNEL_CALLBACK_NOTIFY_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_CALLBACK_NOTIFY_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
-template<typename T>
+template <typename T>
 class CallbackNotifyKernel final : public KernelIf<DeviceType::kCPU> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CallbackNotifyKernel);
   CallbackNotifyKernel() = default;
   ~CallbackNotifyKernel() = default;
 
- private:
+private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_CALLBACK_NOTIFY_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_CALLBACK_NOTIFY_KERNEL_H_

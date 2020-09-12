@@ -63,7 +63,8 @@ TEST(CpuConcatVarNdarray, 2d_concat) {
   CpuNdarrayBuilder<int32_t, 2> ndarray;
   auto x0 = ndarray.Var({2LL, 3LL}, x0_data.data());
   auto x1 = ndarray.Var({2LL, 2LL}, x1_data.data());
-  ndarray.Var({2LL, 5LL}, buffer.data()).CopyFrom(ndarray.template Concatenate<1>({x0, x1}));
+  ndarray.Var({2LL, 5LL}, buffer.data())
+      .CopyFrom(ndarray.template Concatenate<1>({x0, x1}));
   ASSERT_EQ(memcmp(buffer.data(), expected.data(), sizeof(int32_t) * 10), 0);
 }
 
@@ -89,8 +90,10 @@ TEST(CpuConcatVarNdarray, 2d_concat_assign) {
   auto y0 = ndarray.Var({2LL, 3LL}, y0_buffer.data());
   auto y1 = ndarray.Var({2LL, 2LL}, y1_buffer.data());
   ndarray.template Concatenate<1>({y0, y1}).CopyFrom(x);
-  ASSERT_EQ(memcmp(y0_buffer.data(), y0_expected.data(), sizeof(int32_t) * 6), 0);
-  ASSERT_EQ(memcmp(y1_buffer.data(), y1_expected.data(), sizeof(int32_t) * 4), 0);
+  ASSERT_EQ(memcmp(y0_buffer.data(), y0_expected.data(), sizeof(int32_t) * 6),
+            0);
+  ASSERT_EQ(memcmp(y1_buffer.data(), y1_expected.data(), sizeof(int32_t) * 4),
+            0);
 }
 
 TEST(CpuConcatVarNdarray, 3d_concat) {
@@ -121,7 +124,8 @@ TEST(CpuConcatVarNdarray, 3d_concat) {
   CpuNdarrayBuilder<int32_t, 3> ndarray;
   auto x0 = ndarray.Var({2LL, 2LL, 3LL}, x0_data.data());
   auto x1 = ndarray.Var({2LL, 2LL, 2LL}, x1_data.data());
-  ndarray.Var({2LL, 2LL, 5LL}, buffer.data()).CopyFrom(ndarray.template Concatenate<2>({x0, x1}));
+  ndarray.Var({2LL, 2LL, 5LL}, buffer.data())
+      .CopyFrom(ndarray.template Concatenate<2>({x0, x1}));
   ASSERT_EQ(memcmp(buffer.data(), expected.data(), sizeof(int32_t) * 20), 0);
 }
 
@@ -156,10 +160,14 @@ TEST(CpuConcatVarNdarray, 3d_concat_assign) {
   auto y0 = ndarray.Var({2LL, 2LL, 3LL}, y0_buffer.data());
   auto y1 = ndarray.Var({2LL, 2LL, 2LL}, y1_buffer.data());
   ndarray.template Concatenate<2>({y0, y1}).CopyFrom(x);
-  ASSERT_EQ(memcmp(y0_buffer.data(), y0_expected.data(), sizeof(int32_t) * y0_expected.size()), 0);
-  ASSERT_EQ(memcmp(y1_buffer.data(), y1_expected.data(), sizeof(int32_t) * y1_expected.size()), 0);
+  ASSERT_EQ(memcmp(y0_buffer.data(), y0_expected.data(),
+                   sizeof(int32_t) * y0_expected.size()),
+            0);
+  ASSERT_EQ(memcmp(y1_buffer.data(), y1_expected.data(),
+                   sizeof(int32_t) * y1_expected.size()),
+            0);
 }
 
-}  // namespace test
+} // namespace test
 
-}  // namespace oneflow
+} // namespace oneflow

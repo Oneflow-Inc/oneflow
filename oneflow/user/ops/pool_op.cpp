@@ -20,60 +20,79 @@ namespace oneflow {
 
 namespace {
 
-typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
-typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
+typedef std::function<Maybe<void>(user_op::InferContext *ctx)>
+    TensorDescInferFn;
+typedef std::function<void(const user_op::UserOpWrapper &op,
+                           user_op::AddOpFn AddOp)>
     GenBackwardOpConfFn;
 
 TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
-  return [dim](user_op::InferContext* ctx) -> Maybe<void> {
-    const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-    const std::string& data_format = ctx->Attr<std::string>("data_format");
-    const std::string& padding = ctx->Attr<std::string>("padding");
-    const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-    const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
-    const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
-    const std::vector<int32_t> strides = ctx->Attr<std::vector<int32_t>>("strides");
+  return [dim](user_op::InferContext *ctx) -> Maybe<void> {
+    const Shape *x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+    const std::string &data_format = ctx->Attr<std::string>("data_format");
+    const std::string &padding = ctx->Attr<std::string>("padding");
+    const auto &padding_before =
+        ctx->Attr<std::vector<int32_t>>("padding_before");
+    const auto &padding_after =
+        ctx->Attr<std::vector<int32_t>>("padding_after");
+    const std::vector<int32_t> pool_size =
+        ctx->Attr<std::vector<int32_t>>("pool_size");
+    const std::vector<int32_t> strides =
+        ctx->Attr<std::vector<int32_t>>("strides");
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
 
     CHECK_EQ_OR_RETURN(pool_size.size(), dim);
-    for (int32_t pool_dim : pool_size) { CHECK_GT_OR_RETURN(pool_dim, 0); }
+    for (int32_t pool_dim : pool_size) {
+      CHECK_GT_OR_RETURN(pool_dim, 0);
+    }
     CHECK_EQ_OR_RETURN(strides.size(), dim);
-    for (int32_t stride_dim : strides) { CHECK_GT_OR_RETURN(stride_dim, 0); }
+    for (int32_t stride_dim : strides) {
+      CHECK_GT_OR_RETURN(stride_dim, 0);
+    }
 
-    const Params3D params_3d(dim, *x_shape, data_format, padding, padding_before, padding_after,
-                             pool_size, strides, ceil_mode);
-    user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+    const Params3D params_3d(dim, *x_shape, data_format, padding,
+                             padding_before, padding_after, pool_size, strides,
+                             ceil_mode);
+    user_op::TensorDesc *y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
     *y_desc = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
     return Maybe<void>::Ok();
   };
 }
 
-Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
-  *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
+Maybe<void> BwTensorDescInferFn(user_op::InferContext *ctx) {
+  *ctx->TensorDesc4ArgNameAndIndex("dx", 0) =
+      *ctx->TensorDesc4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+Maybe<void> FwBatchAxisInferFn(user_op::BatchAxisContext *ctx) {
+  *ctx->BatchAxis4ArgNameAndIndex("y", 0) =
+      *ctx->BatchAxis4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+Maybe<void> BwBatchAxisInferFn(user_op::BatchAxisContext *ctx) {
+  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) =
+      *ctx->BatchAxis4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+Maybe<void> FwGetSbpFn(user_op::SbpContext *ctx) {
+  const user_op::TensorDesc &tensor =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
-    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("y", 0), i)
+        .Build();
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+Maybe<void> BwGetSbpFn(user_op::SbpContext *ctx) {
+  const user_op::TensorDesc &tensor =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
@@ -85,8 +104,9 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32_t dim) {
-  return [mode, dim](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string &mode,
+                                            const int32_t dim) {
+  return [mode, dim](const user_op::UserOpWrapper &op, user_op::AddOpFn AddOp) {
     if (op.NeedGenGradTensor4OpInput("x", 0)) {
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
       user_op::UserOpConfWrapper grad_op =
@@ -97,8 +117,10 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32
               .Output("dx")
               .Attr("data_format", op.attr<std::string>("data_format"))
               .Attr("padding", op.attr<std::string>("padding"))
-              .Attr("padding_before", op.attr<std::vector<int32_t>>("padding_before"))
-              .Attr("padding_after", op.attr<std::vector<int32_t>>("padding_after"))
+              .Attr("padding_before",
+                    op.attr<std::vector<int32_t>>("padding_before"))
+              .Attr("padding_after",
+                    op.attr<std::vector<int32_t>>("padding_after"))
               .Attr("pool_size", op.attr<std::vector<int32_t>>("pool_size"))
               .Attr("strides", op.attr<std::vector<int32_t>>("strides"))
               .Attr("ceil_mode", op.attr<bool>("ceil_mode"))
@@ -109,7 +131,7 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32
   };
 }
 
-}  // namespace
+} // namespace
 
 REGISTER_USER_OP("avg_pool_1d")
     .Input("x")
@@ -141,7 +163,8 @@ REGISTER_USER_OP("avg_pool_1d_grad")
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
 
-REGISTER_USER_OP_GRAD("avg_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 1));
+REGISTER_USER_OP_GRAD("avg_pool_1d")
+    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 1));
 
 REGISTER_USER_OP("avg_pool_2d")
     .Input("x")
@@ -173,7 +196,8 @@ REGISTER_USER_OP("avg_pool_2d_grad")
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
 
-REGISTER_USER_OP_GRAD("avg_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 2));
+REGISTER_USER_OP_GRAD("avg_pool_2d")
+    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 2));
 
 REGISTER_USER_OP("avg_pool_3d")
     .Input("x")
@@ -205,7 +229,8 @@ REGISTER_USER_OP("avg_pool_3d_grad")
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
 
-REGISTER_USER_OP_GRAD("avg_pool_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 3));
+REGISTER_USER_OP_GRAD("avg_pool_3d")
+    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 3));
 
 REGISTER_USER_OP("max_pool_1d")
     .Input("x")
@@ -237,7 +262,8 @@ REGISTER_USER_OP("max_pool_1d_grad")
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
 
-REGISTER_USER_OP_GRAD("max_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 1));
+REGISTER_USER_OP_GRAD("max_pool_1d")
+    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 1));
 
 REGISTER_USER_OP("max_pool_2d")
     .Input("x")
@@ -269,7 +295,8 @@ REGISTER_USER_OP("max_pool_2d_grad")
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
 
-REGISTER_USER_OP_GRAD("max_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 2));
+REGISTER_USER_OP_GRAD("max_pool_2d")
+    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 2));
 
 REGISTER_USER_OP("max_pool_3d")
     .Input("x")
@@ -301,6 +328,7 @@ REGISTER_USER_OP("max_pool_3d_grad")
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
 
-REGISTER_USER_OP_GRAD("max_pool_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 3));
+REGISTER_USER_OP_GRAD("max_pool_3d")
+    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 3));
 
-}  // namespace oneflow
+} // namespace oneflow

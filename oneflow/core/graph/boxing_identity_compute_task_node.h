@@ -21,15 +21,15 @@ limitations under the License.
 namespace oneflow {
 
 class BoxingIdentityCompTaskNode : public CompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingIdentityCompTaskNode);
   BoxingIdentityCompTaskNode() = default;
   ~BoxingIdentityCompTaskNode() override = default;
 
-  void Init(const CompTaskNode* src_node, const LogicalBlobId& lbi);
+  void Init(const CompTaskNode *src_node, const LogicalBlobId &lbi);
   TaskType GetTaskType() const override { return TaskType::kBoxingIdentity; }
 
- private:
+private:
   void BuildExecGphAndRegst() override;
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() final;
@@ -38,6 +38,6 @@ class BoxingIdentityCompTaskNode : public CompTaskNode {
   LogicalBlobId lbi_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_BOXING_IDENTITY_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_BOXING_IDENTITY_COMPUTE_TASK_NODE_H_

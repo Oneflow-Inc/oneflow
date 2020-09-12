@@ -16,16 +16,16 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_SCHEDULER_MSG_H_
 #define ONEFLOW_CORE_VM_SCHEDULER_MSG_H_
 
-#include <mutex>
-#include "oneflow/core/vm/interpret_type.h"
+#include "oneflow/core/common/range.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/stream_runtime_desc.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/vm_object.msg.h"
 #include "oneflow/core/vm/vm_resource_desc.msg.h"
-#include "oneflow/core/common/range.h"
-#include "oneflow/core/job/parallel_desc.h"
+#include <mutex>
 
 namespace oneflow {
 
@@ -124,8 +124,8 @@ OBJECT_MSG_BEGIN(VirtualMachine);
 OBJECT_MSG_END(VirtualMachine);
 // clang-format on
 
-}  // namespace vm
+} // namespace vm
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_SCHEDULER_MSG_H_
+#endif // ONEFLOW_CORE_VM_SCHEDULER_MSG_H_

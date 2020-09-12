@@ -25,26 +25,30 @@ void SinkTickOp::InitFromOpConf() {
 }
 
 Maybe<void> SinkTickOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+    const ParallelContext *parallel_ctx) const {
   GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
 }
 
 Maybe<void> SinkTickOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+    std::function<OptInt64 *(const std::string &)> BatchAxis4BnInOp) const {
   BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 
-const PbMessage& SinkTickOp::GetCustomizedConf() const { return op_conf().sink_tick_conf(); }
+const PbMessage &SinkTickOp::GetCustomizedConf() const {
+  return op_conf().sink_tick_conf();
+}
 
-Maybe<void> SinkTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+Maybe<void> SinkTickOp::GetSbpSignatures(SbpSignatureList *sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Broadcast(input_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
 REGISTER_CPU_OP(OperatorConf::kSinkTickConf, SinkTickOp);
 REGISTER_TICK_TOCK_OP(OperatorConf::kSinkTickConf);
 
-}  // namespace oneflow
+} // namespace oneflow

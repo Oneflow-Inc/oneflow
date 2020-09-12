@@ -20,20 +20,23 @@ namespace oneflow {
 namespace {
 
 class MutVariableOpConTickInputHelper final : public MutOpConTickInputHelper {
- public:
+public:
   MutVariableOpConTickInputHelper() : MutOpConTickInputHelper() {}
 
-  bool VirtualIsTickInputBound() const override { return op_conf().variable_conf().has_tick(); }
+  bool VirtualIsTickInputBound() const override {
+    return op_conf().variable_conf().has_tick();
+  }
 
-  OperatorConf NewTickInputBoundOpConf(const std::string& lbn) const override {
+  OperatorConf NewTickInputBoundOpConf(const std::string &lbn) const override {
     OperatorConf ret(op_conf());
     ret.mutable_variable_conf()->set_tick(lbn);
     return ret;
   }
 };
 
-}  // namespace
+} // namespace
 
-REGISTER_AUTO_TICK(OperatorConf::kVariableConf, MutVariableOpConTickInputHelper);
+REGISTER_AUTO_TICK(OperatorConf::kVariableConf,
+                   MutVariableOpConTickInputHelper);
 
-}  // namespace oneflow
+} // namespace oneflow

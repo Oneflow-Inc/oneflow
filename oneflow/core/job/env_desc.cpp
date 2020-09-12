@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-int64_t EnvDesc::GetMachineId(const std::string& addr) const {
+int64_t EnvDesc::GetMachineId(const std::string &addr) const {
   int64_t machine_id = -1;
   int64_t machine_num = env_proto_.machine_size();
   FOR_RANGE(int64_t, i, 0, machine_num) {
@@ -31,4 +31,4 @@ int64_t EnvDesc::GetMachineId(const std::string& addr) const {
   return machine_id;
 }
 
-}  // namespace oneflow
+} // namespace oneflow

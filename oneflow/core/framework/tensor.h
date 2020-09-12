@@ -27,42 +27,41 @@ class BlobAccessChecker;
 namespace user_op {
 
 class Tensor final {
- public:
-  Tensor(Blob*);
+public:
+  Tensor(Blob *);
   ~Tensor() = default;
 
-  Tensor(const Tensor& rhs) { this->CopyWithoutData(rhs); }
-  Tensor(Tensor&& rhs) { *this = std::move(rhs); }
-  void CopyWithoutData(const Tensor& rhs);
-  Tensor& operator=(Tensor&& rhs);
+  Tensor(const Tensor &rhs) { this->CopyWithoutData(rhs); }
+  Tensor(Tensor &&rhs) { *this = std::move(rhs); }
+  void CopyWithoutData(const Tensor &rhs);
+  Tensor &operator=(Tensor &&rhs);
 
-  const ShapeView& shape() const { return shape_; }
-  MutShapeView* mut_shape() {
+  const ShapeView &shape() const { return shape_; }
+  MutShapeView *mut_shape() {
     this->header_access_check();
     return mut_shape_.get();
   }
 
   DataType data_type() const { return data_type_; }
-  const MemoryCase& mem_case() const { return *mem_case_; }
+  const MemoryCase &mem_case() const { return *mem_case_; }
 
-  template<typename T = void>
-  const T* dptr() const {
+  template <typename T = void> const T *dptr() const {
     CheckDataType<T>();
-    return static_cast<const T*>(dptr_);
+    return static_cast<const T *>(dptr_);
   }
 
-  template<typename T = void>
-  T* mut_dptr() {
+  template <typename T = void> T *mut_dptr() {
     this->body_access_check();
     CheckDataType<T>();
-    return static_cast<T*>(dptr_);
+    return static_cast<T *>(dptr_);
   }
 
- private:
-  template<typename T>
-  void CheckDataType() const {
-    LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
-                   && data_type_ != DataType::kChar && data_type_ != GetDataType<T>::value))
+private:
+  template <typename T> void CheckDataType() const {
+    LOG_IF(FATAL, (std::is_same<T, void>::value == false &&
+                   std::is_same<T, char>::value == false &&
+                   data_type_ != DataType::kChar &&
+                   data_type_ != GetDataType<T>::value))
         << "tensor data_type dismatched. value: " << DataType_Name(data_type_)
         << ", template T:" << DataType_Name(GetDataType<T>::value);
   }
@@ -70,16 +69,16 @@ class Tensor final {
   void header_access_check();
   void body_access_check();
 
-  void* dptr_;
+  void *dptr_;
   ShapeView shape_;
   std::unique_ptr<MutShapeView> mut_shape_;
   DataType data_type_;
-  const MemoryCase* mem_case_;
-  const BlobAccessChecker* blob_access_checker_;
+  const MemoryCase *mem_case_;
+  const BlobAccessChecker *blob_access_checker_;
 };
 
-}  // namespace user_op
+} // namespace user_op
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_H_
+#endif // ONEFLOW_CORE_FRAMEWORK_TENSOR_H_

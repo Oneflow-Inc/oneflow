@@ -21,22 +21,28 @@ REGISTER_USER_OP("multiply")
     .Input("x")
     .Input("y")
     .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc *x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc *y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc *out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_OR_RETURN(x->shape() == y->shape());
       CHECK_OR_RETURN(x->data_type() == y->data_type());
       CHECK_OR_RETURN(x->is_tensor_list() == y->is_tensor_list());
       *out = *x;
-      if (x->is_dynamic() || y->is_dynamic()) { *out->mut_is_dynamic() = true; }
+      if (x->is_dynamic() || y->is_dynamic()) {
+        *out->mut_is_dynamic() = true;
+      }
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc &x =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       FOR_RANGE(int64_t, i, 0, x.shape().NumAxes()) {
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+        ctx->NewBuilder()
+            .Split(ctx->inputs(), i)
+            .Split(ctx->outputs(), i)
+            .Build();
       }
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("x", 0))
@@ -52,7 +58,8 @@ REGISTER_USER_OP("multiply")
     });
 
 REGISTER_USER_OP_GRAD("multiply")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapper x_grad_op =
             user_op::UserOpConfWrapperBuilder(op.op_name() + "_x_grad")
@@ -77,4 +84,4 @@ REGISTER_USER_OP_GRAD("multiply")
       }
     });
 
-}  // namespace oneflow
+} // namespace oneflow

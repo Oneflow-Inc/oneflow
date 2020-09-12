@@ -25,22 +25,22 @@ limitations under the License.
 namespace oneflow {
 
 class SocketHelper final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(SocketHelper);
   SocketHelper() = delete;
   ~SocketHelper();
 
-  SocketHelper(int sockfd, IOEventPoller* poller);
+  SocketHelper(int sockfd, IOEventPoller *poller);
 
-  void AsyncWrite(const SocketMsg& msg);
+  void AsyncWrite(const SocketMsg &msg);
 
- private:
-  SocketReadHelper* read_helper_;
-  SocketWriteHelper* write_helper_;
+private:
+  SocketReadHelper *read_helper_;
+  SocketWriteHelper *write_helper_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif // PLATFORM_POSIX
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_HELPER_H_
+#endif // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_HELPER_H_

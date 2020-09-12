@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/persistence/binary_in_stream_with_local_copy.h"
-#include "oneflow/core/persistence/binary_in_stream_without_local_copy.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/persistence/binary_in_stream_without_local_copy.h"
 
 namespace oneflow {
 
-BinaryInStreamWithLocalCopy::BinaryInStreamWithLocalCopy(fs::FileSystem* fs,
-                                                         const std::string& file_path)
+BinaryInStreamWithLocalCopy::BinaryInStreamWithLocalCopy(
+    fs::FileSystem *fs, const std::string &file_path)
     : once_read_(false) {
   LOG(INFO) << "New BinaryInStreamWithLocalCopy " << file_path;
   in_stream_.reset(new BinaryInStreamWithoutLocalCopy(fs, file_path));
@@ -29,7 +29,7 @@ BinaryInStreamWithLocalCopy::BinaryInStreamWithLocalCopy(fs::FileSystem* fs,
   read_mthd_ = &BinaryInStreamWithLocalCopy::ReadAndWriteToLocal;
 }
 
-int32_t BinaryInStreamWithLocalCopy::ReadAndWriteToLocal(char* s, size_t n) {
+int32_t BinaryInStreamWithLocalCopy::ReadAndWriteToLocal(char *s, size_t n) {
   if (Restart()) {
     CopyToLocalFinish();
     return Read(s, n);
@@ -48,8 +48,9 @@ bool BinaryInStreamWithLocalCopy::Restart() {
 
 void BinaryInStreamWithLocalCopy::CopyToLocalFinish() {
   out_stream_.reset();
-  in_stream_.reset(new BinaryInStreamWithoutLocalCopy(LocalFS(), local_copy_path_));
+  in_stream_.reset(
+      new BinaryInStreamWithoutLocalCopy(LocalFS(), local_copy_path_));
   read_mthd_ = &BinaryInStreamWithLocalCopy::ReadFromLocal;
 }
 
-}  // namespace oneflow
+} // namespace oneflow

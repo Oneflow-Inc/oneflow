@@ -22,28 +22,30 @@ limitations under the License.
 namespace oneflow {
 
 class RandomCropKernelState final : public user_op::OpKernelState {
- public:
-  explicit RandomCropKernelState(int32_t size, int64_t seed, AspectRatioRange aspect_ratio_range,
+public:
+  explicit RandomCropKernelState(int32_t size, int64_t seed,
+                                 AspectRatioRange aspect_ratio_range,
                                  AreaRange area_range, int32_t num_attempts)
       : gens_(size) {
     std::seed_seq seq{seed};
     std::vector<int> seeds(size);
     seq.generate(seeds.begin(), seeds.end());
     for (int32_t i = 0; i < size; ++i) {
-      gens_.at(i).reset(
-          new RandomCropGenerator(aspect_ratio_range, area_range, seeds.at(i), num_attempts));
+      gens_.at(i).reset(new RandomCropGenerator(aspect_ratio_range, area_range,
+                                                seeds.at(i), num_attempts));
     }
   }
   ~RandomCropKernelState() = default;
 
-  RandomCropGenerator* GetGenerator(int32_t idx) { return gens_.at(idx).get(); }
+  RandomCropGenerator *GetGenerator(int32_t idx) { return gens_.at(idx).get(); }
 
- private:
+private:
   std::vector<std::shared_ptr<RandomCropGenerator>> gens_;
 };
 
-std::shared_ptr<RandomCropKernelState> CreateRandomCropKernelState(user_op::KernelInitContext* ctx);
+std::shared_ptr<RandomCropKernelState>
+CreateRandomCropKernelState(user_op::KernelInitContext *ctx);
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_RANDOM_CROP_KERNEL_STATE_H_
+#endif // ONEFLOW_USER_KERNELS_RANDOM_CROP_KERNEL_STATE_H_

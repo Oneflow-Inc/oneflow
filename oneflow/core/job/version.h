@@ -22,12 +22,12 @@ namespace oneflow {
 
 #ifdef WITH_GIT_VERSION
 
-const char* GetOneFlowGitVersion();
+const char *GetOneFlowGitVersion();
 
-#endif  // WITH_GIT_VERSION
+#endif // WITH_GIT_VERSION
 
 void DumpVersionInfo();
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_VERSION_H_
+#endif // ONEFLOW_CORE_JOB_VERSION_H_

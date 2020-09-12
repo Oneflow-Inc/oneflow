@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class BlockingCounter final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(BlockingCounter);
   BlockingCounter() = delete;
   ~BlockingCounter() = default;
@@ -31,7 +31,9 @@ class BlockingCounter final {
   int64_t Decrease() {
     std::unique_lock<std::mutex> lck(mtx_);
     cnt_val_ -= 1;
-    if (cnt_val_ == 0) { cond_.notify_all(); }
+    if (cnt_val_ == 0) {
+      cond_.notify_all();
+    }
     return cnt_val_;
   }
   void WaitUntilCntEqualZero() {
@@ -39,12 +41,12 @@ class BlockingCounter final {
     cond_.wait(lck, [this]() { return cnt_val_ == 0; });
   }
 
- private:
+private:
   std::mutex mtx_;
   std::condition_variable cond_;
   int64_t cnt_val_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_BLOCKING_COUNTER_H_
+#endif // ONEFLOW_CORE_COMMON_BLOCKING_COUNTER_H_

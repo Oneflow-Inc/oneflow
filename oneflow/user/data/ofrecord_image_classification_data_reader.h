@@ -16,13 +16,13 @@ limitations under the License.
 #ifndef ONEFLOW_USER_DATA_OFRECORD_IMAGE_CLASSIFICATION_DATA_READER_H_
 #define ONEFLOW_USER_DATA_OFRECORD_IMAGE_CLASSIFICATION_DATA_READER_H_
 
+#include "oneflow/user/data/batch_dataset.h"
 #include "oneflow/user/data/data_reader.h"
 #include "oneflow/user/data/ofrecord_dataset.h"
-#include "oneflow/user/data/ofrecord_parser.h"
-#include "oneflow/user/data/random_shuffle_dataset.h"
-#include "oneflow/user/data/batch_dataset.h"
 #include "oneflow/user/data/ofrecord_image_classification_dataset.h"
 #include "oneflow/user/data/ofrecord_image_classification_parser.h"
+#include "oneflow/user/data/ofrecord_parser.h"
+#include "oneflow/user/data/random_shuffle_dataset.h"
 
 namespace oneflow {
 
@@ -30,29 +30,31 @@ namespace data {
 
 class OFRecordImageClassificationDataReader final
     : public DataReader<ImageClassificationDataInstance> {
- public:
-  explicit OFRecordImageClassificationDataReader(user_op::KernelInitContext* ctx)
+public:
+  explicit OFRecordImageClassificationDataReader(
+      user_op::KernelInitContext *ctx)
       : DataReader<ImageClassificationDataInstance>(ctx) {
     std::unique_ptr<Dataset<TensorBuffer>> base(new OFRecordDataset(ctx));
     if (ctx->Attr<bool>("random_shuffle")) {
       base.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(base)));
     }
     loader_.reset(new OFRecordImageClassificationDataset(ctx, std::move(base)));
-    const int64_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
-    loader_.reset(
-        new BatchDataset<ImageClassificationDataInstance>(batch_size, std::move(loader_)));
+    const int64_t batch_size =
+        ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
+    loader_.reset(new BatchDataset<ImageClassificationDataInstance>(
+        batch_size, std::move(loader_)));
     parser_.reset(new OFRecordImageClassificationParser());
     StartLoadThread();
   }
   ~OFRecordImageClassificationDataReader() override = default;
 
- protected:
+protected:
   using DataReader<ImageClassificationDataInstance>::loader_;
   using DataReader<ImageClassificationDataInstance>::parser_;
 };
 
-}  // namespace data
+} // namespace data
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_DATA_OFRECORD_IMAGE_CLASSIFICATION_DATA_READER_H_
+#endif // ONEFLOW_USER_DATA_OFRECORD_IMAGE_CLASSIFICATION_DATA_READER_H_

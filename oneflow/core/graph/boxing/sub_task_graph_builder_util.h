@@ -16,10 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_UTIL_H_
 #define ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_UTIL_H_
 
-#include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/register/tensor_slice_view.h"
-#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/register/blob_desc.h"
+#include "oneflow/core/register/tensor_slice_view.h"
 
 namespace oneflow {
 
@@ -29,31 +29,32 @@ struct SubTskGphBuilderUtil {
   static constexpr int64_t kDistanceDiffMachine = 2;
   static constexpr int64_t kDistanceMax = 3;
 
-  static bool IsDeviceTypeCPUOrGPU(const ParallelDesc& parallel_desc);
-  static std::vector<TensorSliceView> GetTensorSliceView(int64_t parallel_num,
-                                                         const SbpParallel& sbp_parallel,
-                                                         const BlobDesc& blob_desc);
-  static TensorSliceView GetBroadcastTensorSliceView(const BlobDesc& blob_desc);
-  static bool HasEmptySliceIfSplit(int64_t parallel_num, const SbpParallel& sbp_parallel,
-                                   const BlobDesc& blob_desc);
-  static bool IsOnSameGPU(const TaskNode* lhs, const TaskNode* rhs);
-  static bool IsBoxingS2S(const SbpParallel& src, const SbpParallel& dst);
-  static bool IsBoxingS2B(const SbpParallel& src, const SbpParallel& dst);
-  static bool IsBoxingP2S(const SbpParallel& src, const SbpParallel& dst);
-  static bool IsBoxingP2B(const SbpParallel& src, const SbpParallel& dst);
-  static bool IsBoxingB2B(const SbpParallel& src, const SbpParallel& dst);
-  static bool IsBoxingB2S(const SbpParallel& src, const SbpParallel& dst);
-  static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
-  static bool IsErrorBoxingNotSupported(const ErrorProto& error);
-  static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
-  template<typename NodeType>
-  static int64_t FindNearestNodeIndex(const std::vector<NodeType*> from_nodes,
-                                      const NodeType* to_node) {
+  static bool IsDeviceTypeCPUOrGPU(const ParallelDesc &parallel_desc);
+  static std::vector<TensorSliceView>
+  GetTensorSliceView(int64_t parallel_num, const SbpParallel &sbp_parallel,
+                     const BlobDesc &blob_desc);
+  static TensorSliceView GetBroadcastTensorSliceView(const BlobDesc &blob_desc);
+  static bool HasEmptySliceIfSplit(int64_t parallel_num,
+                                   const SbpParallel &sbp_parallel,
+                                   const BlobDesc &blob_desc);
+  static bool IsOnSameGPU(const TaskNode *lhs, const TaskNode *rhs);
+  static bool IsBoxingS2S(const SbpParallel &src, const SbpParallel &dst);
+  static bool IsBoxingS2B(const SbpParallel &src, const SbpParallel &dst);
+  static bool IsBoxingP2S(const SbpParallel &src, const SbpParallel &dst);
+  static bool IsBoxingP2B(const SbpParallel &src, const SbpParallel &dst);
+  static bool IsBoxingB2B(const SbpParallel &src, const SbpParallel &dst);
+  static bool IsBoxingB2S(const SbpParallel &src, const SbpParallel &dst);
+  static bool BlobHasDynamicShape(const BlobDesc &blob_desc);
+  static bool IsErrorBoxingNotSupported(const ErrorProto &error);
+  static int64_t GetDistance(const TaskNode *src, const TaskNode *dst);
+  template <typename NodeType>
+  static int64_t FindNearestNodeIndex(const std::vector<NodeType *> from_nodes,
+                                      const NodeType *to_node) {
     CHECK(!from_nodes.empty());
     int64_t nearest_from_node_idx = -1;
     int64_t nearest_distance = SubTskGphBuilderUtil::kDistanceMax;
     for (int64_t i = 0; i < from_nodes.size(); ++i) {
-      NodeType* from_node = from_nodes.at(i);
+      NodeType *from_node = from_nodes.at(i);
       int64_t distance = SubTskGphBuilderUtil::GetDistance(from_node, to_node);
       if (distance < nearest_distance) {
         nearest_from_node_idx = i;
@@ -63,14 +64,14 @@ struct SubTskGphBuilderUtil {
     return nearest_from_node_idx;
   }
 
-  template<typename NodeType>
-  static NodeType* FindNearestNode(const std::vector<NodeType*> from_nodes,
-                                   const NodeType* to_node) {
+  template <typename NodeType>
+  static NodeType *FindNearestNode(const std::vector<NodeType *> from_nodes,
+                                   const NodeType *to_node) {
     const int64_t idx = FindNearestNodeIndex<NodeType>(from_nodes, to_node);
     return from_nodes.at(idx);
   }
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_UTIL_H_
+#endif // ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_UTIL_H_

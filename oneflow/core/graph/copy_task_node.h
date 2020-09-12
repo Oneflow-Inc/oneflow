@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class CopyTaskNode : public TaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CopyTaskNode);
   CopyTaskNode() = default;
   virtual ~CopyTaskNode() = default;
@@ -30,15 +30,15 @@ class CopyTaskNode : public TaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
 
- protected:
+protected:
   virtual OperatorConf NewCopyOpConf() = 0;
 
- private:
+private:
   void InferProducedDataRegstTimeShape() final;
 };
 
 class CopyHdTaskNode final : public CopyTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdTaskNode);
   CopyHdTaskNode() = default;
   ~CopyHdTaskNode() = default;
@@ -58,15 +58,15 @@ class CopyHdTaskNode final : public CopyTaskNode {
     }
   }
 
- private:
-  void InitProducedRegstMemCase(MemoryCase*) override;
+private:
+  void InitProducedRegstMemCase(MemoryCase *) override;
   OperatorConf NewCopyOpConf() override;
 
   CopyHdOpConf::Type copy_type_;
 };
 
 class CopyCommNetTaskNode final : public CopyTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CopyCommNetTaskNode);
   CopyCommNetTaskNode() = default;
   ~CopyCommNetTaskNode() = default;
@@ -77,13 +77,13 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   int64_t AllocateLocalWorkStreamId() override;
   int64_t peer_machine_id() const { return peer_machine_id_; }
 
- private:
-  void InitProducedRegstMemCase(MemoryCase*) override;
-  void PinConsumedRegstMemCase(MemoryCase*) override;
+private:
+  void InitProducedRegstMemCase(MemoryCase *) override;
+  void PinConsumedRegstMemCase(MemoryCase *) override;
   OperatorConf NewCopyOpConf() override;
   int64_t peer_machine_id_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_COPY_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_COPY_TASK_NODE_H_

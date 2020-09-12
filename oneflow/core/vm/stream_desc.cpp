@@ -18,8 +18,9 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void StreamDesc::__Init__(const StreamTypeId& stream_type_id, int32_t num_machines,
-                          int32_t num_streams_per_machine, int32_t num_streams_per_thread) {
+void StreamDesc::__Init__(const StreamTypeId &stream_type_id,
+                          int32_t num_machines, int32_t num_streams_per_machine,
+                          int32_t num_streams_per_thread) {
   mutable_stream_type_id()->CopyFrom(stream_type_id);
   set_num_machines(num_machines);
   set_num_streams_per_machine(num_streams_per_machine);
@@ -32,5 +33,5 @@ int32_t StreamDesc::num_threads() const {
   return num_devices / num_streams_per_thread();
 }
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow

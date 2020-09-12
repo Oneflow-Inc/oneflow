@@ -16,45 +16,51 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_KERNEL_REENTRANT_LOCK_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_REENTRANT_LOCK_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/graph/graph.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 class ReentrantLockStatus final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(ReentrantLockStatus);
   ReentrantLockStatus() = default;
   ~ReentrantLockStatus() = default;
 
-  void Init(const KernelConf& kernel_conf);
+  void Init(const KernelConf &kernel_conf);
 
   static std::string kEmptyIbn;
 
   // true: success
   // false: failed
-  void RequestLock(int64_t lock_id, std::queue<int64_t>* unlocked_ids);
+  void RequestLock(int64_t lock_id, std::queue<int64_t> *unlocked_ids);
 
   // return lock_id if any other lock acquired
   // -1: no other lock acquired
-  void ReleaseLock(int64_t lock_id, std::queue<int64_t>* unlocked_ids);
+  void ReleaseLock(int64_t lock_id, std::queue<int64_t> *unlocked_ids);
 
-  const std::queue<int64_t>& cur_unlocked_ids() const { return cur_unlocked_ids_; }
-  std::queue<int64_t>* mut_cur_unlocked_ids() { return &cur_unlocked_ids_; }
+  const std::queue<int64_t> &cur_unlocked_ids() const {
+    return cur_unlocked_ids_;
+  }
+  std::queue<int64_t> *mut_cur_unlocked_ids() { return &cur_unlocked_ids_; }
 
   // Getters
-  const std::string& cur_ibn() const { return cur_ibn_; }
+  const std::string &cur_ibn() const { return cur_ibn_; }
   int64_t cur_act_id() const { return cur_act_id_; }
   bool acquired_lock_to_be_sent() const { return acquired_lock_to_be_sent_; }
-  size_t total_queued_request_lock_num() const { return total_queued_request_lock_num_; }
+  size_t total_queued_request_lock_num() const {
+    return total_queued_request_lock_num_;
+  }
   size_t total_acquired_lock_num() const { return total_acquired_lock_num_; }
 
   // Setters
-  void set_cur_ibn(const std::string& ibn) { cur_ibn_ = ibn; }
+  void set_cur_ibn(const std::string &ibn) { cur_ibn_ = ibn; }
   void set_cur_act_id(int64_t act_id) { cur_act_id_ = act_id; }
-  void set_acquired_lock_to_be_sent(bool val) { acquired_lock_to_be_sent_ = val; }
+  void set_acquired_lock_to_be_sent(bool val) {
+    acquired_lock_to_be_sent_ = val;
+  }
 
- private:
+private:
   // true: success
   // false: failed
   bool TryAcquireLock(int64_t lock_id);
@@ -70,18 +76,19 @@ class ReentrantLockStatus final {
   std::queue<int64_t> cur_unlocked_ids_;
 };
 
-template<typename T>
+template <typename T>
 class ReentrantLockKernel final : public KernelIf<DeviceType::kCPU> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(ReentrantLockKernel);
   ReentrantLockKernel() = default;
   ~ReentrantLockKernel() override = default;
 
- private:
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+private:
+  void
+  ForwardDataContent(const KernelCtx &,
+                     std::function<Blob *(const std::string &)>) const override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_REENTRANT_LOCK_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_REENTRANT_LOCK_KERNEL_H_

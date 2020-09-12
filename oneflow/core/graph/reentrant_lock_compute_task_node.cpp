@@ -21,23 +21,26 @@ namespace oneflow {
 
 void ReentrantLockCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false, 1, 1);
-  ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
+  ForEachOutDataEdge(
+      [&](TaskEdge *edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
 void ReentrantLockCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in");
-  ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
+  ForEachInDataEdge(
+      [&](TaskEdge *edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
 void ReentrantLockCompTaskNode::BuildExecGphAndRegst() {
-  ExecNode* node = mut_exec_gph().NewNode();
+  ExecNode *node = mut_exec_gph().NewNode();
   node->mut_op() = logical_node()->SoleOp();
-  const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
+  const std::list<std::shared_ptr<RegstDesc>> &in_regsts =
+      GetConsumedRegst("in");
   // no regst_desc for ibn "end" provided because TaskGraph hates cycle
   node->BindBnWithOneOfTheRegsts("start", in_regsts);
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  for (const std::string& obn : node->op()->output_bns()) {
-    const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(obn);
+  for (const std::string &obn : node->op()->output_bns()) {
+    const LogicalBlobId &lbi = node->op()->BnInOp2Lbi(obn);
     out_regst->AddLbi(lbi);
     node->BindBnWithRegst(obn, out_regst);
   }
@@ -46,17 +49,18 @@ void ReentrantLockCompTaskNode::BuildExecGphAndRegst() {
 
 void ReentrantLockCompTaskNode::InferProducedDataRegstTimeShape() {
   std::shared_ptr<Shape> time_shape(new Shape());
-  for (TaskEdge* edge : in_edges()) {
+  for (TaskEdge *edge : in_edges()) {
     if (edge->src_node()->GetFastestInputOutputTimeShape()) {
       *time_shape = *edge->src_node()->GetFastestInputOutputTimeShape();
     }
   }
   CHECK_GT(time_shape->elem_cnt(), 0);
-  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
-    *regst->mut_data_regst_time_shape() = time_shape;
-  });
+  ForEachProducedDataRegst(
+      [time_shape](const std::string &name, RegstDesc *regst) {
+        *regst->mut_data_regst_time_shape() = time_shape;
+      });
 }
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kReentrantLock);
 
-}  // namespace oneflow
+} // namespace oneflow

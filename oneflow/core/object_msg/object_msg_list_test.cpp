@@ -238,7 +238,7 @@ OBJECT_MSG_END(TestObjectMsgListHead);
 
 TEST(ObjectMsg, OBJECT_MSG_DEFINE_LIST_HEAD) {
   auto foo_list_head = ObjectMsgPtr<TestObjectMsgListHead>::New();
-  auto& foo_list = *foo_list_head->mutable_foo_list();
+  auto &foo_list = *foo_list_head->mutable_foo_list();
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
@@ -270,7 +270,7 @@ OBJECT_MSG_END(TestObjectMsgListHeadWrapper);
 
 TEST(ObjectMsg, nested_list_delete) {
   auto foo_list_head = ObjectMsgPtr<TestObjectMsgListHeadWrapper>::New();
-  auto& foo_list = *foo_list_head->mutable_head()->mutable_foo_list();
+  auto &foo_list = *foo_list_head->mutable_head()->mutable_foo_list();
   auto item0 = ObjectMsgPtr<TestListItem>::New();
   auto item1 = ObjectMsgPtr<TestListItem>::New();
   foo_list.PushBack(item0.Mutable());
@@ -381,10 +381,12 @@ TEST(ObjectMsgSelfLoopList, EmplaceBack) {
     auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
     ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
     ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
-    self_loop_head0->mut_head()->EmplaceBack(ObjectMsgPtr<SelfLoopContainer>(self_loop_head0));
+    self_loop_head0->mut_head()->EmplaceBack(
+        ObjectMsgPtr<SelfLoopContainer>(self_loop_head0));
     ASSERT_EQ(self_loop_head0->head().size(), 1);
     ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
-    self_loop_head0->mut_head()->EmplaceBack(ObjectMsgPtr<SelfLoopContainer>(self_loop_head1));
+    self_loop_head0->mut_head()->EmplaceBack(
+        ObjectMsgPtr<SelfLoopContainer>(self_loop_head1));
     ASSERT_EQ(self_loop_head1->ref_cnt(), 2);
     ASSERT_EQ(self_loop_head0->head().size(), 2);
   }
@@ -400,10 +402,12 @@ TEST(ObjectMsgSelfLoopList, EmplaceFront) {
     auto self_loop_head1 = ObjectMsgPtr<SelfLoopContainer>::New(&deleted1);
     ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
     ASSERT_EQ(self_loop_head1->ref_cnt(), 1);
-    self_loop_head0->mut_head()->EmplaceFront(ObjectMsgPtr<SelfLoopContainer>(self_loop_head0));
+    self_loop_head0->mut_head()->EmplaceFront(
+        ObjectMsgPtr<SelfLoopContainer>(self_loop_head0));
     ASSERT_EQ(self_loop_head0->head().size(), 1);
     ASSERT_EQ(self_loop_head0->ref_cnt(), 1);
-    self_loop_head0->mut_head()->EmplaceFront(ObjectMsgPtr<SelfLoopContainer>(self_loop_head1));
+    self_loop_head0->mut_head()->EmplaceFront(
+        ObjectMsgPtr<SelfLoopContainer>(self_loop_head1));
     ASSERT_EQ(self_loop_head1->ref_cnt(), 2);
     ASSERT_EQ(self_loop_head0->head().size(), 2);
   }
@@ -494,8 +498,8 @@ TEST(ObjectMsgSelfLoopList, Clear) {
   ASSERT_TRUE(deleted1);
 }
 
-}  // namespace
+} // namespace
 
-}  // namespace test
+} // namespace test
 
-}  // namespace oneflow
+} // namespace oneflow

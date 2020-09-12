@@ -24,6 +24,6 @@ struct Cluster final {
   static Maybe<void> WorkerLoop();
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_CLUSTER_H_
+#endif // ONEFLOW_CORE_JOB_CLUSTER_H_

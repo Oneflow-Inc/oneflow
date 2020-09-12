@@ -13,22 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/control_stream_type.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
-#include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/object_wrapper.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
-#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 namespace vm {
 
 class NewParallelDescSymbolInstructionType final : public InstructionType {
- public:
+public:
   NewParallelDescSymbolInstructionType() = default;
   ~NewParallelDescSymbolInstructionType() override = default;
 
@@ -40,40 +40,46 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
   FLAT_MSG_VIEW_END(ParallelDescObjectInstrOperand);
   // clang-format on
 
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Infer(VirtualMachine *vm, InstructionMsg *instr_msg) const override {
     Run<&IdUtil::GetTypeId>(vm, instr_msg);
   }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Compute(VirtualMachine *vm, InstructionMsg *instr_msg) const override {
     Run<&IdUtil::GetValueId>(vm, instr_msg);
   }
-  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
-  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
+  void Infer(Instruction *) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction *) const override { UNIMPLEMENTED(); }
 
- private:
-  template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+private:
+  template <int64_t (*GetLogicalObjectId)(int64_t)>
+  void Run(VirtualMachine *vm, InstructionMsg *instr_msg) const {
     FlatMsgView<ParallelDescObjectInstrOperand> view(instr_msg->operand());
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
-      int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
-      auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
-                                                                 logical_object_id);
-      CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
-      auto* global_device_id2mirrored_object =
+      int64_t logical_object_id =
+          GetLogicalObjectId(view->logical_object_id(i));
+      auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(
+          vm->mut_vm_thread_only_allocator(), logical_object_id);
+      CHECK(
+          vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
+      auto *global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
-      auto mirrored_object =
-          ObjectMsgPtr<MirroredObject>::NewFrom(vm->mut_allocator(), logical_object.Mutable(), 0);
+      auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
+          vm->mut_allocator(), logical_object.Mutable(), 0);
       {
-        const auto& parallel_desc =
-            Global<SymbolStorage<ParallelDesc>>::Get()->GetPtr(view->logical_object_id(i));
-        auto* rw_mutexed_object = mirrored_object->mut_rw_mutexed_object();
+        const auto &parallel_desc =
+            Global<SymbolStorage<ParallelDesc>>::Get()->GetPtr(
+                view->logical_object_id(i));
+        auto *rw_mutexed_object = mirrored_object->mut_rw_mutexed_object();
         rw_mutexed_object->Init<ObjectWrapper<ParallelDesc>>(parallel_desc);
       }
-      CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
+      CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable())
+                .second);
     }
   }
 };
-COMMAND(Global<SymbolStorage<ParallelDesc>>::SetAllocated(new SymbolStorage<ParallelDesc>()));
-COMMAND(RegisterInstructionType<NewParallelDescSymbolInstructionType>("NewParallelDescSymbol"));
+COMMAND(Global<SymbolStorage<ParallelDesc>>::SetAllocated(
+    new SymbolStorage<ParallelDesc>()));
+COMMAND(RegisterInstructionType<NewParallelDescSymbolInstructionType>(
+    "NewParallelDescSymbol"));
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow

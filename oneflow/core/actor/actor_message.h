@@ -22,9 +22,9 @@ limitations under the License.
 namespace oneflow {
 
 enum class ActorCmd {
-  kInitModel = 0,     // MdUpdt Actor
-  kSendInitialModel,  // MdUpdt Actor
-  kStart,             // Source Actor
+  kInitModel = 0,    // MdUpdt Actor
+  kSendInitialModel, // MdUpdt Actor
+  kStart,            // Source Actor
   kStopThread,
   kConstructActor
 };
@@ -32,14 +32,16 @@ enum class ActorCmd {
 enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg };
 
 class ActorMsg final {
- public:
+public:
   // OF_DISALLOW_COPY_AND_MOVE(ActorMsg);
   ActorMsg() = default;
   ~ActorMsg() = default;
 
   // Build Msg
-  static ActorMsg BuildRegstMsgToConsumer(int64_t producer, int64_t consumer, Regst*);
-  static ActorMsg BuildRegstMsgToProducer(int64_t consumer, int64_t producer, Regst*);
+  static ActorMsg BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
+                                          Regst *);
+  static ActorMsg BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
+                                          Regst *);
   static ActorMsg BuildEordMsg(int64_t consumer, int64_t regst_desc_id);
   static ActorMsg BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd);
 
@@ -49,28 +51,26 @@ class ActorMsg final {
   int64_t dst_actor_id() const { return dst_actor_id_; }
   ActorMsgType msg_type() const { return msg_type_; }
   ActorCmd actor_cmd() const;
-  Regst* regst() const;
+  Regst *regst() const;
   int64_t regst_desc_id() const;
   int64_t piece_id() const;
   int64_t act_id() const;
-  void* comm_net_token() const;
+  void *comm_net_token() const;
   bool has_sole_empty_tensor_in_sole_tensor_list() const;
   int64_t eord_regst_desc_id() const;
 
   // Serialize
-  template<typename StreamT>
-  void Serialize(StreamT& out_stream) const {
+  template <typename StreamT> void Serialize(StreamT &out_stream) const {
     out_stream.Write(this, sizeof(ActorMsg));
   }
-  template<typename StreamT>
-  void Deserialize(StreamT& in_stream) {
+  template <typename StreamT> void Deserialize(StreamT &in_stream) {
     in_stream.Read(this, sizeof(ActorMsg));
   }
 
- private:
+private:
   struct RegstWrapper {
-    Regst* regst;
-    void* comm_net_token;
+    Regst *regst;
+    void *comm_net_token;
     RegstStatus regst_status;
     bool has_sole_empty_tensor_in_sole_tensor_list;
   };
@@ -85,16 +85,16 @@ class ActorMsg final {
   };
 };
 
-template<typename StreamT>
-StreamT& operator<<(StreamT& out_stream, const ActorMsg& msg) {
+template <typename StreamT>
+StreamT &operator<<(StreamT &out_stream, const ActorMsg &msg) {
   msg.Serialize(out_stream);
 }
 
-template<typename StreamT>
-StreamT& operator>>(StreamT& in_stream, const ActorMsg& msg) {
+template <typename StreamT>
+StreamT &operator>>(StreamT &in_stream, const ActorMsg &msg) {
   msg.Deserialize(in_stream);
 }
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
+#endif // ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_

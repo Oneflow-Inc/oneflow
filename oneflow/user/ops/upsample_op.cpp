@@ -24,26 +24,32 @@ REGISTER_USER_OP("upsample")
     .Attr("width_scale", UserOpAttrType::kAtFloat)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("interpolation", UserOpAttrType::kAtString)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc *x_desc =
+          ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      user_op::TensorDesc *y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
       const float height_scale = ctx->Attr<float>("height_scale");
       const float width_scale = ctx->Attr<float>("width_scale");
-      if (ctx->Attr<std::string>("data_format") != "channels_first"
-          || x_desc->shape().NumAxes() != 4) {
+      if (ctx->Attr<std::string>("data_format") != "channels_first" ||
+          x_desc->shape().NumAxes() != 4) {
         LOG(FATAL) << "upsample only supports NCHW";
       }
-      *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
-                                    static_cast<int32_t>(height_scale) * x_desc->shape().At(2),
-                                    static_cast<int32_t>(width_scale) * x_desc->shape().At(3)});
+      *y_desc->mut_shape() =
+          Shape({x_desc->shape().At(0), x_desc->shape().At(1),
+                 static_cast<int32_t>(height_scale) * x_desc->shape().At(2),
+                 static_cast<int32_t>(width_scale) * x_desc->shape().At(3)});
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("y", 0) =
+          *ctx->BatchAxis4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0).Split(user_op::OpArg("y", 0), 0).Build();
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), 0)
+          .Split(user_op::OpArg("y", 0), 0)
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -54,12 +60,13 @@ REGISTER_USER_OP("upsample_grad")
     .Attr("width_scale", UserOpAttrType::kAtFloat)
     .Attr("data_format", UserOpAttrType::kAtString)
     .Attr("interpolation", UserOpAttrType::kAtString)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      const Shape *dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
+      Shape *dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
       const float height_scale = ctx->Attr<float>("height_scale");
       const float width_scale = ctx->Attr<float>("width_scale");
-      if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape->NumAxes() != 4) {
+      if (ctx->Attr<std::string>("data_format") != "channels_first" ||
+          dy_shape->NumAxes() != 4) {
         LOG(FATAL) << "upsample_nearest only supports NCHW";
       }
       *dx_shape = Shape({dy_shape->At(0), dy_shape->At(1),
@@ -67,13 +74,17 @@ REGISTER_USER_OP("upsample_grad")
                          dy_shape->At(3) / static_cast<int32_t>(width_scale)});
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(user_op::OpArg("dy", 0), 0).Split(user_op::OpArg("dx", 0), 0).Build();
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("dy", 0), 0)
+          .Split(user_op::OpArg("dx", 0), 0)
+          .Build();
       return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("upsample")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -90,4 +101,4 @@ REGISTER_USER_OP_GRAD("upsample")
       }
     });
 
-}  // namespace oneflow
+} // namespace oneflow

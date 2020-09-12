@@ -13,14 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/instruction_operand.msg.h"
-#include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/vm/instruction.pb.h"
+#include "oneflow/core/vm/instruction_operand.msg.h"
 
 namespace oneflow {
 namespace vm {
 
-void InstructionOperand::__Init__(const InstructionOperandProto& proto) {
+void InstructionOperand::__Init__(const InstructionOperandProto &proto) {
   if (proto.has_const_operand()) {
     mutable_const_operand()->mutable_operand()->__Init__(proto.const_operand());
   } else if (proto.has_mut_operand()) {
@@ -28,9 +28,11 @@ void InstructionOperand::__Init__(const InstructionOperandProto& proto) {
   } else if (proto.has_mut2_operand()) {
     mutable_mut2_operand()->mutable_operand()->__Init__(proto.mut2_operand());
   } else if (proto.has_symbol_operand()) {
-    mutable_symbol_operand()->mutable_operand()->__Init__(proto.symbol_operand());
+    mutable_symbol_operand()->mutable_operand()->__Init__(
+        proto.symbol_operand());
   } else if (proto.has_init_symbol_operand()) {
-    mutable_init_symbol_operand()->mutable_operand()->__Init__(proto.init_symbol_operand());
+    mutable_init_symbol_operand()->mutable_operand()->__Init__(
+        proto.init_symbol_operand());
   } else if (proto.has_separator()) {
     mutable_separator();
   } else if (proto.has_double_operand()) {
@@ -46,5 +48,5 @@ void InstructionOperand::__Init__(const InstructionOperandProto& proto) {
   }
 }
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow

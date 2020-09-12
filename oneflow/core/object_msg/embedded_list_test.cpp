@@ -18,8 +18,8 @@ limitations under the License.
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
 #define private public
-#include "oneflow/core/object_msg/embedded_list.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/object_msg/embedded_list.h"
 
 namespace oneflow {
 
@@ -32,13 +32,13 @@ struct ListItemBar final {
 };
 
 class TestEmbeddedListLink final : public EmbeddedListLink {
- public:
+public:
   TestEmbeddedListLink() { this->__Init__(); }
 };
 
-template<typename ItemField>
+template <typename ItemField>
 class TestEmbeddedList : public EmbeddedListHead<ItemField> {
- public:
+public:
   TestEmbeddedList() { this->__Init__(); }
 };
 
@@ -74,7 +74,7 @@ TEST(EmbeddedListView, empty) {
 
 TEST(EmbeddedListView, push_front) {
   BarListView list_view;
-  EmbeddedListLink& head = list_view.container_;
+  EmbeddedListLink &head = list_view.container_;
   ListItemBar item0;
   list_view.PushFront(&item0);
   ASSERT_EQ(head.next(), &item0.bar_list);
@@ -93,7 +93,7 @@ TEST(EmbeddedListView, push_front) {
 
 TEST(EmbeddedListView, end) {
   BarListView list_view;
-  ListItemBar* end_item = list_view.End();
+  ListItemBar *end_item = list_view.End();
   ListItemBar item0;
   list_view.PushFront(&item0);
   ASSERT_EQ(end_item, list_view.End());
@@ -187,7 +187,7 @@ TEST(EmbeddedListView, Next) {
   ListItemBar item1;
   list_view.PushBack(&item1);
 
-  ListItemBar* item = list_view.Begin();
+  ListItemBar *item = list_view.Begin();
   ASSERT_EQ(item, &item0);
   item = list_view.Next(item);
   ASSERT_EQ(item, &item1);
@@ -204,7 +204,7 @@ TEST(EmbeddedListView, prev_item) {
   ListItemBar item1;
   list_view.PushBack(&item1);
 
-  ListItemBar* item = list_view.Begin();
+  ListItemBar *item = list_view.Begin();
   ASSERT_EQ(item, &item0);
   item = list_view.Prev(item);
   ASSERT_EQ(item, list_view.End());
@@ -214,6 +214,6 @@ TEST(EmbeddedListView, prev_item) {
   ASSERT_EQ(item, &item0);
 }
 
-}  // namespace test
+} // namespace test
 
-}  // namespace oneflow
+} // namespace oneflow

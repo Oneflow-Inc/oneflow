@@ -22,28 +22,26 @@ limitations under the License.
 namespace oneflow {
 
 class MemoryAllocator final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(MemoryAllocator);
   MemoryAllocator() = default;
   ~MemoryAllocator();
 
-  char* Allocate(MemoryCase mem_case, std::size_t size);
-  template<typename T>
-  T* PlacementNew(T* mem_ptr);
+  char *Allocate(MemoryCase mem_case, std::size_t size);
+  template <typename T> T *PlacementNew(T *mem_ptr);
 
- private:
-  void Deallocate(char* dptr, MemoryCase mem_case);
+private:
+  void Deallocate(char *dptr, MemoryCase mem_case);
 
   std::mutex deleters_mutex_;
   std::list<std::function<void()>> deleters_;
 };
 
 class Blob;
-void InitNonPODTypeBlobIfNeed(MemoryAllocator* allocator, Blob* blob_ptr);
+void InitNonPODTypeBlobIfNeed(MemoryAllocator *allocator, Blob *blob_ptr);
 
-template<typename T>
-T* MemoryAllocator::PlacementNew(T* mem_ptr) {
-  T* obj = new (mem_ptr) T();
+template <typename T> T *MemoryAllocator::PlacementNew(T *mem_ptr) {
+  T *obj = new (mem_ptr) T();
   {
     std::unique_lock<std::mutex> lock(deleters_mutex_);
     deleters_.push_front([obj] { obj->~T(); });
@@ -53,12 +51,12 @@ T* MemoryAllocator::PlacementNew(T* mem_ptr) {
 }
 
 struct MemoryAllocatorImpl final {
-  static void* Allocate(MemoryCase mem_case, size_t size);
-  static void Deallocate(void* ptr, MemoryCase mem_case);
-  static void* AllocateUnPinnedHostMem(size_t size);
-  static void DeallocateUnPinnedHostMem(void* ptr);
+  static void *Allocate(MemoryCase mem_case, size_t size);
+  static void Deallocate(void *ptr, MemoryCase mem_case);
+  static void *AllocateUnPinnedHostMem(size_t size);
+  static void DeallocateUnPinnedHostMem(void *ptr);
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_MEMORY_MEMORY_ALLOCATOR_H_
+#endif // ONEFLOW_CORE_MEMORY_MEMORY_ALLOCATOR_H_

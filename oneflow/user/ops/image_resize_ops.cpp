@@ -26,16 +26,19 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_to_fixed")
     .Attr<int64_t>("target_height", UserOpAttrType::kAtInt64, 0)
     .Attr<int64_t>("channels", UserOpAttrType::kAtInt64, 3)
     .Attr<DataType>("data_type", UserOpAttrType::kAtDataType, DataType::kUInt8)
-    .Attr<std::string>("interpolation_type", UserOpAttrType::kAtString, "bilinear")
-    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
-                       const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
+    .Attr<std::string>("interpolation_type", UserOpAttrType::kAtString,
+                       "bilinear")
+    .SetCheckAttrFn([](const user_op::UserOpDefWrapper &def,
+                       const user_op::UserOpConfWrapper &conf) -> Maybe<void> {
       bool check_failed = false;
       std::ostringstream err;
-      err << "Illegal attr value for " << conf.op_type_name() << " op, op_name: " << conf.op_name();
+      err << "Illegal attr value for " << conf.op_type_name()
+          << " op, op_name: " << conf.op_name();
       int64_t target_width = conf.attr<int64_t>("target_width");
       int64_t target_height = conf.attr<int64_t>("target_height");
       if (target_width <= 0 || target_height <= 0) {
-        err << ", target_width: " << target_width << ", target_height: " << target_height;
+        err << ", target_width: " << target_width
+            << ", target_height: " << target_height;
         check_failed = true;
       }
       int64_t channels = conf.attr<int64_t>("channels");
@@ -45,40 +48,54 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_to_fixed")
       }
       DataType data_type = conf.attr<DataType>("data_type");
       if (data_type != DataType::kUInt8 && data_type != DataType::kFloat) {
-        err << ", data_type: " << data_type << " (only support kUInt8 and kFloat for now)";
+        err << ", data_type: " << data_type
+            << " (only support kUInt8 and kFloat for now)";
         check_failed = true;
       }
-      const std::string& interp_type = conf.attr<std::string>("interpolation_type");
-      if (!CheckInterpolationValid(interp_type, err)) { check_failed = true; }
-      if (check_failed) { return oneflow::Error::CheckFailedError() << err.str(); }
+      const std::string &interp_type =
+          conf.attr<std::string>("interpolation_type");
+      if (!CheckInterpolationValid(interp_type, err)) {
+        check_failed = true;
+      }
+      if (check_failed) {
+        return oneflow::Error::CheckFailedError() << err.str();
+      }
       return Maybe<void>::Ok();
     })
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc *in_tensor =
+          ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
-      CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().elem_cnt() > 0);
+      CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 &&
+                      in_tensor->shape().elem_cnt() > 0);
       int64_t batch_size = in_tensor->shape().elem_cnt();
       int64_t target_width = ctx->Attr<int64_t>("target_width");
       int64_t target_height = ctx->Attr<int64_t>("target_height");
       int64_t channels = ctx->Attr<int64_t>("channels");
 
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc *out_tensor =
+          ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_tensor->mut_data_type() = ctx->Attr<DataType>("data_type");
-      *out_tensor->mut_shape() = Shape({batch_size, target_height, target_width, channels});
+      *out_tensor->mut_shape() =
+          Shape({batch_size, target_height, target_width, channels});
       out_tensor->set_is_dynamic(in_tensor->is_dynamic());
 
-      user_op::TensorDesc* scale_tensor = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
+      user_op::TensorDesc *scale_tensor =
+          ctx->TensorDesc4ArgNameAndIndex("scale", 0);
       *scale_tensor->mut_data_type() = DataType::kFloat;
       *scale_tensor->mut_shape() = Shape({batch_size, 2});
       scale_tensor->set_is_dynamic(in_tensor->is_dynamic());
 
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      ctx->NewBuilder()
+          .Split(ctx->inputs(), 0)
+          .Split(ctx->outputs(), 0)
+          .Build();
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
       ctx->BatchAxis4ArgNameAndIndex("scale", 0)->set_value(0);
@@ -94,16 +111,19 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
     .Attr<int32_t>("min_size", UserOpAttrType::kAtInt32, 0)
     .Attr<int32_t>("max_size", UserOpAttrType::kAtInt32, 0)
     .Attr<bool>("resize_longer", UserOpAttrType::kAtBool, false)
-    .Attr<std::string>("interpolation_type", UserOpAttrType::kAtString, "bilinear")
-    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
-                       const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
+    .Attr<std::string>("interpolation_type", UserOpAttrType::kAtString,
+                       "bilinear")
+    .SetCheckAttrFn([](const user_op::UserOpDefWrapper &def,
+                       const user_op::UserOpConfWrapper &conf) -> Maybe<void> {
       bool check_failed = false;
       std::ostringstream err;
-      err << "Illegal attr value for " << conf.op_type_name() << " op, op_name: " << conf.op_name();
+      err << "Illegal attr value for " << conf.op_type_name()
+          << " op, op_name: " << conf.op_name();
       const int32_t target_size = conf.attr<int32_t>("target_size");
       const int32_t max_size = conf.attr<int32_t>("max_size");
       if (target_size <= 0) {
-        err << ", target_size: " << target_size << " (target_size must be greater than 0)";
+        err << ", target_size: " << target_size
+            << " (target_size must be greater than 0)";
         check_failed = true;
       }
       if (max_size < target_size && max_size > 0) {
@@ -111,31 +131,43 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
             << " (max_size must be greater than target_size or equal to 0)";
         check_failed = true;
       }
-      const std::string& interp_type = conf.attr<std::string>("interpolation_type");
-      if (!CheckInterpolationValid(interp_type, err)) { check_failed = true; }
-      if (check_failed) { return oneflow::Error::CheckFailedError() << err.str(); }
+      const std::string &interp_type =
+          conf.attr<std::string>("interpolation_type");
+      if (!CheckInterpolationValid(interp_type, err)) {
+        check_failed = true;
+      }
+      if (check_failed) {
+        return oneflow::Error::CheckFailedError() << err.str();
+      }
       return Maybe<void>::Ok();
     })
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc *in_desc =
+          ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_OR_RETURN(in_desc->data_type() == DataType::kTensorBuffer);
-      CHECK_OR_RETURN(in_desc->shape().NumAxes() == 1 && in_desc->shape().At(0) > 0);
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      CHECK_OR_RETURN(in_desc->shape().NumAxes() == 1 &&
+                      in_desc->shape().At(0) > 0);
+      user_op::TensorDesc *out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_desc->mut_shape() = in_desc->shape();
       *out_desc->mut_data_type() = DataType::kTensorBuffer;
-      user_op::TensorDesc* size_desc = ctx->TensorDesc4ArgNameAndIndex("size", 0);
+      user_op::TensorDesc *size_desc =
+          ctx->TensorDesc4ArgNameAndIndex("size", 0);
       *size_desc->mut_shape() = in_desc->shape();
       *size_desc->mut_data_type() = DataType::kTensorBuffer;
-      user_op::TensorDesc* scale_desc = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
+      user_op::TensorDesc *scale_desc =
+          ctx->TensorDesc4ArgNameAndIndex("scale", 0);
       *scale_desc->mut_shape() = in_desc->shape();
       *scale_desc->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      ctx->NewBuilder()
+          .Split(ctx->inputs(), 0)
+          .Split(ctx->outputs(), 0)
+          .Build();
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
       ctx->BatchAxis4ArgNameAndIndex("size", 0)->set_value(0);
@@ -143,4 +175,4 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
       return Maybe<void>::Ok();
     });
 
-}  // namespace oneflow
+} // namespace oneflow

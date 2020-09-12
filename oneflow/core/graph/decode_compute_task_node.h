@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class DecodeCompTaskNode final : public CompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(DecodeCompTaskNode);
   DecodeCompTaskNode() = default;
   ~DecodeCompTaskNode() = default;
@@ -32,10 +32,10 @@ class DecodeCompTaskNode final : public CompTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kDecode; }
 
- private:
+private:
   void InferProducedDataRegstTimeShape() override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_DECODE_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_DECODE_COMPUTE_TASK_NODE_H_

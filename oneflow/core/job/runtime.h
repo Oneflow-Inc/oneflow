@@ -23,18 +23,19 @@ limitations under the License.
 namespace oneflow {
 
 class Runtime final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(Runtime);
   Runtime() = delete;
   ~Runtime();
 
-  Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase);
+  Runtime(const Plan &plan, size_t total_piece_num, bool is_experiment_phase);
 
- private:
-  void NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase);
+private:
+  void NewAllGlobal(const Plan &plan, size_t total_piece_num,
+                    bool is_experiment_phase);
   void DeleteAllGlobal();
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
 #endif

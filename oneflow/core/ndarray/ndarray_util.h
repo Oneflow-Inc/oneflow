@@ -16,171 +16,203 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_NDARRAY_NDARRAY_UTIL_H_
 #define ONEFLOW_CORE_NDARRAY_NDARRAY_UTIL_H_
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/ndarray/xpu_var_ndarray.h"
-#include "oneflow/core/ndarray/xpu_var_ndarray_builder.h"
-#include "oneflow/core/ndarray/ndarray_reduce.h"
-#include "oneflow/core/ndarray/ndarray_apply_unary.h"
-#include "oneflow/core/ndarray/ndarray_apply_binary.h"
-#include "oneflow/core/ndarray/ndarray_apply_broadcast_unary.h"
-#include "oneflow/core/ndarray/ndarray_apply_broadcast_binary.h"
-#include "oneflow/core/ndarray/xpu_reduced_ndarray.h"
-#include "oneflow/core/ndarray/xpu_ndarray_assign.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/ndarray/ndarray_apply_binary.h"
+#include "oneflow/core/ndarray/ndarray_apply_broadcast_binary.h"
+#include "oneflow/core/ndarray/ndarray_apply_broadcast_unary.h"
+#include "oneflow/core/ndarray/ndarray_apply_unary.h"
+#include "oneflow/core/ndarray/ndarray_reduce.h"
+#include "oneflow/core/ndarray/xpu_ndarray_assign.h"
+#include "oneflow/core/ndarray/xpu_reduced_ndarray.h"
+#include "oneflow/core/ndarray/xpu_var_ndarray.h"
+#include "oneflow/core/ndarray/xpu_var_ndarray_builder.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-struct NdarrayUtil final {
+template <DeviceType device_type, typename T> struct NdarrayUtil final {
   static XpuVarNdarrayBuilder<const T> GetValNdarrayBuilder() {
     return XpuVarNdarrayBuilder<const T>();
   }
-  static XpuVarNdarrayBuilder<T> GetVarNdarrayBuilder() { return XpuVarNdarrayBuilder<T>(); }
+  static XpuVarNdarrayBuilder<T> GetVarNdarrayBuilder() {
+    return XpuVarNdarrayBuilder<T>();
+  }
 
-  static void Assign(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
+  static void Assign(DeviceCtx *ctx, const XpuVarNdarray<T> &y,
+                     const XpuVarNdarray<const T> &x) {
     return XpuNdarrayAssign<device_type, T>::Assign(ctx, y, x);
   }
 
-  static void BroadcastTo(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
-                          const XpuVarNdarray<const T>& x) {
+  static void BroadcastTo(DeviceCtx *ctx, const XpuVarNdarray<T> &y,
+                          const XpuVarNdarray<const T> &x) {
     return BroadcastIdentity(ctx, y, x);
   }
 
-#define DEFINE_UNARY_FUNC(func_name)                                                         \
-  static void func_name(                                                                     \
-      DeviceCtx* ctx,                                                                        \
-      const XpuVarNdarray<typename UnaryFuncTrait<UnaryFunc##func_name, T>::return_type>& y, \
-      const XpuVarNdarray<const T>& x) {                                                     \
-    return ApplyUnary<UnaryFunc##func_name>(ctx, y, x);                                      \
+#define DEFINE_UNARY_FUNC(func_name)                                           \
+  static void func_name(                                                       \
+      DeviceCtx *ctx,                                                          \
+      const XpuVarNdarray<                                                     \
+          typename UnaryFuncTrait<UnaryFunc##func_name, T>::return_type> &y,   \
+      const XpuVarNdarray<const T> &x) {                                       \
+    return ApplyUnary<UnaryFunc##func_name>(ctx, y, x);                        \
   }
   OF_PP_FOR_EACH_ATOMIC(DEFINE_UNARY_FUNC, ARITHMETIC_UNARY_FUNC_NAME_SEQ)
 #undef DEFINE_UNARY_FUNC
 
-#define DEFINE_BINARY_FUNC(func_name)                                                          \
-  static void func_name(                                                                       \
-      DeviceCtx* ctx,                                                                          \
-      const XpuVarNdarray<typename BinaryFuncTrait<BinaryFunc##func_name, T>::return_type>& y, \
-      const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {                      \
-    return ApplyBinary<BinaryFunc##func_name>(ctx, y, a, b);                                   \
+#define DEFINE_BINARY_FUNC(func_name)                                          \
+  static void func_name(                                                       \
+      DeviceCtx *ctx,                                                          \
+      const XpuVarNdarray<                                                     \
+          typename BinaryFuncTrait<BinaryFunc##func_name, T>::return_type> &y, \
+      const XpuVarNdarray<const T> &a, const XpuVarNdarray<const T> &b) {      \
+    return ApplyBinary<BinaryFunc##func_name>(ctx, y, a, b);                   \
   }
   OF_PP_FOR_EACH_ATOMIC(DEFINE_BINARY_FUNC, BINARY_FUNC_NAME_SEQ)
 #undef DEFINE_BINARY_FUNC
 
-#define DEFINE_BROADCAST_UNARY_FUNC(func_name)                                               \
-  static void Broadcast##func_name(                                                          \
-      DeviceCtx* ctx,                                                                        \
-      const XpuVarNdarray<typename UnaryFuncTrait<UnaryFunc##func_name, T>::return_type>& y, \
-      const XpuVarNdarray<const T>& x) {                                                     \
-    return BroadcastApplyUnary<UnaryFunc##func_name>(ctx, y, x);                             \
+#define DEFINE_BROADCAST_UNARY_FUNC(func_name)                                 \
+  static void Broadcast##func_name(                                            \
+      DeviceCtx *ctx,                                                          \
+      const XpuVarNdarray<                                                     \
+          typename UnaryFuncTrait<UnaryFunc##func_name, T>::return_type> &y,   \
+      const XpuVarNdarray<const T> &x) {                                       \
+    return BroadcastApplyUnary<UnaryFunc##func_name>(ctx, y, x);               \
   }
-  OF_PP_FOR_EACH_ATOMIC(DEFINE_BROADCAST_UNARY_FUNC, ARITHMETIC_UNARY_FUNC_NAME_SEQ)
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_BROADCAST_UNARY_FUNC,
+                        ARITHMETIC_UNARY_FUNC_NAME_SEQ)
 #undef DEFINE_BROADCAST_UNARY_FUNC
 
-#define DEFINE_BROADCAST_BINARY_FUNC(func_name)                                                \
-  static void Broadcast##func_name(                                                            \
-      DeviceCtx* ctx,                                                                          \
-      const XpuVarNdarray<typename BinaryFuncTrait<BinaryFunc##func_name, T>::return_type>& y, \
-      const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {                      \
-    return BroadcastApplyBinary<BinaryFunc##func_name>(ctx, y, a, b);                          \
+#define DEFINE_BROADCAST_BINARY_FUNC(func_name)                                \
+  static void Broadcast##func_name(                                            \
+      DeviceCtx *ctx,                                                          \
+      const XpuVarNdarray<                                                     \
+          typename BinaryFuncTrait<BinaryFunc##func_name, T>::return_type> &y, \
+      const XpuVarNdarray<const T> &a, const XpuVarNdarray<const T> &b) {      \
+    return BroadcastApplyBinary<BinaryFunc##func_name>(ctx, y, a, b);          \
   }
   OF_PP_FOR_EACH_ATOMIC(DEFINE_BROADCAST_BINARY_FUNC, BINARY_FUNC_NAME_SEQ)
 #undef DEFINE_BROADCAST_BINARY_FUNC
 
-#define DEFINE_INPLACE_UNARY_FUNC(func_name)                                  \
-  static void Inplace##func_name(DeviceCtx* ctx, const XpuVarNdarray<T>& y) { \
-    InplaceApply<UnaryFunc##func_name>(ctx, y);                               \
+#define DEFINE_INPLACE_UNARY_FUNC(func_name)                                   \
+  static void Inplace##func_name(DeviceCtx *ctx, const XpuVarNdarray<T> &y) {  \
+    InplaceApply<UnaryFunc##func_name>(ctx, y);                                \
   }
-  OF_PP_FOR_EACH_ATOMIC(DEFINE_INPLACE_UNARY_FUNC, ARITHMETIC_UNARY_FUNC_NAME_SEQ)
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_INPLACE_UNARY_FUNC,
+                        ARITHMETIC_UNARY_FUNC_NAME_SEQ)
 #undef DEFINE_INPLACE_UNARY_FUNC
 
-#define DEFINE_INPLACE_BINARY_FUNC(func_name)                               \
-  static void Inplace##func_name(DeviceCtx* ctx, const XpuVarNdarray<T>& y, \
-                                 const XpuVarNdarray<const T>& x) {         \
-    InplaceApply<BinaryFunc##func_name>(ctx, y, x);                         \
+#define DEFINE_INPLACE_BINARY_FUNC(func_name)                                  \
+  static void Inplace##func_name(DeviceCtx *ctx, const XpuVarNdarray<T> &y,    \
+                                 const XpuVarNdarray<const T> &x) {            \
+    InplaceApply<BinaryFunc##func_name>(ctx, y, x);                            \
   }
-  OF_PP_FOR_EACH_ATOMIC(DEFINE_INPLACE_BINARY_FUNC, ARITHMETIC_BINARY_FUNC_NAME_SEQ)
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_INPLACE_BINARY_FUNC,
+                        ARITHMETIC_BINARY_FUNC_NAME_SEQ)
 #undef DEFINE_INPLACE_BINARY_FUNC
 
-#define DEFINE_INPLACE_BROADCAST_BINARY_FUNC(func_name)                              \
-  static void InplaceBroadcast##func_name(DeviceCtx* ctx, const XpuVarNdarray<T>& y, \
-                                          const XpuVarNdarray<const T>& x) {         \
-    return InplaceBroadcastApply<BinaryFunc##func_name>(ctx, y, x);                  \
+#define DEFINE_INPLACE_BROADCAST_BINARY_FUNC(func_name)                        \
+  static void InplaceBroadcast##func_name(DeviceCtx *ctx,                      \
+                                          const XpuVarNdarray<T> &y,           \
+                                          const XpuVarNdarray<const T> &x) {   \
+    return InplaceBroadcastApply<BinaryFunc##func_name>(ctx, y, x);            \
   }
-  OF_PP_FOR_EACH_ATOMIC(DEFINE_INPLACE_BROADCAST_BINARY_FUNC, ARITHMETIC_BINARY_FUNC_NAME_SEQ)
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_INPLACE_BROADCAST_BINARY_FUNC,
+                        ARITHMETIC_BINARY_FUNC_NAME_SEQ)
 #undef DEFINE_INPLACE_BROADCAST_BINARY_FUNC
 
-#define DEFINE_REDUCE_FUNC(func_name)                                                            \
-  static void Reduce##func_name(DeviceCtx* ctx, const XpuVarNdarray<T>& y,                       \
-                                const XpuVarNdarray<const T>& x,                                 \
-                                const XpuVarNdarray<T>& tmp_storage) {                           \
-    return NdarrayReduce<device_type, T, BinaryFunc##func_name>::Reduce(ctx, y, x, tmp_storage); \
+#define DEFINE_REDUCE_FUNC(func_name)                                          \
+  static void Reduce##func_name(DeviceCtx *ctx, const XpuVarNdarray<T> &y,     \
+                                const XpuVarNdarray<const T> &x,               \
+                                const XpuVarNdarray<T> &tmp_storage) {         \
+    return NdarrayReduce<device_type, T, BinaryFunc##func_name>::Reduce(       \
+        ctx, y, x, tmp_storage);                                               \
   }
   OF_PP_FOR_EACH_ATOMIC(DEFINE_REDUCE_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
 #undef DEFINE_REDUCE_FUNC
 
- private:
-  template<template<typename> class unary_func>
+private:
+  template <template <typename> class unary_func>
   static void BroadcastApplyUnary(
-      DeviceCtx* ctx, const XpuVarNdarray<typename UnaryFuncTrait<unary_func, T>::return_type>& y,
-      const XpuVarNdarray<const T>& x) {
+      DeviceCtx *ctx,
+      const XpuVarNdarray<typename UnaryFuncTrait<unary_func, T>::return_type>
+          &y,
+      const XpuVarNdarray<const T> &x) {
     CHECK_EQ(x.shape().NumAxes(), y.shape().NumAxes());
-    return NdarrayApplyBroadcastUnary<device_type, T, unary_func>::Apply(ctx, y, x);
+    return NdarrayApplyBroadcastUnary<device_type, T, unary_func>::Apply(ctx, y,
+                                                                         x);
   }
 
-  template<template<typename> class binary_func>
+  template <template <typename> class binary_func>
   static void BroadcastApplyBinary(
-      DeviceCtx* ctx, const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
-      const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
+      DeviceCtx *ctx,
+      const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>
+          &y,
+      const XpuVarNdarray<const T> &a, const XpuVarNdarray<const T> &b) {
     CHECK_EQ(a.shape().NumAxes(), y.shape().NumAxes());
     CHECK_EQ(b.shape().NumAxes(), y.shape().NumAxes());
-    return NdarrayApplyBroadcastBinary<device_type, T, binary_func>::Apply(ctx, y, a, b);
+    return NdarrayApplyBroadcastBinary<device_type, T, binary_func>::Apply(
+        ctx, y, a, b);
   }
 
-  template<template<typename> class binary_func>
-  static void InplaceBroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
-                                    const XpuVarNdarray<const T>& x) {
-    static_assert(std::is_same<T, typename BinaryFuncTrait<binary_func, T>::return_type>::value,
-                  "T must be same with BinaryFuncTrait<binary_func, T>::return_type");
+  template <template <typename> class binary_func>
+  static void InplaceBroadcastApply(DeviceCtx *ctx, const XpuVarNdarray<T> &y,
+                                    const XpuVarNdarray<const T> &x) {
+    static_assert(
+        std::is_same<
+            T, typename BinaryFuncTrait<binary_func, T>::return_type>::value,
+        "T must be same with BinaryFuncTrait<binary_func, T>::return_type");
     CHECK_EQ(x.shape().NumAxes(), y.shape().NumAxes());
-    return NdarrayApplyBroadcastBinary<device_type, T, binary_func>::InplaceApply(ctx, y, x);
+    return NdarrayApplyBroadcastBinary<device_type, T,
+                                       binary_func>::InplaceApply(ctx, y, x);
   }
 
-  template<template<typename> class unary_func>
-  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
-    static_assert(std::is_same<T, typename UnaryFuncTrait<unary_func, T>::return_type>::value,
-                  "T must be same with UnaryFuncTrait<unary_func, T>::return_type");
+  template <template <typename> class unary_func>
+  static void InplaceApply(DeviceCtx *ctx, const XpuVarNdarray<T> &y) {
+    static_assert(
+        std::is_same<
+            T, typename UnaryFuncTrait<unary_func, T>::return_type>::value,
+        "T must be same with UnaryFuncTrait<unary_func, T>::return_type");
     return NdarrayApplyUnary<device_type, T, unary_func>::InplaceApply(ctx, y);
   }
 
-  template<template<typename> class binary_func>
-  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
-                           const XpuVarNdarray<const T>& x) {
-    static_assert(std::is_same<T, typename BinaryFuncTrait<binary_func, T>::return_type>::value,
-                  "T must be same with BinaryFuncTrait<binary_func, T>::return_type");
-    return NdarrayApplyBinary<device_type, T, binary_func>::InplaceApply(ctx, y, x);
+  template <template <typename> class binary_func>
+  static void InplaceApply(DeviceCtx *ctx, const XpuVarNdarray<T> &y,
+                           const XpuVarNdarray<const T> &x) {
+    static_assert(
+        std::is_same<
+            T, typename BinaryFuncTrait<binary_func, T>::return_type>::value,
+        "T must be same with BinaryFuncTrait<binary_func, T>::return_type");
+    return NdarrayApplyBinary<device_type, T, binary_func>::InplaceApply(ctx, y,
+                                                                         x);
   }
 
-  template<template<typename> class unary_func>
+  template <template <typename> class unary_func>
   static void ApplyUnary(
-      DeviceCtx* ctx, const XpuVarNdarray<typename UnaryFuncTrait<unary_func, T>::return_type>& y,
-      const XpuVarNdarray<const T>& x) {
+      DeviceCtx *ctx,
+      const XpuVarNdarray<typename UnaryFuncTrait<unary_func, T>::return_type>
+          &y,
+      const XpuVarNdarray<const T> &x) {
     return NdarrayApplyUnary<device_type, T, unary_func>::Apply(ctx, y, x);
   }
 
-  template<template<typename> class binary_func>
+  template <template <typename> class binary_func>
   static void ApplyBinary(
-      DeviceCtx* ctx, const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
-      const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
+      DeviceCtx *ctx,
+      const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>
+          &y,
+      const XpuVarNdarray<const T> &a, const XpuVarNdarray<const T> &b) {
     if (a.host_ptr() == y.host_ptr()) {
       CHECK(a.host_shape() == y.host_shape());
-      return NdarrayApplyBinary<device_type, T, binary_func>::InplaceApply(ctx, y, b);
+      return NdarrayApplyBinary<device_type, T, binary_func>::InplaceApply(
+          ctx, y, b);
     } else {
-      return NdarrayApplyBinary<device_type, T, binary_func>::Apply(ctx, y, a, b);
+      return NdarrayApplyBinary<device_type, T, binary_func>::Apply(ctx, y, a,
+                                                                    b);
     }
   }
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NDARRAY_NDARRAY_UTIL_H_
+#endif // ONEFLOW_CORE_NDARRAY_NDARRAY_UTIL_H_

@@ -24,15 +24,15 @@ limitations under the License.
 namespace oneflow {
 
 class Compiler final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(Compiler);
   Compiler() = default;
   ~Compiler() = default;
 
-  void Compile(Job*, Plan*, bool need_job_complete) const;
-  void GenNetTopo(Plan* plan) const;
+  void Compile(Job *, Plan *, bool need_job_complete) const;
+  void GenNetTopo(Plan *plan) const;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_COMPILER_H_
+#endif // ONEFLOW_CORE_JOB_COMPILER_H_

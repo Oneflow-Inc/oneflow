@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/object_msg/flat_msg_view.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_type.h"
 
 namespace oneflow {
 namespace eager {
 
 class LazyReferenceInstructionType : public vm::InstructionType {
- public:
+public:
   LazyReferenceInstructionType() = default;
   virtual ~LazyReferenceInstructionType() override = default;
 
@@ -32,14 +32,16 @@ class LazyReferenceInstructionType : public vm::InstructionType {
   FLAT_MSG_VIEW_END(LazyReferenceInstruction);
   // clang-format on
 
-  void Infer(vm::Instruction* instruction) const override { CHECK_OK(Run(instruction)); };
-  void Compute(vm::Instruction* instruction) const override{
+  void Infer(vm::Instruction *instruction) const override {
+    CHECK_OK(Run(instruction));
+  };
+  void Compute(vm::Instruction *instruction) const override{
       // do nothing
   };
 
- private:
-  Maybe<void> Run(vm::Instruction* instruction) const;
+private:
+  Maybe<void> Run(vm::Instruction *instruction) const;
 };
 
-}  // namespace eager
-}  // namespace oneflow
+} // namespace eager
+} // namespace oneflow

@@ -21,15 +21,15 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void CudaHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
+void CudaHostAllocator::Allocate(char **mem_ptr, std::size_t size) {
   OF_CUDA_CHECK(cudaMallocHost(mem_ptr, size));
 }
 
-void CudaHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {
+void CudaHostAllocator::Deallocate(char *mem_ptr, std::size_t size) {
   OF_CUDA_CHECK(cudaFreeHost(mem_ptr));
 }
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
 #endif

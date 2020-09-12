@@ -13,13 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/util/cuda_kernel_util.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/kernel/util/cuda_kernel_util.h"
 
 namespace oneflow {
 
-template<typename T>
-__device__ T MaxWithLogThreshold(T x) {
+template <typename T> __device__ T MaxWithLogThreshold(T x) {
   const T threshold = 1e-20;
   return x > threshold ? x : threshold;
 }
@@ -27,11 +26,12 @@ __device__ T MaxWithLogThreshold(T x) {
 template __device__ float MaxWithLogThreshold(float x);
 template __device__ double MaxWithLogThreshold(double x);
 
-template<>
-__device__ half MaxWithLogThreshold(half x) {
+template <> __device__ half MaxWithLogThreshold(half x) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   half threshold = hexp2(__float2half(-14.0));
-  if (__hgt(x, threshold)) { return x; }
+  if (__hgt(x, threshold)) {
+    return x;
+  }
   return threshold;
 #else
   printf("use half need nvcc arch >= 530");
@@ -39,16 +39,14 @@ __device__ half MaxWithLogThreshold(half x) {
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
-template<typename T>
-__device__ T SafeLog(T x) {
+template <typename T> __device__ T SafeLog(T x) {
   return logf(MaxWithLogThreshold(x));
 }
 
 template __device__ float SafeLog(float x);
 template __device__ double SafeLog(double x);
 
-template<>
-__device__ half SafeLog(half x) {
+template <> __device__ half SafeLog(half x) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   hlog(MaxWithLogThreshold<half>(x));
 #else
@@ -57,4 +55,4 @@ __device__ half SafeLog(half x) {
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
-}  // namespace oneflow
+} // namespace oneflow

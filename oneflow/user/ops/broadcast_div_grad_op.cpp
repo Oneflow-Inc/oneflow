@@ -22,14 +22,17 @@ REGISTER_USER_OP("broadcast_div_grad")
     .Input("z")
     .Input("dz")
     .Output("dy")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("dy", 0) = *ctx->TensorDesc4ArgNameAndIndex("y", 0);
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      *ctx->TensorDesc4ArgNameAndIndex("dy", 0) =
+          *ctx->TensorDesc4ArgNameAndIndex("y", 0);
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
-      const Shape& z_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("z", 0).shape();
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      const Shape &y_shape =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
+      const Shape &z_shape =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("z", 0).shape();
       CHECK_LE_OR_RETURN(y_shape.NumAxes(), z_shape.NumAxes());
       FOR_RANGE(int64_t, i, 0, y_shape.NumAxes()) {
         const int64_t axis_y = y_shape.NumAxes() - 1 - i;
@@ -58,4 +61,4 @@ REGISTER_USER_OP("broadcast_div_grad")
       return Maybe<void>::Ok();
     });
 
-}  // namespace oneflow
+} // namespace oneflow

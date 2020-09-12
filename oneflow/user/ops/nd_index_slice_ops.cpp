@@ -19,8 +19,9 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_shape,
-                                const Shape& updates_shape) {
+Maybe<void> CheckScatterNdShape(const Shape &params_shape,
+                                const Shape &indices_shape,
+                                const Shape &updates_shape) {
   int64_t batch_ndims = indices_shape.NumAxes() - 1;
   int64_t index_ndims = indices_shape.At(batch_ndims);
   CHECK_LE_OR_RETURN(batch_ndims, updates_shape.NumAxes());
@@ -31,45 +32,49 @@ Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_
   int64_t slice_ndims = params_shape.NumAxes() - index_ndims;
   CHECK_EQ_OR_RETURN(slice_ndims, updates_shape.NumAxes() - batch_ndims);
   FOR_RANGE(int64_t, i, 0, slice_ndims) {
-    CHECK_EQ_OR_RETURN(updates_shape.At(i + batch_ndims), params_shape.At(i + index_ndims));
+    CHECK_EQ_OR_RETURN(updates_shape.At(i + batch_ndims),
+                       params_shape.At(i + index_ndims));
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferScatterNdTensorDesc(user_op::InferContext* ctx) {
-  Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
-  Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
-  const Shape& params_shape = ctx->Attr<Shape>("shape");
+Maybe<void> InferScatterNdTensorDesc(user_op::InferContext *ctx) {
+  Shape *indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
+  Shape *updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
+  const Shape &params_shape = ctx->Attr<Shape>("shape");
   JUST(CheckScatterNdShape(params_shape, *indices_shape, *updates_shape));
   *ctx->Shape4ArgNameAndIndex("out", 0) = params_shape;
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
+  *ctx->Dtype4ArgNameAndIndex("out", 0) =
+      *ctx->Dtype4ArgNameAndIndex("updates", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferScatterNdLikeTensorDesc(user_op::InferContext* ctx) {
-  Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
-  Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
-  Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
+Maybe<void> InferScatterNdLikeTensorDesc(user_op::InferContext *ctx) {
+  Shape *indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
+  Shape *updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
+  Shape *like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
   JUST(CheckScatterNdShape(*like_shape, *indices_shape, *updates_shape));
   *ctx->Shape4ArgNameAndIndex("out", 0) = *like_shape;
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
+  *ctx->Dtype4ArgNameAndIndex("out", 0) =
+      *ctx->Dtype4ArgNameAndIndex("updates", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
-  Shape* params_shape = ctx->Shape4ArgNameAndIndex("params", 0);
-  Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
-  Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
+Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext *ctx) {
+  Shape *params_shape = ctx->Shape4ArgNameAndIndex("params", 0);
+  Shape *updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
+  Shape *indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
   JUST(CheckScatterNdShape(*params_shape, *indices_shape, *updates_shape));
   *ctx->Shape4ArgNameAndIndex("out", 0) = *params_shape;
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
+  *ctx->Dtype4ArgNameAndIndex("out", 0) =
+      *ctx->Dtype4ArgNameAndIndex("params", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& params_tensor =
+Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext *ctx) {
+  const user_op::TensorDesc &params_tensor =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("params", 0);
-  const user_op::TensorDesc& indices_tensor =
+  const user_op::TensorDesc &indices_tensor =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
   int64_t indices_num_axes = indices_tensor.shape().NumAxes();
   FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
@@ -85,7 +90,8 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("params", 0), i)
         .Broadcast(user_op::OpArg("indices", 0))
-        .Split(user_op::OpArg("updates", 0), i - index_ndims + indices_num_axes - 1)
+        .Split(user_op::OpArg("updates", 0),
+               i - index_ndims + indices_num_axes - 1)
         .Split(user_op::OpArg("out", 0), i)
         .Build();
   }
@@ -98,20 +104,21 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferTensorScatterNdOptBatchAxis(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("params", 0);
+Maybe<void> InferTensorScatterNdOptBatchAxis(user_op::BatchAxisContext *ctx) {
+  *ctx->BatchAxis4ArgNameAndIndex("out", 0) =
+      *ctx->BatchAxis4ArgNameAndIndex("params", 0);
   return Maybe<void>::Ok();
 }
 
-}  // namespace
+} // namespace
 
 REGISTER_USER_OP("gather_nd")
     .Input("params")
     .Input("indices")
     .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* params_shape = ctx->Shape4ArgNameAndIndex("params", 0);
-      Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      Shape *params_shape = ctx->Shape4ArgNameAndIndex("params", 0);
+      Shape *indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
       int64_t index_ndims = indices_shape->At(indices_shape->NumAxes() - 1);
       CHECK_LE_OR_RETURN(index_ndims, params_shape->NumAxes());
       DimVector out_shape_vec(indices_shape->dim_vec().cbegin(),
@@ -120,30 +127,36 @@ REGISTER_USER_OP("gather_nd")
         out_shape_vec.push_back(params_shape->At(i));
       }
       *ctx->Shape4ArgNameAndIndex("out", 0) = Shape(out_shape_vec);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
+      *ctx->Dtype4ArgNameAndIndex("out", 0) =
+          *ctx->Dtype4ArgNameAndIndex("params", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
+                            const user_op::UserOpConfWrapper &) {
+      user_op::InputArgModifier *indices_modifier =
+          GetInputArgModifierFn("indices", 0);
       CHECK(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      OptInt64* indices_batch_axis = ctx->BatchAxis4ArgNameAndIndex("indices", 0);
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
+      OptInt64 *indices_batch_axis =
+          ctx->BatchAxis4ArgNameAndIndex("indices", 0);
       if (indices_batch_axis->has_value()) {
         CHECK_GE_OR_RETURN(indices_batch_axis->value(), 0);
         CHECK_LT_OR_RETURN(
             indices_batch_axis->value(),
-            ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0).shape().NumAxes() - 1);
+            ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0)
+                    .shape()
+                    .NumAxes() -
+                1);
       }
       *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *indices_batch_axis;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& params_tensor =
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc &params_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("params", 0);
-      const user_op::TensorDesc& indices_tensor =
+      const user_op::TensorDesc &indices_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
       int64_t indices_num_axes = indices_tensor.shape().NumAxes();
       FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
@@ -158,7 +171,8 @@ REGISTER_USER_OP("gather_nd")
         ctx->NewBuilder()
             .Split(user_op::OpArg("params", 0), i)
             .Broadcast(user_op::OpArg("indices", 0))
-            .Split(user_op::OpArg("out", 0), i - index_ndims + indices_num_axes - 1)
+            .Split(user_op::OpArg("out", 0),
+                   i - index_ndims + indices_num_axes - 1)
             .Build();
       }
       ctx->NewBuilder()
@@ -175,20 +189,21 @@ REGISTER_USER_OP("scatter_nd")
     .Output("out")
     .Attr("shape", UserOpAttrType::kAtShape)
     .SetTensorDescInferFn(InferScatterNdTensorDesc)
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("indices", 0)
-                      == *ctx->BatchAxis4ArgNameAndIndex("updates", 0));
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
+      CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("indices", 0) ==
+                      *ctx->BatchAxis4ArgNameAndIndex("updates", 0));
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
+                            const user_op::UserOpConfWrapper &) {
+      user_op::InputArgModifier *indices_modifier =
+          GetInputArgModifierFn("indices", 0);
       CHECK(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& indices_desc =
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc &indices_desc =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
       int64_t indices_num_axes = indices_desc.shape().NumAxes();
       FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
@@ -198,7 +213,7 @@ REGISTER_USER_OP("scatter_nd")
             .Broadcast(user_op::OpArg("out", 0))
             .Build();
       }
-      const Shape& out_shape = ctx->Attr<Shape>("shape");
+      const Shape &out_shape = ctx->Attr<Shape>("shape");
       int64_t index_ndims = indices_desc.shape().At(indices_num_axes - 1);
       int64_t slice_ndims = out_shape.NumAxes() - index_ndims;
       FOR_RANGE(int64_t, i, 0, slice_ndims) {
@@ -222,14 +237,15 @@ REGISTER_USER_OP("scatter_nd_like")
     .Input("updates")
     .Output("out")
     .SetTensorDescInferFn(InferScatterNdLikeTensorDesc)
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("indices", 0)
-                      == *ctx->BatchAxis4ArgNameAndIndex("updates", 0));
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
+      CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("indices", 0) ==
+                      *ctx->BatchAxis4ArgNameAndIndex("updates", 0));
+      *ctx->BatchAxis4ArgNameAndIndex("out", 0) =
+          *ctx->BatchAxis4ArgNameAndIndex("like", 0);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& indices_tensor =
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc &indices_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
       int64_t indices_num_axes = indices_tensor.shape().NumAxes();
       FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
@@ -240,7 +256,7 @@ REGISTER_USER_OP("scatter_nd_like")
             .Broadcast(user_op::OpArg("out", 0))
             .Build();
       }
-      const Shape& out_shape = ctx->Attr<Shape>("shape");
+      const Shape &out_shape = ctx->Attr<Shape>("shape");
       int64_t index_ndims = indices_tensor.shape().At(indices_num_axes - 1);
       int64_t slice_ndims = out_shape.NumAxes() - index_ndims;
       FOR_RANGE(int64_t, i, 0, slice_ndims) {
@@ -260,8 +276,9 @@ REGISTER_USER_OP("scatter_nd_like")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
+                            const user_op::UserOpConfWrapper &) {
+      user_op::InputArgModifier *like_arg_modifier =
+          GetInputArgModifierFn("like", 0);
       CHECK(like_arg_modifier != nullptr);
       like_arg_modifier->set_use_header_only(true);
     });
@@ -275,8 +292,9 @@ REGISTER_USER_OP("tensor_scatter_nd_update")
     .SetBatchAxisInferFn(InferTensorScatterNdOptBatchAxis)
     .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
+                            const user_op::UserOpConfWrapper &) {
+      user_op::InputArgModifier *indices_modifier =
+          GetInputArgModifierFn("indices", 0);
       CHECK(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
     });
@@ -290,14 +308,16 @@ REGISTER_USER_OP("tensor_scatter_nd_add")
     .SetBatchAxisInferFn(InferTensorScatterNdOptBatchAxis)
     .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
+                            const user_op::UserOpConfWrapper &) {
+      user_op::InputArgModifier *indices_modifier =
+          GetInputArgModifierFn("indices", 0);
       CHECK(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
     });
 
 REGISTER_USER_OP_GRAD("gather_nd")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("params", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -313,7 +333,8 @@ REGISTER_USER_OP_GRAD("gather_nd")
     });
 
 REGISTER_USER_OP_GRAD("scatter_nd")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("updates", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -328,9 +349,11 @@ REGISTER_USER_OP_GRAD("scatter_nd")
     });
 
 REGISTER_USER_OP_GRAD("tensor_scatter_nd_update")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("updates", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_updates_grad");
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() +
+                                                  "_updates_grad");
         user_op::UserOpConfWrapper grad_op =
             builder.Op("gather_nd")
                 .Input("params", op.GetGradTensorWithOpOutput("out", 0))
@@ -341,11 +364,13 @@ REGISTER_USER_OP_GRAD("tensor_scatter_nd_update")
         AddOp(grad_op);
       }
       if (op.NeedGenGradTensor4OpInput("params", 0)) {
-        user_op::UserOpConfWrapperBuilder zero_grad_builder(op.op_name() + "_zero_updates");
-        user_op::UserOpConfWrapper zero_grad_op = zero_grad_builder.Op("zero_like")
-                                                      .Input("like", op.input("updates", 0))
-                                                      .Output("out")
-                                                      .Build();
+        user_op::UserOpConfWrapperBuilder zero_grad_builder(op.op_name() +
+                                                            "_zero_updates");
+        user_op::UserOpConfWrapper zero_grad_op =
+            zero_grad_builder.Op("zero_like")
+                .Input("like", op.input("updates", 0))
+                .Output("out")
+                .Build();
         AddOp(zero_grad_op);
         user_op::UserOpConfWrapperBuilder grad_builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -361,9 +386,11 @@ REGISTER_USER_OP_GRAD("tensor_scatter_nd_update")
     });
 
 REGISTER_USER_OP_GRAD("tensor_scatter_nd_add")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op,
+                               user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("updates", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_updates_grad");
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() +
+                                                  "_updates_grad");
         user_op::UserOpConfWrapper grad_op =
             builder.Op("gather_nd")
                 .Input("params", op.GetGradTensorWithOpOutput("out", 0))
@@ -374,7 +401,8 @@ REGISTER_USER_OP_GRAD("tensor_scatter_nd_add")
         AddOp(grad_op);
       }
       if (op.NeedGenGradTensor4OpInput("params", 0)) {
-        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "params", 0);
+        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0),
+                                     "params", 0);
       }
     });
-}  // namespace oneflow
+} // namespace oneflow

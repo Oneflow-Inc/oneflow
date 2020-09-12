@@ -15,9 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
-#include <cfenv>
-#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/platform.h"
+#include "oneflow/core/common/str_util.h"
+#include <cfenv>
 #include <csignal>
 
 #ifdef PLATFORM_POSIX
@@ -26,13 +26,12 @@ limitations under the License.
 
 namespace oneflow {
 
-#define DEFINE_ONEFLOW_STR2INT_CAST(dst_type, cast_func) \
-  template<>                                             \
-  dst_type oneflow_cast(const std::string& s) {          \
-    char* end_ptr = nullptr;                             \
-    dst_type ret = cast_func(s.c_str(), &end_ptr, 0);    \
-    CHECK_EQ(*end_ptr, '\0');                            \
-    return ret;                                          \
+#define DEFINE_ONEFLOW_STR2INT_CAST(dst_type, cast_func)                       \
+  template <> dst_type oneflow_cast(const std::string &s) {                    \
+    char *end_ptr = nullptr;                                                   \
+    dst_type ret = cast_func(s.c_str(), &end_ptr, 0);                          \
+    CHECK_EQ(*end_ptr, '\0');                                                  \
+    return ret;                                                                \
   }
 
 DEFINE_ONEFLOW_STR2INT_CAST(long, strtol);
@@ -48,17 +47,15 @@ DEFINE_ONEFLOW_STR2INT_CAST(unsigned char, strtoul);
 DEFINE_ONEFLOW_STR2INT_CAST(unsigned short, strtoul);
 DEFINE_ONEFLOW_STR2INT_CAST(unsigned int, strtoul);
 
-template<>
-float oneflow_cast(const std::string& s) {
-  char* end_ptr = nullptr;
+template <> float oneflow_cast(const std::string &s) {
+  char *end_ptr = nullptr;
   float ret = strtof(s.c_str(), &end_ptr);
   CHECK_EQ(*end_ptr, '\0');
   return ret;
 }
 
-template<>
-double oneflow_cast(const std::string& s) {
-  char* end_ptr = nullptr;
+template <> double oneflow_cast(const std::string &s) {
+  char *end_ptr = nullptr;
   double ret = strtod(s.c_str(), &end_ptr);
   CHECK_EQ(*end_ptr, '\0');
   return ret;
@@ -79,9 +76,11 @@ size_t GetAvailableCpuMemSize() {
   std::string line;
   while (std::getline(mem_info, line).good()) {
     std::string token;
-    const char* p = line.c_str();
+    const char *p = line.c_str();
     p = StrToToken(p, " ", &token);
-    if (token != "MemAvailable:") { continue; }
+    if (token != "MemAvailable:") {
+      continue;
+    }
     CHECK_NE(*p, '\0');
     p = StrToToken(p, " ", &token);
     size_t mem_available = oneflow_cast<size_t>(token);
@@ -99,4 +98,4 @@ size_t GetAvailableCpuMemSize() {
 
 bool IsKernelSafeInt32(int64_t n) { return n <= GetMaxVal<int32_t>() / 2; }
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -20,28 +20,28 @@ namespace oneflow {
 
 namespace user_op {
 
-OpGradRegistry& OpGradRegistry::Name(const std::string& op_type_name) {
+OpGradRegistry &OpGradRegistry::Name(const std::string &op_type_name) {
   CHECK(!op_type_name.empty());
   result_.op_type_name = op_type_name;
   return *this;
 }
 
-OpGradRegistry& OpGradRegistry::SetGenBackwardOpConfFn(GenBackwardOpConfFn fn) {
+OpGradRegistry &OpGradRegistry::SetGenBackwardOpConfFn(GenBackwardOpConfFn fn) {
   result_.gen_bw_fn = std::move(fn);
   return *this;
 }
 
-OpGradRegistry& OpGradRegistry::SetBackwardOpConfGenFn(BackwardOpConfGenFn fn) {
+OpGradRegistry &OpGradRegistry::SetBackwardOpConfGenFn(BackwardOpConfGenFn fn) {
   result_.bw_gen_fn = std::move(fn);
   return *this;
 }
 
-OpGradRegistry& OpGradRegistry::Finish() {
+OpGradRegistry &OpGradRegistry::Finish() {
   CHECK((result_.gen_bw_fn != nullptr) || (result_.bw_gen_fn != nullptr))
       << "No BackwardOpConf generate function for " << result_.op_type_name;
   return *this;
 }
 
-}  // namespace user_op
+} // namespace user_op
 
-}  // namespace oneflow
+} // namespace oneflow

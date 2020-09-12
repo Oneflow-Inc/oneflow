@@ -25,11 +25,11 @@ void RepeatForwardCompTaskNode::ConsumeAllRegsts() {
 
 void RepeatForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
-  ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
+  ForEachOutDataEdge([&](TaskEdge *edge) { edge->AddRegst("out", out_regst); });
 }
 
 void RepeatForwardCompTaskNode::BuildExecGphAndRegst() {
-  ExecNode* node = mut_exec_gph().NewNode();
+  ExecNode *node = mut_exec_gph().NewNode();
   std::shared_ptr<Operator> sole_op = this->logical_node()->SoleOp();
   node->mut_op() = sole_op;
   node->BindBnWithRegst(sole_op->SoleIbn(), GetSoleConsumedRegst("in"));
@@ -40,11 +40,14 @@ void RepeatForwardCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void RepeatForwardCompTaskNode::InferProducedDataRegstTimeShape() {
-  DimVector time_shape_dim_vec = GetSoleConsumedRegst("in")->data_regst_time_shape()->dim_vec();
-  const RepeatOp* repeat_op = dynamic_cast<RepeatOp*>(this->logical_node()->SoleOp().get());
+  DimVector time_shape_dim_vec =
+      GetSoleConsumedRegst("in")->data_regst_time_shape()->dim_vec();
+  const RepeatOp *repeat_op =
+      dynamic_cast<RepeatOp *>(this->logical_node()->SoleOp().get());
   CHECK_NOTNULL(repeat_op);
   time_shape_dim_vec.push_back(repeat_op->op_conf().repeat_conf().repeat_num());
-  GetProducedRegst("out")->mut_data_regst_time_shape()->reset(new Shape(time_shape_dim_vec));
+  GetProducedRegst("out")->mut_data_regst_time_shape()->reset(
+      new Shape(time_shape_dim_vec));
 }
 
-}  // namespace oneflow
+} // namespace oneflow

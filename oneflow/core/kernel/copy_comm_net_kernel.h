@@ -21,22 +21,24 @@ limitations under the License.
 namespace oneflow {
 
 class CopyCommNetKernel final : public KernelIf<DeviceType::kCPU> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CopyCommNetKernel);
   CopyCommNetKernel() = default;
   ~CopyCommNetKernel() = default;
 
-  void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override {
+  void Forward(const KernelCtx &,
+               std::function<Blob *(const std::string &)>) const override {
     UNIMPLEMENTED();
   }
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override {
+  void ForwardDataContent(
+      const KernelCtx &,
+      std::function<Blob *(const std::string &)>) const override {
     UNIMPLEMENTED();
   }
 
- private:
+private:
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_COPY_COMM_NET_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_COPY_COMM_NET_KERNEL_H_

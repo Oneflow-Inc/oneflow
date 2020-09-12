@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params) {
+SliceParams FoldContiguousFullSliceDimensions(const SliceParams &params) {
   SliceParams fold_slice_params;
   std::memset(&fold_slice_params, 0, sizeof(SliceParams));
   bool full_slice_on_prev_axis = false;
@@ -41,47 +41,55 @@ SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params) {
   return fold_slice_params;
 }
 
-template<typename T>
-struct SliceKernelUtil<DeviceType::kCPU, T> {
-  static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced) {
+template <typename T> struct SliceKernelUtil<DeviceType::kCPU, T> {
+  static void Forward(DeviceCtx *ctx, const SliceParams &params,
+                      const T *entire, T *sliced) {
     SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
-    SwitchDoForward(SwitchCase(fold_slice_params.ndim), ctx, fold_slice_params, entire, sliced);
+    SwitchDoForward(SwitchCase(fold_slice_params.ndim), ctx, fold_slice_params,
+                    entire, sliced);
   }
 
-  static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire) {
+  static void Backward(DeviceCtx *ctx, const SliceParams &params,
+                       const T *sliced, T *entire) {
     SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
-    SwitchDoBackward(SwitchCase(fold_slice_params.ndim), ctx, fold_slice_params, sliced, entire);
+    SwitchDoBackward(SwitchCase(fold_slice_params.ndim), ctx, fold_slice_params,
+                     sliced, entire);
   }
 
- private:
-  template<int NDIM>
-  static void DoForward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced) {
+private:
+  template <int NDIM>
+  static void DoForward(DeviceCtx *ctx, const SliceParams &params,
+                        const T *entire, T *sliced) {
     CHECK_EQ(params.ndim, NDIM);
     int64_t elem_cnt = params.elem_cnt();
     SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
     FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+      int64_t offset = SliceOffsetToEntireOffset<NDIM>(
+          i, params, entire_idx_cvtr, sliced_idx_cvtr);
       sliced[i] = entire[offset];
     }
   }
 
-  template<int NDIM>
-  static void DoBackward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire) {
+  template <int NDIM>
+  static void DoBackward(DeviceCtx *ctx, const SliceParams &params,
+                         const T *sliced, T *entire) {
     CHECK_EQ(params.ndim, NDIM);
     int64_t elem_cnt = params.elem_cnt();
     SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
     FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+      int64_t offset = SliceOffsetToEntireOffset<NDIM>(
+          i, params, entire_idx_cvtr, sliced_idx_cvtr);
       entire[offset] = sliced[i];
     }
   }
 
-#define MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY(func_name, N) \
+#define MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY(func_name, N)                      \
   SliceKernelUtil<DeviceType::kCPU, T>::func_name<N>
-#define DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD(func_name)                  \
-  DEFINE_STATIC_SWITCH_FUNC(void, func_name, MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY, \
+#define DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD(func_name)               \
+  DEFINE_STATIC_SWITCH_FUNC(void, func_name,                                   \
+                            MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY,               \
                             MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
 
   DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD(DoForward);
@@ -92,4 +100,4 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
 
 INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(DeviceType::kCPU)
 
-}  // namespace oneflow
+} // namespace oneflow

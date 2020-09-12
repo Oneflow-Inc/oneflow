@@ -16,36 +16,40 @@ limitations under the License.
 #ifndef ONEFLOW_USER_DATA_OFRECORD_DATA_READER_H_
 #define ONEFLOW_USER_DATA_OFRECORD_DATA_READER_H_
 
+#include "oneflow/user/data/batch_dataset.h"
 #include "oneflow/user/data/data_reader.h"
 #include "oneflow/user/data/ofrecord_dataset.h"
 #include "oneflow/user/data/ofrecord_parser.h"
 #include "oneflow/user/data/random_shuffle_dataset.h"
-#include "oneflow/user/data/batch_dataset.h"
 #include <iostream>
 
 namespace oneflow {
 namespace data {
 
 class OFRecordDataReader final : public DataReader<TensorBuffer> {
- public:
-  OFRecordDataReader(user_op::KernelInitContext* ctx) : DataReader<TensorBuffer>(ctx) {
+public:
+  OFRecordDataReader(user_op::KernelInitContext *ctx)
+      : DataReader<TensorBuffer>(ctx) {
     loader_.reset(new OFRecordDataset(ctx));
     parser_.reset(new OFRecordParser());
     if (ctx->Attr<bool>("random_shuffle")) {
-      loader_.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
+      loader_.reset(
+          new RandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
     }
-    int32_t batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().elem_cnt();
-    loader_.reset(new BatchDataset<TensorBuffer>(batch_size, std::move(loader_)));
+    int32_t batch_size =
+        ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().elem_cnt();
+    loader_.reset(
+        new BatchDataset<TensorBuffer>(batch_size, std::move(loader_)));
     StartLoadThread();
   }
   ~OFRecordDataReader() = default;
 
- protected:
+protected:
   using DataReader<TensorBuffer>::loader_;
   using DataReader<TensorBuffer>::parser_;
 };
 
-}  // namespace data
-}  // namespace oneflow
+} // namespace data
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_DATA_OFRECORD_DATA_READER_H_
+#endif // ONEFLOW_USER_DATA_OFRECORD_DATA_READER_H_

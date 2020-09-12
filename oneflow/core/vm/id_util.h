@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_LOGICAL_OBJECT_ID_H_
 #define ONEFLOW_CORE_VM_LOGICAL_OBJECT_ID_H_
 
-#include <cstdint>
 #include "oneflow/core/object_msg/flat_msg.h"
+#include <cstdint>
 
 namespace oneflow {
 namespace vm {
@@ -58,7 +58,7 @@ struct IdUtil final {
   static bool IsValueId(int64_t id);
 };
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_LOGICAL_OBJECT_ID_H_
+#endif // ONEFLOW_CORE_VM_LOGICAL_OBJECT_ID_H_

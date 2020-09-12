@@ -20,22 +20,24 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type>
+template <DeviceType device_type>
 class DecodeRandomKernel final : public KernelIf<device_type> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(DecodeRandomKernel);
   DecodeRandomKernel() = default;
   ~DecodeRandomKernel() = default;
 
-  void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void Forward(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override {
     ForwardDataContent(ctx, BnInOp2Blob);
   }
 
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
 
- private:
+private:
   void VirtualKernelInit() override;
   uint32_t GenNextRandomSeed() const;
 
@@ -45,6 +47,6 @@ class DecodeRandomKernel final : public KernelIf<device_type> {
   mutable bool is_init_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_DECODE_RANDOM_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_DECODE_RANDOM_KERNEL_H_

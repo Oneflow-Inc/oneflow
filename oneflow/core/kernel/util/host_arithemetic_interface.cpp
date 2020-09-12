@@ -14,15 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/util/host_arithemetic_interface.h"
-#include "oneflow/core/register/blob.h"
 #include "oneflow/core/operator/op_conf_util.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
 namespace {
 
-void ComputeOffset(const int32_t num_axes, const int64_t* shape, const int32_t* permutation,
-                   DimVector& offset) {
+void ComputeOffset(const int32_t num_axes, const int64_t *shape,
+                   const int32_t *permutation, DimVector &offset) {
   offset.resize(num_axes);
   DimVector buff(num_axes);
   int64_t cur_offset = 1;
@@ -30,10 +30,12 @@ void ComputeOffset(const int32_t num_axes, const int64_t* shape, const int32_t* 
     buff[i] = cur_offset;
     cur_offset *= shape[i];
   }
-  for (int32_t i = 0; i < num_axes; ++i) { offset[permutation[i]] = buff[i]; }
+  for (int32_t i = 0; i < num_axes; ++i) {
+    offset[permutation[i]] = buff[i];
+  }
 }
 
-void IncreaseIndex(const int64_t* shape, DimVector& index) {
+void IncreaseIndex(const int64_t *shape, DimVector &index) {
   for (int32_t i = index.size() - 1; i >= 0; --i) {
     ++index[i];
     if (index[i] >= shape[i]) {
@@ -44,10 +46,11 @@ void IncreaseIndex(const int64_t* shape, DimVector& index) {
   }
 }
 
-template<typename T>
-void TransposeImpl(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
-                   const ShapeView& y_shape, const std::vector<int32_t>& permutation,
-                   const int64_t elem_cnt, const T* x, T* y) {
+template <typename T>
+void TransposeImpl(DeviceCtx *ctx, const int32_t num_axis,
+                   const ShapeView &x_shape, const ShapeView &y_shape,
+                   const std::vector<int32_t> &permutation,
+                   const int64_t elem_cnt, const T *x, T *y) {
   int64_t block_size = 1;
   int32_t shared_idxs_num = 0;
   for (int32_t i = num_axis - 1; i >= 0 && permutation[i] == i; --i) {
@@ -64,133 +67,143 @@ void TransposeImpl(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_sh
   DimVector x_index_digits(trans_axis, 0);
   int64_t num_blocks = elem_cnt / block_size;
   FOR_RANGE(int64_t, x_idx, 0, num_blocks) {
-    int64_t y_idx = std::inner_product(x_to_y_offset.cbegin(), x_to_y_offset.cend(),
-                                       x_index_digits.cbegin(), 0);
+    int64_t y_idx =
+        std::inner_product(x_to_y_offset.cbegin(), x_to_y_offset.cend(),
+                           x_index_digits.cbegin(), 0);
     if (block_size == 1) {
       y[y_idx] = x[x_idx];
     } else {
-      memcpy(y + block_size * y_idx, x + block_size * x_idx, block_size * sizeof(T));
+      memcpy(y + block_size * y_idx, x + block_size * x_idx,
+             block_size * sizeof(T));
     }
     IncreaseIndex(x_shape.ptr(), x_index_digits);
   }
 }
 
-template<typename T>
-void ConstantInitializer(const T& value, Blob* blob) {
-  T* dptr = blob->mut_dptr<T>();
+template <typename T> void ConstantInitializer(const T &value, Blob *blob) {
+  T *dptr = blob->mut_dptr<T>();
   const int64_t elem_cnt = blob->shape().elem_cnt();
   CHECK(elem_cnt);
-  for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
+  for (int64_t i = 0; i < elem_cnt; ++i) {
+    dptr[i] = value;
+  }
 }
 
-}  // namespace
+} // namespace
 
-void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const std::vector<int32_t>& permutation,
-                                                const int64_t elem_cnt, const float* x, float* y) {
-  TransposeImpl<float>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
-}
-
-void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const std::vector<int32_t>& permutation,
-                                                const int64_t elem_cnt, const double* x,
-                                                double* y) {
-  TransposeImpl<double>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
-}
-
-void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const std::vector<int32_t>& permutation,
-                                                const int64_t elem_cnt, const int8_t* x,
-                                                int8_t* y) {
-  TransposeImpl<int8_t>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
-}
-
-void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const std::vector<int32_t>& permutation,
-                                                const int64_t elem_cnt, const int32_t* x,
-                                                int32_t* y) {
-  TransposeImpl<int32_t>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
-}
-
-void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const std::vector<int32_t>& permutation,
-                                                const int64_t elem_cnt, const int64_t* x,
-                                                int64_t* y) {
-  TransposeImpl<int64_t>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
-}
-
-void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const PbRf<int32_t>& permutation,
-                                                const int64_t elem_cnt, const float* x, float* y) {
-  TransposeImpl<float>(ctx, num_axis, x_shape, y_shape,
-                       std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt,
+void ArithemeticIf<DeviceType::kCPU>::Transpose(
+    DeviceCtx *ctx, const int32_t num_axis, const ShapeView &x_shape,
+    const ShapeView &y_shape, const std::vector<int32_t> &permutation,
+    const int64_t elem_cnt, const float *x, float *y) {
+  TransposeImpl<float>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt,
                        x, y);
 }
 
-void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const PbRf<int32_t>& permutation,
-                                                const int64_t elem_cnt, const double* x,
-                                                double* y) {
-  TransposeImpl<double>(ctx, num_axis, x_shape, y_shape,
-                        std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt,
+void ArithemeticIf<DeviceType::kCPU>::Transpose(
+    DeviceCtx *ctx, const int32_t num_axis, const ShapeView &x_shape,
+    const ShapeView &y_shape, const std::vector<int32_t> &permutation,
+    const int64_t elem_cnt, const double *x, double *y) {
+  TransposeImpl<double>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt,
                         x, y);
 }
 
-void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const PbRf<int32_t>& permutation,
-                                                const int64_t elem_cnt, const int8_t* x,
-                                                int8_t* y) {
-  TransposeImpl<int8_t>(ctx, num_axis, x_shape, y_shape,
-                        std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt,
+void ArithemeticIf<DeviceType::kCPU>::Transpose(
+    DeviceCtx *ctx, const int32_t num_axis, const ShapeView &x_shape,
+    const ShapeView &y_shape, const std::vector<int32_t> &permutation,
+    const int64_t elem_cnt, const int8_t *x, int8_t *y) {
+  TransposeImpl<int8_t>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt,
                         x, y);
 }
 
-void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const PbRf<int32_t>& permutation,
-                                                const int64_t elem_cnt, const int32_t* x,
-                                                int32_t* y) {
-  TransposeImpl<int32_t>(ctx, num_axis, x_shape, y_shape,
-                         std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt,
+void ArithemeticIf<DeviceType::kCPU>::Transpose(
+    DeviceCtx *ctx, const int32_t num_axis, const ShapeView &x_shape,
+    const ShapeView &y_shape, const std::vector<int32_t> &permutation,
+    const int64_t elem_cnt, const int32_t *x, int32_t *y) {
+  TransposeImpl<int32_t>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt,
                          x, y);
 }
 
-void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const PbRf<int32_t>& permutation,
-                                                const int64_t elem_cnt, const int64_t* x,
-                                                int64_t* y) {
-  TransposeImpl<int64_t>(ctx, num_axis, x_shape, y_shape,
-                         std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt,
+void ArithemeticIf<DeviceType::kCPU>::Transpose(
+    DeviceCtx *ctx, const int32_t num_axis, const ShapeView &x_shape,
+    const ShapeView &y_shape, const std::vector<int32_t> &permutation,
+    const int64_t elem_cnt, const int64_t *x, int64_t *y) {
+  TransposeImpl<int64_t>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt,
                          x, y);
+}
+
+void ArithemeticIf<DeviceType::kCPU>::Transpose(
+    DeviceCtx *ctx, const int32_t num_axis, const ShapeView &x_shape,
+    const ShapeView &y_shape, const PbRf<int32_t> &permutation,
+    const int64_t elem_cnt, const float *x, float *y) {
+  TransposeImpl<float>(
+      ctx, num_axis, x_shape, y_shape,
+      std::vector<int32_t>({permutation.cbegin(), permutation.cend()}),
+      elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kCPU>::Transpose(
+    DeviceCtx *ctx, const int32_t num_axis, const ShapeView &x_shape,
+    const ShapeView &y_shape, const PbRf<int32_t> &permutation,
+    const int64_t elem_cnt, const double *x, double *y) {
+  TransposeImpl<double>(
+      ctx, num_axis, x_shape, y_shape,
+      std::vector<int32_t>({permutation.cbegin(), permutation.cend()}),
+      elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kCPU>::Transpose(
+    DeviceCtx *ctx, const int32_t num_axis, const ShapeView &x_shape,
+    const ShapeView &y_shape, const PbRf<int32_t> &permutation,
+    const int64_t elem_cnt, const int8_t *x, int8_t *y) {
+  TransposeImpl<int8_t>(
+      ctx, num_axis, x_shape, y_shape,
+      std::vector<int32_t>({permutation.cbegin(), permutation.cend()}),
+      elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kCPU>::Transpose(
+    DeviceCtx *ctx, const int32_t num_axis, const ShapeView &x_shape,
+    const ShapeView &y_shape, const PbRf<int32_t> &permutation,
+    const int64_t elem_cnt, const int32_t *x, int32_t *y) {
+  TransposeImpl<int32_t>(
+      ctx, num_axis, x_shape, y_shape,
+      std::vector<int32_t>({permutation.cbegin(), permutation.cend()}),
+      elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kCPU>::Transpose(
+    DeviceCtx *ctx, const int32_t num_axis, const ShapeView &x_shape,
+    const ShapeView &y_shape, const PbRf<int32_t> &permutation,
+    const int64_t elem_cnt, const int64_t *x, int64_t *y) {
+  TransposeImpl<int64_t>(
+      ctx, num_axis, x_shape, y_shape,
+      std::vector<int32_t>({permutation.cbegin(), permutation.cend()}),
+      elem_cnt, x, y);
 }
 
 void ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(
-    DeviceCtx* ctx, const ConstantInitializerConf& initializer_conf, Blob* blob) {
+    DeviceCtx *ctx, const ConstantInitializerConf &initializer_conf,
+    Blob *blob) {
   DataType dtype = blob->data_type();
   if (dtype == DataType::kFloat) {
     ConstantInitializer<float>(initializer_conf.value(), blob);
   } else if (dtype == DataType::kDouble) {
-    ConstantInitializer<double>(static_cast<double>(initializer_conf.value()), blob);
+    ConstantInitializer<double>(static_cast<double>(initializer_conf.value()),
+                                blob);
   } else if (dtype == DataType::kFloat16) {
-    ConstantInitializer<float16>(static_cast<float16>(initializer_conf.value()), blob);
+    ConstantInitializer<float16>(static_cast<float16>(initializer_conf.value()),
+                                 blob);
   } else {
     UNIMPLEMENTED();
   }
 }
 
-#define MUL_BY_SCALAR(T)                                                                         \
-  void ArithemeticIf<DeviceType::kCPU>::MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, \
-                                                    const T y, T* z) {                           \
-    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y; }                                         \
+#define MUL_BY_SCALAR(T)                                                       \
+  void ArithemeticIf<DeviceType::kCPU>::MulByScalar(                           \
+      DeviceCtx *ctx, const int64_t n, const T *x, const T y, T *z) {          \
+    for (int64_t i = 0; i < n; ++i) {                                          \
+      z[i] = x[i] * y;                                                         \
+    }                                                                          \
   }
 
 MUL_BY_SCALAR(float);
@@ -200,10 +213,12 @@ MUL_BY_SCALAR(int64_t);
 
 #undef MUL_BY_SCALAR
 
-#define MUL_BY_SCALAR_PTR(T)                                                            \
-  void ArithemeticIf<DeviceType::kCPU>::MulByScalarPtr(DeviceCtx* ctx, const int64_t n, \
-                                                       const T* x, const T* y, T* z) {  \
-    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[0]; }                             \
+#define MUL_BY_SCALAR_PTR(T)                                                   \
+  void ArithemeticIf<DeviceType::kCPU>::MulByScalarPtr(                        \
+      DeviceCtx *ctx, const int64_t n, const T *x, const T *y, T *z) {         \
+    for (int64_t i = 0; i < n; ++i) {                                          \
+      z[i] = x[i] * y[0];                                                      \
+    }                                                                          \
   }
 
 MUL_BY_SCALAR_PTR(float);
@@ -214,10 +229,12 @@ MUL_BY_SCALAR_PTR(int64_t);
 
 #undef MUL_BY_SCALAR_PTR
 
-#define ADD_BY_SCALAR_PTR(T)                                                            \
-  void ArithemeticIf<DeviceType::kCPU>::AddByScalarPtr(DeviceCtx* ctx, const int64_t n, \
-                                                       const T* x, const T* y, T* z) {  \
-    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] + y[0]; }                             \
+#define ADD_BY_SCALAR_PTR(T)                                                   \
+  void ArithemeticIf<DeviceType::kCPU>::AddByScalarPtr(                        \
+      DeviceCtx *ctx, const int64_t n, const T *x, const T *y, T *z) {         \
+    for (int64_t i = 0; i < n; ++i) {                                          \
+      z[i] = x[i] + y[0];                                                      \
+    }                                                                          \
   }
 
 ADD_BY_SCALAR_PTR(float);
@@ -228,10 +245,12 @@ ADD_BY_SCALAR_PTR(int64_t);
 
 #undef ADD_BY_SCALAR_PTR
 
-#define SUB_BY_SCALAR_PTR(T)                                                            \
-  void ArithemeticIf<DeviceType::kCPU>::SubByScalarPtr(DeviceCtx* ctx, const int64_t n, \
-                                                       const T* x, const T* y, T* z) {  \
-    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] - y[0]; }                             \
+#define SUB_BY_SCALAR_PTR(T)                                                   \
+  void ArithemeticIf<DeviceType::kCPU>::SubByScalarPtr(                        \
+      DeviceCtx *ctx, const int64_t n, const T *x, const T *y, T *z) {         \
+    for (int64_t i = 0; i < n; ++i) {                                          \
+      z[i] = x[i] - y[0];                                                      \
+    }                                                                          \
   }
 
 SUB_BY_SCALAR_PTR(float);
@@ -242,10 +261,12 @@ SUB_BY_SCALAR_PTR(int64_t);
 
 #undef SUB_BY_SCALAR_PTR
 
-#define DIV_BY_SCALAR_PTR(T)                                                            \
-  void ArithemeticIf<DeviceType::kCPU>::DivByScalarPtr(DeviceCtx* ctx, const int64_t n, \
-                                                       const T* x, const T* y, T* z) {  \
-    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] / y[0]; }                             \
+#define DIV_BY_SCALAR_PTR(T)                                                   \
+  void ArithemeticIf<DeviceType::kCPU>::DivByScalarPtr(                        \
+      DeviceCtx *ctx, const int64_t n, const T *x, const T *y, T *z) {         \
+    for (int64_t i = 0; i < n; ++i) {                                          \
+      z[i] = x[i] / y[0];                                                      \
+    }                                                                          \
   }
 
 DIV_BY_SCALAR_PTR(float);
@@ -256,10 +277,10 @@ DIV_BY_SCALAR_PTR(int64_t);
 
 #undef DIV_BY_SCALAR_PTR
 
-#define FILL(T)                                                                              \
-  void ArithemeticIf<DeviceType::kCPU>::Fill(DeviceCtx* ctx, const int64_t n, const T value, \
-                                             T* y) {                                         \
-    std::fill_n(y, n, value);                                                                \
+#define FILL(T)                                                                \
+  void ArithemeticIf<DeviceType::kCPU>::Fill(DeviceCtx *ctx, const int64_t n,  \
+                                             const T value, T *y) {            \
+    std::fill_n(y, n, value);                                                  \
   }
 
 FILL(float);
@@ -270,16 +291,16 @@ FILL(int64_t);
 
 #undef FILL
 
-#define COPY_COLS_REGION(T)                                                              \
-  void ArithemeticIf<DeviceType::kCPU>::CopyColsRegion(                                  \
-      DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,          \
-      const int64_t x_col_offset, const int64_t x_lda, T* y, const int64_t y_col_offset, \
-      const int64_t y_lda) {                                                             \
-    for (int64_t i = 0; i < row_num; ++i) {                                              \
-      for (int64_t j = 0; j < col_num; ++j) {                                            \
-        y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];               \
-      }                                                                                  \
-    }                                                                                    \
+#define COPY_COLS_REGION(T)                                                    \
+  void ArithemeticIf<DeviceType::kCPU>::CopyColsRegion(                        \
+      DeviceCtx *ctx, const int64_t row_num, const int64_t col_num,            \
+      const T *x, const int64_t x_col_offset, const int64_t x_lda, T *y,       \
+      const int64_t y_col_offset, const int64_t y_lda) {                       \
+    for (int64_t i = 0; i < row_num; ++i) {                                    \
+      for (int64_t j = 0; j < col_num; ++j) {                                  \
+        y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];     \
+      }                                                                        \
+    }                                                                          \
   }
 
 COPY_COLS_REGION(float)
@@ -290,4 +311,4 @@ COPY_COLS_REGION(int64_t)
 
 #undef COPY_COLS_REGION
 
-}  // namespace oneflow
+} // namespace oneflow

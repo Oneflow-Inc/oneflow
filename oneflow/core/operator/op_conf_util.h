@@ -20,13 +20,13 @@ limitations under the License.
 
 namespace std {
 
-template<>
-struct hash<::oneflow::OperatorConf::OpTypeCase> {
-  std::size_t operator()(const ::oneflow::OperatorConf::OpTypeCase& op_type) const {
+template <> struct hash<::oneflow::OperatorConf::OpTypeCase> {
+  std::size_t
+  operator()(const ::oneflow::OperatorConf::OpTypeCase &op_type) const {
     return std::hash<int>()(static_cast<size_t>(op_type));
   }
 };
 
-}  // namespace std
+} // namespace std
 
-#endif  // ONEFLOW_CORE_OPERATOR_OP_CONF_UTIL_H_
+#endif // ONEFLOW_CORE_OPERATOR_OP_CONF_UTIL_H_

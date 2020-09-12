@@ -16,9 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_STREAM_H_
 #define ONEFLOW_CORE_VM_STREAM_H_
 
-#include "oneflow/core/vm/stream_desc.msg.h"
-#include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/stream_desc.msg.h"
 
 namespace oneflow {
 namespace vm {
@@ -51,7 +51,7 @@ OBJECT_MSG_BEGIN(Stream);
 OBJECT_MSG_END(Stream);
 // clang-format on
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_STREAM_H_
+#endif // ONEFLOW_CORE_VM_STREAM_H_

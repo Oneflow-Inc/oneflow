@@ -27,22 +27,22 @@ namespace oneflow {
 class ExecNode;
 
 class ExecEdge final : public Edge<ExecNode, ExecEdge> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(ExecEdge);
   ExecEdge() = default;
   ~ExecEdge() = default;
 
   // Getters
-  const LogicalBlobId& lbi() const { return lbi_; }
-  const std::string& src_bn() const { return src_bn_; }
-  const std::string& dst_bn() const { return dst_bn_; }
+  const LogicalBlobId &lbi() const { return lbi_; }
+  const std::string &src_bn() const { return src_bn_; }
+  const std::string &dst_bn() const { return dst_bn_; }
 
   // Setters
-  void set_lbi(const LogicalBlobId& lbi) { lbi_ = lbi; }
-  std::string& mut_src_bn() { return src_bn_; }
-  std::string& mut_dst_bn() { return dst_bn_; }
+  void set_lbi(const LogicalBlobId &lbi) { lbi_ = lbi; }
+  std::string &mut_src_bn() { return src_bn_; }
+  std::string &mut_dst_bn() { return dst_bn_; }
 
- private:
+private:
   // various names for one blob
   LogicalBlobId lbi_;
   std::string src_bn_;
@@ -50,55 +50,63 @@ class ExecEdge final : public Edge<ExecNode, ExecEdge> {
 };
 
 class ExecNode final : public Node<ExecNode, ExecEdge> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(ExecNode);
   ExecNode() : fw_node_(nullptr) {}
   ~ExecNode() = default;
 
   std::shared_ptr<const Operator> op() const { return op_; }
-  std::shared_ptr<const Operator>& mut_op() { return op_; }
-  const OpContext* op_context() const { return fw_node_ ? fw_node_->op_ctx_.get() : op_ctx_.get(); }
-  RegstDesc* RegstDesc4BnInOp(const std::string& bn) const { return bn_in_op2regst_.at(bn).get(); }
+  std::shared_ptr<const Operator> &mut_op() { return op_; }
+  const OpContext *op_context() const {
+    return fw_node_ ? fw_node_->op_ctx_.get() : op_ctx_.get();
+  }
+  RegstDesc *RegstDesc4BnInOp(const std::string &bn) const {
+    return bn_in_op2regst_.at(bn).get();
+  }
 
-  void BindBnWithRegst(const std::string& bn, std::shared_ptr<RegstDesc>);
-  void BindBnsWithRegst(const PbRpf<std::string>& (Operator::*bns_getter)() const,
+  void BindBnWithRegst(const std::string &bn, std::shared_ptr<RegstDesc>);
+  void BindBnsWithRegst(const PbRpf<std::string> &(Operator::*bns_getter)()
+                            const,
                         std::shared_ptr<RegstDesc>);
-  void AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_getter)() const,
+  void AddBnToRegstAndBindIt(const PbRpf<std::string> &(Operator::*bns_getter)()
+                                 const,
                              std::shared_ptr<RegstDesc>);
-  void BindBnWithOneOfTheRegsts(const std::string&, const std::list<std::shared_ptr<RegstDesc>>&);
+  void BindBnWithOneOfTheRegsts(const std::string &,
+                                const std::list<std::shared_ptr<RegstDesc>> &);
   void UnbindBnWithEmptyRegst();
 
-  void set_fw_node(ExecNode* val) { fw_node_ = val; }
-  ExecNode* fw_node() { return fw_node_; }
+  void set_fw_node(ExecNode *val) { fw_node_ = val; }
+  ExecNode *fw_node() { return fw_node_; }
 
   std::string VisualStr() const override { return op_->op_name(); }
-  void ToProto(const ParallelContext*, ExecNodeProto*) const;
+  void ToProto(const ParallelContext *, ExecNodeProto *) const;
 
-  void InferBlobDescs(const ParallelContext* parallel_ctx);
+  void InferBlobDescs(const ParallelContext *parallel_ctx);
 
- private:
-  std::function<const BlobDesc&(const std::string&)> GetLogicalBlobDesc4BnInOpFunc() const;
-  std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
+private:
+  std::function<const BlobDesc &(const std::string &)>
+  GetLogicalBlobDesc4BnInOpFunc() const;
+  std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOpFunc() const;
 
   std::shared_ptr<const Operator> op_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> bn_in_op2regst_;
-  ExecNode* fw_node_;
+  ExecNode *fw_node_;
 
   std::unique_ptr<OpContext> op_ctx_;
 };
 
 class ExecGraph final : public Graph<ExecNode, ExecEdge> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(ExecGraph);
   ExecGraph() = default;
   ~ExecGraph() = default;
 
-  void ToExecSequence(const ParallelContext*, ExecSequence*) const;
-  const char* TypeName() const override { return "ExecGraph"; }
+  void ToExecSequence(const ParallelContext *, ExecSequence *) const;
+  const char *TypeName() const override { return "ExecGraph"; }
 
- private:
+private:
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_EXEC_GRAPH_H_
+#endif // ONEFLOW_CORE_GRAPH_EXEC_GRAPH_H_

@@ -22,14 +22,13 @@ namespace oneflow {
 
 namespace user_op {
 
-template<typename T>
-struct AttrValAccessor final {
-  static T Attr(const UserOpAttrVal&);
-  static void Attr(const T&, UserOpAttrVal*);
+template <typename T> struct AttrValAccessor final {
+  static T Attr(const UserOpAttrVal &);
+  static void Attr(const T &, UserOpAttrVal *);
 };
 
-}  // namespace user_op
+} // namespace user_op
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_ATTR_VAL_ACCESSOR_H_
+#endif // ONEFLOW_CORE_FRAMEWORK_ATTR_VAL_ACCESSOR_H_

@@ -16,16 +16,17 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_ERROR_H_
 #define ONEFLOW_CORE_COMMON_ERROR_H_
 
+#include "oneflow/core/common/error.pb.h"
 #include <sstream>
 #include <vector>
-#include "oneflow/core/common/error.pb.h"
 
 namespace oneflow {
 
 class Error final {
- public:
-  Error(const std::shared_ptr<ErrorProto>& error_proto) : error_proto_(error_proto) {}
-  Error(const Error&) = default;
+public:
+  Error(const std::shared_ptr<ErrorProto> &error_proto)
+      : error_proto_(error_proto) {}
+  Error(const Error &) = default;
   ~Error() = default;
 
   static Error Ok();
@@ -52,43 +53,46 @@ class Error final {
   static Error Todo();
   static Error Unimplemented();
   static Error BoxingNotSupportedError();
-  static Error MemoryZoneOutOfMemoryError(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
-                                          uint64_t available, const std::string& device_type);
-  static Error OpKernelNotFoundError(const std::string& error_summary,
-                                     const std::vector<std::string>& error_msgs);
-  static Error MultipleOpKernelsMatchedError(const std::string& error_summary,
-                                             const std::vector<std::string>& error_msgs);
-  static Error LossBlobNotFoundError(const std::string& error_summary);
+  static Error MemoryZoneOutOfMemoryError(int64_t machine_id,
+                                          int64_t mem_zone_id, uint64_t calc,
+                                          uint64_t available,
+                                          const std::string &device_type);
+  static Error
+  OpKernelNotFoundError(const std::string &error_summary,
+                        const std::vector<std::string> &error_msgs);
+  static Error
+  MultipleOpKernelsMatchedError(const std::string &error_summary,
+                                const std::vector<std::string> &error_msgs);
+  static Error LossBlobNotFoundError(const std::string &error_summary);
 
   // gradient
   static Error GradientFunctionNotFound();
 
   std::shared_ptr<ErrorProto> error_proto() const { return error_proto_; }
-  ErrorProto* operator->() const { return error_proto_.get(); }
+  ErrorProto *operator->() const { return error_proto_.get(); }
   operator std::string() const;
-  void Assign(const Error& other) { error_proto_ = other.error_proto_; }
+  void Assign(const Error &other) { error_proto_ = other.error_proto_; }
 
- private:
+private:
   std::shared_ptr<ErrorProto> error_proto_;
 };
 
-template<typename T>
-Error&& operator<<(Error&& error, const T& x) {
+template <typename T> Error &&operator<<(Error &&error, const T &x) {
   std::ostringstream ss;
   ss << x;
   error->set_msg(error->msg() + ss.str());
   return std::move(error);
 }
 
-template<>
-inline Error&& operator<<(Error&& error, const Error& other) {
+template <> inline Error &&operator<<(Error &&error, const Error &other) {
   error.Assign(other);
   return std::move(error);
 }
 
 // for LOG(ERROR)
-Error&& operator<=(const std::pair<std::string, std::string>& loc_and_func, Error&& error);
+Error &&operator<=(const std::pair<std::string, std::string> &loc_and_func,
+                   Error &&error);
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_ERROR_H_
+#endif // ONEFLOW_CORE_COMMON_ERROR_H_

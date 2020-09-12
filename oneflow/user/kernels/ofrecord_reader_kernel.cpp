@@ -21,32 +21,35 @@ namespace oneflow {
 namespace {
 
 class OFRecordReaderWrapper final : public user_op::OpKernelState {
- public:
-  explicit OFRecordReaderWrapper(user_op::KernelInitContext* ctx) : reader_(ctx) {}
+public:
+  explicit OFRecordReaderWrapper(user_op::KernelInitContext *ctx)
+      : reader_(ctx) {}
   ~OFRecordReaderWrapper() = default;
 
-  void Read(user_op::KernelComputeContext* ctx) { reader_.Read(ctx); }
+  void Read(user_op::KernelComputeContext *ctx) { reader_.Read(ctx); }
 
- private:
+private:
   data::OFRecordDataReader reader_;
 };
 
-}  // namespace
+} // namespace
 
 class OFRecordReaderKernel final : public user_op::OpKernel {
- public:
+public:
   OFRecordReaderKernel() = default;
   ~OFRecordReaderKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    std::shared_ptr<OFRecordReaderWrapper> reader(new OFRecordReaderWrapper(ctx));
+  std::shared_ptr<user_op::OpKernelState>
+  CreateOpKernelState(user_op::KernelInitContext *ctx) const override {
+    std::shared_ptr<OFRecordReaderWrapper> reader(
+        new OFRecordReaderWrapper(ctx));
     return reader;
   }
 
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* reader = dynamic_cast<OFRecordReaderWrapper*>(state);
+private:
+  void Compute(user_op::KernelComputeContext *ctx,
+               user_op::OpKernelState *state) const override {
+    auto *reader = dynamic_cast<OFRecordReaderWrapper *>(state);
     reader->Read(ctx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -54,7 +57,7 @@ class OFRecordReaderKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("OFRecordReader")
     .SetCreateFn<OFRecordReaderKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("out", 0) == DataType::kOFRecord));
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") &
+                     (user_op::HobDataType("out", 0) == DataType::kOFRecord));
 
-}  // namespace oneflow
+} // namespace oneflow

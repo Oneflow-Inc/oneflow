@@ -96,7 +96,7 @@ using TransportKey2ReceiveRequest = TransportKey2Request<kReceiveTransportReques
 
 // clang-format on
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_TRANSPORT_REQUEST_H_
+#endif // ONEFLOW_CORE_VM_TRANSPORT_REQUEST_H_

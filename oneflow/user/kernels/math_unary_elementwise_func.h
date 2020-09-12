@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_MATH_UNARY_ELEMENTWISE_FUNC_H_
 #define ONEFLOW_USER_KERNELS_MATH_UNARY_ELEMENTWISE_FUNC_H_
 
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/user/ops/math_unary_elementwise_seq.h"
 
 #if defined(__CUDACC__)
@@ -36,28 +36,28 @@ limitations under the License.
 
 namespace oneflow {
 
-#define DECLARE_UNARY_FUNCTOR(math_unary_elementwise_type, func_prefix) \
-  template<typename T>                                                  \
-  struct func_prefix##Functor;
+#define DECLARE_UNARY_FUNCTOR(math_unary_elementwise_type, func_prefix)        \
+  template <typename T> struct func_prefix##Functor;
 
 OF_PP_FOR_EACH_TUPLE(DECLARE_UNARY_FUNCTOR, MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
 
-template<typename T>
-struct AbsFunctor {
+template <typename T> struct AbsFunctor {
   static OF_DEVICE_FUNC const T Forward(const T x) { return x < T(0) ? -x : x; }
 
-  static OF_DEVICE_FUNC const T Backward(const T x, const T dy) { return x < T(0) ? -dy : dy; }
+  static OF_DEVICE_FUNC const T Backward(const T x, const T dy) {
+    return x < T(0) ? -dy : dy;
+  }
 };
 
-template<typename T>
-struct SignFunctor {
-  static OF_DEVICE_FUNC const T Forward(const T x) { return (T(0) < x) - (x < T(0)); }
+template <typename T> struct SignFunctor {
+  static OF_DEVICE_FUNC const T Forward(const T x) {
+    return (T(0) < x) - (x < T(0));
+  }
 
   static OF_DEVICE_FUNC const T Backward(const T x, const T dy) { return T(0); }
 };
 
-template<>
-struct RsqrtFunctor<float> {
+template <> struct RsqrtFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) {
 #if defined(__CUDACC__)
     return rsqrtf(x);
@@ -71,8 +71,7 @@ struct RsqrtFunctor<float> {
   }
 };
 
-template<>
-struct RsqrtFunctor<double> {
+template <> struct RsqrtFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) {
 #if defined(__CUDACC__)
     return rsqrt(x);
@@ -88,131 +87,150 @@ struct RsqrtFunctor<double> {
 
 // float version
 
-template<>
-struct AcosFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(acos, x); }
+template <> struct AcosFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(acos, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * -RsqrtFunctor<float>::Forward(1.0f - x * x);
   }
 };
 
-template<>
-struct AcoshFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(acosh, x); }
+template <> struct AcoshFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(acosh, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * RsqrtFunctor<float>::Forward(x * x - 1.0f);
   }
 };
 
-template<>
-struct AsinFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(asin, x); }
+template <> struct AsinFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(asin, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * RsqrtFunctor<float>::Forward(1.0f - x * x);
   }
 };
 
-template<>
-struct AsinhFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(asinh, x); }
+template <> struct AsinhFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(asinh, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * RsqrtFunctor<float>::Forward(1.0f + x * x);
   }
 };
 
-template<>
-struct AtanFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(atan, x); }
+template <> struct AtanFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(atan, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * (1.0f / (1.0f + x * x));
   }
 };
 
-template<>
-struct AtanhFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(atanh, x); }
+template <> struct AtanhFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(atanh, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * (1.0f / (1.0f - x * x));
   }
 };
 
-template<>
-struct CeilFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(ceil, x); }
+template <> struct CeilFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(ceil, x);
+  }
 
-  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) { return 0.0f; }
+  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
+    return 0.0f;
+  }
 };
 
-template<>
-struct CosFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(cos, x); }
+template <> struct CosFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(cos, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * (-MATH_FUNC_F(sin, x));
   }
 };
 
-template<>
-struct CoshFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(cosh, x); }
+template <> struct CoshFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(cosh, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * (MATH_FUNC_F(exp, x) + MATH_FUNC_F(exp, -x)) / 2.0f;
   }
 };
 
-template<>
-struct ErfFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(erf, x); }
+template <> struct ErfFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(erf, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * 2.0f * RsqrtFunctor<float>::Forward(M_PI) * expf(-x * x);
   }
 };
 
-template<>
-struct ErfcFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(erfc, x); }
+template <> struct ErfcFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(erfc, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * -2.0f * RsqrtFunctor<float>::Forward(M_PI) * expf(-x * x);
   }
 };
 
-template<>
-struct ExpFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(exp, x); }
+template <> struct ExpFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(exp, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * MATH_FUNC_F(exp, x);
   }
 };
 
-template<>
-struct Expm1Functor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(expm1, x); }
+template <> struct Expm1Functor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(expm1, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * MATH_FUNC_F(exp, x);
   }
 };
 
-template<>
-struct FloorFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(floor, x); }
+template <> struct FloorFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(floor, x);
+  }
 
-  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) { return 0.0f; }
+  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
+    return 0.0f;
+  }
 };
 
-template<>
-struct LgammaFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(lgamma, x); }
+template <> struct LgammaFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(lgamma, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     // TODO(chengcheng): return: dy * digamma(x)
@@ -221,26 +239,27 @@ struct LgammaFunctor<float> {
   }
 };
 
-template<>
-struct LogFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(log, x); }
+template <> struct LogFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(log, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * (1.0f / x);
   }
 };
 
-template<>
-struct Log1pFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(log1p, x); }
+template <> struct Log1pFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(log1p, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * (1.0f / (x + 1.0f));
   }
 };
 
-template<>
-struct LogSigmoidFunctor<float> {
+template <> struct LogSigmoidFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) {
     return -MATH_FUNC_F(log, (1.0f + MATH_FUNC_F(exp, -x)));
   }
@@ -250,15 +269,15 @@ struct LogSigmoidFunctor<float> {
   }
 };
 
-template<>
-struct NegativeFunctor<float> {
+template <> struct NegativeFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) { return -x; }
 
-  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) { return -dy; }
+  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
+    return -dy;
+  }
 };
 
-template<>
-struct ReciprocalFunctor<float> {
+template <> struct ReciprocalFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) { return 1.0f / x; }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
@@ -266,35 +285,43 @@ struct ReciprocalFunctor<float> {
   }
 };
 
-template<>
-struct ReciprocalNoNanFunctor<float> {
+template <> struct ReciprocalNoNanFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) {
-    if (fabsf(x) <= 0.0f) { return 0.0f; }
+    if (fabsf(x) <= 0.0f) {
+      return 0.0f;
+    }
     return 1.0f / x;
   }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
-    if (fabsf(x) <= 0.0f) { return 0.0f; }
+    if (fabsf(x) <= 0.0f) {
+      return 0.0f;
+    }
     return dy * (-1.0f / (x * x));
   }
 };
 
-template<>
-struct RintFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(rint, x); }
+template <> struct RintFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(rint, x);
+  }
 
-  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) { return 0.0f; }
+  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
+    return 0.0f;
+  }
 };
 
-template<>
-struct RoundFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(nearbyint, x); }
+template <> struct RoundFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(nearbyint, x);
+  }
 
-  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) { return 0.0f; }
+  static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
+    return 0.0f;
+  }
 };
 
-template<>
-struct SigmoidFunctor<float> {
+template <> struct SigmoidFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) {
     return 1.0f / (1.0f + MATH_FUNC_F(exp, -x));
   }
@@ -305,26 +332,27 @@ struct SigmoidFunctor<float> {
   }
 };
 
-template<>
-struct SinFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(sin, x); }
+template <> struct SinFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(sin, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * MATH_FUNC_F(cos, x);
   }
 };
 
-template<>
-struct SinhFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(sinh, x); }
+template <> struct SinhFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(sinh, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * MATH_FUNC_F(cosh, x);
   }
 };
 
-template<>
-struct SoftplusFunctor<float> {
+template <> struct SoftplusFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) {
     return MATH_FUNC_F(log, (1.0f + MATH_FUNC_F(exp, x)));
   }
@@ -334,17 +362,17 @@ struct SoftplusFunctor<float> {
   }
 };
 
-template<>
-struct SqrtFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(sqrt, x); }
+template <> struct SqrtFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(sqrt, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * 0.5f / MATH_FUNC_F(sqrt, x);
   }
 };
 
-template<>
-struct SquareFunctor<float> {
+template <> struct SquareFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) { return x * x; }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
@@ -352,18 +380,20 @@ struct SquareFunctor<float> {
   }
 };
 
-template<>
-struct TanFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(tan, x); }
+template <> struct TanFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(tan, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * (1.0f / (MATH_FUNC_F(cos, x) * MATH_FUNC_F(cos, x)));
   }
 };
 
-template<>
-struct TanhFunctor<float> {
-  static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(tanh, x); }
+template <> struct TanhFunctor<float> {
+  static OF_DEVICE_FUNC const float Forward(const float x) {
+    return MATH_FUNC_F(tanh, x);
+  }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
     return dy * (1.0f - MATH_FUNC_F(tanh, x) * MATH_FUNC_F(tanh, x));
@@ -372,131 +402,150 @@ struct TanhFunctor<float> {
 
 // double version
 
-template<>
-struct AcosFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(acos, x); }
+template <> struct AcosFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(acos, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * -RsqrtFunctor<double>::Forward(1.0 - x * x);
   }
 };
 
-template<>
-struct AcoshFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(acosh, x); }
+template <> struct AcoshFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(acosh, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * -RsqrtFunctor<double>::Forward(x * x - 1.0);
   }
 };
 
-template<>
-struct AsinFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(asin, x); }
+template <> struct AsinFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(asin, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * RsqrtFunctor<double>::Forward(1.0 - x * x);
   }
 };
 
-template<>
-struct AsinhFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(asinh, x); }
+template <> struct AsinhFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(asinh, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * RsqrtFunctor<double>::Forward(1.0 + x * x);
   }
 };
 
-template<>
-struct AtanFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(atan, x); }
+template <> struct AtanFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(atan, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * (1.0 / (1.0 + x * x));
   }
 };
 
-template<>
-struct AtanhFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(atanh, x); }
+template <> struct AtanhFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(atanh, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * (1.0 / (1.0 - x * x));
   }
 };
 
-template<>
-struct CeilFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(ceil, x); }
+template <> struct CeilFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(ceil, x);
+  }
 
-  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) { return 0.0; }
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return 0.0;
+  }
 };
 
-template<>
-struct CosFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(cos, x); }
+template <> struct CosFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(cos, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * (-MATH_FUNC_D(sin, x));
   }
 };
 
-template<>
-struct CoshFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(cosh, x); }
+template <> struct CoshFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(cosh, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * (MATH_FUNC_D(exp, x) + MATH_FUNC_D(exp, -x)) / 2.0;
   }
 };
 
-template<>
-struct ErfFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(erf, x); }
+template <> struct ErfFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(erf, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * 2.0 * RsqrtFunctor<double>::Forward(M_PI) * expf(-x * x);
   }
 };
 
-template<>
-struct ErfcFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(erfc, x); }
+template <> struct ErfcFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(erfc, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * -2.0 * RsqrtFunctor<double>::Forward(M_PI) * expf(-x * x);
   }
 };
 
-template<>
-struct ExpFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(exp, x); }
+template <> struct ExpFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(exp, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * MATH_FUNC_D(exp, x);
   }
 };
 
-template<>
-struct Expm1Functor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(expm1, x); }
+template <> struct Expm1Functor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(expm1, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * MATH_FUNC_D(exp, x);
   }
 };
 
-template<>
-struct FloorFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(floor, x); }
+template <> struct FloorFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(floor, x);
+  }
 
-  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) { return 0.0; }
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return 0.0;
+  }
 };
 
-template<>
-struct LgammaFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(lgamma, x); }
+template <> struct LgammaFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(lgamma, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     // TODO(chengcheng): return: dy * digamma(x)
@@ -505,26 +554,27 @@ struct LgammaFunctor<double> {
   }
 };
 
-template<>
-struct LogFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(log, x); }
+template <> struct LogFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(log, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * (1.0 / x);
   }
 };
 
-template<>
-struct Log1pFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(log1p, x); }
+template <> struct Log1pFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(log1p, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * (1.0 / (x + 1.0));
   }
 };
 
-template<>
-struct LogSigmoidFunctor<double> {
+template <> struct LogSigmoidFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) {
     return -MATH_FUNC_D(log, (1.0 + MATH_FUNC_D(exp, -x)));
   }
@@ -534,15 +584,15 @@ struct LogSigmoidFunctor<double> {
   }
 };
 
-template<>
-struct NegativeFunctor<double> {
+template <> struct NegativeFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) { return -x; }
 
-  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) { return -dy; }
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return -dy;
+  }
 };
 
-template<>
-struct ReciprocalFunctor<double> {
+template <> struct ReciprocalFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) { return 1.0 / x; }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
@@ -550,35 +600,43 @@ struct ReciprocalFunctor<double> {
   }
 };
 
-template<>
-struct ReciprocalNoNanFunctor<double> {
+template <> struct ReciprocalNoNanFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) {
-    if (fabs(x) <= 0.0) { return 0.0; }
+    if (fabs(x) <= 0.0) {
+      return 0.0;
+    }
     return 1.0 / x;
   }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
-    if (fabs(x) <= 0.0) { return 0.0; }
+    if (fabs(x) <= 0.0) {
+      return 0.0;
+    }
     return dy * (-1.0 / (x * x));
   }
 };
 
-template<>
-struct RintFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(rint, x); }
+template <> struct RintFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(rint, x);
+  }
 
-  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) { return 0.0; }
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return 0.0;
+  }
 };
 
-template<>
-struct RoundFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(nearbyint, x); }
+template <> struct RoundFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(nearbyint, x);
+  }
 
-  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) { return 0.0; }
+  static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
+    return 0.0;
+  }
 };
 
-template<>
-struct SigmoidFunctor<double> {
+template <> struct SigmoidFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) {
     return 1.0 / (1.0 + MATH_FUNC_D(exp, -x));
   }
@@ -589,26 +647,27 @@ struct SigmoidFunctor<double> {
   }
 };
 
-template<>
-struct SinFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(sin, x); }
+template <> struct SinFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(sin, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * MATH_FUNC_D(cos, x);
   }
 };
 
-template<>
-struct SinhFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(sinh, x); }
+template <> struct SinhFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(sinh, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * MATH_FUNC_D(cosh, x);
   }
 };
 
-template<>
-struct SoftplusFunctor<double> {
+template <> struct SoftplusFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) {
     return MATH_FUNC_D(log, (1.0 + MATH_FUNC_D(exp, x)));
   }
@@ -618,17 +677,17 @@ struct SoftplusFunctor<double> {
   }
 };
 
-template<>
-struct SqrtFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(sqrt, x); }
+template <> struct SqrtFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(sqrt, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * 0.5 / MATH_FUNC_D(sqrt, x);
   }
 };
 
-template<>
-struct SquareFunctor<double> {
+template <> struct SquareFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) { return x * x; }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
@@ -636,18 +695,20 @@ struct SquareFunctor<double> {
   }
 };
 
-template<>
-struct TanFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(tan, x); }
+template <> struct TanFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(tan, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * (1.0 / (MATH_FUNC_D(cos, x) * MATH_FUNC_D(cos, x)));
   }
 };
 
-template<>
-struct TanhFunctor<double> {
-  static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(tanh, x); }
+template <> struct TanhFunctor<double> {
+  static OF_DEVICE_FUNC const double Forward(const double x) {
+    return MATH_FUNC_D(tanh, x);
+  }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
     return dy * (1.0 - MATH_FUNC_D(tanh, x) * MATH_FUNC_D(tanh, x));
@@ -664,8 +725,7 @@ struct TanhFunctor<double> {
 #define HALF_VAL_TWO __float2half(2.0f)
 #define HALF_VAL_2RSQRT_PI __float2half(1.1283791671f)
 
-template<>
-struct AbsFunctor<half> {
+template <> struct AbsFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) {
     return __hlt(x, GetZeroVal<half>()) ? __hneg(x) : x;
   }
@@ -675,62 +735,69 @@ struct AbsFunctor<half> {
   }
 };
 
-template<>
-struct AcosFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(acos, x); }
+template <> struct AcosFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(acos, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     return __hmul(dy, __hneg(hrsqrt(__hsub(GetOneVal<half>(), __hmul(x, x)))));
   }
 };
 
-template<>
-struct AcoshFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(acosh, x); }
+template <> struct AcoshFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(acosh, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     return __hmul(dy, hrsqrt(__hsub(__hmul(x, x), GetOneVal<half>())));
   }
 };
 
-template<>
-struct AsinFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(asin, x); }
+template <> struct AsinFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(asin, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     return __hmul(dy, hrsqrt(__hsub(GetOneVal<half>(), __hmul(x, x))));
   }
 };
 
-template<>
-struct AsinhFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(asinh, x); }
+template <> struct AsinhFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(asinh, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     return __hmul(dy, hrsqrt(__hadd(GetOneVal<half>(), __hmul(x, x))));
   }
 };
 
-template<>
-struct AtanFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(atan, x); }
+template <> struct AtanFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(atan, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
-    return __hmul(dy, __hdiv(GetOneVal<half>(), __hadd(GetOneVal<half>(), __hmul(x, x))));
+    return __hmul(
+        dy, __hdiv(GetOneVal<half>(), __hadd(GetOneVal<half>(), __hmul(x, x))));
   }
 };
 
-template<>
-struct AtanhFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(atanh, x); }
+template <> struct AtanhFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(atanh, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
-    return __hmul(dy, __hdiv(GetOneVal<half>(), __hsub(GetOneVal<half>(), __hmul(x, x))));
+    return __hmul(
+        dy, __hdiv(GetOneVal<half>(), __hsub(GetOneVal<half>(), __hmul(x, x))));
   }
 };
 
-template<>
-struct CeilFunctor<half> {
+template <> struct CeilFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) { return hceil(x); }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
@@ -738,8 +805,7 @@ struct CeilFunctor<half> {
   }
 };
 
-template<>
-struct CosFunctor<half> {
+template <> struct CosFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) { return hcos(x); }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
@@ -747,35 +813,38 @@ struct CosFunctor<half> {
   }
 };
 
-template<>
-struct CoshFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(cosh, x); }
+template <> struct CoshFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(cosh, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     return __hmul(dy, __hdiv(__hadd(hexp(x), hexp(__hneg(x))), HALF_VAL_TWO));
   }
 };
 
-template<>
-struct ErfFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(erf, x); }
+template <> struct ErfFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(erf, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     return __hmul(dy, __hmul(HALF_VAL_2RSQRT_PI, hexp(__hmul(__hneg(x), x))));
   }
 };
 
-template<>
-struct ErfcFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(erfc, x); }
+template <> struct ErfcFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(erfc, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
-    return __hmul(dy, __hneg(__hmul(HALF_VAL_2RSQRT_PI, hexp(__hmul(__hneg(x), x)))));
+    return __hmul(
+        dy, __hneg(__hmul(HALF_VAL_2RSQRT_PI, hexp(__hmul(__hneg(x), x)))));
   }
 };
 
-template<>
-struct ExpFunctor<half> {
+template <> struct ExpFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) { return hexp(x); }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
@@ -783,17 +852,17 @@ struct ExpFunctor<half> {
   }
 };
 
-template<>
-struct Expm1Functor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(expm1, x); }
+template <> struct Expm1Functor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(expm1, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     return __hmul(dy, hexp(x));
   }
 };
 
-template<>
-struct FloorFunctor<half> {
+template <> struct FloorFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) { return hfloor(x); }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
@@ -801,9 +870,10 @@ struct FloorFunctor<half> {
   }
 };
 
-template<>
-struct LgammaFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(lgamma, x); }
+template <> struct LgammaFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(lgamma, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     // TODO(chengcheng): return: dy * digamma(x)
@@ -812,8 +882,7 @@ struct LgammaFunctor<half> {
   }
 };
 
-template<>
-struct LogFunctor<half> {
+template <> struct LogFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) { return hlog(x); }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
@@ -821,17 +890,17 @@ struct LogFunctor<half> {
   }
 };
 
-template<>
-struct Log1pFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(log1p, x); }
+template <> struct Log1pFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(log1p, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     return __hmul(dy, hrcp(__hadd(x, GetOneVal<half>())));
   }
 };
 
-template<>
-struct LogSigmoidFunctor<half> {
+template <> struct LogSigmoidFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) {
     return __hneg(hlog(__hadd(GetOneVal<half>(), hexp(__hneg(x)))));
   }
@@ -841,15 +910,15 @@ struct LogSigmoidFunctor<half> {
   }
 };
 
-template<>
-struct NegativeFunctor<half> {
+template <> struct NegativeFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) { return __hneg(x); }
 
-  static OF_HALF_FUNC const half Backward(const half x, const half dy) { return __hneg(dy); }
+  static OF_HALF_FUNC const half Backward(const half x, const half dy) {
+    return __hneg(dy);
+  }
 };
 
-template<>
-struct ReciprocalFunctor<half> {
+template <> struct ReciprocalFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) { return hrcp(x); }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
@@ -857,21 +926,23 @@ struct ReciprocalFunctor<half> {
   }
 };
 
-template<>
-struct ReciprocalNoNanFunctor<half> {
+template <> struct ReciprocalNoNanFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) {
-    if (__heq(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
+    if (__heq(GetZeroVal<half>(), x)) {
+      return GetZeroVal<half>();
+    }
     return hrcp(x);
   }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
-    if (__heq(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
+    if (__heq(GetZeroVal<half>(), x)) {
+      return GetZeroVal<half>();
+    }
     return __hmul(dy, __hneg(hrcp(__hmul(x, x))));
   }
 };
 
-template<>
-struct RintFunctor<half> {
+template <> struct RintFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) { return hrint(x); }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
@@ -879,26 +950,26 @@ struct RintFunctor<half> {
   }
 };
 
-template<>
-struct RoundFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(nearbyint, x); }
+template <> struct RoundFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(nearbyint, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     return GetZeroVal<half>();
   }
 };
 
-template<>
-struct RsqrtFunctor<half> {
+template <> struct RsqrtFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) { return hrsqrt(x); }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
-    return __hmul(dy, __hneg(hrcp(__hmul(HALF_VAL_TWO, hsqrt(__hmul(x, __hmul(x, x)))))));
+    return __hmul(
+        dy, __hneg(hrcp(__hmul(HALF_VAL_TWO, hsqrt(__hmul(x, __hmul(x, x)))))));
   }
 };
 
-template<>
-struct SigmoidFunctor<half> {
+template <> struct SigmoidFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) {
     return hrcp(__hadd(GetOneVal<half>(), hexp(__hneg(x))));
   }
@@ -909,11 +980,14 @@ struct SigmoidFunctor<half> {
   }
 };
 
-template<>
-struct SignFunctor<half> {
+template <> struct SignFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) {
-    if (__hgt(x, GetZeroVal<half>())) { return GetOneVal<half>(); }
-    if (__hlt(x, GetZeroVal<half>())) { return __hneg(GetOneVal<half>()); }
+    if (__hgt(x, GetZeroVal<half>())) {
+      return GetOneVal<half>();
+    }
+    if (__hlt(x, GetZeroVal<half>())) {
+      return __hneg(GetOneVal<half>());
+    }
     return GetZeroVal<half>();
   }
 
@@ -922,8 +996,7 @@ struct SignFunctor<half> {
   }
 };
 
-template<>
-struct SinFunctor<half> {
+template <> struct SinFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) { return hsin(x); }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
@@ -931,17 +1004,17 @@ struct SinFunctor<half> {
   }
 };
 
-template<>
-struct SinhFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(sinh, x); }
+template <> struct SinhFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(sinh, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     return __hmul(dy, MATH_FUNC_H(cosh, x));
   }
 };
 
-template<>
-struct SoftplusFunctor<half> {
+template <> struct SoftplusFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) {
     return hlog(__hadd(GetOneVal<half>(), hexp(x)));
   }
@@ -951,8 +1024,7 @@ struct SoftplusFunctor<half> {
   }
 };
 
-template<>
-struct SqrtFunctor<half> {
+template <> struct SqrtFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) { return hsqrt(x); }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
@@ -960,8 +1032,7 @@ struct SqrtFunctor<half> {
   }
 };
 
-template<>
-struct SquareFunctor<half> {
+template <> struct SquareFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) { return __hmul(x, x); }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
@@ -969,18 +1040,20 @@ struct SquareFunctor<half> {
   }
 };
 
-template<>
-struct TanFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return __hdiv(hsin(x), hcos(x)); }
+template <> struct TanFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return __hdiv(hsin(x), hcos(x));
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     return __hmul(dy, hrcp(__hmul(hcos(x), hcos(x))));
   }
 };
 
-template<>
-struct TanhFunctor<half> {
-  static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(tanh, x); }
+template <> struct TanhFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x) {
+    return MATH_FUNC_H(tanh, x);
+  }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
     float x_float = __half2float(x);
@@ -990,6 +1063,6 @@ struct TanhFunctor<half> {
 
 #endif
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_MATH_UNARY_ELEMENTWISE_FUNC_H_
+#endif // ONEFLOW_USER_KERNELS_MATH_UNARY_ELEMENTWISE_FUNC_H_

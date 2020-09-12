@@ -22,10 +22,11 @@ namespace oneflow {
 
 namespace user_op {
 
-void MultiThreadLoopInOpKernel(size_t num, std::function<void(size_t i)> Callback);
+void MultiThreadLoopInOpKernel(size_t num,
+                               std::function<void(size_t i)> Callback);
 
-}  // namespace user_op
+} // namespace user_op
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_MULTI_THREAD_H_
+#endif // ONEFLOW_CORE_FRAMEWORK_MULTI_THREAD_H_

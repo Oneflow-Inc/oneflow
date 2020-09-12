@@ -25,24 +25,30 @@ typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 typedef fixed_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
 
 class Params3D {
- public:
-  Params3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
-           const std::string& padding, const std::vector<int32_t>& padding_before,
-           const std::vector<int32_t>& padding_after, const std::vector<int32_t>& pool_size,
-           const std::vector<int32_t>& strides, const bool ceil_mode);
+public:
+  Params3D(const int32_t dim, const ShapeView &x_shape,
+           const std::string &data_format, const std::string &padding,
+           const std::vector<int32_t> &padding_before,
+           const std::vector<int32_t> &padding_after,
+           const std::vector<int32_t> &pool_size,
+           const std::vector<int32_t> &strides, const bool ceil_mode);
   ~Params3D() = default;
-  void Reset(const ShapeView& x_shape);
+  void Reset(const ShapeView &x_shape);
 
   Shape GetYShape() const;
   Shape GetXShape5D() const;
   Shape GetYShape5D() const;
 
-  const std::vector<int32_t>& pool_size_3d() const { return pool_size_3d_; }
-  const std::vector<int32_t>& strides_3d() const { return strides_3d_; }
-  const std::vector<int32_t>& padding_before_3d() const { return padding_before_3d_; }
-  const std::vector<int32_t>& padding_after_3d() const { return padding_after_3d_; }
+  const std::vector<int32_t> &pool_size_3d() const { return pool_size_3d_; }
+  const std::vector<int32_t> &strides_3d() const { return strides_3d_; }
+  const std::vector<int32_t> &padding_before_3d() const {
+    return padding_before_3d_;
+  }
+  const std::vector<int32_t> &padding_after_3d() const {
+    return padding_after_3d_;
+  }
 
- private:
+private:
   int32_t dim_;
   FixedDimVector x_3d_;
   FixedDimVector y_3d_;
@@ -57,6 +63,6 @@ class Params3D {
   int64_t channel_num_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_UTILS_POOL_UTIL_H_
+#endif // ONEFLOW_USER_UTILS_POOL_UTIL_H_

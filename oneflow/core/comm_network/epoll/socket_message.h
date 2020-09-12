@@ -16,12 +16,13 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MESSAGE_H_
 #define ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MESSAGE_H_
 
+#include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/comm_network/comm_network.h"
 
 #ifdef PLATFORM_POSIX
 
+#include "oneflow/core/actor/actor_message.h"
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -30,13 +31,12 @@ limitations under the License.
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "oneflow/core/actor/actor_message.h"
 
 namespace oneflow {
 
-#define SOCKET_MSG_TYPE_SEQ                         \
-  OF_PP_MAKE_TUPLE_SEQ(RequestWrite, request_write) \
-  OF_PP_MAKE_TUPLE_SEQ(RequestRead, request_read)   \
+#define SOCKET_MSG_TYPE_SEQ                                                    \
+  OF_PP_MAKE_TUPLE_SEQ(RequestWrite, request_write)                            \
+  OF_PP_MAKE_TUPLE_SEQ(RequestRead, request_read)                              \
   OF_PP_MAKE_TUPLE_SEQ(Actor, actor)
 
 enum class SocketMsgType {
@@ -46,16 +46,16 @@ enum class SocketMsgType {
 };
 
 struct RequestWriteMsg {
-  void* src_token;
+  void *src_token;
   int64_t dst_machine_id;
-  void* dst_token;
-  void* read_id;
+  void *dst_token;
+  void *read_id;
 };
 
 struct RequestReadMsg {
-  void* src_token;
-  void* dst_token;
-  void* read_id;
+  void *src_token;
+  void *dst_token;
+  void *read_id;
 };
 
 struct SocketMsg {
@@ -69,8 +69,8 @@ struct SocketMsg {
 
 using CallBackList = std::list<std::function<void()>>;
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif // PLATFORM_POSIX
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MESSAGE_H_
+#endif // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MESSAGE_H_

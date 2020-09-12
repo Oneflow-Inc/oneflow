@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
-#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {
 
@@ -24,10 +24,11 @@ namespace boxing {
 namespace collective {
 
 CollectiveBoxingDeviceCtxPoller::CollectiveBoxingDeviceCtxPoller() {
-  checkpoint2callbacks_.reset(
-      new HashMap<CollectiveBoxingDeviceCtxCheckpoint*, std::list<std::function<void()>>>());
-  thread_pool_.reset(new ThreadPool(
-      Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf().num_callback_threads()));
+  checkpoint2callbacks_.reset(new HashMap<CollectiveBoxingDeviceCtxCheckpoint *,
+                                          std::list<std::function<void()>>>());
+  thread_pool_.reset(new ThreadPool(Global<ResourceDesc, ForSession>::Get()
+                                        ->collective_boxing_conf()
+                                        .num_callback_threads()));
   mutex_.reset(new std::mutex());
 }
 
@@ -43,7 +44,8 @@ CollectiveBoxingDeviceCtxPoller::CreateCheckpoint() {
   auto checkpoint2callbacks = checkpoint2callbacks_;
   std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> checkpoint(
       new CollectiveBoxingDeviceCtxCheckpoint());
-  std::weak_ptr<CollectiveBoxingDeviceCtxCheckpoint> weak_checkpoint(checkpoint);
+  std::weak_ptr<CollectiveBoxingDeviceCtxCheckpoint> weak_checkpoint(
+      checkpoint);
   auto callback = [mutex, checkpoint2callbacks, weak_checkpoint]() {
     std::list<std::function<void()>> callbacks;
     {
@@ -55,20 +57,23 @@ CollectiveBoxingDeviceCtxPoller::CreateCheckpoint() {
       callbacks = std::move(callbacks_it->second);
       checkpoint2callbacks->erase(callbacks_it);
     }
-    for (const auto& callback : callbacks) { callback(); }
+    for (const auto &callback : callbacks) {
+      callback();
+    }
   };
   checkpoint->SetCallback(callback);
   {
     std::lock_guard<std::mutex> lock(*mutex_);
-    CHECK(checkpoint2callbacks_->emplace(checkpoint.get(), std::list<std::function<void()>>())
+    CHECK(checkpoint2callbacks_
+              ->emplace(checkpoint.get(), std::list<std::function<void()>>())
               .second);
   }
   return checkpoint;
 }
 
 void CollectiveBoxingDeviceCtxPoller::Enqueue(
-    const std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint>& checkpoint,
-    const std::function<void()>& callback) {
+    const std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> &checkpoint,
+    const std::function<void()> &callback) {
   if (checkpoint) {
     std::lock_guard<std::mutex> lock(*mutex_);
     auto it = checkpoint2callbacks_->find(checkpoint.get());
@@ -80,8 +85,8 @@ void CollectiveBoxingDeviceCtxPoller::Enqueue(
   thread_pool_->AddWork(callback);
 }
 
-}  // namespace collective
+} // namespace collective
 
-}  // namespace boxing
+} // namespace boxing
 
-}  // namespace oneflow
+} // namespace oneflow

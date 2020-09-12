@@ -21,13 +21,13 @@ limitations under the License.
 namespace oneflow {
 
 class UnpackCompActor final : public CompActor {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(UnpackCompActor);
   UnpackCompActor() = default;
   ~UnpackCompActor() override = default;
 
- private:
-  void VirtualCompActorInit(const TaskProto& proto) override;
+private:
+  void VirtualCompActorInit(const TaskProto &proto) override;
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void VirtualAsyncSendNaiveConsumedRegstMsgToProducer() override;
@@ -38,6 +38,6 @@ class UnpackCompActor final : public CompActor {
   size_t cur_piece_id_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_UNPACK_COMPUTE_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_UNPACK_COMPUTE_ACTOR_H_

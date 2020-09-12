@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/object_msg/object_msg.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/range.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -42,26 +42,31 @@ OBJECT_MSG_END(FooList);
 
 using ConditionListFoo = OBJECT_MSG_CONDITION_LIST(Foo, link);
 
-void CallFromSenderThread(ConditionListFoo* condition_list, Range range) {
+void CallFromSenderThread(ConditionListFoo *condition_list, Range range) {
   for (int i = range.begin(); i < range.end(); ++i) {
     auto foo = ObjectMsgPtr<Foo>::New();
     foo->set_x(i);
-    if (condition_list->EmplaceBack(std::move(foo)) != kObjectMsgConditionListStatusSuccess) {
+    if (condition_list->EmplaceBack(std::move(foo)) !=
+        kObjectMsgConditionListStatusSuccess) {
       break;
     }
   }
 }
 
-void CallFromReceiverThreadByPopFront(std::vector<int>* visit, ConditionListFoo* condition_list) {
+void CallFromReceiverThreadByPopFront(std::vector<int> *visit,
+                                      ConditionListFoo *condition_list) {
   ObjectMsgPtr<Foo> foo;
-  while (condition_list->PopFront(&foo) == kObjectMsgConditionListStatusSuccess) {
+  while (condition_list->PopFront(&foo) ==
+         kObjectMsgConditionListStatusSuccess) {
     ++visit->at(foo->x());
   }
 }
 
-void CallFromReceiverThreadByMoveTo(std::vector<int>* visit, ConditionListFoo* condition_list) {
+void CallFromReceiverThreadByMoveTo(std::vector<int> *visit,
+                                    ConditionListFoo *condition_list) {
   OBJECT_MSG_LIST(Foo, link) tmp_list;
-  while (condition_list->MoveTo(&tmp_list) == kObjectMsgConditionListStatusSuccess) {
+  while (condition_list->MoveTo(&tmp_list) ==
+         kObjectMsgConditionListStatusSuccess) {
     OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, foo) {
       ++visit->at(foo->x());
       tmp_list.Erase(foo);
@@ -69,7 +74,8 @@ void CallFromReceiverThreadByMoveTo(std::vector<int>* visit, ConditionListFoo* c
   }
 }
 
-typedef void (*ThreadHandlerType)(std::vector<int>* visit, ConditionListFoo* condition_list);
+typedef void (*ThreadHandlerType)(std::vector<int> *visit,
+                                  ConditionListFoo *condition_list);
 
 void TestConditionList(ThreadHandlerType ThreadHandler) {
   ConditionListFoo condition_list;
@@ -81,21 +87,31 @@ void TestConditionList(ThreadHandlerType ThreadHandler) {
   std::vector<std::vector<int>> visits;
   for (int i = 0; i < receiver_num; ++i) {
     std::vector<int> visit_i;
-    for (int j = 0; j < range_num; j++) { visit_i.push_back(0); }
+    for (int j = 0; j < range_num; j++) {
+      visit_i.push_back(0);
+    }
     visits.push_back(visit_i);
   }
   for (int i = 0; i < sender_num; ++i) {
-    senders.push_back(std::thread(CallFromSenderThread, &condition_list, Range(0, range_num)));
+    senders.push_back(std::thread(CallFromSenderThread, &condition_list,
+                                  Range(0, range_num)));
   }
   for (int i = 0; i < receiver_num; ++i) {
-    receivers.push_back(std::thread(ThreadHandler, &visits[i], &condition_list));
+    receivers.push_back(
+        std::thread(ThreadHandler, &visits[i], &condition_list));
   }
-  for (std::thread& this_thread : senders) { this_thread.join(); }
+  for (std::thread &this_thread : senders) {
+    this_thread.join();
+  }
   condition_list.Close();
-  for (std::thread& this_thread : receivers) { this_thread.join(); }
+  for (std::thread &this_thread : receivers) {
+    this_thread.join();
+  }
   for (int i = 0; i < range_num; ++i) {
     int visit_count = 0;
-    for (int j = 0; j < receiver_num; j++) { visit_count += visits[j][i]; }
+    for (int j = 0; j < receiver_num; j++) {
+      visit_count += visits[j][i];
+    }
     ASSERT_EQ(visit_count, sender_num);
   }
 }
@@ -108,8 +124,8 @@ TEST(ObjectMsgConditionList, 30sender40receiver_move_to) {
   TestConditionList(&CallFromReceiverThreadByMoveTo);
 }
 
-}  // namespace
+} // namespace
 
-}  // namespace test
+} // namespace test
 
-}  // namespace oneflow
+} // namespace oneflow

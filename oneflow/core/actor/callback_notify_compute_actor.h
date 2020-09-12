@@ -21,14 +21,14 @@ limitations under the License.
 namespace oneflow {
 
 class CallbackNotifyCompActor final : public SinkCompActor {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CallbackNotifyCompActor);
   CallbackNotifyCompActor() = default;
   ~CallbackNotifyCompActor() = default;
 
- private:
+private:
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_CALLBACK_NOTIFY_COMPUTE_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_CALLBACK_NOTIFY_COMPUTE_ACTOR_H_

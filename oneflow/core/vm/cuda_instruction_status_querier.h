@@ -26,24 +26,26 @@ namespace vm {
 
 #ifdef WITH_CUDA
 class CudaInstrStatusQuerier {
- public:
+public:
   ~CudaInstrStatusQuerier() = default;
 
   bool done() const { return launched_ && event_completed(); }
-  void SetLaunched(DeviceCtx* device_ctx);
+  void SetLaunched(DeviceCtx *device_ctx);
 
-  static const CudaInstrStatusQuerier* Cast(const char* mem_ptr) {
-    return reinterpret_cast<const CudaInstrStatusQuerier*>(mem_ptr);
+  static const CudaInstrStatusQuerier *Cast(const char *mem_ptr) {
+    return reinterpret_cast<const CudaInstrStatusQuerier *>(mem_ptr);
   }
-  static CudaInstrStatusQuerier* MutCast(char* mem_ptr) {
-    return reinterpret_cast<CudaInstrStatusQuerier*>(mem_ptr);
+  static CudaInstrStatusQuerier *MutCast(char *mem_ptr) {
+    return reinterpret_cast<CudaInstrStatusQuerier *>(mem_ptr);
   }
-  static CudaInstrStatusQuerier* PlacementNew(char* mem_ptr, int64_t device_id) {
+  static CudaInstrStatusQuerier *PlacementNew(char *mem_ptr,
+                                              int64_t device_id) {
     return new (mem_ptr) CudaInstrStatusQuerier(device_id);
   }
 
- private:
-  explicit CudaInstrStatusQuerier(int64_t device_id) : launched_(false), device_id_(device_id) {}
+private:
+  explicit CudaInstrStatusQuerier(int64_t device_id)
+      : launched_(false), device_id_(device_id) {}
   bool event_completed() const;
 
   volatile bool launched_;
@@ -53,7 +55,7 @@ class CudaInstrStatusQuerier {
 
 #endif
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_CUDA_VM_INSTRUCTION_STATUS_QUERIER_H_
+#endif // ONEFLOW_CORE_VM_CUDA_VM_INSTRUCTION_STATUS_QUERIER_H_

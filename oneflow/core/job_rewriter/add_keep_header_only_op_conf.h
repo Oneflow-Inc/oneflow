@@ -23,8 +23,8 @@ namespace oneflow {
 class OpGraph;
 class Job;
 
-void AddKeepHeaderOnlyOp(const OpGraph& op_graph, JobBuilder* job_builder);
+void AddKeepHeaderOnlyOp(const OpGraph &op_graph, JobBuilder *job_builder);
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_REWRITER_ADD_KEEP_HEADER_ONLY_H_
+#endif // ONEFLOW_CORE_JOB_REWRITER_ADD_KEEP_HEADER_ONLY_H_

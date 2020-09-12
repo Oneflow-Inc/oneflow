@@ -22,18 +22,18 @@ limitations under the License.
 namespace oneflow {
 
 class ActorMsgBus final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgBus);
   ~ActorMsgBus() = default;
 
-  void SendMsg(const ActorMsg& msg);
-  void SendMsgWithoutCommNet(const ActorMsg& msg);
+  void SendMsg(const ActorMsg &msg);
+  void SendMsgWithoutCommNet(const ActorMsg &msg);
 
- private:
+private:
   friend class Global<ActorMsgBus>;
   ActorMsgBus() = default;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_BUS_H_
+#endif // ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_BUS_H_

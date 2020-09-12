@@ -19,36 +19,43 @@ limitations under the License.
 namespace oneflow {
 
 class ForeignCallback {
- public:
+public:
   ForeignCallback() = default;
   virtual ~ForeignCallback() = default;
 
-  virtual void EagerMirroredCast(const std::string& op_attribute_str,
-                                 const std::string& parallel_conf_str) const {
+  virtual void EagerMirroredCast(const std::string &op_attribute_str,
+                                 const std::string &parallel_conf_str) const {
     UNIMPLEMENTED();
   }
-  virtual void EagerInterpretCompletedOp(const std::string& op_attribute_str,
-                                         const std::string& parallel_conf_str) const {
+  virtual void
+  EagerInterpretCompletedOp(const std::string &op_attribute_str,
+                            const std::string &parallel_conf_str) const {
     UNIMPLEMENTED();
   }
 
-  virtual void OfBlobCall(int64_t unique_id, int64_t ofblob_ptr) const { UNIMPLEMENTED(); }
+  virtual void OfBlobCall(int64_t unique_id, int64_t ofblob_ptr) const {
+    UNIMPLEMENTED();
+  }
 
-  virtual void RemoveForeignCallback(int64_t unique_id) const { UNIMPLEMENTED(); }
+  virtual void RemoveForeignCallback(int64_t unique_id) const {
+    UNIMPLEMENTED();
+  }
 
   // return scope_symbol_id
-  virtual int64_t MakeScopeSymbol(const std::string& job_conf, const std::string& parallel_conf,
+  virtual int64_t MakeScopeSymbol(const std::string &job_conf,
+                                  const std::string &parallel_conf,
                                   bool is_mirrored) const {
     UNIMPLEMENTED();
     return 0;
   }
   // return parallel_desc_symbol_id
-  virtual int64_t MakeParallelDescSymbol(const std::string& parallel_conf) const {
+  virtual int64_t
+  MakeParallelDescSymbol(const std::string &parallel_conf) const {
     UNIMPLEMENTED();
     return 0;
   }
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_FOREIGN_CALLBACK_H_
+#endif // ONEFLOW_CORE_JOB_FOREIGN_CALLBACK_H_

@@ -20,21 +20,24 @@ limitations under the License.
 
 namespace oneflow {
 
-enum BufferStatus { kBufferStatusSuccess = 0, kBufferStatusErrorClosed, kBufferStatusEmpty };
+enum BufferStatus {
+  kBufferStatusSuccess = 0,
+  kBufferStatusErrorClosed,
+  kBufferStatusEmpty
+};
 
-template<typename T>
-class Buffer final {
- public:
+template <typename T> class Buffer final {
+public:
   OF_DISALLOW_COPY_AND_MOVE(Buffer);
   Buffer(size_t max_len) : max_len_(max_len), is_closed_(false) {}
   ~Buffer() = default;
 
-  BufferStatus Send(const T& item);
-  BufferStatus Receive(T* item);
-  BufferStatus TryReceive(T* item);
+  BufferStatus Send(const T &item);
+  BufferStatus Receive(T *item);
+  BufferStatus TryReceive(T *item);
   void Close();
 
- private:
+private:
   std::queue<T> queue_;
   mutable std::mutex mutex_;
   size_t max_len_;
@@ -42,44 +45,50 @@ class Buffer final {
   std::condition_variable cond_;
 };
 
-template<typename T>
-BufferStatus Buffer<T>::Send(const T& item) {
+template <typename T> BufferStatus Buffer<T>::Send(const T &item) {
   std::unique_lock<std::mutex> lock(mutex_);
   cond_.wait(lock, [this]() { return queue_.size() < max_len_ || is_closed_; });
-  if (is_closed_) { return kBufferStatusErrorClosed; }
+  if (is_closed_) {
+    return kBufferStatusErrorClosed;
+  }
   queue_.push(item);
   cond_.notify_one();
   return kBufferStatusSuccess;
 }
 
-template<typename T>
-BufferStatus Buffer<T>::Receive(T* item) {
+template <typename T> BufferStatus Buffer<T>::Receive(T *item) {
   std::unique_lock<std::mutex> lock(mutex_);
   cond_.wait(lock, [this]() { return (!queue_.empty()) || is_closed_; });
-  if (queue_.empty()) { return kBufferStatusErrorClosed; }
+  if (queue_.empty()) {
+    return kBufferStatusErrorClosed;
+  }
   *item = queue_.front();
   queue_.pop();
-  if (queue_.size() < max_len_) { cond_.notify_all(); }
+  if (queue_.size() < max_len_) {
+    cond_.notify_all();
+  }
   return kBufferStatusSuccess;
 }
 
-template<typename T>
-BufferStatus Buffer<T>::TryReceive(T* item) {
+template <typename T> BufferStatus Buffer<T>::TryReceive(T *item) {
   std::unique_lock<std::mutex> lock(mutex_);
-  if (queue_.empty()) { return is_closed_ ? kBufferStatusErrorClosed : kBufferStatusEmpty; }
+  if (queue_.empty()) {
+    return is_closed_ ? kBufferStatusErrorClosed : kBufferStatusEmpty;
+  }
   *item = queue_.front();
   queue_.pop();
-  if (queue_.size() < max_len_) { cond_.notify_all(); }
+  if (queue_.size() < max_len_) {
+    cond_.notify_all();
+  }
   return kBufferStatusSuccess;
 }
 
-template<typename T>
-void Buffer<T>::Close() {
+template <typename T> void Buffer<T>::Close() {
   std::unique_lock<std::mutex> lock(mutex_);
   is_closed_ = true;
   cond_.notify_all();
 }
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_BUFFER_H_
+#endif // ONEFLOW_CORE_COMMON_BUFFER_H_

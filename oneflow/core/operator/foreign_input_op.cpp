@@ -20,27 +20,31 @@ namespace oneflow {
 
 namespace {
 
-void CheckOpConf(const OperatorConf& op_conf) { CHECK(op_conf.ctrl_in_op_name().empty()); }
+void CheckOpConf(const OperatorConf &op_conf) {
+  CHECK(op_conf.ctrl_in_op_name().empty());
+}
 
-}  // namespace
+} // namespace
 
 void ForeignInputOp::InitFromOpConf() {
   CHECK(op_conf().has_foreign_input_conf());
-  if (op_conf().foreign_input_conf().has_tick()) { EnrollInputBn("tick", false); }
+  if (op_conf().foreign_input_conf().has_tick()) {
+    EnrollInputBn("tick", false);
+  }
   EnrollOutputBn("out", false);
 }
 
-const PbMessage& ForeignInputOp::GetCustomizedConf() const {
+const PbMessage &ForeignInputOp::GetCustomizedConf() const {
   return op_conf().foreign_input_conf();
 }
 
 Maybe<void> ForeignInputOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+    const ParallelContext *parallel_ctx) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   CheckOpConf(op_conf());
-  const auto& conf = op_conf().foreign_input_conf().blob_conf();
-  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  const auto &conf = op_conf().foreign_input_conf().blob_conf();
+  BlobDesc *out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(conf.shape());
   if (conf.has_data_type()) {
     out_blob_desc->set_data_type(conf.data_type());
@@ -53,16 +57,18 @@ Maybe<void> ForeignInputOp::InferBlobDescs(
 }
 
 Maybe<void> ForeignInputOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  *BatchAxis4BnInOp("out") = op_conf().foreign_input_conf().blob_conf().batch_axis();
+    std::function<OptInt64 *(const std::string &)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("out") =
+      op_conf().foreign_input_conf().blob_conf().batch_axis();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ForeignInputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void>
+ForeignInputOp::GetSbpSignatures(SbpSignatureList *sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kForeignInputConf, ForeignInputOp);
 REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kForeignInputConf, 1);
 
-}  // namespace oneflow
+} // namespace oneflow

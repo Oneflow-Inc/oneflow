@@ -27,7 +27,8 @@ hob::BoolFunctorPtr<KernelRegContext> HobTrue() {
   string_stream << "\" always true \"";
   const std::shared_ptr<const hob::BoolFunctor<KernelRegContext>> krbf_ptr =
       std::make_shared<const hob::HighOrderBoolFunctor<KernelRegContext>>(
-          string_stream.str(), [](const KernelRegContext& ctx) { return true; });
+          string_stream.str(),
+          [](const KernelRegContext &ctx) { return true; });
   return krbf_ptr;
 }
 
@@ -36,17 +37,20 @@ hob::BoolFunctorPtr<KernelRegContext> HobFalse() {
   string_stream << "\" always false \"";
   const std::shared_ptr<const hob::BoolFunctor<KernelRegContext>> krbf_ptr =
       std::make_shared<const hob::HighOrderBoolFunctor<KernelRegContext>>(
-          string_stream.str(), [](const KernelRegContext& ctx) { return false; });
+          string_stream.str(),
+          [](const KernelRegContext &ctx) { return false; });
   return krbf_ptr;
 }
 
-hob::HobContextGetter<KernelRegContext, DataType> HobDataType(const std::string& tensor_name,
-                                                              int tensor_idx) {
+hob::HobContextGetter<KernelRegContext, DataType>
+HobDataType(const std::string &tensor_name, int tensor_idx) {
   std::ostringstream string_stream;
   string_stream << "data_type of tensor \'" << tensor_name << "\'";
   return hob::HobContextGetter<KernelRegContext, DataType>(
-      string_stream.str(), [tensor_name, tensor_idx](const KernelRegContext& ctx) {
-        const user_op::TensorDesc* desc = ctx.TensorDesc4ArgNameAndIndex(tensor_name, tensor_idx);
+      string_stream.str(),
+      [tensor_name, tensor_idx](const KernelRegContext &ctx) {
+        const user_op::TensorDesc *desc =
+            ctx.TensorDesc4ArgNameAndIndex(tensor_name, tensor_idx);
         return desc->data_type();
       });
 }
@@ -56,9 +60,11 @@ HobStringContextGetter<KernelRegContext> HobDeviceTag() {
   string_stream << "device_tag";
   return HobStringContextGetter<KernelRegContext>(
       string_stream.str(),
-      [](const KernelRegContext& ctx) -> const std::string& { return ctx.device_tag(); });
+      [](const KernelRegContext &ctx) -> const std::string & {
+        return ctx.device_tag();
+      });
 }
 
-}  // namespace user_op
+} // namespace user_op
 
-}  // namespace oneflow
+} // namespace oneflow

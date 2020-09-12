@@ -20,20 +20,22 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type>
+template <DeviceType device_type>
 class OutputKernel final : public KernelIf<device_type> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(OutputKernel);
   OutputKernel() = default;
   ~OutputKernel() = default;
 
- private:
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardHeader(const KernelCtx& ctx,
-                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+private:
+  void ForwardDataContent(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
+  void ForwardHeader(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_OUTPUT_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_OUTPUT_KERNEL_H_

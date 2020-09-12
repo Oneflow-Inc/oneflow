@@ -43,7 +43,7 @@ OBJECT_MSG_BEGIN(ThreadCtx);
 OBJECT_MSG_END(ThreadCtx);
 // clang-format on
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_THREAD_MSG_H_
+#endif // ONEFLOW_CORE_VM_THREAD_MSG_H_

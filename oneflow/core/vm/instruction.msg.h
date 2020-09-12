@@ -16,19 +16,19 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_VPU_INSTRUCTION_MSG_H_
 #define ONEFLOW_CORE_VM_VPU_INSTRUCTION_MSG_H_
 
-#include <cstring>
-#include <mutex>
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/object_msg/object_msg.h"
-#include "oneflow/core/vm/stream_desc.msg.h"
-#include "oneflow/core/vm/vm_object.msg.h"
-#include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/interpret_type.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/instruction.pb.h"
+#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/interpret_type.h"
+#include "oneflow/core/vm/stream_desc.msg.h"
+#include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/vm_object.msg.h"
+#include <cstring>
+#include <mutex>
 
 namespace oneflow {
 namespace vm {
@@ -85,8 +85,8 @@ OBJECT_MSG_BEGIN(InstructionMsg);
 OBJECT_MSG_END(InstructionMsg);
 // clang-format on
 
-template<OperandMemZoneModifier mem_zone_modifier>
-void CheckOperand(const Operand& operand);
+template <OperandMemZoneModifier mem_zone_modifier>
+void CheckOperand(const Operand &operand);
 
 static const int kInstructionStatusBufferBytes = 32;
 // clang-format off
@@ -218,7 +218,7 @@ OBJECT_MSG_BEGIN(Instruction);
 OBJECT_MSG_END(Instruction);
 // clang-format on
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VPU_INSTRUCTION_MSG_H_
+#endif // ONEFLOW_CORE_VM_VPU_INSTRUCTION_MSG_H_

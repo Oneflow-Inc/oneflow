@@ -23,20 +23,22 @@ namespace oneflow {
 #ifdef WITH_CUDA
 
 class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);
   CopyHdKernel() = default;
   ~CopyHdKernel() = default;
 
- private:
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
-  void ForwardHeader(const KernelCtx& ctx,
-                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+private:
+  void
+  ForwardDataContent(const KernelCtx &,
+                     std::function<Blob *(const std::string &)>) const override;
+  void ForwardHeader(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
 };
 
 #endif
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_COPY_HD_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_COPY_HD_KERNEL_H_

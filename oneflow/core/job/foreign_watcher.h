@@ -21,13 +21,15 @@ limitations under the License.
 namespace oneflow {
 
 class ForeignWatcher {
- public:
+public:
   ForeignWatcher() = default;
   virtual ~ForeignWatcher() = default;
 
-  virtual void Call(const std::string& handler_uuid, int64_t ofblob_ptr) const { UNIMPLEMENTED(); }
+  virtual void Call(const std::string &handler_uuid, int64_t ofblob_ptr) const {
+    UNIMPLEMENTED();
+  }
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_FOREIGN_WATCHER_H_
+#endif // ONEFLOW_CORE_JOB_FOREIGN_WATCHER_H_

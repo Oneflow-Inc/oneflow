@@ -16,34 +16,34 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CONTROL_CTRL_SERVICE_H_
 #define ONEFLOW_CORE_CONTROL_CTRL_SERVICE_H_
 
+#include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/control/control.pb.h"
 #include <grpc++/grpc++.h>
 #include <grpc++/impl/codegen/async_stream.h>
 #include <grpc++/impl/codegen/async_unary_call.h>
+#include <grpc++/impl/codegen/client_unary_call.h>
 #include <grpc++/impl/codegen/proto_utils.h>
 #include <grpc++/impl/codegen/rpc_method.h>
 #include <grpc++/impl/codegen/service_type.h>
 #include <grpc++/impl/codegen/status.h>
 #include <grpc++/impl/codegen/stub_options.h>
 #include <grpc++/impl/codegen/sync_stream.h>
-#include <grpc++/impl/codegen/client_unary_call.h>
-#include "oneflow/core/common/preprocessor.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/control/control.pb.h"
 
 namespace oneflow {
 
-#define CTRL_METHOD_SEQ               \
-  OF_PP_MAKE_TUPLE_SEQ(LoadServer)    \
-  OF_PP_MAKE_TUPLE_SEQ(Barrier)       \
-  OF_PP_MAKE_TUPLE_SEQ(TryLock)       \
-  OF_PP_MAKE_TUPLE_SEQ(NotifyDone)    \
-  OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone) \
-  OF_PP_MAKE_TUPLE_SEQ(PushKV)        \
-  OF_PP_MAKE_TUPLE_SEQ(ClearKV)       \
-  OF_PP_MAKE_TUPLE_SEQ(PullKV)        \
-  OF_PP_MAKE_TUPLE_SEQ(PushActEvent)  \
-  OF_PP_MAKE_TUPLE_SEQ(Clear)         \
-  OF_PP_MAKE_TUPLE_SEQ(IncreaseCount) \
+#define CTRL_METHOD_SEQ                                                        \
+  OF_PP_MAKE_TUPLE_SEQ(LoadServer)                                             \
+  OF_PP_MAKE_TUPLE_SEQ(Barrier)                                                \
+  OF_PP_MAKE_TUPLE_SEQ(TryLock)                                                \
+  OF_PP_MAKE_TUPLE_SEQ(NotifyDone)                                             \
+  OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone)                                          \
+  OF_PP_MAKE_TUPLE_SEQ(PushKV)                                                 \
+  OF_PP_MAKE_TUPLE_SEQ(ClearKV)                                                \
+  OF_PP_MAKE_TUPLE_SEQ(PullKV)                                                 \
+  OF_PP_MAKE_TUPLE_SEQ(PushActEvent)                                           \
+  OF_PP_MAKE_TUPLE_SEQ(Clear)                                                  \
+  OF_PP_MAKE_TUPLE_SEQ(IncreaseCount)                                          \
   OF_PP_MAKE_TUPLE_SEQ(EraseCount)
 
 #define CatRequest(method) method##Request,
@@ -51,58 +51,64 @@ namespace oneflow {
 #define CatEnum(method) k##method,
 #define CatName(method) "/oneflow.CtrlService/" OF_PP_STRINGIZE(method),
 
-#define MAKE_META_DATA()                                                                       \
-  enum class CtrlMethod { OF_PP_FOR_EACH_TUPLE(CatEnum, CTRL_METHOD_SEQ) };                    \
-  static const char* g_method_name[] = {OF_PP_FOR_EACH_TUPLE(CatName, CTRL_METHOD_SEQ)};       \
-  using CtrlRequestTuple = std::tuple<OF_PP_FOR_EACH_TUPLE(CatRequest, CTRL_METHOD_SEQ) void>; \
-  using CtrlResponseTuple = std::tuple<OF_PP_FOR_EACH_TUPLE(CatReqponse, CTRL_METHOD_SEQ) void>;
+#define MAKE_META_DATA()                                                       \
+  enum class CtrlMethod { OF_PP_FOR_EACH_TUPLE(CatEnum, CTRL_METHOD_SEQ) };    \
+  static const char *g_method_name[] = {                                       \
+      OF_PP_FOR_EACH_TUPLE(CatName, CTRL_METHOD_SEQ)};                         \
+  using CtrlRequestTuple =                                                     \
+      std::tuple<OF_PP_FOR_EACH_TUPLE(CatRequest, CTRL_METHOD_SEQ) void>;      \
+  using CtrlResponseTuple =                                                    \
+      std::tuple<OF_PP_FOR_EACH_TUPLE(CatReqponse, CTRL_METHOD_SEQ) void>;
 
 MAKE_META_DATA()
 
 constexpr const size_t kCtrlMethodNum = OF_PP_SEQ_SIZE(CTRL_METHOD_SEQ);
 
-template<CtrlMethod ctrl_method>
+template <CtrlMethod ctrl_method>
 using CtrlRequest =
-    typename std::tuple_element<static_cast<size_t>(ctrl_method), CtrlRequestTuple>::type;
+    typename std::tuple_element<static_cast<size_t>(ctrl_method),
+                                CtrlRequestTuple>::type;
 
-template<CtrlMethod ctrl_method>
+template <CtrlMethod ctrl_method>
 using CtrlResponse =
-    typename std::tuple_element<static_cast<size_t>(ctrl_method), CtrlResponseTuple>::type;
+    typename std::tuple_element<static_cast<size_t>(ctrl_method),
+                                CtrlResponseTuple>::type;
 
-inline const char* GetMethodName(CtrlMethod method) {
+inline const char *GetMethodName(CtrlMethod method) {
   return g_method_name[static_cast<int32_t>(method)];
 }
 
 class CtrlService final {
- public:
+public:
   class Stub final {
-   public:
+  public:
     Stub(std::shared_ptr<grpc::ChannelInterface> channel);
 
-    template<CtrlMethod ctrl_method>
-    grpc::Status CallMethod(grpc::ClientContext* context, const CtrlRequest<ctrl_method>& request,
-                            CtrlResponse<ctrl_method>* response) {
-      return grpc::BlockingUnaryCall(channel_.get(),
-                                     rpcmethods_.at(static_cast<size_t>(ctrl_method)), context,
-                                     request, response);
+    template <CtrlMethod ctrl_method>
+    grpc::Status CallMethod(grpc::ClientContext *context,
+                            const CtrlRequest<ctrl_method> &request,
+                            CtrlResponse<ctrl_method> *response) {
+      return grpc::BlockingUnaryCall(
+          channel_.get(), rpcmethods_.at(static_cast<size_t>(ctrl_method)),
+          context, request, response);
     }
 
-   private:
+  private:
     std::array<const grpc::RpcMethod, kCtrlMethodNum> rpcmethods_;
 
     std::shared_ptr<grpc::ChannelInterface> channel_;
   };
 
-  static std::unique_ptr<Stub> NewStub(const std::string& addr);
+  static std::unique_ptr<Stub> NewStub(const std::string &addr);
 
   class AsyncService final : public grpc::Service {
-   public:
+  public:
     AsyncService();
     ~AsyncService() = default;
     using grpc::Service::RequestAsyncUnary;
   };
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CONTROL_CTRL_SERVICE_H_
+#endif // ONEFLOW_CORE_CONTROL_CTRL_SERVICE_H_

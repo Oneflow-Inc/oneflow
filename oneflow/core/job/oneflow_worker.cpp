@@ -13,23 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/oneflow.h"
-#include "oneflow/core/job/machine_context.h"
-#include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/job/session_global_objects_scope.h"
-#include "oneflow/core/job/env.pb.h"
-#include "oneflow/core/job/cluster.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/control/cluster_control.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/job/cluster.h"
+#include "oneflow/core/job/env.pb.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
 
 namespace {
 
-Maybe<void> Run(const std::string& env_proto_filepath) {
+Maybe<void> Run(const std::string &env_proto_filepath) {
   EnvProto env_proto;
   ParseProtoFromTextFile(env_proto_filepath, &env_proto);
   CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
@@ -41,13 +41,13 @@ Maybe<void> Run(const std::string& env_proto_filepath) {
   return Maybe<void>::Ok();
 }
 
-}  // namespace
+} // namespace
 
-}  // namespace oneflow
+} // namespace oneflow
 
 DEFINE_string(env_proto, "", "EnvProto file path");
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   using namespace oneflow;
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   CHECK_JUST(Run(FLAGS_env_proto));

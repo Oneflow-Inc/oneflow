@@ -26,6 +26,6 @@ struct InplaceObasInfo {
   OpBlobArgPairs con_inplace_oba_pairs;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_REGISTER_OP_BLOB_ARG_INFO_H_
+#endif // ONEFLOW_CORE_REGISTER_OP_BLOB_ARG_INFO_H_

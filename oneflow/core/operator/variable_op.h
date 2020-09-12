@@ -21,28 +21,30 @@ limitations under the License.
 namespace oneflow {
 
 class VariableOp final : public Operator {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(VariableOp);
   VariableOp() : Operator() {}
   ~VariableOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  const PbMessage &GetCustomizedConf() const override;
+  Maybe<void> InferBlobDescs(
+      std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+      const ParallelContext *parallel_ctx) const override;
 
- private:
+private:
   Maybe<void> InferSbpSignature(
-      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override;
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
-  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+      SbpSignature *sbp_signature, const SbpSignature &sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature &)> &CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint *>(const std::string &)>
+          SbpInferHint4Ibn,
+      const ParallelDesc &parallel_desc) const override;
+  Maybe<void> InferBatchAxis(std::function<OptInt64 *(const std::string &)>
+                                 BatchAxis4BnInOp) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList *sbp_sig_list) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_VARIABLE_OP_H_
+#endif // ONEFLOW_CORE_OPERATOR_VARIABLE_OP_H_

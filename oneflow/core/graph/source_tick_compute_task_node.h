@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class SourceTickCompTaskNode final : public CompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(SourceTickCompTaskNode);
   SourceTickCompTaskNode() = default;
   ~SourceTickCompTaskNode() = default;
@@ -33,11 +33,11 @@ class SourceTickCompTaskNode final : public CompTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kSourceTick; }
 
- private:
+private:
   void InferProducedDataRegstTimeShape() override;
   bool IsIndependent() const override { return true; }
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_SOURCE_TICK_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_SOURCE_TICK_COMPUTE_TASK_NODE_H_

@@ -28,10 +28,11 @@ REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
     .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
     .Attr<int32_t>("shuffle_buffer_size", UserOpAttrType::kAtInt32, 1024)
     .Attr<bool>("shuffle_after_epoch", UserOpAttrType::kAtBool, false)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      user_op::TensorDesc *out_tensor =
+          ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
-      const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+      const SbpParallel &sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       if (sbp.has_split_parallel() && parallel_num > 1) {
         CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
@@ -41,19 +42,21 @@ REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
       *out_tensor->mut_data_type() = DataType::kOFRecord;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext *ctx) -> Maybe<void> {
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
       return Maybe<void>::Ok();
     })
-    .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
-                             const user_op::UserOpConfWrapper& conf) {
-      user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
-      CHECK(out_modifier != nullptr);
-      out_modifier->set_header_infered_before_compute(false);
-    });
+    .SetOutputArgModifyFn(
+        [](user_op::GetOutputArgModifier GetOutputArgModifierFn,
+           const user_op::UserOpConfWrapper &conf) {
+          user_op::OutputArgModifier *out_modifier =
+              GetOutputArgModifierFn("out", 0);
+          CHECK(out_modifier != nullptr);
+          out_modifier->set_header_infered_before_compute(false);
+        });
 
-}  // namespace oneflow
+} // namespace oneflow

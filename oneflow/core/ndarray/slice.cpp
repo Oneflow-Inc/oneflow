@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Slice::Slice(const std::initializer_list<int64_t>& l) {
+Slice::Slice(const std::initializer_list<int64_t> &l) {
   DimVector vec(l);
   value_capacity_ = 0;
   if (vec.size() == 0) {
@@ -43,22 +43,38 @@ Slice::Slice(const std::initializer_list<int64_t>& l) {
 
 bool Slice::IsBounded() const {
   CHECK_NE(stride_, 0);
-  if (value_capacity_ == 0) { return false; }
-  return (start_ >= 0) && (start_ <= value_capacity_ - (stride_ < 0)) && (end_ >= 0 - (stride_ < 0))
-         && (end_ <= value_capacity_);
+  if (value_capacity_ == 0) {
+    return false;
+  }
+  return (start_ >= 0) && (start_ <= value_capacity_ - (stride_ < 0)) &&
+         (end_ >= 0 - (stride_ < 0)) && (end_ <= value_capacity_);
 }
 
-const Slice& Slice::Bound(size_t value_capacity) {
+const Slice &Slice::Bound(size_t value_capacity) {
   CHECK_GT(value_capacity, 0);
-  if (value_capacity_ == value_capacity) { return *this; }
+  if (value_capacity_ == value_capacity) {
+    return *this;
+  }
   CHECK_EQ(value_capacity_, 0);
   value_capacity_ = value_capacity;
-  if (start_ != kStart && start_ < 0) { start_ += value_capacity_; }
-  if (end_ != kStart && end_ < 0) { end_ += value_capacity_; }
-  if (start_ == kStart) { start_ = 0; }
-  if (end_ == kEnd) { end_ = value_capacity_; }
-  if (start_ == kEnd) { start_ = value_capacity_ - (stride_ < 0); }
-  if (end_ == kStart) { end_ = 0 - (stride_ < 0); }
+  if (start_ != kStart && start_ < 0) {
+    start_ += value_capacity_;
+  }
+  if (end_ != kStart && end_ < 0) {
+    end_ += value_capacity_;
+  }
+  if (start_ == kStart) {
+    start_ = 0;
+  }
+  if (end_ == kEnd) {
+    end_ = value_capacity_;
+  }
+  if (start_ == kEnd) {
+    start_ = value_capacity_ - (stride_ < 0);
+  }
+  if (end_ == kStart) {
+    end_ = 0 - (stride_ < 0);
+  }
   CHECK_NE(stride_, 0);
   CHECK_GE(start_, 0);
   CHECK_LE(start_, value_capacity_);
@@ -69,9 +85,14 @@ const Slice& Slice::Bound(size_t value_capacity) {
 
 size_t Slice::Size() const {
   CHECK(IsBounded());
-  if (stride_ > 0 && start_ >= end_) { return 0; }
-  if (stride_ < 0 && start_ <= end_) { return 0; }
-  return ((end_ - start_) + (stride_ - ((stride_ > 0) - (stride_ < 0)))) / stride_;
+  if (stride_ > 0 && start_ >= end_) {
+    return 0;
+  }
+  if (stride_ < 0 && start_ <= end_) {
+    return 0;
+  }
+  return ((end_ - start_) + (stride_ - ((stride_ > 0) - (stride_ < 0)))) /
+         stride_;
 }
 
 bool Slice::IsContiguous() const {
@@ -83,4 +104,4 @@ bool Slice::IsCoveringAll() const {
   return start_ == 0 && end_ == value_capacity_;
 }
 
-}  // namespace oneflow
+} // namespace oneflow

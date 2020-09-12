@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/thread/thread.h"
-#include "oneflow/core/job/runtime_context.h"
-#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/runtime_context.h"
 
 namespace oneflow {
 
@@ -27,24 +27,26 @@ Thread::~Thread() {
   msg_channel_.Close();
 }
 
-void Thread::AddTask(const TaskProto& task) {
+void Thread::AddTask(const TaskProto &task) {
   std::unique_lock<std::mutex> lck(id2task_mtx_);
   CHECK(id2task_.emplace(task.task_id(), task).second);
 }
 
-void Thread::EnqueueActorMsg(const ActorMsg& msg) {
-  if (Global<ResourceDesc, ForSession>::Get()->thread_enable_local_message_queue()
-      && std::this_thread::get_id() == actor_thread_.get_id()) {
+void Thread::EnqueueActorMsg(const ActorMsg &msg) {
+  if (Global<ResourceDesc, ForSession>::Get()
+          ->thread_enable_local_message_queue() &&
+      std::this_thread::get_id() == actor_thread_.get_id()) {
     local_msg_queue_.push(msg);
   } else {
     msg_channel_.Send(msg);
   }
 }
 
-void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
+void Thread::PollMsgChannel(const ThreadCtx &thread_ctx) {
   while (true) {
     if (local_msg_queue_.empty()) {
-      CHECK_EQ(msg_channel_.ReceiveMany(&local_msg_queue_), kChannelStatusSuccess);
+      CHECK_EQ(msg_channel_.ReceiveMany(&local_msg_queue_),
+               kChannelStatusSuccess);
     }
     ActorMsg msg = std::move(local_msg_queue_.front());
     local_msg_queue_.pop();
@@ -73,13 +75,14 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
   }
 }
 
-void Thread::ConstructActor(int64_t actor_id, const ThreadCtx& thread_ctx) {
+void Thread::ConstructActor(int64_t actor_id, const ThreadCtx &thread_ctx) {
   LOG(INFO) << "thread " << thrd_id_ << " construct actor " << actor_id;
   std::unique_lock<std::mutex> lck(id2task_mtx_);
   auto task_it = id2task_.find(actor_id);
-  CHECK(id2actor_ptr_.emplace(actor_id, NewActor(task_it->second, thread_ctx)).second);
+  CHECK(id2actor_ptr_.emplace(actor_id, NewActor(task_it->second, thread_ctx))
+            .second);
   id2task_.erase(task_it);
   Global<RuntimeCtx>::Get()->DecreaseCounter("constructing_actor_cnt");
 }
 
-}  // namespace oneflow
+} // namespace oneflow

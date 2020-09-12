@@ -18,7 +18,9 @@ limitations under the License.
 
 namespace oneflow {
 
-int64_t IDMgr::GetGpuH2DThrdId(int64_t dev_phy_id) const { return gpu_device_num_ + dev_phy_id; }
+int64_t IDMgr::GetGpuH2DThrdId(int64_t dev_phy_id) const {
+  return gpu_device_num_ + dev_phy_id;
+}
 int64_t IDMgr::GetGpuD2HThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 2 + dev_phy_id;
 }
@@ -38,18 +40,24 @@ int64_t IDMgr::CommNetThrdId() const {
   return gpu_device_num_ * GetCudaWorkTypeSize() + cpu_device_num_;
 }
 int64_t IDMgr::TickTockThrdId() const { return CommNetThrdId() + 1; }
-int64_t IDMgr::BaseIndependentThrdId() const { return base_independent_thrd_id_; }
+int64_t IDMgr::BaseIndependentThrdId() const {
+  return base_independent_thrd_id_;
+}
 void IDMgr::UpdateBaseIndependentThrdId(int64_t val) {
-  if (val >= base_independent_thrd_id_) { base_independent_thrd_id_ = val + 1; }
+  if (val >= base_independent_thrd_id_) {
+    base_independent_thrd_id_ = val + 1;
+  }
 }
 
-int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id) {
+int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id,
+                         int64_t local_work_stream_id) {
   int64_t machine_thrd_id = GetMachineThrdId(machine_id, thrd_id);
   CHECK_LT(machine_thrd_id2num_of_tasks_[machine_thrd_id],
            (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
-  CHECK_LT(local_work_stream_id, static_cast<int64_t>(1) << local_work_stream_id_bit_num_);
-  return machine_thrd_id | (local_work_stream_id << task_id_bit_num_)
-         | (machine_thrd_id2num_of_tasks_[machine_thrd_id]++);
+  CHECK_LT(local_work_stream_id, static_cast<int64_t>(1)
+                                     << local_work_stream_id_bit_num_);
+  return machine_thrd_id | (local_work_stream_id << task_id_bit_num_) |
+         (machine_thrd_id2num_of_tasks_[machine_thrd_id]++);
 }
 
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
@@ -81,7 +89,8 @@ int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
 }
 
 int64_t IDMgr::AllocateLocalWorkStreamId(int64_t machine_id, int64_t thrd_id) {
-  return 100 + (machine_thrd_id2stream_id_cnt_[GetMachineThrdId(machine_id, thrd_id)]++);
+  return 100 + (machine_thrd_id2stream_id_cnt_[GetMachineThrdId(machine_id,
+                                                                thrd_id)]++);
 }
 
 int64_t IDMgr::GlobalWorkStreamId4TaskId(int64_t task_id) const {
@@ -110,11 +119,13 @@ int64_t IDMgr::LocalWorkStreamId4ActorId(int64_t actor_id) const {
 int64_t IDMgr::AllocateChainId(int64_t global_work_stream_id) {
   CHECK_LT(stream_id2chain_cnt_[global_work_stream_id],
            (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
-  return global_work_stream_id | (stream_id2chain_cnt_[global_work_stream_id]++);
+  return global_work_stream_id |
+         (stream_id2chain_cnt_[global_work_stream_id]++);
 }
 
 int64_t IDMgr::PickCpuThrdIdEvenly(int64_t machine_id) {
-  return GetCpuDeviceThrdId(machine_id2num_cpu_thrd_id_picked_[machine_id]++ % cpu_device_num_);
+  return GetCpuDeviceThrdId(machine_id2num_cpu_thrd_id_picked_[machine_id]++ %
+                            cpu_device_num_);
 }
 
 IDMgr::IDMgr() {
@@ -122,7 +133,8 @@ IDMgr::IDMgr() {
            static_cast<int64_t>(1) << machine_id_bit_num_);
   gpu_device_num_ = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
   cpu_device_num_ = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
-  CHECK_LT(gpu_device_num_ + cpu_device_num_, (static_cast<int64_t>(1) << thread_id_bit_num_) - 3);
+  CHECK_LT(gpu_device_num_ + cpu_device_num_,
+           (static_cast<int64_t>(1) << thread_id_bit_num_) - 3);
   regst_desc_id_count_ = 0;
   mem_block_id_count_ = 0;
   chunk_id_count_ = 0;
@@ -131,9 +143,10 @@ IDMgr::IDMgr() {
 
 int64_t IDMgr::GetMachineThrdId(int64_t machine_id, int64_t thrd_id) {
   int64_t machine_id64bit = machine_id << (63 - machine_id_bit_num_);
-  int64_t thread_id64bit = thrd_id << (local_work_stream_id_bit_num_ + task_id_bit_num_);
+  int64_t thread_id64bit =
+      thrd_id << (local_work_stream_id_bit_num_ + task_id_bit_num_);
   int64_t machine_thread_id = machine_id64bit | thread_id64bit;
   return machine_thread_id;
 }
 
-}  // namespace oneflow
+} // namespace oneflow

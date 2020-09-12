@@ -24,13 +24,14 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
     .Output("out")
     .Attr("instance_shape", UserOpAttrType::kAtShape)
     .Attr("dtype", UserOpAttrType::kAtDataType)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc *in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc *out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       out->set_is_dynamic(in->is_dynamic());
-      const auto& instance_shape = ctx->Attr<Shape>("instance_shape");
+      const auto &instance_shape = ctx->Attr<Shape>("instance_shape");
       DimVector dim_vec;
-      dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(), in->shape().dim_vec().cend());
+      dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(),
+                     in->shape().dim_vec().cend());
       dim_vec.insert(dim_vec.end(), instance_shape.dim_vec().cbegin(),
                      instance_shape.dim_vec().cend());
       *out->mut_shape() = Shape(dim_vec);
@@ -39,8 +40,9 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
       *out->mut_data_type() = data_type;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc &in =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       FOR_RANGE(int64_t, i, 0, in.shape().NumAxes()) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("in", 0), i)
@@ -54,13 +56,13 @@ REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
     .Input("in")
     .Output("out")
     .Attr("instance_dims", UserOpAttrType::kAtInt32)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+    .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc *in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_OR_RETURN(IsPODDataType(in->data_type()));
-      const Shape& in_shape = in->shape();
-      const auto& instance_dims = ctx->Attr<int32_t>("instance_dims");
+      const Shape &in_shape = in->shape();
+      const auto &instance_dims = ctx->Attr<int32_t>("instance_dims");
       CHECK_LT_OR_RETURN(instance_dims, in_shape.NumAxes());
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc *out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       out->set_is_dynamic(in->is_dynamic());
       DimVector out_dim_vec;
       out_dim_vec.insert(out_dim_vec.end(), in_shape.dim_vec().cbegin(),
@@ -69,9 +71,10 @@ REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
       *out->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      const auto& instance_dims = ctx->Attr<int32_t>("instance_dims");
+    .SetGetSbpFn([](user_op::SbpContext *ctx) -> Maybe<void> {
+      const user_op::TensorDesc &in =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      const auto &instance_dims = ctx->Attr<int32_t>("instance_dims");
       CHECK_LE_OR_RETURN(instance_dims, in.shape().NumAxes());
       FOR_RANGE(int64_t, i, 0, in.shape().NumAxes() - instance_dims) {
         ctx->NewBuilder()
@@ -82,6 +85,6 @@ REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
       return Maybe<void>::Ok();
     });
 
-}  // namespace
+} // namespace
 
-}  // namespace oneflow
+} // namespace oneflow

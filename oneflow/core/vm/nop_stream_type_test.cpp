@@ -18,14 +18,14 @@ limitations under the License.
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
 #define private public
+#include "oneflow/core/common/cached_object_msg_allocator.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
-#include "oneflow/core/vm/test_util.h"
-#include "oneflow/core/common/cached_object_msg_allocator.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 namespace vm {
@@ -36,21 +36,24 @@ namespace {
 
 using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
-ObjectMsgPtr<VirtualMachine> NaiveNewVirtualMachine(const VmDesc& vm_desc) {
+ObjectMsgPtr<VirtualMachine> NaiveNewVirtualMachine(const VmDesc &vm_desc) {
   return ObjectMsgPtr<VirtualMachine>::New(vm_desc);
 }
 
-std::function<ObjectMsgPtr<VirtualMachine>(const VmDesc&)> CachedAllocatorNewVirtualMachine() {
+std::function<ObjectMsgPtr<VirtualMachine>(const VmDesc &)>
+CachedAllocatorNewVirtualMachine() {
   auto allocator = std::make_shared<CachedObjectMsgAllocator>(20, 100);
-  return [allocator](const VmDesc& vm_desc) -> ObjectMsgPtr<VirtualMachine> {
+  return [allocator](const VmDesc &vm_desc) -> ObjectMsgPtr<VirtualMachine> {
     return ObjectMsgPtr<VirtualMachine>::NewFrom(allocator.get(), vm_desc);
   };
 }
 
-ThreadCtx* FindNopThreadCtx(VirtualMachine* vm) {
-  const StreamTypeId& nop_stream_type_id = LookupInstrTypeId("Nop").stream_type_id();
+ThreadCtx *FindNopThreadCtx(VirtualMachine *vm) {
+  const StreamTypeId &nop_stream_type_id =
+      LookupInstrTypeId("Nop").stream_type_id();
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
-    if (nop_stream_type_id == thread_ctx->stream_rt_desc().stream_desc().stream_type_id()) {
+    if (nop_stream_type_id ==
+        thread_ctx->stream_rt_desc().stream_desc().stream_type_id()) {
       return thread_ctx;
     }
   }
@@ -58,7 +61,8 @@ ThreadCtx* FindNopThreadCtx(VirtualMachine* vm) {
 }
 
 void TestNopStreamTypeNoArgument(
-    std::function<ObjectMsgPtr<VirtualMachine>(const VmDesc&)> NewVirtualMachine) {
+    std::function<ObjectMsgPtr<VirtualMachine>(const VmDesc &)>
+        NewVirtualMachine) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop"});
   auto vm = NewVirtualMachine(vm_desc.Get());
@@ -72,23 +76,26 @@ void TestNopStreamTypeNoArgument(
   ASSERT_TRUE(vm->pending_msg_list().empty());
   ASSERT_EQ(vm->waiting_instruction_list().size(), 0);
   ASSERT_EQ(vm->active_stream_list().size(), 1 * 2);
-  auto* thread_ctx = FindNopThreadCtx(vm.Mutable());
+  auto *thread_ctx = FindNopThreadCtx(vm.Mutable());
   ASSERT_TRUE(thread_ctx != nullptr);
-  auto* stream = thread_ctx->mut_stream_list()->Begin();
+  auto *stream = thread_ctx->mut_stream_list()->Begin();
   ASSERT_TRUE(stream != nullptr);
-  auto* instruction = stream->mut_running_instruction_list()->Begin();
+  auto *instruction = stream->mut_running_instruction_list()->Begin();
   ASSERT_TRUE(instruction != nullptr);
   ASSERT_EQ(instruction->mut_instr_msg(), nop_instr_msg.Mutable());
 }
 
-TEST(NopStreamType, no_argument) { TestNopStreamTypeNoArgument(&NaiveNewVirtualMachine); }
+TEST(NopStreamType, no_argument) {
+  TestNopStreamTypeNoArgument(&NaiveNewVirtualMachine);
+}
 
 TEST(NopStreamType, cached_allocator_no_argument) {
   TestNopStreamTypeNoArgument(CachedAllocatorNewVirtualMachine());
 }
 
 void TestNopStreamTypeOneArgument(
-    std::function<ObjectMsgPtr<VirtualMachine>(const VmDesc&)> NewVirtualMachine) {
+    std::function<ObjectMsgPtr<VirtualMachine>(const VmDesc &)>
+        NewVirtualMachine) {
   TestResourceDescScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
@@ -105,7 +112,9 @@ void TestNopStreamTypeOneArgument(
   vm->Receive(&list);
   while (!vm->Empty()) {
     vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) {
+      t->TryReceiveAndRun();
+    }
   }
 }
 
@@ -132,7 +141,9 @@ TEST(NopStreamType, one_argument_triger_next_instruction) {
   vm->Receive(&list);
   while (!vm->Empty()) {
     vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) {
+      t->TryReceiveAndRun();
+    }
   }
 }
 
@@ -151,13 +162,15 @@ TEST(NopStreamType, one_argument_triger_all_instructions) {
   vm->Receive(&list);
   while (!vm->Empty()) {
     vm->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
+    OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) {
+      t->TryReceiveAndRun();
+    }
   }
 }
 
-}  // namespace
+} // namespace
 
-}  // namespace test
+} // namespace test
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow

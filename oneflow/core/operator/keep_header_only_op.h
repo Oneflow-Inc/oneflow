@@ -21,26 +21,29 @@ limitations under the License.
 namespace oneflow {
 
 class KeepHeaderOnlyOp final : public Operator {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(KeepHeaderOnlyOp);
   KeepHeaderOnlyOp() = default;
   ~KeepHeaderOnlyOp() override = default;
 
   void InitFromOpConf() override;
 
-  const PbMessage& GetCustomizedConf() const override { return op_conf().keep_header_only_conf(); }
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  const PbMessage &GetCustomizedConf() const override {
+    return op_conf().keep_header_only_conf();
+  }
+  Maybe<void> InferBlobDescs(
+      std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+      const ParallelContext *parallel_ctx) const override;
 
- private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
+private:
+  Maybe<void> InferBatchAxis(std::function<OptInt64 *(const std::string &)>
+                                 BatchAxis4BnInOp) const override;
 
-  Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(const std::function<Maybe<const BlobDesc &>(
+                                   const std::string &)> &LogicalBlobDesc4Ibn,
+                               SbpSignatureList *sbp_sig_list) const override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_KEEP_HEADER_ONLY_OP_H_
+#endif // ONEFLOW_CORE_OPERATOR_KEEP_HEADER_ONLY_OP_H_

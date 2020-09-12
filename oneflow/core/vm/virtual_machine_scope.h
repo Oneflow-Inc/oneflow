@@ -19,10 +19,10 @@ namespace oneflow {
 namespace vm {
 
 class VirtualMachineScope {
- public:
-  VirtualMachineScope(const Resource& resource);
+public:
+  VirtualMachineScope(const Resource &resource);
   ~VirtualMachineScope();
 };
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow

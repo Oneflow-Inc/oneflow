@@ -22,13 +22,13 @@ limitations under the License.
 namespace oneflow {
 
 class DecodeCompActor final : public CompActor {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(DecodeCompActor);
   DecodeCompActor() = default;
   ~DecodeCompActor() = default;
 
- private:
-  void VirtualCompActorInit(const TaskProto&) override;
+private:
+  void VirtualCompActorInit(const TaskProto &) override;
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void VirtualAsyncSendNaiveConsumedRegstMsgToProducer() override;
@@ -37,6 +37,6 @@ class DecodeCompActor final : public CompActor {
   DecodeStatus decode_status_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_DECODE_COMPUTE_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_DECODE_COMPUTE_ACTOR_H_

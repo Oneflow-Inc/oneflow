@@ -16,176 +16,194 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_
 #define ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_
 
+#include "oneflow/core/graph/acc_compute_task_node.h"
+#include "oneflow/core/graph/acc_tick_compute_task_node.h"
+#include "oneflow/core/graph/callback_notify_compute_task_node.h"
+#include "oneflow/core/graph/case_compute_task_node.h"
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/pack_forward_task_node.h"
-#include "oneflow/core/graph/unpack_forward_task_node.h"
-#include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
+#include "oneflow/core/graph/device_tick_compute_task_node.h"
+#include "oneflow/core/graph/esac_compute_task_node.h"
 #include "oneflow/core/graph/foreign_input_compute_task_node.h"
 #include "oneflow/core/graph/foreign_output_compute_task_node.h"
-#include "oneflow/core/graph/callback_notify_compute_task_node.h"
+#include "oneflow/core/graph/pack_forward_task_node.h"
 #include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
+#include "oneflow/core/graph/repeat_forward_compute_task_node.h"
 #include "oneflow/core/graph/source_tick_compute_task_node.h"
 #include "oneflow/core/graph/tick_compute_task_node.h"
-#include "oneflow/core/graph/device_tick_compute_task_node.h"
-#include "oneflow/core/graph/acc_tick_compute_task_node.h"
-#include "oneflow/core/graph/repeat_forward_compute_task_node.h"
-#include "oneflow/core/graph/acc_compute_task_node.h"
-#include "oneflow/core/graph/case_compute_task_node.h"
-#include "oneflow/core/graph/esac_compute_task_node.h"
+#include "oneflow/core/graph/unpack_forward_task_node.h"
+#include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
 class LogicalEdge;
 
 class LogicalNode : public Node<LogicalNode, LogicalEdge> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(LogicalNode);
   virtual ~LogicalNode() = default;
 
   // op_vec_
   std::shared_ptr<Operator> SoleOp() const;
-  const std::vector<std::shared_ptr<Operator>>& op_vec() const { return op_vec_; }
-  std::vector<std::shared_ptr<Operator>>& mut_op_vec() { return op_vec_; }
+  const std::vector<std::shared_ptr<Operator>> &op_vec() const {
+    return op_vec_;
+  }
+  std::vector<std::shared_ptr<Operator>> &mut_op_vec() { return op_vec_; }
 
   // parallel_desc_
-  std::shared_ptr<const ParallelDesc> parallel_desc() const { return parallel_desc_; }
-  std::shared_ptr<const ParallelDesc>& mut_parallel_desc() { return parallel_desc_; }
+  std::shared_ptr<const ParallelDesc> parallel_desc() const {
+    return parallel_desc_;
+  }
+  std::shared_ptr<const ParallelDesc> &mut_parallel_desc() {
+    return parallel_desc_;
+  }
 
   // time_shape
-  const Shape* out_blob_time_shape() const { return out_blob_time_shape_.get(); }
-  void reset_out_blob_time_shape(const Shape* time_shape) {
+  const Shape *out_blob_time_shape() const {
+    return out_blob_time_shape_.get();
+  }
+  void reset_out_blob_time_shape(const Shape *time_shape) {
     out_blob_time_shape_.reset(time_shape);
   }
-  const Shape* in_blob_fastest_time_shape() const { return in_blob_fastest_time_shape_.get(); }
-  void reset_in_blob_fastest_time_shape(const Shape* time_shape) {
+  const Shape *in_blob_fastest_time_shape() const {
+    return in_blob_fastest_time_shape_.get();
+  }
+  void reset_in_blob_fastest_time_shape(const Shape *time_shape) {
     in_blob_fastest_time_shape_.reset(time_shape);
   }
 
   // Lbis
-  std::vector<LogicalBlobId> GetLbisTo(const LogicalNode* dst) const;
-  void SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>&);
-  bool IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const;
+  std::vector<LogicalBlobId> GetLbisTo(const LogicalNode *dst) const;
+  void SetDataLbisTo(const LogicalNode *dst,
+                     const std::vector<LogicalBlobId> &);
+  bool IsDataLbiOnOutEdge(const LogicalBlobId &lbi) const;
 
   // util
   virtual std::string TypeName() const = 0;
   std::string VisualStr() const;
-  void GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
-                              std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
-                              std::function<void(CompTaskNode*)>) const;
+  void GenSortedCompTaskNodes(
+      std::function<int64_t(const TaskNode *)> AllocateCpuThrdIdEvenly,
+      std::vector<std::pair<int64_t, CompTaskNode *>> *nodes,
+      std::function<void(CompTaskNode *)>) const;
 
   // other
   virtual int64_t GetAreaId() const = 0;
 
- protected:
+protected:
   LogicalNode() {}
-  virtual CompTaskNode* NewCompTaskNode() const = 0;
+  virtual CompTaskNode *NewCompTaskNode() const = 0;
 
- private:
-  bool HasOpWithCondition(std::function<bool(const Operator*)>) const;
+private:
+  bool HasOpWithCondition(std::function<bool(const Operator *)>) const;
 
   std::vector<std::shared_ptr<Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
 
-  HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
+  HashMap<const LogicalNode *, std::vector<LogicalBlobId>> dst2data_lbis_;
   std::unique_ptr<const Shape> in_blob_fastest_time_shape_;
   std::unique_ptr<const Shape> out_blob_time_shape_;
 };
 
-#define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
-  (const LogicalNode* src_logical, const LogicalNode* dst_logical,                        \
-   const std::vector<CompTaskNode*>& sorted_src_comp_tasks,                               \
-   const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,                               \
-   HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_in_box,            \
-   HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_out_box,           \
-   std::function<TaskNode**(CompTaskNode * src, int64_t machine_id, int32_t mem_zone_id)> \
-       MutBufTask,                                                                        \
-   std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly)
+#define BLD_SUB_TSK_GPH_MTHD_ARGS()                                            \
+  (const LogicalNode *src_logical, const LogicalNode *dst_logical,             \
+   const std::vector<CompTaskNode *> &sorted_src_comp_tasks,                   \
+   const std::vector<CompTaskNode *> &sorted_dst_comp_tasks,                   \
+   HashMap<const LogicalNode *, std::vector<TaskNode *>>                       \
+       *logical2sorted_in_box,                                                 \
+   HashMap<const LogicalNode *, std::vector<TaskNode *>>                       \
+       *logical2sorted_out_box,                                                \
+   std::function<TaskNode **(CompTaskNode * src, int64_t machine_id,           \
+                             int32_t mem_zone_id)>                             \
+       MutBufTask,                                                             \
+   std::function<int64_t(const TaskNode *)> AllocateCpuThrdIdEvenly)
 
 class TaskGraph;
 using BldSubTskGphMthd = void(TaskGraph::*) BLD_SUB_TSK_GPH_MTHD_ARGS();
 
 class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(LogicalEdge);
   LogicalEdge() = default;
   ~LogicalEdge() = default;
 
-  const LogicalBlobId& SoleLbi() const {
+  const LogicalBlobId &SoleLbi() const {
     CHECK_EQ(lbis_.size(), 1);
     return lbis_.front();
   }
 
-  const std::vector<LogicalBlobId>& lbis() const { return lbis_; }
-  std::vector<LogicalBlobId>& mut_lbis() { return lbis_; }
+  const std::vector<LogicalBlobId> &lbis() const { return lbis_; }
+  std::vector<LogicalBlobId> &mut_lbis() { return lbis_; }
 
- private:
+private:
   std::vector<LogicalBlobId> lbis_;
 };
 
-BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src, const LogicalNode* dst);
+BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode *src,
+                                        const LogicalNode *dst);
 
-#define OVERRIDE_PURE_VIRTUAL_METHOD()            \
-  std::string TypeName() const override;          \
-  CompTaskNode* NewCompTaskNode() const override; \
+#define OVERRIDE_PURE_VIRTUAL_METHOD()                                         \
+  std::string TypeName() const override;                                       \
+  CompTaskNode *NewCompTaskNode() const override;                              \
   int64_t GetAreaId() const override;
 
-#define LOGICAL_NODE_BOILERPLATE(class_name) \
-  OF_DISALLOW_COPY_AND_MOVE(class_name);     \
-  class_name() = default;                    \
-  ~class_name() = default;                   \
+#define LOGICAL_NODE_BOILERPLATE(class_name)                                   \
+  OF_DISALLOW_COPY_AND_MOVE(class_name);                                       \
+  class_name() = default;                                                      \
+  ~class_name() = default;                                                     \
   OVERRIDE_PURE_VIRTUAL_METHOD();
 
 class ForwardLogicalNode : public LogicalNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(ForwardLogicalNode);
   ForwardLogicalNode() = default;
   virtual ~ForwardLogicalNode() = default;
 };
 
 class NormalForwardLogicalNode final : public ForwardLogicalNode {
- public:
+public:
   LOGICAL_NODE_BOILERPLATE(NormalForwardLogicalNode);
 
- private:
+private:
 };
 
 class OptimizerLogicalNode final : public ForwardLogicalNode {
- public:
+public:
   LOGICAL_NODE_BOILERPLATE(OptimizerLogicalNode);
 
- private:
+private:
 };
 
 int64_t NewAreaId();
 
-#define LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name)                             \
- public:                                                                            \
-  OF_DISALLOW_COPY_AND_MOVE(name##LogicalNode);                                     \
-  name##LogicalNode() { area_id_ = NewAreaId(); }                                   \
-  ~name##LogicalNode() = default;                                                   \
-                                                                                    \
-  std::string TypeName() const override { return #name; }                           \
-  CompTaskNode* NewCompTaskNode() const override { return new name##CompTaskNode; } \
-  int64_t GetAreaId() const override { return area_id_; }                           \
-                                                                                    \
- private:                                                                           \
+#define LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name)                        \
+public:                                                                        \
+  OF_DISALLOW_COPY_AND_MOVE(name##LogicalNode);                                \
+  name##LogicalNode() { area_id_ = NewAreaId(); }                              \
+  ~name##LogicalNode() = default;                                              \
+                                                                               \
+  std::string TypeName() const override { return #name; }                      \
+  CompTaskNode *NewCompTaskNode() const override {                             \
+    return new name##CompTaskNode;                                             \
+  }                                                                            \
+  int64_t GetAreaId() const override { return area_id_; }                      \
+                                                                               \
+private:                                                                       \
   int64_t area_id_;
 
-#define DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(name) \
-  class name##LogicalNode final : public ForwardLogicalNode {       \
-    LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name)                 \
-                                                                    \
-   private:                                                         \
+#define DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(name)            \
+  class name##LogicalNode final : public ForwardLogicalNode {                  \
+    LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name)                            \
+                                                                               \
+  private:                                                                     \
   }
 
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(UnpackForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(PackForward);
 
-#define DECLARE_NAIVE_LOGICAL_NODE(name)  \
-  class name final : public LogicalNode { \
-   public:                                \
-    LOGICAL_NODE_BOILERPLATE(name);       \
+#define DECLARE_NAIVE_LOGICAL_NODE(name)                                       \
+  class name final : public LogicalNode {                                      \
+  public:                                                                      \
+    LOGICAL_NODE_BOILERPLATE(name);                                            \
   }
 
 DECLARE_NAIVE_LOGICAL_NODE(RecordLoadLogicalNode);
@@ -209,6 +227,6 @@ DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Case);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Esac);
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_

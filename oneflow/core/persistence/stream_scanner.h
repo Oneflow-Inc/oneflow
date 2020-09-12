@@ -16,23 +16,24 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PERSISTENCE_STREAM_SCANNER_H_
 #define ONEFLOW_CORE_PERSISTENCE_STREAM_SCANNER_H_
 
-#include <vector>
-#include <string>
 #include "oneflow/core/persistence/binary_in_stream.h"
 #include "oneflow/core/persistence/file_system.h"
+#include <string>
+#include <vector>
 
 namespace oneflow {
 
 class StreamScanner {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(StreamScanner);
 
-  StreamScanner(fs::FileSystem* fs, const std::vector<std::shared_ptr<BinaryInStream>>& streams,
+  StreamScanner(fs::FileSystem *fs,
+                const std::vector<std::shared_ptr<BinaryInStream>> &streams,
                 uint64_t offset);
   bool IsEof() const;
-  uint64_t UpdateBuffer(std::vector<char>* buffer);
+  uint64_t UpdateBuffer(std::vector<char> *buffer);
 
- protected:
+protected:
   virtual void AddNForCurFilePos(uint64_t n) = 0;
 
   std::vector<std::shared_ptr<BinaryInStream>> streams_;
@@ -42,32 +43,37 @@ class StreamScanner {
   int32_t stream_num_;
   uint64_t whole_file_offset_;
 
- private:
-  void AddStream(fs::FileSystem* fs, const std::shared_ptr<BinaryInStream>& stream, int64_t idx);
+private:
+  void AddStream(fs::FileSystem *fs,
+                 const std::shared_ptr<BinaryInStream> &stream, int64_t idx);
 };
 
 class CyclicStreamScanner final : public StreamScanner {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CyclicStreamScanner);
-  CyclicStreamScanner(fs::FileSystem* fs,
-                      const std::vector<std::shared_ptr<BinaryInStream>>& streams, uint64_t offset)
+  CyclicStreamScanner(
+      fs::FileSystem *fs,
+      const std::vector<std::shared_ptr<BinaryInStream>> &streams,
+      uint64_t offset)
       : StreamScanner(fs, streams, offset) {}
 
- protected:
+protected:
   void AddNForCurFilePos(uint64_t n) override;
 };
 
 class AcyclicStreamScanner final : public StreamScanner {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(AcyclicStreamScanner);
-  AcyclicStreamScanner(fs::FileSystem* fs,
-                       const std::vector<std::shared_ptr<BinaryInStream>>& streams, uint64_t offset)
+  AcyclicStreamScanner(
+      fs::FileSystem *fs,
+      const std::vector<std::shared_ptr<BinaryInStream>> &streams,
+      uint64_t offset)
       : StreamScanner(fs, streams, offset) {}
 
- protected:
+protected:
   void AddNForCurFilePos(uint64_t n) override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_PERSISTENCE_STREAM_SCANNER_H_
+#endif // ONEFLOW_CORE_PERSISTENCE_STREAM_SCANNER_H_

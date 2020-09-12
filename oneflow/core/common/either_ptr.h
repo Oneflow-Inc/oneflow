@@ -21,30 +21,27 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename X, typename Y>
-class EitherPtr final {
- public:
+template <typename X, typename Y> class EitherPtr final {
+public:
   static_assert(!std::is_same<X, Y>::value, "X should not be Y");
   EitherPtr() : type_(UnionType<Void>::value) {}
-  EitherPtr(const std::shared_ptr<X>& ptr) { Set(ptr); }
-  EitherPtr(const std::shared_ptr<Y>& ptr) { Set(ptr); }
-  EitherPtr(const EitherPtr<X, Y>& either_ptr) { CopyFrom(either_ptr); }
+  EitherPtr(const std::shared_ptr<X> &ptr) { Set(ptr); }
+  EitherPtr(const std::shared_ptr<Y> &ptr) { Set(ptr); }
+  EitherPtr(const EitherPtr<X, Y> &either_ptr) { CopyFrom(either_ptr); }
   ~EitherPtr() { Reset(); }
 
-  template<typename T>
-  bool Has() const {
+  template <typename T> bool Has() const {
     return type_ == UnionType<T>::value;
   }
-  template<typename T>
-  const std::shared_ptr<T>& Get() const {
+  template <typename T> const std::shared_ptr<T> &Get() const {
     CHECK(this->template Has<T>());
     return Cast<T>();
   }
-  void Reset(const std::shared_ptr<X>& ptr) {
+  void Reset(const std::shared_ptr<X> &ptr) {
     Reset();
     Set(ptr);
   }
-  void Reset(const std::shared_ptr<Y>& ptr) {
+  void Reset(const std::shared_ptr<Y> &ptr) {
     Reset();
     Set(ptr);
   }
@@ -61,23 +58,25 @@ class EitherPtr final {
     }
   }
 
- private:
+private:
   struct Void {};
-  template<typename T, typename Enable = void>
-  struct UnionType;
-  template<typename T>
-  struct UnionType<T, typename std::enable_if<std::is_same<Void, T>::value>::type> {
+  template <typename T, typename Enable = void> struct UnionType;
+  template <typename T>
+  struct UnionType<
+      T, typename std::enable_if<std::is_same<Void, T>::value>::type> {
     static const int8_t value = 0;
   };
-  template<typename T>
-  struct UnionType<T, typename std::enable_if<std::is_same<X, T>::value>::type> {
+  template <typename T>
+  struct UnionType<T,
+                   typename std::enable_if<std::is_same<X, T>::value>::type> {
     static const int8_t value = 1;
   };
-  template<typename T>
-  struct UnionType<T, typename std::enable_if<std::is_same<Y, T>::value>::type> {
+  template <typename T>
+  struct UnionType<T,
+                   typename std::enable_if<std::is_same<Y, T>::value>::type> {
     static const int8_t value = 2;
   };
-  void CopyFrom(const EitherPtr<X, Y>& either_ptr) {
+  void CopyFrom(const EitherPtr<X, Y> &either_ptr) {
     if (either_ptr.template Has<X>()) {
       Set(either_ptr.template Get<X>());
     } else if (either_ptr.template Has<Y>()) {
@@ -86,26 +85,24 @@ class EitherPtr final {
       // do nothin
     }
   }
-  void Set(const std::shared_ptr<X>& ptr) {
+  void Set(const std::shared_ptr<X> &ptr) {
     CHECK(union_.get() == nullptr);
     *MutCast<X>() = ptr;
     type_ = UnionType<X>::value;
   }
-  void Set(const std::shared_ptr<Y>& ptr) {
+  void Set(const std::shared_ptr<Y> &ptr) {
     CHECK(union_.get() == nullptr);
     *MutCast<Y>() = ptr;
     type_ = UnionType<Y>::value;
   }
-  template<typename T>
-  std::shared_ptr<T>* MutCast() {
-    std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =
-        reinterpret_cast<std::shared_ptr<T>*>(&union_);
+  template <typename T> std::shared_ptr<T> *MutCast() {
+    std::shared_ptr<T> *__attribute__((__may_alias__)) ptr =
+        reinterpret_cast<std::shared_ptr<T> *>(&union_);
     return ptr;
   }
-  template<typename T>
-  const std::shared_ptr<T>& Cast() const {
-    const std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =
-        reinterpret_cast<const std::shared_ptr<T>*>(&union_);
+  template <typename T> const std::shared_ptr<T> &Cast() const {
+    const std::shared_ptr<T> *__attribute__((__may_alias__)) ptr =
+        reinterpret_cast<const std::shared_ptr<T> *>(&union_);
     return *ptr;
   }
 
@@ -113,6 +110,6 @@ class EitherPtr final {
   int8_t type_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_EITHER_PTR_H_
+#endif // ONEFLOW_CORE_COMMON_EITHER_PTR_H_

@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-SocketHelper::SocketHelper(int sockfd, IOEventPoller* poller) {
+SocketHelper::SocketHelper(int sockfd, IOEventPoller *poller) {
   read_helper_ = new SocketReadHelper(sockfd);
   write_helper_ = new SocketWriteHelper(sockfd, poller);
   poller->AddFd(sockfd, [this]() { read_helper_->NotifyMeSocketReadable(); },
@@ -31,8 +31,10 @@ SocketHelper::~SocketHelper() {
   delete write_helper_;
 }
 
-void SocketHelper::AsyncWrite(const SocketMsg& msg) { write_helper_->AsyncWrite(msg); }
+void SocketHelper::AsyncWrite(const SocketMsg &msg) {
+  write_helper_->AsyncWrite(msg);
+}
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif // PLATFORM_POSIX

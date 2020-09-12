@@ -16,27 +16,27 @@ limitations under the License.
 #ifndef ONEFLOW_USER_DATA_COCO_DATA_READER_H_
 #define ONEFLOW_USER_DATA_COCO_DATA_READER_H_
 
-#include "oneflow/user/data/data_reader.h"
-#include "oneflow/user/data/coco_parser.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/user/data/coco_parser.h"
+#include "oneflow/user/data/data_reader.h"
 #include <json.hpp>
 
 namespace oneflow {
 namespace data {
 
 class COCODataReader final : public DataReader<COCOImage> {
- public:
-  COCODataReader(user_op::KernelInitContext* ctx);
+public:
+  COCODataReader(user_op::KernelInitContext *ctx);
   ~COCODataReader() = default;
 
- protected:
+protected:
   using DataReader<COCOImage>::loader_;
   using DataReader<COCOImage>::parser_;
 };
 
 class COCOMeta final {
- public:
-  COCOMeta(const std::string& annotation_file, const std::string& image_dir,
+public:
+  COCOMeta(const std::string &annotation_file, const std::string &image_dir,
            bool remove_images_without_annotations);
   ~COCOMeta() = default;
 
@@ -52,37 +52,34 @@ class COCOMeta final {
   }
   std::string GetImageFilePath(int64_t index) const {
     int64_t image_id = image_ids_.at(index);
-    const auto& image_json = image_id2image_.at(image_id);
+    const auto &image_json = image_id2image_.at(image_id);
     return JoinPath(image_dir_, image_json["file_name"].get<std::string>());
   }
-  template<typename T>
-  std::vector<T> GetBboxVec(int64_t index) const;
-  template<typename T>
-  std::vector<T> GetLabelVec(int64_t index) const;
-  template<typename T>
-  void ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer* segm,
-                                       TensorBuffer* segm_offset_mat) const;
+  template <typename T> std::vector<T> GetBboxVec(int64_t index) const;
+  template <typename T> std::vector<T> GetLabelVec(int64_t index) const;
+  template <typename T>
+  void ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer *segm,
+                                       TensorBuffer *segm_offset_mat) const;
 
- private:
+private:
   bool ImageHasValidAnnotations(int64_t image_id) const;
 
   static constexpr int kMinKeypointsPerImage = 10;
   nlohmann::json annotation_json_;
   std::string image_dir_;
   std::vector<int64_t> image_ids_;
-  HashMap<int64_t, const nlohmann::json&> image_id2image_;
-  HashMap<int64_t, const nlohmann::json&> anno_id2anno_;
+  HashMap<int64_t, const nlohmann::json &> image_id2image_;
+  HashMap<int64_t, const nlohmann::json &> anno_id2anno_;
   HashMap<int64_t, std::vector<int64_t>> image_id2anno_ids_;
   HashMap<int32_t, int32_t> category_id2contiguous_id_;
 };
 
-template<typename T>
-std::vector<T> COCOMeta::GetBboxVec(int64_t index) const {
+template <typename T> std::vector<T> COCOMeta::GetBboxVec(int64_t index) const {
   std::vector<T> bbox_vec;
   int64_t image_id = image_ids_.at(index);
-  const auto& anno_ids = image_id2anno_ids_.at(image_id);
+  const auto &anno_ids = image_id2anno_ids_.at(image_id);
   for (int64_t anno_id : anno_ids) {
-    const auto& bbox_json = anno_id2anno_.at(anno_id)["bbox"];
+    const auto &bbox_json = anno_id2anno_.at(anno_id)["bbox"];
     CHECK(bbox_json.is_array());
     CHECK_EQ(bbox_json.size(), 4);
     // COCO bounding box format is [left, top, width, height]
@@ -110,31 +107,39 @@ std::vector<T> COCOMeta::GetBboxVec(int64_t index) const {
   return bbox_vec;
 }
 
-template<typename T>
+template <typename T>
 std::vector<T> COCOMeta::GetLabelVec(int64_t index) const {
   std::vector<T> label_vec;
   int64_t image_id = image_ids_.at(index);
-  const auto& anno_ids = image_id2anno_ids_.at(image_id);
+  const auto &anno_ids = image_id2anno_ids_.at(image_id);
   for (int64_t anno_id : anno_ids) {
-    int32_t category_id = anno_id2anno_.at(anno_id)["category_id"].get<int32_t>();
+    int32_t category_id =
+        anno_id2anno_.at(anno_id)["category_id"].get<int32_t>();
     label_vec.push_back(category_id2contiguous_id_.at(category_id));
   }
   return label_vec;
 }
 
-template<typename T>
-void COCOMeta::ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer* segm,
-                                               TensorBuffer* segm_index) const {
-  if (segm == nullptr || segm_index == nullptr) { return; }
+template <typename T>
+void COCOMeta::ReadSegmentationsToTensorBuffer(int64_t index,
+                                               TensorBuffer *segm,
+                                               TensorBuffer *segm_index) const {
+  if (segm == nullptr || segm_index == nullptr) {
+    return;
+  }
   int64_t image_id = image_ids_.at(index);
-  const auto& anno_ids = image_id2anno_ids_.at(image_id);
+  const auto &anno_ids = image_id2anno_ids_.at(image_id);
   std::vector<T> segm_vec;
   for (int64_t anno_id : anno_ids) {
-    const auto& segm_json = anno_id2anno_.at(anno_id)["segmentation"];
-    if (!segm_json.is_array()) { continue; }
-    for (const auto& poly_json : segm_json) {
+    const auto &segm_json = anno_id2anno_.at(anno_id)["segmentation"];
+    if (!segm_json.is_array()) {
+      continue;
+    }
+    for (const auto &poly_json : segm_json) {
       CHECK(poly_json.is_array());
-      for (const auto& elem : poly_json) { segm_vec.push_back(elem.get<T>()); }
+      for (const auto &elem : poly_json) {
+        segm_vec.push_back(elem.get<T>());
+      }
     }
   }
   CHECK_EQ(segm_vec.size() % 2, 0);
@@ -143,14 +148,14 @@ void COCOMeta::ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer* segm
   std::copy(segm_vec.begin(), segm_vec.end(), segm->mut_data<T>());
 
   segm_index->Resize(Shape({num_pts, 3}), DataType::kInt32);
-  int32_t* index_ptr = segm_index->mut_data<int32_t>();
+  int32_t *index_ptr = segm_index->mut_data<int32_t>();
   int i = 0;
   int32_t segm_idx = 0;
   for (int64_t anno_id : anno_ids) {
-    const auto& segm_json = anno_id2anno_.at(anno_id)["segmentation"];
+    const auto &segm_json = anno_id2anno_.at(anno_id)["segmentation"];
     CHECK(segm_json.is_array());
     FOR_RANGE(int32_t, poly_idx, 0, segm_json.size()) {
-      const auto& poly_json = segm_json[poly_idx];
+      const auto &poly_json = segm_json[poly_idx];
       CHECK(poly_json.is_array());
       CHECK_EQ(poly_json.size() % 2, 0);
       FOR_RANGE(int32_t, pt_idx, 0, poly_json.size() / 2) {
@@ -165,7 +170,7 @@ void COCOMeta::ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer* segm
   CHECK_EQ(i, num_pts);
 }
 
-}  // namespace data
-}  // namespace oneflow
+} // namespace data
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_DATA_COCO_DATA_READER_H_
+#endif // ONEFLOW_USER_DATA_COCO_DATA_READER_H_

@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-bool ImageUtil::IsColor(const std::string& color_space) {
+bool ImageUtil::IsColor(const std::string &color_space) {
   if (color_space == "RGB" || color_space == "BGR") {
     return true;
   } else if (color_space == "GRAY") {
@@ -29,8 +29,10 @@ bool ImageUtil::IsColor(const std::string& color_space) {
   }
 }
 
-void ImageUtil::ConvertColor(const std::string& input_color, const cv::Mat& input_img,
-                             const std::string& output_color, cv::Mat& output_img) {
+void ImageUtil::ConvertColor(const std::string &input_color,
+                             const cv::Mat &input_img,
+                             const std::string &output_color,
+                             cv::Mat &output_img) {
   if (input_color == "BGR" && output_color == "RGB") {
     cv::cvtColor(input_img, output_img, cv::COLOR_BGR2RGB);
   } else {
@@ -38,7 +40,7 @@ void ImageUtil::ConvertColor(const std::string& input_color, const cv::Mat& inpu
   }
 }
 
-cv::Mat GenCvMat4ImageBuffer(const TensorBuffer& image_buffer) {
+cv::Mat GenCvMat4ImageBuffer(const TensorBuffer &image_buffer) {
   CHECK_EQ(image_buffer.shape().NumAxes(), 3);
   int h = image_buffer.shape().At(0);
   int w = image_buffer.shape().At(1);
@@ -58,7 +60,8 @@ cv::Mat GenCvMat4ImageBuffer(const TensorBuffer& image_buffer) {
   return cv::Mat();
 }
 
-cv::Mat GenCvMat4ImageTensor(const user_op::Tensor* image_tensor, int image_offset) {
+cv::Mat GenCvMat4ImageTensor(const user_op::Tensor *image_tensor,
+                             int image_offset) {
   int has_batch_dim = 0;
   if (image_tensor->shape().NumAxes() == 3) {
     has_batch_dim = 0;
@@ -76,20 +79,24 @@ cv::Mat GenCvMat4ImageTensor(const user_op::Tensor* image_tensor, int image_offs
   int elem_offset = image_offset * h * w * c;
   DataType data_type = image_tensor->data_type();
   if (c == 1 && data_type == DataType::kUInt8) {
-    return CreateMatWithPtr(h, w, CV_8UC1, image_tensor->dptr<uint8_t>() + elem_offset);
+    return CreateMatWithPtr(h, w, CV_8UC1,
+                            image_tensor->dptr<uint8_t>() + elem_offset);
   } else if (c == 1 && data_type == DataType::kFloat) {
-    return CreateMatWithPtr(h, w, CV_32FC1, image_tensor->dptr<float>() + elem_offset);
+    return CreateMatWithPtr(h, w, CV_32FC1,
+                            image_tensor->dptr<float>() + elem_offset);
   } else if (c == 3 && data_type == DataType::kUInt8) {
-    return CreateMatWithPtr(h, w, CV_8UC3, image_tensor->dptr<uint8_t>() + elem_offset);
+    return CreateMatWithPtr(h, w, CV_8UC3,
+                            image_tensor->dptr<uint8_t>() + elem_offset);
   } else if (c == 3 && data_type == DataType::kFloat) {
-    return CreateMatWithPtr(h, w, CV_32FC3, image_tensor->dptr<float>() + elem_offset);
+    return CreateMatWithPtr(h, w, CV_32FC3,
+                            image_tensor->dptr<float>() + elem_offset);
   } else {
     UNIMPLEMENTED();
   }
   return cv::Mat();
 }
 
-void CvMatConvertToDataType(const cv::Mat& src, cv::Mat* dst, DataType dtype) {
+void CvMatConvertToDataType(const cv::Mat &src, cv::Mat *dst, DataType dtype) {
   if (dtype == DataType::kUInt8) {
     src.convertTo(*dst, CV_8U);
   } else if (dtype == DataType::kFloat) {
@@ -99,8 +106,8 @@ void CvMatConvertToDataType(const cv::Mat& src, cv::Mat* dst, DataType dtype) {
   }
 }
 
-int GetCvInterpolationFlag(const std::string& interp_type, int org_w, int org_h, int res_w,
-                           int res_h) {
+int GetCvInterpolationFlag(const std::string &interp_type, int org_w, int org_h,
+                           int res_w, int res_h) {
   if (interp_type == "bilinear") {
     return cv::INTER_LINEAR;
   } else if (interp_type == "nearest_neighbor" || interp_type == "nn") {
@@ -120,15 +127,18 @@ int GetCvInterpolationFlag(const std::string& interp_type, int org_w, int org_h,
   }
 }
 
-bool CheckInterpolationValid(const std::string& interp_type, std::ostringstream& err) {
-  if (interp_type != "bilinear" && interp_type != "nearest_neighbor" && interp_type != "nn"
-      && interp_type != "bicubic" && interp_type != "area" && interp_type != "auto") {
+bool CheckInterpolationValid(const std::string &interp_type,
+                             std::ostringstream &err) {
+  if (interp_type != "bilinear" && interp_type != "nearest_neighbor" &&
+      interp_type != "nn" && interp_type != "bicubic" &&
+      interp_type != "area" && interp_type != "auto") {
     err << ", interpolation_type: " << interp_type
-        << " (interpolation_type must be one of bilinear, nearest_neighbor(nn), bicubic, area and "
+        << " (interpolation_type must be one of bilinear, "
+           "nearest_neighbor(nn), bicubic, area and "
            "auto)";
     return false;
   }
   return true;
 }
 
-}  // namespace oneflow
+} // namespace oneflow

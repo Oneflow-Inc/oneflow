@@ -18,16 +18,18 @@ limitations under the License.
 
 namespace oneflow {
 
-const PbMessage& NaiveModelUpdateOp::GetCustomizedConf() const {
+const PbMessage &NaiveModelUpdateOp::GetCustomizedConf() const {
   return op_conf().naive_model_update_conf();
 }
 
-const HashSet<std::string> NaiveModelUpdateOp::AlwaysBroadcastParallelBns() const {
+const HashSet<std::string>
+NaiveModelUpdateOp::AlwaysBroadcastParallelBns() const {
   return HashSet<std::string>{};
 }
 
-REGISTER_CLASS(NormalModelUpdateOpUserConf::kNaiveConf, NormalModelUpdtOp, NaiveModelUpdateOp);
+REGISTER_CLASS(NormalModelUpdateOpUserConf::kNaiveConf, NormalModelUpdtOp,
+               NaiveModelUpdateOp);
 
 REGISTER_OP(OperatorConf::kNaiveModelUpdateConf, NaiveModelUpdateOp);
 
-}  // namespace oneflow
+} // namespace oneflow

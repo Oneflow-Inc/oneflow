@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class DistributeSplitCompTaskNode final : public CompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(DistributeSplitCompTaskNode);
   DistributeSplitCompTaskNode() = default;
   ~DistributeSplitCompTaskNode() = default;
@@ -33,13 +33,13 @@ class DistributeSplitCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kDistributeSplit; }
   bool HasBackwardCompTaskNode();
 
- private:
+private:
   void BuildExecGphAndRegst() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
   void InferProducedDataRegstTimeShape() override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_DISTRIBUTE_SPLIT_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_DISTRIBUTE_SPLIT_COMPUTE_TASK_NODE_H_

@@ -13,30 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
 namespace {
 
-template<int field_counter, typename WalkCtxType, typename FieldType>
+template <int field_counter, typename WalkCtxType, typename FieldType>
 struct DumpFieldName {
-  static void Call(WalkCtxType* ctx, FieldType* field, const char* field_name) {
+  static void Call(WalkCtxType *ctx, FieldType *field, const char *field_name) {
     ctx->push_back(field_name);
   }
 };
 
-template<typename T>
-std::vector<std::string> GetFieldNames(T* flat_msg) {
+template <typename T> std::vector<std::string> GetFieldNames(T *flat_msg) {
   std::vector<std::string> field_names;
   flat_msg->template __WalkVerboseField__<DumpFieldName>(&field_names);
   return field_names;
 }
 
-template<typename T>
-void CheckSoleFieldName(T* flat_msg, const std::string& expected) {
-  const auto& field_names = GetFieldNames(flat_msg);
+template <typename T>
+void CheckSoleFieldName(T *flat_msg, const std::string &expected) {
+  const auto &field_names = GetFieldNames(flat_msg);
   ASSERT_EQ(field_names.size(), 1);
   ASSERT_EQ(field_names.at(0), expected);
 }
@@ -47,9 +46,10 @@ FLAT_MSG_END(TestOptional)
 // clang-format on
 
 TEST(FlatMsg, optional) {
-  static_assert(std::is_trivial<TestOptional>::value, "TestOptional is not trivial");
+  static_assert(std::is_trivial<TestOptional>::value,
+                "TestOptional is not trivial");
   FlatMsg<TestOptional> foo_box;
-  auto& foo = *foo_box.Mutable();
+  auto &foo = *foo_box.Mutable();
   ASSERT_TRUE(!foo.has_bar());
   ASSERT_EQ(foo.bar(), 0);
   ASSERT_TRUE(GetFieldNames(&foo).empty());
@@ -72,7 +72,7 @@ FLAT_MSG_END(FooOneof)
 
 TEST(FlatMsg, oneof) {
   FlatMsg<FooOneof> foo_box;
-  auto& foo = *foo_box.Mutable();
+  auto &foo = *foo_box.Mutable();
   ASSERT_TRUE(GetFieldNames(&foo).empty());
   ASSERT_TRUE(!foo.has_bar());
   ASSERT_EQ(foo.bar().bar(), 0);
@@ -96,10 +96,10 @@ FLAT_MSG_END(FooRepeated)
 
 TEST(FlatMsg, repeated) {
   FlatMsg<FooRepeated> foo_box;
-  auto& foo = *foo_box.Mutable();
+  auto &foo = *foo_box.Mutable();
   ASSERT_EQ(foo.bar_size(), 0);
   ASSERT_EQ(foo.bar().size(), 0);
-  auto* bar = foo.mutable_bar()->Add();
+  auto *bar = foo.mutable_bar()->Add();
   ASSERT_TRUE(!bar->has_bar());
   ASSERT_EQ(foo.bar_size(), 1);
   ASSERT_EQ(foo.bar().size(), 1);
@@ -111,7 +111,9 @@ TEST(FlatMsg, repeated) {
   ASSERT_EQ(foo.bar_size(), 2);
   ASSERT_EQ(foo.bar().size(), 2);
   bar->set_bar(9528);
-  for (const auto& x : foo.bar()) { ASSERT_TRUE(x.has_bar()); }
+  for (const auto &x : foo.bar()) {
+    ASSERT_TRUE(x.has_bar());
+  }
   foo.clear_bar();
   ASSERT_EQ(foo.bar_size(), 0);
 }
@@ -128,6 +130,6 @@ TEST(FlatMsg, flat_msg_template) {
   ASSERT_TRUE(foo.Get().char_field().empty());
 }
 
-}  // namespace
+} // namespace
 
-}  // namespace oneflow
+} // namespace oneflow

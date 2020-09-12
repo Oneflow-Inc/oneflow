@@ -33,7 +33,7 @@ inline std::string GetCwd() {
   size_t len = 128;
   std::unique_ptr<char[]> a(new char[len]);
   for (;;) {
-    char* p = getcwd(a.get(), len);
+    char *p = getcwd(a.get(), len);
     if (p != NULL) {
       return p;
     } else if (errno == ERANGE) {
@@ -45,6 +45,6 @@ inline std::string GetCwd() {
   }
 }
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_PROCESS_STATE_H_
+#endif // ONEFLOW_CORE_COMMON_PROCESS_STATE_H_

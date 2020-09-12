@@ -21,17 +21,18 @@ limitations under the License.
 namespace oneflow {
 
 class ForeignOutputKernel final : public KernelIf<DeviceType::kCPU> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(ForeignOutputKernel);
   ForeignOutputKernel() = default;
   ~ForeignOutputKernel() = default;
 
- private:
+private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_FOREIGN_OUTPUT_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_FOREIGN_OUTPUT_KERNEL_H_

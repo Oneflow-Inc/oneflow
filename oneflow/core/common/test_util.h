@@ -27,4 +27,4 @@ limitations under the License.
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#endif  // ONEFLOW_CORE_COMMON_TEST_UTIL_H_
+#endif // ONEFLOW_CORE_COMMON_TEST_UTIL_H_

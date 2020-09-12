@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -36,7 +36,9 @@ OBJECT_MSG_END(ObjectMsgFoo)
 // clang-format on
 
 void ObjectMsgFoo::__Delete__() {
-  if (mutable_is_deleted()) { *mutable_is_deleted() = "deleted"; }
+  if (mutable_is_deleted()) {
+    *mutable_is_deleted() = "deleted";
+  }
 }
 
 TEST(OBJECT_MSG, naive) {
@@ -80,7 +82,7 @@ TEST(OBJECT_MSG, nested_delete) {
   {
     auto bar = ObjectMsgPtr<ObjectMsgBar>::New();
     bar->set_is_deleted(&bar_is_deleted);
-    auto* foo = bar->mutable_foo();
+    auto *foo = bar->mutable_foo();
     foo->set_bar(9527);
     foo->set_is_deleted(&is_deleted);
     ASSERT_EQ(foo->bar(), 9527);
@@ -109,8 +111,8 @@ OBJECT_MSG_END(TestPtrOneof)
 
 TEST(OBJECT_MSG, oneof_get) {
   auto test_oneof = ObjectMsgPtr<TestPtrOneof>::New();
-  auto& obj = *test_oneof;
-  const auto* default_foo_ptr = &obj.foo();
+  auto &obj = *test_oneof;
+  const auto *default_foo_ptr = &obj.foo();
   ASSERT_EQ(obj.foo().x(), 0);
   ASSERT_TRUE(!obj.has_foo());
   obj.mutable_foo();
@@ -121,8 +123,8 @@ TEST(OBJECT_MSG, oneof_get) {
 
 TEST(OBJECT_MSG, oneof_release) {
   auto test_oneof = ObjectMsgPtr<TestPtrOneof>::New();
-  auto& obj = *test_oneof;
-  const auto* default_foo_ptr = &obj.foo();
+  auto &obj = *test_oneof;
+  const auto *default_foo_ptr = &obj.foo();
   ASSERT_EQ(obj.foo().x(), 0);
   obj.mutable_foo();
   ASSERT_EQ(obj.foo().x(), 0);
@@ -143,8 +145,8 @@ TEST(OBJECT_MSG, oneof_release) {
 
 TEST(OBJECT_MSG, oneof_reset) {
   auto test_oneof = ObjectMsgPtr<TestPtrOneof>::New();
-  auto& obj = *test_oneof;
-  const auto* default_foo_ptr = &obj.foo();
+  auto &obj = *test_oneof;
+  const auto *default_foo_ptr = &obj.foo();
   ASSERT_EQ(obj.foo().x(), 0);
   obj.mutable_foo();
   ASSERT_EQ(obj.foo().x(), 0);
@@ -169,8 +171,8 @@ TEST(OBJECT_MSG, oneof_reset) {
 
 TEST(OBJECT_MSG, oneof_clear) {
   auto test_oneof = ObjectMsgPtr<TestPtrOneof>::New();
-  auto& obj = *test_oneof;
-  const auto* default_foo_ptr = &obj.foo();
+  auto &obj = *test_oneof;
+  const auto *default_foo_ptr = &obj.foo();
   ASSERT_EQ(obj.foo().x(), 0);
   obj.mutable_foo();
   ASSERT_EQ(obj.foo().x(), 0);
@@ -190,8 +192,8 @@ TEST(OBJECT_MSG, oneof_clear) {
 
 TEST(OBJECT_MSG, oneof_set) {
   auto test_oneof = ObjectMsgPtr<TestPtrOneof>::New();
-  auto& obj = *test_oneof;
-  const auto* default_foo_ptr = &obj.foo();
+  auto &obj = *test_oneof;
+  const auto *default_foo_ptr = &obj.foo();
   ASSERT_EQ(obj.foo().x(), 0);
   obj.mutable_foo();
   ASSERT_EQ(obj.foo().x(), 0);
@@ -232,6 +234,6 @@ TEST(OBJECT_MSG, flat_msg_field) {
   ASSERT_EQ(obj->flat_field().int32_field(), 33);
 }
 
-}  // namespace test
+} // namespace test
 
-}  // namespace oneflow
+} // namespace oneflow

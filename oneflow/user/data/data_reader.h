@@ -26,20 +26,22 @@ namespace data {
 
 static const int32_t kDataReaderBatchBufferSize = 4;
 
-template<typename LoadTarget>
-class DataReader {
- public:
+template <typename LoadTarget> class DataReader {
+public:
   using LoadTargetPtr = std::shared_ptr<LoadTarget>;
   using LoadTargetPtrList = std::vector<LoadTargetPtr>;
-  DataReader(user_op::KernelInitContext* ctx)
+  DataReader(user_op::KernelInitContext *ctx)
       : is_closed_(false), batch_buffer_(kDataReaderBatchBufferSize) {}
   virtual ~DataReader() {
     Close();
-    if (load_thrd_.joinable()) { load_thrd_.join(); }
+    if (load_thrd_.joinable()) {
+      load_thrd_.join();
+    }
   }
 
-  void Read(user_op::KernelComputeContext* ctx) {
-    CHECK(load_thrd_.joinable()) << "You should call StartLoadThread before read data";
+  void Read(user_op::KernelComputeContext *ctx) {
+    CHECK(load_thrd_.joinable())
+        << "You should call StartLoadThread before read data";
     auto batch_data = FetchBatchData();
     parser_->Parse(batch_data, ctx);
   }
@@ -56,21 +58,25 @@ class DataReader {
     batch_buffer_.Close();
   }
 
- protected:
+protected:
   void StartLoadThread() {
-    if (load_thrd_.joinable()) { return; }
+    if (load_thrd_.joinable()) {
+      return;
+    }
     load_thrd_ = std::thread([this] {
-      while (!is_closed_.load() && LoadBatch()) {}
+      while (!is_closed_.load() && LoadBatch()) {
+      }
     });
   }
 
   std::unique_ptr<Dataset<LoadTarget>> loader_;
   std::unique_ptr<Parser<LoadTarget>> parser_;
 
- private:
+private:
   std::shared_ptr<LoadTargetPtrList> FetchBatchData() {
     std::shared_ptr<LoadTargetPtrList> batch_data(nullptr);
-    CHECK_EQ(batch_buffer_.Receive(&batch_data), BufferStatus::kBufferStatusSuccess);
+    CHECK_EQ(batch_buffer_.Receive(&batch_data),
+             BufferStatus::kBufferStatusSuccess);
     return batch_data;
   }
 
@@ -85,7 +91,7 @@ class DataReader {
   std::thread load_thrd_;
 };
 
-}  // namespace data
-}  // namespace oneflow
+} // namespace data
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_DATA_DATA_READER_H_
+#endif // ONEFLOW_USER_DATA_DATA_READER_H_

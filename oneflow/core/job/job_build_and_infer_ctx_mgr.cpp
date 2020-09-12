@@ -19,14 +19,18 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& job_name) {
-  CHECK_OR_RETURN(!has_cur_job_) << Error::UnknownJobBuildAndInferError
-                                 << "cur job not leave before you enter this job_name:" << job_name;
+Maybe<void>
+JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string &job_name) {
+  CHECK_OR_RETURN(!has_cur_job_)
+      << Error::UnknownJobBuildAndInferError
+      << "cur job not leave before you enter this job_name:" << job_name;
   CHECK_OR_RETURN(!job_name.empty()) << Error::JobNameEmptyError();
-  CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) == job_name2infer_ctx_.end())
-      << Error::JobNameExistError() << "job name: " << job_name << " already exist";
+  CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) ==
+                  job_name2infer_ctx_.end())
+      << Error::JobNameExistError() << "job name: " << job_name
+      << " already exist";
   int64_t job_id = job_set_.job_size();
-  Job* job = job_set_.add_job();
+  Job *job = job_set_.add_job();
   job->mutable_job_conf()->set_job_name(job_name);
   std::unique_ptr<JobBuildAndInferCtx> ctx(NewJobBuildAndInferCtx(job, job_id));
   job_name2infer_ctx_.emplace(job_name, std::move(ctx));
@@ -35,54 +39,65 @@ Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& j
   return Maybe<void>::Ok();
 }
 
-JobBuildAndInferCtx* LazyJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job,
-                                                                        int64_t job_id) const {
+JobBuildAndInferCtx *
+LazyJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job *job,
+                                                   int64_t job_id) const {
   return new LazyJobBuildAndInferCtx(job, job_id);
 }
 
-JobBuildAndInferCtx* EagerJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job,
-                                                                         int64_t job_id) const {
+JobBuildAndInferCtx *
+EagerJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job *job,
+                                                    int64_t job_id) const {
   return new EagerJobBuildAndInferCtx(job, job_id);
 }
 
-Maybe<JobBuildAndInferCtx*> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
-    const std::string& job_name) {
-  CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) != job_name2infer_ctx_.end())
-      << Error::NoJobBuildAndInferCtxError() << "cannot find job name:" << job_name;
+Maybe<JobBuildAndInferCtx *>
+JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(const std::string &job_name) {
+  CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) !=
+                  job_name2infer_ctx_.end())
+      << Error::NoJobBuildAndInferCtxError()
+      << "cannot find job name:" << job_name;
   return job_name2infer_ctx_.at(job_name).get();
 }
 
 Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() const {
-  CHECK_OR_RETURN(has_cur_job_) << Error::NoJobBuildAndInferCtxError()
-                                << "current JobBuildAndInferCtx was closed, job name: "
-                                << cur_job_name_;
+  CHECK_OR_RETURN(has_cur_job_)
+      << Error::NoJobBuildAndInferCtxError()
+      << "current JobBuildAndInferCtx was closed, job name: " << cur_job_name_;
   return cur_job_name_;
 }
 
 Maybe<void> JobBuildAndInferCtxMgr::AddLbiAndDiffWatcherUuidPair(
-    const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) const {
-  auto* job_name2pairs =
-      Global<LbiDiffWatcherInfo>::Get()->mutable_job_name2lbi_and_watcher_uuids();
-  const auto& job_name = JUST(GetCurrentJobName());
-  LbiAndDiffWatcherUuidPairList* pairs = &(*job_name2pairs)[*job_name];
-  auto PairFoundCond = [&](const LbiAndDiffWatcherUuidPair& x) {
-    return x.lbi() == lbi_uuid_pair.lbi() && x.watcher_uuid() == lbi_uuid_pair.watcher_uuid();
+    const LbiAndDiffWatcherUuidPair &lbi_uuid_pair) const {
+  auto *job_name2pairs = Global<LbiDiffWatcherInfo>::Get()
+                             ->mutable_job_name2lbi_and_watcher_uuids();
+  const auto &job_name = JUST(GetCurrentJobName());
+  LbiAndDiffWatcherUuidPairList *pairs = &(*job_name2pairs)[*job_name];
+  auto PairFoundCond = [&](const LbiAndDiffWatcherUuidPair &x) {
+    return x.lbi() == lbi_uuid_pair.lbi() &&
+           x.watcher_uuid() == lbi_uuid_pair.watcher_uuid();
   };
-  auto found_iter = std::find_if(pairs->lbi_and_uuid_pair().begin(),
-                                 pairs->lbi_and_uuid_pair().end(), PairFoundCond);
+  auto found_iter =
+      std::find_if(pairs->lbi_and_uuid_pair().begin(),
+                   pairs->lbi_and_uuid_pair().end(), PairFoundCond);
   CHECK_OR_RETURN(found_iter == pairs->lbi_and_uuid_pair().end())
       << "diff blob has been watched. (logical_blob_name: "
-      << GenLogicalBlobName(lbi_uuid_pair.lbi()) << ", job_name: " << *job_name << ")";
+      << GenLogicalBlobName(lbi_uuid_pair.lbi()) << ", job_name: " << *job_name
+      << ")";
   *pairs->mutable_lbi_and_uuid_pair()->Add() = lbi_uuid_pair;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
   VirtualCloseJob();
-  if (!has_cur_job_) { return Maybe<void>::Ok(); }
+  if (!has_cur_job_) {
+    return Maybe<void>::Ok();
+  }
   has_cur_job_ = false;
-  const JobDesc* job_desc = Global<JobDesc>::Get();
-  if (job_desc == nullptr) { return Maybe<void>::Ok(); }
+  const JobDesc *job_desc = Global<JobDesc>::Get();
+  if (job_desc == nullptr) {
+    return Maybe<void>::Ok();
+  }
   CHECK_EQ_OR_RETURN(job_desc->job_name(), cur_job_name_);
   CHECK_EQ_OR_RETURN(job_desc->job_id(), job_set_.job_size() - 1);
   Global<JobDesc>::Delete();
@@ -91,7 +106,7 @@ Maybe<void> JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
 
 std::string JobBuildAndInferCtxMgr::structure_graph() const {
   nlohmann::json json_array;
-  for (const auto& pair : job_name2infer_ctx_) {
+  for (const auto &pair : job_name2infer_ctx_) {
     nlohmann::json json_pair;
     json_pair["class_name"] = "Model";
     std::string tmp_json = pair.second->GetJobStructureGraphJson(pair.first);
@@ -107,4 +122,4 @@ void EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
   clear_job_name2infer_ctx();
 }
 
-}  // namespace oneflow
+} // namespace oneflow

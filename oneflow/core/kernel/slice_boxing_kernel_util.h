@@ -20,11 +20,10 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-struct SliceBoxingKernelUtil {
-  static void Add(DeviceCtx* ctx, int64_t n, const T* a, const T* b, T* out);
+template <DeviceType device_type, typename T> struct SliceBoxingKernelUtil {
+  static void Add(DeviceCtx *ctx, int64_t n, const T *a, const T *b, T *out);
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_SLICE_BOXING_KERNEL_UTIL_H_
+#endif // ONEFLOW_CORE_KERNEL_SLICE_BOXING_KERNEL_UTIL_H_

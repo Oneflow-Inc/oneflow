@@ -19,73 +19,84 @@ namespace oneflow {
 namespace eager {
 
 Maybe<void> OpKernelObject::ResetOpAndKernel(
-    const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
-    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const ParallelDesc* parallel_desc) {
+    const OpNodeSignatureDesc &op_node_signature,
+    const ParallelContext *parallel_ctx,
+    const std::function<BlobDesc *(const std::string &)> &BlobDesc4BnInOp,
+    const ParallelDesc *parallel_desc) {
   auto op = ConstructOp(op_conf_, device_type_, job_desc_.get());
   std::unique_ptr<OpContext> op_ctx;
-  JUST(InferBlobDescs(*op, BlobDesc4BnInOp, &op_node_signature.sbp_signature(), parallel_ctx,
-                      &op_ctx));
-  NewPartialInitializedKernel(*op, BlobDesc4BnInOp, op_node_signature, parallel_ctx, op_ctx.get(),
-                              parallel_desc);
+  JUST(InferBlobDescs(*op, BlobDesc4BnInOp, &op_node_signature.sbp_signature(),
+                      parallel_ctx, &op_ctx));
+  NewPartialInitializedKernel(*op, BlobDesc4BnInOp, op_node_signature,
+                              parallel_ctx, op_ctx.get(), parallel_desc);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> OpKernelObject::InferBlobDescs(
-    const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
-    std::unique_ptr<OpContext>* op_ctx) {
+    const Operator &op,
+    const std::function<BlobDesc *(const std::string &)> &BlobDesc4BnInOp,
+    const SbpSignature *sbp_signature, const ParallelContext *parallel_ctx,
+    std::unique_ptr<OpContext> *op_ctx) {
   JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx, sbp_signature,
-                           [op_ctx](OpContext* ctx) { op_ctx->reset(ctx); }));
+                           [op_ctx](OpContext *ctx) { op_ctx->reset(ctx); }));
   return Maybe<void>::Ok();
 }
 
 void OpKernelObject::NewPartialInitializedKernel(
-    const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
-    OpContext* op_ctx, const ParallelDesc* parallel_desc) {
+    const Operator &op,
+    const std::function<BlobDesc *(const std::string &)> &BlobDesc4BnInOp,
+    const OpNodeSignatureDesc &op_node_signature,
+    const ParallelContext *parallel_ctx, OpContext *op_ctx,
+    const ParallelDesc *parallel_desc) {
   KernelConf kernel_conf;
-  auto LogicalBlobDesc4BnInOp = [&](const std::string& bn_in_op) -> const BlobDesc& {
+  auto LogicalBlobDesc4BnInOp =
+      [&](const std::string &bn_in_op) -> const BlobDesc & {
     return CHECK_JUST(op_node_signature.LogicalBlobDesc4BnInOp(bn_in_op));
   };
-  op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf, op_ctx, LogicalBlobDesc4BnInOp,
-                   parallel_desc);
+  op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf, op_ctx,
+                   LogicalBlobDesc4BnInOp, parallel_desc);
   kernel_.reset(new EagerKernel(job_desc_.get(), kernel_conf));
 }
 
 Maybe<void> SystemOpKernelObject::ResetKernel(
-    const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
-    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const ParallelDesc* parallel_desc) {
+    const OpNodeSignatureDesc &op_node_signature,
+    const ParallelContext *parallel_ctx,
+    const std::function<BlobDesc *(const std::string &)> &BlobDesc4BnInOp,
+    const ParallelDesc *parallel_desc) {
   auto op = ConstructOp(op_conf_, device_type_, job_desc_.get());
   std::unique_ptr<OpContext> op_ctx;
-  JUST(InferBlobDescs(*op, BlobDesc4BnInOp, &op_node_signature.sbp_signature(), parallel_ctx,
-                      &op_ctx));
-  ResetKernel(*op, BlobDesc4BnInOp, op_node_signature, parallel_ctx, op_ctx.get(), parallel_desc);
+  JUST(InferBlobDescs(*op, BlobDesc4BnInOp, &op_node_signature.sbp_signature(),
+                      parallel_ctx, &op_ctx));
+  ResetKernel(*op, BlobDesc4BnInOp, op_node_signature, parallel_ctx,
+              op_ctx.get(), parallel_desc);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> SystemOpKernelObject::InferBlobDescs(
-    const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
-    std::unique_ptr<OpContext>* op_ctx) {
+    const Operator &op,
+    const std::function<BlobDesc *(const std::string &)> &BlobDesc4BnInOp,
+    const SbpSignature *sbp_signature, const ParallelContext *parallel_ctx,
+    std::unique_ptr<OpContext> *op_ctx) {
   JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx, sbp_signature,
-                           [op_ctx](OpContext* ctx) { op_ctx->reset(ctx); }));
+                           [op_ctx](OpContext *ctx) { op_ctx->reset(ctx); }));
   return Maybe<void>::Ok();
 }
 
 void SystemOpKernelObject::ResetKernel(
-    const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
-    OpContext* op_ctx, const ParallelDesc* parallel_desc) {
+    const Operator &op,
+    const std::function<BlobDesc *(const std::string &)> &BlobDesc4BnInOp,
+    const OpNodeSignatureDesc &op_node_signature,
+    const ParallelContext *parallel_ctx, OpContext *op_ctx,
+    const ParallelDesc *parallel_desc) {
   KernelConf kernel_conf;
-  auto LogicalBlobDesc4BnInOp = [&](const std::string& bn_in_op) -> const BlobDesc& {
+  auto LogicalBlobDesc4BnInOp =
+      [&](const std::string &bn_in_op) -> const BlobDesc & {
     return CHECK_JUST(op_node_signature.LogicalBlobDesc4BnInOp(bn_in_op));
   };
-  op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf, op_ctx, LogicalBlobDesc4BnInOp,
-                   parallel_desc);
+  op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf, op_ctx,
+                   LogicalBlobDesc4BnInOp, parallel_desc);
   kernel_ = ConstructKernel(job_desc_.get(), kernel_conf, nullptr);
 }
 
-}  // namespace eager
-}  // namespace oneflow
+} // namespace eager
+} // namespace oneflow

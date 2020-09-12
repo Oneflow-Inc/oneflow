@@ -25,39 +25,36 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type>
-class RandomMaskGenerator;
+template <DeviceType device_type> class RandomMaskGenerator;
 
-template<>
-class RandomMaskGenerator<DeviceType::kCPU> final {
- public:
+template <> class RandomMaskGenerator<DeviceType::kCPU> final {
+public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
   RandomMaskGenerator(int64_t seed) : mt19937_generator_(seed) {}
   ~RandomMaskGenerator() {}
 
-  void Generate(DeviceCtx* device_ctx, int64_t n, float rate, int8_t* mask);
+  void Generate(DeviceCtx *device_ctx, int64_t n, float rate, int8_t *mask);
 
- private:
+private:
   std::mt19937 mt19937_generator_;
 };
 
 #ifdef WITH_CUDA
-template<>
-class RandomMaskGenerator<DeviceType::kGPU> final {
- public:
+template <> class RandomMaskGenerator<DeviceType::kGPU> final {
+public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
   RandomMaskGenerator(int64_t seed);
   ~RandomMaskGenerator();
 
-  void Generate(DeviceCtx* device_ctx, int64_t n, float rate, int8_t* mask);
+  void Generate(DeviceCtx *device_ctx, int64_t n, float rate, int8_t *mask);
 
- private:
-  curandState* curand_states_;
+private:
+  curandState *curand_states_;
   int32_t block_num_;
   int32_t thread_num_;
 };
 #endif
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_RANDOM_MASK_GENERATOR_H_
+#endif // ONEFLOW_USER_KERNELS_RANDOM_MASK_GENERATOR_H_

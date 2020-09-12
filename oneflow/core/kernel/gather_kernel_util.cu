@@ -14,24 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/gather_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/kernel_util.cuh"
 #include <assert.h>
 
 namespace oneflow {
 
 namespace {
 
-Shape GetFlatShape(const ShapeView& shape, int64_t axis) {
+Shape GetFlatShape(const ShapeView &shape, int64_t axis) {
   CHECK_GT(shape.NumAxes(), 0);
   CHECK_GE(axis, 0);
   CHECK_LT(axis, shape.NumAxes());
   return Shape({shape.Count(0, axis), shape.At(axis), shape.Count(axis + 1)});
 }
 
-template<typename K, typename IDX>
-__device__ IDX GetInOffset(const IDX out_offset, const K* indices, const IDX num_indices,
-                           const IDX gather_dim_size, const IDX inner_dim_size, const IDX offset) {
+template <typename K, typename IDX>
+__device__ IDX GetInOffset(const IDX out_offset, const K *indices,
+                           const IDX num_indices, const IDX gather_dim_size,
+                           const IDX inner_dim_size, const IDX offset) {
   const IDX outer_dim_elem_cnt = num_indices * inner_dim_size;
   const IDX outer_idx = out_offset / outer_dim_elem_cnt;
   const IDX indices_idx = out_offset % outer_dim_elem_cnt / inner_dim_size;
@@ -39,19 +40,21 @@ __device__ IDX GetInOffset(const IDX out_offset, const K* indices, const IDX num
   assert(indices[indices_idx] >= 0);
   const IDX idx = indices[indices_idx] - offset;
   if (idx >= 0 && idx < gather_dim_size) {
-    return outer_idx * gather_dim_size * inner_dim_size + idx * inner_dim_size + inner_idx;
+    return outer_idx * gather_dim_size * inner_dim_size + idx * inner_dim_size +
+           inner_idx;
   } else {
     return -1;
   }
 }
 
-template<typename T, typename K, typename IDX>
-__global__ void GatherForwardGpu(const IDX elem_cnt, const K* indices, const IDX num_indices,
-                                 const T* in, const IDX gather_dim_size, const IDX inner_dim_size,
-                                 T* out, const IDX offset) {
+template <typename T, typename K, typename IDX>
+__global__ void
+GatherForwardGpu(const IDX elem_cnt, const K *indices, const IDX num_indices,
+                 const T *in, const IDX gather_dim_size,
+                 const IDX inner_dim_size, T *out, const IDX offset) {
   CUDA_1D_KERNEL_LOOP_T(IDX, i, elem_cnt) {
-    const IDX in_offset =
-        GetInOffset<K, IDX>(i, indices, num_indices, gather_dim_size, inner_dim_size, offset);
+    const IDX in_offset = GetInOffset<K, IDX>(
+        i, indices, num_indices, gather_dim_size, inner_dim_size, offset);
     if (in_offset < 0) {
       out[i] = 0;
     } else {
@@ -60,50 +63,57 @@ __global__ void GatherForwardGpu(const IDX elem_cnt, const K* indices, const IDX
   }
 }
 
-bool IsSafeUseIndex32(const Shape& flat_in_shape, const int64_t num_indices) {
+bool IsSafeUseIndex32(const Shape &flat_in_shape, const int64_t num_indices) {
   const int64_t in_elem_cnt = flat_in_shape.elem_cnt();
-  const int64_t out_elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
+  const int64_t out_elem_cnt =
+      flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
   return std::max(out_elem_cnt, in_elem_cnt) < GetMaxVal<int32_t>() / 2;
 }
 
-}  // namespace
+} // namespace
 
-template<typename T, typename K>
+template <typename T, typename K>
 struct GatherKernelUtilImpl<DeviceType::kGPU, T, K> final {
-  static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const T* in,
-                      const Shape& flat_in_shape, T* out, const int64_t offset) {
-    const int64_t out_elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
+  static void Forward(DeviceCtx *ctx, const K *indices, int64_t num_indices,
+                      const T *in, const Shape &flat_in_shape, T *out,
+                      const int64_t offset) {
+    const int64_t out_elem_cnt =
+        flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
     if (IsSafeUseIndex32(flat_in_shape, num_indices)) {
-      GatherForwardGpu<T, K, int32_t>
-          <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              out_elem_cnt, indices, num_indices, in, flat_in_shape.At(1), flat_in_shape.At(2), out,
-              offset);
+      GatherForwardGpu<
+          T, K, int32_t><<<BlocksNum4ThreadsNum(out_elem_cnt),
+                           kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          out_elem_cnt, indices, num_indices, in, flat_in_shape.At(1),
+          flat_in_shape.At(2), out, offset);
     } else {
-      GatherForwardGpu<T, K, int64_t>
-          <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              out_elem_cnt, indices, num_indices, in, flat_in_shape.At(1), flat_in_shape.At(2), out,
-              offset);
+      GatherForwardGpu<
+          T, K, int64_t><<<BlocksNum4ThreadsNum(out_elem_cnt),
+                           kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          out_elem_cnt, indices, num_indices, in, flat_in_shape.At(1),
+          flat_in_shape.At(2), out, offset);
     }
   }
 };
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
-template<typename K>
+template <typename K>
 struct GatherKernelUtilImpl<DeviceType::kGPU, float16, K> final {
-  static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const float16* in,
-                      const Shape& flat_in_shape, float16* out, const int64_t offset) {
+  static void Forward(DeviceCtx *ctx, const K *indices, int64_t num_indices,
+                      const float16 *in, const Shape &flat_in_shape,
+                      float16 *out, const int64_t offset) {
     GatherKernelUtilImpl<DeviceType::kGPU, half, K>::Forward(
-        ctx, indices, num_indices, reinterpret_cast<const half*>(in), flat_in_shape,
-        reinterpret_cast<half*>(out), offset);
+        ctx, indices, num_indices, reinterpret_cast<const half *>(in),
+        flat_in_shape, reinterpret_cast<half *>(out), offset);
   }
 };
 #endif
 
-#define INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL(in_type_pair, index_type_pair)              \
-  template struct GatherKernelUtilImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
+#define INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL(in_type_pair, index_type_pair)    \
+  template struct GatherKernelUtilImpl<DeviceType::kGPU,                       \
+                                       OF_PP_PAIR_FIRST(in_type_pair),         \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL, GATHER_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL,
+                                 GATHER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -16,38 +16,44 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 #define ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 
-#include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/memory/memory_case.pb.h"
 
 namespace oneflow {
 
-inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
+inline bool operator==(const MemoryCase &lhs, const MemoryCase &rhs) {
   if (lhs.has_host_mem() && rhs.has_host_mem()) {
-    const HostMemory& lhs_host_mem = lhs.host_mem();
-    const HostMemory& rhs_host_mem = rhs.host_mem();
-    if (lhs_host_mem.has_cuda_pinned_mem() && rhs_host_mem.has_cuda_pinned_mem()) {
-      return lhs_host_mem.cuda_pinned_mem().device_id()
-             == rhs_host_mem.cuda_pinned_mem().device_id();
+    const HostMemory &lhs_host_mem = lhs.host_mem();
+    const HostMemory &rhs_host_mem = rhs.host_mem();
+    if (lhs_host_mem.has_cuda_pinned_mem() &&
+        rhs_host_mem.has_cuda_pinned_mem()) {
+      return lhs_host_mem.cuda_pinned_mem().device_id() ==
+             rhs_host_mem.cuda_pinned_mem().device_id();
     } else {
-      return (!lhs_host_mem.has_cuda_pinned_mem()) && (!rhs_host_mem.has_cuda_pinned_mem());
+      return (!lhs_host_mem.has_cuda_pinned_mem()) &&
+             (!rhs_host_mem.has_cuda_pinned_mem());
     }
   }
   if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
-    return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
+    return lhs.device_cuda_mem().device_id() ==
+           rhs.device_cuda_mem().device_id();
   }
   return false;
 }
 
 struct MemoryCaseUtil {
-  static bool GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& b, MemoryCase* common);
+  static bool GetCommonMemoryCase(const MemoryCase &a, const MemoryCase &b,
+                                  MemoryCase *common);
 
-  static MemoryCase GetHostPinnedMemoryCaseForRegstSeparatedHeader(const MemoryCase& mem_case);
+  static MemoryCase
+  GetHostPinnedMemoryCaseForRegstSeparatedHeader(const MemoryCase &mem_case);
 
-  static int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case);
+  static int64_t GenMemZoneUniqueId(int64_t machine_id,
+                                    const MemoryCase &mem_case);
 
-  static bool IsHostUnPinnedMemoryCase(const MemoryCase& mem_case);
+  static bool IsHostUnPinnedMemoryCase(const MemoryCase &mem_case);
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
+#endif // ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_

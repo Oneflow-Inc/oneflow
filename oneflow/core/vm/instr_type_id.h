@@ -16,11 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_INSTRUCTION_ID_H_
 #define ONEFLOW_CORE_VM_INSTRUCTION_ID_H_
 
-#include <typeindex>
-#include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/common/layout_standardize.h"
-#include "oneflow/core/vm/stream_desc.msg.h"
+#include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/vm/interpret_type.h"
+#include "oneflow/core/vm/stream_desc.msg.h"
+#include <typeindex>
 
 namespace oneflow {
 namespace vm {
@@ -28,9 +28,9 @@ namespace vm {
 class InstructionType;
 
 class InstrTypeId final {
- public:
+public:
   InstrTypeId() : instruction_type_(nullptr) { __Init__(); }
-  InstrTypeId(const InstrTypeId& rhs) : instruction_type_(nullptr) {
+  InstrTypeId(const InstrTypeId &rhs) : instruction_type_(nullptr) {
     __Init__();
     CopyFrom(rhs);
   }
@@ -41,7 +41,8 @@ class InstrTypeId final {
     std::memset(this, 0, sizeof(InstrTypeId));
     mutable_stream_type_id()->__Init__();
   }
-  void __Init__(const StreamType* stream_type, const InstructionType* instruction_type,
+  void __Init__(const StreamType *stream_type,
+                const InstructionType *instruction_type,
                 InterpretType interpret_type) {
     __Init__();
     mutable_stream_type_id()->__Init__(stream_type, interpret_type);
@@ -51,36 +52,41 @@ class InstrTypeId final {
     stream_type_id_.clear();
     instruction_type_ = nullptr;
   }
-  void CopyFrom(const InstrTypeId& rhs) {
+  void CopyFrom(const InstrTypeId &rhs) {
     stream_type_id_.CopyFrom(rhs.stream_type_id_);
     instruction_type_ = &rhs.instruction_type();
   }
   // Getters
-  const StreamTypeId& stream_type_id() const { return stream_type_id_; }
-  const InstructionType& instruction_type() const { return *instruction_type_; }
+  const StreamTypeId &stream_type_id() const { return stream_type_id_; }
+  const InstructionType &instruction_type() const { return *instruction_type_; }
 
   // Setters
-  StreamTypeId* mut_stream_type_id() { return &stream_type_id_; }
-  StreamTypeId* mutable_stream_type_id() { return &stream_type_id_; }
+  StreamTypeId *mut_stream_type_id() { return &stream_type_id_; }
+  StreamTypeId *mutable_stream_type_id() { return &stream_type_id_; }
 
-  bool operator==(const InstrTypeId& rhs) const {
-    return stream_type_id_ == rhs.stream_type_id_ && instruction_type_ == rhs.instruction_type_;
+  bool operator==(const InstrTypeId &rhs) const {
+    return stream_type_id_ == rhs.stream_type_id_ &&
+           instruction_type_ == rhs.instruction_type_;
   }
-  bool operator<(const InstrTypeId& rhs) const {
-    if (!(stream_type_id_ == rhs.stream_type_id_)) { return stream_type_id_ < rhs.stream_type_id_; }
+  bool operator<(const InstrTypeId &rhs) const {
+    if (!(stream_type_id_ == rhs.stream_type_id_)) {
+      return stream_type_id_ < rhs.stream_type_id_;
+    }
     if (!(instruction_type_ == rhs.instruction_type_)) {
       return instruction_type_ < rhs.instruction_type_;
     }
     return false;
   }
-  bool operator<=(const InstrTypeId& rhs) const { return *this < rhs || *this == rhs; }
+  bool operator<=(const InstrTypeId &rhs) const {
+    return *this < rhs || *this == rhs;
+  }
 
- private:
-  const InstructionType* instruction_type_;
+private:
+  const InstructionType *instruction_type_;
   StreamTypeId stream_type_id_;
 };
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_INSTRUCTION_ID_H_
+#endif // ONEFLOW_CORE_VM_INSTRUCTION_ID_H_

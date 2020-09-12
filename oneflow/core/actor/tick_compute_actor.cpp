@@ -17,13 +17,13 @@ limitations under the License.
 
 namespace oneflow {
 
-void TickComputeActor::VirtualCompActorInit(const TaskProto& task_proto) {
+void TickComputeActor::VirtualCompActorInit(const TaskProto &task_proto) {
   piece_id_ = 0;
   OF_SET_MSG_HANDLER(&TickComputeActor::HandlerNormal);
 }
 
 void TickComputeActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  HandleProducedNaiveDataRegstToConsumer([&](Regst* out_regst) {
+  HandleProducedNaiveDataRegstToConsumer([&](Regst *out_regst) {
     out_regst->set_piece_id(piece_id_++);
     return true;
   });
@@ -32,4 +32,4 @@ void TickComputeActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 REGISTER_ACTOR(kTick, TickComputeActor);
 REGISTER_ACTOR(kDeviceTick, TickComputeActor);
 
-}  // namespace oneflow
+} // namespace oneflow

@@ -18,16 +18,16 @@ limitations under the License.
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
 #define private public
-#include "oneflow/core/vm/control_stream_type.h"
+#include "oneflow/core/common/cached_object_msg_allocator.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/vm/control_stream_type.h"
+#include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/test_util.h"
+#include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/vm/test_util.h"
-#include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/test_util.h"
-#include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
 namespace vm {
@@ -56,15 +56,15 @@ TEST(ControlStreamType, new_symbol_symbol) {
   ASSERT_EQ(vm->thread_ctx_list().size(), 1 * 2);
   ASSERT_EQ(vm->stream_type_id2stream_rt_desc().size(), 1 * 2);
   ASSERT_EQ(vm->id2logical_object().size(), 1 * 2);
-  auto* logical_object = vm->mut_id2logical_object()->FindPtr(symbol_id);
+  auto *logical_object = vm->mut_id2logical_object()->FindPtr(symbol_id);
   ASSERT_NE(logical_object, nullptr);
   ASSERT_EQ(logical_object->global_device_id2mirrored_object().size(), 1);
   ASSERT_TRUE(vm->Empty());
 }
 
-}  // namespace
+} // namespace
 
-}  // namespace test
+} // namespace test
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow

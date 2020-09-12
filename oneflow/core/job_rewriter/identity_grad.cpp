@@ -20,12 +20,12 @@ namespace oneflow {
 namespace {
 
 void GenerateIdentityBackwardOpConf(
-    const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
+    const Operator &op, std::vector<OperatorConf> *op_confs,
+    const std::function<LogicalBlobId *(const std::string &)> &DiffLbi4BnInOp) {
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf grad_op{};
     grad_op.set_name("System-AutoGrad-" + op.op_name());
-    IdentityOpConf* identity_op_conf = grad_op.mutable_identity_conf();
+    IdentityOpConf *identity_op_conf = grad_op.mutable_identity_conf();
     identity_op_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     identity_op_conf->set_out("out");
     op_confs->push_back(grad_op);
@@ -37,9 +37,10 @@ void GenerateIdentityBackwardOpConf(
 REGISTER_OP_GRAD(OperatorConf::kIdentityConf, &GenerateIdentityBackwardOpConf);
 REGISTER_OP_GRAD(OperatorConf::kCopyConf, &GenerateIdentityBackwardOpConf);
 
-}  // namespace
+} // namespace
 
-void GenerateBwSbpParallel(SbpParallel* bw_sbp_parallel, const SbpParallel& fw_sbp_parallel) {
+void GenerateBwSbpParallel(SbpParallel *bw_sbp_parallel,
+                           const SbpParallel &fw_sbp_parallel) {
   if (fw_sbp_parallel.has_split_parallel()) {
     *bw_sbp_parallel = fw_sbp_parallel;
   } else if (fw_sbp_parallel.has_broadcast_parallel()) {
@@ -54,49 +55,54 @@ void GenerateBwSbpParallel(SbpParallel* bw_sbp_parallel, const SbpParallel& fw_s
 namespace {
 
 void GenerateCastToMirroredBackwardOpConf(
-    const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
+    const Operator &op, std::vector<OperatorConf> *op_confs,
+    const std::function<LogicalBlobId *(const std::string &)> &DiffLbi4BnInOp) {
   CHECK(op.op_conf().has_cast_to_mirrored_conf());
-  const auto& fw_op_conf = op.op_conf().cast_to_mirrored_conf();
+  const auto &fw_op_conf = op.op_conf().cast_to_mirrored_conf();
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf grad_op{};
     grad_op.set_name("System-AutoGrad-" + op.op_name());
-    CastFromMirroredOpConf* bw_op_conf = grad_op.mutable_cast_from_mirrored_conf();
+    CastFromMirroredOpConf *bw_op_conf =
+        grad_op.mutable_cast_from_mirrored_conf();
     bw_op_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     bw_op_conf->set_out("out");
-    GenerateBwSbpParallel(bw_op_conf->mutable_sbp_parallel(), fw_op_conf.sbp_parallel());
+    GenerateBwSbpParallel(bw_op_conf->mutable_sbp_parallel(),
+                          fw_op_conf.sbp_parallel());
     op_confs->push_back(grad_op);
     DiffLbi4BnInOp("in")->set_op_name(grad_op.name());
     DiffLbi4BnInOp("in")->set_blob_name(bw_op_conf->out());
   }
 }
 
-REGISTER_OP_GRAD(OperatorConf::kCastToMirroredConf, &GenerateCastToMirroredBackwardOpConf);
+REGISTER_OP_GRAD(OperatorConf::kCastToMirroredConf,
+                 &GenerateCastToMirroredBackwardOpConf);
 
-}  // namespace
+} // namespace
 
 namespace {
 
 void GenerateCastFromMirroredBackwardOpConf(
-    const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
+    const Operator &op, std::vector<OperatorConf> *op_confs,
+    const std::function<LogicalBlobId *(const std::string &)> &DiffLbi4BnInOp) {
   CHECK(op.op_conf().has_cast_from_mirrored_conf());
-  const auto& fw_op_conf = op.op_conf().cast_from_mirrored_conf();
+  const auto &fw_op_conf = op.op_conf().cast_from_mirrored_conf();
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf grad_op{};
     grad_op.set_name("System-AutoGrad-" + op.op_name());
-    CastToMirroredOpConf* bw_op_conf = grad_op.mutable_cast_to_mirrored_conf();
+    CastToMirroredOpConf *bw_op_conf = grad_op.mutable_cast_to_mirrored_conf();
     bw_op_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     bw_op_conf->set_out("out");
-    GenerateBwSbpParallel(bw_op_conf->mutable_sbp_parallel(), fw_op_conf.sbp_parallel());
+    GenerateBwSbpParallel(bw_op_conf->mutable_sbp_parallel(),
+                          fw_op_conf.sbp_parallel());
     op_confs->push_back(grad_op);
     DiffLbi4BnInOp("in")->set_op_name(grad_op.name());
     DiffLbi4BnInOp("in")->set_blob_name(bw_op_conf->out());
   }
 }
 
-REGISTER_OP_GRAD(OperatorConf::kCastFromMirroredConf, &GenerateCastFromMirroredBackwardOpConf);
+REGISTER_OP_GRAD(OperatorConf::kCastFromMirroredConf,
+                 &GenerateCastFromMirroredBackwardOpConf);
 
-}  // namespace
+} // namespace
 
-}  // namespace oneflow
+} // namespace oneflow

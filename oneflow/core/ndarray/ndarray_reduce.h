@@ -16,50 +16,67 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_H_
 #define ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_H_
 
-#include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ndarray/ndarray_reduce_impl.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, template<typename> class binary_func,
-         typename Enable = void>
+template <DeviceType device_type, typename T,
+          template <typename> class binary_func, typename Enable = void>
 struct NdarrayReduce;
 
-template<DeviceType device_type, typename T, template<typename> class binary_func>
+template <DeviceType device_type, typename T,
+          template <typename> class binary_func>
 struct NdarrayReduce<
     device_type, T, binary_func,
-    typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
+    typename std::enable_if<
+        std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& origin_y,
-                     const XpuVarNdarray<const T>& origin_x, const XpuVarNdarray<T>& tmp_storage) {
+  static void Reduce(DeviceCtx *ctx, const XpuVarNdarray<T> &origin_y,
+                     const XpuVarNdarray<const T> &origin_x,
+                     const XpuVarNdarray<T> &tmp_storage) {
     DimVector simplified_x_dim;
     DimVector simplified_y_dim;
-    TrySimplifyDims(origin_x.shape(), origin_y.shape(), &simplified_x_dim, &simplified_y_dim);
+    TrySimplifyDims(origin_x.shape(), origin_y.shape(), &simplified_x_dim,
+                    &simplified_y_dim);
     XpuVarNdarray<T> y(Shape(simplified_y_dim), origin_y.ptr());
     XpuVarNdarray<const T> x(Shape(simplified_x_dim), origin_x.ptr());
 
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
     if (NdarrayNoReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayNoReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
-    } else if (NdarrayScalarReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayScalarReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
-    } else if (NdarrayMatrixRowReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayMatrixRowReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
-    } else if (NdarrayMatrixColReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayMatrixColReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
-    } else if (NdarrayXYZCubeYReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayXYZCubeYReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
-    } else if (NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
+      NdarrayNoReduce<device_type, T, binary_func>::Reduce(ctx, y, x,
+                                                           tmp_storage);
+    } else if (NdarrayScalarReduce<device_type, T, binary_func>::Matched(y,
+                                                                         x)) {
+      NdarrayScalarReduce<device_type, T, binary_func>::Reduce(ctx, y, x,
+                                                               tmp_storage);
+    } else if (NdarrayMatrixRowReduce<device_type, T, binary_func>::Matched(
+                   y, x)) {
+      NdarrayMatrixRowReduce<device_type, T, binary_func>::Reduce(ctx, y, x,
+                                                                  tmp_storage);
+    } else if (NdarrayMatrixColReduce<device_type, T, binary_func>::Matched(
+                   y, x)) {
+      NdarrayMatrixColReduce<device_type, T, binary_func>::Reduce(ctx, y, x,
+                                                                  tmp_storage);
+    } else if (NdarrayXYZCubeYReduce<device_type, T, binary_func>::Matched(y,
+                                                                           x)) {
+      NdarrayXYZCubeYReduce<device_type, T, binary_func>::Reduce(ctx, y, x,
+                                                                 tmp_storage);
+    } else if (NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Matched(
+                   y, x)) {
+      NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Reduce(ctx, y, x,
+                                                                  tmp_storage);
     } else {
-      NdarrayDefaultReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
+      NdarrayDefaultReduce<device_type, T, binary_func>::Reduce(ctx, y, x,
+                                                                tmp_storage);
     }
   }
 
-  static void TrySimplifyDims(const XpuShape& x, const XpuShape& y, DimVector* simplified_x,
-                              DimVector* simplified_y) {
+  static void TrySimplifyDims(const XpuShape &x, const XpuShape &y,
+                              DimVector *simplified_x,
+                              DimVector *simplified_y) {
     CHECK_EQ(y.NumAxes(), x.NumAxes());
     CHECK(y.At(0) == 1 || y.At(0) == x.At(0));
     CHECK(simplified_x->empty());
@@ -84,21 +101,24 @@ struct NdarrayReduce<
   }
 };
 
-template<DeviceType device_type, typename T, template<typename> class binary_func>
+template <DeviceType device_type, typename T,
+          template <typename> class binary_func>
 struct NdarrayReduce<
     device_type, T, binary_func,
-    typename std::enable_if<!std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
+    typename std::enable_if<
+        !std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage) {
+  static void Reduce(DeviceCtx *ctx, const XpuVarNdarray<T> &y,
+                     const XpuVarNdarray<const T> &x,
+                     const XpuVarNdarray<T> &tmp_storage) {
     using NewT = typename DevDType<device_type, T>::type;
     return NdarrayReduce<device_type, NewT, binary_func>::Reduce(
-        ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
-        reinterpret_cast<const XpuVarNdarray<const NewT>&>(x),
-        reinterpret_cast<const XpuVarNdarray<NewT>&>(tmp_storage));
+        ctx, reinterpret_cast<const XpuVarNdarray<NewT> &>(y),
+        reinterpret_cast<const XpuVarNdarray<const NewT> &>(x),
+        reinterpret_cast<const XpuVarNdarray<NewT> &>(tmp_storage));
   }
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_H_
+#endif // ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_H_

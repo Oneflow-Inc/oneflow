@@ -17,17 +17,24 @@ limitations under the License.
 
 namespace oneflow {
 
-const char* StrToToken(const char* text, const std::string& delims, std::string* token) {
+const char *StrToToken(const char *text, const std::string &delims,
+                       std::string *token) {
   token->clear();
-  while (*text != '\0' && delims.find(*text) != std::string::npos) { text++; }
-  while (*text != '\0' && delims.find(*text) == std::string::npos) { token->push_back(*text++); }
+  while (*text != '\0' && delims.find(*text) != std::string::npos) {
+    text++;
+  }
+  while (*text != '\0' && delims.find(*text) == std::string::npos) {
+    token->push_back(*text++);
+  }
   return text;
 }
 
-void Split(const std::string& text, const std::string& delims,
-           std::function<void(std::string&&)> Func) {
+void Split(const std::string &text, const std::string &delims,
+           std::function<void(std::string &&)> Func) {
   size_t token_start = 0;
-  if (text.empty()) { return; }
+  if (text.empty()) {
+    return;
+  }
   for (size_t i = 0; i < text.size() + 1; ++i) {
     if ((i == text.size()) || (delims.find(text[i]) != std::string::npos)) {
       Func(text.substr(token_start, i - token_start));
@@ -36,29 +43,36 @@ void Split(const std::string& text, const std::string& delims,
   }
 }
 
-std::string Dirname(const std::string& path) {
+std::string Dirname(const std::string &path) {
   size_t found = path.rfind('/');
-  if (found == std::string::npos) { return ""; }
-  if (found == 0) { return "/"; }
+  if (found == std::string::npos) {
+    return "";
+  }
+  if (found == 0) {
+    return "/";
+  }
   return path.substr(0, found);
 }
 
-std::string Basename(const std::string& path) {
+std::string Basename(const std::string &path) {
   size_t found = path.rfind('/');
-  if (found == std::string::npos) { return path; }
+  if (found == std::string::npos) {
+    return path;
+  }
   return path.substr(found + 1);
 }
 
-std::string CleanPath(const std::string& unclean_path) {
+std::string CleanPath(const std::string &unclean_path) {
   std::string path = unclean_path;
-  const char* src = path.c_str();
+  const char *src = path.c_str();
   std::string::iterator dst = path.begin();
 
   // Check for absolute path and determine initial backtrack limit.
   const bool is_absolute_path = *src == '/';
   if (is_absolute_path) {
     *dst++ = *src++;
-    while (*src == '/') ++src;
+    while (*src == '/')
+      ++src;
   }
   std::string::const_iterator backtrack_limit = dst;
 
@@ -69,7 +83,9 @@ std::string CleanPath(const std::string& unclean_path) {
     if (src[0] == '.') {
       //  1dot ".<whateverisnext>", check for END or SEP.
       if (src[1] == '/' || !src[1]) {
-        if (*++src) { ++src; }
+        if (*++src) {
+          ++src;
+        }
         parsed = true;
       } else if (src[1] == '.' && (src[2] == '/' || !src[2])) {
         // 2dot END or SEP (".." | "../<whateverisnext>").
@@ -84,30 +100,42 @@ std::string CleanPath(const std::string& unclean_path) {
           src -= 2;
           *dst++ = *src++;
           *dst++ = *src++;
-          if (*src) { *dst++ = *src; }
+          if (*src) {
+            *dst++ = *src;
+          }
           // We can never backtrack over a copied "../" part so set new limit.
           backtrack_limit = dst;
         }
-        if (*src) { ++src; }
+        if (*src) {
+          ++src;
+        }
         parsed = true;
       }
     }
 
     // If not parsed, copy entire part until the next SEP or EOS.
     if (!parsed) {
-      while (*src && *src != '/') { *dst++ = *src++; }
-      if (*src) { *dst++ = *src++; }
+      while (*src && *src != '/') {
+        *dst++ = *src++;
+      }
+      if (*src) {
+        *dst++ = *src++;
+      }
     }
 
     // Skip consecutive SEP occurrences
-    while (*src == '/') { ++src; }
+    while (*src == '/') {
+      ++src;
+    }
   }
 
   // Calculate and check the length of the cleaned path.
   std::string::difference_type path_length = dst - path.begin();
   if (path_length != 0) {
     // Remove trailing '/' except if it is root path ("/" ==> path_length := 1)
-    if (path_length > 1 && path[path_length - 1] == '/') { --path_length; }
+    if (path_length > 1 && path[path_length - 1] == '/') {
+      --path_length;
+    }
     path.resize(path_length);
   } else {
     // The cleaned path is empty; assign "." as per the spec.
@@ -121,7 +149,8 @@ namespace internal {
 std::string JoinPathImpl(std::initializer_list<std::string> paths) {
   std::string result;
   for (std::string path : paths) {
-    if (path.empty()) continue;
+    if (path.empty())
+      continue;
     if (result.empty()) {
       result = path;
       continue;
@@ -145,10 +174,12 @@ std::string JoinPathImpl(std::initializer_list<std::string> paths) {
 
 std::string GetHashKeyImpl(std::initializer_list<int> integers) {
   std::string result = "";
-  for (int integer : integers) { result += std::to_string(integer) + ","; }
+  for (int integer : integers) {
+    result += std::to_string(integer) + ",";
+  }
   return result;
 }
 
-}  // namespace internal
+} // namespace internal
 
-}  // namespace oneflow
+} // namespace oneflow

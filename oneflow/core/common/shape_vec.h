@@ -34,6 +34,6 @@ typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> DimVector;
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> AxisVector;
 
 #endif
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_SHAPE_VEC_H_
+#endif // ONEFLOW_CORE_COMMON_SHAPE_VEC_H_

@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 class SocketReadHelper final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(SocketReadHelper);
   SocketReadHelper() = delete;
   ~SocketReadHelper();
@@ -32,7 +32,7 @@ class SocketReadHelper final {
 
   void NotifyMeSocketReadable();
 
- private:
+private:
   void SwitchToMsgHeadReadHandle();
   void ReadUntilSocketNotReadable();
 
@@ -51,12 +51,12 @@ class SocketReadHelper final {
 
   SocketMsg cur_msg_;
   bool (SocketReadHelper::*cur_read_handle_)();
-  char* read_ptr_;
+  char *read_ptr_;
   size_t read_size_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif // PLATFORM_POSIX
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_READ_HELPER_H_
+#endif // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_READ_HELPER_H_

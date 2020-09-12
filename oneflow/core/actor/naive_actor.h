@@ -21,20 +21,20 @@ limitations under the License.
 namespace oneflow {
 
 class NaiveActor : public Actor {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(NaiveActor);
   NaiveActor() = default;
   ~NaiveActor() override = default;
 
-  void VirtualActorInit(const TaskProto&) override {
+  void VirtualActorInit(const TaskProto &) override {
     OF_SET_MSG_HANDLER(&NaiveActor::HandlerNormal);
   }
 
- private:
+private:
   void Act() override final;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_NAIVE_ACTOR_H_
+#endif // ONEFLOW_CORE_ACTOR_NAIVE_ACTOR_H_

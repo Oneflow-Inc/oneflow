@@ -16,9 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_VM_RESOURCE_DESC_MSG_H_
 #define ONEFLOW_CORE_VM_VM_RESOURCE_DESC_MSG_H_
 
-#include <unordered_map>
-#include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/object_msg/object_msg.h"
+#include <unordered_map>
 
 namespace oneflow {
 
@@ -44,7 +44,7 @@ OBJECT_MSG_BEGIN(VmResourceDesc);
 OBJECT_MSG_END(VmResourceDesc);
 // clang-format on
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VM_RESOURCE_DESC_MSG_H_
+#endif // ONEFLOW_CORE_VM_VM_RESOURCE_DESC_MSG_H_

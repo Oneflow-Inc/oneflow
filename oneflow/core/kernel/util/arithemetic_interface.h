@@ -16,15 +16,14 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_KERNEL_UTIL_ARITHEMETIC_INTERFACE_H_
 #define ONEFLOW_CORE_KERNEL_UTIL_ARITHEMETIC_INTERFACE_H_
 
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
-template<DeviceType>
-class ArithemeticIf;
+template <DeviceType> class ArithemeticIf;
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_UTIL_ARITHEMETIC_INTERFACE_H_
+#endif // ONEFLOW_CORE_KERNEL_UTIL_ARITHEMETIC_INTERFACE_H_

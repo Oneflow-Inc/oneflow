@@ -77,7 +77,7 @@ FLAT_MSG_BEGIN(InstructionOperand);
 FLAT_MSG_END(InstructionOperand);
 // clang-format on
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_INSTRUCTION_OPERAND_H_
+#endif // ONEFLOW_CORE_VM_INSTRUCTION_OPERAND_H_

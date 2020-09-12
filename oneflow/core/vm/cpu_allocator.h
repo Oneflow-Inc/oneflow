@@ -16,22 +16,22 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_
 #define ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_
 
-#include <cstdint>
 #include "oneflow/core/vm/allocator.h"
+#include <cstdint>
 
 namespace oneflow {
 namespace vm {
 
 class CpuAllocator final : public Allocator {
- public:
+public:
   explicit CpuAllocator() = default;
   ~CpuAllocator() override = default;
 
-  void Allocate(char** mem_ptr, std::size_t size) override;
-  void Deallocate(char* mem_ptr, std::size_t size) override;
+  void Allocate(char **mem_ptr, std::size_t size) override;
+  void Deallocate(char *mem_ptr, std::size_t size) override;
 };
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_
+#endif // ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_

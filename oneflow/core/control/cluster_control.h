@@ -25,6 +25,6 @@ struct ClusterControl final {
   static void HaltBarrier();
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CONTROL_CLUSTER_CONTROL_H_
+#endif // ONEFLOW_CORE_CONTROL_CLUSTER_CONTROL_H_

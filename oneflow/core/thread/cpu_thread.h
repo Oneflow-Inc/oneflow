@@ -21,16 +21,16 @@ limitations under the License.
 namespace oneflow {
 
 class CpuThread final : public Thread {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CpuThread);
   CpuThread() = delete;
   ~CpuThread() = default;
 
   CpuThread(int64_t thrd_id);
 
- private:
+private:
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_THREAD_CPU_THREAD_H_
+#endif // ONEFLOW_CORE_THREAD_CPU_THREAD_H_

@@ -21,12 +21,13 @@ limitations under the License.
 namespace oneflow {
 namespace eager {
 
-Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_proto_str,
-                                   const std::string& eager_symbol_list_str);
-Maybe<void> RunLogicalInstruction(const std::string& instruction_list_proto_str,
-                                  const std::string& eager_symbol_list_str);
+Maybe<void>
+RunPhysicalInstruction(const std::string &instruction_list_proto_str,
+                       const std::string &eager_symbol_list_str);
+Maybe<void> RunLogicalInstruction(const std::string &instruction_list_proto_str,
+                                  const std::string &eager_symbol_list_str);
 
-}  // namespace eager
-}  // namespace oneflow
+} // namespace eager
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EAGER_EAGER_UTIL_H_
+#endif // ONEFLOW_CORE_EAGER_EAGER_UTIL_H_

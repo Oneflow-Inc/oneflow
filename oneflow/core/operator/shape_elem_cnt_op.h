@@ -21,26 +21,28 @@ limitations under the License.
 namespace oneflow {
 
 class ShapeElemCntOp final : public Operator {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(ShapeElemCntOp);
   ShapeElemCntOp() = default;
   ~ShapeElemCntOp() override = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  const PbMessage &GetCustomizedConf() const override;
+  Maybe<void> InferBlobDescs(
+      std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+      const ParallelContext *parallel_ctx) const override;
 
- private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
-  Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override;
-  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext*, KernelConf*, const OpContext*) const override;
+private:
+  Maybe<void> InferBatchAxis(std::function<OptInt64 *(const std::string &)>
+                                 BatchAxis4BnInOp) const override;
+  Maybe<void> GetSbpSignatures(const std::function<Maybe<const BlobDesc &>(
+                                   const std::string &)> &LogicalBlobDesc4Ibn,
+                               SbpSignatureList *sbp_sig_list) const override;
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+      const ParallelContext *, KernelConf *, const OpContext *) const override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_SHAPE_ELEM_CNT_H_
+#endif // ONEFLOW_CORE_OPERATOR_SHAPE_ELEM_CNT_H_

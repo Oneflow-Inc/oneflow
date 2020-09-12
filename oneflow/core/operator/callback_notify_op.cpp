@@ -24,17 +24,17 @@ void CallbackNotifyOp::InitFromOpConf() {
   EnrollInputBn("in", false);
 }
 
-LogicalNode* CallbackNotifyOp::NewProperLogicalNode() const {
+LogicalNode *CallbackNotifyOp::NewProperLogicalNode() const {
   return new CallbackNotifyLogicalNode();
 }
 
-const PbMessage& CallbackNotifyOp::GetCustomizedConf() const {
+const PbMessage &CallbackNotifyOp::GetCustomizedConf() const {
   return op_conf().callback_notify_conf();
 }
 
 Maybe<void> CallbackNotifyOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+    const ParallelContext *parallel_ctx) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   CHECK_OR_RETURN(GetBlobDesc4BnInOp("in")->shape() == Shape({1}));
   CHECK_OR_RETURN(IsIntegralDataType(GetBlobDesc4BnInOp("in")->data_type()));
@@ -42,15 +42,18 @@ Maybe<void> CallbackNotifyOp::InferBlobDescs(
 }
 
 Maybe<void> CallbackNotifyOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+    std::function<OptInt64 *(const std::string &)> BatchAxis4BnInOp) const {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CallbackNotifyOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Split(input_bns(), 0).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+Maybe<void>
+CallbackNotifyOp::GetSbpSignatures(SbpSignatureList *sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
 REGISTER_CPU_OP(OperatorConf::kCallbackNotifyConf, CallbackNotifyOp);
 
-}  // namespace oneflow
+} // namespace oneflow

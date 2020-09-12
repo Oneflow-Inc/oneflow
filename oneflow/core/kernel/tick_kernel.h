@@ -20,19 +20,22 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type>
+template <DeviceType device_type>
 class TickKernel final : public KernelIf<device_type> {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(TickKernel);
   TickKernel() = default;
   ~TickKernel() = default;
 
- private:
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
-  const PbMessage& GetCustomizedOpConf() const override { return this->op_conf().tick_conf(); }
+private:
+  void ForwardDataContent(
+      const KernelCtx &ctx,
+      std::function<Blob *(const std::string &)> BnInOp2Blob) const override {}
+  const PbMessage &GetCustomizedOpConf() const override {
+    return this->op_conf().tick_conf();
+  }
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_TICK_KERNEL_H_
+#endif // ONEFLOW_CORE_KERNEL_TICK_KERNEL_H_

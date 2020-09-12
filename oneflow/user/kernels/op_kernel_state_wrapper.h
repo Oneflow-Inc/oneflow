@@ -20,21 +20,22 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T>
+template <typename T>
 class OpKernelStateWrapper final : public user_op::OpKernelState {
- public:
-  template<typename... Args>
-  explicit OpKernelStateWrapper(Args&&... args) : data_(std::forward<Args>(args)...) {}
+public:
+  template <typename... Args>
+  explicit OpKernelStateWrapper(Args &&... args)
+      : data_(std::forward<Args>(args)...) {}
 
   ~OpKernelStateWrapper() = default;
 
-  const T& Get() const { return data_; }
-  T* Mutable() { return &data_; }
+  const T &Get() const { return data_; }
+  T *Mutable() { return &data_; }
 
- private:
+private:
   T data_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_OP_KERNEL_STATE_WRAPPER_H_
+#endif // ONEFLOW_USER_KERNELS_OP_KERNEL_STATE_WRAPPER_H_

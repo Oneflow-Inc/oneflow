@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_CALLBACK_MSG_H_
 #define ONEFLOW_CORE_COMMON_CALLBACK_MSG_H_
 
-#include <functional>
 #include "oneflow/core/object_msg/object_msg.h"
+#include <functional>
 
 namespace oneflow {
 
@@ -37,6 +37,6 @@ OBJECT_MSG_END(CallbackMsg);
 
 using CallbackMsgListPtr = OBJECT_MSG_LIST_PTR(CallbackMsg, callback_link);
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_CALLBACK_MSG_H_
+#endif // ONEFLOW_CORE_COMMON_CALLBACK_MSG_H_

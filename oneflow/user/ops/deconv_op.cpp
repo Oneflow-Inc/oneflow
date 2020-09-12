@@ -20,40 +20,46 @@ namespace oneflow {
 
 namespace {
 
-template<size_t NDims>
-Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+template <size_t NDims>
+Maybe<void> InferTensorDesc4DeConv(user_op::InferContext *ctx) {
+  const user_op::TensorDesc *in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   CHECK_EQ(NDims + 2, in->shape().NumAxes());
 
-  const std::string& data_format = ctx->Attr<std::string>("data_format");
-  const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+  const std::string &data_format = ctx->Attr<std::string>("data_format");
+  const auto &kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
   CHECK_EQ_OR_RETURN(NDims, kernel_size.size());
   const int32_t filters = ctx->Attr<int32_t>("filters");
   size_t idx_offset = IdxOffset(data_format);
 
   // only support data parallel
-  CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
-                  || ctx->SbpParallel4ArgNameAndIndex("weight", 0).has_broadcast_parallel());
+  CHECK_OR_RETURN(
+      ctx->parallel_ctx().parallel_num() == 1 ||
+      ctx->SbpParallel4ArgNameAndIndex("weight", 0).has_broadcast_parallel());
 
   {
-    const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-    const auto& output_padding = ctx->Attr<std::vector<int32_t>>("output_padding");
-    const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
-    const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
+    const auto &dilation_rate =
+        ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    const auto &output_padding =
+        ctx->Attr<std::vector<int32_t>>("output_padding");
+    const auto &strides = ctx->Attr<std::vector<int32_t>>("strides");
+    const auto &padding_before =
+        ctx->Attr<std::vector<int32_t>>("padding_before");
     CHECK_EQ_OR_RETURN(NDims, dilation_rate.size());
     CHECK_EQ_OR_RETURN(NDims, strides.size());
     CHECK_EQ_OR_RETURN(NDims, output_padding.size());
 
-    user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+    user_op::TensorDesc *out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
     DimVector out_shape(NDims + 2);
     out_shape.at(0) = in->shape().At(0);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
     out_shape.at(c_dim) = filters;
     for (int32_t i = 0; i < NDims; ++i) {
-      int32_t effective_filter_size = (kernel_size.at(i) - 1) * dilation_rate.at(i) + 1;
-      out_shape.at(idx_offset + i) = (in->shape().At(idx_offset + i) - 1) * strides.at(i)
-                                     - 2 * padding_before.at(i) + output_padding.at(i)
-                                     + effective_filter_size;
+      int32_t effective_filter_size =
+          (kernel_size.at(i) - 1) * dilation_rate.at(i) + 1;
+      out_shape.at(idx_offset + i) =
+          (in->shape().At(idx_offset + i) - 1) * strides.at(i) -
+          2 * padding_before.at(i) + output_padding.at(i) +
+          effective_filter_size;
     }
     *out = *in;
     *out->mut_shape() = Shape(out_shape);
@@ -70,21 +76,25 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
-    for (size_t i = 0; i < NDims; ++i) { weight_shape.at(idx_offset + i) = kernel_size.at(i); }
+    for (size_t i = 0; i < NDims; ++i) {
+      weight_shape.at(idx_offset + i) = kernel_size.at(i);
+    }
 
-    const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
+    const user_op::TensorDesc *weight =
+        ctx->TensorDesc4ArgNameAndIndex("weight", 0);
     CHECK_EQ(weight->shape(), Shape(weight_shape));
   }
 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferBatchAxis4DeConv(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+Maybe<void> InferBatchAxis4DeConv(user_op::BatchAxisContext *ctx) {
+  *ctx->BatchAxis4ArgNameAndIndex("out", 0) =
+      *ctx->BatchAxis4ArgNameAndIndex("in", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetSbpSignatures4DeConv(user_op::SbpContext* ctx) {
+Maybe<void> GetSbpSignatures4DeConv(user_op::SbpContext *ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("in", 0), 0)
       .Broadcast(user_op::OpArg("weight", 0))
@@ -94,39 +104,42 @@ Maybe<void> GetSbpSignatures4DeConv(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-template<size_t NDims>
-Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
-                      const user_op::UserOpConfWrapper& conf) {
+template <size_t NDims>
+Maybe<void> CheckAttr(const user_op::UserOpDefWrapper &def,
+                      const user_op::UserOpConfWrapper &conf) {
   bool is_checked = true;
   std::stringstream err;
-  err << "Illegal value for " << conf.op_type_name() << " op " << conf.op_name() << ": ";
+  err << "Illegal value for " << conf.op_type_name() << " op " << conf.op_name()
+      << ": ";
 
-  const std::string& data_format = conf.attr<std::string>("data_format");
+  const std::string &data_format = conf.attr<std::string>("data_format");
   if (!(data_format == "channels_first" || data_format == "channels_last")) {
     err << " data_format:" << data_format;
     is_checked = false;
   }
 
   if (NDims != 0) {
-    const auto& padding_before = conf.attr<std::vector<int32_t>>("padding_before");
+    const auto &padding_before =
+        conf.attr<std::vector<int32_t>>("padding_before");
     if (padding_before.size() != NDims) {
       err << " padding_before: number of element is " << padding_before.size();
       is_checked = false;
     }
 
-    const auto& kernel_size = conf.attr<std::vector<int32_t>>("kernel_size");
+    const auto &kernel_size = conf.attr<std::vector<int32_t>>("kernel_size");
     if (kernel_size.size() != NDims) {
       err << " kernel_size: number of element is " << kernel_size.size();
       is_checked = false;
     }
 
-    const auto& strides = conf.attr<std::vector<int32_t>>("strides");
+    const auto &strides = conf.attr<std::vector<int32_t>>("strides");
     if (strides.size() != NDims) {
       err << " strides: number of element is " << strides.size();
       is_checked = false;
     }
 
-    const auto& dilation_rate = conf.attr<std::vector<int32_t>>("dilation_rate");
+    const auto &dilation_rate =
+        conf.attr<std::vector<int32_t>>("dilation_rate");
     if (dilation_rate.size() != NDims) {
       err << " dilation_rate: number of element is " << dilation_rate.size();
       is_checked = false;
@@ -140,13 +153,15 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
   }
 }
 
-void GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-  const std::string& data_format = op.attr<std::string>("data_format");
-  const auto& padding_before = op.attr<std::vector<int32_t>>("padding_before");
-  const auto& kernel_size = op.attr<std::vector<int32_t>>("kernel_size");
-  const auto& strides = op.attr<std::vector<int32_t>>("strides");
-  const auto& dilation_rate = op.attr<std::vector<int32_t>>("dilation_rate");
-  const Shape& weight_shape = op.TensorDesc4ArgNameAndIndex("weight", 0).shape();
+void GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper &op,
+                                   user_op::AddOpFn AddOp) {
+  const std::string &data_format = op.attr<std::string>("data_format");
+  const auto &padding_before = op.attr<std::vector<int32_t>>("padding_before");
+  const auto &kernel_size = op.attr<std::vector<int32_t>>("kernel_size");
+  const auto &strides = op.attr<std::vector<int32_t>>("strides");
+  const auto &dilation_rate = op.attr<std::vector<int32_t>>("dilation_rate");
+  const Shape &weight_shape =
+      op.TensorDesc4ArgNameAndIndex("weight", 0).shape();
 
   const int32_t ndims = kernel_size.size();
   CHECK_EQ(ndims, strides.size());
@@ -154,7 +169,8 @@ void GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op, user_op::Ad
 
   if (op.NeedGenGradTensor4OpInput("weight", 0)) {
     auto filter_grad_op =
-        user_op::UserOpConfWrapperBuilder("System-AutoGrad-" + op.op_name() + "-FilterGrad")
+        user_op::UserOpConfWrapperBuilder("System-AutoGrad-" + op.op_name() +
+                                          "-FilterGrad")
             .Op("conv_filter_grad")
             .Input("dy", op.input("in", 0))
             .Input("x", op.GetGradTensorWithOpOutput("out", 0))
@@ -167,14 +183,16 @@ void GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op, user_op::Ad
             .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
             .Attr<int32_t>("groups", 1)
             .Build();
-    op.BindGradTensorWithOpInput(filter_grad_op.output("filter_diff", 0), "weight", 0);
+    op.BindGradTensorWithOpInput(filter_grad_op.output("filter_diff", 0),
+                                 "weight", 0);
     AddOp(filter_grad_op);
   }
 
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     std::string ndims_str = std::to_string(ndims);
     auto data_grad_op =
-        user_op::UserOpConfWrapperBuilder("System-AutoGrad-" + op.op_name() + "-DataGrad")
+        user_op::UserOpConfWrapperBuilder("System-AutoGrad-" + op.op_name() +
+                                          "-DataGrad")
             .Op("conv" + ndims_str + "d")
             .Input("in", op.GetGradTensorWithOpOutput("out", 0))
             .Input("weight", op.input("weight", 0))
@@ -192,7 +210,7 @@ void GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op, user_op::Ad
   }
 }
 
-}  // namespace
+} // namespace
 
 REGISTER_USER_OP("deconv1d")
     .Input("in")
@@ -245,8 +263,11 @@ REGISTER_USER_OP("deconv3d")
     .SetBatchAxisInferFn(InferBatchAxis4DeConv)
     .SetGetSbpFn(GetSbpSignatures4DeConv);
 
-REGISTER_USER_OP_GRAD("deconv1d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);
-REGISTER_USER_OP_GRAD("deconv2d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);
-REGISTER_USER_OP_GRAD("deconv3d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);
+REGISTER_USER_OP_GRAD("deconv1d")
+    .SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);
+REGISTER_USER_OP_GRAD("deconv2d")
+    .SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);
+REGISTER_USER_OP_GRAD("deconv3d")
+    .SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);
 
-}  // namespace oneflow
+} // namespace oneflow

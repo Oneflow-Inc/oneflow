@@ -18,7 +18,8 @@ limitations under the License.
 namespace oneflow {
 
 void AdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
-  const auto& adam_conf = op_conf().adam_model_update_conf().user_conf().adam_conf();
+  const auto &adam_conf =
+      op_conf().adam_model_update_conf().user_conf().adam_conf();
   CHECK_GE(adam_conf.beta1(), 0);
   CHECK_LT(adam_conf.beta1(), 1);
   CHECK_GE(adam_conf.beta2(), 0);
@@ -33,11 +34,13 @@ void AdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
 }
 
 Maybe<void> AdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  const auto& adam_conf = op_conf().adam_model_update_conf().user_conf().adam_conf();
-  const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
-  CHECK_EQ_OR_RETURN(model_blob_desc->data_type(), job_desc().DefaultDataType());
+    std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
+    const ParallelContext *parallel_ctx) const {
+  const auto &adam_conf =
+      op_conf().adam_model_update_conf().user_conf().adam_conf();
+  const BlobDesc *model_blob_desc = GetBlobDesc4BnInOp("model");
+  CHECK_EQ_OR_RETURN(model_blob_desc->data_type(),
+                     job_desc().DefaultDataType());
   CHECK_OR_RETURN(*GetBlobDesc4BnInOp("m") == *model_blob_desc);
   CHECK_OR_RETURN(*GetBlobDesc4BnInOp("v") == *model_blob_desc);
 
@@ -48,16 +51,18 @@ Maybe<void> AdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-const HashSet<std::string> AdamModelUpdateOp::AlwaysBroadcastParallelBns() const {
+const HashSet<std::string>
+AdamModelUpdateOp::AlwaysBroadcastParallelBns() const {
   return HashSet<std::string>{"beta1_t", "beta2_t"};
 }
 
-const PbMessage& AdamModelUpdateOp::GetCustomizedConf() const {
+const PbMessage &AdamModelUpdateOp::GetCustomizedConf() const {
   return op_conf().adam_model_update_conf();
 }
 
-REGISTER_CLASS(NormalModelUpdateOpUserConf::kAdamConf, NormalModelUpdtOp, AdamModelUpdateOp);
+REGISTER_CLASS(NormalModelUpdateOpUserConf::kAdamConf, NormalModelUpdtOp,
+               AdamModelUpdateOp);
 
 REGISTER_OP(OperatorConf::kAdamModelUpdateConf, AdamModelUpdateOp);
 
-}  // namespace oneflow
+} // namespace oneflow

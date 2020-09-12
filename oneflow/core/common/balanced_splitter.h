@@ -16,9 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_BALANCED_SPLITTER_H_
 #define ONEFLOW_CORE_COMMON_BALANCED_SPLITTER_H_
 
-#include <stdint.h>
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/common/util.h"
+#include <stdint.h>
 
 namespace oneflow {
 
@@ -32,7 +32,7 @@ namespace oneflow {
 //     4    [14, 17)
 //     5    [17, 20)
 class BalancedSplitter final {
- public:
+public:
   // OF_DISALLOW_COPY_AND_MOVE(BalancedSplitter);
   BalancedSplitter() = delete;
   ~BalancedSplitter() = default;
@@ -42,12 +42,12 @@ class BalancedSplitter final {
   Range At(int64_t idx) const;
   Range At(int64_t first_idx, int64_t last_idx) const;
 
- private:
+private:
   int64_t base_part_size_;
   int64_t base_begin_idx_;
   int64_t split_num_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_BALANCED_SPLITTER_H_
+#endif // ONEFLOW_CORE_COMMON_BALANCED_SPLITTER_H_

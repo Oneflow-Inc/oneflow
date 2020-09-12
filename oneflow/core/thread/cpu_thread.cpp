@@ -28,4 +28,4 @@ CpuThread::CpuThread(int64_t thrd_id) {
   });
 }
 
-}  // namespace oneflow
+} // namespace oneflow

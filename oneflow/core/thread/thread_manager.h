@@ -26,25 +26,25 @@ namespace oneflow {
 class Plan;
 
 class ThreadMgr final {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(ThreadMgr);
   ThreadMgr() = delete;
   ~ThreadMgr();
 
-  Thread* GetThrd(int64_t thrd_id);
+  Thread *GetThrd(int64_t thrd_id);
 
- private:
+private:
   friend class Global<ThreadMgr>;
-  explicit ThreadMgr(const Plan& plan);
+  explicit ThreadMgr(const Plan &plan);
 
-  void CreatePersistenceThrd(const Plan& plan, int64_t thrd_id);
+  void CreatePersistenceThrd(const Plan &plan, int64_t thrd_id);
 
-  std::vector<Thread*> threads_;
+  std::vector<Thread *> threads_;
 };
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
+#endif // ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_

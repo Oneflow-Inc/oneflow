@@ -18,9 +18,9 @@ limitations under the License.
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
 #define private public
+#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/object_msg.h"
-#include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
 
@@ -28,7 +28,7 @@ namespace test {
 
 TEST(ObjectMsgStruct, ref_cnt) {
   class Foo final : public ObjectMsgBase {
-   public:
+  public:
     Foo() = default;
   };
   Foo foo;
@@ -39,6 +39,6 @@ TEST(ObjectMsgStruct, ref_cnt) {
   ASSERT_EQ(foo.DecreaseRefCount(), 0);
 }
 
-}  // namespace test
+} // namespace test
 
-}  // namespace oneflow
+} // namespace oneflow

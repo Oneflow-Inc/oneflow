@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class CaseCompTaskNode final : public CompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(CaseCompTaskNode);
   CaseCompTaskNode() = default;
   ~CaseCompTaskNode() override = default;
@@ -38,12 +38,12 @@ class CaseCompTaskNode final : public CompTaskNode {
 #endif
   }
 
- private:
+private:
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
   bool IsIndependent() const override { return true; }
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_CASE_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_CASE_COMPUTE_TASK_NODE_H_

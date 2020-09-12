@@ -23,10 +23,10 @@ namespace oneflow {
 struct ThreadCtx {
 #ifdef WITH_CUDA
   std::unique_ptr<CudaStreamHandle> g_cuda_stream;
-  Channel<CudaCBEvent>* cb_event_chan;
+  Channel<CudaCBEvent> *cb_event_chan;
 #endif
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_THREAD_THREAD_CONTEXT_H_
+#endif // ONEFLOW_CORE_THREAD_THREAD_CONTEXT_H_

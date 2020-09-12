@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class RecordLoadCompTaskNode final : public CompTaskNode {
- public:
+public:
   OF_DISALLOW_COPY_AND_MOVE(RecordLoadCompTaskNode);
   RecordLoadCompTaskNode() = default;
   ~RecordLoadCompTaskNode() = default;
@@ -34,10 +34,10 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kRecordLoad; }
   bool IsIndependent() const override { return true; }
 
- private:
+private:
   void InferProducedDataRegstTimeShape() override;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_RECORD_LOAD_COMPUTE_TASK_NODE_H_
+#endif // ONEFLOW_CORE_GRAPH_RECORD_LOAD_COMPUTE_TASK_NODE_H_

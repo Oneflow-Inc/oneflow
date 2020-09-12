@@ -16,42 +16,49 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_VPU_DESC_MSG_H_
 #define ONEFLOW_CORE_VM_VPU_DESC_MSG_H_
 
-#include <cstring>
-#include <typeindex>
 #include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/stream_type_id.h"
+#include <cstring>
+#include <typeindex>
 
 namespace oneflow {
 namespace vm {
 
 class StreamId final {
- public:
+public:
   using self_type = StreamId;
   void __Init__() {}
-  void __Init__(const StreamTypeId& stream_type_id, int64_t global_device_id) {
+  void __Init__(const StreamTypeId &stream_type_id, int64_t global_device_id) {
     stream_type_id_.CopyFrom(stream_type_id);
     global_device_id_ = global_device_id;
   }
 
-  void CopyFrom(const StreamId& rhs) { __Init__(rhs.stream_type_id_, rhs.global_device_id_); }
+  void CopyFrom(const StreamId &rhs) {
+    __Init__(rhs.stream_type_id_, rhs.global_device_id_);
+  }
 
-  const StreamTypeId& stream_type_id() const { return stream_type_id_; }
+  const StreamTypeId &stream_type_id() const { return stream_type_id_; }
   int64_t global_device_id() const { return global_device_id_; }
 
-  bool operator==(const StreamId& rhs) const {
-    return stream_type_id_ == rhs.stream_type_id_ && global_device_id_ == rhs.global_device_id_;
+  bool operator==(const StreamId &rhs) const {
+    return stream_type_id_ == rhs.stream_type_id_ &&
+           global_device_id_ == rhs.global_device_id_;
   }
 
-  bool operator<(const StreamId& rhs) const {
-    if (!(stream_type_id_ == rhs.stream_type_id_)) { return stream_type_id_ < rhs.stream_type_id_; }
+  bool operator<(const StreamId &rhs) const {
+    if (!(stream_type_id_ == rhs.stream_type_id_)) {
+      return stream_type_id_ < rhs.stream_type_id_;
+    }
     return global_device_id_ < rhs.global_device_id_;
   }
-  bool operator<=(const StreamId& rhs) const { return *this < rhs || *this == rhs; }
+  bool operator<=(const StreamId &rhs) const {
+    return *this < rhs || *this == rhs;
+  }
 
- private:
+private:
   StreamTypeId stream_type_id_;
   int64_t global_device_id_;
 };
@@ -76,7 +83,7 @@ OBJECT_MSG_BEGIN(StreamDesc);
 OBJECT_MSG_END(StreamDesc);
 // clang-format on
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_VPU_DESC_MSG_H_
+#endif // ONEFLOW_CORE_VM_VPU_DESC_MSG_H_

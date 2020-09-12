@@ -16,32 +16,35 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_OPERATOR_SIG_DESC_H_
 #define ONEFLOW_CORE_OPERATOR_SIG_DESC_H_
 
-#include "oneflow/core/operator/op_attribute.pb.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
-#include "oneflow/core/job/parallel_signature.pb.h"
-#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/parallel_signature.pb.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/register/blob_desc.h"
 
 namespace oneflow {
 
 class OpNodeSignatureDesc final {
- public:
-  OpNodeSignatureDesc(const OpNodeSignatureDesc&) = delete;
-  OpNodeSignatureDesc(OpNodeSignatureDesc&&) = delete;
-  OpNodeSignatureDesc(const OpNodeSignature& op_node_signature);
+public:
+  OpNodeSignatureDesc(const OpNodeSignatureDesc &) = delete;
+  OpNodeSignatureDesc(OpNodeSignatureDesc &&) = delete;
+  OpNodeSignatureDesc(const OpNodeSignature &op_node_signature);
 
-  const SbpSignature& sbp_signature() const { return op_node_signature_.sbp_signature(); }
-  const ParallelSignature& parallel_signature() const {
+  const SbpSignature &sbp_signature() const {
+    return op_node_signature_.sbp_signature();
+  }
+  const ParallelSignature &parallel_signature() const {
     return op_node_signature_.parallel_signature();
   }
 
-  Maybe<const BlobDesc&> LogicalBlobDesc4BnInOp(const std::string& bn_in_op) const;
+  Maybe<const BlobDesc &>
+  LogicalBlobDesc4BnInOp(const std::string &bn_in_op) const;
 
- private:
+private:
   OpNodeSignature op_node_signature_;
   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc_;
 };
 
-}  // namespace oneflow
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_SIG_DESC_H_
+#endif // ONEFLOW_CORE_OPERATOR_SIG_DESC_H_

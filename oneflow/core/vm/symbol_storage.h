@@ -16,9 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_STORAGE_H_
 #define ONEFLOW_CORE_VM_STORAGE_H_
 
-#include <mutex>
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/util.h"
+#include <mutex>
 
 namespace oneflow {
 
@@ -30,54 +30,53 @@ class OpNodeSignature;
 
 namespace vm {
 
-template<typename T>
-struct ConstructArgType4Symbol final {
-  using type = T;
-};
+template <typename T> struct ConstructArgType4Symbol final { using type = T; };
 
-template<>
-struct ConstructArgType4Symbol<OpNodeSignatureDesc> final {
+template <> struct ConstructArgType4Symbol<OpNodeSignatureDesc> final {
   using type = OpNodeSignature;
 };
 
-template<typename T>
-class SymbolStorage final {
- public:
-  SymbolStorage(const SymbolStorage&) = delete;
-  SymbolStorage(SymbolStorage&&) = delete;
+template <typename T> class SymbolStorage final {
+public:
+  SymbolStorage(const SymbolStorage &) = delete;
+  SymbolStorage(SymbolStorage &&) = delete;
 
   SymbolStorage() = default;
   ~SymbolStorage() = default;
 
   bool Has(int64_t logical_object_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
-    return logical_object_id2data_.find(logical_object_id) != logical_object_id2data_.end();
+    return logical_object_id2data_.find(logical_object_id) !=
+           logical_object_id2data_.end();
   }
 
-  Maybe<const T&> MaybeGet(int64_t logical_object_id) const {
+  Maybe<const T &> MaybeGet(int64_t logical_object_id) const {
     return *JUST(MaybeGetPtr(logical_object_id));
   }
 
-  const T& Get(int64_t logical_object_id) const { return *GetPtr(logical_object_id); }
+  const T &Get(int64_t logical_object_id) const {
+    return *GetPtr(logical_object_id);
+  }
 
   Maybe<T> MaybeGetPtr(int64_t logical_object_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
-    const auto& iter = logical_object_id2data_.find(logical_object_id);
+    const auto &iter = logical_object_id2data_.find(logical_object_id);
     CHECK_OR_RETURN(iter != logical_object_id2data_.end())
         << "logical_object_id: " << logical_object_id;
     return iter->second;
   }
 
-  const std::shared_ptr<T>& GetPtr(int64_t logical_object_id) const {
+  const std::shared_ptr<T> &GetPtr(int64_t logical_object_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
-    const auto& iter = logical_object_id2data_.find(logical_object_id);
+    const auto &iter = logical_object_id2data_.find(logical_object_id);
     CHECK(iter != logical_object_id2data_.end());
     return iter->second;
   }
 
-  void Add(int64_t logical_object_id, const typename ConstructArgType4Symbol<T>::type& data) {
+  void Add(int64_t logical_object_id,
+           const typename ConstructArgType4Symbol<T>::type &data) {
     CHECK_GT(logical_object_id, 0);
-    const auto& ptr = std::make_shared<T>(data);
+    const auto &ptr = std::make_shared<T>(data);
     std::unique_lock<std::mutex> lock(mutex_);
     CHECK(logical_object_id2data_.emplace(logical_object_id, ptr).second);
   }
@@ -90,12 +89,12 @@ class SymbolStorage final {
     logical_object_id2data_.clear();
   }
 
- private:
+private:
   mutable std::mutex mutex_;
   HashMap<int64_t, std::shared_ptr<T>> logical_object_id2data_;
 };
 
-}  // namespace vm
-}  // namespace oneflow
+} // namespace vm
+} // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_STORAGE_H_
+#endif // ONEFLOW_CORE_VM_STORAGE_H_
