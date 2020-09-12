@@ -25,7 +25,7 @@ jobs:
       uses: ./.github/actions/fmt
 
   build_and_test:
-
+    name: Build CUDA OneFlow and run tests
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
@@ -100,7 +100,7 @@ jobs:
           bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
 
   build_and_test_cpu:
-
+    name: Build CPU-only OneFlow and run tests
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
@@ -136,3 +136,32 @@ jobs:
           --env ONEFLOW_TEST_CPU_ONLY=1 \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
+
+  build_and_test_xla:
+    name: Build OneFlow with XLA and run tests
+    runs-on: [self-hosted, linux, gpu]
+    if: github.event.pull_request.draft == false
+    steps:
+    - name: Fix permissions
+      run: |
+        docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+    - uses: actions/checkout@v2
+    - name: Setup submodule
+      uses: ./.github/actions/setup
+    - name: Build OneFlow
+      run: |
+        export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DWITH_XLA=ON"
+        export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-xla
+        bash ci/build/make.sh
+    - name: Build docker image for testing
+      run: |
+        bash docker/ci/test/build.sh
+    - name: Test
+      run: |
+        docker run --shm-size=8g --rm \
+          -v $HOME/ci-tmp-xla:/ci-tmp \
+          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+          --env ONEFLOW_TEST_CPU_ONLY=1 \
+          oneflow-test \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
