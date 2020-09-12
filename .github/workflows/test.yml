@@ -16,7 +16,7 @@ on:
 jobs:
 
   check_license_and_format:
-
+    name: License and format
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     steps:
@@ -25,7 +25,7 @@ jobs:
       uses: ./.github/actions/fmt
 
   build_and_test:
-
+    name: CUDA
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
@@ -37,7 +37,7 @@ jobs:
       uses: ./.github/actions/setup
     - name: Build OneFlow
       run: |
-        ONEFLOW_CI_PACKAGE_APPENDIX="_cu102" \
+        ONEFLOW_CI_PACKAGE_SUFFIX="_cu102" \
         bash ci/build/make.sh
     - name: Build docker image for testing
       run: |
@@ -99,8 +99,39 @@ jobs:
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
 
-  build_and_test_cpu:
+  build_and_test_xla:
+    name: XLA
+    runs-on: [self-hosted, linux, gpu]
+    if: github.event.pull_request.draft == false
+    steps:
+    - name: Fix permissions
+      run: |
+        docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+    - uses: actions/checkout@v2
+    - name: Setup submodule
+      uses: ./.github/actions/setup
+    - name: Build OneFlow
+      run: |
+        export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DWITH_XLA=ON"
+        export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-xla
+        export ONEFLOW_CI_CUDA_VERSION=10.1
+        export ONEFLOW_CI_PACKAGE_SUFFIX="_cu101_xla"
+        bash ci/build/make.sh
+    - name: Build docker image for testing
+      run: |
+        bash docker/ci/test/build.sh
+    - name: Test
+      run: |
+        docker run --shm-size=8g --rm \
+          -v $HOME/ci-tmp-xla:/ci-tmp \
+          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+          --env ONEFLOW_TEST_CPU_ONLY=1 \
+          oneflow-test \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
 
+  build_and_test_cpu:
+    name: CPU-only
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false
     steps:
@@ -114,6 +145,7 @@ jobs:
       run: |
         export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DBUILD_CUDA=OFF"
         export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-cpu
+        export ONEFLOW_CI_PACKAGE_SUFFIX="_cpu"
         bash ci/build/make.sh
     - name: Build docker image for testing
       run: |
