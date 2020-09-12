@@ -62,7 +62,10 @@ ExternalProject_Add(grpc
         -DOPENSSL_ROOT_DIR:PATH=${THIRD_PARTY_DIR}/openssl
 )
 
-add_copy_headers_target(NAME grpc SRC ${GRPC_INCLUDE_DIRS} DST ${GRPC_INCLUDE_DIR} DEPS grpc INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/grpc_headers.txt")
+# add_copy_headers_target(NAME grpc SRC ${GRPC_INCLUDE_DIRS} DST ${GRPC_INCLUDE_DIR} DEPS grpc INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/grpc_headers.txt")
+add_custom_target(grpc_copy_headers_to_destination
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include ${THIRD_PARTY_DIR}/grpc/include
+  DEPENDS grpc)
 
 add_custom_target(grpc_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GRPC_LIBRARY_DIR}
