@@ -1842,3 +1842,14 @@ def invert_permutation(
     input: remote_blob_util.BlobDef, 
     name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("InvertPermutation_")
+        )
+        .Op("invert_permutation")
+        .Input("in", [input])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
