@@ -29,8 +29,8 @@ foreach(LIBRARY_NAME ${GRPC_LIBRARY_NAMES})
 endforeach()
 
 set (PROTOBUF_CONFIG_DIR ${PROTOBUF_BUILD_LIBRARY_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/protobuf)
-set (ABSL_CONFIG_DIR ${CMAKE_CURRENT_BINARY_DIR}/absl/src/absl/${CMAKE_INSTALL_LIBDIR}/cmake/absl)
-set (CARES_CONFIG_DIR ${CMAKE_CURRENT_BINARY_DIR}/cares/src/cares/lib/cmake/c-ares)
+set (ABSL_CONFIG_DIR ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR}/cmake/absl)
+set (CARES_CONFIG_DIR ${CARES_INSTALL}/lib/cmake/c-ares)
 
 if(THIRD_PARTY)
 
@@ -61,7 +61,7 @@ ExternalProject_Add(grpc
         -DgRPC_ZLIB_PROVIDER:STRING=package
         -DZLIB_ROOT:PATH=${ZLIB_INSTALL}
         -DgRPC_SSL_PROVIDER:STRING=package
-        -DOPENSSL_ROOT_DIR:PATH=${THIRD_PARTY_DIR}/openssl
+        -DOPENSSL_ROOT_DIR:PATH=${OPENSSL_INSTALL}
 )
 
 # add_copy_headers_target(NAME grpc SRC ${GRPC_INCLUDE_DIRS} DST ${GRPC_INCLUDE_DIR} DEPS grpc INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/grpc_headers.txt")
