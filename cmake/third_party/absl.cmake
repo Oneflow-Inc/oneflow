@@ -6,10 +6,10 @@ SET(ABSL_GIT_URL https://github.com/abseil/abseil-cpp.git)
 SET(ABSL_GIT_TAG 43ef2148c0936ebf7cb4be6b19927a9d9d145b8f)
  
 SET(ABSL_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/absl/src/absl)
-SET(ABSL_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/absl/install)
+SET(ABSL_INSTALL ${THIRD_PARTY_DIR}/absl)
 
 SET(ABSL_INCLUDE_DIR ${THIRD_PARTY_DIR}/absl/include CACHE PATH "" FORCE)
-SET(ABSL_LIBRARY_DIR ${THIRD_PARTY_DIR}/absl/lib CACHE PATH "" FORCE)
+SET(ABSL_LIBRARY_DIR ${THIRD_PARTY_DIR}/absl/${CMAKE_INSTALL_LIBDIR} CACHE PATH "" FORCE)
 
 if(WIN32)
   set(ABSL_BUILD_LIBRARY_DIR ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR})
@@ -46,22 +46,4 @@ if (THIRD_PARTY)
         -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
   )
-
-add_custom_target(absl_create_library_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${ABSL_LIBRARY_DIR}
-  DEPENDS absl)
-
-add_custom_target(absl_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${ABSL_INSTALL}/include ${ABSL_INCLUDE_DIR}
-  DEPENDS absl_create_library_dir)
-
-add_custom_target(absl_copy_libs_to_destination
-  DEPENDS absl_create_library_dir)
-
-foreach(LIBRARY_NAME ${ABSL_LIBRARY_NAMES})
-  add_custom_command(TARGET absl_copy_libs_to_destination 
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${ABSL_BUILD_LIBRARY_DIR}/${LIBRARY_NAME} 
-    ${ABSL_LIBRARY_DIR}/${LIBRARY_NAME})
-endforeach()
-
 endif(THIRD_PARTY)
