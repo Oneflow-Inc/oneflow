@@ -11,17 +11,22 @@ SET(ABSL_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/absl/install)
 SET(ABSL_INCLUDE_DIR ${THIRD_PARTY_DIR}/absl/include CACHE PATH "" FORCE)
 SET(ABSL_LIBRARY_DIR ${THIRD_PARTY_DIR}/absl/lib CACHE PATH "" FORCE)
 
-SET(ABSL_LIBRARIES
-    ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR}/libabsl_base.a
-    ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR}/libabsl_spinlock_wait.a
-    ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR}/libabsl_dynamic_annotations.a
-    ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR}/libabsl_malloc_internal.a
-    ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR}/libabsl_throw_delegate.a
-    ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR}/libabsl_int128.a
-    ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR}/libabsl_strings.a
-    ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR}/libabsl_str_format_internal.a
-    ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR}/libabsl_time.a
-    ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR}/libabsl_bad_optional_access.a)
+if(WIN32)
+  set(ABSL_BUILD_LIBRARY_DIR ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR})
+  set(ABSL_LIBRARY_NAMES absl_base.lib absl_spinlock_wait.lib absl_dynamic_annotations.lib
+    absl_malloc_internal.lib absl_throw_delegate.lib absl_int128.lib absl_strings.lib absl_str_format_internal.lib
+    absl_time.lib absl_bad_optional_access.lib)
+else()
+  set(ABSL_BUILD_LIBRARY_DIR ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR})
+  set(ABSL_LIBRARY_NAMES libabsl_base.a libabsl_spinlock_wait.a libabsl_dynamic_annotations.a
+    libabsl_malloc_internal.a libabsl_throw_delegate.a libabsl_int128.a libabsl_strings.a libabsl_str_format_internal.a
+    libabsl_time.a libabsl_bad_optional_access.a)
+endif()
+
+foreach(LIBRARY_NAME ${ABSL_LIBRARY_NAMES})
+  list(APPEND ABSL_STATIC_LIBRARIES ${ABSL_LIBRARY_DIR}/${LIBRARY_NAME})
+  list(APPEND ABSL_BUILD_STATIC_LIBRARIES ${ABSL_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
+endforeach()
 
 if (THIRD_PARTY)
   ExternalProject_Add(${ABSL_PROJECT}
@@ -51,6 +56,6 @@ add_custom_target(absl_copy_headers_to_destination
   DEPENDS absl_create_library_dir)
 
 add_custom_target(absl_copy_libs_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ABSL_LIBRARIES} ${ABSL_LIBRARY_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ABSL_BUILD_STATIC_LIBRARIES} ${ABSL_LIBRARY_DIR}
   DEPENDS absl_create_library_dir)
 endif(THIRD_PARTY)
