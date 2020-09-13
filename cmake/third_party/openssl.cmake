@@ -1,6 +1,6 @@
 include (ExternalProject)
 
-set(OPENSSL_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/openssl/install)
+set(OPENSSL_INSTALL ${THIRD_PARTY_DIR}/openssl)
 set(OPENSSL_INCLUDE_DIR ${THIRD_PARTY_DIR}/openssl/include)
 set(OPENSSL_LIBRARY_DIR ${THIRD_PARTY_DIR}/openssl/lib)
 
@@ -35,20 +35,4 @@ ExternalProject_Add(openssl
   INSTALL_COMMAND make install
 )
 
-add_custom_target(openssl_create_library_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${OPENSSL_LIBRARY_DIR}
-  DEPENDS openssl)
-
-add_custom_target(openssl_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${OPENSSL_INSTALL}/include ${OPENSSL_INCLUDE_DIR}
-  DEPENDS openssl_create_library_dir)
-
-add_custom_target(openssl_copy_libs_to_destination
-  DEPENDS openssl_create_library_dir)
-
-foreach(LIBRARY_NAME ${CARES_LIBRARY_NAMES})
-  add_custom_command(TARGET openssl_copy_libs_to_destination 
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${OPENSSL_BUILD_LIBRARY_DIR}/${LIBRARY_NAME} 
-    ${OPENSSL_LIBRARY_DIR}/${LIBRARY_NAME})
-endforeach()
 endif(THIRD_PARTY)

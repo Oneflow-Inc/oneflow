@@ -1,7 +1,7 @@
 include(ExternalProject)
 set(CARES_TAR_URL https://github.com/c-ares/c-ares/releases/download/cares-1_15_0/c-ares-1.15.0.tar.gz)
 set(CARES_URL_HASH d2391da274653f7643270623e822dff7)
-set(CARES_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/cares/install)
+set(CARES_INSTALL ${THIRD_PARTY_DIR}/cares)
 SET(CARES_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/cares/src/cares)
 
 set(CARES_INCLUDE_DIR ${THIRD_PARTY_DIR}/cares/include)
@@ -37,22 +37,5 @@ ExternalProject_Add(cares
       -DCMAKE_INSTALL_PREFIX:STRING=${CARES_INSTALL}
       -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
 )
-
-add_custom_target(cares_create_library_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${CARES_LIBRARY_DIR}
-  DEPENDS cares)
-
-add_custom_target(cares_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CARES_INSTALL}/include ${CARES_INCLUDE_DIR}
-  DEPENDS cares_create_library_dir)
-
-add_custom_target(cares_copy_libs_to_destination
-  DEPENDS cares_create_library_dir)
-
-foreach(LIBRARY_NAME ${CARES_LIBRARY_NAMES})
-  add_custom_command(TARGET cares_copy_libs_to_destination 
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CARES_BUILD_LIBRARY_DIR}/${LIBRARY_NAME} 
-    ${CARES_LIBRARY_DIR}/${LIBRARY_NAME})
-endforeach()
 
 endif()
