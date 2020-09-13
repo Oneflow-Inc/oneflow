@@ -32,8 +32,6 @@ class Oneflow final {
 
   Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_proto_str,
                                      const std::string& eager_symbol_list_str);
-
- private:
   Maybe<void> RunPhysicalInstruction(
       const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
 };

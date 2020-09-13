@@ -24,12 +24,6 @@ namespace oneflow {
 
 namespace {
 
-void BarrierClear() {
-  OF_BARRIER_ALL();
-  Global<CtrlClient>::Get()->Clear();
-  OF_BARRIER_ALL();
-}
-
 std::string GetHaltAckCtrlKey(int64_t machine_id) {
   return "HaltAckCtrlKey/" + std::to_string(machine_id);
 }
@@ -43,23 +37,33 @@ std::string GetClusterInstructionKey() {
 
 }  // namespace
 
+void ClusterInstruction::NewSessionBarrier() {
+  OF_BARRIER_ALL();
+  Global<CtrlClient>::Get()->Clear();
+  OF_BARRIER_ALL();
+}
+
 void ClusterInstruction::MasterSendSessionStart() {
-  BarrierClear();
   ClusterInstructionProto cluster_instruction;
   cluster_instruction.mutable_cluster_ctrl_session_start();
   Global<CtrlClient>::Get()->PushKV(GetClusterInstructionKey(), cluster_instruction);
+  NewSessionBarrier();
 }
 
 void ClusterInstruction::MasterSendHalt() {
-  BarrierClear();
   ClusterInstructionProto cluster_instruction;
   cluster_instruction.mutable_cluster_ctrl_halt();
   Global<CtrlClient>::Get()->PushKV(GetClusterInstructionKey(), cluster_instruction);
   HaltBarrier();
 }
 
+void ClusterInstruction::MasterSendEagerInstruction(
+    const ClusterInstructionProto& cluster_instruction) {
+  CHECK(cluster_instruction.has_eager_instruction());
+  Global<CtrlClient>::Get()->PushKV(GetClusterInstructionKey(), cluster_instruction);
+}
+
 void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction) {
-  BarrierClear();
   Global<CtrlClient>::Get()->PullKV(GetClusterInstructionKey(), cluster_instruction);
 }
 

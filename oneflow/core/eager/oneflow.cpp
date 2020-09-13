@@ -20,6 +20,8 @@ limitations under the License.
 #include "oneflow/core/eager/eager_symbol_storage.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
@@ -81,6 +83,9 @@ Maybe<void> Oneflow::RunPhysicalInstruction(const std::string& instruction_list_
 
 Maybe<void> Oneflow::RunLogicalInstruction(
     const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction) {
+  CHECK(cluster_instruction->has_eager_instruction());
+  CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  ClusterInstruction::MasterSendEagerInstruction(*cluster_instruction);
   return RunPhysicalInstruction(cluster_instruction);
 }
 
