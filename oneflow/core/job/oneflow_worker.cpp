@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/job/cluster.h"
-#include "oneflow/core/control/cluster_control.h"
+#include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"

@@ -13,18 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_CLUSTER_CONTROL_H_
-#define ONEFLOW_CORE_CONTROL_CLUSTER_CONTROL_H_
+#ifndef ONEFLOW_CORE_JOB_CLUSTER_CONTROL_H_
+#define ONEFLOW_CORE_JOB_CLUSTER_CONTROL_H_
+
+#include "oneflow/core/job/cluster_instruction.pb.h"
 
 namespace oneflow {
 
-struct ClusterControl final {
+struct ClusterInstruction final {
   static void MasterSendSessionStart();
-  static bool WorkerReceiveHalt();
+  static bool WorkerReceiveHalt(ClusterInstructionProto* cluster_instruction);
   static void MasterSendHalt();
   static void HaltBarrier();
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CONTROL_CLUSTER_CONTROL_H_
+#endif  // ONEFLOW_CORE_JOB_CLUSTER_CONTROL_H_
