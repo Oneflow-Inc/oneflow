@@ -64,8 +64,6 @@ ExternalProject_Add(grpc
         -DOPENSSL_ROOT_DIR:PATH=${OPENSSL_INSTALL}
 )
 
-# add_copy_headers_target(NAME grpc SRC ${GRPC_INCLUDE_DIRS} DST ${GRPC_INCLUDE_DIR} DEPS grpc INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/grpc_headers.txt")
-
 add_custom_target(grpc_create_library_dir
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GRPC_LIBRARY_DIR}
   DEPENDS grpc)
@@ -75,7 +73,12 @@ add_custom_target(grpc_copy_headers_to_destination
   DEPENDS grpc_create_library_dir)
 
 add_custom_target(grpc_copy_libs_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GRPC_BUILD_STATIC_LIBRARIES} ${GRPC_LIBRARY_DIR}
   DEPENDS grpc_create_library_dir)
+
+foreach(LIBRARY_NAME ${GRPC_LIBRARY_NAMES})
+  add_custom_command(TARGET grpc_copy_libs_to_destination 
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${GRPC_BUILD_LIBRARY_DIR}/${LIBRARY_NAME} 
+    ${GRPC_LIBRARY_DIR}/${LIBRARY_NAME})
+endforeach()
 
 endif(THIRD_PARTY)

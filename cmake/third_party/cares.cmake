@@ -47,7 +47,12 @@ add_custom_target(cares_copy_headers_to_destination
   DEPENDS cares_create_library_dir)
 
 add_custom_target(cares_copy_libs_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CARES_BUILD_STATIC_LIBRARIES} ${CARES_LIBRARY_DIR}
   DEPENDS cares_create_library_dir)
+
+foreach(LIBRARY_NAME ${CARES_LIBRARY_NAMES})
+  add_custom_command(TARGET cares_copy_libs_to_destination 
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CARES_BUILD_LIBRARY_DIR}/${LIBRARY_NAME} 
+    ${CARES_LIBRARY_DIR}/${LIBRARY_NAME})
+endforeach()
 
 endif()
