@@ -148,6 +148,10 @@ set(oneflow_third_party_dependencies
   half_copy_headers_to_destination
   re2
   json_copy_headers_to_destination
+  absl_copy_headers_to_destination
+  absl_copy_libs_to_destination
+  cares_copy_headers_to_destination
+  cares_copy_libs_to_destination
 )
 
 
@@ -166,6 +170,8 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
     ${JSON_INCLUDE_DIR}
+    ${ABSL_INCLUDE_DIR}
+    ${CARES_INCLUDE_DIR}
 )
 
 if (NOT WITH_XLA)

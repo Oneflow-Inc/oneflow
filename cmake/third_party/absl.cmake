@@ -1,33 +1,35 @@
 include (ExternalProject)
+include(GNUInstallDirs)
 
 SET(ABSL_PROJECT absl)
 SET(ABSL_GIT_URL https://github.com/abseil/abseil-cpp.git)
 SET(ABSL_GIT_TAG 43ef2148c0936ebf7cb4be6b19927a9d9d145b8f)
  
-SET(ABSL_SOURCE_DIR ${THIRD_PARTY_SUBMODULE_DIR}/absl)
+# SET(ABSL_SOURCE_DIR ${THIRD_PARTY_SUBMODULE_DIR}/absl)
+SET(ABSL_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/absl/src/absl)
 SET(ABSL_INSTALL_DIR ${THIRD_PARTY_DIR}/absl)
 
 SET(ABSL_INCLUDE_DIR ${ABSL_INSTALL_DIR}/include CACHE PATH "" FORCE)
 SET(ABSL_LIBRARY_DIR ${ABSL_INSTALL_DIR}/lib CACHE PATH "" FORCE)
 
-INCLUDE_DIRECTORIES(${ABSL_INCLUDE_DIR})
-LINK_DIRECTORIES(${ABSL_LIBRARY_DIR})
+# INCLUDE_DIRECTORIES(${ABSL_INCLUDE_DIR})
+# LINK_DIRECTORIES(${ABSL_LIBRARY_DIR})
 
 SET(ABSL_LIBRARIES
-    ${ABSL_LIBRARY_DIR}/libabsl_base.a
-    ${ABSL_LIBRARY_DIR}/libabsl_spinlock_wait.a
-    ${ABSL_LIBRARY_DIR}/libabsl_dynamic_annotations.a
-    ${ABSL_LIBRARY_DIR}/libabsl_malloc_internal.a
-    ${ABSL_LIBRARY_DIR}/libabsl_throw_delegate.a
-    ${ABSL_LIBRARY_DIR}/libabsl_int128.a
-    ${ABSL_LIBRARY_DIR}/libabsl_strings.a
-    ${ABSL_LIBRARY_DIR}/libabsl_str_format_internal.a
-    ${ABSL_LIBRARY_DIR}/libabsl_time.a
-    ${ABSL_LIBRARY_DIR}/libabsl_bad_optional_access.a)
+    ${ABSL_SOURCE_DIR}/${CMAKE_INSTALL_LIBDIR}/libabsl_base.a
+    ${ABSL_SOURCE_DIR}/${CMAKE_INSTALL_LIBDIR}/libabsl_spinlock_wait.a
+    ${ABSL_SOURCE_DIR}/${CMAKE_INSTALL_LIBDIR}/libabsl_dynamic_annotations.a
+    ${ABSL_SOURCE_DIR}/${CMAKE_INSTALL_LIBDIR}/libabsl_malloc_internal.a
+    ${ABSL_SOURCE_DIR}/${CMAKE_INSTALL_LIBDIR}/libabsl_throw_delegate.a
+    ${ABSL_SOURCE_DIR}/${CMAKE_INSTALL_LIBDIR}/libabsl_int128.a
+    ${ABSL_SOURCE_DIR}/${CMAKE_INSTALL_LIBDIR}/libabsl_strings.a
+    ${ABSL_SOURCE_DIR}/${CMAKE_INSTALL_LIBDIR}/libabsl_str_format_internal.a
+    ${ABSL_SOURCE_DIR}/${CMAKE_INSTALL_LIBDIR}/libabsl_time.a
+    ${ABSL_SOURCE_DIR}/${CMAKE_INSTALL_LIBDIR}/libabsl_bad_optional_access.a)
 
 if (THIRD_PARTY)
   ExternalProject_Add(${ABSL_PROJECT}
-    PREFIX ${ABSL_SOURCE_DIR}
+    PREFIX absl 
     GIT_REPOSITORY ${ABSL_GIT_URL}
     GIT_TAG ${ABSL_GIT_TAG}
     UPDATE_COMMAND ""
@@ -38,9 +40,22 @@ if (THIRD_PARTY)
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
     CMAKE_CACHE_ARGS
-        -DCMAKE_INSTALL_PREFIX:PATH=${ABSL_INSTALL_DIR}
-        -DCMAKE_INSTALL_LIBDIR:PATH=${ABSL_LIBRARY_DIR}
+        -DCMAKE_INSTALL_PREFIX:PATH=${ABSL_SOURCE_DIR}
+        -DCMAKE_INSTALL_LIBDIR:PATH=${ABSL_SOURCE_DIR}/${CMAKE_INSTALL_LIBDIR}
         -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
   )
+
+
+add_custom_target(absl_create_library_dir
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${ABSL_LIBRARY_DIR}
+  DEPENDS absl)
+
+add_custom_target(absl_copy_headers_to_destination
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${ABSL_SOURCE_DIR}/include ${THIRD_PARTY_DIR}/absl/include
+  DEPENDS absl_create_library_dir)
+
+add_custom_target(absl_copy_libs_to_destination
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ABSL_LIBRARIES} ${ABSL_LIBRARY_DIR}
+  DEPENDS absl_create_library_dir)
 endif(THIRD_PARTY)
