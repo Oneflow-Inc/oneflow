@@ -110,7 +110,8 @@ set(oneflow_third_party_libs
     ${LIBJPEG_STATIC_LIBRARIES}
     ${ZLIB_STATIC_LIBRARIES}
     ${CARES_STATIC_LIBRARIES}
-    ${ABSL_LIBRARIES}
+    ${ABSL_STATIC_LIBRARIES}
+    ${OPENSSL_STATIC_LIBRARIES}
 )
 
 if (NOT WITH_XLA)
@@ -152,6 +153,8 @@ set(oneflow_third_party_dependencies
   absl_copy_libs_to_destination
   cares_copy_headers_to_destination
   cares_copy_libs_to_destination
+  openssl_copy_headers_to_destination
+  openssl_copy_libs_to_destination
 )
 
 
@@ -172,6 +175,7 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${JSON_INCLUDE_DIR}
     ${ABSL_INCLUDE_DIR}
     ${CARES_INCLUDE_DIR}
+    ${OPENSSL_INCLUDE_DIR}
 )
 
 if (NOT WITH_XLA)
