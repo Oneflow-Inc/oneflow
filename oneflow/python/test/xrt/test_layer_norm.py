@@ -57,7 +57,10 @@ class TestLayerNorm(unittest.TestCase):
         b = f2(x).get()
         print("without xla: ", a)
         print("with xla", b)
-        self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=1e-5, atol=2e-3))
+        self.assertTrue(
+            np.allclose(a.numpy(), b.numpy(), rtol=1e-4, atol=5e-3),
+            a.numpy() - b.numpy(),
+        )
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, norm_axis=-1, params_axis=-1, dtype=np.float32):

@@ -207,6 +207,7 @@ message MomentumModelUpdateConf {
 message RMSPropModelUpdateConf {
   optional float decay_rate = 1 [default = 0.99];
   optional float epsilon = 2 [default = 1e-8];
+  optional bool centered = 3 [default = false];
 }
 
 message LARSModelUpdateConf {
@@ -374,10 +375,12 @@ message MomentumModelUpdateOpConf {
 message RMSPropModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
-  required string model = 4;
-  required string train_step = 5;
-  required string learning_rate = 6;
-  optional float weight_decay = 7 [default = 0.0];
+  required string mean_square = 3;
+  optional string mean_gradient = 4;
+  required string model = 5;
+  required string train_step = 6;
+  required string learning_rate = 7;
+  optional float weight_decay = 8 [default = 0.0];
 }
 
 message LARSModelUpdateOpConf {
@@ -969,8 +972,6 @@ message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
   optional string device_tag = 4 [default = "invalid_device"];
-  optional bool enable_cudnn = 5;
-  optional int64 cudnn_buf_limit_mbyte = 6;
   repeated string ctrl_in_op_name = 7;
   optional int64 scope_symbol_id = 8;
   oneof op_type {

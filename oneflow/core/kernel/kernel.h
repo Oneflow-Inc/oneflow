@@ -194,8 +194,6 @@ class KernelIf : public Kernel {
       }
     }
   }
-
-  bool EnableCudnn() const { return op_conf().enable_cudnn(); }
 };
 
 #define REGISTER_KERNEL(k, KernelType) \
