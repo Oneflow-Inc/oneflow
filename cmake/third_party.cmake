@@ -149,10 +149,6 @@ set(oneflow_third_party_dependencies
   half_copy_headers_to_destination
   re2
   json_copy_headers_to_destination
-  cares_copy_headers_to_destination
-  cares_copy_libs_to_destination
-  openssl_copy_headers_to_destination
-  openssl_copy_libs_to_destination
 )
 
 
