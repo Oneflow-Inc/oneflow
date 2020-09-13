@@ -56,6 +56,12 @@ add_custom_target(absl_copy_headers_to_destination
   DEPENDS absl_create_library_dir)
 
 add_custom_target(absl_copy_libs_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ABSL_BUILD_STATIC_LIBRARIES} ${ABSL_LIBRARY_DIR}
   DEPENDS absl_create_library_dir)
+
+foreach(LIBRARY_NAME ${ABSL_LIBRARY_NAMES})
+  add_custom_command(TARGET absl_copy_libs_to_destination 
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${ABSL_BUILD_LIBRARY_DIR}/${LIBRARY_NAME} 
+    ${ABSL_LIBRARY_DIR}/${LIBRARY_NAME})
+endforeach()
+
 endif(THIRD_PARTY)
