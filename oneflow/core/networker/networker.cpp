@@ -90,7 +90,6 @@ void Networker::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, st
   msg.token = token;
   msg.src_machine_id = stat->src_machine_id;
   msg.dst_machine_id = stat->dst_machine_id;
-  msg.ptr = stat->src_ptr;
   msg.size = size;
   msg.src_mem_token = stat->src_mem_token;
   msg.type = NetworkerMsgType::kSend;
@@ -99,19 +98,77 @@ void Networker::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, st
 
 void Networker::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::size_t size,
                         std::function<void()> callback) {
-  TODO();
-  /*
-  // Let local networker msg poller prepare recv
-  NetworkerMsg msg;
-  msg.token = token;
-  msg.src_machine_id = src_machine_id;
-  msg.dst_machine_id = this_machine_id_;
-  msg.ptr = ptr;
-  msg.size = size;
-  msg.callback = callback;
-  msg.type = NetworkerMsgType::kPrepareRecv;
-  msg_channel_.Send(msg);
-  */
+  // prepare networker status for this token.
+  // store callback.
+  NetworkerStatus* stat = nullptr;
+  bool is_send_ready = false;
+  {
+    std::unique_lock<std::mutex> lock(status_lock_);
+    auto it = token2status_.find(token);
+    if (it == token2status_.end()) {
+      token2status_.emplace(token, NetworkerStatus(token));
+      stat = &(token2status_.at(token));
+    } else {
+      is_send_ready = true;
+      stat = &(it->second);
+    }
+  }
+
+  stat->callback = callback;
+  stat->is_recv_ready = true;
+  CHECK(stat->dst_mem_token == nullptr);
+  stat->dst_mem_token = comm_net_->RegisterMemory(ptr, size);
+  CHECK(stat->dst_ptr == nullptr);
+  stat->dst_ptr = ptr;
+
+  if (is_send_ready) {
+    // it means the source machine has send message to this machine
+    // check status
+    CHECK_EQ(stat->size, size);
+    CHECK_EQ(stat->src_machine_id, src_machine_id);
+    CHECK_EQ(stat->dst_machine_id, this_machine_id_);
+
+    DoRead(token);
+  } else {
+    // init and wait for message from source machine
+    stat->size = size;
+    stat->src_machine_id = src_machine_id;
+    stat->dst_machine_id = this_machine_id_;
+  }
+}
+
+void Networker::DoRead(uint64_t token) {
+  auto it = token2status_.find(token);
+  CHECK(it != token2status_.end());
+  NetworkerStatus* stat = &(it->second);
+  CHECK(stat->is_send_ready && stat->is_recv_ready);
+  CHECK(stat->src_mem_token != nullptr);
+  CHECK(stat->dst_mem_token != nullptr);
+  CHECK(stat->src_machine_id != -1);
+  CHECK(stat->dst_machine_id != -1);
+  CHECK(stat->src_ptr != nullptr);
+  CHECK(stat->dst_ptr != nullptr);
+  CHECK(stat->size != -1);
+  CHECK(stat->callback != nullptr);
+  comm_net_->Read(read_id_, stat->src_machine_id, stat->src_mem_token, stat->dst_mem_token);
+  comm_net_->AddReadCallBack(read_id_, [stat, it, this]() {
+    // Send ack message to source machine
+    NetworkerMsg msg;
+    msg.token = stat->token;
+    msg.src_machine_id = stat->src_machine_id;
+    msg.dst_machine_id = stat->dst_machine_id;
+    msg.size = stat->size;
+    msg.src_mem_token = stat->src_mem_token;
+    msg.dst_mem_token = stat->dst_mem_token;
+    msg.type = NetworkerMsgType::kAck;
+    comm_net_->SendNetworkerMsg(msg.src_machine_id, msg);
+
+    // Do Recive callback
+    stat->callback();
+
+    // Recovery status
+    token2status_.erase(it);
+  });
 }
 
 }  // namespace oneflow

@@ -33,7 +33,6 @@ struct NetworkerMsg {
   uint64_t token;
   void* src_mem_token;
   void* dst_mem_token;
-  void* ptr;
   std::size_t size;
   int64_t src_machine_id;
   int64_t dst_machine_id;

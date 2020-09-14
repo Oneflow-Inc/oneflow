@@ -63,6 +63,7 @@ class Networker {
   void PollMsgChannel();
   void HandlerSend(const NetworkerMsg& msg);
   void HandlerAck(const NetworkerMsg& msg);
+  void DoRead(uint64_t token);
 
   friend class Global<Networker>;
   Networker();
