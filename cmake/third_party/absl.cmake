@@ -1,4 +1,4 @@
-include (ExternalProject)
+include(ExternalProject)
 include(GNUInstallDirs)
 
 SET(ABSL_PROJECT absl)
@@ -28,7 +28,7 @@ foreach(LIBRARY_NAME ${ABSL_LIBRARY_NAMES})
   list(APPEND ABSL_BUILD_STATIC_LIBRARIES ${ABSL_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
-if (THIRD_PARTY)
+if(THIRD_PARTY)
   ExternalProject_Add(${ABSL_PROJECT}
     PREFIX absl 
     GIT_REPOSITORY ${ABSL_GIT_URL}
