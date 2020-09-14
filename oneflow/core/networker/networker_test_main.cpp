@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
@@ -70,30 +71,43 @@ Maybe<void> TestNetworkerOn2Machine(const std::string& first_machine_ip,
   Global<EpollCommNet>::New();
   Global<Networker>::New();
 
+  std::cout << "New All Global" << std::endl;
+  BlockingCounter bc(1);
+
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   if (this_machine_id == 0) {
+    std::cout << "I'm first machine!" << std::endl;
     void* first_send_ptr = malloc(1024);
     int32_t* data = static_cast<int32_t*>(first_send_ptr);
     for (int i = 0; i < 1024 / 4; ++i) { *(data + i) = i; }
-    std::function<void()> func = [first_send_ptr]() {
+    std::function<void()> func = [first_send_ptr, &bc]() {
       std::cout << "Yes! I have send 1024 bytes to machine 1" << std::endl;
       free(first_send_ptr);
       DeleteAll();
+      bc.Decrease();
     };
     Global<Networker>::Get()->Send(23330, 1, first_send_ptr, 1024, func);
+    std::cout << "First send post!" << std::endl;
   } else if (this_machine_id == 1) {
+    std::cout << "I'm second machine!" << std::endl;
     void* first_receive_ptr = malloc(1024);
-    std::function<void()> func = [first_receive_ptr]() {
+    std::function<void()> func = [first_receive_ptr, &bc]() {
       int32_t* data = static_cast<int32_t*>(first_receive_ptr);
       for (int i = 0; i < 1024 / 4; ++i) { CHECK_EQ(*(data + i), i); }
       std::cout << "Yes! I have recv 1024 bytes from machine 0" << std::endl;
       free(first_receive_ptr);
       DeleteAll();
+      bc.Decrease();
     };
     Global<Networker>::Get()->Receive(23330, 0, first_receive_ptr, 1024, func);
+    std::cout << "First recv post!" << std::endl;
   } else {
     UNIMPLEMENTED();
   }
+  std::cout << "wait for callback..." << std::endl;
+  bc.WaitUntilCntEqualZero();
+  std::cout << "All Done!" << std::endl;
+
   return Maybe<void>::Ok();
 }
 
@@ -101,16 +115,17 @@ Maybe<void> TestNetworkerOn2Machine(const std::string& first_machine_ip,
 
 }  // namespace oneflow
 
-// Try run this test exe by :
-//   ./oneflow_test_networker first_machine_ip="192.168.1.12" \
-//       second_machine_ip = "192.168.1.15"
-DEFINE_string(first_machine_ip, "192.168.1.12", "IP address for first machine");
-DEFINE_string(second_machine_ip, "192.168.1.15", "IP address for second machine");
+/*
+ * Try run this test exe by :
+ *     ./oneflow_test_networker first_machine_ip="192.168.1.15" \
+ *          second_machine_ip = "192.168.1.16"
+ */
+DEFINE_string(first_machine_ip, "192.168.1.15", "IP address for first machine");
+DEFINE_string(second_machine_ip, "192.168.1.16", "IP address for second machine");
 
 int main(int argc, char* argv[]) {
   using namespace oneflow;
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-
   CHECK_JUST(TestNetworkerOn2Machine(FLAGS_first_machine_ip, FLAGS_second_machine_ip));
   return 0;
 }
