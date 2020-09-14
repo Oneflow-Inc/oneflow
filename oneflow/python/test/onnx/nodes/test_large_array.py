@@ -14,15 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import oneflow.typing as tp
 from util import convert_to_onnx_and_check
 
 
-func_config = flow.FunctionConfig()
-func_config.default_data_type(flow.float)
-
-
 def test_large_array(test_case):
-    @flow.global_function(func_config)
+    @flow.global_function()
     def add_with_large_array():
         large_shape = (256 * 1024 * 1024 + 1,)
         x = flow.get_variable(

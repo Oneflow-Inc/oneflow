@@ -68,7 +68,9 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
             # default const of graph input cannot be merged
             if node.is_graph_input_default_const():
                 continue
-            res[_KeyToGroupNodes(node.type, tuple(node.input))].append(node)
+            res[_KeyToGroupNodes(node.op_type, tuple(node.input_tensor_names))].append(
+                node
+            )
         return res
 
     def _DelNodesIfDuplicated(self, nodes_group, graph):
@@ -90,8 +92,8 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
         # above check guarantees consts here are able to be merged
         if node_1.is_const() and node_2.is_const():
             # get_tensor_value is costly so that we check their shape first
-            shape_1 = graph.get_shape(node_1.output[0])
-            shape_2 = graph.get_shape(node_2.output[0])
+            shape_1 = graph.get_shape(node_1.output_tensor_names[0])
+            shape_2 = graph.get_shape(node_2.output_tensor_names[0])
             if shape_1 is not None and shape_2 is not None and shape_1 != shape_2:
                 return False
             const_1 = node_1.get_tensor_value(as_list=False)
@@ -99,7 +101,7 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
             if const_1.dtype == const_2.dtype and np.array_equal(const_1, const_2):
                 return True
         else:
-            if node_1.attr == node_2.attr:
+            if node_1.attrs == node_2.attrs:
                 return True
         return False
 
@@ -109,10 +111,10 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
         node_to_retain = nodes_to_process[0]
         for node_to_delete in nodes_to_process[1:]:
             # if one of the output is graph's output then it can't be deleted
-            if set(node_to_delete.output).intersection(set(graph.outputs)):
+            if set(node_to_delete.output_tensor_names).intersection(set(graph.outputs)):
                 continue
             for old_input, new_input in zip(
-                node_to_delete.output, node_to_retain.output
+                node_to_delete.output_tensor_names, node_to_retain.output_tensor_names
             ):
                 graph.ReplaceAllInputs(graph.get_nodes(), old_input, new_input)
             graph.RemoveNode(node_to_delete.name)
@@ -121,7 +123,7 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
     @staticmethod
     def _skip_node_type(node):
         # identity node will be handled by identity optimizer so skip it
-        if node.type in ["Identity"]:
+        if node.op_type in ["Identity"]:
             return True
         if node.is_graph_input():
             return True
@@ -129,4 +131,4 @@ class MergeDuplicatedNodesOptimizer(GraphOptimizerBase):
 
     @staticmethod
     def _len_of_node_output(node):
-        return len(node.output)
+        return len(node.output_tensor_names)
