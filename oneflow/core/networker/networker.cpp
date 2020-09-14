@@ -100,7 +100,39 @@ void Networker::HandlerRecieveSendMsgFromSrcMachine(const NetworkerMsg& msg) {
 }
 
 void Networker::HandlerRecieveAckMsgFromDstMachine(const NetworkerMsg& msg) {
-  // TODO()
+  // this handler means that:
+  // this machine is src machine, and recieve Ack msg from dst machine
+  // The Send/Recieve is done.
+  CHECK(msg.src_mem_token != nullptr);
+  CHECK(msg.dst_mem_token != nullptr);
+  uint64_t token = msg.token;
+  CHECK(token != -1);
+
+  // get status from map
+  HashMap<uint64_t, NetworkerStatus>::iterator it;
+  NetworkerStatus* stat = nullptr;
+  {
+    std::unique_lock<std::mutex> lock(status_lock_);
+    it = token2status_.find(token);
+  }
+  CHECK(it != token2status_.end());
+  stat = &(it->second);
+
+  // check msg == stat
+  CHECK_EQ(stat->src_mem_token, msg.src_mem_token);
+  CHECK_EQ(stat->size, msg.size);
+  CHECK_EQ(stat->src_machine_id, msg.src_machine_id);
+  CHECK_EQ(stat->dst_machine_id, msg.dst_machine_id);
+  CHECK(stat->callback != nullptr);
+
+  // Do Send callback
+  stat->callback();
+
+  // Recovery status
+  {
+    std::unique_lock<std::mutex> lock(status_lock_);
+    token2status_.erase(it);
+  }
 }
 
 void Networker::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, std::size_t size,
@@ -176,7 +208,11 @@ void Networker::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::
 }
 
 void Networker::DoRead(uint64_t token) {
-  auto it = token2status_.find(token);
+  HashMap<uint64_t, NetworkerStatus>::iterator it;
+  {
+    std::unique_lock<std::mutex> lock(status_lock_);
+    auto it = token2status_.find(token);
+  }
   CHECK(it != token2status_.end());
   NetworkerStatus* stat = &(it->second);
   CHECK(stat->is_send_ready && stat->is_recv_ready);
@@ -187,7 +223,12 @@ void Networker::DoRead(uint64_t token) {
   CHECK(stat->size != -1);
   CHECK(stat->callback != nullptr);
   comm_net_->Read(read_id_, stat->src_machine_id, stat->src_mem_token, stat->dst_mem_token);
-  comm_net_->AddReadCallBack(read_id_, [stat, it, this]() {
+  comm_net_->AddReadCallBack(read_id_, [stat, this]() {
+    HashMap<uint64_t, NetworkerStatus>::iterator it;
+    {
+      std::unique_lock<std::mutex> lock(status_lock_);
+      auto it = token2status_.find(stat->token);
+    }
     // Send ack message to source machine
     NetworkerMsg msg;
     msg.token = stat->token;
@@ -203,7 +244,10 @@ void Networker::DoRead(uint64_t token) {
     stat->callback();
 
     // Recovery status
-    token2status_.erase(it);
+    {
+      std::unique_lock<std::mutex> lock(status_lock_);
+      token2status_.erase(it);
+    }
   });
 }
 
