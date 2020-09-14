@@ -1874,4 +1874,3 @@ def invert_permutation(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-    

@@ -46,12 +46,11 @@ class CpuInvertPermutationKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_INVERT_PERMUTATION_KERNEL(dtype)                          \
-  REGISTER_USER_KERNEL("invert_permutation")                                   \
-      .SetCreateFn<CpuInvertPermutationKernel<dtype>>()                        \
-      .SetIsMatchedHob(                                                        \
-          (user_op::HobDeviceTag() == "cpu") &                                 \
-          (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+#define REGISTER_CPU_INVERT_PERMUTATION_KERNEL(dtype)     \
+  REGISTER_USER_KERNEL("invert_permutation")              \
+      .SetCreateFn<CpuInvertPermutationKernel<dtype>>()   \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_INVERT_PERMUTATION_KERNEL(int32_t)
 REGISTER_CPU_INVERT_PERMUTATION_KERNEL(int64_t)

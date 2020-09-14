@@ -28,10 +28,10 @@ __global__ void InvertPermutationGpu(const int64_t n, const T *x, T *y) {
 template<typename T>
 void InvertPermutation(DeviceCtx *ctx, const int64_t n, const T *x, T *y) {
   InvertPermutationGpu<T>
-  <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 
-template <typename T>
+template<typename T>
 class GpuInvertPermutationKernel final : public user_op::OpKernel {
  public:
   GpuInvertPermutationKernel() = default;
@@ -53,12 +53,11 @@ class GpuInvertPermutationKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_INVERT_PERMUTATION_KERNEL(dtype)                          \
-  REGISTER_USER_KERNEL("invert_permutation")                                   \
-      .SetCreateFn<GpuInvertPermutationKernel<dtype>>()                        \
-      .SetIsMatchedHob(                                                        \
-          (user_op::HobDeviceTag() == "gpu") &                                 \
-          (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+#define REGISTER_GPU_INVERT_PERMUTATION_KERNEL(dtype)     \
+  REGISTER_USER_KERNEL("invert_permutation")              \
+      .SetCreateFn<GpuInvertPermutationKernel<dtype>>()   \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_INVERT_PERMUTATION_KERNEL(int32_t)
 REGISTER_GPU_INVERT_PERMUTATION_KERNEL(int64_t)
