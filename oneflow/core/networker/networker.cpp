@@ -25,18 +25,20 @@ Networker::Networker() {
   // maybe need new read id for each dst machine id, maybe need 2 * machine num read ids
   read_id_ = comm_net_->NewActorReadId();
   msg_poller_ = std::thread([this]() { PollMsgChannel(); });
+  /*
   callback_poller_ = std::thread([this]() {
     std::function<void()> callback;
     while (callback_channel_.Receive(&callback) == kChannelStatusSuccess) { callback(); }
   });
+  */
 }
 
 Networker::~Networker() {
-  msg_poller_.join();
-  callback_poller_.join();
-  CHECK(token2status_.empty());
   msg_channel_.Close();
-  callback_channel_.Close();
+  msg_poller_.join();
+  // callback_poller_.join();
+  CHECK(token2status_.empty());
+  // callback_channel_.Close();
   comm_net_->DeleteActorReadId(read_id_);
 }
 
