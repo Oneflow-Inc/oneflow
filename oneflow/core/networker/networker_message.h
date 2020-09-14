@@ -25,8 +25,8 @@ namespace oneflow {
 
 enum class NetworkerMsgType {
   kInvalid = 0,
-  kSend,  // send msg from local to remote networker
-  kAck,   // this token transmission task is down
+  kSend = 1,  // send msg from local to remote networker
+  kAck = 2,   // this token transmission task is down
 };
 
 struct NetworkerMsg {

@@ -53,9 +53,15 @@ void Networker::PollMsgChannel() {
               << "\n ----  dst_machine_id = " << msg.dst_machine_id
               << "\n ----  type = " << msg.type << std::endl;
     switch (msg.type) {
-      case NetworkerMsgType::kSend: HandlerReceiveSendMsgFromSrcMachine(msg);
-      case NetworkerMsgType::kAck: HandlerReceiveAckMsgFromDstMachine(msg);
-      default: UNIMPLEMENTED();
+      case NetworkerMsgType::kSend: {
+        HandlerReceiveSendMsgFromSrcMachine(msg);
+        break;
+      }
+      case NetworkerMsgType::kAck: {
+        HandlerReceiveAckMsgFromDstMachine(msg);
+        break;
+      }
+      default: UNIMPLEMENTED(); break;
     }
   }
 }
@@ -63,6 +69,7 @@ void Networker::PollMsgChannel() {
 void Networker::HandlerReceiveSendMsgFromSrcMachine(const NetworkerMsg& msg) {
   // this handler means that:
   // this machine is dst machine, and receive Send msg from source machine
+  CHECK_EQ(msg.type, NetworkerMsgType::kSend);
   CHECK(msg.src_mem_token != nullptr);
   CHECK(msg.dst_mem_token == nullptr);
   uint64_t token = msg.token;
@@ -112,6 +119,7 @@ void Networker::HandlerReceiveAckMsgFromDstMachine(const NetworkerMsg& msg) {
   // The Send/Receive is done.
   std::cout << "cclog: Recv ACK msg from dst machine, the src_mem_token is " << msg.src_mem_token
             << std::endl;
+  CHECK_EQ(msg.type, NetworkerMsgType::kAck);
   CHECK(msg.src_mem_token != nullptr);
   CHECK(msg.dst_mem_token != nullptr);
   uint64_t token = msg.token;
