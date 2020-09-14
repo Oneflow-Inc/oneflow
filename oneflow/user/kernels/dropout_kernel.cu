@@ -29,6 +29,12 @@ __global__ void MaskAndScaleGpu(const int64_t n, float scale, const T* x, const 
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * static_cast<T>(mask[i]) * scale; }
 }
 
+template<typename T>
+__global__ void MaskAndScaleAddGpu(const int64_t n, float scale, const T* x, const int8_t* mask,
+                                   const T* addend, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * static_cast<T>(mask[i]) * scale + addend[i]; }
+}
+
 template<>
 __global__ void MaskAndScaleGpu<half>(const int64_t n, float scale, const half* x,
                                       const int8_t* mask, half* y) {
@@ -44,9 +50,19 @@ __global__ void MaskAndScaleGpu<half>(const int64_t n, float scale, const half* 
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
-__global__ void GenMaskGpu(const int64_t n, float threshold, const float* random_tmp,
-                           int8_t* mask) {
-  CUDA_1D_KERNEL_LOOP(i, n) { mask[i] = random_tmp[i] > threshold; }
+template<>
+__global__ void MaskAndScaleAddGpu<half>(const int64_t n, float scale, const half* x,
+                                         const int8_t* mask, const half* addend, half* y) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  half h_scale = __float2half(scale);
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    half one_or_zero = mask[i];
+    y[i] = __hadd(__hmul(__hmul(x[i], one_or_zero), h_scale), addend[i]);
+  }
+#else
+  printf("use half need nvcc arch >= 530");
+  assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
 template<typename T>
@@ -56,12 +72,29 @@ void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, cons
       n, scale, x, mask, y);
 }
 
+template<typename T>
+void MaskAndScaleAdd(DeviceCtx* ctx, const int64_t n, float scale, const T* x, const int8_t* mask,
+                     const T* addend, T* y) {
+  MaskAndScaleAddGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          n, scale, x, mask, addend, y);
+}
+
 template<>
 void MaskAndScale<float16>(DeviceCtx* ctx, const int64_t n, float scale, const float16* x,
                            const int8_t* mask, float16* y) {
   MaskAndScaleGpu<half>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           n, scale, reinterpret_cast<const half*>(x), mask, reinterpret_cast<half*>(y));
+}
+
+template<>
+void MaskAndScaleAdd<float16>(DeviceCtx* ctx, const int64_t n, float scale, const float16* x,
+                              const int8_t* mask, const float16* addend, float16* y) {
+  MaskAndScaleAddGpu<half>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          n, scale, reinterpret_cast<const half*>(x), mask, reinterpret_cast<const half*>(addend),
+          reinterpret_cast<half*>(y));
 }
 
 template<typename T>
@@ -76,22 +109,22 @@ class DropoutKernelGPU final : public user_op::OpKernel {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const float scale = ctx->Attr<float>("scale");
-    MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
-                    mask->dptr<int8_t>(), out->mut_dptr<T>());
+    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      MaskAndScaleAdd<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
+                         mask->dptr<int8_t>(), addend->dptr<T>(), out->mut_dptr<T>());
+    } else {
+      MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
+                      mask->dptr<int8_t>(), out->mut_dptr<T>());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DROPOUT_KERNEL_GPU(dtype)                                                      \
-  REGISTER_USER_KERNEL("dropout")                                                               \
-      .SetCreateFn<DropoutKernelGPU<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
-        return Maybe<void>::Ok();                                                               \
-      });
+#define REGISTER_DROPOUT_KERNEL_GPU(dtype)                                                \
+  REGISTER_USER_KERNEL("dropout").SetCreateFn<DropoutKernelGPU<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == "gpu")                                                  \
+      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_DROPOUT_KERNEL_GPU(float16)
 REGISTER_DROPOUT_KERNEL_GPU(float)
