@@ -222,8 +222,17 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
     auto ForEachNodeOnOutEdge = [&](const PlanTaskNode* node,
                                     const std::function<void(const PlanTaskNode*)>& Handler) {
       if (!IsCollectiveBoxingNode(node)) {
-        node->ForEachNodeOnOutEdge(
-            [&](const PlanTaskNode* node_on_out_edge) { Handler(node_on_out_edge); });
+        node->ForEachNodeOnOutEdge([&](const PlanTaskNode* node_on_out_edge) {
+          bool has_unvisited_collective_boxing_node_on_in_edges = false;
+          node_on_out_edge->ForEachNodeOnInEdge([&](const PlanTaskNode* node_on_in_edge) {
+            if (!has_unvisited_collective_boxing_node_on_in_edges
+                && IsCollectiveBoxingNode(node_on_in_edge)
+                && all_visited.count(node_on_in_edge) == 0) {
+              has_unvisited_collective_boxing_node_on_in_edges = true;
+            }
+          });
+          if (!has_unvisited_collective_boxing_node_on_in_edges) { Handler(node_on_out_edge); }
+        });
       }
     };
     HashSet<const PlanTaskNode*> visited;
