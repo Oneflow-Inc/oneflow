@@ -73,6 +73,7 @@ Maybe<void> TestNetworkerOn2Machine(const std::string& first_machine_ip,
 
   std::cout << "New All Global" << std::endl;
   BlockingCounter bc(1);
+  OF_BARRIER();
 
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   if (this_machine_id == 0) {
