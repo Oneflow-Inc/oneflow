@@ -75,32 +75,31 @@ Maybe<void> TestNetworkerOn2Machine(const std::string& first_machine_ip,
   BlockingCounter bc(1);
   OF_BARRIER();
 
+  void* malloc_ptr = nullptr;
+
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   if (this_machine_id == 0) {
     std::cout << "I'm first machine!" << std::endl;
-    void* first_send_ptr = malloc(1024);
-    int32_t* data = static_cast<int32_t*>(first_send_ptr);
+    malloc_ptr = malloc(1024);
+    int32_t* data = static_cast<int32_t*>(malloc_ptr);
     for (int i = 0; i < 1024 / 4; ++i) { *(data + i) = i; }
-    std::function<void()> func = [first_send_ptr, &bc]() {
+    std::function<void()> func = [malloc_ptr, &bc]() {
       std::cout << "Yes! I have send 1024 bytes to machine 1" << std::endl;
-      free(first_send_ptr);
-      DeleteAll();
       bc.Decrease();
     };
-    Global<Networker>::Get()->Send(23330, 1, first_send_ptr, 1024, func);
+    Global<Networker>::Get()->Send(23330, 1, malloc_ptr, 1024, func);
     std::cout << "First send post!" << std::endl;
   } else if (this_machine_id == 1) {
     std::cout << "I'm second machine!" << std::endl;
-    void* first_receive_ptr = malloc(1024);
-    std::function<void()> func = [first_receive_ptr, &bc]() {
-      int32_t* data = static_cast<int32_t*>(first_receive_ptr);
+    malloc_ptr = malloc(1024);
+    std::function<void()> func = [malloc_ptr, &bc]() {
+      int32_t* data = static_cast<int32_t*>(malloc_ptr);
       for (int i = 0; i < 1024 / 4; ++i) { CHECK_EQ(*(data + i), i); }
       std::cout << "Yes! I have recv 1024 bytes from machine 0" << std::endl;
-      free(first_receive_ptr);
-      DeleteAll();
+      free(malloc_ptr);
       bc.Decrease();
     };
-    Global<Networker>::Get()->Receive(23330, 0, first_receive_ptr, 1024, func);
+    Global<Networker>::Get()->Receive(23330, 0, malloc_ptr, 1024, func);
     std::cout << "First recv post!" << std::endl;
   } else {
     UNIMPLEMENTED();
@@ -108,7 +107,9 @@ Maybe<void> TestNetworkerOn2Machine(const std::string& first_machine_ip,
   std::cout << "wait for callback..." << std::endl;
   bc.WaitUntilCntEqualZero();
   std::cout << "All Done!" << std::endl;
-
+  free(malloc_ptr);
+  DeleteAll();
+  std::cout << "Delete all global." << std::endl;
   return Maybe<void>::Ok();
 }
 
