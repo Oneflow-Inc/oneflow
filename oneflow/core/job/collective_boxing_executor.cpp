@@ -245,7 +245,8 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
 
   for (const RequestDesc* request : requests) {
     const int64_t size = GetAlignedRequestSize(request);
-    if (group.empty() || !CanFuse(group.back(), request) || group_size + size > fusion_threshold_) {
+    if (group.empty() || !CanFuse(group.back(), request) || group_size + size > fusion_threshold_
+        || group.size() >= collective_boxing_conf_.nccl_fusion_max_ops()) {
       if (!group.empty()) {
         groups->emplace_back();
         groups->back().swap(group);
