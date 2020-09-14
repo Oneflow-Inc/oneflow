@@ -103,6 +103,8 @@ void Networker::HandlerReceiveAckMsgFromDstMachine(const NetworkerMsg& msg) {
   // this handler means that:
   // this machine is src machine, and receive Ack msg from dst machine
   // The Send/Receive is done.
+  std::cout << "cclog: Recv ACK msg from dst machine, the src_mem_token is " << msg.src_mem_token
+            << std::endl;
   CHECK(msg.src_mem_token != nullptr);
   CHECK(msg.dst_mem_token != nullptr);
   uint64_t token = msg.token;
@@ -237,6 +239,9 @@ void Networker::DoRead(uint64_t token) {
     msg.src_mem_token = stat->src_mem_token;
     msg.dst_mem_token = stat->dst_mem_token;
     msg.type = NetworkerMsgType::kAck;
+    std::cout << "cclog: Send ACK msg to src machine, the src_mem_token is " << msg.src_mem_token
+              << std::endl;
+    std::cout << "cclog: Send ACK msg to src machine id is " << msg.src_machine_id << std::endl;
     comm_net_->SendNetworkerMsg(msg.src_machine_id, msg);
 
     // Do Recive callback
