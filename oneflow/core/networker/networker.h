@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 struct NetworkerStatus {
-  uint64_t token;
+  const uint64_t token;
   std::function<void()> callback;
   bool is_send_ready;
   bool is_recv_ready;
@@ -61,14 +61,12 @@ class Networker {
 
  private:
   void PollMsgChannel();
-  void HandlerPrepareSend(const NetworkerMsg& msg);
-  void HandlerPrepareRecv(const NetworkerMsg& msg);
   void HandlerSend(const NetworkerMsg& msg);
   void HandlerAck(const NetworkerMsg& msg);
 
   friend class Global<Networker>;
   Networker();
-  // std::mutex status_lock_;
+  std::mutex status_lock_;
   HashMap<uint64_t, NetworkerStatus> token2status_;
   void* read_id_;
 

@@ -46,42 +46,11 @@ void Networker::PollMsgChannel() {
   NetworkerMsg msg;
   while (msg_channel_.Receive(&msg) == kChannelStatusSuccess) {
     switch (msg.type) {
-      case NetworkerMsgType::kPrepareSend: HandlerPrepareSend(msg);
-      case NetworkerMsgType::kPrepareRecv: HandlerPrepareRecv(msg);
       case NetworkerMsgType::kSend: HandlerSend(msg);
       case NetworkerMsgType::kAck: HandlerAck(msg);
       default: UNIMPLEMENTED();
     }
   }
-}
-
-void Networker::HandlerPrepareSend(const NetworkerMsg& msg) {
-  // init status, save callback
-  CHECK(token2status_.emplace(msg.token, NetworkerStatus(msg.token)).second);
-  NetworkerStatus* stat = &(token2status_.at(msg.token));
-  // CHECK(msg.callback != nullptr);
-  // stat->callback = msg.callback;
-  stat->is_send_ready = true;
-
-  // create src mem token
-  CHECK(msg.ptr != nullptr);
-  CHECK(msg.size > 0);
-  stat->src_mem_token = comm_net_->RegisterMemory(msg.ptr, msg.size);
-  stat->src_ptr = msg.ptr;
-  stat->size = msg.size;
-  stat->dst_machine_id = msg.dst_machine_id;
-  stat->src_machine_id = msg.src_machine_id;
-
-  // create kSend msg and send
-  SocketMsg socket_msg;
-  socket_msg.msg_type = SocketMsgType::kNetworker;
-  socket_msg.networker_msg = msg;
-  socket_msg.networker_msg.type = NetworkerMsgType::kSend;
-  comm_net_->SendSocketMsg(msg.dst_machine_id, socket_msg);
-}
-
-void Networker::HandlerPrepareRecv(const NetworkerMsg& msg) {
-  // TODO()
 }
 
 void Networker::HandlerSend(const NetworkerMsg& msg) {
@@ -94,20 +63,44 @@ void Networker::HandlerAck(const NetworkerMsg& msg) {
 
 void Networker::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, std::size_t size,
                      std::function<void()> callback) {
-  // Let local networker msg poller prepare send
+  // prepare networker status for this token.
+  // store callback.
+  NetworkerStatus* stat = nullptr;
+  {
+    std::unique_lock<std::mutex> lock(status_lock_);
+    CHECK(token2status_.find(token)
+          == token2status_.end());  // this token must be first add to status
+    token2status_.emplace(token, NetworkerStatus(token));
+    stat = &(token2status_.at(token));
+  }
+  void* mut_ptr = const_cast<void*>(ptr);
+  stat->callback = callback;
+  stat->is_send_ready = true;
+  // stat->is_recv_ready = false;
+  stat->src_mem_token = comm_net_->RegisterMemory(mut_ptr, size);
+  // stat->dst_mem_token = nullptr;
+  stat->src_ptr = mut_ptr;
+  // stat->dst_ptr = nullptr;
+  stat->size = size;
+  stat->src_machine_id = this_machine_id_;
+  stat->dst_machine_id = dst_machine_id;
+
+  // Send msg to dst machine
   NetworkerMsg msg;
   msg.token = token;
-  msg.src_machine_id = this_machine_id_;
-  msg.dst_machine_id = dst_machine_id;
-  msg.ptr = const_cast<void*>(ptr);
+  msg.src_machine_id = stat->src_machine_id;
+  msg.dst_machine_id = stat->dst_machine_id;
+  msg.ptr = stat->src_ptr;
   msg.size = size;
-  // msg.callback = callback;
-  msg.type = NetworkerMsgType::kPrepareSend;
-  msg_channel_.Send(msg);
+  msg.src_mem_token = stat->src_mem_token;
+  msg.type = NetworkerMsgType::kSend;
+  comm_net_->SendNetworkerMsg(msg.dst_machine_id, msg);
 }
 
 void Networker::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::size_t size,
                         std::function<void()> callback) {
+  TODO();
+  /*
   // Let local networker msg poller prepare recv
   NetworkerMsg msg;
   msg.token = token;
@@ -115,9 +108,10 @@ void Networker::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::
   msg.dst_machine_id = this_machine_id_;
   msg.ptr = ptr;
   msg.size = size;
-  // msg.callback = callback;
+  msg.callback = callback;
   msg.type = NetworkerMsgType::kPrepareRecv;
   msg_channel_.Send(msg);
+  */
 }
 
 }  // namespace oneflow

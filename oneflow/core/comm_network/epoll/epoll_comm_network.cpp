@@ -94,6 +94,13 @@ void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_ms
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
+void EpollCommNet::SendNetworkerMsg(int64_t dst_machine_id, const NetworkerMsg& networker_msg) {
+  SocketMsg msg;
+  msg.msg_type = SocketMsgType::kNetworker;
+  msg.networker_msg = networker_msg;
+  GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
+}
+
 void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }

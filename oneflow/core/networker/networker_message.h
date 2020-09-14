@@ -24,10 +24,9 @@ limitations under the License.
 namespace oneflow {
 
 enum class NetworkerMsgType {
-  kPrepareSend,  // prepare send msg from local to local networker poller thread
-  kPrepareRecv,  // prepare recv msg from local to local networker poller thread
-  kSend,         // send msg from local to remote networker
-  kAck,          // this token transmission task is down
+  kInvalid = 0,
+  kSend,  // send msg from local to remote networker
+  kAck,   // this token transmission task is down
 };
 
 struct NetworkerMsg {
@@ -38,7 +37,6 @@ struct NetworkerMsg {
   std::size_t size;
   int64_t src_machine_id;
   int64_t dst_machine_id;
-  // std::function<void()> callback;
   NetworkerMsgType type;
 };
 
