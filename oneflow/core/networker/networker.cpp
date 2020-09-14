@@ -109,14 +109,13 @@ void Networker::HandlerRecieveAckMsgFromDstMachine(const NetworkerMsg& msg) {
   CHECK(token != -1);
 
   // get status from map
-  HashMap<uint64_t, NetworkerStatus>::iterator it;
   NetworkerStatus* stat = nullptr;
   {
     std::unique_lock<std::mutex> lock(status_lock_);
-    it = token2status_.find(token);
+    auto it = token2status_.find(token);
+    CHECK(it != token2status_.end());
+    stat = &(it->second);
   }
-  CHECK(it != token2status_.end());
-  stat = &(it->second);
 
   // check msg == stat
   CHECK_EQ(stat->src_mem_token, msg.src_mem_token);
@@ -131,6 +130,8 @@ void Networker::HandlerRecieveAckMsgFromDstMachine(const NetworkerMsg& msg) {
   // Recovery status
   {
     std::unique_lock<std::mutex> lock(status_lock_);
+    auto it = token2status_.find(token);
+    CHECK(it != token2status_.end());
     token2status_.erase(it);
   }
 }
@@ -208,13 +209,14 @@ void Networker::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::
 }
 
 void Networker::DoRead(uint64_t token) {
-  HashMap<uint64_t, NetworkerStatus>::iterator it;
+  NetworkerStatus* stat = nullptr;
   {
     std::unique_lock<std::mutex> lock(status_lock_);
     auto it = token2status_.find(token);
+    CHECK(it != token2status_.end());
+    stat = &(it->second);
   }
-  CHECK(it != token2status_.end());
-  NetworkerStatus* stat = &(it->second);
+  CHECK(stat != nullptr);
   CHECK(stat->is_send_ready && stat->is_recv_ready);
   CHECK(stat->src_mem_token != nullptr);
   CHECK(stat->dst_mem_token != nullptr);
@@ -224,11 +226,8 @@ void Networker::DoRead(uint64_t token) {
   CHECK(stat->callback != nullptr);
   comm_net_->Read(read_id_, stat->src_machine_id, stat->src_mem_token, stat->dst_mem_token);
   comm_net_->AddReadCallBack(read_id_, [stat, this]() {
-    HashMap<uint64_t, NetworkerStatus>::iterator it;
-    {
-      std::unique_lock<std::mutex> lock(status_lock_);
-      auto it = token2status_.find(stat->token);
-    }
+    CHECK(stat != nullptr);
+
     // Send ack message to source machine
     NetworkerMsg msg;
     msg.token = stat->token;
@@ -246,6 +245,8 @@ void Networker::DoRead(uint64_t token) {
     // Recovery status
     {
       std::unique_lock<std::mutex> lock(status_lock_);
+      auto it = token2status_.find(stat->token);
+      CHECK(it != token2status_.end());
       token2status_.erase(it);
     }
   });
