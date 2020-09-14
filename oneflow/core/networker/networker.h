@@ -29,8 +29,6 @@ struct NetworkerStatus {
   bool is_recv_ready;
   void* src_mem_token;
   void* dst_mem_token;
-  void* src_ptr;
-  void* dst_ptr;
   std::size_t size;
   int64_t src_machine_id;
   int64_t dst_machine_id;
@@ -41,8 +39,6 @@ struct NetworkerStatus {
         is_recv_ready(false),
         src_mem_token(nullptr),
         dst_mem_token(nullptr),
-        src_ptr(nullptr),
-        dst_ptr(nullptr),
         size(-1),
         src_machine_id(-1),
         dst_machine_id(-1) {}
@@ -61,8 +57,8 @@ class Networker {
 
  private:
   void PollMsgChannel();
-  void HandlerSend(const NetworkerMsg& msg);
-  void HandlerAck(const NetworkerMsg& msg);
+  void HandlerRecieveSendMsgFromSrcMachine(const NetworkerMsg& msg);
+  void HandlerRecieveAckMsgFromDstMachine(const NetworkerMsg& msg);
   void DoRead(uint64_t token);
 
   friend class Global<Networker>;
