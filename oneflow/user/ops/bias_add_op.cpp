@@ -60,7 +60,7 @@ REGISTER_USER_OP_GRAD("bias_add")
       if (op.NeedGenGradTensor4OpInput("b", 0)) {
         const int64_t num_axes = op.TensorDesc4ArgNameAndIndex("a", 0).shape().NumAxes();
         const int32_t bias_add_axis = op.attr<int32_t>("axis");
-        std::vector<int32_t> reduce_axes_vec(num_axes);
+        std::vector<int32_t> reduce_axes_vec;
         FOR_RANGE(int64_t, i, 0, num_axes) {
           if (i != bias_add_axis) { reduce_axes_vec.push_back(i); }
         }
