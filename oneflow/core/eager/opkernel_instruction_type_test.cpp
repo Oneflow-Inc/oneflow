@@ -168,6 +168,7 @@ TEST(OpkernelInstructionType, call_opkernel) {
                        ->add_symbol_operand(op_node_signature_id)
                        ->add_separator()
                        ->add_separator()
+                       ->add_separator()
                        ->add_symbol_operand(obn_id)
                        ->add_mut_operand(output_blob_id)
                        ->add_separator());
@@ -210,6 +211,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
                          ->add_symbol_operand(op_node_signature_id)
                          ->add_separator()
                          ->add_separator()
+                         ->add_separator()
                          ->add_symbol_operand(out_id)
                          ->add_mut_operand(x)
                          ->add_separator());
@@ -239,6 +241,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
                          ->add_separator()
                          ->add_symbol_operand(in_id)
                          ->add_const_operand(x)
+                         ->add_separator()
                          ->add_separator()
                          ->add_symbol_operand(out_id)
                          ->add_symbol_operand(tmp_buffer_id)
@@ -284,6 +287,7 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
                        ->add_mut_operand(opkernel_id)
                        ->add_separator()
                        ->add_separator()
+                       ->add_separator()
                        ->add_symbol_operand(obn_id)
                        ->add_mut_operand(output_blob_id)
                        ->add_separator());
@@ -326,6 +330,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
                        ->add_mut_operand(opkernel_id)
                        ->add_separator()
                        ->add_separator()
+                       ->add_separator()
                        ->add_symbol_operand(out_id)
                        ->add_mut_operand(x)
                        ->add_separator());
@@ -355,6 +360,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
                        ->add_separator()
                        ->add_symbol_operand(in_id)
                        ->add_const_operand(x)
+                       ->add_separator()
                        ->add_separator()
                        ->add_symbol_operand(out_id)
                        ->add_symbol_operand(tmp_buffer_id)
