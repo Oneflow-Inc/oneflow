@@ -34,6 +34,25 @@ from oneflow.python.oneflow_export import oneflow_export
 from typing import Dict, List, Union, Sequence, Optional
 
 
+_lazy_checkpoint = False
+
+
+@oneflow_export("use_legacy_checkpoint")
+def api_use_legacy_checkpoint(val: bool = True) -> None:
+    return enable_if.unique([use_legacy_checkpoint])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
+def use_legacy_checkpoint(val=True):
+    global _lazy_checkpoint
+    _lazy_checkpoint = val
+
+
+@oneflow_export("legacy_checkpoint_used")
+def legacy_checkpoint_used():
+    return _lazy_checkpoint
+
+
 @oneflow_export("train.CheckPoint")
 class CheckPoint(object):
     """Create a `CheckPoint` object to manage checkpoint manually.
@@ -50,6 +69,10 @@ class CheckPoint(object):
         Args:
             path: A `string` of path to save checkpoint. 
         """
+        if not legacy_checkpoint_used():
+            print(
+                "'checkpoint.save()' is deprecated. Please use the new checkpoint API"
+            )
         assert type(path) is str
         enable_if.unique([lazy_checkpoint_save, eager_checkpoint_save])(path)
 
@@ -57,6 +80,10 @@ class CheckPoint(object):
     def init(self) -> None:
         r"""Initialize models by default initializer of op or Job.
         """
+        if not legacy_checkpoint_used():
+            print(
+                "'checkpoint.init()' is deprecated. It has no effect and will be removed in the future"
+            )
         enable_if.unique([lazy_checkpoint_init, eager_checkpoint_init])()
 
     @session_ctx.try_init_default_session
@@ -66,6 +93,10 @@ class CheckPoint(object):
         Args:
             path: A `string` of path to load checkpoint.
         """
+        if not legacy_checkpoint_used():
+            print(
+                "'checkpoint.load()' is deprecated. Please use the new checkpoint API"
+            )
         assert type(path) is str
         enable_if.unique([lazy_checkpoint_load, eager_checkpoint_load])(path)
 
@@ -331,6 +362,7 @@ class FileBackendVariableBlob:
 
 
 @oneflow_export("get_all_variables")
+@session_ctx.try_init_default_session
 def get_all_variables() -> Dict[str, FileBackendVariableBlob]:
     sess = session_ctx.GetDefaultSession()
     interface_ops = sess.interface_ops
@@ -344,6 +376,7 @@ def get_all_variables() -> Dict[str, FileBackendVariableBlob]:
 
 
 @oneflow_export("load")
+@session_ctx.try_init_default_session
 def load(path):
     var_dict = {}
     for f in os.listdir(path):
@@ -360,6 +393,7 @@ def read_slice_from_blob(blob):
 
 
 @oneflow_export("save")
+@session_ctx.try_init_default_session
 def save(var_dict, path):
     os.makedirs(path, exist_ok=True)
     meta_infos = variable_meta_info_pb.VariableMetaInfos()
@@ -386,9 +420,8 @@ def slice_assign(slice_id, slice, var_name):
 
 def _FeedValueToVariable(var_name, value_blob):
     if isinstance(value_blob, EagerBlobTrait):
-        raise NotImplementedError(
-            "Loading value from another blob has not been implemented"
-        )
+        var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
+        interface_op_read_and_write.Assign(value_blob, var_blob)
     elif isinstance(value_blob, FileBackendVariableBlob):
         if not value_blob.has_meta_info_:
             var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
@@ -402,6 +435,7 @@ def _FeedValueToVariable(var_name, value_blob):
 
 
 @oneflow_export("checkpoint.load_variables")
+@session_ctx.try_init_default_session
 def load_variables(var_dict, ignore_mismatch=False):
     for name, var in var_dict.items():
         if name in get_all_variables():

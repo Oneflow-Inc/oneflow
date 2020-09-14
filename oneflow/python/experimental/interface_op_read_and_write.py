@@ -24,6 +24,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.eager.op_executor as op_executor
 
 
 lazy_blob_cache = {}
@@ -141,3 +142,8 @@ def FeedValueToInterfaceBlob(op_name, ndarray):
         vm_util.LogicalRun(build)
 
     async_util.Await(1, AsyncFeedValueToInterfaceBlob)
+
+
+def Assign(src_blob, dst_blob):
+    # TODO: remove _ here
+    op_executor._Assign(dst_blob.blob_object, src_blob.blob_object)

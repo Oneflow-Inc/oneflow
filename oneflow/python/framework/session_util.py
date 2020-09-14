@@ -32,6 +32,7 @@ import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.op_executor as op_executor
 from oneflow.python.experimental import interface_op_read_and_write
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.framework.function_desc import FunctionDesc
@@ -44,6 +45,7 @@ from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.framework.check_point import SnapshotManager
+import oneflow.python.framework.check_point as check_point
 import oneflow.python.eager.blob_register as blob_register_util
 from contextlib import contextmanager
 from typing import Callable
@@ -69,6 +71,7 @@ class Session(object):
         self.existed_module_names_ = set()
         self.var_name2var_blob_ = {}
         self.interface_op_name2op_attr_ = {}
+        self.interface_op_name2op_conf_ = {}
         self.interface_op_name2job_name_ = {}
         self.job_name2name_scope_stack_ = {}
         self.job_name2current_scope_ = {}
@@ -220,6 +223,11 @@ class Session(object):
             assert len(self.job_name2function_desc_.items()) > 0
             c_api_util.StartGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
+            if not check_point.legacy_checkpoint_used():
+                sess = session_ctx.GetDefaultSession()
+                for op_name, var_blob in check_point.get_all_variables().items():
+                    op_conf = sess.OpConf4InterfaceOpName(op_name)
+                    op_executor.EagerInitVariableBlob(sess, op_conf, var_blob)
         return self
 
     def TryClose(self):
@@ -318,14 +326,18 @@ class Session(object):
         assert var_name not in self.job_name2var_name2var_blob_[job_name]
         self.job_name2var_name2var_blob_[job_name][var_name] = var_blob
 
-    def AddInfo4InterfaceOpName(self, interface_op_name, op_attribute):
+    def AddInfo4InterfaceOpName(self, interface_op_name, op_attribute, op_conf):
         self.interface_op_name2op_attr_[interface_op_name] = op_attribute
+        self.interface_op_name2op_conf_[interface_op_name] = op_conf
         self.interface_op_name2job_name_[
             interface_op_name
         ] = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
 
     def OpAttribute4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2op_attr_[interface_op_name]
+
+    def OpConf4InterfaceOpName(self, interface_op_name):
+        return self.interface_op_name2op_conf_[interface_op_name]
 
     def JobName4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2job_name_[interface_op_name]

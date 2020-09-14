@@ -24,6 +24,8 @@ import oneflow.typing as tp
 
 flow.config.gpu_device_num(2)
 flow.enable_eager_execution(False)
+flow.use_legacy_checkpoint(False)
+
 
 @flow.global_function()
 def add() -> tp.Numpy:
@@ -38,32 +40,37 @@ def add() -> tp.Numpy:
             name="z", shape=(2, 3), initializer=flow.xavier_uniform_initializer(),
         )
         return flow.math.add_n([x, y, z])
-        return z
 
 
 if flow.eager_execution_enabled():
     add()
-check_point = flow.train.CheckPoint()
-check_point.init()
 
-all_vars = flow.get_all_variables()
-print(all_vars)
+check_point = flow.train.CheckPoint()
+if flow.legacy_checkpoint_used():
+    check_point.init()
+
+print("--------")
+vars_in_mem = flow.get_all_variables()
+print("--------")
+print(vars_in_mem)
+print("--------")
+flow.checkpoint.load_variables({"y": vars_in_mem['x']})
+print(vars_in_mem)
 print("--------")
 
-legacy = False
-if legacy:
+if flow.legacy_checkpoint_used():
     save_dir = "/tmp/legacy_cp"
     shutil.rmtree(save_dir)
     check_point.save(save_dir)
     flow.sync_default_session()
 else:
     save_dir = "/tmp/cp"
-    flow.save(all_vars, save_dir)
+    flow.save(vars_in_mem, save_dir)
 
-vars = flow.load(save_dir)
-print(vars)
+vars_in_file = flow.load(save_dir)
+print(vars_in_file)
 print("--------")
-flow.checkpoint.load_variables({"y": vars["x"]})
+flow.checkpoint.load_variables({"y": vars_in_file["z"]})
 
 print(flow.get_all_variables())
 print(add())
