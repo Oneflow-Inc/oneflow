@@ -14,18 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import oneflow.typing as tp
 from util import convert_to_onnx_and_check
-
-func_config = flow.FunctionConfig()
-func_config.default_data_type(flow.float)
 
 initializer = flow.random_uniform_initializer()
 initer_args = {"kernel_initializer": initializer, "bias_initializer": initializer}
 
 
 def test_conv2d_k2d1_valid(test_case):
-    @flow.global_function(func_config)
-    def conv2d_k3s1_valid(x=flow.FixedTensorDef((2, 4, 3, 5))):
+    @flow.global_function()
+    def conv2d_k3s1_valid(x: tp.Numpy.Placeholder((2, 4, 3, 5))):
         return flow.layers.conv2d(
             x, 6, kernel_size=3, strides=1, padding="VALID", **initer_args
         )
@@ -34,8 +32,8 @@ def test_conv2d_k2d1_valid(test_case):
 
 
 def test_conv2d_s2_valid(test_case):
-    @flow.global_function(func_config)
-    def conv2d_s2_valid(x=flow.FixedTensorDef((2, 4, 3, 5))):
+    @flow.global_function()
+    def conv2d_s2_valid(x: tp.Numpy.Placeholder((2, 4, 3, 5))):
         return flow.layers.conv2d(
             x, 6, kernel_size=1, strides=2, padding="VALID", **initer_args
         )
@@ -44,8 +42,8 @@ def test_conv2d_s2_valid(test_case):
 
 
 def test_conv2d_s2_same(test_case):
-    @flow.global_function(func_config)
-    def conv2d_s2_same(x=flow.FixedTensorDef((2, 4, 3, 5))):
+    @flow.global_function()
+    def conv2d_s2_same(x: tp.Numpy.Placeholder((2, 4, 3, 5))):
         return flow.layers.conv2d(
             x, 6, kernel_size=3, strides=2, padding="SAME", **initer_args
         )
@@ -54,8 +52,8 @@ def test_conv2d_s2_same(test_case):
 
 
 def test_conv2d_k3s1_nhwc_valid(test_case):
-    @flow.global_function(func_config)
-    def conv2d_k3s1_nhwc_valid(x=flow.FixedTensorDef((2, 3, 5, 4))):
+    @flow.global_function()
+    def conv2d_k3s1_nhwc_valid(x: tp.Numpy.Placeholder((2, 3, 5, 4))):
         return flow.layers.conv2d(
             x,
             6,
@@ -70,8 +68,8 @@ def test_conv2d_k3s1_nhwc_valid(test_case):
 
 
 def test_conv2d_k3s1_nhwc_same_d2(test_case):
-    @flow.global_function(func_config)
-    def conv2d(x=flow.FixedTensorDef((2, 7, 5, 4))):
+    @flow.global_function()
+    def conv2d(x: tp.Numpy.Placeholder((2, 7, 5, 4))):
         return flow.layers.conv2d(
             x,
             6,
@@ -87,8 +85,8 @@ def test_conv2d_k3s1_nhwc_same_d2(test_case):
 
 
 def test_conv2d_k3s1_nchw_same_g2(test_case):
-    @flow.global_function(func_config)
-    def conv2d(x=flow.FixedTensorDef((2, 4, 5, 3))):
+    @flow.global_function()
+    def conv2d(x: tp.Numpy.Placeholder((2, 4, 5, 3))):
         return flow.layers.conv2d(
             x,
             6,
@@ -104,8 +102,8 @@ def test_conv2d_k3s1_nchw_same_g2(test_case):
 
 
 def test_conv2d_k3s1_nchw_same_depthwise(test_case):
-    @flow.global_function(func_config)
-    def conv2d(x=flow.FixedTensorDef((2, 4, 5, 3))):
+    @flow.global_function()
+    def conv2d(x: tp.Numpy.Placeholder((2, 4, 5, 3))):
         return flow.layers.conv2d(
             x,
             4,

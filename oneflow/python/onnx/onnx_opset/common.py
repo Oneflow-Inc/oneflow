@@ -35,15 +35,15 @@ class BroadcastOp:
     @classmethod
     def Version_6(cls, ctx, node, **kwargs):
         """Elementwise Ops with broadcast flag."""
-        shape0 = ctx.get_shape(node.input[0])
-        shape1 = ctx.get_shape(node.input[1])
+        shape0 = ctx.get_shape(node.input_tensor_names[0])
+        shape1 = ctx.get_shape(node.input_tensor_names[1])
         if shape0 != shape1:
             if (
                 shape0
                 and shape1
                 and len(shape0) < len(shape1)
-                and node.type in ["Mul", "Add"]
+                and node.op_type in ["Mul", "Add"]
             ):
-                tmp = node.input[0]
-                node.input[0] = node.input[1]
-                node.input[1] = tmp
+                tmp = node.input_tensor_names[0]
+                node.input_tensor_names[0] = node.input_tensor_names[1]
+                node.input_tensor_names[1] = tmp
