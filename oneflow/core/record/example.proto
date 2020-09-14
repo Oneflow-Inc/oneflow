@@ -1,7 +1,40 @@
 syntax = "proto3";
 package tensorflow;
 
-import "oneflow/core/record/feature.proto";
+message BytesList {
+  repeated bytes value = 1;
+}
+message FloatList {
+  repeated float value = 1 [packed = true];
+}
+message Int64List {
+  repeated int64 value = 1 [packed = true];
+}
+
+// Containers for non-sequential data.
+message Feature {
+  // Each feature can be exactly one kind.
+  oneof kind {
+    BytesList bytes_list = 1;
+    FloatList float_list = 2;
+    Int64List int64_list = 3;
+  }
+}
+
+message Features {
+  // Map from feature name to feature.
+  map<string, Feature> feature = 1;
+}
+
+message FeatureList {
+  repeated Feature feature = 1;
+}
+
+message FeatureLists {
+  // Map from feature name to feature list.
+  map<string, FeatureList> feature_list = 1;
+}
+
 
 message Example {
   Features features = 1;

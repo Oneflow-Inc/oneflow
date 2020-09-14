@@ -100,7 +100,7 @@ class TFRecordDataset final : public Dataset<TensorBuffer> {
     CHECK_GT(tfrecordLen, 0);
     CHECK_EQ(in_stream_->ReadFully(pMaskedCrc32OfLen, sizeof(uint32_t)), 0);
     CHECK_EQ(maskedCrc32OfLen, 
-             GetMaskedCrc32CValue(pTfRecordLen, sizeof(uint32_t))) << "hell";
+             GetMaskedCrc32CValue(pTfRecordLen, sizeof(uint64_t)));
 
     // read data and check
     tensor.Resize(Shape({tfrecordLen}), DataType::kChar);

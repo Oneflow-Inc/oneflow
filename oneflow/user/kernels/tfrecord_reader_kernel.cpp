@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#include "oneflow/core/record/example.pb.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/data/tfrecord_data_reader.h"
 
@@ -55,6 +58,6 @@ class TFRecordReaderKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("TFRecordReader")
     .SetCreateFn<TFRecordReaderKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("out", 0) == DataType::kOFRecord));
+                     & (user_op::HobDataType("out", 0) == DataType::kTFRecord));
 
 }  // namespace oneflow

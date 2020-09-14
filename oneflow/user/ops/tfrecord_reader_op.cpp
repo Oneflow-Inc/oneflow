@@ -38,7 +38,7 @@ REGISTER_CPU_ONLY_USER_OP("TFRecordReader")
         local_batch_size /= parallel_num;
       }
       *out_tensor->mut_shape() = Shape({local_batch_size});
-      *out_tensor->mut_data_type() = DataType::kOFRecord;
+      *out_tensor->mut_data_type() = DataType::kTFRecord;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
