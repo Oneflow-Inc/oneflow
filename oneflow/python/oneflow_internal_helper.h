@@ -28,9 +28,9 @@ limitations under the License.
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/runtime_job_descs.h"
-#include "oneflow/core/control/cluster_control.pb.h"
+#include "oneflow/core/job/cluster_instruction.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/control/cluster_control.h"
+#include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/foreign_watcher.h"
 #include "oneflow/core/job/foreign_callback.h"
@@ -105,7 +105,7 @@ Maybe<void> InitEnv(const std::string& env_proto_str) {
 Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  ClusterControl::MasterSendHalt();
+  ClusterInstruction::MasterSendHalt();
   return Maybe<void>::Ok();
 }
 
@@ -118,7 +118,7 @@ Maybe<void> InitGlobalSession(const std::string& config_proto_str) {
   CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
 
-  ClusterControl::MasterSendSessionStart();
+  ClusterInstruction::MasterSendSessionStart();
 
   ConfigProto config_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(config_proto_str, &config_proto))
@@ -147,7 +147,7 @@ Maybe<void> StartGlobalSession() {
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
   }
-  if (job_set.job().empty()) { return Error::JobSetEmpty() << "no function defined"; }
+  if (job_set.job().empty()) { return Error::JobSetEmptyError() << "no function defined"; }
   CHECK_ISNULL_OR_RETURN(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
   Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());

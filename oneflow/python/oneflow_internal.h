@@ -49,8 +49,6 @@ void EnableEagerEnvironment(bool enable_eager_execution) {
   *Global<bool, EagerExecution>::Get() = enable_eager_execution;
 }
 
-bool EagerExecutionEnabled() { return oneflow::EagerExecutionEnabled(); }
-
 bool IsEnvInited() {
   using namespace oneflow;
   return Global<EnvGlobalObjectsScope>::Get() != nullptr;
