@@ -45,6 +45,13 @@ void Networker::EnqueueNetworkerMsg(const NetworkerMsg& msg) { msg_channel_.Send
 void Networker::PollMsgChannel() {
   NetworkerMsg msg;
   while (msg_channel_.Receive(&msg) == kChannelStatusSuccess) {
+    std::cout << " cclog: Oh! I got one message : "
+              << "\n ----  token = " << msg.token
+              << "\n ----  src_mem_token = " << msg.src_mem_token
+              << "\n ----  dst_mem_token = " << msg.dst_mem_token << "\n ----  size = " << msg.size
+              << "\n ----  src_machine_id = " << msg.src_machine_id
+              << "\n ----  dst_machine_id = " << msg.dst_machine_id
+              << "\n ----  type = " << msg.type << std::endl;
     switch (msg.type) {
       case NetworkerMsgType::kSend: HandlerReceiveSendMsgFromSrcMachine(msg);
       case NetworkerMsgType::kAck: HandlerReceiveAckMsgFromDstMachine(msg);
@@ -239,9 +246,11 @@ void Networker::DoRead(uint64_t token) {
     msg.src_mem_token = stat->src_mem_token;
     msg.dst_mem_token = stat->dst_mem_token;
     msg.type = NetworkerMsgType::kAck;
+    std::cout << "cclog: this_machine_id is " << this_machine_id_ << std::endl;
     std::cout << "cclog: Send ACK msg to src machine, the src_mem_token is " << msg.src_mem_token
-              << std::endl;
-    std::cout << "cclog: Send ACK msg to src machine id is " << msg.src_machine_id << std::endl;
+              << " dst mem token is " << msg.dst_mem_token << std::endl;
+    std::cout << "cclog: Send ACK msg to src machine id is " << msg.src_machine_id
+              << " dst machine id is " << msg.dst_machine_id << std::endl;
     comm_net_->SendNetworkerMsg(msg.src_machine_id, msg);
 
     // Do Recive callback
