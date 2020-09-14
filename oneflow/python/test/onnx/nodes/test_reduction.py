@@ -14,15 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import oneflow.typing as tp
 from util import convert_to_onnx_and_check
-
-func_config = flow.FunctionConfig()
-func_config.default_data_type(flow.float)
 
 
 def generate_reduction_test(flow_op, *args, **kwargs):
-    @flow.global_function(func_config)
-    def job(x=flow.FixedTensorDef((3, 5, 4))):
+    @flow.global_function()
+    def job(x: tp.Numpy.Placeholder((3, 5, 4))):
         return flow_op(x, *args, **kwargs)
 
     convert_to_onnx_and_check(job)

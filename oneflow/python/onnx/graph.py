@@ -66,28 +66,31 @@ class Node(object):
         self.graph = graph
         self._input = list(node.input)
         self._output = list(node.output)
-        self._attr = {}
+        self.attrs = {}
 
         graph.set_node_by_name(self)
         # dict to original attributes
         for a in node.attribute:
-            self._attr[a.name] = a
+            attr_val = helper.get_attribute_value(a)
+            if isinstance(attr_val, bytes):
+                attr_val = attr_val.decode("utf-8")
+            self.attrs[a.name] = attr_val
         self._skip_conversion = skip_conversion
 
     @property
-    def input(self):
+    def input_tensor_names(self):
         return self._input
 
-    @input.setter
-    def input(self, val):
+    @input_tensor_names.setter
+    def input_tensor_names(self, val):
         self._input = copy.deepcopy(val)
 
     @property
-    def output(self):
+    def output_tensor_names(self):
         return copy.deepcopy(self._output)
 
-    @output.setter
-    def output(self, val):
+    @output_tensor_names.setter
+    def output_tensor_names(self, val):
         """Set op output. Output should be updated explicitly,
         changing it would require output mapping changed.
         """
@@ -105,31 +108,27 @@ class Node(object):
             self.graph._output_to_node_name[o] = self.name
 
     @property
-    def inputs(self):
+    def input_nodes(self):
         """Input node objects."""
         self._GraphCheck()
         val = [self.graph.get_node_by_output(n) for n in self._input]
         return val
 
     @property
-    def attr(self):
-        return self._attr
-
-    @property
-    def attr_onnx(self):
+    def attrs_onnx(self):
         """Return onnx valid attributes"""
-        schema = get_schema(self.type, self.graph.opset, self.domain)
+        schema = get_schema(self.op_type, self.graph.opset, self.domain)
         if schema is None and not (self.is_const() or self.is_graph_input()):
             logger.debug(
                 "Node %s uses non-stardard onnx op <%s, %s>, skip attribute check",
                 self.name,
                 self.domain,
-                self.type,
+                self.op_type,
             )
         onnx_attrs = {}
-        for a in self._attr.values():
-            if schema is None or schema.has_attribute(a.name):
-                onnx_attrs[a.name] = a
+        for name, attr in self.attrs.items():
+            if schema is None or schema.has_attribute(name):
+                onnx_attrs[name] = helper.make_attribute(name, attr)
         return onnx_attrs
 
     @property
@@ -141,12 +140,12 @@ class Node(object):
         return self._op
 
     @property
-    def type(self):
+    def op_type(self):
         """Return Op type."""
         return self._op.op_type
 
-    @type.setter
-    def type(self, val):
+    @op_type.setter
+    def op_type(self, val):
         """Set Op type."""
         self._op.op_type = val
 
@@ -163,107 +162,70 @@ class Node(object):
     @property
     def data_format(self):
         """Return data_format."""
-        return self.get_attr_str("data_format")
+        return self.attrs["data_format"]
 
     @data_format.setter
     def data_format(self, val):
         """Set data_format."""
-        self.set_attr("data_format", val)
+        self.attrs["data_format"] = val
 
     def is_nhwc(self):
         """Return True if node is in NHWC format."""
-        if self.type == "BatchNormalization":
-            axis = self.get_attr_value("axis")
+        if self.op_type == "BatchNormalization":
+            axis = self.attrs["axis"]
             return axis == -1 or axis == len(self.output_shapes[0]) - 1
         return self.data_format in ["NHWC", "channels_last"]
 
     def is_const(self):
         """Return True if node is a constant."""
-        return self.type in ["variable", "Const"]
-        # return self.type in ["Const", "ConstV2"]
+        return self.op_type in ["variable", "Const"]
+        # return self.op_type in ["Const", "ConstV2"]
 
     def is_graph_output(self):
-        return self.type in ["return"]
+        return self.op_type in ["return"]
 
     def is_graph_input(self):
-        return self.type in ["input"]
+        return self.op_type in ["input"]
 
     def is_graph_input_default_const(self):
         return self.is_const() and any(
             out.is_graph_input()
-            for out in self.graph.FindOutputConsumers(self.output[0])
+            for out in self.graph.FindOutputConsumers(self.output_tensor_names[0])
         )
 
     def __str__(self):
         return str(self._op)
 
     def __repr__(self):
-        return "<onnx op type='%s' name=%s>" % (self.type, self._op.name)
+        return "<onnx op type='%s' name=%s>" % (self.op_type, self._op.name)
 
     @property
     def summary(self):
         """Return node summary information."""
         lines = []
-        lines.append("OP={}".format(self.type))
+        lines.append("OP={}".format(self.op_type))
         lines.append("Name={}".format(self.name))
 
         g = self.graph
-        if self.input:
+        if self.input_tensor_names:
             lines.append("Inputs:")
-            for name in self.input:
+            for name in self.input_tensor_names:
                 node = g.get_node_by_output(name)
-                op = node.type if node else "N/A"
+                op = node.op_type if node else "N/A"
                 lines.append(
                     "\t{}={}, {}, {}".format(
                         name, op, g.get_shape(name), g.get_dtype(name)
                     )
                 )
 
-        if self.output:
-            for name in self.output:
+        if self.output_tensor_names:
+            for name in self.output_tensor_names:
                 lines.append("Outpus:")
                 lines.append(
                     "\t{}={}, {}".format(name, g.get_shape(name), g.get_dtype(name))
                 )
 
         return "\n".join(lines)
-
-    def get_attr(self, name, default=None):
-        """Get raw attribute value."""
-        attr = self.attr.get(name, default)
-        return attr
-
-    def get_attr_value(self, name, default=None):
-        attr = self.get_attr(name)
-        if attr:
-            return helper.get_attribute_value(attr)
-        return default
-
-    def get_attr_int(self, name):
-        """Get attribute value as int."""
-        attr_int = self.get_attr_value(name)
-        util.MakeSure(
-            attr_int is not None and isinstance(attr_int, int),
-            "attribute %s is None",
-            name,
-        )
-        return attr_int
-
-    def get_attr_str(self, name, encoding="utf-8"):
-        """Get attribute value as string."""
-        attr_str = self.get_attr_value(name)
-        util.MakeSure(
-            attr_str is not None and isinstance(attr_str, bytes),
-            "attribute %s is None",
-            name,
-        )
-        return attr_str.decode(encoding)
-
-    def set_attr(self, name, value):
-        self.attr[name] = helper.make_attribute(name, value)
-
-    def set_attr_onnx(self, value):
-        self.attr[value.name] = value
 
     # If some Node is created as onnx_node, then we don't need convert it
     @property
@@ -302,9 +264,9 @@ class Node(object):
         """
         if not self.is_const():
             raise ValueError("get tensor value: {} must be Const".format(self.name))
-        t = self.get_attr("value")
+        t = self.attrs.get("value", None)
         if t:
-            t = numpy_helper.to_array(helper.get_attribute_value(t))
+            t = numpy_helper.to_array(t)
         else:
             self._GraphCheck()
             t = self.graph.get_saved_tensor(self)
@@ -331,16 +293,16 @@ class Node(object):
         """
         if not self.is_const():
             raise ValueError("set tensor value: {} must be Const".format(self.name))
-        t = self.get_attr("value")
+        t = self.attrs.get("value")
         if t is not None:
             t = helper.get_attribute_value(t)
             del t
-        if self.type == "Const":
+        if self.op_type == "Const":
             tensor_name = t.name
         else:
-            tensor_name = self.output[0]
+            tensor_name = self.output_tensor_names[0]
         onnx_tensor = util.TensorProtoFromNumpy(new_val, tensor_name)
-        self.set_attr("value", onnx_tensor)
+        self.attrs["value"] = onnx_tensor
         # track shapes in _output_shapes
         self._GraphCheck()
         self.graph.set_shape(onnx_tensor.name, onnx_tensor.dims)
@@ -362,11 +324,11 @@ class Node(object):
         nodes = list(self._op.input)
         for node in nodes:
             self._op.input.remove(node)
-        self._op.input.extend(self.input)
+        self._op.input.extend(self.input_tensor_names)
         nodes = list(self._op.output)
         for node in nodes:
             self._op.output.remove(node)
-        self._op.output.extend(self.output)
+        self._op.output.extend(self.output_tensor_names)
 
         # update attributes to proto
         del self._op.attribute[:]
@@ -380,7 +342,7 @@ class Node(object):
                 )
                 self.set_attr(attr_name, graph_proto)
 
-        attr = list(self.attr_onnx.values())
+        attr = list(self.attrs_onnx.values())
         if attr:
             self._op.attribute.extend(attr)
 
@@ -397,8 +359,8 @@ class Node(object):
         while graphs:
             graph = graphs.pop()
             for n in graph.get_nodes():
-                output_available_in_cur_graph |= set(n.output)
-                for i in n.input:
+                output_available_in_cur_graph |= set(n.output_tensor_names)
+                for i in n.input_tensor_names:
                     all_node_inputs.add(i)
 
                 if recursive:
@@ -460,7 +422,7 @@ class Graph(object):
 
         for op in ops:
             if op.is_graph_output():
-                self.AddGraphOutput(op.input[0])
+                self.AddGraphOutput(op.input_tensor_names[0])
 
         # add identity node after each output, in case it is renamed during conversion.
         for o in self.outputs:
@@ -472,14 +434,15 @@ class Graph(object):
             self.RemoveNode(n.name)
 
             new_outputs = [
-                output if output != o else new_output_name for output in n.output
+                output if output != o else new_output_name
+                for output in n.output_tensor_names
             ]
             # domain should be passed to new node
             new_node = self.MakeNode(
-                n.type,
-                n.input,
+                n.op_type,
+                n.input_tensor_names,
                 outputs=new_outputs,
-                attr=n.attr,
+                attr=n.attrs,
                 name=n.name,
                 skip_conversion=n._skip_conversion,
                 dtypes=n_dtypes,
@@ -578,13 +541,9 @@ class Graph(object):
             outputs = [name + ":" + str(i) for i in range(output_count)]
 
         output_count = len(outputs)
-        raw_attr = {}
         onnx_attrs = []
         for a, v in attr.items():
-            if isinstance(v, AttributeProto):
-                onnx_attrs.append(v)
-            else:
-                raw_attr[a] = v
+            assert not isinstance(v, AttributeProto)
 
         n = self.get_node_by_name(name)
         util.MakeSure(n is None, "name %s already exists in node: \n%s", name, n)
@@ -595,7 +554,7 @@ class Graph(object):
             )
 
         onnx_node = helper.make_node(
-            op_type, inputs, outputs, name=name, domain=domain, **raw_attr
+            op_type, inputs, outputs, name=name, domain=domain, **attr
         )
 
         if op_type in ["If", "Loop", "Scan"]:
@@ -604,7 +563,7 @@ class Graph(object):
 
         node = Node(onnx_node, self, skip_conversion=skip_conversion)
         if onnx_attrs:
-            _ = [node.set_attr_onnx(a) for a in onnx_attrs]
+            _ = [node.set_attrs_onnx(a) for a in onnx_attrs]
 
         if shapes:
             util.MakeSure(
@@ -614,7 +573,7 @@ class Graph(object):
                 output_count,
             )
             for i in range(output_count):
-                self.set_shape(node.output[i], shapes[i])
+                self.set_shape(node.output_tensor_names[i], shapes[i])
 
         if dtypes:
             util.MakeSure(
@@ -624,7 +583,7 @@ class Graph(object):
                 output_count,
             )
             for i in range(output_count):
-                self.set_dtype(node.output[i], dtypes[i])
+                self.set_dtype(node.output_tensor_names[i], dtypes[i])
 
         if (not shapes or not dtypes) and infer_shape_dtype:
             self.UpdateNodeShapeDtype(node, override=False)
@@ -648,7 +607,7 @@ class Graph(object):
         if node in self._order_sensitive_inputs:
             self._order_sensitive_inputs.remove(node)
 
-        for op_output in node.output:
+        for op_output in node.output_tensor_names:
             del self._output_to_node_name[op_output]
 
             if op_output in self._output_shapes:
@@ -665,7 +624,7 @@ class Graph(object):
         remained_shapes = {}
         remained_sub_graphs = {}
         for op in ops:
-            for op_output in op.output:
+            for op_output in op.output_tensor_names:
                 # this check should be removed once we make sure all output tensors have dtype/shape.
                 if op_output in self._dtypes:
                     remained_dtypes[op_output] = self._dtypes[op_output]
@@ -680,7 +639,7 @@ class Graph(object):
         self._nodes_by_name = {op.name: op for op in ops}
         self._output_to_node_name = {}
         for op in ops:
-            for op_output in op.output:
+            for op_output in op.output_tensor_names:
                 self._output_to_node_name[op_output] = op.name
 
         for n in self._order_sensitive_inputs:
@@ -705,7 +664,7 @@ class Graph(object):
         """
         broken_outputs = set()
         for node in self.get_nodes():
-            for inp in node.input:
+            for inp in node.input_tensor_names:
                 if self.get_node_by_output(inp) is None and not self.is_empty_input(
                     inp
                 ):
@@ -726,24 +685,24 @@ class Graph(object):
         # NOTE: shape inference for some ops need the input values of the op, e.g., Reshape
         # op needs the "Shape" value to infer output shape.
         initializers = []
-        for i, inp in enumerate(node.inputs):
+        for i, inp in enumerate(node.input_nodes):
             if inp is None:
-                if not self.is_empty_input(node.input[i]):
+                if not self.is_empty_input(node.input_tensor_names[i]):
                     if logger.isEnabledFor(logging.INFO):
                         logger.warning(
                             "[%s] infer a inexistent node: [%s], please check the code",
                             node.name,
-                            node.input[i],
+                            node.input_tensor_names[i],
                         )
                 continue
             if inp.is_const():
                 tensor = util.TensorProtoFromNumpy(
-                    inp.get_tensor_value(as_list=False), name=inp.output[0]
+                    inp.get_tensor_value(as_list=False), name=inp.output_tensor_names[0]
                 )
                 initializers.append(tensor)
 
-        input_shapes = [self.get_shape(i) for i in node.input]
-        input_dtypes = [self.get_dtype(i) for i in node.input]
+        input_shapes = [self.get_shape(i) for i in node.input_tensor_names]
+        input_dtypes = [self.get_dtype(i) for i in node.input_tensor_names]
 
         shapes, dtypes = InferOnnxShapeDtype(
             node, self._opset, input_shapes, input_dtypes, initializers
@@ -751,12 +710,12 @@ class Graph(object):
         if not shapes or not dtypes:
             return
 
-        for output, shape, dtype in zip(node.output, shapes, dtypes):
+        for output, shape, dtype in zip(node.output_tensor_names, shapes, dtypes):
             if dtype == TensorProto.UNDEFINED:
                 logger.debug(
                     "Inferred dtype for [%s, type: %s] is UNDEFINED, SKIP",
                     node.name,
-                    node.type,
+                    node.op_type,
                 )
             else:
                 existing_dtype = self.get_dtype(output)
@@ -777,7 +736,7 @@ class Graph(object):
                 logger.debug(
                     "Inferred shape for [%s, type: %s] is None, SKIP",
                     node.name,
-                    node.type,
+                    node.op_type,
                 )
             else:
                 existing_shape = self.get_shape(output)
@@ -838,7 +797,7 @@ class Graph(object):
     def set_node_by_name(self, node):
         """Set node by name."""
         self._nodes_by_name[node.name] = node
-        for op_output in node.output:
+        for op_output in node.output_tensor_names:
             self._output_to_node_name[op_output] = node.name
 
     def AddGraphInput(self, name, dtype=None, shape=None):
@@ -897,10 +856,10 @@ class Graph(object):
         self.set_dtype(dst_name, dtype)
 
     def get_saved_tensor(self, node):
-        tensor_name = node.output[0]
-        # TODO(daquexian): node.output[0] is "node_name/output_name", so this pathjoin doesn't work
+        tensor_name = node.output_tensor_names[0]
+        # TODO(daquexian): node.output_tensor_names[0] is "node_name/output_name", so this pathjoin doesn't work
         # on windows (where path separator is "\")
-        path = pathjoin(self._model_save_dir, node.output[0])
+        path = pathjoin(self._model_save_dir, node.output_tensor_names[0])
         tensor_value = np.fromfile(
             path, dtype=util.Onnx2NumpyDtype(self.get_dtype(tensor_name))
         ).reshape(self.get_shape(tensor_name))
@@ -967,7 +926,7 @@ class Graph(object):
             op_name_to_index[op.name] = i
 
         for i, op in enumerate(ops):
-            all_input = set(op.input)
+            all_input = set(op.input_tensor_names)
             implicit_inputs = op.get_implicit_inputs()
             all_input |= set(implicit_inputs)
             # remove those empty inputs
@@ -1041,7 +1000,7 @@ class Graph(object):
         initializers = []
         # create initializers for constant nodes
         for op in const_ops:
-            tensor_name = op.output[0]
+            tensor_name = op.output_tensor_names[0]
             tensor = util.TensorProtoFromNumpy(
                 op.get_tensor_value(as_list=False),
                 tensor_name,
@@ -1051,13 +1010,13 @@ class Graph(object):
             initializers.append(tensor)
 
         # create input_tensor_values
-        input_ids = [op.output[0] for op in placeholder_ops]
+        input_ids = [op.output_tensor_names[0] for op in placeholder_ops]
         # onnx with IR version below 4 requires initializer should be in inputs.
         # here we check opset version rather than IR version for the reason:
         # https://github.com/onnx/tensorflow-onnx/pull/557
         # opset 9 come with IR 4.
         if self.opset < 9:
-            input_ids += [op.output[0] for op in const_ops]
+            input_ids += [op.output_tensor_names[0] for op in const_ops]
 
         input_tensor_values = self.MakeOnnxGraphIO(input_ids)
 
@@ -1131,11 +1090,13 @@ class Graph(object):
     def Dump(self):
         """Dump graph with shapes (helpful for debugging)."""
         for node in self.get_nodes():
-            input_names = ["{}{}".format(n, self.get_shape(n)) for n in node.input]
+            input_names = [
+                "{}{}".format(n, self.get_shape(n)) for n in node.input_tensor_names
+            ]
             logger.debug(
                 "%s %s %s %s",
-                node.type,
-                self.get_shape(node.output[0]),
+                node.op_type,
+                self.get_shape(node.output_tensor_names[0]),
                 node.name,
                 ", ".join(input_names),
             )
@@ -1149,13 +1110,13 @@ class Graph(object):
         val.append(
             "{}{} {} {}".format(
                 space,
-                node.type,
+                node.op_type,
                 node.name,
                 self.get_shape(id_util.UniqueStr(node.name)),
             )
         )
         space += "    "
-        for j in node.inputs:
+        for j in node.input_nodes:
             val.extend(self.FollowInputs(j, num - 1, space))
         if top:
             print("\n".join(reversed(val)))
@@ -1166,7 +1127,7 @@ class Graph(object):
     def DumpNodeStatistics(self):
         op_cnt = collections.Counter()
         for n in self.get_nodes():
-            op_cnt[n.type] += 1
+            op_cnt[n.op_type] += 1
             body_graphs = n.get_body_graphs()
             if body_graphs:
                 for _, b_g in body_graphs.items():
@@ -1182,9 +1143,9 @@ class Graph(object):
             to_be_removed: the node name we want to remove
         """
         assert isinstance(node, Node) and isinstance(to_be_removed, six.text_type)
-        for i, name in enumerate(node.input):
+        for i, name in enumerate(node.input_tensor_names):
             if name == to_be_removed:
-                del node.input[i]
+                del node.input_tensor_names[i]
                 break
         # don't remove output from parent since others might depend on it
         return True
@@ -1219,9 +1180,9 @@ class Graph(object):
             name=name,
             domain=domain,
         )
-        for i, n in enumerate(node.input):
+        for i, n in enumerate(node.input_tensor_names):
             if n == input_name[0]:
-                node.input[i] = new_output
+                node.input_tensor_names[i] = new_output
                 break
         return new_node
 
@@ -1265,7 +1226,7 @@ class Graph(object):
         """Find all nodes consuming a given output."""
         nodes = []
         for node in self.get_nodes():
-            if output_name in node.input:
+            if output_name in node.input_tensor_names:
                 nodes.append(node)
 
             # find consumers in sub graphs
@@ -1284,14 +1245,17 @@ class Graph(object):
         if type(ops) is not list:
             ops = [ops]
         for node in ops:
-            if old_input in node.input and new_input in node.output:
+            if (
+                old_input in node.input_tensor_names
+                and new_input in node.output_tensor_names
+            ):
                 raise RuntimeError(
                     "creating a circle in the graph is not allowed: " + node.name
                 )
 
-            for i, input_name in enumerate(node.input):
+            for i, input_name in enumerate(node.input_tensor_names):
                 if input_name == old_input:
-                    node.input[i] = new_input
+                    node.input_tensor_names[i] = new_input
 
             # modify references in sub graphs
             body_graphs = node.get_body_graphs()
@@ -1316,7 +1280,9 @@ class Graph(object):
         while processing_set:
             top_node = processing_set.pop()
             res_set.add(top_node)
-            all_inputs = top_node.input + list(top_node.get_implicit_inputs())
+            all_inputs = top_node.input_tensor_names + list(
+                top_node.get_implicit_inputs()
+            )
             for input_id in all_inputs:
                 # we don't care about nested graph here, just handle current graph cropping.
                 node = self.get_node_by_output(input_id, search_in_parent_graphs=False)
@@ -1384,7 +1350,7 @@ class Graph(object):
         delete_set = set(to_delete)
         for n in delete_set:
             out_consumers = set()
-            for out in n.output:
+            for out in n.output_tensor_names:
                 out_consumers |= set(self.FindOutputConsumers(out))
             if out_consumers.issubset(delete_set):
                 safe_to_remove.append(n)
@@ -1395,7 +1361,7 @@ class Graph(object):
         delete_set = set(to_delete)
         for n in delete_set:
             out_consumers = set()
-            for out in n.output:
+            for out in n.output_tensor_names:
                 out_consumers |= set(self.FindOutputConsumers(out))
             if out_consumers.issubset(delete_set):
                 self.RemoveNode(n.name)
