@@ -18,13 +18,13 @@ limitations under the License.
 
 namespace oneflow {
 
-template <typename T>
+template<typename T>
 class CpuInvertPermutationKernel final : public user_op::OpKernel {
-public:
+ public:
   CpuInvertPermutationKernel() = default;
   ~CpuInvertPermutationKernel() = default;
 
-private:
+ private:
   void Compute(user_op::KernelComputeContext *ctx) const override {
     const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor *out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -37,8 +37,7 @@ private:
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       const T d = x_ptr[i];
 
-      CHECK(d < elem_cnt && d >= 0) << d << " is not between 0 and "
-                                    << elem_cnt;
+      CHECK(d < elem_cnt && d >= 0) << d << " is not between 0 and " << elem_cnt;
       CHECK(y_ptr[d] == -1) << d << " is duplicated in the input.";
 
       y_ptr[d] = i;
@@ -57,4 +56,4 @@ private:
 REGISTER_CPU_INVERT_PERMUTATION_KERNEL(int32_t)
 REGISTER_CPU_INVERT_PERMUTATION_KERNEL(int64_t)
 
-} // namespace oneflow
+}  //  namespace oneflow

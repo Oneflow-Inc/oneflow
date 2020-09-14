@@ -23,4 +23,4 @@ REGISTER_USER_OP("invert_permutation")
     .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
-} // namespace oneflow
+}  //  namespace oneflow
