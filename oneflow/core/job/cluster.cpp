@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/job/cluster_instruction.pb.h"
 #include "oneflow/core/job/cluster_instruction.h"
-#include "oneflow/core/eager/oneflow.h"
+#include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/machine_context.h"
@@ -51,6 +51,8 @@ void AsyncRunLazyJobSet(ThreadPool* lazy_runtime_thread) {
 }  // namespace
 
 Maybe<void> Cluster::WorkerLoop() {
+  // The reason why excluding master machine is that
+  // eager instruction for compile-time symbol constructing must be done synchronously
   CHECK_OR_RETURN(!Global<MachineCtx>::Get()->IsThisMachineMaster());
   {
     // Oneflow::~Oneflow blocking in current thread is not acceptable
@@ -70,7 +72,7 @@ Maybe<void> Cluster::WorkerLoop() {
         ClusterInstruction::NewSessionBarrier();
         AsyncRunLazyJobSet(&lazy_runtime_thread);
       } else if (mut_cluster_instruction->has_eager_instruction()) {
-        Global<eager::Oneflow>::Get()->RunPhysicalInstruction(
+        Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
             std::const_pointer_cast<const ClusterInstructionProto>(mut_cluster_instruction));
       } else {
         OF_UNIMPLEMENTED();

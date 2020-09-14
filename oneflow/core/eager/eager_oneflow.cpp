@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/eager/oneflow.h"
+#include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/eager/eager_symbol.pb.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/instruction.pb.h"
@@ -56,7 +56,7 @@ void StorageAdd(const EagerSymbol& symbol) {
 
 }  // namespace
 
-Maybe<void> Oneflow::RunPhysicalInstruction(
+Maybe<void> EagerOneflow::RunPhysicalInstruction(
     const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction) {
   const vm::InstructionListProto& instruction_list_proto =
       cluster_instruction->eager_instruction().instruction_list();
@@ -66,8 +66,8 @@ Maybe<void> Oneflow::RunPhysicalInstruction(
   return vm::Run(instruction_list_proto);
 }
 
-Maybe<void> Oneflow::RunPhysicalInstruction(const std::string& instruction_list_proto_str,
-                                            const std::string& eager_symbol_list_str) {
+Maybe<void> EagerOneflow::RunPhysicalInstruction(const std::string& instruction_list_proto_str,
+                                                 const std::string& eager_symbol_list_str) {
   auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
   vm::InstructionListProto* instruction_list_proto =
       cluster_instruction->mutable_eager_instruction()->mutable_instruction_list();
@@ -81,7 +81,7 @@ Maybe<void> Oneflow::RunPhysicalInstruction(const std::string& instruction_list_
       std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
 }
 
-Maybe<void> Oneflow::RunLogicalInstruction(
+Maybe<void> EagerOneflow::RunLogicalInstruction(
     const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction) {
   CHECK(cluster_instruction->has_eager_instruction());
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
@@ -89,8 +89,8 @@ Maybe<void> Oneflow::RunLogicalInstruction(
   return RunPhysicalInstruction(cluster_instruction);
 }
 
-Maybe<void> Oneflow::RunLogicalInstruction(const std::string& instruction_list_proto_str,
-                                           const std::string& eager_symbol_list_str) {
+Maybe<void> EagerOneflow::RunLogicalInstruction(const std::string& instruction_list_proto_str,
+                                                const std::string& eager_symbol_list_str) {
   auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
   vm::InstructionListProto* instruction_list_proto =
       cluster_instruction->mutable_eager_instruction()->mutable_instruction_list();
@@ -104,7 +104,7 @@ Maybe<void> Oneflow::RunLogicalInstruction(const std::string& instruction_list_p
       std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
 }
 
-COMMAND(Global<Oneflow>::SetAllocated(new Oneflow()));
+COMMAND(Global<EagerOneflow>::SetAllocated(new EagerOneflow()));
 
 }  // namespace eager
 }  // namespace oneflow
