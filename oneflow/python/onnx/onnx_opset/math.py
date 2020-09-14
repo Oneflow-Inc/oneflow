@@ -51,15 +51,15 @@ class ScalarBinaryOp:
     @classmethod
     def Version_6(cls, ctx, node, **kwargs):
         scalar_val = (
-            node.get_attr_value("int_operand")
-            if node.get_attr_value("has_int_operand")
-            else node.get_attr_value("float_operand")
+            node.attrs["int_operand"]
+            if node.attrs["has_int_operand"]
+            else node.attrs["float_operand"]
         )
-        np_dtype = util.Onnx2NumpyDtype(ctx.get_dtype(node.input[0]))
+        np_dtype = util.Onnx2NumpyDtype(ctx.get_dtype(node.input_tensor_names[0]))
         scalar_node = ctx.MakeConst(
             id_util.UniqueStr("scalar"), np.array([scalar_val]).astype(np_dtype)
         )
-        node.input.append(scalar_node.output[0])
+        node.input_tensor_names.append(scalar_node.output_tensor_names[0])
 
 
 @flow_op("add_n", onnx_op="Sum")
@@ -73,19 +73,21 @@ class AddN:
 class BiasAdd(common.BroadcastOp):
     @classmethod
     def Version_6(cls, ctx, node, **kwargs):
-        axis = node.get_attr_value("axis")
+        axis = node.attrs["axis"]
         unsqueeze_axes = []
-        x_rank = len(ctx.get_shape(node.input[0]))
+        x_rank = len(ctx.get_shape(node.input_tensor_names[0]))
         for i in range(x_rank):
             if axis != i:
                 unsqueeze_axes.append(i)
         unsqueeze_shape = [1] * x_rank
-        assert len(ctx.get_shape(node.input[1])) == 1
-        unsqueeze_shape[axis] = ctx.get_shape(node.input[1])[0]
-        unsqueeze_dtype = ctx.get_dtype(node.input[1])
-        ctx.InsertNewNodeOnInput(node, "Unsqueeze", node.input[1], axes=unsqueeze_axes)
-        ctx.set_shape(node.input[1], unsqueeze_shape)
-        ctx.set_dtype(node.input[1], unsqueeze_dtype)
+        assert len(ctx.get_shape(node.input_tensor_names[1])) == 1
+        unsqueeze_shape[axis] = ctx.get_shape(node.input_tensor_names[1])[0]
+        unsqueeze_dtype = ctx.get_dtype(node.input_tensor_names[1])
+        ctx.InsertNewNodeOnInput(
+            node, "Unsqueeze", node.input_tensor_names[1], axes=unsqueeze_axes
+        )
+        ctx.set_shape(node.input_tensor_names[1], unsqueeze_shape)
+        ctx.set_dtype(node.input_tensor_names[1], unsqueeze_dtype)
         super().Version_6(ctx, node, **kwargs)
 
 
@@ -177,24 +179,24 @@ def _MakeMinOrMaxOp(
         util.MakeSure(dtype is not None, "dtype of {} is None".format(inp))
         if dtype not in supported_dtypes:
             cast_inp = ctx.MakeNode("Cast", [inp], attr={"to": target_dtype})
-            cast_inputs.append(cast_inp.output[0])
+            cast_inputs.append(cast_inp.output_tensor_names[0])
             need_cast = True
         else:
             cast_inputs.append(inp)
     node = ctx.MakeNode(op_type, cast_inputs, shapes=output_shapes)
-    actual_outputs = node.output
+    actual_outputs = node.output_tensor_names
     if need_cast:
         origin_dtype = ctx.get_dtype(inputs[0])
         if output_dtypes is not None:
             origin_dtype = output_dtypes[0]
-        ctx.set_dtype(node.output[0], target_dtype)
+        ctx.set_dtype(node.output_tensor_names[0], target_dtype)
         cast_name = id_util.UniqueStr(node.name)
         cast_node = ctx.InsertNewNodeOnOutput(
-            "Cast", node.output[0], name=cast_name, to=origin_dtype
+            "Cast", node.output_tensor_names[0], name=cast_name, to=origin_dtype
         )
-        ctx.set_dtype(cast_node.output[0], origin_dtype)
-        ctx.CopyShape(node.output[0], cast_node.output[0])
-        actual_outputs = cast_node.output
+        ctx.set_dtype(cast_node.output_tensor_names[0], origin_dtype)
+        ctx.CopyShape(node.output_tensor_names[0], cast_node.output_tensor_names[0])
+        actual_outputs = cast_node.output_tensor_names
     ctx.MakeNode(
         "Identity",
         actual_outputs,
@@ -207,11 +209,11 @@ def _MakeMinOrMaxOp(
     # handle this by doing something like:
     # y = min(x1, add(x2, sub(x1, x1))), where x1, x2 are the inputs and x2 is a scalar
     # this will create a tensor of zeros of the shape of x1, adds x2 to it (which broadcasts) and use that for min.
-    shapeo = ctx.get_shape(node.output[0])
+    shapeo = ctx.get_shape(node.output_tensor_names[0])
     needs_broadcast_op = []
     has_correct_shape = []
     if ctx.opset < 8:
-        for i, input_name in enumerate(node.input):
+        for i, input_name in enumerate(node.input_tensor_names):
             if ctx.get_shape(input_name) != shapeo:
                 needs_broadcast_op.append(i)
             else:
@@ -219,7 +221,7 @@ def _MakeMinOrMaxOp(
     if needs_broadcast_op:
         has_correct_shape = has_correct_shape[0]
         for i in needs_broadcast_op:
-            input_node = node.inputs[i]
+            input_node = node.input_nodes[i]
             # get a tensor with zeros (since there is no Fill op as of opset8)
             sub_node = ctx.MakeNode(
                 "Sub",
@@ -229,10 +231,10 @@ def _MakeMinOrMaxOp(
             # use add as 'broadcast' op
             add_node = ctx.MakeNode(
                 "Add",
-                [input_node.output[0], sub_node.output[0]],
+                [input_node.output_tensor_names[0], sub_node.output_tensor_names[0]],
                 op_name_scope=input_node.name,
             )
-            node.input[i] = add_node.output[0]
+            node.input_tensor_names[i] = add_node.output_tensor_names[0]
 
 
 @flow_op("broadcast_minimum", onnx_op="Min")
@@ -243,61 +245,68 @@ class MinMaxOp:
         shapes = node.output_shapes
         dtypes = node.output_dtypes
         ctx.RemoveNode(node.name)
-        _MakeMinOrMaxOp(ctx, node.type, node.input, node.output, shapes, dtypes)
+        _MakeMinOrMaxOp(
+            ctx,
+            node.op_type,
+            node.input_tensor_names,
+            node.output_tensor_names,
+            shapes,
+            dtypes,
+        )
 
 
 class ClipOps:
     @classmethod
     def Version_1(cls, ctx, node, min_val=None, max_val=None, **kwargs):
         # relu6 = min(max(features, 0), 6)
-        node.type = "Clip"
+        node.op_type = "Clip"
         if min_val is not None:
-            node.set_attr("min", float(min_val))
+            node.attrs["min"] = float(min_val)
         if max_val is not None:
-            node.set_attr("max", float(max_val))
+            node.attrs["max"] = float(max_val)
 
     @classmethod
     def Version_11(cls, ctx, node, min_val=None, max_val=None, **kwargs):
         # add min and max as inputs
-        node.type = "Clip"
-        onnx_dtype = ctx.get_dtype(node.input[0])
+        node.op_type = "Clip"
+        onnx_dtype = ctx.get_dtype(node.input_tensor_names[0])
         np_dtype = util.ONNX_2_NUMPY_DTYPE[onnx_dtype]
         if min_val is not None:
             clip_min = ctx.MakeConst(
                 id_util.UniqueStr("{}_min".format(node.name)),
                 np.array(min_val, dtype=np_dtype),
             )
-            node.input.append(clip_min.output[0])
+            node.input_tensor_names.append(clip_min.output_tensor_names[0])
         else:
-            node.input.append("")
+            node.input_tensor_names.append("")
         if max_val is not None:
             clip_max = ctx.MakeConst(
                 id_util.UniqueStr("{}_max".format(node.name)),
                 np.array(max_val, dtype=np_dtype),
             )
-            node.input.append(clip_max.output[0])
+            node.input_tensor_names.append(clip_max.output_tensor_names[0])
         else:
-            node.input.append("")
+            node.input_tensor_names.append("")
 
 
 @flow_op(["clip_by_scalar", "clip_by_scalar_min", "clip_by_scalar_max"], onnx_op="Clip")
 class ClipByValueOp(ClipOps):
     @classmethod
     def Version_1(cls, ctx, node, **kwargs):
-        min_val = node.get_attr_value("floating_min", None) or node.get_attr_value(
+        min_val = node.attrs.get("floating_min", None) or node.attrs.get(
             "integral_min", None
         )
-        max_val = node.get_attr_value("floating_max", None) or node.get_attr_value(
+        max_val = node.attrs.get("floating_max", None) or node.attrs.get(
             "integral_max", None
         )
         super().Version_1(ctx, node, min_val, max_val)
 
     @classmethod
     def Version_11(cls, ctx, node, **kwargs):
-        min_val = node.get_attr_value("floating_min", None) or node.get_attr_value(
+        min_val = node.attrs.get("floating_min", None) or node.attrs.get(
             "integral_min", None
         )
-        max_val = node.get_attr_value("floating_max", None) or node.get_attr_value(
+        max_val = node.attrs.get("floating_max", None) or node.attrs.get(
             "integral_max", None
         )
         super().Version_11(ctx, node, min_val, max_val)
@@ -309,8 +318,8 @@ class Softmax:
     def Version_1(cls, ctx, node, **kwargs):
         # T output = Softmax(T logits). The axis softmax would be performed on is always on -1.
         # T output = Softmax(T input, @int axis). Default axis is 1.
-        logits_rank = len(ctx.get_shape(node.input[0]))
-        node.set_attr("axis", logits_rank - 1)
+        logits_rank = len(ctx.get_shape(node.input_tensor_names[0]))
+        node.attrs["axis"] = logits_rank - 1
 
     @classmethod
     def Version_11(cls, ctx, node, **kwargs):
@@ -321,30 +330,32 @@ class Softmax:
 class Square:
     @classmethod
     def Version_1(cls, ctx, node, **kwargs):
-        node.type = "Mul"
-        node.input.append(node.input[0])
+        node.op_type = "Mul"
+        node.input_tensor_names.append(node.input_tensor_names[0])
 
 
 @flow_op("rsqrt", None)
 class Rsqrt:
     @classmethod
     def Version_1(cls, ctx, node, **kwargs):
-        node.type = "Sqrt"
+        node.op_type = "Sqrt"
         op_name = id_util.UniqueStr(node.name)
         reciprocal = ctx.InsertNewNodeOnOutput(
-            "Reciprocal", node.output[0], name=op_name
+            "Reciprocal", node.output_tensor_names[0], name=op_name
         )
-        ctx.CopyShape(node.output[0], reciprocal.output[0])
+        ctx.CopyShape(node.output_tensor_names[0], reciprocal.output_tensor_names[0])
 
 
 @flow_op("squared_difference", None)
 class SquaredDifference:
     @classmethod
     def Version_1(cls, ctx, node, **kwargs):
-        node.type = "Sub"
+        node.op_type = "Sub"
         op_name = id_util.UniqueStr(node.name)
-        mul = ctx.InsertNewNodeOnOutput("Mul", node.output[0], name=op_name)
-        mul.input.append(node.output[0])
+        mul = ctx.InsertNewNodeOnOutput(
+            "Mul", node.output_tensor_names[0], name=op_name
+        )
+        mul.input_tensor_names.append(node.output_tensor_names[0])
 
 
 @flow_op("sign", onnx_op="Sign")
@@ -353,7 +364,7 @@ class Sign:
     def Version_1(cls, ctx, node, **kwargs):
         """Sign op."""
         # T sign = Sign(T Input)
-        node_dtype = ctx.get_dtype(node.output[0])
+        node_dtype = ctx.get_dtype(node.output_tensor_names[0])
         util.MakeSure(node_dtype, "Dtype of {} is None".format(node.name))
         if node_dtype in [
             onnx_pb.TensorProto.COMPLEX64,
@@ -370,30 +381,40 @@ class Sign:
             onnx_pb.TensorProto.DOUBLE,
         ]:
             cast_node_0 = ctx.MakeNode(
-                "Cast", [node.input[0]], {"to": onnx_pb.TensorProto.FLOAT}
+                "Cast", [node.input_tensor_names[0]], {"to": onnx_pb.TensorProto.FLOAT}
             )
-            greater_node = ctx.MakeNode("Greater", [cast_node_0.output[0], zero_name])
-            less_node = ctx.MakeNode("Less", [cast_node_0.output[0], zero_name])
+            greater_node = ctx.MakeNode(
+                "Greater", [cast_node_0.output_tensor_names[0], zero_name]
+            )
+            less_node = ctx.MakeNode(
+                "Less", [cast_node_0.output_tensor_names[0], zero_name]
+            )
         else:
-            greater_node = ctx.MakeNode("Greater", [node.input[0], zero_name])
-            less_node = ctx.MakeNode("Less", [node.input[0], zero_name])
-        cast_node_1 = ctx.MakeNode("Cast", [greater_node.output[0]], {"to": node_dtype})
-        cast_node_2 = ctx.MakeNode("Cast", [less_node.output[0]], {"to": node_dtype})
+            greater_node = ctx.MakeNode(
+                "Greater", [node.input_tensor_names[0], zero_name]
+            )
+            less_node = ctx.MakeNode("Less", [node.input_tensor_names[0], zero_name])
+        cast_node_1 = ctx.MakeNode(
+            "Cast", [greater_node.output_tensor_names[0]], {"to": node_dtype}
+        )
+        cast_node_2 = ctx.MakeNode(
+            "Cast", [less_node.output_tensor_names[0]], {"to": node_dtype}
+        )
 
         shapes = node.output_shapes
         dtypes = node.output_dtypes
         ctx.RemoveNode(node.name)
         ctx.MakeNode(
             "Sub",
-            [cast_node_1.output[0], cast_node_2.output[0]],
-            outputs=[node.output[0]],
+            [cast_node_1.output_tensor_names[0], cast_node_2.output_tensor_names[0]],
+            outputs=[node.output_tensor_names[0]],
             shapes=shapes,
             dtypes=dtypes,
         )
 
     @classmethod
     def Version_9(cls, ctx, node, **kwargs):
-        node_dtype = ctx.get_dtype(node.output[0])
+        node_dtype = ctx.get_dtype(node.output_tensor_names[0])
         util.MakeSure(node_dtype, "dtype of {} is None".format(node.name))
         if node_dtype in [
             onnx_pb.TensorProto.BOOL,
@@ -409,36 +430,36 @@ class Sign:
 class MatMul:
     @classmethod
     def Version_1(cls, ctx, node, **kwargs):
-        attrs = ["transpose_a", "transpose_b"]
-        attrs_val = [node.get_attr(attr) for attr in attrs]
-        attrs_val = [0 if val is None else val.i for val in attrs_val]
-
-        transpose_a = node.get_attr_value("transpose_a")
-        transpose_b = node.get_attr_value("transpose_b")
+        transpose_a = node.attrs.get("transpose_a", 0)
+        transpose_b = node.attrs.get("transpose_b", 0)
 
         if transpose_a != 0:
-            shape = ctx.get_shape(node.input[0])
+            shape = ctx.get_shape(node.input_tensor_names[0])
             if shape:
                 perm = list(range(0, len(shape)))
                 tmp = perm[-1]
                 perm[-1] = perm[-2]
                 perm[-2] = tmp
-                ctx.InsertNewNodeOnInput(node, "Transpose", node.input[0], perm=perm)
+                ctx.InsertNewNodeOnInput(
+                    node, "Transpose", node.input_tensor_names[0], perm=perm
+                )
 
         if transpose_b != 0:
-            shape = ctx.get_shape(node.input[1])
+            shape = ctx.get_shape(node.input_tensor_names[1])
             if shape:
                 perm = list(range(0, len(shape)))
                 tmp = perm[-1]
                 perm[-1] = perm[-2]
                 perm[-2] = tmp
-                ctx.InsertNewNodeOnInput(node, "Transpose", node.input[1], perm=perm)
+                ctx.InsertNewNodeOnInput(
+                    node, "Transpose", node.input_tensor_names[1], perm=perm
+                )
 
         unsupported = ["a_is_sparse", "b_is_sparse"]
         for i in unsupported:
-            val = node.get_attr(i)
-            if val is not None and val.i != 0:
-                raise ValueError(node.type + " attribute " + i + " is not supported")
+            val = node.attrs.get(i, 0)
+            if val != 0:
+                raise ValueError(node.op_type + " attribute " + i + " is not supported")
 
 
 @flow_op("erf", onnx_op="Erf")
@@ -457,7 +478,7 @@ class Erf:
         null = "erf_null"
 
         n = node.name
-        output_name = node.output[0]
+        output_name = node.output_tensor_names[0]
         erf_a1_node = ctx.get_node_by_output("erf_a1")
         if erf_a1_node is None:
             # insert the constants for erf once
@@ -470,7 +491,7 @@ class Erf:
             ctx.MakeConst(one, np.array(1.0, dtype=np.float32))
             ctx.MakeConst(null, np.array(0.0, dtype=np.float32))
 
-        x = node.input[0]
+        x = node.input_tensor_names[0]
 
         # erf(x):
         #  sign = 1 if x >= 0 else -1
@@ -487,7 +508,7 @@ class Erf:
         )
         is_positive_value_node = ctx.MakeNode(
             "Cast",
-            is_positive_node.output,
+            is_positive_node.output_tensor_names,
             op_name_scope=node.name,
             name="isPositiveValue",
             attr={"to": onnx_pb.TensorProto.FLOAT},
@@ -497,94 +518,130 @@ class Erf:
         )
         ig_neg_value_node = ctx.MakeNode(
             "Cast",
-            is_neg_node.output,
+            is_neg_node.output_tensor_names,
             op_name_scope=node.name,
             name="isNegValue",
             attr={"to": onnx_pb.TensorProto.FLOAT},
         )
         sign0_node = ctx.MakeNode(
             "Sub",
-            [is_positive_value_node.output[0], ig_neg_value_node.output[0]],
+            [
+                is_positive_value_node.output_tensor_names[0],
+                ig_neg_value_node.output_tensor_names[0],
+            ],
             op_name_scope=node.name,
             name="sign0",
         )
         sign_add_one_node = ctx.MakeNode(
             "Add",
-            [sign0_node.output[0], one],
+            [sign0_node.output_tensor_names[0], one],
             op_name_scope=node.name,
             name="signAddOne",
         )
         non_zero_node = ctx.MakeNode(
-            "Abs", sign0_node.output, op_name_scope=node.name, name="nonZero"
+            "Abs",
+            sign0_node.output_tensor_names,
+            op_name_scope=node.name,
+            name="nonZero",
         )
         sign_node = ctx.MakeNode(
             "Sub",
-            [sign_add_one_node.output[0], non_zero_node.output[0]],
+            [
+                sign_add_one_node.output_tensor_names[0],
+                non_zero_node.output_tensor_names[0],
+            ],
             op_name_scope=node.name,
             name="sign",
         )
         num_4_node = ctx.MakeNode(
-            "Mul", [x_node.output[0], p], op_name_scope=node.name, name="4"
+            "Mul", [x_node.output_tensor_names[0], p], op_name_scope=node.name, name="4"
         )
         num_5_node = ctx.MakeNode(
-            "Add", [num_4_node.output[0], one], op_name_scope=node.name, name="5"
+            "Add",
+            [num_4_node.output_tensor_names[0], one],
+            op_name_scope=node.name,
+            name="5",
         )
         t_node = ctx.MakeNode(
-            "Div", [one, num_5_node.output[0]], op_name_scope=node.name, name="t"
+            "Div",
+            [one, num_5_node.output_tensor_names[0]],
+            op_name_scope=node.name,
+            name="t",
         )
         xsq_node = ctx.MakeNode(
-            "Mul", [x, negx_node.output[0]], op_name_scope=node.name, name="xsq"
+            "Mul",
+            [x, negx_node.output_tensor_names[0]],
+            op_name_scope=node.name,
+            name="xsq",
         )
         num_6_node = ctx.MakeNode(
-            "Exp", xsq_node.output, op_name_scope=node.name, name="6"
+            "Exp", xsq_node.output_tensor_names, op_name_scope=node.name, name="6"
         )
         num_7_node = ctx.MakeNode(
             "Mul",
-            [num_6_node.output[0], t_node.output[0]],
+            [num_6_node.output_tensor_names[0], t_node.output_tensor_names[0]],
             op_name_scope=node.name,
             name="7",
         )
         num_8_node = ctx.MakeNode(
-            "Mul", [t_node.output[0], a5], op_name_scope=node.name, name="8"
+            "Mul",
+            [t_node.output_tensor_names[0], a5],
+            op_name_scope=node.name,
+            name="8",
         )
         num_9_node = ctx.MakeNode(
-            "Add", [num_8_node.output[0], a4], op_name_scope=node.name, name="9"
+            "Add",
+            [num_8_node.output_tensor_names[0], a4],
+            op_name_scope=node.name,
+            name="9",
         )
         num_10_node = ctx.MakeNode(
             "Mul",
-            [num_9_node.output[0], t_node.output[0]],
+            [num_9_node.output_tensor_names[0], t_node.output_tensor_names[0]],
             op_name_scope=node.name,
             name="10",
         )
         num_11_node = ctx.MakeNode(
-            "Add", [num_10_node.output[0], a3], op_name_scope=node.name, name="11"
+            "Add",
+            [num_10_node.output_tensor_names[0], a3],
+            op_name_scope=node.name,
+            name="11",
         )
         num_12_node = ctx.MakeNode(
             "Mul",
-            [num_11_node.output[0], t_node.output[0]],
+            [num_11_node.output_tensor_names[0], t_node.output_tensor_names[0]],
             op_name_scope=node.name,
             name="12",
         )
         num_13_node = ctx.MakeNode(
-            "Add", [num_12_node.output[0], a2], op_name_scope=node.name, name="13"
+            "Add",
+            [num_12_node.output_tensor_names[0], a2],
+            op_name_scope=node.name,
+            name="13",
         )
         num_14_node = ctx.MakeNode(
             "Mul",
-            [num_13_node.output[0], t_node.output[0]],
+            [num_13_node.output_tensor_names[0], t_node.output_tensor_names[0]],
             op_name_scope=node.name,
             name="14",
         )
         num_15_node = ctx.MakeNode(
-            "Add", [num_14_node.output[0], a1], op_name_scope=node.name, name="15"
+            "Add",
+            [num_14_node.output_tensor_names[0], a1],
+            op_name_scope=node.name,
+            name="15",
         )
         num_16_node = ctx.MakeNode(
             "Mul",
-            [num_15_node.output[0], num_7_node.output[0]],
+            [num_15_node.output_tensor_names[0], num_7_node.output_tensor_names[0]],
             op_name_scope=node.name,
             name="16",
         )
         num_17_node = ctx.MakeNode(
-            "Sub", [one, num_16_node.output[0]], op_name_scope=node.name, name="17"
+            "Sub",
+            [one, num_16_node.output_tensor_names[0]],
+            op_name_scope=node.name,
+            name="17",
         )
 
         shapes = node.output_shapes
@@ -592,7 +649,7 @@ class Erf:
         ctx.RemoveNode(node.name)
         ctx.MakeNode(
             "Mul",
-            [num_17_node.output[0], sign_node.output[0]],
+            [num_17_node.output_tensor_names[0], sign_node.output_tensor_names[0]],
             outputs=[output_name],
             name=n,
             shapes=shapes,
@@ -609,25 +666,28 @@ class FloorMod:
     @classmethod
     def Version_7(cls, ctx, node, **kwargs):
         # T output = FloorMod(T x, T y)
-        div = ctx.MakeNode(op_type="Div", inputs=node.input)
-        dtype = ctx.get_dtype(node.input[0])
+        div = ctx.MakeNode(op_type="Div", inputs=node.input_tensor_names)
+        dtype = ctx.get_dtype(node.input_tensor_names[0])
         if dtype in [
             onnx_pb.TensorProto.FLOAT,
             onnx_pb.TensorProto.FLOAT16,
             onnx_pb.TensorProto.DOUBLE,
         ]:
-            div = ctx.MakeNode(op_type="Floor", inputs=div.output)
+            div = ctx.MakeNode(op_type="Floor", inputs=div.output_tensor_names)
 
-        mul = ctx.MakeNode(op_type="Mul", inputs=[div.output[0], node.input[1]])
+        mul = ctx.MakeNode(
+            op_type="Mul",
+            inputs=[div.output_tensor_names[0], node.input_tensor_names[1]],
+        )
         # res node will take over shape&dtype&output connection info of original "node"
         shapes = node.output_shapes
         dtypes = node.output_dtypes
         ctx.RemoveNode(node.name)
         ctx.MakeNode(
             op_type="Sub",
-            inputs=[node.input[0], mul.output[0]],
+            inputs=[node.input_tensor_names[0], mul.output_tensor_names[0]],
             name=node.name,
-            outputs=node.output,
+            outputs=node.output_tensor_names,
             shapes=shapes,
             dtypes=dtypes,
         )
@@ -642,25 +702,25 @@ class Round:
 
 def _AddCastToInputs(graph, node, supported_dtypes, target_dtype):
     is_support = True
-    for inp in node.input:
+    for inp in node.input_tensor_names:
         if graph.get_dtype(inp) not in supported_dtypes:
             is_support = False
             break
     if not is_support:
-        for inp in node.input:
+        for inp in node.input_tensor_names:
             inp_cast = graph.InsertNewNodeOnInput(node, "Cast", inp, to=target_dtype)
-            graph.CopyShape(inp, inp_cast.output[0])
-            graph.set_dtype(inp_cast.output[0], target_dtype)
+            graph.CopyShape(inp, inp_cast.output_tensor_names[0])
+            graph.set_dtype(inp_cast.output_tensor_names[0], target_dtype)
 
 
 def _AddCastToOutput(graph, node):
     # oneflow logical ops produce int8 tensor while onnx logical ops produce bool tensor
-    output = node.output[0]
+    output = node.output_tensor_names[0]
     cast_node = graph.InsertNewNodeOnOutput(
         "Cast", output, id_util.UniqueStr("cast"), to=graph.get_dtype(output)
     )
-    graph.CopyShape(output, node.output[0])
-    graph.set_dtype(node.output[0], TensorProto.BOOL)
+    graph.CopyShape(output, node.output_tensor_names[0])
+    graph.set_dtype(node.output_tensor_names[0], TensorProto.BOOL)
 
 
 # oneflow doesn't have logical_not and broadcast_logical_or, but
@@ -691,34 +751,39 @@ class Equal:
     def Version_7(cls, ctx, node, **kwargs):
         # T2 output = Equal(T1, x, T1 y), T1 \in {bool, int32, int64}
         _AddCastToOutput(ctx, node)
-        need_not = node.type == "NotEqual"
+        need_not = node.op_type == "NotEqual"
         supported_dtypes = [TensorProto.BOOL, TensorProto.INT32, TensorProto.INT64]
-        if any([ctx.get_dtype(inp) not in supported_dtypes for inp in node.input]):
+        if any(
+            [
+                ctx.get_dtype(inp) not in supported_dtypes
+                for inp in node.input_tensor_names
+            ]
+        ):
             raise ValueError(
                 "Version 7 Equal op only supports bool, int32 and int64 inputs. Please set opset > 11 and try again."
             )
         if need_not:
-            node.type = "Equal"
-            output_name = node.output[0]
+            node.op_type = "Equal"
+            output_name = node.output_tensor_names[0]
             not_node = ctx.InsertNewNodeOnOutput(
                 "Not", output_name, name=id_util.UniqueStr(node.name)
             )
-            ctx.CopyShape(output_name, not_node.output[0])
-            ctx.CopyDtype(output_name, not_node.output[0])
+            ctx.CopyShape(output_name, not_node.output_tensor_names[0])
+            ctx.CopyDtype(output_name, not_node.output_tensor_names[0])
 
     @classmethod
     def Version_11(cls, ctx, node, **kwargs):
         # starting with opset-11, equal supports all types
         _AddCastToOutput(ctx, node)
-        need_not = node.type == "NotEqual"
+        need_not = node.op_type == "NotEqual"
         if need_not:
-            node.type = "Equal"
-            output_name = node.output[0]
+            node.op_type = "Equal"
+            output_name = node.output_tensor_names[0]
             not_node = ctx.InsertNewNodeOnOutput(
                 "Not", output_name, name=id_util.UniqueStr(node.name)
             )
-            ctx.CopyShape(output_name, not_node.output[0])
-            ctx.CopyDtype(output_name, not_node.output[0])
+            ctx.CopyShape(output_name, not_node.output_tensor_names[0])
+            ctx.CopyDtype(output_name, not_node.output_tensor_names[0])
 
 
 @flow_op(
@@ -743,9 +808,9 @@ class GreaterLessEqual:
     def Version_7(cls, ctx, node, **kwargs):
         _AddCastToOutput(ctx, node)
         GreaterLess.Version_7(ctx, node, **kwargs)
-        output_name = node.output[0]
+        output_name = node.output_tensor_names[0]
         new_node = ctx.InsertNewNodeOnOutput(
             "Not", output_name, name=id_util.UniqueStr(node.name)
         )
-        ctx.CopyShape(output_name, new_node.output[0])
-        ctx.set_dtype(new_node.output[0], ctx.get_dtype(output_name))
+        ctx.CopyShape(output_name, new_node.output_tensor_names[0])
+        ctx.set_dtype(new_node.output_tensor_names[0], ctx.get_dtype(output_name))
