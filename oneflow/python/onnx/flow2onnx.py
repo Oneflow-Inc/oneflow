@@ -156,9 +156,7 @@ def FlowToOnnxNaive(graph, shape_override):
         for a in attrs:
             attr_cnt[a] += 1
             if a == "dtype":
-                attr[a] = util.Flow2OnnxDtype(
-                    util.get_flow_node_attr(node, "dtype")
-                )
+                attr[a] = util.Flow2OnnxDtype(util.get_flow_node_attr(node, "dtype"))
             else:
                 attr[a] = util.get_flow_node_attr(node, a)
 
