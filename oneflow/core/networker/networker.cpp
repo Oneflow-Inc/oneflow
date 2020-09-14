@@ -46,16 +46,16 @@ void Networker::PollMsgChannel() {
   NetworkerMsg msg;
   while (msg_channel_.Receive(&msg) == kChannelStatusSuccess) {
     switch (msg.type) {
-      case NetworkerMsgType::kSend: HandlerRecieveSendMsgFromSrcMachine(msg);
-      case NetworkerMsgType::kAck: HandlerRecieveAckMsgFromDstMachine(msg);
+      case NetworkerMsgType::kSend: HandlerReceiveSendMsgFromSrcMachine(msg);
+      case NetworkerMsgType::kAck: HandlerReceiveAckMsgFromDstMachine(msg);
       default: UNIMPLEMENTED();
     }
   }
 }
 
-void Networker::HandlerRecieveSendMsgFromSrcMachine(const NetworkerMsg& msg) {
+void Networker::HandlerReceiveSendMsgFromSrcMachine(const NetworkerMsg& msg) {
   // this handler means that:
-  // this machine is dst machine, and recieve Send msg from source machine
+  // this machine is dst machine, and receive Send msg from source machine
   CHECK(msg.src_mem_token != nullptr);
   CHECK(msg.dst_mem_token == nullptr);
   uint64_t token = msg.token;
@@ -82,7 +82,7 @@ void Networker::HandlerRecieveSendMsgFromSrcMachine(const NetworkerMsg& msg) {
   stat->src_mem_token = msg.src_mem_token;
 
   if (is_recv_ready) {
-    // it means the local machine has call Networker::Recieve() before this handler
+    // it means the local machine has call Networker::Receive() before this handler
     // check status
     CHECK_EQ(stat->size, msg.size);
     CHECK_EQ(stat->src_machine_id, msg.src_machine_id);
@@ -99,10 +99,10 @@ void Networker::HandlerRecieveSendMsgFromSrcMachine(const NetworkerMsg& msg) {
   }
 }
 
-void Networker::HandlerRecieveAckMsgFromDstMachine(const NetworkerMsg& msg) {
+void Networker::HandlerReceiveAckMsgFromDstMachine(const NetworkerMsg& msg) {
   // this handler means that:
-  // this machine is src machine, and recieve Ack msg from dst machine
-  // The Send/Recieve is done.
+  // this machine is src machine, and receive Ack msg from dst machine
+  // The Send/Receive is done.
   CHECK(msg.src_mem_token != nullptr);
   CHECK(msg.dst_mem_token != nullptr);
   uint64_t token = msg.token;

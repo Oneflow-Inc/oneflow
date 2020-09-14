@@ -57,22 +57,25 @@ class Networker {
 
  private:
   void PollMsgChannel();
-  void HandlerRecieveSendMsgFromSrcMachine(const NetworkerMsg& msg);
-  void HandlerRecieveAckMsgFromDstMachine(const NetworkerMsg& msg);
+  void HandlerReceiveSendMsgFromSrcMachine(const NetworkerMsg& msg);
+  void HandlerReceiveAckMsgFromDstMachine(const NetworkerMsg& msg);
   void DoRead(uint64_t token);
 
   friend class Global<Networker>;
   Networker();
   std::mutex status_lock_;
   HashMap<uint64_t, NetworkerStatus> token2status_;
+
+  int64_t this_machine_id_;
   void* read_id_;
+  EpollCommNet* comm_net_;
 
   Channel<NetworkerMsg> msg_channel_;
   std::thread msg_poller_;
+
+  // unused now
   Channel<std::function<void()>> callback_channel_;
   std::thread callback_poller_;
-  EpollCommNet* comm_net_;
-  int64_t this_machine_id_;
 };
 
 }  // namespace oneflow

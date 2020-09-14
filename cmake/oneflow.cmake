@@ -124,7 +124,9 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cpp$")
-    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/networker/networker_test_main\\.cpp$")
+      list(APPEND of_networker_test_cc ${oneflow_single_file})
+    elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/.*\\.pybind\\.cpp$")
@@ -320,6 +322,16 @@ if(BUILD_TESTING)
     endif()
   endif()
 endif()
+
+# build networker_test
+foreach(cc ${of_networker_test_cc})
+  get_filename_component(networker_test_name ${cc} NAME_WE)
+  string(CONCAT networker_test_exe_name ${networker_test_name} exe)
+  oneflow_add_executable(${networker_test_exe_name} ${cc})
+  target_link_libraries(${networker_test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+  set_target_properties(${networker_test_exe_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+endforeach()
+
 
 # build include
 set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")
