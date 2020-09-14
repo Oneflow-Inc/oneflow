@@ -96,7 +96,6 @@ Maybe<void> TestNetworkerOn2Machine(const std::string& first_machine_ip,
       int32_t* data = static_cast<int32_t*>(malloc_ptr);
       for (int i = 0; i < 1024 / 4; ++i) { CHECK_EQ(*(data + i), i); }
       std::cout << "Yes! I have recv 1024 bytes from machine 0" << std::endl;
-      free(malloc_ptr);
       bc.Decrease();
     };
     Global<Networker>::Get()->Receive(23330, 0, malloc_ptr, 1024, func);
