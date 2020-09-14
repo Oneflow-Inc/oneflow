@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import oneflow.typing as tp
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from util import convert_to_onnx_and_check
 
@@ -392,11 +393,8 @@ def Mobilenet(
 
 
 def test_mobilenetv2(test_case):
-    func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
-
-    @flow.global_function(func_config)
-    def mobilenetv2(x=flow.FixedTensorDef((1, 224, 224, 3))):
+    @flow.global_function()
+    def mobilenetv2(x: tp.Numpy.Placeholder((1, 224, 224, 3))):
         return Mobilenet(x)
 
     convert_to_onnx_and_check(mobilenetv2)

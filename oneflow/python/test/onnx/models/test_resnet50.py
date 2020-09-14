@@ -18,6 +18,7 @@ from __future__ import division
 from __future__ import print_function
 
 import oneflow as flow
+import oneflow.typing as tp
 import onnx
 import onnxruntime as ort
 import numpy as np
@@ -183,11 +184,8 @@ def resnet50(images, trainable=True, need_transpose=False):
 
 
 def test_resnet50(test_case):
-    func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
-
-    @flow.global_function(func_config)
-    def InferenceNet(images=flow.FixedTensorDef((1, 3, 224, 224))):
+    @flow.global_function()
+    def InferenceNet(images: tp.Numpy.Placeholder((1, 3, 224, 224))):
         logits = resnet50(images)
 
         predictions = flow.nn.softmax(logits)
