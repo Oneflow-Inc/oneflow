@@ -2,9 +2,7 @@ include(ExternalProject)
 include(GNUInstallDirs)
 
 SET(ABSL_PROJECT absl)
-SET(ABSL_GIT_URL https://github.com/abseil/abseil-cpp.git)
-SET(ABSL_GIT_TAG 43ef2148c0936ebf7cb4be6b19927a9d9d145b8f)
- 
+
 SET(ABSL_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/absl/src/absl)
 SET(ABSL_INSTALL ${THIRD_PARTY_DIR}/absl)
 
@@ -30,9 +28,9 @@ endforeach()
 
 if(THIRD_PARTY)
   ExternalProject_Add(${ABSL_PROJECT}
-    PREFIX absl 
-    GIT_REPOSITORY ${ABSL_GIT_URL}
-    GIT_TAG ${ABSL_GIT_TAG}
+    PREFIX absl
+    URL https://github.com/Oneflow-Inc/abseil-cpp/archive/d0.tar.gz
+    URL_MD5 20126998c9b17e5f7a93711972f03f79
     UPDATE_COMMAND ""
     CMAKE_ARGS
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
