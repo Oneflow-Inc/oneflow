@@ -21,6 +21,26 @@ namespace oneflow {
 
 namespace {
 
+std::function<bool(const OpNode* op_node)> MakePredicatorIsSafeToDelete(const OpGraph& op_graph) {
+  HashSet<std::string> ctrl_in_op_names;
+  op_graph.ForEachNode([&](const OpNode* op_node) {
+    for (const std::string& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+      ctrl_in_op_names.insert(ctrl_in_op_name);
+    }
+  });
+  return [=](const OpNode* op_node) {
+    if (!op_node->op().op_conf().ctrl_in_op_name().empty()) { return false; }
+    if (ctrl_in_op_names.find(op_node->op().op_conf().name()) != ctrl_in_op_names.end()) {
+      return false;
+    }
+    return true;
+  };
+}
+
+bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_type_name) {
+  return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
+};
+
 class FuseUpdateOpsPass final : public OpGraphPass {
  public:
   FuseUpdateOpsPass() = default;
@@ -31,25 +51,7 @@ class FuseUpdateOpsPass final : public OpGraphPass {
 };
 
 Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
-  HashSet<std::string> ctrl_in_op_names;
-  op_graph.ForEachNode([&](const OpNode* op_node) {
-    for (const std::string& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
-      ctrl_in_op_names.insert(ctrl_in_op_name);
-    }
-  });
-
-  const auto IsUserOpWithTypeName = [&](const OperatorConf& op_conf,
-                                        const std::string& op_type_name) {
-    return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
-  };
-  const auto IsSafeToDelete = [&](const OpNode* op_node) {
-    if (!op_node->op().op_conf().ctrl_in_op_name().empty()) { return false; }
-    if (ctrl_in_op_names.find(op_node->op().op_conf().name()) != ctrl_in_op_names.end()) {
-      return false;
-    }
-    return true;
-  };
-
+  const auto IsSafeToDelete = MakePredicatorIsSafeToDelete(op_graph);
   op_graph.ForEachNode([&](const OpNode* op_node) {
     if (!op_node->op().op_conf().has_user_conf()) { return; }
     const user_op::UserOpConfWrapper user_op_conf(op_node->op().op_conf());
