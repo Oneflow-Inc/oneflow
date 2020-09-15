@@ -20,16 +20,26 @@ namespace oneflow {
 
 namespace {
 
-template<typename T>
+template<typename T, bool centered>
 __global__ void UpdateModelGpu(int64_t n, const int64_t* train_step, const float* learning_rate,
                                T decay_rate, T epsilon, T weight_decay, const T* model_diff,
-                               T* model, T* mean_square) {
-  const T cur_decay_rate = *train_step == 0 ? 0 : decay_rate;
+                               T* model, T* mean_square, T* mean_gradient) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     T model_diff_val = model_diff[i];
-    mean_square[i] =
-        (1 - cur_decay_rate) * model_diff_val * model_diff_val + cur_decay_rate * mean_square[i];
-    model[i] = model[i] - *learning_rate * model_diff_val / std::sqrt(mean_square[i] + epsilon);
+    T mean_square_val = mean_square[i];
+    mean_square_val =
+        (1 - decay_rate) * model_diff_val * model_diff_val + decay_rate * mean_square_val;
+    mean_square[i] = mean_square_val;
+    T denom_t;
+    if (centered) {
+      T mean_gradient_val = mean_gradient[i];
+      mean_gradient_val = (1 - decay_rate) * model_diff_val + decay_rate * mean_gradient_val;
+      mean_gradient[i] = mean_gradient_val;
+      denom_t = mean_square_val - mean_gradient_val * mean_gradient_val;
+    } else {
+      denom_t = mean_square_val;
+    }
+    model[i] = model[i] - *learning_rate * model_diff_val * rsqrt(denom_t + epsilon);
   }
 }
 
@@ -39,11 +49,20 @@ template<typename T>
 class RMSPropMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
   static void UpdateModel(DeviceCtx* ctx, int64_t n, const int64_t* train_step,
-                          const float* learning_rate, T decay_rate, T epsilon, T weight_decay,
-                          const T* model_diff, T* model, T* mean_square) {
-    UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, train_step, learning_rate, decay_rate, epsilon, weight_decay, model_diff, model,
-        mean_square);
+                          const float* learning_rate, T decay_rate, T epsilon, bool centered,
+                          T weight_decay, const T* model_diff, T* model, T* mean_square,
+                          T* mean_gradient) {
+    if (centered) {
+      UpdateModelGpu<T, true>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+              n, train_step, learning_rate, decay_rate, epsilon, weight_decay, model_diff, model,
+              mean_square, mean_gradient);
+    } else {
+      UpdateModelGpu<T, false>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+              n, train_step, learning_rate, decay_rate, epsilon, weight_decay, model_diff, model,
+              mean_square, mean_gradient);
+    }
   }
 };
 
