@@ -119,8 +119,12 @@ void InitNonPODTypeBlobIfNeed(MemoryAllocator* allocator, Blob* blob_ptr) {
     FOR_RANGE(int64_t, idx, 0, elem_cnt) {
       allocator->PlacementNew(&blob_ptr->mut_dptr<OFRecord>()[idx]);
     }
-  }
-  if (blob_desc.data_type() == kTensorBuffer) {
+  }else if(blob_desc.data_type() == kTFRecord){
+    int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
+    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
+      allocator->PlacementNew(&blob_ptr->mut_dptr<tensorflow::Example>()[idx]);
+    }
+  }else if (blob_desc.data_type() == kTensorBuffer) {
     int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
     FOR_RANGE(int64_t, idx, 0, elem_cnt) {
       allocator->PlacementNew(&blob_ptr->mut_dptr<TensorBuffer>()[idx]);
