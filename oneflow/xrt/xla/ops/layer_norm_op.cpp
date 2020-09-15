@@ -85,8 +85,8 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
     output = xla::ConvertElementType(output, DataTypeToPrimitiveType(output_type));
   }
 
-  if (ctx->Attr<bool>("scale") && ctx->HasOutput("normalized")) {
-    ctx->SetOutput("normalized", Reshape(output, input_shape));
+  if (ctx->Attr<bool>("scale") && ctx->HasOutput("normalized_0")) {
+    ctx->SetOutput("normalized_0", Reshape(output, input_shape));
   }
 
   Shape gamma_shape = Shape({norm_dims});
