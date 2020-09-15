@@ -28,6 +28,7 @@ import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import traceback
 
+
 @oneflow_export("enable_eager_execution")
 def api_enable_eager_execution(val: bool = True) -> None:
     r"""If True, job will execute in eager mode, else use lazy mode(static graph).
