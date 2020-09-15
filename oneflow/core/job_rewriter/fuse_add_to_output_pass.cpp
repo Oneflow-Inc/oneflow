@@ -32,7 +32,9 @@ class FuseAddToOutputPass final : public OpGraphPass {
 
 Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   const HashMap<std::string, user_op::OpArg> supported_op_type_name2output_arg(
-      {{"conv_data_grad", user_op::OpArg("dx", 0)}, {"normalization", user_op::OpArg("y", 0)}});
+      {{"conv_data_grad", user_op::OpArg("dx", 0)},
+       {"normalization", user_op::OpArg("y", 0)},
+       {"dropout", user_op::OpArg("out", 0)}});
   HashMap<std::string, OperatorConf> op_name2op_conf;
   auto IsAddToOutputSupported = [&](const OpNode* node, const LogicalBlobId& lbi) -> bool {
     const OperatorConf& op_conf = node->op().op_conf();

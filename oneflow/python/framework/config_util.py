@@ -530,6 +530,23 @@ def nccl_fusion_broadcast(val):
     sess.config_proto.resource.collective_boxing_conf.nccl_fusion_broadcast = val
 
 
+@oneflow_export("config.collective_boxing.nccl_fusion_max_ops")
+def api_nccl_fusion_max_ops(val: int) -> None:
+    r"""Maximum number of ops for nccl fusion.
+
+    Args:
+        val (int): Maximum number of ops
+    """
+    return enable_if.unique([nccl_fusion_max_ops, do_nothing])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def nccl_fusion_max_ops(val):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is int
+    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_max_ops = val
+
+
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
 def do_nothing(*args, **kwargs):
     print("Nothing happened because the session is running")

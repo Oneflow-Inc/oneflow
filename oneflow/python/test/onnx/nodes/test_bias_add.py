@@ -14,16 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import oneflow.typing as tp
 from util import convert_to_onnx_and_check
 
 
-func_config = flow.FunctionConfig()
-func_config.default_data_type(flow.float)
-
-
 def test_bias_add_nchw(test_case):
-    @flow.global_function(func_config)
-    def bias_add_nchw(x=flow.FixedTensorDef((3, 4, 2, 5))):
+    @flow.global_function()
+    def bias_add_nchw(x: tp.Numpy.Placeholder((3, 4, 2, 5))):
         y = flow.get_variable(
             name="y",
             shape=(4,),
@@ -36,8 +33,8 @@ def test_bias_add_nchw(test_case):
 
 
 def test_bias_add_nhwc(test_case):
-    @flow.global_function(func_config)
-    def bias_add_nhwc(x=flow.FixedTensorDef((3, 4, 2, 5))):
+    @flow.global_function()
+    def bias_add_nhwc(x: tp.Numpy.Placeholder((3, 4, 2, 5))):
         y = flow.get_variable(
             name="y",
             shape=(5,),
