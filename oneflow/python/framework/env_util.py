@@ -26,7 +26,7 @@ import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
-
+import traceback
 
 @oneflow_export("enable_eager_execution")
 def api_enable_eager_execution(val: bool = True) -> None:
@@ -161,6 +161,7 @@ def api_grpc_use_no_signal(val: bool = True) -> None:
     print(
         "WARNING:",
         "oneflow.env.grpc_use_no_signal is deprecated, users no longer need to set rpc use signal or not. \n",
+        traceback.format_stack()[-2],
     )
     return None
 
