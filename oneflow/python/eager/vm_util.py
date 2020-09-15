@@ -457,7 +457,10 @@ class InstructionsBuilder(object):
         opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(
             op_parallel_desc_sym
         )
-        const_operand_blob_objects = self._GetConstOperandBlobObjects(
+        const_input_operand_blob_objects = self._GetConstInputOperandBlobObjects(
+            op_attribute, blob_object4ibn=DelegateBlobObject4Ibn
+        )
+        mutable_input_operand_blob_objects = self._GetMutableInputOperandBlobObjects(
             op_attribute, blob_object4ibn=DelegateBlobObject4Ibn
         )
         mut1_operand_blob_objects = self._GetMut1OperandBlobObjects(
@@ -479,7 +482,8 @@ class InstructionsBuilder(object):
             op_conf_sym,
             op_node_signature_sym,
             opkernel_obj,
-            const_operand_blob_objects,
+            const_input_operand_blob_objects,
+            mutable_input_operand_blob_objects,
             mut1_operand_blob_objects,
             mut2_operand_blob_objects,
         )
@@ -502,7 +506,10 @@ class InstructionsBuilder(object):
             )
 
         op_node_signature_sym = self._GetOpNodeSignatureSymbol(op_attribute)
-        const_operand_blob_objects = self._GetConstOperandBlobObjects(
+        const_input_operand_blob_objects = self._GetConstInputOperandBlobObjects(
+            op_attribute, blob_object4ibn=DelegateBlobObject4Ibn
+        )
+        mutable_input_operand_blob_objects = self._GetMutableInputOperandBlobObjects(
             op_attribute, blob_object4ibn=DelegateBlobObject4Ibn
         )
         mut1_operand_blob_objects = self._GetMut1OperandBlobObjects(
@@ -523,7 +530,8 @@ class InstructionsBuilder(object):
             op_parallel_desc_sym,
             opkernel_object,
             op_node_signature_sym,
-            const_operand_blob_objects,
+            const_input_operand_blob_objects,
+            mutable_input_operand_blob_objects,
             mut1_operand_blob_objects,
             mut2_operand_blob_objects,
         )
@@ -582,29 +590,33 @@ class InstructionsBuilder(object):
         )
         return symbol
 
-    def _GetConstOperandBlobObjects(self, op_attribute, blob_object4ibn=None):
+    def _GetConstInputOperandBlobObjects(self, op_attribute, blob_object4ibn=None):
         assert callable(blob_object4ibn)
-        const_operand_blob_objects = []
+        const_input_operand_blob_objects = []
         for ibn in op_attribute.input_bns:
             ibn2modifier = op_attribute.arg_modifier_signature.ibn2input_blob_modifier
             if ibn2modifier[ibn].is_mutable:
                 continue
             ibn_sym = self.GetSymbol4String(ibn)
             in_object = blob_object4ibn(ibn)
-            const_operand_blob_objects.append((ibn_sym, in_object))
-        return const_operand_blob_objects
+            const_input_operand_blob_objects.append((ibn_sym, in_object))
+        return const_input_operand_blob_objects
 
-    def _GetMut1OperandBlobObjects(
-        self, op_attribute, parallel_desc_sym, bn_in_op2blob_object={}
-    ):
-        mut1_operand_blob_objects = []
+    def _GetMutableInputOperandBlobObjects(self, op_attribute, blob_object4ibn=None):
+        mutable_input_operand_blob_objects = []
         for ibn in op_attribute.input_bns:
             ibn2modifier = op_attribute.arg_modifier_signature.ibn2input_blob_modifier
             if not ibn2modifier[ibn].is_mutable:
                 continue
             ibn_sym = self.GetSymbol4String(ibn)
-            ref_blob_object = bn_in_op2blob_object[ibn]
-            mut1_operand_blob_objects.append((ibn_sym, ref_blob_object))
+            in_object = blob_object4ibn(ibn)
+            mutable_input_operand_blob_objects.append((ibn_sym, in_object))
+        return mutable_input_operand_blob_objects
+
+    def _GetMut1OperandBlobObjects(
+        self, op_attribute, parallel_desc_sym, bn_in_op2blob_object={}
+    ):
+        mut1_operand_blob_objects = []
 
         def GetOutBlobParallelDescSymbol(obn):
             parallel_signature = op_attribute.parallel_signature
@@ -731,7 +743,8 @@ class InstructionsBuilder(object):
         op_conf_sym,
         op_node_signature_sym,
         shared_opkernel_obj,
-        const_operand_blob_objects,
+        const_input_operand_blob_objects,
+        mutable_input_operand_blob_objects,
         mut1_operand_blob_objects,
         mut2_operand_blob_objects,
     ):
@@ -746,10 +759,15 @@ class InstructionsBuilder(object):
         instruction.operand.append(_SymbolOperand(op_node_signature_sym.symbol_id))
         instruction.operand.append(_MutOperand(shared_opkernel_obj.object_id))
         instruction.operand.append(_OperandSeparator())
-        for ibn_sym, _ in const_operand_blob_objects:
+        for ibn_sym, _ in const_input_operand_blob_objects:
             instruction.operand.append(_SymbolOperand(ibn_sym.symbol_id))
-        for _, blob_object in const_operand_blob_objects:
+        for _, blob_object in const_input_operand_blob_objects:
             instruction.operand.append(_ConstOperand(blob_object.object_id))
+        instruction.operand.append(_OperandSeparator())
+        for ibn_sym, _ in mutable_input_operand_blob_objects:
+            instruction.operand.append(_SymbolOperand(ibn_sym.symbol_id))
+        for _, blob_object in mutable_input_operand_blob_objects:
+            instruction.operand.append(_MutOperand(blob_object.object_id))
         instruction.operand.append(_OperandSeparator())
         for obn_sym, _ in mut1_operand_blob_objects:
             instruction.operand.append(_SymbolOperand(obn_sym.symbol_id))
@@ -768,7 +786,8 @@ class InstructionsBuilder(object):
         parallel_desc_sym,
         opkernel_object,
         op_node_signature_sym,
-        const_operand_blob_objects,
+        const_input_operand_blob_objects,
+        mutable_input_operand_blob_objects,
         mut1_operand_blob_objects,
         mut2_operand_blob_objects,
     ):
@@ -781,10 +800,15 @@ class InstructionsBuilder(object):
         instruction.operand.append(_MutOperand(opkernel_object.object_id))
         instruction.operand.append(_SymbolOperand(op_node_signature_sym.symbol_id))
         instruction.operand.append(_OperandSeparator())
-        for ibn_sym, _ in const_operand_blob_objects:
+        for ibn_sym, _ in const_input_operand_blob_objects:
             instruction.operand.append(_SymbolOperand(ibn_sym.symbol_id))
-        for _, blob_object in const_operand_blob_objects:
+        for _, blob_object in const_input_operand_blob_objects:
             instruction.operand.append(_ConstOperand(blob_object.object_id))
+        instruction.operand.append(_OperandSeparator())
+        for ibn_sym, _ in mutable_input_operand_blob_objects:
+            instruction.operand.append(_SymbolOperand(ibn_sym.symbol_id))
+        for _, blob_object in mutable_input_operand_blob_objects:
+            instruction.operand.append(_MutOperand(blob_object.object_id))
         instruction.operand.append(_OperandSeparator())
         for obn_sym, _ in mut1_operand_blob_objects:
             instruction.operand.append(_SymbolOperand(obn_sym.symbol_id))
