@@ -36,12 +36,13 @@ class TFRecordParser final : public Parser<TensorBuffer> {
   void Parse(std::shared_ptr<LoadTargetPtrList> batch_data,
              user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    tensorflow::Example* dptr = (tensorflow::Example*)out_tensor->mut_dptr<char>();
+    tensorflow::Example* dptr = out_tensor->mut_dptr<tensorflow::Example>();
+    
     MultiThreadLoop(batch_data->size(), [&](size_t i) {
       TensorBuffer* buffer = batch_data->at(i).get();
-      printf("%d: datatpr:%p, size:%ld\n", i, buffer->data<char>(), buffer->shape().elem_cnt());
       CHECK(dptr[i].ParseFromArray(buffer->data<char>(), buffer->shape().elem_cnt()));
     });
+
     if (batch_data->size() != out_tensor->shape().elem_cnt()) {
       CHECK_EQ(out_tensor->mut_shape()->NumAxes(), 1);
       out_tensor->mut_shape()->Set(0, batch_data->size());
