@@ -77,9 +77,9 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
     CHECK_EQ(model->shape().At(0),
              indexed_slices_update_state->upper() - indexed_slices_update_state->lower());
     IndexedSlicesSGDUpdateKernelUtil<device_type, T, K>::Update(
-        ctx->device_ctx(), model_diff_indices->dptr<K>(), model_diff_values->dptr<T>(),
-        learning_rate->dptr<float>(), model_diff_indices->shape().elem_cnt(), model->shape().At(0),
-        model->shape().Count(1), indexed_slices_update_state->lower(), model->mut_dptr<T>());
+        ctx->device_ctx(), model_diff_indices->shape().elem_cnt(), model->shape().At(0),
+        model->shape().Count(1), indexed_slices_update_state->lower(), learning_rate->dptr<float>(),
+        model_diff_indices->dptr<K>(), model_diff_values->dptr<T>(), model->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

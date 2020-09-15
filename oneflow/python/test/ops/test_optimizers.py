@@ -761,7 +761,7 @@ def test_indexed_slices_adam(test_case):
     arg_dict["beta2"] = [0.99]
     arg_dict["epsilon"] = [1e-9]
     arg_dict["learning_rate"] = [1]
-    arg_dict["train_iters"] = [1]
+    arg_dict["train_iters"] = [10]
     arg_dict["mul_scalar"] = [1, 2]
     for arg in GenArgList(arg_dict):
         compare_with_numpy_indexed_slices_adam(*arg)

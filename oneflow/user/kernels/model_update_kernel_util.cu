@@ -35,16 +35,18 @@ __global__ void IndexedSlicesSGDUpdateGpu(const IDX data_elem_cnt, const K* indi
                                           const T* values, const float* learning_rate,
                                           const IDX num_features, const IDX feature_size, T* model,
                                           const IDX feature_id_offset) {
-  const T lr = *learning_rate;
+  const T minus_lr = -*learning_rate;
   CUDA_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
     const T val = values[i];
     if (val != static_cast<T>(0)) {
-      const IDX feature_id = indices[i / feature_size];
+      const IDX indices_idx = i / feature_size;
+      const IDX inner_idx = i - indices_idx * feature_size;
+      const IDX feature_id = indices[indices_idx];
       assert(feature_id >= 0);
       const IDX local_feature_id = feature_id - feature_id_offset;
       if (local_feature_id >= 0 && local_feature_id < num_features) {
-        const IDX update_offset = local_feature_id * feature_size + i % feature_size;
-        gpu_atomic_add(model + update_offset, -val * lr);
+        const IDX update_offset = local_feature_id * feature_size + inner_idx;
+        gpu_atomic_add(model + update_offset, val * minus_lr);
       }
     }
   }
@@ -88,15 +90,15 @@ template struct SGDUpdateKernelUtil<DeviceType::kGPU, float, float16>;
 
 template<typename T, typename K>
 struct IndexedSlicesSGDUpdateKernelUtil<DeviceType::kGPU, T, K> {
-  static void Update(DeviceCtx* ctx, const K* indices, const T* values, const float* learning_rate,
-                     int64_t num_indices, int64_t num_features, int64_t feature_size,
-                     int64_t feature_id_offset, T* model);
+  static void Update(DeviceCtx* ctx, int64_t num_indices, int64_t num_features,
+                     int64_t feature_size, int64_t feature_id_offset, const float* learning_rate,
+                     const K* indices, const T* values, T* model);
 };
 
 template<typename T, typename K>
 void IndexedSlicesSGDUpdateKernelUtil<DeviceType::kGPU, T, K>::Update(
-    DeviceCtx* ctx, const K* indices, const T* values, const float* learning_rate,
-    int64_t num_indices, int64_t num_features, int64_t feature_size, int64_t feature_id_offset,
+    DeviceCtx* ctx, int64_t num_indices, int64_t num_features, int64_t feature_size,
+    int64_t feature_id_offset, const float* learning_rate, const K* indices, const T* values,
     T* model) {
   const int64_t values_elem_cnt = num_indices * feature_size;
   IndexedSlicesSGDUpdateGpu<T, K, int64_t>
@@ -133,9 +135,11 @@ __global__ void IndexedSlicesMomentumUpdateGpu(T beta, int64_t feature_size, int
   const int64_t n = *num_unique_instance * feature_size;
   const T lr = *learning_rate;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    const K instance_id = indices[i / feature_size];
+    const IDX indices_idx = i / feature_size;
+    const IDX inner_idx = i - indices_idx * feature_size;
+    const IDX instance_id = indices[indices_idx];
     if (instance_id >= lower_bound && instance_id < upper_bound) {
-      const K model_idx = (instance_id - lower_bound) * feature_size + i % feature_size;
+      const IDX model_idx = (instance_id - lower_bound) * feature_size + inner_idx;
       MomentumUpdateFunctor<T, T>()(values + i, model + model_idx, momentum + model_idx, 1.0, 0.0,
                                     0.0, beta, 0.0, lr);
     }
@@ -249,9 +253,11 @@ __global__ void IndexedSlicesAdamUpdateGpu(float beta1, float beta2, float epsil
   }
   const int64_t n = *num_unique_instance * feature_size;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    const K instance_id = indices[i / feature_size];
+    const IDX indices_idx = i / feature_size;
+    const IDX inner_idx = i - indices_idx * feature_size;
+    const IDX instance_id = indices[indices_idx];
     if (instance_id >= lower_bound && instance_id < upper_bound) {
-      const K model_idx = (instance_id - lower_bound) * feature_size + i % feature_size;
+      const IDX model_idx = (instance_id - lower_bound) * feature_size + inner_idx;
       AdamUpdateFunctor<T, T>()(values + i, model + model_idx, m + model_idx, v + model_idx, 1, 0,
                                 0, beta1, beta2, epsilon, 0, lr);
     }

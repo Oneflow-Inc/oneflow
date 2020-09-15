@@ -50,9 +50,9 @@ struct SGDUpdateKernelUtil {
 
 template<DeviceType device_type, typename T, typename K>
 struct IndexedSlicesSGDUpdateKernelUtil final {
-  static void Update(DeviceCtx* ctx, const K* indices, const T* values, const float* learning_rate,
-                     int64_t num_indices, int64_t num_features, int64_t feature_size,
-                     int64_t feature_id_offset, T* model);
+  static void Update(DeviceCtx* ctx, int64_t num_indices, int64_t num_features,
+                     int64_t feature_size, int64_t feature_id_offset, const float* learning_rate,
+                     const K* indices, const T* values, T* model);
 };
 
 template<typename T, typename G>
