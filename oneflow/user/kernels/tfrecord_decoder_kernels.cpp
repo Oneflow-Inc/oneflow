@@ -33,8 +33,11 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void DecodeOneRawTFRecord(const Feature& feature, T* dptr, int64_t sample_elem_cnt,
-                          bool dim1_varying_length, bool auto_zero_padding) {
+void DecodeOneRawTFRecord(const tensorflow::Feature& feature, 
+                          T* dptr, 
+                          int64_t sample_elem_cnt,
+                          bool dim1_varying_length, 
+                          bool auto_zero_padding) {
   if (feature.has_bytes_list()) {
     CHECK_EQ(feature.bytes_list().value_size(), 1);
     const auto& value0 = feature.bytes_list().value(0);
@@ -59,8 +62,6 @@ void DecodeOneRawTFRecord(const Feature& feature, T* dptr, int64_t sample_elem_c
     }                                                                                             \
   }
   DEFINE_ONE_ELIF(float, float)
-  DEFINE_ONE_ELIF(double, double)
-  DEFINE_ONE_ELIF(int32, int32_t)
   DEFINE_ONE_ELIF(int64, int64_t)
 #undef DEFINE_ONE_ELIF
   else {
@@ -78,7 +79,27 @@ class TFRecordRawDecoderKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    // to be added...
+    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    // TODO(chengcheng): remove record num in record blob, fix by shape elem cnt
+    int64_t record_num = in_blob->shape().At(0);
+    int64_t sample_elem_cnt = out_blob->shape().Count(1);
+    CHECK(record_num > 0);
+    const tensorflow::Example* examples = in_blob->dptr<tensorflow::Example>();
+    T* out_dptr = out_blob->mut_dptr<T>();
+    const std::string& name = ctx->Attr<std::string>("name");
+
+    bool auto_zero_padding = ctx->Attr<bool>("auto_zero_padding");
+    bool dim1_varying_length = ctx->Attr<bool>("dim1_varying_length");
+
+    MultiThreadLoop(record_num, [&](size_t i) {
+      const tensorflow::Example& record = *(examples + i);
+      T* dptr = out_dptr + i * sample_elem_cnt;
+      CHECK(record.features().feature().find(name) != record.features().feature().end())
+          << "Field " << name << " not found";
+      const tensorflow::Feature& feature = record.features().feature().at(name);
+      DecodeOneRawTFRecord<T>(feature, dptr, sample_elem_cnt, auto_zero_padding, dim1_varying_length);
+    });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -87,9 +108,8 @@ class TFRecordRawDecoderKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("tfrecord_raw_decoder")                                  \
       .SetCreateFn<TFRecordRawDecoderKernel<dtype>>()                           \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                       \
-                       & (user_op::HobDataType("in", 0) == DataType::kOFRecord) \
+                       & (user_op::HobDataType("in", 0) == DataType::kTFRecord) \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
-//kTFRecord to be added...
 
 REGISTER_RAW_DECODER_KERNEL(char)
 REGISTER_RAW_DECODER_KERNEL(float)
@@ -101,11 +121,12 @@ REGISTER_RAW_DECODER_KERNEL(uint8_t)
 
 namespace {
 
-void DecodeRandomCropImageFromOneRecord(const OFRecord& record /*TFRecord instead*/, TensorBuffer* buffer,
+void DecodeRandomCropImageFromOneRecord(const tensorflow::Example& record, TensorBuffer* buffer,
                                         const std::string& name, const std::string& color_space,
                                         RandomCropGenerator* random_crop_gen) {
-  CHECK(record.feature().find(name) != record.feature().end()) << "Field " << name << " not found";
-  const Feature& feature = record.feature().at(name);
+  const tensorflow::Features &features = record.features();
+  CHECK(features.feature().find(name) != features.feature().end()) << "Field " << name << " not found";
+  const tensorflow::Feature& feature = features.feature().at(name);
   CHECK(feature.has_bytes_list());
   CHECK(feature.bytes_list().value_size() == 1);
   const std::string& src_data = feature.bytes_list().value(0);
@@ -176,7 +197,7 @@ class TFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("tfrecord_image_decoder_random_crop")
     .SetCreateFn<TFRecordImageDecoderRandomCropKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("in", 0) == DataType::kOFRecord) // kTFRecord should be added
+                     & (user_op::HobDataType("in", 0) == DataType::kTFRecord)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 class TFRecordImageDecoderKernel final : public user_op::OpKernel {
@@ -194,7 +215,7 @@ class TFRecordImageDecoderKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("tfrecord_image_decoder")
     .SetCreateFn<TFRecordImageDecoderKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("in", 0) == DataType::kOFRecord) // kTFRecord should be added
+                     & (user_op::HobDataType("in", 0) == DataType::kTFRecord)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 }  // namespace oneflow

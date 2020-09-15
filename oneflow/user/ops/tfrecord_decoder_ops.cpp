@@ -29,7 +29,7 @@ REGISTER_CPU_ONLY_USER_OP("tfrecord_raw_decoder")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kOFRecord);
+      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTFRecord);
       CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().At(0) >= 1);
       Shape conf_shape = ctx->Attr<Shape>("shape");
       DimVector dim_vec(1 + conf_shape.NumAxes());
@@ -66,7 +66,7 @@ REGISTER_CPU_ONLY_USER_OP("tfrecord_image_decoder")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kOFRecord);
+      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTFRecord);
       CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().At(0) >= 1);
       *out_tensor->mut_shape() = in_tensor->shape();
       *out_tensor->mut_data_type() = DataType::kTensorBuffer;
@@ -104,7 +104,7 @@ REGISTER_CPU_ONLY_USER_OP("tfrecord_image_decoder_random_crop")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kOFRecord);
+      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTFRecord);
       CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().At(0) >= 1);
       *out_tensor->mut_shape() = in_tensor->shape();
       *out_tensor->mut_data_type() = DataType::kTensorBuffer;
