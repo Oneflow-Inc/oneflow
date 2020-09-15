@@ -206,7 +206,6 @@ def main():
         print("{} = {}".format(arg, getattr(args, arg)))
     print("-".ljust(66, "-"))
     print("Time stamp: {}".format(str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))))
-    flow.env.grpc_use_no_signal()
     flow.env.log_dir(args.log_dir)
 
     if args.node_num > 1:
