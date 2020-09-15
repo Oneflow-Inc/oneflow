@@ -30,6 +30,7 @@ if(THIRD_PARTY)
   ExternalProject_Add(${ABSL_PROJECT}
     PREFIX absl
     URL https://github.com/Oneflow-Inc/abseil-cpp/archive/d0.tar.gz
+    URL_MD5 20126998c9b17e5f7a93711972f03f79
     UPDATE_COMMAND ""
     CMAKE_ARGS
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
