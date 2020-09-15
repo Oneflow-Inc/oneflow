@@ -1071,6 +1071,91 @@ def image_batch_align(
     alignment: int,
     name: Optional[str] = None,
 ) -> BlobDef:
+    """This operator aligns the shape for a batch of images. 
+
+    The aligned shape is computed as: 
+
+    .. math:: 
+
+        & shape_{width} = int(\frac{(shape_{width}+alignment-1)}{alignment})*alignment
+
+        & shape_{height} = int(\frac{(shape_{height}+alignment-1)}{alignment})*alignment
+
+    Args:
+        images (BlobDef): The images. 
+        shape (Sequence[int]): The maximum static shape of input images. 
+        dtype (dtype_util.dtype): The data type. 
+        alignment (int): The align factor. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        BlobDef: The result Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import cv2
+        import numpy as np
+        import oneflow as flow
+        import oneflow.typing as tp 
+
+
+        def _of_image_batch_align(images, input_shape, output_shape, alignment):
+            func_config = flow.FunctionConfig()
+            func_config.default_data_type(flow.float)
+            func_config.default_logical_view(flow.scope.mirrored_view())
+
+            @flow.global_function(function_config=func_config)
+            def image_batch_align_job(
+                images_def: tp.ListListNumpy.Placeholder(shape=input_shape, dtype=flow.float)
+            ) -> tp.ListNumpy:
+                # Convert to tensor buffer
+                images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
+                image = flow.image_batch_align(
+                    images_buffer, shape=output_shape[1:], dtype=flow.float, alignment=alignment
+                )
+                return image
+
+            image = image_batch_align_job([images])
+            return image[0]
+
+
+        def _read_images_by_cv(image_files):
+            images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
+            return [np.expand_dims(image, axis=0) for image in images]
+
+
+        def _get_images_static_shape(images):
+            image_shapes = [image.shape for image in images]
+            image_static_shape = np.amax(image_shapes, axis=0)
+            assert isinstance(
+                image_static_shape, np.ndarray
+            ), "image_shapes: {}, image_static_shape: {}".format(
+                str(image_shapes), str(image_static_shape)
+            )
+            image_static_shape = image_static_shape.tolist()
+            assert image_static_shape[0] == 1, str(image_static_shape)
+            image_static_shape[0] = len(image_shapes)
+            return image_static_shape
+
+        def _roundup(x, n):
+            # compute the aligned shape
+            return int((x + n - 1) / n) * n
+
+        if __name__ == "__main__": 
+            img = _read_images_by_cv(['./img/1.jpg', './img/2.jpg', './img/3.jpg'])
+            img_shape = _get_images_static_shape(img) # In example is [3, 349, 367, 3]
+            alignment = 16 # alignment factor
+            aligned_image_shape = [
+                img_shape[0],
+                _roundup(img_shape[1], alignment),
+                _roundup(img_shape[2], alignment),
+                img_shape[3],
+            ]
+            image = _of_image_batch_align(img, tuple(img_shape), aligned_image_shape, alignment)
+
+    """
     if name is None:
         name = id_util.UniqueStr("ImageBatchAlign_")
 
@@ -1094,6 +1179,76 @@ def image_normalize(
     mean: Sequence[float],
     name: Optional[str] = None,
 ) -> BlobDef:
+    """This operator normalizes the image. 
+
+    Args:
+        image (BlobDef): The input image. 
+        std (Sequence[float]): The standard deviation of the images. 
+        mean (Sequence[float]): The mean value of the images. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        BlobDef: The result Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import cv2
+        import numpy as np
+        import oneflow as flow
+        import oneflow.typing as tp 
+
+
+        def _of_image_normalize(images, image_shape, std, mean):
+            func_config = flow.FunctionConfig()
+            func_config.default_data_type(flow.float)
+            func_config.default_logical_view(flow.scope.mirrored_view())
+
+            @flow.global_function(function_config=func_config)
+            def image_normalize_job(
+                images_def: tp.ListListNumpy.Placeholder(shape=image_shape, dtype=flow.float)
+            ) -> tp.ListListNumpy:
+                # Convert to tensor buffer
+                images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
+                # Normalize the imagess
+                norm_images = flow.image_normalize(images_buffer, std, mean)
+                # Convert back to tensor list
+                return flow.tensor_buffer_to_tensor_list(
+                    norm_images, shape=image_shape[1:], dtype=flow.float
+                )
+
+            image_tensor = image_normalize_job([images])
+            return image_tensor[0]
+
+
+        def _read_images_by_cv(image_files):
+            images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
+            return [np.expand_dims(image, axis=0) for image in images]
+
+
+        def _get_images_static_shape(images):
+            image_shapes = [image.shape for image in images]
+            image_static_shape = np.amax(image_shapes, axis=0)
+            assert isinstance(
+                image_static_shape, np.ndarray
+            ), "image_shapes: {}, image_static_shape: {}".format(
+                str(image_shapes), str(image_static_shape)
+            )
+            image_static_shape = image_static_shape.tolist()
+            assert image_static_shape[0] == 1, str(image_static_shape)
+            image_static_shape[0] = len(image_shapes)
+            return image_static_shape
+
+        if __name__ == "__main__": 
+            img = _read_images_by_cv(['./img/1.jpg', './img/2.jpg', './img/3.jpg'])
+            img_shape = _get_images_static_shape(img) # In example is [3, 349, 367, 3]
+            image = _of_image_normalize(img, 
+                                        tuple(img_shape), 
+                                        std=(102.9801, 115.9465, 122.7717),
+                                        mean=(1.0, 1.0, 1.0))
+
+    """
     if name is None:
         name = id_util.UniqueStr("ImageNormalize_")
 
@@ -1116,6 +1271,81 @@ def image_normalize(
 def image_flip(
     image: BlobDef, flip_code: Union[int, BlobDef], name: Optional[str] = None
 ) -> BlobDef:
+    """This operator flips the images. 
+
+    The flip code corresponds to the different flip mode: 
+
+    0 (0x00): Non Flip 
+
+    1 (0x01): Horizontal Flip 
+
+    16 (0x10): Vertical Flip
+
+    17 (0x11): Both Horizontal and Vertical Flip
+
+    Args:
+        image (BlobDef): The input images. 
+        flip_code (Union[int, BlobDef]): The flip code. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        BlobDef: The result Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import cv2
+        import numpy as np
+        import oneflow as flow
+        import oneflow.typing as tp 
+
+
+        def _of_image_flip(images, image_shape, flip_code):
+            func_config = flow.FunctionConfig()
+            func_config.default_data_type(flow.float)
+            func_config.default_logical_view(flow.scope.mirrored_view())
+
+            @flow.global_function(function_config=func_config)
+            def image_flip_job(
+                images_def: tp.ListListNumpy.Placeholder(shape=image_shape, dtype=flow.float)
+            ) -> tp.ListListNumpy:
+                images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
+                flip_images = flow.image_flip(images_buffer, flip_code)
+                return flow.tensor_buffer_to_tensor_list(
+                    flip_images, shape=image_shape[1:], dtype=flow.float
+                )
+
+            image_tensor = image_flip_job([images])
+            return image_tensor[0]
+
+
+        def _read_images_by_cv(image_files):
+            images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
+            return [np.expand_dims(image, axis=0) for image in images]
+
+
+        def _get_images_static_shape(images):
+            image_shapes = [image.shape for image in images]
+            image_static_shape = np.amax(image_shapes, axis=0)
+            assert isinstance(
+                image_static_shape, np.ndarray
+            ), "image_shapes: {}, image_static_shape: {}".format(
+                str(image_shapes), str(image_static_shape)
+            )
+            image_static_shape = image_static_shape.tolist()
+            assert image_static_shape[0] == 1, str(image_static_shape)
+            image_static_shape[0] = len(image_shapes)
+            return image_static_shape
+
+        if __name__ == "__main__": 
+            img = _read_images_by_cv(['./img/1.jpg', './img/2.jpg', './img/3.jpg'])
+            img_shape = _get_images_static_shape(img) # In example is [3, 349, 367, 3]
+            image = _of_image_flip(img, 
+                           tuple(img_shape), 
+                           flip_code=1)
+
+    """
     assert isinstance(image, BlobDef)
 
     if name is None:
@@ -1150,6 +1380,86 @@ def object_bbox_flip(
     flip_code: Union[int, BlobDef],
     name: Optional[str] = None,
 ) -> BlobDef:
+    """This operator flips the object bounding box. 
+
+    The flip code corresponds to the different flip mode: 
+
+    0 (0x00): Non Flip 
+
+    1 (0x01): Horizontal Flip 
+
+    16 (0x10): Vertical Flip
+
+    17 (0x11): Both Horizontal and Vertical Flip
+
+    Args:
+        bbox (BlobDef): The bounding box. 
+        image_size (BlobDef): The size of input image. 
+        flip_code (Union[int, BlobDef]): The flip code. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        BlobDef: The result Blob 
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import numpy as np
+        import oneflow as flow
+        import oneflow.typing as tp 
+
+
+        def _of_object_bbox_flip(bbox_list, image_size, flip_code):
+            bbox_shape = _get_bbox_static_shape(bbox_list)
+            func_config = flow.FunctionConfig()
+            func_config.default_data_type(flow.float)
+            func_config.default_logical_view(flow.scope.mirrored_view())
+
+            @flow.global_function(function_config=func_config)
+            def object_bbox_flip_job(
+                bbox_def: tp.ListListNumpy.Placeholder(
+                    shape=tuple(bbox_shape), dtype=flow.float
+                ),
+                image_size_def: tp.ListNumpy.Placeholder(
+                    shape=image_size.shape, dtype=flow.int32
+                ),
+            ) -> tp.ListListNumpy:
+                bbox_buffer = flow.tensor_list_to_tensor_buffer(bbox_def)
+                flip_bbox = flow.object_bbox_flip(bbox_buffer, image_size_def, flip_code)
+                return flow.tensor_buffer_to_tensor_list(
+                    flip_bbox, shape=bbox_shape[1:], dtype=flow.float
+                )
+
+            input_bbox_list = [np.expand_dims(bbox, axis=0) for bbox in bbox_list]
+            bbox_tensor = object_bbox_flip_job([input_bbox_list], [image_size])
+            return bbox_tensor[0]
+
+
+        def _get_bbox_static_shape(bbox_list):
+            bbox_shapes = [bbox.shape for bbox in bbox_list]
+            bbox_static_shape = np.amax(bbox_shapes, axis=0)
+            assert isinstance(
+                bbox_static_shape, np.ndarray
+            ), "bbox_shapes: {}, bbox_static_shape: {}".format(
+                str(bbox_shapes), str(bbox_static_shape)
+            )
+            bbox_static_shape = bbox_static_shape.tolist()
+            bbox_static_shape.insert(0, len(bbox_list))
+            return bbox_static_shape
+
+        if __name__ == "__main__": 
+            bbox = np.array([[[20.0, 40.0, 80.0, 160.0],  
+                            [30.0, 50.0, 70.0, 100.0]]]).astype(np.single) # [x1, y1, x2, y2]
+            image_size = np.array([[480, 620]]).astype(np.int32)
+            bbox_flip =  _of_object_bbox_flip(bbox, 
+                                            image_size, 
+                                            flip_code=1) # Horizontal Flip
+            print(bbox_flip[0][0])
+            
+            # [[399.  40. 459. 160.]
+            #  [409.  50. 449. 100.]]
+    """
     assert isinstance(bbox, BlobDef)
     assert isinstance(image_size, BlobDef)
     assert bbox.shape[0] == image_size.shape[0]
@@ -1184,6 +1494,111 @@ def object_bbox_flip(
 def object_bbox_scale(
     bbox: BlobDef, scale: BlobDef, name: Optional[str] = None
 ) -> BlobDef:
+    """This operator scales the input image and the corresponding bounding box. It returns the scaled bounding box. 
+
+    Args:
+        bbox (BlobDef): The bounding box. 
+        scale (BlobDef): The scale factor. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        BlobDef: The result Blob.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import numpy as np
+        import oneflow as flow
+        import oneflow.typing as tp
+        import cv2 
+        from typing import Tuple 
+
+
+        def _read_images_by_cv(image_files):
+            images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
+            return images 
+
+
+        def _get_images_static_shape(images):
+            image_shapes = [image.shape for image in images]
+            image_static_shape = np.amax(image_shapes, axis=0)
+            assert isinstance(
+                image_static_shape, np.ndarray
+            ), "image_shapes: {}, image_static_shape: {}".format(
+                str(image_shapes), str(image_static_shape)
+            )
+            image_static_shape = image_static_shape.tolist()
+            image_static_shape.insert(0, len(image_shapes))
+            return image_static_shape
+
+
+        def _get_bbox_static_shape(bbox_list):
+            bbox_shapes = [bbox.shape for bbox in bbox_list]
+            bbox_static_shape = np.amax(bbox_shapes, axis=0)
+            assert isinstance(
+                bbox_static_shape, np.ndarray
+            ), "bbox_shapes: {}, bbox_static_shape: {}".format(
+                str(bbox_shapes), str(bbox_static_shape)
+            )
+            bbox_static_shape = bbox_static_shape.tolist()
+            bbox_static_shape.insert(0, len(bbox_list))
+            return bbox_static_shape
+
+
+        def _of_target_resize_bbox_scale(images, bbox_list, target_size, max_size):
+            image_shape = _get_images_static_shape(images)
+            bbox_shape = _get_bbox_static_shape(bbox_list)
+
+            func_config = flow.FunctionConfig()
+            func_config.default_data_type(flow.float)
+            func_config.default_logical_view(flow.scope.mirrored_view())
+
+            @flow.global_function(function_config=func_config)
+            def target_resize_bbox_scale_job(
+                image_def: tp.ListListNumpy.Placeholder(
+                    shape=tuple(image_shape), dtype=flow.float
+                ),
+                bbox_def: tp.ListListNumpy.Placeholder(
+                    shape=tuple(bbox_shape), dtype=flow.float
+                ),
+            ) -> Tuple[tp.ListListNumpy, tp.ListNumpy]:
+                images_buffer = flow.tensor_list_to_tensor_buffer(image_def)
+                resized_images_buffer, new_size, scale = flow.image_target_resize(
+                    images_buffer, target_size=target_size, max_size=max_size
+                )
+                bbox_buffer = flow.tensor_list_to_tensor_buffer(bbox_def)
+                scaled_bbox = flow.object_bbox_scale(bbox_buffer, scale)
+                scaled_bbox_list = flow.tensor_buffer_to_tensor_list(
+                    scaled_bbox, shape=bbox_shape[1:], dtype=flow.float
+                )
+                return scaled_bbox_list, new_size
+
+            input_image_list = [np.expand_dims(image, axis=0) for image in images]
+            input_bbox_list = [np.expand_dims(bbox, axis=0) for bbox in bbox_list]
+            output_bbox_list, output_image_size = target_resize_bbox_scale_job(
+                [input_image_list], [input_bbox_list]
+            )
+            return output_bbox_list[0], output_image_size[0]
+
+
+        if __name__ == "__main__": 
+            images = _read_images_by_cv(['./img/1.jpg', './img/2.jpg'])
+            bbox = np.array([[[20.0, 40.0, 80.0, 160.0],  
+                            [30.0, 50.0, 70.0, 100.0]], 
+                            [[26.0, 40.0, 86.0, 160.0],  
+                            [36.0, 56.0, 76.0, 106.0]]]).astype(np.single) # [x1, y1, x2, y2]
+            bbox, size = _of_target_resize_bbox_scale(images, bbox, 280, 350)
+            print(bbox[0])
+            print(bbox[1])
+
+            # [[[ 16.0218    32.09169   64.0872   128.36676 ]
+            #   [ 24.032698  40.114613  56.076298  80.229225]]]
+            
+            # [[[ 24.186047  37.170418  80.       148.68167 ]
+            #   [ 33.488373  52.038586  70.69768   98.5016  ]]]
+
+    """
     assert isinstance(bbox, BlobDef)
     assert isinstance(scale, BlobDef)
     assert bbox.shape[0] == scale.shape[0]
@@ -1211,6 +1626,113 @@ def object_segm_poly_flip(
     flip_code: Union[int, BlobDef],
     name: Optional[str] = None,
 ) -> BlobDef:
+    """This operator flips the segmentation points in image. 
+
+    The flip code corresponds to the different flip mode: 
+
+    0 (0x00): Non Flip 
+
+    1 (0x01): Horizontal Flip 
+
+    16 (0x10): Vertical Flip
+
+    17 (0x11): Both Horizontal and Vertical Flip
+
+    Args:
+        poly (BlobDef): The poly segmentation points. 
+        image_size (BlobDef): The image size. 
+        flip_code (Union[int, BlobDef]): The filp code. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        BlobDef: The result Blob 
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import numpy as np
+        import oneflow as flow
+        import oneflow.typing as tp
+        import cv2 
+
+
+        def _read_images_by_cv(image_files):
+            images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
+            return [np.expand_dims(image, axis=0) for image in images]
+
+
+        def _of_object_segm_poly_flip(poly_list, image_size, flip_code):
+            poly_shape = _get_segm_poly_static_shape(poly_list)
+
+            func_config = flow.FunctionConfig()
+            func_config.default_data_type(flow.float)
+            func_config.default_logical_view(flow.scope.mirrored_view())
+
+            @flow.global_function(function_config=func_config)
+            def object_segm_poly_flip_job(
+                poly_def: tp.ListListNumpy.Placeholder(
+                    shape=tuple(poly_shape), dtype=flow.float
+                ),
+                image_size_def: tp.ListNumpy.Placeholder(
+                    shape=image_size.shape, dtype=flow.int32
+                ),
+            ) -> tp.ListListNumpy:
+                poly_buffer = flow.tensor_list_to_tensor_buffer(poly_def)
+                flip_poly = flow.object_segmentation_polygon_flip(
+                    poly_buffer, image_size_def, flip_code
+                )
+                return flow.tensor_buffer_to_tensor_list(
+                    flip_poly, shape=poly_shape[1:], dtype=flow.float
+                )
+
+            input_poly_list = [np.expand_dims(poly, axis=0) for poly in poly_list]
+            poly_tensor = object_segm_poly_flip_job([input_poly_list], [image_size])
+            return poly_tensor[0]
+
+
+        def _get_segm_poly_static_shape(poly_list):
+            poly_shapes = [poly.shape for poly in poly_list]
+            poly_static_shape = np.amax(poly_shapes, axis=0)
+            assert isinstance(
+                poly_static_shape, np.ndarray
+            ), "poly_shapes: {}, poly_static_shape: {}".format(
+                str(poly_shapes), str(poly_static_shape)
+            )
+            poly_static_shape = poly_static_shape.tolist()
+            poly_static_shape.insert(0, len(poly_list))
+            return poly_static_shape
+
+        if __name__ == "__main__": 
+            segm_poly_list = []
+            segmentations = [[[20.0, 40.0], [80.0, 160.0], [100.0, 210.0]], # Image 1 segmentation point
+                            [[25.0, 45.0], [85.0, 165.0], [105.0, 215.0]]] # Image 2 segmentation point
+            for segmentation in segmentations: 
+                polygon = []
+                for seg in segmentation: 
+                    polygon.extend(seg)
+                poly_array = np.array(polygon, dtype=np.single).reshape(-1, 2) # Reshape it
+                segm_poly_list.append(poly_array)
+
+            image_size = np.array([[480, 620], # Image 1 size
+                                [640, 640]]).astype(np.int32) # Image 2 size
+            of_segm_poly_list = _of_object_segm_poly_flip(
+                segm_poly_list, image_size, flip_code=1
+            ) # Horizontal Flip
+            print(of_segm_poly_list[0])
+            print(of_segm_poly_list[1])
+
+            # of_segm_poly_list[0]
+            # [[[460.  40.]
+            #   [400. 160.]
+            #   [380. 210.]]]
+            
+            # of_segm_poly_list[1]
+            # [[[615.  45.]
+            #   [555. 165.]
+            #   [535. 215.]]]
+
+    """
     assert isinstance(poly, BlobDef)
     assert isinstance(image_size, BlobDef)
     assert poly.shape[0] == image_size.shape[0]
@@ -1247,6 +1769,125 @@ def object_segm_poly_flip(
 def object_segm_poly_scale(
     poly: BlobDef, scale: BlobDef, name: Optional[str] = None
 ) -> BlobDef:
+    """This operator scales the segmentation points in the images. 
+
+    Args:
+        poly (BlobDef): The poly segmentation points. 
+        scale (BlobDef): The image scale. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        BlobDef: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import numpy as np
+        import oneflow as flow
+        import oneflow.typing as tp
+        import cv2 
+        from typing import Tuple 
+
+
+        def _read_images_by_cv(image_files):
+            images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
+            return images
+
+
+        def _get_images_static_shape(images):
+            image_shapes = [image.shape for image in images]
+            image_static_shape = np.amax(image_shapes, axis=0)
+            assert isinstance(
+                image_static_shape, np.ndarray
+            ), "image_shapes: {}, image_static_shape: {}".format(
+                str(image_shapes), str(image_static_shape)
+            )
+            image_static_shape = image_static_shape.tolist()
+            image_static_shape.insert(0, len(image_shapes))
+            return image_static_shape
+
+
+        def _get_segm_poly_static_shape(poly_list):
+            poly_shapes = [poly.shape for poly in poly_list]
+            poly_static_shape = np.amax(poly_shapes, axis=0)
+            assert isinstance(
+                poly_static_shape, np.ndarray
+            ), "poly_shapes: {}, poly_static_shape: {}".format(
+                str(poly_shapes), str(poly_static_shape)
+            )
+            poly_static_shape = poly_static_shape.tolist()
+            poly_static_shape.insert(0, len(poly_list))
+            return poly_static_shape
+
+
+        def _get_bbox_static_shape(bbox_list):
+            bbox_shapes = [bbox.shape for bbox in bbox_list]
+            bbox_static_shape = np.amax(bbox_shapes, axis=0)
+            assert isinstance(
+                bbox_static_shape, np.ndarray
+            ), "bbox_shapes: {}, bbox_static_shape: {}".format(
+                str(bbox_shapes), str(bbox_static_shape)
+            )
+            bbox_static_shape = bbox_static_shape.tolist()
+            bbox_static_shape.insert(0, len(bbox_list))
+            return bbox_static_shape
+
+
+        def _of_object_segm_poly_scale(images, poly_list, target_size, max_size):
+            image_shape = _get_images_static_shape(images)
+            print(image_shape)
+            poly_shape = _get_segm_poly_static_shape(poly_list)
+            print("Poly shape is ", poly_shape)
+            func_config = flow.FunctionConfig()
+            func_config.default_data_type(flow.float)
+            func_config.default_logical_view(flow.scope.mirrored_view())
+
+            @flow.global_function(function_config=func_config)
+            def object_segm_poly_scale_job(
+                image_def: tp.ListListNumpy.Placeholder(
+                    shape=tuple(image_shape), dtype=flow.float
+                ),
+                poly_def: tp.ListListNumpy.Placeholder(
+                    shape=tuple(poly_shape), dtype=flow.float
+                ),
+            ) -> Tuple[tp.ListListNumpy, tp.ListNumpy]:
+                images_buffer = flow.tensor_list_to_tensor_buffer(image_def)
+                resized_images_buffer, new_size, scale = flow.image_target_resize(
+                    images_buffer, target_size=target_size, max_size=max_size
+                )
+                poly_buffer = flow.tensor_list_to_tensor_buffer(poly_def)
+                scaled_poly = flow.object_segmentation_polygon_scale(poly_buffer, scale)
+                scaled_poly_list = flow.tensor_buffer_to_tensor_list(
+                    scaled_poly, shape=poly_shape[1:], dtype=flow.float
+                )
+                return scaled_poly_list, new_size
+
+            input_image_list = [np.expand_dims(image, axis=0) for image in images]
+            input_poly_list = [np.expand_dims(poly, axis=0) for poly in poly_list]
+
+            output_poly_list, output_image_size = object_segm_poly_scale_job(
+                [input_image_list], [input_poly_list]
+            )
+
+            return output_poly_list[0], output_image_size
+
+        if __name__ == "__main__": 
+            images = _read_images_by_cv(['./img/1.jpg', './img/2.jpg'])
+            segm_poly_list = []
+            segmentations = [[[20.0, 40.0], [80.0, 160.0], [100.0, 210.0]], # Image 1 segmentation point
+                            [[25.0, 45.0], [85.0, 165.0], [105.0, 215.0]]] # Image 2 segmentation point
+            
+            for segmentation in segmentations: 
+                polygon = []
+                for seg in segmentation: 
+                    polygon.extend(seg)
+                poly_array = np.array(polygon, dtype=np.single).reshape(-1, 2) # Reshape it
+                segm_poly_list.append(poly_array)
+            
+            bbox, size = _of_object_segm_poly_scale(images, segm_poly_list, 280, 350)
+
+    """
     assert isinstance(poly, BlobDef)
     assert isinstance(scale, BlobDef)
     assert poly.shape[0] == scale.shape[0]
@@ -1272,6 +1913,171 @@ def object_segm_poly_scale(
 def object_segm_poly_to_mask(
     poly: BlobDef, poly_index: BlobDef, image_size: BlobDef, name: Optional[str] = None
 ) -> BlobDef:
+    """This operator converts the poly segment points to the segment mask array. 
+
+    Args:
+        poly (BlobDef): The poly segment points. 
+        poly_index (BlobDef): The poly segment index. 
+        image_size (BlobDef): The input image size. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        BlobDef: The result Blob. 
+
+    .. code-block:: python 
+
+        import numpy as np
+        import oneflow as flow
+        import oneflow.typing as tp
+        import cv2 
+        from typing import Tuple 
+
+
+        def _read_images_by_cv(image_files):
+            images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
+            return images
+
+
+        def _get_images_static_shape(images):
+            image_shapes = [image.shape for image in images]
+            image_static_shape = np.amax(image_shapes, axis=0)
+            assert isinstance(
+                image_static_shape, np.ndarray
+            ), "image_shapes: {}, image_static_shape: {}".format(
+                str(image_shapes), str(image_static_shape)
+            )
+            image_static_shape = image_static_shape.tolist()
+            image_static_shape.insert(0, len(image_shapes))
+            return image_static_shape
+
+
+        def _get_segm_poly_static_shape(poly_list, poly_index_list):
+            assert len(poly_list) == len(poly_index_list)
+            num_images = len(poly_list)
+            max_poly_elems = 0
+            for poly, poly_index in zip(poly_list, poly_index_list):
+                assert len(poly.shape) == 2
+                assert len(poly_index.shape) == 2, str(poly_index.shape)
+                assert poly.shape[0] == poly_index.shape[0]
+                assert poly.shape[1] == 2
+                assert poly_index.shape[1] == 3
+                max_poly_elems = max(max_poly_elems, poly.shape[0])
+            return [num_images, max_poly_elems, 2], [num_images, max_poly_elems, 3]
+
+        def _segm_poly_to_tensor(img_segm_poly_list):
+            poly_array_list = []
+            poly_index_array_list = []
+            for img_idx, segm_poly_list in enumerate(img_segm_poly_list):
+                img_poly_elem_list = []
+                img_poly_index_list = []
+
+                for obj_idx, poly_list in enumerate(segm_poly_list):
+                    for poly_idx, poly in enumerate(poly_list):
+                        img_poly_elem_list.extend(poly)
+                        for pt_idx, pt in enumerate(poly):
+                            if pt_idx % 2 == 0:
+                                img_poly_index_list.append([pt_idx / 2, poly_idx, obj_idx])
+
+                img_poly_array = np.array(img_poly_elem_list, dtype=np.single).reshape(-1, 2)
+                assert img_poly_array.size > 0, segm_poly_list
+                poly_array_list.append(img_poly_array)
+
+                img_poly_index_array = np.array(img_poly_index_list, dtype=np.int32)
+                assert img_poly_index_array.size > 0, segm_poly_list
+                poly_index_array_list.append(img_poly_index_array)
+
+            return poly_array_list, poly_index_array_list
+
+
+        def _of_poly_to_mask_pipline(
+            images, poly_list, poly_index_list, num_segms_list, target_size, max_size
+        ):  
+            print(len(images))
+            print(len(poly_list))
+
+            assert len(images) == len(poly_list)
+            assert len(poly_list) == len(poly_index_list)
+            image_shape = _get_images_static_shape(images)
+            poly_shape, poly_index_shape = _get_segm_poly_static_shape(
+                poly_list, poly_index_list
+            )
+            max_num_segms = max(num_segms_list)
+
+            func_config = flow.FunctionConfig()
+            func_config.default_logical_view(flow.scope.mirrored_view())
+            func_config.default_data_type(flow.float)
+
+
+            @flow.global_function(function_config=func_config)
+            def poly_to_mask_job(
+                image_def: tp.ListListNumpy.Placeholder(
+                    shape=tuple(image_shape), dtype=flow.float
+                ),
+                poly_def: tp.ListListNumpy.Placeholder(
+                    shape=tuple(poly_shape), dtype=flow.float
+                ),
+                poly_index_def: tp.ListListNumpy.Placeholder(
+                    shape=tuple(poly_index_shape), dtype=flow.int32
+                ),
+            ) -> Tuple[tp.ListListNumpy, tp.ListListNumpy]:
+                images_buffer = flow.tensor_list_to_tensor_buffer(image_def)
+                resized_images_buffer, new_size, scale = flow.image_target_resize(
+                    images_buffer, target_size=target_size, max_size=max_size
+                )
+                poly_buffer = flow.tensor_list_to_tensor_buffer(poly_def)
+                poly_index_buffer = flow.tensor_list_to_tensor_buffer(poly_index_def)
+                scaled_poly_buffer = flow.object_segmentation_polygon_scale(poly_buffer, scale)
+                mask_buffer = flow.object_segmentation_polygon_to_mask(
+                    scaled_poly_buffer, poly_index_buffer, new_size
+                )
+                mask_list = flow.tensor_buffer_to_tensor_list(
+                    mask_buffer, shape=(max_num_segms, target_size, max_size), dtype=flow.int8
+                )
+                scaled_poly_list = flow.tensor_buffer_to_tensor_list(
+                    scaled_poly_buffer, shape=poly_shape[1:], dtype=flow.float
+                )
+                return mask_list, scaled_poly_list
+
+            input_image_list = [np.expand_dims(image, axis=0) for image in images]
+            input_poly_list = [np.expand_dims(poly, axis=0) for poly in poly_list]
+            input_poly_index_list = [
+                np.expand_dims(poly_index, axis=0) for poly_index in poly_index_list
+            ]
+
+            output_mask_list, output_poly_list = poly_to_mask_job(
+                [input_image_list], [input_poly_list], [input_poly_index_list]
+            )
+
+            return output_mask_list[0], output_poly_list[0]
+
+        if __name__ == "__main__": 
+            images = _read_images_by_cv(['./img/1.jpg', './img/2.jpg'])
+            segm_poly_list = []
+            
+            segmentations = [[[20.0, 40.0, 80.0, 160.0, 100.0, 210.0, 120.0, 215.0]], # Image 1 segmentation point
+                            [[24.0, 42.0, 86.0, 168.0, 103.0, 223.0, 125.0, 235.0]]] # Image 2 segmentation point
+            
+            for segmentation in segmentations: 
+                polygon = []
+                for seg in segmentation: 
+                    polygon.extend(seg)
+
+                poly_array = np.array(polygon, dtype=np.single).reshape(-1, 2) # Reshape it
+                segm_poly_list.append([poly_array])
+
+            poly_list, poly_index_list = _segm_poly_to_tensor(segm_poly_list)
+            num_segms_list = [len(segm_poly_list) for segm_poly_list in segm_poly_list]
+            target_size = 280
+            max_size = 350
+            of_mask_list, of_scaled_poly_list = _of_poly_to_mask_pipline(
+                images, poly_list, poly_index_list, num_segms_list, target_size, max_size
+            )
+            of_mask_list = [
+                mask_array.reshape(-1, mask_array.shape[-2], mask_array.shape[-1])
+                for mask_array in of_mask_list
+            ] # reshape it 
+
+    """
     assert isinstance(poly, BlobDef)
     assert isinstance(poly_index, BlobDef)
     assert isinstance(image_size, BlobDef)
@@ -1387,6 +2193,62 @@ def ofrecord_image_classification_reader(
     num_decode_threads_per_machine: Optional[int] = None,
     name: Optional[str] = None,
 ) -> BlobDef:
+    """This operator creates a reader for image classification tasks. 
+
+    Args:
+        ofrecord_dir (str): The directory of ofrecord file. 
+        image_feature_name (str): The name of the image feature. 
+        label_feature_name (str): The name of the label feature. 
+        batch_size (int, optional): The batch_size. Defaults to 1.
+        data_part_num (int, optional): The amounts of data part. Defaults to 1.
+        part_name_prefix (str, optional): The prefix of data part name. Defaults to "part-".
+        part_name_suffix_length (int, optional): The suffix name of data part name. Defaults to -1.
+        random_shuffle (bool, optional): Whether to random shuffle the data. Defaults to False.
+        shuffle_buffer_size (int, optional): The buffer size for shuffle data. Defaults to 1024.
+        shuffle_after_epoch (bool, optional): Whether to shuffle the data after each epoch. Defaults to False.
+        color_space (str, optional): The color space. Defaults to "BGR".
+        decode_buffer_size_per_thread (int, optional): The decode buffer size for per thread. Defaults to 32.
+        num_decode_threads_per_machine (Optional[int], optional): The amounts of decode threads for each machine. Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        BlobDef: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        from typing import Tuple
+
+
+        @flow.global_function(type="predict")
+        def image_classifier_job() -> Tuple[tp.Numpy, tp.Numpy]:
+            image, label = flow.data.ofrecord_image_classification_reader(
+                ofrecord_dir="./imgdataset", 
+                image_feature_name="encoded",
+                label_feature_name="class/label",
+                batch_size=8,
+                data_part_num=1,
+                part_name_prefix="part-",
+                part_name_suffix_length=-1,
+                random_shuffle=False,
+                shuffle_after_epoch=False,
+                color_space="RGB",
+                decode_buffer_size_per_thread=16,
+            )
+            res_image, scale, new_size = flow.image.Resize(
+                    image, target_size=(224, 224)
+                )
+            return res_image, label
+
+
+        if __name__ == "__main__":
+            images, labels = image_classifier_job()
+            # images.shape (8, 224, 224, 3)
+
+    """
     if name is None:
         name = id_util.UniqueStr("OFRecordImageClassificationReader_")
     (image, label) = (
