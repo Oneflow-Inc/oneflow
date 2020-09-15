@@ -1071,7 +1071,7 @@ def image_batch_align(
     alignment: int,
     name: Optional[str] = None,
 ) -> BlobDef:
-    """This operator aligns the shape for a batch of images. 
+    r"""This operator aligns the shape for a batch of images. 
 
     The aligned shape is computed as: 
 
