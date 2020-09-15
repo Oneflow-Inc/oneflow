@@ -187,9 +187,15 @@ REGISTER_USER_OP("indexed_slices_adam_update")
       const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
       const user_op::TensorDesc& model_diff_indices =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("model_diff_indices", 0);
+      std::vector<user_op::OpArg> broadcast_args;
+      broadcast_args.emplace_back("learning_rate", 0);
+      broadcast_args.emplace_back("model_diff_indices", 0);
+      if (ctx->Attr<bool>("do_bias_correction")) {
+        broadcast_args.emplace_back("beta1_t", 0);
+        broadcast_args.emplace_back("beta2_t", 0);
+      }
       ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("learning_rate", 0))
-          .Broadcast(user_op::OpArg("model_diff_indices", 0))
+          .Broadcast(broadcast_args)
           .Broadcast(user_op::OpArg("model_diff_values", 0))
           .Split(user_op::OpArg("model", 0), 0)
           .Split(user_op::OpArg("m", 0), 0)
@@ -197,8 +203,7 @@ REGISTER_USER_OP("indexed_slices_adam_update")
           .Build();
       FOR_RANGE(int64_t, i, 1, model.shape().NumAxes()) {
         ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("learning_rate", 0))
-            .Broadcast(user_op::OpArg("model_diff_indices", 0))
+            .Broadcast(broadcast_args)
             .Split(user_op::OpArg("model_diff_values", 0),
                    model_diff_indices.shape().NumAxes() + i - 1)
             .Split(user_op::OpArg("model", 0), i)
