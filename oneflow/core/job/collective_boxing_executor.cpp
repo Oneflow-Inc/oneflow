@@ -240,7 +240,8 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
         return true;
       }
     } else if (op_type == OpType::kOpTypeReduce || op_type == OpType::kOpTypeBroadcast
-               || op_type == OpType::kOpTypeReduceScatter || op_type == OpType::kOpTypeAllGather) {
+               || op_type == OpType::kOpTypeReduceScatter || op_type == OpType::kOpTypeAllGather
+               || op_type == OpType::kOpTypeAll2All) {
       return true;
     } else {
       UNIMPLEMENTED();
