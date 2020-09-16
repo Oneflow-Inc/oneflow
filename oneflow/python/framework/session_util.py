@@ -78,7 +78,7 @@ class Session(object):
         self.backward_blob_register_ = blob_register_util.BlobRegister()
         self.InitNormalModeNoneScope()
         self.snapshot_mgr_ = SnapshotManager()
-        self.error_str_ = None
+        self.err_str_ = None
 
     @property
     def status(self):
