@@ -70,14 +70,16 @@ void HandlerOfFirstMachine(uint64_t first_token, size_t test_num,
     uint64_t token = first_token + i;
     if (i % 2 == 0) {
       // Send
-      *(static_cast<int32_t*>(ptr)) = i;
-      *(static_cast<int32_t*>(ptr + size - 4)) = i + 10;
+      int32_t* data = static_cast<int32_t*>(ptr);
+      *data = i;
+      *(data + (size / 4) - 1) = i + 10;
       Global<Transport>::Get()->Send(token, 1, ptr, size, []() {});
     } else {
       // Recv
       Global<Transport>::Get()->Receive(token, 1, ptr, size, [ptr, i, size]() {
-        CHECK_EQ(*static_cast<int32_t*>(ptr), i);
-        CHECK_EQ(*static_cast<int32_t*>(ptr + size - 4), i + 20);
+        int32_t* data = static_cast<int32_t*>(ptr);
+        CHECK_EQ(*data, i);
+        CHECK_EQ(*(data + (size / 4) - 1), i + 20);
       });
     }
   }
@@ -112,14 +114,16 @@ void HandlerOfSecondMachine(uint64_t first_token, size_t test_num,
     if (i % 2 == 0) {
       // Recv
       Global<Transport>::Get()->Receive(token, 0, ptr, size, [ptr, i, size]() {
-        CHECK_EQ(*static_cast<int32_t*>(ptr), i);
-        CHECK_EQ(*static_cast<int32_t*>(ptr + size - 4), i + 10);
+        int32_t* data = static_cast<int32_t*>(ptr);
+        CHECK_EQ(*data, i);
+        CHECK_EQ(*(data + (size / 4) - 1), i + 10);
       });
 
     } else {
       // Send
-      *(static_cast<int32_t*>(ptr)) = i;
-      *(static_cast<int32_t*>(ptr + size - 4)) = i + 20;
+      int32_t* data = static_cast<int32_t*>(ptr);
+      *data = i;
+      *(data + (size / 4) - 1) = i + 20;
       Global<Transport>::Get()->Send(token, 0, ptr, size, []() {});
     }
   }
@@ -161,8 +165,8 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
 
   uint64_t first_token = 2333;
   size_t test_num = 100;
-  uint64_t min_bytes = 16;
-  uint64_t max_bytes = 16 << 20;  // 16 MB
+  // uint64_t min_bytes = 16;
+  // uint64_t max_bytes = 16 << 20;  // 16 MB
   uint64_t total_bytes = 1024;
   double total_mib = -1;
   std::vector<uint64_t> malloc_size_list(test_num);
@@ -170,7 +174,7 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
 
   std::cout << "malloc list = [";
   for (int i = 0; i < test_num; ++i) {
-    malloc_size_list.at(i) = 16 << (i % 10);
+    malloc_size_list.at(i) = 16 << (i % 20);
     std::cout << malloc_size_list.at(i) << ",";
     total_bytes += malloc_size_list.at(i);
     // malloc data

@@ -180,9 +180,9 @@ void Transport::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, st
   void* mut_ptr = const_cast<void*>(ptr);
   stat->callback = callback;
   stat->is_send_ready = true;
-  // stat->is_recv_ready = false;
+  stat->is_recv_ready = false;
   stat->src_mem_token = comm_net_->RegisterMemory(mut_ptr, size);
-  // stat->dst_mem_token = nullptr;
+  stat->dst_mem_token = nullptr;
   stat->size = size;
   stat->src_machine_id = this_machine_id_;
   stat->dst_machine_id = dst_machine_id;
@@ -194,6 +194,7 @@ void Transport::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, st
   msg.dst_machine_id = stat->dst_machine_id;
   msg.size = size;
   msg.src_mem_token = stat->src_mem_token;
+  msg.dst_mem_token = stat->dst_mem_token;
   msg.type = TransportMsgType::kSend;
   comm_net_->SendTransportMsg(msg.dst_machine_id, msg);
 }
