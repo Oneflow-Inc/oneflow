@@ -20,13 +20,13 @@ namespace oneflow {
 namespace {
 
 template<size_t method_index>
-const grpc::RpcMethod BuildOneRpcMethod(std::shared_ptr<grpc::ChannelInterface> channel) {
-  return grpc::RpcMethod(GetMethodName(static_cast<CtrlMethod>(method_index)),
-                         grpc::RpcMethod::NORMAL_RPC, channel);
+const grpc::internal::RpcMethod BuildOneRpcMethod(std::shared_ptr<grpc::ChannelInterface> channel) {
+  return grpc::internal::RpcMethod(GetMethodName(static_cast<CtrlMethod>(method_index)),
+                                   grpc::internal::RpcMethod::NORMAL_RPC, channel);
 }
 
 template<size_t... method_indices>
-std::array<const grpc::RpcMethod, kCtrlMethodNum> BuildRpcMethods(
+std::array<const grpc::internal::RpcMethod, kCtrlMethodNum> BuildRpcMethods(
     std::index_sequence<method_indices...>, std::shared_ptr<grpc::ChannelInterface> channel) {
   return {BuildOneRpcMethod<method_indices>(channel)...};
 }
@@ -46,8 +46,8 @@ std::unique_ptr<CtrlService::Stub> CtrlService::NewStub(const std::string& addr)
 
 CtrlService::AsyncService::AsyncService() {
   for (int32_t i = 0; i < kCtrlMethodNum; ++i) {
-    AddMethod(new grpc::RpcServiceMethod(GetMethodName(static_cast<CtrlMethod>(i)),
-                                         grpc::RpcMethod::NORMAL_RPC, nullptr));
+    AddMethod(new grpc::internal::RpcServiceMethod(GetMethodName(static_cast<CtrlMethod>(i)),
+                                                   grpc::internal::RpcMethod::NORMAL_RPC, nullptr));
     grpc::Service::MarkMethodAsync(i);
   }
 }
