@@ -18,6 +18,7 @@ class GlogFailureFunction final {
   GlogFailureFunction() {
     is_function_set_ = false;
     failure_function_ = [](std::string) { return kDefaultPanic; };
+    main_thread_id_ = std::this_thread::get_id();
   }
   ~GlogFailureFunction() = default;
 
@@ -25,10 +26,12 @@ class GlogFailureFunction final {
   int RunCallback(std::string err_str) { return failure_function_(err_str); }
   void Clear() { is_function_set_ = false; }
   void UpdateThreadLocal();
+  bool IsMainThread() { return std::this_thread::get_id() == main_thread_id_; }
 
  private:
   py_failure_callback failure_function_;
   bool is_function_set_;
+  std::thread::id main_thread_id_;
 };
 }  // namespace oneflow
 

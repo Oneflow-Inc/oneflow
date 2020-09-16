@@ -5,12 +5,15 @@ namespace oneflow {
 namespace {
 
 void PyFailureFunction() {
-  int ret = Global<GlogFailureFunction>::Get()->RunCallback("panic in C++");
-  if (ret == kMainThreadPanic) {
+  const int ret = Global<GlogFailureFunction>::Get()->RunCallback("panic in C++");
+  const bool is_main_thread = Global<GlogFailureFunction>::Get()->IsMainThread();
+  if (ret == kMainThreadPanic && is_main_thread) {
     throw MainThreadPanic();
-  } else if (ret == kNonMainThreadPanic) {
+  } else if (ret == kNonMainThreadPanic && is_main_thread == false) {
     throw NonMainThreadPanic();
   } else {
+    LOG(ERROR) << "failure callback return code: " << ret << ", is_main_thread: " << is_main_thread
+               << ", aborting";
     abort();
   }
 }
