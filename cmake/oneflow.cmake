@@ -226,7 +226,12 @@ endforeach()
 RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
                               ${PROJECT_SOURCE_DIR}
                               ${of_all_rel_swigs})
-pybind11_add_module(oneflow_internal ${PROJECT_SOURCE_DIR}/oneflow/api/python/init.cpp ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
+include(cfg)
+
+RELATIVE_PYBIND11_GENERATE_CPP(PYBIND11_SRCS PYBIND11_HRCS ${PROJECT_SOURCE_DIR} ${of_all_rel_pybinds})
+set(pybind_registry_cc "${PROJECT_SOURCE_DIR}/tools/cfg/pybind_module_registry.cpp")
+# PYBIND11_SRCS must be put before oneflow/api/python/init.cpp, and pybind_registry_cc must be the last arg
+pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${PROJECT_SOURCE_DIR}/oneflow/api/python/init.cpp ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc}  ${pybind_registry_cc})
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
 target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs})
