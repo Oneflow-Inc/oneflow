@@ -33,8 +33,7 @@ def compare_with_tensorflow(test_case, device_type, data_type, shape, axis, reve
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    # func_config.train.primary_lr(1e-4)
-    # func_config.train.model_update_conf(dict(naive_conf={}))
+    flow_type = type_name_to_flow_type[data_type]
 
     @flow.global_function(type="train", function_config=func_config)
     def CumsumJob():
@@ -42,12 +41,13 @@ def compare_with_tensorflow(test_case, device_type, data_type, shape, axis, reve
             x = flow.get_variable(
                 "x",
                 shape=shape,
-                dtype=type_name_to_flow_type[data_type],
+                dtype=flow.float,
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
-
-            loss = flow.math.cumsum(x, axis=axis, exclusive=exclusive, reverse=reverse)
+            x = flow.cast(x, dtype=flow_type)
+            out = flow.math.cumsum(x, axis=axis, exclusive=exclusive, reverse=reverse)
+            loss = flow.cast(out, dtype=flow.float)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(loss)
@@ -62,46 +62,25 @@ def compare_with_tensorflow(test_case, device_type, data_type, shape, axis, reve
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    # of_out = CumsumJob().get()
-    # # TensorFlow
-    # with tf.GradientTape(persistent=True) as tape:
-    #     x = tf.Variable(test_global_storage.Get("x"))
-    #     tf_out = tf.math.cumsum(x, axis=axis, exclusive=exclusive, reverse=reverse)
-    # loss_diff = test_global_storage.Get("loss_diff")
-    # tf_x_diff = tape.gradient(tf_out, x, loss_diff)
+    of_out = CumsumJob().get()
 
-    # assert np.allclose(of_out.numpy(), tf_out.numpy(), atol=1e-03), np.max(np.abs(of_out.numpy() - tf_out.numpy()))
-    # assert np.allclose(test_global_storage.Get("x_diff"), tf_x_diff.numpy(), atol=1e-03)
+    # TensorFlow
+    with tf.GradientTape(persistent=True) as tape:
+        x = tf.Variable(test_global_storage.Get("x"), dtype=tf.float32)
+        tf_out = tf.math.cumsum(x, axis=axis, exclusive=exclusive, reverse=reverse)
+    loss_diff = test_global_storage.Get("loss_diff")
+    tf_x_diff = tape.gradient(tf_out, x, loss_diff)
+
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), atol=1e-03), np.max(np.abs(of_out.numpy() - tf_out.numpy()))
+    assert np.allclose(test_global_storage.Get("x_diff"), tf_x_diff.numpy(), atol=1e-03)
 
 def test_cumsum(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
-    # arg_dict["data_type"] = ["double", "float32", "int64", "int32"]
-    arg_dict["data_type"] = ["int32"]
+    arg_dict["data_type"] = ["double", "float32", "int64", "int32"]
     arg_dict["shape"] = [(5, 4, 3)]
     arg_dict["axis"] = [0, 1, 2]
     arg_dict["reverse"] = [True, False]
     arg_dict["exclusive"] = [True, False]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(test_case, *arg)
-
-
-# #----------------------Debug code-------------------------
-# from absl import app
-# from absl.testing import absltest
-
-# flow.unittest.register_test_cases(
-#     scope=globals(),
-#     directory=os.path.dirname(os.path.realpath(__file__)),
-#     filter_by_num_nodes=lambda x: x == 1,
-#     base_class=absltest.TestCase,
-# )
-
-
-# def main(argv):
-#     flow.env.init()
-#     absltest.main()
-
-
-# if __name__ == "__main__":
-#     app.run(main)

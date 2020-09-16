@@ -1874,3 +1874,23 @@ def invert_permutation(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("math.cumsum")
+def cumsum(input, axis=0, exclusive=False, reverse=False, name=None):
+    if axis < 0:
+        axis < len(input.shape)
+    assert axis >= 0 and axis < len(input.shape)
+    y = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("CumSum_"))
+        .Op("cumsum")
+        .Input("in", [input])
+        .Attr("axis", int(axis))
+        .Attr("exclusive", bool(exclusive))
+        .Attr("reverse", bool(reverse))
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+    return y
