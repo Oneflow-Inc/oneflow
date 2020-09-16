@@ -77,18 +77,35 @@ void Networker::HandlerReceiveSendMsgFromSrcMachine(const NetworkerMsg& msg) {
   uint64_t token = msg.token;
   CHECK(token != -1);
 
+  // There are two ways to trigger the creation of NetworkerStatus:
+  //   1. the dst machine receives SendMsg from src machine
+  //   2. time the dst machine calls the Receive() method.
+  // The early party is responsible for creating the NetworkerStatus,
+  // and the late party is responsible for checking the state and calling the DoRead() operation.
+  // Early arrival and late arrival are within the protection scope of lock(status_lock_),
+  // so there will be no early or late arrival at the same time.
+
   // prepare networker status for this token.
   // store callback.
   NetworkerStatus* stat = nullptr;
-  bool is_recv_ready = false;
+
+  // if recv_before_send is ture, it means the Receive() method has been called before this handler
+  bool recv_before_send = false;
   {
     std::unique_lock<std::mutex> lock(status_lock_);
     auto it = token2status_.find(token);
     if (it == token2status_.end()) {
       token2status_.emplace(token, NetworkerStatus(token));
       stat = &(token2status_.at(token));
+
+      // init stat
+      // These three members must be initialized in the block protected by lock
+      //  to prevent multithreaded access bugs
+      stat->size = msg.size;
+      stat->src_machine_id = msg.src_machine_id;
+      stat->dst_machine_id = msg.dst_machine_id;
     } else {
-      is_recv_ready = true;
+      recv_before_send = true;
       stat = &(it->second);
     }
   }
@@ -97,21 +114,15 @@ void Networker::HandlerReceiveSendMsgFromSrcMachine(const NetworkerMsg& msg) {
   CHECK(stat->src_mem_token == nullptr);
   stat->src_mem_token = msg.src_mem_token;
 
-  if (is_recv_ready) {
+  if (recv_before_send) {
     // it means the local machine has call Networker::Receive() before this handler
     // check status
     CHECK_EQ(stat->size, msg.size);
     CHECK_EQ(stat->src_machine_id, msg.src_machine_id);
     CHECK_EQ(stat->dst_machine_id, msg.dst_machine_id);
+
+    // the recv is ready, and the send is ready too, so call DoRead();
     DoRead(token);
-  } else {
-    // init and wait for message from source machine
-    CHECK(stat->callback == nullptr);
-    CHECK(stat->is_recv_ready == false);
-    CHECK(stat->dst_mem_token == nullptr);
-    stat->size = msg.size;
-    stat->src_machine_id = msg.src_machine_id;
-    stat->dst_machine_id = msg.dst_machine_id;
   }
 }
 
@@ -127,6 +138,8 @@ void Networker::HandlerReceiveAckMsgFromDstMachine(const NetworkerMsg& msg) {
   uint64_t token = msg.token;
   CHECK(token != -1);
 
+  std::function<void()> callback;
+
   // get status from map
   NetworkerStatus* stat = nullptr;
   {
@@ -134,25 +147,22 @@ void Networker::HandlerReceiveAckMsgFromDstMachine(const NetworkerMsg& msg) {
     auto it = token2status_.find(token);
     CHECK(it != token2status_.end());
     stat = &(it->second);
-  }
 
-  // check msg == stat
-  CHECK_EQ(stat->src_mem_token, msg.src_mem_token);
-  CHECK_EQ(stat->size, msg.size);
-  CHECK_EQ(stat->src_machine_id, msg.src_machine_id);
-  CHECK_EQ(stat->dst_machine_id, msg.dst_machine_id);
-  CHECK(stat->callback != nullptr);
+    // check msg == stat
+    CHECK_EQ(stat->src_mem_token, msg.src_mem_token);
+    CHECK_EQ(stat->size, msg.size);
+    CHECK_EQ(stat->src_machine_id, msg.src_machine_id);
+    CHECK_EQ(stat->dst_machine_id, msg.dst_machine_id);
+    CHECK(stat->callback != nullptr);
 
-  // Do Send callback
-  stat->callback();
+    callback = stat->callback;
 
-  // Recovery status
-  {
-    std::unique_lock<std::mutex> lock(status_lock_);
-    auto it = token2status_.find(token);
-    CHECK(it != token2status_.end());
+    // Recovery status
     token2status_.erase(it);
   }
+
+  // Do Send callback
+  callback();
 }
 
 void Networker::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, std::size_t size,
@@ -193,15 +203,24 @@ void Networker::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::
   // prepare networker status for this token.
   // store callback.
   NetworkerStatus* stat = nullptr;
-  bool is_send_ready = false;
+
+  // if recv_before_send is ture, it means the SendMsg has been handled before this Receive called.
+  bool send_before_recv = false;
   {
     std::unique_lock<std::mutex> lock(status_lock_);
     auto it = token2status_.find(token);
     if (it == token2status_.end()) {
       token2status_.emplace(token, NetworkerStatus(token));
       stat = &(token2status_.at(token));
+
+      // init stat
+      // These three members must be initialized in the block protected by lock
+      //  to prevent multithreaded access bugs
+      stat->size = size;
+      stat->src_machine_id = src_machine_id;
+      stat->dst_machine_id = this_machine_id_;
     } else {
-      is_send_ready = true;
+      send_before_recv = true;
       stat = &(it->second);
     }
   }
@@ -211,19 +230,15 @@ void Networker::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::
   CHECK(stat->dst_mem_token == nullptr);
   stat->dst_mem_token = comm_net_->RegisterMemory(ptr, size);
 
-  if (is_send_ready) {
+  if (send_before_recv) {
     // it means the source machine has send message to this machine
     // check status
-    CHECK(stat->is_send_ready);
     CHECK_EQ(stat->size, size);
     CHECK_EQ(stat->src_machine_id, src_machine_id);
     CHECK_EQ(stat->dst_machine_id, this_machine_id_);
+
+    // the recv is ready, and the send is ready too, so call DoRead();
     DoRead(token);
-  } else {
-    // init and wait for message from source machine
-    stat->size = size;
-    stat->src_machine_id = src_machine_id;
-    stat->dst_machine_id = this_machine_id_;
   }
 }
 
