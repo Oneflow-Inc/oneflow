@@ -76,10 +76,6 @@ void DestroyGlobalSession(std::string* error_str) {
   return oneflow::DestroyGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
-void StartGlobalSession(std::string* error_str) {
-  return oneflow::StartGlobalSession().GetDataAndSerializedErrorProto(error_str);
-}
-
 void StopGlobalSession(std::string* error_str) {
   return oneflow::StopGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }

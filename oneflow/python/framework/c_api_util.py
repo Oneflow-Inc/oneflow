@@ -131,7 +131,7 @@ def DestroyGlobalSession():
 
 
 def StartGlobalSession():
-    error_str = oneflow_internal.StartGlobalSession()
+    error_str = oneflow_api.StartGlobalSession()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
