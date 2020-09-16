@@ -32,6 +32,7 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
+    func_config.enable_fuse_add_to_output(True)
 
     @flow.global_function(type="train", function_config=func_config)
     def MatmulJob():
@@ -50,7 +51,15 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
-            loss = flow.matmul(a, b, transpose_a, transpose_b)
+            out = flow.matmul(a, b, transpose_a, transpose_b)
+            c = flow.get_variable(
+                "c",
+                shape=out.shape,
+                dtype=flow.float,
+                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
+                trainable=True,
+            )
+            loss = out + c
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(loss)
@@ -59,6 +68,8 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
             flow.watch_diff(a, test_global_storage.Setter("a_diff"))
             flow.watch(b, test_global_storage.Setter("b"))
             flow.watch_diff(b, test_global_storage.Setter("b_diff"))
+            flow.watch(c, test_global_storage.Setter("c"))
+            flow.watch_diff(c, test_global_storage.Setter("c_diff"))
             flow.watch(loss, test_global_storage.Setter("loss"))
             flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
 
@@ -72,16 +83,20 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
     with tf.GradientTape(persistent=True) as tape:
         a = tf.Variable(test_global_storage.Get("a"))
         b = tf.Variable(test_global_storage.Get("b"))
+        c = tf.Variable(test_global_storage.Get("c"))
         tf_out = tf.matmul(a, b, transpose_a, transpose_b)
+        tf_out = tf_out + c
     loss_diff = test_global_storage.Get("loss_diff")
     tf_a_diff = tape.gradient(tf_out, a, loss_diff)
     tf_b_diff = tape.gradient(tf_out, b, loss_diff)
+    tf_c_diff = tape.gradient(tf_out, c, loss_diff)
 
     assert np.allclose(of_out.numpy(), tf_out.numpy(), atol=1e-03), np.max(
         np.abs(of_out.numpy() - tf_out.numpy())
     )
     assert np.allclose(test_global_storage.Get("a_diff"), tf_a_diff.numpy(), atol=1e-03)
     assert np.allclose(test_global_storage.Get("b_diff"), tf_b_diff.numpy(), atol=1e-03)
+    assert np.allclose(test_global_storage.Get("c_diff"), tf_c_diff.numpy(), atol=1e-03)
 
 
 def filter_args(arg_list):
