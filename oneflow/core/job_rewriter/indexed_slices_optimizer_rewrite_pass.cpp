@@ -85,8 +85,12 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
         || user_op_conf.attr<float>("weight_decay") != 0.0f) {
       return;
     }
-
     const LogicalBlobId& model_lbi = GenLogicalBlobId(user_op_conf.input("model", 0));
+    if (dst_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(user_op_conf.input("model_diff", 0)))
+            .data_type()
+        != dst_node->LogicalBlobDesc4Lbi(model_lbi).data_type()) {
+      return;
+    }
     model_op_name = model_lbi.op_name();
     user_op::UserOpConfWrapperBuilder indexed_slices_op_builder("System-Optimizer-IndexedSlices-"
                                                                 + model_op_name);
