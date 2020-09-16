@@ -29,6 +29,10 @@ def GetDefaultSession():
     return _default_session
 
 
+def HasDefaultSession():
+    return _default_session is not None
+
+
 def OpenDefaultSession(sess):
     global _default_session
     assert _default_session is None

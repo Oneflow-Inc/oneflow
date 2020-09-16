@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/functional.h>
+#include "oneflow/core/common/global.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/thread/glog_failure_function.h"
 
 namespace py = pybind11;
 
@@ -22,6 +25,9 @@ namespace oneflow {
 
 PYBIND11_MODULE(oneflow_api, m) {
   m.def("EagerExecutionEnabled", []() { return EagerExecutionEnabled(); });
+  m.def("SetFailureCallback", [](const GlogFailureFunction::py_failure_callback& f) {
+    Global<GlogFailureFunction>::Get()->SetCallback(f);
+  });
 }
 
 }  // namespace oneflow

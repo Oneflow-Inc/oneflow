@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine_scope.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
+#include "oneflow/core/thread/glog_failure_function.h"
 
 namespace oneflow {
 
@@ -74,6 +75,8 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
 }  // namespace
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
+  Global<GlogFailureFunction>::New();
+  Global<GlogFailureFunction>::Get()->UpdateThreadLocal();
   InitLogging(env_proto.cpp_logging_conf());
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
@@ -117,6 +120,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
 #endif
+  Global<GlogFailureFunction>::Delete();
 }
 
 }  // namespace oneflow

@@ -27,6 +27,8 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import traceback
+import oneflow as flow
+import oneflow.python.framework.session_context as session_ctx
 
 
 @oneflow_export("enable_eager_execution")
@@ -44,6 +46,22 @@ def enable_eager_environment(val=True):
     return c_api_util.EnableEagerEnvironment(val)
 
 
+kMainThreadPanic = 0
+kNonMainThreadPanic = 1
+
+
+def failure_callback(error_str):
+    if session_ctx.HasDefaultSession:
+        sess = session_ctx.GetDefaultSession()
+        sess.SetErrStr(error_str)
+        sess.cond_var_.acquire()
+        sess.cond_var_.notify()
+        sess.cond_var_.release()
+        return kMainThreadPanic
+    else:
+        return kNonMainThreadPanic
+
+
 @oneflow_export("env.init")
 def api_env_init() -> bool:
     r"""Init environment for job
@@ -51,7 +69,9 @@ def api_env_init() -> bool:
     Returns:
         bool: [description]
     """
-    return enable_if.unique([env_init, do_nothing])()
+    ret = enable_if.unique([env_init, do_nothing])()
+    flow.oneflow_api.SetFailureCallback(failure_callback)
+    return ret
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)

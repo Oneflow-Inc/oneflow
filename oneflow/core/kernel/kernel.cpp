@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/gdb.h"
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
+#include "oneflow/core/thread/glog_failure_function.h"
 
 namespace oneflow {
 
@@ -55,10 +56,19 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
   InitConstBufBlobs(ctx.device_ctx, BnInOp2Blob);
 }
 
+bool kernel_failed = false;
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
-  Forward(ctx, BnInOp2Blob);
+  // TODO: wrap this in a lambda
+  if (kernel_failed) {
+    try {
+      Forward(ctx, BnInOp2Blob);
+    } catch (NonMainThreadPanic& e) {
+      kernel_failed = true;
+      LOG(ERROR) << "NonMainThreadPanic caught";
+    }
+  }
   gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
 }
 

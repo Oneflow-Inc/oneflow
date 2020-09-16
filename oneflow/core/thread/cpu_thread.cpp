@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/thread/cpu_thread.h"
+#include "oneflow/core/thread/glog_failure_function.h"
 
 namespace oneflow {
 
 CpuThread::CpuThread(int64_t thrd_id) {
   set_thrd_id(thrd_id);
   mut_actor_thread() = std::thread([this]() {
+    Global<GlogFailureFunction>::Get()->UpdateThreadLocal();
     ThreadCtx ctx;
 #ifdef WITH_CUDA
     ctx.cb_event_chan = nullptr;

@@ -78,6 +78,7 @@ class Session(object):
         self.backward_blob_register_ = blob_register_util.BlobRegister()
         self.InitNormalModeNoneScope()
         self.snapshot_mgr_ = SnapshotManager()
+        self.error_str_ = None
 
     @property
     def status(self):
@@ -244,8 +245,10 @@ class Session(object):
     def Sync(self):
         assert self.status_ is SessionStatus.RUNNING
         self.cond_var_.acquire()
-        while self.running_job_cnt_ > 0:
+        while self.running_job_cnt_ > 0 and self.err_str_ == None:
             self.cond_var_.wait()
+        if self.err_str_:
+            raise ValueError(self.err_str_)
         assert self.running_job_cnt_ == 0
         self.cond_var_.release()
 
@@ -348,6 +351,9 @@ class Session(object):
         if len(self.eager_global_function_desc_stack_) == 0:
             return None
         return self.eager_global_function_desc_stack_[0]
+
+    def SetErrStr(self, err_str):
+        self.err_str_ = err_str
 
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):
