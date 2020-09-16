@@ -47,6 +47,7 @@ void Transport::EnqueueTransportMsg(const TransportMsg& msg) { msg_channel_.Send
 void Transport::PollMsgChannel() {
   TransportMsg msg;
   while (msg_channel_.Receive(&msg) == kChannelStatusSuccess) {
+    /*
     std::cout << " cclog: Oh! I got one message : "
               << "\n ----  token = " << msg.token
               << "\n ----  src_mem_token = " << msg.src_mem_token
@@ -54,6 +55,7 @@ void Transport::PollMsgChannel() {
               << "\n ----  src_machine_id = " << msg.src_machine_id
               << "\n ----  dst_machine_id = " << msg.dst_machine_id
               << "\n ----  type = " << msg.type << std::endl;
+              */
     switch (msg.type) {
       case TransportMsgType::kSend: {
         HandlerAchievedTransportSendMsgFromSrcMachine(msg);
@@ -130,8 +132,6 @@ void Transport::HandlerAchievedTransportAckMsgFromDstMachine(const TransportMsg&
   // this handler means that:
   // this machine is src machine, and receive Ack msg from dst machine
   // The Send/Receive is done.
-  std::cout << "cclog: Recv ACK msg from dst machine, the src_mem_token is " << msg.src_mem_token
-            << std::endl;
   CHECK_EQ(msg.type, TransportMsgType::kAck);
   CHECK(msg.src_mem_token != nullptr);
   CHECK(msg.dst_mem_token != nullptr);
@@ -271,11 +271,13 @@ void Transport::DoRead(uint64_t token) {
     msg.src_mem_token = stat->src_mem_token;
     msg.dst_mem_token = stat->dst_mem_token;
     msg.type = TransportMsgType::kAck;
+    /*
     std::cout << "cclog: this_machine_id is " << this_machine_id_ << std::endl;
     std::cout << "cclog: Send ACK msg to src machine, the src_mem_token is " << msg.src_mem_token
               << " dst mem token is " << msg.dst_mem_token << std::endl;
     std::cout << "cclog: Send ACK msg to src machine id is " << msg.src_machine_id
               << " dst machine id is " << msg.dst_machine_id << std::endl;
+              */
     comm_net_->SendTransportMsg(msg.src_machine_id, msg);
 
     // Do Recive callback
