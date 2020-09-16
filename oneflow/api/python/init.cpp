@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/thread/glog_failure_function.h"
-#include "oneflow/api/python/helper.h"
+#include "oneflow/core/job/api_helper.h"
 
 namespace py = pybind11;
 
