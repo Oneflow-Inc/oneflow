@@ -42,7 +42,7 @@ class LoopOptimizer(GraphOptimizerBase):
         has_update = True
         while has_update:
             has_update = False
-            nodes = [n for n in g.get_nodes() if n.type == "Loop"]
+            nodes = [n for n in g.get_nodes() if n.op_type == "Loop"]
             for n in nodes:
                 has_update_tmp = self._TryMoveTransposeOutOfBodyGraph(n)
                 if has_update_tmp:
@@ -52,8 +52,11 @@ class LoopOptimizer(GraphOptimizerBase):
 
     @staticmethod
     def ConsumerNodesNum(graph, node):
-        MakeSure(len(node.output) == 1, "only consider node with only one output")
-        res = len(graph.FindOutputConsumers(node.output[0]))
+        MakeSure(
+            len(node.output_tensor_names) == 1,
+            "only consider node with only one output",
+        )
+        res = len(graph.FindOutputConsumers(node.output_tensor_names[0]))
         return res
 
     def _TryMoveTransposeOutOfBodyGraph(self, loop_node):
@@ -72,31 +75,33 @@ class LoopOptimizer(GraphOptimizerBase):
             # only consider two case: trans is output, or transpose > identity > output
             need_process = False
             if (
-                node.type == "Transpose"
+                node.op_type == "Transpose"
                 and self.ConsumerNodesNum(body_graph, node) <= 1
             ):
                 trans = node
-                new_output = node.input[0]
+                new_output = node.input_tensor_names[0]
                 body_graph.RemoveNode(node.name)
                 need_process = True
             elif (
-                node.type == "Identity"
-                and node.inputs[0].type == "Transpose"
+                node.op_type == "Identity"
+                and node.input_nodes[0].op_type == "Transpose"
                 and self.ConsumerNodesNum(body_graph, node) <= 1
-                and self.ConsumerNodesNum(body_graph, node.inputs[0]) <= 1
+                and self.ConsumerNodesNum(body_graph, node.input_nodes[0]) <= 1
             ):
-                trans = node.inputs[0]
-                new_output = node.inputs[0].input[0]
-                body_graph.RemoveNode(node.inputs[0].name)
+                trans = node.input_nodes[0]
+                new_output = node.input_nodes[0].input_tensor_names[0]
+                body_graph.RemoveNode(node.input_nodes[0].name)
                 body_graph.RemoveNode(node.name)
                 need_process = True
 
             if need_process:
                 # 2 correct body graph's output
                 body_outputs = body_graph.outputs
-                body_outputs[body_outputs.index(node.output[0])] = new_output
+                body_outputs[
+                    body_outputs.index(node.output_tensor_names[0])
+                ] = new_output
                 # 3 insert new node in parent graph
-                ori_perm = list(trans.get_attr("perm").ints)
+                ori_perm = trans.attrs["perm"]
                 new_perm = [0] + [
                     i + 1 for i in ori_perm
                 ]  # body output's rank is m > rank of loop's output is m+1
@@ -112,6 +117,9 @@ class LoopOptimizer(GraphOptimizerBase):
     def _ScanOutputs(cls, loop):
         # loop has 2+N inputs; loop has N+K outputs;
         # loop's body graph has 1+N+K outputs
-        loop_carried = len(loop.input) - 2
+        loop_carried = len(loop.input_tensor_names) - 2
         body_graph = loop.get_body_graphs()["body"]
-        return body_graph.outputs[loop_carried + 1 :], loop.output[loop_carried:]
+        return (
+            body_graph.outputs[loop_carried + 1 :],
+            loop.output_tensor_names[loop_carried:],
+        )

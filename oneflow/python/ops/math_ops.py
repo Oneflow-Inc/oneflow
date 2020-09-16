@@ -1797,18 +1797,23 @@ def tril(
     x: remote_blob_util.BlobDef, diagonal: int = 0, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Compute lower triangle of an matrix.
+    
     Args:
         x (remote_blob_util.BlobDef): Input Blob.
         diagonal (int): Diagonal offset, when diagonal > 0, diagonal offset up, 
                         otherwise, offset downward.
         name (Optional[str], optional): The name for the operation. Defaults to None.
+    
     Attention:
         The dimension of x must greater or equal to 2.
+    
     Returns:
         remote_blob_util.BlobDef: The lower triangle blob of input.
     
     For example:
+
     .. code-block:: python
+    
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
@@ -1824,6 +1829,7 @@ def tril(
                   [1, 2, 0, 0],
                   [1, 2, 3, 0],
                   [1, 2, 3, 4]]
+
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Tril_"))

@@ -39,7 +39,6 @@ CtrlServer::~CtrlServer() {
 
 CtrlServer::CtrlServer() : is_first_connect_(true), this_machine_addr_("") {
   Init();
-  if (Global<EnvDesc>::Get()->grpc_use_no_signal()) { grpc_use_signal(-1); }
   int port = Global<EnvDesc>::Get()->ctrl_port();
   grpc::ServerBuilder server_builder;
   server_builder.SetMaxMessageSize(INT_MAX);

@@ -14,14 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import oneflow.typing as tp
 from util import convert_to_onnx_and_check
-
-func_config = flow.FunctionConfig()
-func_config.default_data_type(flow.float)
 
 
 def test_concat_axis0(test_case):
-    @flow.global_function(func_config)
+    @flow.global_function()
     def concat():
         variables = []
         for i in range(4):
@@ -39,7 +37,7 @@ def test_concat_axis0(test_case):
 
 
 def test_concat_axis1(test_case):
-    @flow.global_function(func_config)
+    @flow.global_function()
     def concat():
         variables = []
         for i in range(4):

@@ -1724,7 +1724,6 @@ def softmax_cross_entropy_with_logits(
         def softmax_cross_entropy_Job(input: tp.Numpy.Placeholder((3, 3), dtype=flow.float32),
                                     labels: tp.Numpy.Placeholder((3, 3), dtype=flow.float32)
         ) -> tp.Numpy:
-            input = flow.nn.softmax(input)
             loss = flow.nn.softmax_cross_entropy_with_logits(labels=labels,
                                                             logits=input)
             return loss
@@ -1800,7 +1799,6 @@ def sparse_softmax_cross_entropy_with_logits(
         def sparse_softmax_cross_entropy_Job(input: tp.Numpy.Placeholder((3, 3), dtype=flow.float32),
                                              labels: tp.Numpy.Placeholder((3, ), dtype=flow.int32)
         ) -> tp.Numpy:
-            input = flow.nn.softmax(input)
             loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,
                                                                     logits=input)
             return loss
@@ -1893,7 +1891,6 @@ def sigmoid_cross_entropy_with_logits(
         def sigmoid_cross_entropy_Job(input: tp.Numpy.Placeholder((3, 2), dtype=flow.float32),
                                     labels: tp.Numpy.Placeholder((3, 2), dtype=flow.float32)
         ) -> tp.Numpy:
-            input = flow.math.sigmoid(input)
             loss = flow.nn.sigmoid_cross_entropy_with_logits(labels=labels,
                                                             logits=input)
             return loss
