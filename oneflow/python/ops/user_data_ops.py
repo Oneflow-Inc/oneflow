@@ -913,3 +913,125 @@ def ofrecord_image_classification_reader(
     label = flow.tensor_buffer_to_tensor(label, dtype=flow.int32, instance_shape=[1])
     label = flow.squeeze(label, axis=[-1])
     return image, label
+
+
+@oneflow_export("data.TFRecordRawDecoder")
+def TFRecordRawDecoder(
+    input_blob: BlobDef,
+    blob_name: str,
+    shape: Sequence[int],
+    dtype: dtype_util.dtype,
+    dim1_varying_length: bool = False,
+    auto_zero_padding: bool = False,
+    name: Optional[str] = None,
+) -> BlobDef:
+    if name is None:
+        name = id_util.UniqueStr("TFRecordRawDecoder_")
+    return (
+        flow.user_op_builder(name)
+        .Op("tfrecord_raw_decoder")
+        .Input("in", [input_blob])
+        .Output("out")
+        .Attr("name", blob_name)
+        .Attr("shape", shape)
+        .Attr("data_type", dtype)
+        .Attr("dim1_varying_length", dim1_varying_length)
+        .Attr("auto_zero_padding", auto_zero_padding)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("data.TFRecordImageDecoderRandomCrop")
+def TFRecordImageDecoderRandomCrop(
+    input_blob: BlobDef,
+    blob_name: str,
+    color_space: str = "BGR",
+    num_attempts: int = 10,
+    seed: Optional[int] = None,
+    random_area: Sequence[float] = [0.08, 1.0],
+    random_aspect_ratio: Sequence[float] = [0.75, 1.333333],
+    name: str = "TFRecordImageDecoderRandomCrop",
+) -> BlobDef:
+    assert isinstance(name, str)
+    if seed is not None:
+        assert name is not None
+    module = flow.find_or_create_module(
+        name,
+        lambda: TFRecordImageDecoderRandomCropModule(
+            blob_name=blob_name,
+            color_space=color_space,
+            num_attempts=num_attempts,
+            random_seed=seed,
+            random_area=random_area,
+            random_aspect_ratio=random_aspect_ratio,
+            name=name,
+        ),
+    )
+    return module(input_blob)
+
+
+class TFRecordImageDecoderRandomCropModule(module_util.Module):
+    def __init__(
+        self,
+        blob_name: str,
+        color_space: str,
+        num_attempts: int,
+        random_seed: Optional[int],
+        random_area: Sequence[float],
+        random_aspect_ratio: Sequence[float],
+        name: str,
+    ):
+        module_util.Module.__init__(self, name)
+        seed, has_seed = flow.random.gen_seed(random_seed)
+        self.op_module_builder = (
+            flow.user_op_module_builder("tfrecord_image_decoder_random_crop")
+            .InputSize("in", 1)
+            .Output("out")
+            .Attr("name", blob_name)
+            .Attr("color_space", color_space)
+            .Attr("num_attempts", num_attempts)
+            .Attr("random_area", random_area)
+            .Attr("random_aspect_ratio", random_aspect_ratio)
+            .Attr("has_seed", has_seed)
+            .Attr("seed", seed)
+            .CheckAndComplete()
+        )
+        self.op_module_builder.user_op_module.InitOpKernel()
+
+    def forward(self, input: BlobDef):
+        if self.call_seq_no == 0:
+            name = self.module_name
+        else:
+            name = id_util.UniqueStr("TFRecordImageDecoderRandomCrop_")
+
+        return (
+            self.op_module_builder.OpName(name)
+            .Input("in", [input])
+            .Build()
+            .InferAndTryRun()
+            .SoleOutputBlob()
+        )
+
+
+@oneflow_export("data.TFRecordImageDecoder")
+def TFRecordImageDecoder(
+    input_blob: BlobDef,
+    blob_name: str,
+    color_space: str = "BGR",
+    name: Optional[str] = None,
+) -> BlobDef:
+    if name is None:
+        name = id_util.UniqueStr("TFRecordImageDecoder_")
+    return (
+        flow.user_op_builder(name)
+        .Op("tfrecord_image_decoder")
+        .Input("in", [input_blob])
+        .Output("out")
+        .Attr("name", blob_name)
+        .Attr("color_space", color_space)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

@@ -368,3 +368,52 @@ def decode_random(
 
     interpret_util.ConsistentForward(op_conf)
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("data.tfrecord_reader")
+def tfrecord_reader(
+    ofrecord_dir: str,
+    batch_size: int = 1,
+    data_part_num: int = 1,
+    part_name_prefix: str = "part-",
+    part_name_suffix_length: int = -1,
+    random_shuffle: bool = False,
+    shuffle_buffer_size: int = 1024,
+    shuffle_after_epoch: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Get ofrecord object from ofrecord dataset.
+
+    Args:
+        tfrecord_dir (str): Path to tfrecord dataset.
+        batch_size (int, optional): Batch size. Defaults to 1.
+        data_part_num (int, optional): Number of dataset's partitions. Defaults to 1.
+        part_name_prefix (str, optional): Prefix of dataset's parition file. Defaults to "part-".
+        part_name_suffix_length (int, optional): Total length of padded suffix number , -1 means no padding. eg: 3 for `part-001`. Defaults to -1.
+        random_shuffle (bool, optional): Determines records shuffled or not. Defaults to False.
+        shuffle_buffer_size (int, optional): Shuffle buffer size. Defaults to 1024.
+        shuffle_after_epoch (bool, optional): Shuffled or not after each epoch. Defaults to False.
+        name (Optional[str], optional): Optional name. Defaults to None.
+        
+    Returns:
+        remote_blob_util.BlobDef: [description]
+    """
+    if name is None:
+        name = id_util.UniqueStr("TFRecord_Reader_")
+
+    return (
+        flow.user_op_builder(name)
+        .Op("TFRecordReader")
+        .Output("out")
+        .Attr("data_dir", ofrecord_dir)
+        .Attr("data_part_num", data_part_num)
+        .Attr("batch_size", batch_size)
+        .Attr("part_name_prefix", part_name_prefix)
+        .Attr("random_shuffle", random_shuffle)
+        .Attr("shuffle_buffer_size", shuffle_buffer_size)
+        .Attr("shuffle_after_epoch", shuffle_after_epoch)
+        .Attr("part_name_suffix_length", part_name_suffix_length)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

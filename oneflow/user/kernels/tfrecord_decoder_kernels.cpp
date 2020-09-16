@@ -33,11 +33,8 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void DecodeOneRawTFRecord(const tensorflow::Feature& feature, 
-                          T* dptr, 
-                          int64_t sample_elem_cnt,
-                          bool dim1_varying_length, 
-                          bool auto_zero_padding) {
+void DecodeOneRawTFRecord(const tensorflow::Feature& feature, T* dptr, int64_t sample_elem_cnt,
+                          bool dim1_varying_length, bool auto_zero_padding) {
   if (feature.has_bytes_list()) {
     CHECK_EQ(feature.bytes_list().value_size(), 1);
     const auto& value0 = feature.bytes_list().value(0);
@@ -98,7 +95,8 @@ class TFRecordRawDecoderKernel final : public user_op::OpKernel {
       CHECK(record.features().feature().find(name) != record.features().feature().end())
           << "Field " << name << " not found";
       const tensorflow::Feature& feature = record.features().feature().at(name);
-      DecodeOneRawTFRecord<T>(feature, dptr, sample_elem_cnt, auto_zero_padding, dim1_varying_length);
+      DecodeOneRawTFRecord<T>(feature, dptr, sample_elem_cnt, auto_zero_padding,
+                              dim1_varying_length);
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -121,18 +119,17 @@ REGISTER_RAW_DECODER_KERNEL(uint8_t)
 
 namespace {
 
-void DecodeRandomCropImageFromOneRecord(const tensorflow::Example& record, TensorBuffer* buffer,
-                                        const std::string& name, const std::string& color_space,
-                                        RandomCropGenerator* random_crop_gen) {
-  const tensorflow::Features &features = record.features();
-  CHECK(features.feature().find(name) != features.feature().end()) << "Field " << name << " not found";
+void DecodeRandomCropImageFromOneExample(const tensorflow::Example& example, TensorBuffer* buffer,
+                                         const std::string& name, const std::string& color_space,
+                                         RandomCropGenerator* random_crop_gen) {
+  const tensorflow::Features& features = example.features();
+  CHECK(features.feature().find(name) != features.feature().end())
+      << "Field " << name << " not found";
   const tensorflow::Feature& feature = features.feature().at(name);
   CHECK(feature.has_bytes_list());
   CHECK(feature.bytes_list().value_size() == 1);
   const std::string& src_data = feature.bytes_list().value(0);
 
-  // cv::_InputArray image_data(src_data.data(), src_data.size());
-  // cv::Mat image = cv::imdecode(image_data, cv::IMREAD_ANYCOLOR);
   cv::Mat image =
       cv::imdecode(cv::Mat(1, src_data.size(), CV_8UC1, (void*)(src_data.data())),  // NOLINT
                    ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
@@ -189,7 +186,24 @@ class TFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    // to be added ...
+    auto* crop_window_generators = dynamic_cast<RandomCropKernelState*>(state);
+    CHECK_NOTNULL(crop_window_generators);
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int64_t record_num = out_blob->shape().At(0);
+    CHECK(record_num > 0);
+    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    CHECK_EQ(out_blob->shape(), in_blob->shape());
+    auto records = in_blob->dptr<tensorflow::Example>();
+    TensorBuffer* buffers = out_blob->mut_dptr<TensorBuffer>();
+    const std::string& name = ctx->Attr<std::string>("name");
+    const std::string& color_space = ctx->Attr<std::string>("color_space");
+
+    MultiThreadLoop(record_num, [&](size_t i) {
+      const tensorflow::Example& example = *(records + i);
+      TensorBuffer* buffer = buffers + i;
+      RandomCropGenerator* gen = crop_window_generators->GetGenerator(i);
+      DecodeRandomCropImageFromOneExample(example, buffer, name, color_space, gen);
+    });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -207,7 +221,21 @@ class TFRecordImageDecoderKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    // to be added ...
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int64_t record_num = out_blob->shape().At(0);
+    CHECK(record_num > 0);
+    user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    CHECK_EQ(out_blob->shape(), in_blob->shape());
+    const tensorflow::Example* records = in_blob->dptr<tensorflow::Example>();
+    TensorBuffer* buffers = out_blob->mut_dptr<TensorBuffer>();
+    const std::string& name = ctx->Attr<std::string>("name");
+    const std::string& color_space = ctx->Attr<std::string>("color_space");
+
+    MultiThreadLoop(record_num, [&](size_t i) {
+      const tensorflow::Example& example = *(records + i);
+      TensorBuffer* buffer = buffers + i;
+      DecodeRandomCropImageFromOneExample(example, buffer, name, color_space, nullptr);
+    });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

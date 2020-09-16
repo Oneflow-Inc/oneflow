@@ -37,7 +37,7 @@ class TFRecordParser final : public Parser<TensorBuffer> {
              user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     tensorflow::Example* dptr = out_tensor->mut_dptr<tensorflow::Example>();
-    
+
     MultiThreadLoop(batch_data->size(), [&](size_t i) {
       TensorBuffer* buffer = batch_data->at(i).get();
       CHECK(dptr[i].ParseFromArray(buffer->data<char>(), buffer->shape().elem_cnt()));

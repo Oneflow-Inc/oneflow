@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/lib/crc32c.h"
+#include "oneflow/user/summary/crc32c.h"
 
 namespace oneflow {
 namespace data {
@@ -71,10 +71,9 @@ class TFRecordDataset final : public Dataset<TensorBuffer> {
   }
 
  private:
-  uint32_t GetMaskedCrc32CValue(const char* data, size_t size)
-  {
-    using namespace oneflow::crc32c;
-    return Mask(Extend(0, data, size));
+  uint32_t GetMaskedCrc32CValue(const char* data, size_t size) {
+    using namespace oneflow::summary;
+    return MaskCrc32(GetCrc32(data, size));
   }
 
   void ReadSample(TensorBuffer& tensor) {
@@ -94,18 +93,17 @@ class TFRecordDataset final : public Dataset<TensorBuffer> {
 
     // read length of record and check
     if (in_stream_->ReadFully(pTfRecordLen, sizeof(int64_t)) != 0) {
-       ShuffleAfterEpoch();
-       CHECK_EQ(in_stream_->ReadFully(pTfRecordLen, sizeof(int64_t)), 0);
+      ShuffleAfterEpoch();
+      CHECK_EQ(in_stream_->ReadFully(pTfRecordLen, sizeof(int64_t)), 0);
     }
     CHECK_GT(tfrecordLen, 0);
     CHECK_EQ(in_stream_->ReadFully(pMaskedCrc32OfLen, sizeof(uint32_t)), 0);
-    CHECK_EQ(maskedCrc32OfLen, 
-             GetMaskedCrc32CValue(pTfRecordLen, sizeof(uint64_t)));
+    CHECK_EQ(maskedCrc32OfLen, GetMaskedCrc32CValue(pTfRecordLen, sizeof(uint64_t)));
 
     // read data and check
     tensor.Resize(Shape({tfrecordLen}), DataType::kChar);
     CHECK_EQ(in_stream_->ReadFully(tensor.mut_data<char>(), tfrecordLen), 0);
-    
+
     char* pMaskedCrc32OfData = reinterpret_cast<char*>(&maskedCrc32OfData);
     CHECK_EQ(in_stream_->ReadFully(pMaskedCrc32OfData, sizeof(uint32_t)), 0);
     CHECK_EQ(maskedCrc32OfData, GetMaskedCrc32CValue(tensor.data<char>(), tfrecordLen));
