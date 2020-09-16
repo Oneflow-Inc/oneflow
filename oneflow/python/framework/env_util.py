@@ -47,7 +47,7 @@ def enable_eager_environment(val=True):
 
 
 kMainThreadPanic = 0
-kNonMainThreadPanic = 1
+kWorkerThreadPanic = 1
 
 
 def failure_callback(error_str):
@@ -59,7 +59,7 @@ def failure_callback(error_str):
         sess.cond_var_.release()
         return kMainThreadPanic
     else:
-        return kNonMainThreadPanic
+        return kWorkerThreadPanic
 
 
 @oneflow_export("env.init")

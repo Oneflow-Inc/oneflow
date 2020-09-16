@@ -9,8 +9,8 @@ void PyFailureFunction() {
   const bool is_main_thread = Global<GlogFailureFunction>::Get()->IsMainThread();
   if (ret == kMainThreadPanic && is_main_thread) {
     throw MainThreadPanic();
-  } else if (ret == kNonMainThreadPanic && is_main_thread == false) {
-    throw NonMainThreadPanic();
+  } else if (ret == kWorkerThreadPanic && is_main_thread == false) {
+    throw WorkerThreadPanic();
   } else {
     LOG(ERROR) << "failure callback return code: " << ret << ", is_main_thread: " << is_main_thread
                << ", aborting";

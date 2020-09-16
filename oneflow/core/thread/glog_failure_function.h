@@ -5,11 +5,11 @@
 namespace oneflow {
 
 struct MainThreadPanic : public std::exception {};
-struct NonMainThreadPanic : public std::exception {};
+struct WorkerThreadPanic : public std::exception {};
 
 const int kDefaultPanic = -1;
 const int kMainThreadPanic = 0;
-const int kNonMainThreadPanic = 1;
+const int kWorkerThreadPanic = 1;
 
 class GlogFailureFunction final {
  public:

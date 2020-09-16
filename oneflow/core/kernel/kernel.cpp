@@ -64,9 +64,9 @@ void Kernel::Launch(const KernelCtx& ctx,
   if (kernel_failed) {
     try {
       Forward(ctx, BnInOp2Blob);
-    } catch (NonMainThreadPanic& e) {
+    } catch (WorkerThreadPanic& e) {
       kernel_failed = true;
-      LOG(ERROR) << "NonMainThreadPanic caught";
+      LOG(ERROR) << "WorkerThreadPanic caught";
     }
   }
   gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
