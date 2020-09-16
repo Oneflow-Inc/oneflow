@@ -25,8 +25,9 @@ namespace py = pybind11;
 namespace oneflow {
 
 PYBIND11_MODULE(oneflow_api, m) {
+  py::register_exception<MainThreadPanic>(m, "MainThreadPanic");
   m.def("EagerExecutionEnabled", []() { return EagerExecutionEnabled(); });
-  m.def("SetFailureCallback", [](const GlogFailureFunction::py_failure_callback& f) {
+  m.def("SetPanicCallback", [](const GlogFailureFunction::py_failure_callback& f) {
     Global<GlogFailureFunction>::Get()->SetCallback(f);
   });
   m.def("StartGlobalSession", []() {

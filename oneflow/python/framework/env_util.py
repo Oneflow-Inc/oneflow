@@ -50,10 +50,10 @@ kMainThreadPanic = 0
 kWorkerThreadPanic = 1
 
 
-def failure_callback(error_str):
+def panic_callback(err_str):
     if session_ctx.HasDefaultSession:
         sess = session_ctx.GetDefaultSession()
-        sess.SetErrStr(error_str)
+        sess.SetPanicErrStr(err_str)
         sess.cond_var_.acquire()
         sess.cond_var_.notify()
         sess.cond_var_.release()
@@ -70,7 +70,7 @@ def api_env_init() -> bool:
         bool: [description]
     """
     ret = enable_if.unique([env_init, do_nothing])()
-    flow.oneflow_api.SetFailureCallback(failure_callback)
+    flow.oneflow_api.SetPanicCallback(panic_callback)
     return ret
 
 
