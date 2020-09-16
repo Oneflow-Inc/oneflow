@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef ONEFLOW_CORE_COMMON_CONVERT_H_
-#define ONEFLOW_CORE_COMMON_CONVERT_H_
+#ifndef ONEFLOW_CORE_COMMON_CONVERTER_H_
+#define ONEFLOW_CORE_COMMON_CONVERTER_H_
 
 #include <cuda_runtime.h>
 #include <cstdint>
@@ -27,12 +27,12 @@ namespace oneflow {
 template<typename T>
 struct IsFloatingOrHalf {
   static constexpr bool value = IsFloating<T>::value || IsFloat16<T>::value;
-}
+};
 
 template<typename T>
 struct IsArithmeticOrHalf {
   static constexpr bool value = std::is_arithmetic<T>::value || IsFloat16<T>::value;
-}
+};
 
 template<typename From, typename To>
 struct NeedsClamp {
@@ -72,10 +72,11 @@ Clamp(U value, ret_type<T>) {
 
 // floating-point -> unsigned types
 template<typename T, typename U>
-    OF_DEVICE_FUNC constexpr std::enable_if_t
-    < NeedsClamp<U, T>::value&& std::is_signed<U>::value&& IsFloatingOrHalf<U>::value&&
-          std::is_unsigned<T>::value;
-T > Clamp(U value, ret_type<T>) {
+OF_DEVICE_FUNC constexpr std::enable_if_t<NeedsClamp<U, T>::value && std::is_signed<U>::value
+                                              && IsFloatingOrHalf<U>::value
+                                              && std::is_unsigned<T>::value,
+                                          T>
+Clamp(U value, ret_type<T>) {
   return value <= GetMinVal<T>() ? GetMinVal<T>()
                                  : value >= GetMaxVal<T>() ? GetMaxVal<T>() : static_cast<T>(value);
 }
@@ -102,8 +103,7 @@ Clamp(U value, ret_type<T>) {
 
 // not clamp
 template<typename T, typename U>
-OF_DEVICE_FUNC constexpr std::enable_if_t<!needs_clamp<U, T>::value, T> Clamp(U value,
-                                                                              ret_type<T>) {
+OF_DEVICE_FUNC constexpr std::enable_if_t<!NeedsClamp<U, T>::value, T> Clamp(U value, ret_type<T>) {
   return value;
 }
 
@@ -149,9 +149,11 @@ OF_DEVICE_FUNC constexpr bool Clamp(T value, ret_type<bool>) {
 
 template<typename T>
 OF_DEVICE_FUNC constexpr float16 Clamp(T value, ret_type<float16>) {
-  float f = Clamp(value, ret_type<float>());
-  f = f < GetMinVal(float16) ? GetMinVal(float16) : f > GetMaxVal(float16) ? GetMaxVal(float16) : f;
-  return static_cast<float16>(f);
+  return static_cast<float16>(Clamp(value, ret_type<float>()) < GetMinVal<float16>()
+                                  ? GetMinVal<float16>()
+                                  : Clamp(value, ret_type<float>()) > GetMaxVal<float16>()
+                                        ? GetMaxVal<float16>()
+                                        : Clamp(value, ret_type<float>()));
 }
 
 template<typename T>
@@ -291,7 +293,7 @@ struct ConverterBase<Out, In, false, true> {
 #ifdef __CUDA_ARCH__
     return Clamp<Out>(cuda_round_helper(value * GetMaxVal<Out>(), Out()));
 #else
-    return std::round(value * max_value<Out>());
+    return std::round(value * GetMaxVal<Out>());
 #endif
   }
 
@@ -299,7 +301,7 @@ struct ConverterBase<Out, In, false, true> {
 #ifdef __CUDA_ARCH__
     return std::is_signed<Out>::value
                ? Clamp<Out>(cuda_round_helper(value * GetMaxVal<Out>(), Out()))
-               : cuda_round_helper(max_value<Out>() * __saturatef(value), Out());
+               : cuda_round_helper(GetMaxVal<Out>() * __saturatef(value), Out());
 #else
     return Clamp<Out>(std::round(value * GetMaxVal<Out>()));
 #endif
@@ -309,12 +311,12 @@ struct ConverterBase<Out, In, false, true> {
 // Converts signed to signed, unsigned to unsigned or unsigned to signed
 template<typename Out, typename In, bool IsOutSigned = std::is_signed<Out>::value,
          bool IsInSigned = std::is_signed<In>::value>
-struct ConverIntInt {
+struct ConvertIntInt {
   OF_DEVICE_FUNC static constexpr Out Convert(In value) { return value; }
   OF_DEVICE_FUNC static constexpr Out ConvertNorm(In value) {
-    return Converter<Out, float>::Convert(value * (1.0f * max_value<Out>() / max_value<In>()));
+    return Converter<Out, float>::Convert(value * (1.0f * GetMaxVal<Out>() / GetMaxVal<In>()));
   }
-  OF_DEVICE_FUNC static constexpr Out ConvertSat(In value) { return clamp<Out>(value); }
+  OF_DEVICE_FUNC static constexpr Out ConvertSat(In value) { return Clamp<Out>(value); }
   OF_DEVICE_FUNC static constexpr Out ConvertSatNorm(In value) { return ConvertNorm(value); }
 };
 
@@ -328,32 +330,32 @@ struct ConvertIntInt<Out, In, false, true> {
   OF_DEVICE_FUNC static constexpr Out ConvertSat(In value) { return Clamp<Out>(value); }
   OF_DEVICE_FUNC static constexpr Out ConvertSatNorm(In value) {
 #ifdef __CUDA_ARCH__
-    return cuda_round_helper(__saturatef(value * (1.0f / max_value<In>())) * max_value<Out>());
+    return cuda_round_helper(__saturatef(value * (1.0f / GetMaxVal<In>())) * GetMaxVal<Out>());
 #else
     return value < 0 ? 0 : ConvertNorm(value);
   }
-};
+#endif
+  };
 
-// Converts between integral types
-template<typename Out, typename In>
-struct ConverterBase<Out, In, false, false> : ConvertIntInt<Out, In> {
-  static_assert(IsArithmeticOrHalf<Out>::value && IsArithmeticOrHalf<In>::value,
-                "Default ConverterBase can only be used with arithmetic types.");
-};
+  // Converts between integral types
+  template<typename Out, typename In>
+  struct ConverterBase<Out, In, false, false> : ConvertIntInt<Out, In> {
+    static_assert(IsArithmeticOrHalf<Out>::value && IsArithmeticOrHalf<In>::value,
+                  "Default ConverterBase can only be used with arithmetic types.");
+  };
 
-// Pass-through conversion
-template<typename T>
-struct Converter<T, T> {
-  static OF_DEVICE_FUNC constexpr T Convert(T value) { return value; }
-  static OF_DEVICE_FUNC constexpr T ConvertSat(T value) { return value; }
-  static OF_DEVICE_FUNC constexpr T ConvertNorm(T value) { return value; }
-  static OF_DEVICE_FUNC constexpr T ConvertSatNorm(T value) { return value; }
-};
+  // Pass-through conversion
+  template<typename T>
+  struct Converter<T, T> {
+    static OF_DEVICE_FUNC constexpr T Convert(T value) { return value; }
+    static OF_DEVICE_FUNC constexpr T ConvertSat(T value) { return value; }
+    static OF_DEVICE_FUNC constexpr T ConvertNorm(T value) { return value; }
+    static OF_DEVICE_FUNC constexpr T ConvertSatNorm(T value) { return value; }
+  };
 
-template<typename raw_out, typename raw_in>
-using converter_t =
-    Converter<std::remove_cv_t<raw_out>, std::remove_cv_t<std::remove_reference_t<raw_in>>>;
-;
+  template<typename raw_out, typename raw_in>
+  using converter_t =
+      Converter<std::remove_cv_t<raw_out>, std::remove_cv_t<std::remove_reference_t<raw_in>>>;
 
 }  // namespace
 
@@ -379,4 +381,4 @@ OF_DEVICE_FUNC constexpr Out ConvertSatNorm(In value) {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_CONVERT_H_
+#endif  // ONEFLOW_CORE_COMMON_CONVERTER_H_
