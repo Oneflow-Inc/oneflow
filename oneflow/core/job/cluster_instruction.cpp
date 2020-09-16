@@ -35,6 +35,27 @@ std::string GetClusterInstructionKey() {
   return "ClusterInstructionKey/" + std::to_string(seq++);
 }
 
+void OccasionallyClearCtrlKV() {
+  static int64_t seq = 0;
+  const static int64_t interval = 65536;
+  // 1 instead of 0 is better for avoid clearing no ctrl kv
+  if ((seq++) % interval == 1) {
+    OF_BARRIER_ALL();
+    Global<CtrlClient>::Get()->Clear();
+    OF_BARRIER_ALL();
+  }
+}
+
+void PushClusterInstruction(const ClusterInstructionProto& cluster_instruction) {
+  OccasionallyClearCtrlKV();
+  Global<CtrlClient>::Get()->PushKV(GetClusterInstructionKey(), cluster_instruction);
+}
+
+void PullClusterInstruction(ClusterInstructionProto* cluster_instruction) {
+  OccasionallyClearCtrlKV();
+  Global<CtrlClient>::Get()->PullKV(GetClusterInstructionKey(), cluster_instruction);
+}
+
 }  // namespace
 
 void ClusterInstruction::NewSessionBarrier() {
@@ -46,25 +67,25 @@ void ClusterInstruction::NewSessionBarrier() {
 void ClusterInstruction::MasterSendSessionStart() {
   ClusterInstructionProto cluster_instruction;
   cluster_instruction.mutable_cluster_ctrl_session_start();
-  Global<CtrlClient>::Get()->PushKV(GetClusterInstructionKey(), cluster_instruction);
+  PushClusterInstruction(cluster_instruction);
   NewSessionBarrier();
 }
 
 void ClusterInstruction::MasterSendHalt() {
   ClusterInstructionProto cluster_instruction;
   cluster_instruction.mutable_cluster_ctrl_halt();
-  Global<CtrlClient>::Get()->PushKV(GetClusterInstructionKey(), cluster_instruction);
+  PushClusterInstruction(cluster_instruction);
   HaltBarrier();
 }
 
 void ClusterInstruction::MasterSendEagerInstruction(
     const ClusterInstructionProto& cluster_instruction) {
   CHECK(cluster_instruction.has_eager_instruction());
-  Global<CtrlClient>::Get()->PushKV(GetClusterInstructionKey(), cluster_instruction);
+  PushClusterInstruction(cluster_instruction);
 }
 
 void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction) {
-  Global<CtrlClient>::Get()->PullKV(GetClusterInstructionKey(), cluster_instruction);
+  PullClusterInstruction(cluster_instruction);
 }
 
 void ClusterInstruction::HaltBarrier() { OF_BARRIER_ALL(); }
