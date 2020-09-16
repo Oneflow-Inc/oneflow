@@ -72,13 +72,12 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
         ctx->Tensor4ArgNameAndIndex("model_diff_indices", 0);
     const user_op::Tensor* model_diff_values = ctx->Tensor4ArgNameAndIndex("model_diff_values", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
-    auto* indexed_slices_update_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
-    CHECK_NOTNULL(indexed_slices_update_state);
-    CHECK_EQ(model->shape().At(0),
-             indexed_slices_update_state->upper() - indexed_slices_update_state->lower());
+    auto* kernel_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
+    CHECK_NOTNULL(kernel_state);
+    CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
     IndexedSlicesSGDUpdateKernelUtil<device_type, T, K>::Update(
         ctx->device_ctx(), model_diff_indices->shape().elem_cnt(), model->shape().At(0),
-        model->shape().Count(1), indexed_slices_update_state->lower(), learning_rate->dptr<float>(),
+        model->shape().Count(1), kernel_state->lower(), learning_rate->dptr<float>(),
         model_diff_indices->dptr<K>(), model_diff_values->dptr<T>(), model->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -145,10 +144,9 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     const int64_t num_values = model_diff_values->shape().elem_cnt();
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
-    auto* indexed_slices_update_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
-    CHECK_NOTNULL(indexed_slices_update_state);
-    CHECK_EQ(model->shape().At(0),
-             indexed_slices_update_state->upper() - indexed_slices_update_state->lower());
+    auto* kernel_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
+    CHECK_NOTNULL(kernel_state);
+    CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
 
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     K* unique_diff_indices_ptr = tmp_buffer->mut_dptr<K>();
@@ -169,9 +167,8 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
                               model_diff_indices->dptr<K>(), model_diff_values->dptr<T>(),
                               num_unique_diff_indices_ptr, unique_diff_indices_ptr,
                               unique_diff_values_ptr, unique_workspace_ptr, unique_workspace_bytes);
-    MdUpdateUtilT::Update(ctx->device_ctx(), beta, num_indices, feature_size,
-                          indexed_slices_update_state->lower(),
-                          indexed_slices_update_state->upper(), num_unique_diff_indices_ptr,
+    MdUpdateUtilT::Update(ctx->device_ctx(), beta, num_indices, feature_size, kernel_state->lower(),
+                          kernel_state->upper(), num_unique_diff_indices_ptr,
                           learning_rate->dptr<float>(), unique_diff_indices_ptr,
                           unique_diff_values_ptr, model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
@@ -228,10 +225,9 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
       user_op::Tensor* beta2_t = ctx->Tensor4ArgNameAndIndex("beta2_t", 0);
       beta2_t_ptr = beta2_t->mut_dptr<T>();
     }
-    auto* indexed_slices_update_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
-    CHECK_NOTNULL(indexed_slices_update_state);
-    CHECK_EQ(model->shape().At(0),
-             indexed_slices_update_state->upper() - indexed_slices_update_state->lower());
+    auto* kernel_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
+    CHECK_NOTNULL(kernel_state);
+    CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
     const int64_t num_indices = model_diff_indices->shape().elem_cnt();
     const int64_t num_values = model_diff_values->shape().elem_cnt();
     CHECK_EQ(num_values % num_indices, 0);
@@ -258,11 +254,10 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
                               unique_diff_values_ptr, unique_workspace_ptr, unique_workspace_bytes);
 
     MdUpdateUtilT::Update(ctx->device_ctx(), beta1, beta2, epsilon, do_bias_correction, num_indices,
-                          feature_size, indexed_slices_update_state->lower(),
-                          indexed_slices_update_state->upper(), num_unique_diff_indices_ptr,
-                          learning_rate->dptr<float>(), unique_diff_indices_ptr,
-                          unique_diff_values_ptr, model->mut_dptr<T>(), m->mut_dptr<T>(),
-                          v->mut_dptr<T>(), beta1_t_ptr, beta2_t_ptr);
+                          feature_size, kernel_state->lower(), kernel_state->upper(),
+                          num_unique_diff_indices_ptr, learning_rate->dptr<float>(),
+                          unique_diff_indices_ptr, unique_diff_values_ptr, model->mut_dptr<T>(),
+                          m->mut_dptr<T>(), v->mut_dptr<T>(), beta1_t_ptr, beta2_t_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
