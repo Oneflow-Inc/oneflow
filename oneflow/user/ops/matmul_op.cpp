@@ -175,35 +175,35 @@ REGISTER_USER_OP("matmul")
         k_b_axis = 0;
         n_axis = 1;
       }
-      std::vector<user_op::OpArg> same_sbp_args;
-      same_sbp_args.emplace_back("out", 0);
+      std::vector<user_op::OpArg> out_and_add_to_output_args;
+      out_and_add_to_output_args.emplace_back("out", 0);
       if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
-        same_sbp_args.emplace_back("_add_to_output", 0);
+        out_and_add_to_output_args.emplace_back("_add_to_output", 0);
       }
       ctx->NewBuilder()
           .Split(user_op::OpArg("a", 0), m_axis)
           .Broadcast(user_op::OpArg("b", 0))
-          .Split(same_sbp_args, 0)
+          .Split(out_and_add_to_output_args, 0)
           .Build();
       ctx->NewBuilder()
           .Broadcast(user_op::OpArg("a", 0))
           .Split(user_op::OpArg("b", 0), n_axis)
-          .Split(same_sbp_args, 1)
+          .Split(out_and_add_to_output_args, 1)
           .Build();
       ctx->NewBuilder()
           .Split(user_op::OpArg("a", 0), k_a_axis)
           .Split(user_op::OpArg("b", 0), k_b_axis)
-          .PartialSum(same_sbp_args)
+          .PartialSum(out_and_add_to_output_args)
           .Build();
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("a", 0))
           .Broadcast(user_op::OpArg("b", 0))
-          .PartialSum(same_sbp_args)
+          .PartialSum(out_and_add_to_output_args)
           .Build();
       ctx->NewBuilder()
           .Broadcast(user_op::OpArg("a", 0))
           .PartialSum(user_op::OpArg("b", 0))
-          .PartialSum(same_sbp_args)
+          .PartialSum(out_and_add_to_output_args)
           .Build();
       return Maybe<void>::Ok();
     });
@@ -236,13 +236,13 @@ REGISTER_USER_OP("batch_matmul")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& a_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0);
-      std::vector<user_op::OpArg> same_sbp_args;
-      same_sbp_args.emplace_back("out", 0);
+      std::vector<user_op::OpArg> out_and_add_to_output_args;
+      out_and_add_to_output_args.emplace_back("out", 0);
       if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
-        same_sbp_args.emplace_back("_add_to_output", 0);
+        out_and_add_to_output_args.emplace_back("_add_to_output", 0);
       }
       FOR_RANGE(int64_t, i, 0, a_tensor.shape().NumAxes() - 2) {
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(same_sbp_args, i).Build();
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(out_and_add_to_output_args, i).Build();
       }
       return Maybe<void>::Ok();
     });

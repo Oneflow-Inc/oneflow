@@ -27,12 +27,14 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpose_b):
+def compare_with_tensorflow(
+    device_type, a_shape, b_shape, transpose_a, transpose_b, fuse_add_to_output
+):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.enable_fuse_add_to_output(True)
+    func_config.enable_fuse_add_to_output(fuse_add_to_output)
 
     @flow.global_function(type="train", function_config=func_config)
     def MatmulJob():
@@ -125,6 +127,7 @@ def gen_arg_list():
     arg_dict["b_shape"] = [(256, 1024), (1024, 256)]
     arg_dict["transpose_a"] = [True, False]
     arg_dict["transpose_b"] = [True, False]
+    arg_dict["fuse_add_to_output"] = [True, False]
     matmul_args = filter_args(GenArgList(arg_dict))
 
     arg_dict.clear()
@@ -133,6 +136,7 @@ def gen_arg_list():
     arg_dict["b_shape"] = [(10, 10, 32, 128), (10, 10, 128, 32)]
     arg_dict["transpose_a"] = [True, False]
     arg_dict["transpose_b"] = [True, False]
+    arg_dict["fuse_add_to_output"] = [True, False]
     batch_matmul_args = filter_args(GenArgList(arg_dict))
 
     return matmul_args + batch_matmul_args

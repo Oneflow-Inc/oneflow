@@ -21,10 +21,17 @@ import oneflow as flow
 config = flow.function_config()
 
 
-def make_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32):
+def make_job(
+    a_shape,
+    b_shape,
+    trans_a=False,
+    trans_b=False,
+    fuse_add_to_output=True,
+    dtype=flow.float32,
+):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
-    config.enable_fuse_add_to_output(True)
+    config.enable_fuse_add_to_output(fuse_add_to_output)
 
     @flow.global_function(config)
     def matmul_job(
@@ -45,10 +52,17 @@ def make_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32)
     return matmul_job
 
 
-def make_xla_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32):
+def make_xla_job(
+    a_shape,
+    b_shape,
+    trans_a=False,
+    trans_b=False,
+    fuse_add_to_output=True,
+    dtype=flow.float32,
+):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
-    config.enable_fuse_add_to_output(True)
+    config.enable_fuse_add_to_output(fuse_add_to_output)
 
     @flow.global_function(config)
     def xla_matmul_job(
@@ -69,10 +83,17 @@ def make_xla_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.floa
     return xla_matmul_job
 
 
-def make_trt_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32):
+def make_trt_job(
+    a_shape,
+    b_shape,
+    trans_a=False,
+    trans_b=False,
+    fuse_add_to_output=True,
+    dtype=flow.float32,
+):
     config.use_xla_jit(False)
     config.use_tensorrt(True)
-    config.enable_fuse_add_to_output(True)
+    config.enable_fuse_add_to_output(fuse_add_to_output)
 
     @flow.global_function(config)
     def trt_matmul_job(
@@ -100,10 +121,10 @@ class TestMatmul(unittest.TestCase):
         else:
             return (m, n)
 
-    def _test_body(self, a, b, trans_a, trans_b, dtype=np.float32):
-        f1 = make_job(a.shape, b.shape, trans_a, trans_b)
-        f2 = make_xla_job(a.shape, b.shape, trans_a, trans_b)
-        f3 = make_trt_job(a.shape, b.shape, trans_a, trans_b)
+    def _test_body(self, a, b, trans_a, trans_b, fuse_add_to_output, dtype=np.float32):
+        f1 = make_job(a.shape, b.shape, trans_a, trans_b, fuse_add_to_output)
+        f2 = make_xla_job(a.shape, b.shape, trans_a, trans_b, fuse_add_to_output)
+        f3 = make_trt_job(a.shape, b.shape, trans_a, trans_b, fuse_add_to_output)
         x = f1(a, b).get()
         y = f2(a, b).get()
         z = f3(a, b).get()
@@ -114,65 +135,81 @@ class TestMatmul(unittest.TestCase):
         self.assertTrue(np.allclose(x.numpy(), z.numpy(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
-    def _test_ones_body(self, m, k, n, trans_a, trans_b, dtype=np.float32):
+    def _test_ones_body(
+        self, m, k, n, trans_a, trans_b, fuse_add_to_output, dtype=np.float32
+    ):
         shape_a = self.make_shape(m, k, trans_a)
         shape_b = self.make_shape(k, n, trans_b)
         a = np.ones(shape_a, dtype=dtype)
         b = np.ones(shape_b, dtype=dtype)
-        self._test_body(a, b, trans_a, trans_b, dtype=dtype)
+        self._test_body(a, b, trans_a, trans_b, fuse_add_to_output, dtype=dtype)
 
-    def _test_random_body(self, m, k, n, trans_a, trans_b, dtype=np.float32):
+    def _test_random_body(
+        self, m, k, n, trans_a, trans_b, fuse_add_to_output, dtype=np.float32
+    ):
         shape_a = self.make_shape(m, k, trans_a)
         shape_b = self.make_shape(k, n, trans_b)
         a = np.random.random(shape_a).astype(dtype)
         b = np.random.random(shape_b).astype(dtype)
-        self._test_body(a, b, trans_a, trans_b, dtype=dtype)
+        self._test_body(a, b, trans_a, trans_b, fuse_add_to_output, dtype=dtype)
 
     def test_ones1x1x1_input(self):
         print("run test_ones1x1x1_input: ")
-        self._test_ones_body(1, 1, 1, False, False)
-        self._test_ones_body(1, 1, 1, False, True)
-        self._test_ones_body(1, 1, 1, True, False)
-        self._test_ones_body(1, 1, 1, True, True)
+        self._test_ones_body(1, 1, 1, False, False, True)
+        self._test_ones_body(1, 1, 1, False, False, False)
+        self._test_ones_body(1, 1, 1, False, True, True)
+        self._test_ones_body(1, 1, 1, False, True, False)
+        self._test_ones_body(1, 1, 1, True, False, True)
+        self._test_ones_body(1, 1, 1, True, False, False)
+        self._test_ones_body(1, 1, 1, True, True, True)
+        self._test_ones_body(1, 1, 1, True, True, False)
 
     def test_random1x1x1_input(self):
         print("test_random1x1x1_input: ")
-        self._test_random_body(1, 1, 1, False, False)
-        self._test_random_body(1, 1, 1, False, True)
-        self._test_random_body(1, 1, 1, True, False)
-        self._test_random_body(1, 1, 1, True, True)
+        self._test_random_body(1, 1, 1, False, False, True)
+        self._test_random_body(1, 1, 1, False, False, False)
+        self._test_random_body(1, 1, 1, False, True, True)
+        self._test_random_body(1, 1, 1, False, True, False)
+        self._test_random_body(1, 1, 1, True, False, True)
+        self._test_random_body(1, 1, 1, True, False, False)
+        self._test_random_body(1, 1, 1, True, True, True)
+        self._test_random_body(1, 1, 1, True, True, False)
 
 
 def test_ones1x10x1_input(self):
     print("test_ones1x10x1_input: ")
-    self._test_ones_body(1, 10, 1, False, False)
-    self._test_ones_body(1, 10, 1, False, True)
-    self._test_ones_body(1, 10, 1, True, False)
-    self._test_ones_body(1, 10, 1, True, True)
+    self._test_ones_body(1, 10, 1, False, False, True)
+    self._test_ones_body(1, 10, 1, False, False, False)
+    self._test_ones_body(1, 10, 1, False, True, True)
+    self._test_ones_body(1, 10, 1, False, True, False)
+    self._test_ones_body(1, 10, 1, True, False, True)
+    self._test_ones_body(1, 10, 1, True, False, False)
+    self._test_ones_body(1, 10, 1, True, True, True)
+    self._test_ones_body(1, 10, 1, True, True, False)
 
 
 def test_random1x10x1_input(self):
     print("test_random1x10x1_input: ")
-    self._test_random_body(1, 10, 1, False, False)
-    self._test_random_body(1, 10, 1, False, True)
-    self._test_random_body(1, 10, 1, True, False)
-    self._test_random_body(1, 10, 1, True, True)
+    self._test_random_body(1, 10, 1, False, False, True)
+    self._test_random_body(1, 10, 1, False, True, True)
+    self._test_random_body(1, 10, 1, True, False, True)
+    self._test_random_body(1, 10, 1, True, True, True)
 
 
 def test_ones10x10x2_input(self):
     print("test_ones10x10x2_input: ")
-    self._test_ones_body(10, 10, 2, False, False)
-    self._test_ones_body(10, 10, 2, False, True)
-    self._test_ones_body(10, 10, 2, True, False)
-    self._test_ones_body(10, 10, 2, True, True)
+    self._test_ones_body(10, 10, 2, False, False, True)
+    self._test_ones_body(10, 10, 2, False, True, True)
+    self._test_ones_body(10, 10, 2, True, False, True)
+    self._test_ones_body(10, 10, 2, True, True, True)
 
 
 def test_random10x10x2_input(self):
     print("run test_random10x10x2_input: ")
-    self._test_random_body(10, 10, 2, False, False)
-    self._test_random_body(10, 10, 2, False, True)
-    self._test_random_body(10, 10, 2, True, False)
-    self._test_random_body(10, 10, 2, True, True)
+    self._test_random_body(10, 10, 2, False, False, True)
+    self._test_random_body(10, 10, 2, False, True, True)
+    self._test_random_body(10, 10, 2, True, False, True)
+    self._test_random_body(10, 10, 2, True, True, True)
 
 
 if __name__ == "__main__":

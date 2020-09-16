@@ -74,11 +74,18 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_MATMUL_KERNEL(device, dtype)              \
-  REGISTER_USER_KERNEL("matmul")                           \
-      .SetCreateFn<MatmulFloatingKernel<device, dtype>>()  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device) \
-                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value));
+#define REGISTER_MATMUL_KERNEL(device, dtype)                                                   \
+  REGISTER_USER_KERNEL("matmul")                                                                \
+      .SetCreateFn<MatmulFloatingKernel<device, dtype>>()                                       \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))           \
+      .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+          OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));         \
+        }                                                                                       \
+        return Maybe<void>::Ok();                                                               \
+      });
 
 REGISTER_MATMUL_KERNEL(DeviceType::kCPU, float);
 REGISTER_MATMUL_KERNEL(DeviceType::kCPU, double);
@@ -176,17 +183,24 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_BATCH_MATMUL_KERNEL(device, dtype)                                   \
-  REGISTER_USER_KERNEL("batch_matmul")                                                \
-      .SetCreateFn<BatchMatmulFloatingKernel<device, dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                            \
-                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
-        user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);             \
-        size_t num_axes = a->shape().NumAxes();                                       \
-        size_t batch_num = a->shape().Count(0, num_axes - 2);                         \
-        return sizeof(int64_t) * 3 * batch_num;                                       \
-      })
+#define REGISTER_BATCH_MATMUL_KERNEL(device, dtype)                                             \
+  REGISTER_USER_KERNEL("batch_matmul")                                                          \
+      .SetCreateFn<BatchMatmulFloatingKernel<device, dtype>>()                                  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))           \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
+        user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);                       \
+        size_t num_axes = a->shape().NumAxes();                                                 \
+        size_t batch_num = a->shape().Count(0, num_axes - 2);                                   \
+        return sizeof(int64_t) * 3 * batch_num;                                                 \
+      })                                                                                        \
+      .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+          OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));         \
+        }                                                                                       \
+        return Maybe<void>::Ok();                                                               \
+      });
 
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, float);
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, double);
@@ -250,7 +264,15 @@ REGISTER_USER_KERNEL("batch_matmul")
       size_t num_axes = a->shape().NumAxes();
       size_t batch_num = a->shape().Count(0, num_axes - 2);
       return sizeof(int64_t) * 3 * batch_num;
+    })
+    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
+                             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+      if (ctx.user_op_conf().has_input("_add_to_output", 0)) {
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
+      }
+      return Maybe<void>::Ok();
     });
+
 #endif
 
 }  // namespace oneflow
