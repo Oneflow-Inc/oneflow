@@ -30,7 +30,6 @@ class EnvDesc final {
   const Machine& machine(int32_t idx) const { return env_proto_.machine(idx); }
   int32_t ctrl_port() const { return env_proto_.ctrl_port(); }
   int32_t data_port() const { return env_proto_.data_port(); }
-  bool grpc_use_no_signal() const { return env_proto_.grpc_use_no_signal(); }
   int64_t GetMachineId(const std::string& addr) const;
 
  private:
