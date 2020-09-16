@@ -39,24 +39,67 @@ Maybe<void> CheckModelDiffDesc(const user_op::TensorDesc* model,
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferIndexedSlicesSGDUpdateTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  const user_op::TensorDesc* model_diff_indices =
+      ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
+  const user_op::TensorDesc* model_diff_values =
+      ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
+  JUST(CheckModelDiffDesc(model, model_diff_indices, model_diff_values));
+  const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
+  CHECK_EQ_OR_RETURN(learning_rate->shape(), Shape({1}));
+  CHECK_EQ_OR_RETURN(learning_rate->data_type(), DataType::kFloat);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferIndexedSlicesMomentumUpdateTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  const user_op::TensorDesc* model_diff_indices =
+      ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
+  const user_op::TensorDesc* model_diff_values =
+      ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
+  JUST(CheckModelDiffDesc(model, model_diff_indices, model_diff_values));
+  const user_op::TensorDesc* momentum = ctx->TensorDesc4ArgNameAndIndex("momentum", 0);
+  CHECK_EQ_OR_RETURN(momentum->data_type(), model->data_type());
+  CHECK_EQ_OR_RETURN(momentum->shape(), model->shape());
+  const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
+  CHECK_EQ_OR_RETURN(learning_rate->shape(), Shape({1}));
+  CHECK_EQ_OR_RETURN(learning_rate->data_type(), DataType::kFloat);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferIndexedSlicesAdamUpdateTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  const user_op::TensorDesc* model_diff_indices =
+      ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
+  const user_op::TensorDesc* model_diff_values =
+      ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
+  JUST(CheckModelDiffDesc(model, model_diff_indices, model_diff_values));
+  const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
+  CHECK_EQ_OR_RETURN(learning_rate->shape(), Shape({1}));
+  CHECK_EQ_OR_RETURN(learning_rate->data_type(), DataType::kFloat);
+
+  if (ctx->Attr<bool>("do_bias_correction")) {
+    CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta1_t", 0));
+    CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta2_t", 0));
+    const user_op::TensorDesc* beta1_t = ctx->TensorDesc4ArgNameAndIndex("beta1_t", 0);
+    CHECK_EQ_OR_RETURN(beta1_t->shape(), Shape({1}));
+    const user_op::TensorDesc* beta2_t = ctx->TensorDesc4ArgNameAndIndex("beta2_t", 0);
+    CHECK_EQ_OR_RETURN(beta2_t->shape(), Shape({1}));
+    CHECK_EQ_OR_RETURN(beta1_t->data_type(), beta2_t->data_type());
+  } else {
+    CHECK_OR_RETURN(!ctx->user_op_conf().has_input("beta1_t", 0));
+    CHECK_OR_RETURN(!ctx->user_op_conf().has_input("beta2_t", 0));
+  }
+  return Maybe<void>::Ok();
+}
+
 REGISTER_USER_OP("indexed_slices_sgd_update")
     .Input("model")
     .Input("model_diff_indices")
     .Input("model_diff_values")
     .Input("learning_rate")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-      const user_op::TensorDesc* model_diff_indices =
-          ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
-      const user_op::TensorDesc* model_diff_values =
-          ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-      CheckModelDiffDesc(model, model_diff_indices, model_diff_values);
-      const user_op::TensorDesc* learning_rate =
-          ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
-      CHECK_EQ_OR_RETURN(learning_rate->shape(), Shape({1}));
-      CHECK_EQ_OR_RETURN(learning_rate->data_type(), DataType::kFloat);
-      return Maybe<void>::Ok();
-    })
+    .SetTensorDescInferFn(InferIndexedSlicesSGDUpdateTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
@@ -93,22 +136,7 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
     .Input("learning_rate")
     .Input("momentum")
     .Attr<float>("beta", UserOpAttrType::kAtFloat, 0.9)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-      const user_op::TensorDesc* model_diff_indices =
-          ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
-      const user_op::TensorDesc* model_diff_values =
-          ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-      CheckModelDiffDesc(model, model_diff_indices, model_diff_values);
-      const user_op::TensorDesc* momentum = ctx->TensorDesc4ArgNameAndIndex("momentum", 0);
-      CHECK_EQ_OR_RETURN(momentum->data_type(), model->data_type());
-      CHECK_EQ_OR_RETURN(momentum->shape(), model->shape());
-      const user_op::TensorDesc* learning_rate =
-          ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
-      CHECK_EQ_OR_RETURN(learning_rate->shape(), Shape({1}));
-      CHECK_EQ_OR_RETURN(learning_rate->data_type(), DataType::kFloat);
-      return Maybe<void>::Ok();
-    })
+    .SetTensorDescInferFn(InferIndexedSlicesMomentumUpdateTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
@@ -156,32 +184,7 @@ REGISTER_USER_OP("indexed_slices_adam_update")
     .Attr<float>("beta2", UserOpAttrType::kAtFloat, 0.999)
     .Attr<float>("epsilon", UserOpAttrType::kAtFloat, 1e-8)
     .Attr<bool>("do_bias_correction", UserOpAttrType::kAtBool, false)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-      const user_op::TensorDesc* model_diff_indices =
-          ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
-      const user_op::TensorDesc* model_diff_values =
-          ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-      CheckModelDiffDesc(model, model_diff_indices, model_diff_values);
-      const user_op::TensorDesc* learning_rate =
-          ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
-      CHECK_EQ_OR_RETURN(learning_rate->shape(), Shape({1}));
-      CHECK_EQ_OR_RETURN(learning_rate->data_type(), DataType::kFloat);
-
-      if (ctx->Attr<bool>("do_bias_correction")) {
-        CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta1_t", 0));
-        CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta2_t", 0));
-        const user_op::TensorDesc* beta1_t = ctx->TensorDesc4ArgNameAndIndex("beta1_t", 0);
-        CHECK_EQ_OR_RETURN(beta1_t->shape(), Shape({1}));
-        const user_op::TensorDesc* beta2_t = ctx->TensorDesc4ArgNameAndIndex("beta2_t", 0);
-        CHECK_EQ_OR_RETURN(beta2_t->shape(), Shape({1}));
-        CHECK_EQ_OR_RETURN(beta1_t->data_type(), beta2_t->data_type());
-      } else {
-        CHECK_OR_RETURN(!ctx->user_op_conf().has_input("beta1_t", 0));
-        CHECK_OR_RETURN(!ctx->user_op_conf().has_input("beta2_t", 0));
-      }
-      return Maybe<void>::Ok();
-    })
+    .SetTensorDescInferFn(InferIndexedSlicesAdamUpdateTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
