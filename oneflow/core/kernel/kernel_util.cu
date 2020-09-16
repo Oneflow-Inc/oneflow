@@ -728,7 +728,7 @@ __device__ double gpu_atomic_max(double* address, const double val) {
   do {
     assumed = old;
     old = atomicCAS(address_as_i, assumed,
-                    __double_as_longlong(fmaxf(val, __longlong_as_double(assumed))));
+                    __double_as_longlong(fmax(val, __longlong_as_double(assumed))));
   } while (assumed != old);
   return __longlong_as_double(old);
 }
