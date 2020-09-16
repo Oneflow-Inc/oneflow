@@ -22,42 +22,57 @@ namespace oneflow {
 
 namespace {
 
-template<typename T, typename K>
+template<DeviceType device_type, typename T, typename K>
 class TmpBufferManager final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
-  TmpBufferManager(int64_t capacity, void* ptr, const int64_t num_indices,
-                   const int64_t num_values) {
+  TmpBufferManager(void* ptr, const int64_t num_indices, const int64_t num_values) : ptr_(ptr) {
     const size_t unique_diff_indices_bytes = GetCudaAlignedSize(num_indices * sizeof(K));
     const size_t unique_diff_values_bytes = GetCudaAlignedSize(num_values * sizeof(T));
     const size_t num_unique_diff_indices_bytes = GetCudaAlignedSize(1 * sizeof(int32_t));
-    unique_diff_indices_ptr_ = reinterpret_cast<K*>(ptr);
-    unique_diff_values_ptr_ = reinterpret_cast<T*>(reinterpret_cast<char*>(unique_diff_indices_ptr_)
-                                                   + unique_diff_indices_bytes);
-    num_unique_diff_indices_ptr_ = reinterpret_cast<int32_t*>(
-        reinterpret_cast<char*>(unique_diff_values_ptr_) + unique_diff_values_bytes);
-    unique_workspace_ptr_ =
-        reinterpret_cast<char*>(num_unique_diff_indices_ptr_) + num_unique_diff_indices_bytes;
-    unique_workspace_bytes_ = capacity - unique_diff_indices_bytes - unique_diff_values_bytes
-                              - num_unique_diff_indices_bytes;
+    CHECK_EQ(num_values % num_indices, 0);
+    IndexedSlicesReduceSumKernelUtil<device_type, K, T, int64_t>::GetReduceSumWorkspaceSizeInBytes(
+        nullptr, num_indices, num_values / num_indices, &unique_workspace_bytes_);
+    unique_diff_indices_offset_ = 0;
+    unique_diff_values_offset_ = unique_diff_indices_offset_ + unique_diff_indices_bytes;
+    num_unique_diff_indices_offset_ = unique_diff_values_offset_ + unique_diff_values_bytes;
+    unique_workspace_offset_ = num_unique_diff_indices_offset_ + num_unique_diff_indices_bytes;
     CHECK_GE(unique_workspace_bytes_, 0);
+    total_buffer_size_ = unique_diff_indices_bytes + unique_diff_values_bytes
+                         + num_unique_diff_indices_bytes
+                         + static_cast<size_t>(unique_workspace_bytes_);
   }
   ~TmpBufferManager() = default;
 
-  K* UniqueDiffIndicesPtr() const { return unique_diff_indices_ptr_; }
-  T* UniqueDiffValuesPtr() const { return unique_diff_values_ptr_; }
-  int32_t* NumUniqueDiffIndicesPtr() const { return num_unique_diff_indices_ptr_; }
-  char* UniqueWorkspacePtr() const { return unique_workspace_ptr_; }
-
-  size_t UniqueWorkspaceBytes() const { return unique_workspace_bytes_; }
+  int64_t UniqueWorkspaceBytes() const { return unique_workspace_bytes_; }
+  size_t GetTotalBufferSize() const { return total_buffer_size_; }
+  K* UniqueDiffIndicesPtr() const {
+    CHECK(ptr_ != nullptr);
+    return reinterpret_cast<K*>(reinterpret_cast<char*>(ptr_) + unique_diff_indices_offset_);
+  }
+  T* UniqueDiffValuesPtr() const {
+    CHECK(ptr_ != nullptr);
+    return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr_) + unique_diff_values_offset_);
+  }
+  int32_t* NumUniqueDiffIndicesPtr() const {
+    CHECK(ptr_ != nullptr);
+    return reinterpret_cast<int32_t*>(reinterpret_cast<char*>(ptr_)
+                                      + num_unique_diff_indices_offset_);
+  }
+  char* UniqueWorkspacePtr() const {
+    CHECK(ptr_ != nullptr);
+    return reinterpret_cast<char*>(ptr_) + unique_workspace_offset_;
+  }
 
  private:
-  K* unique_diff_indices_ptr_;
-  T* unique_diff_values_ptr_;
-  int32_t* num_unique_diff_indices_ptr_;
-  char* unique_workspace_ptr_;
+  size_t unique_diff_indices_offset_;
+  size_t unique_diff_values_offset_;
+  size_t num_unique_diff_indices_offset_;
+  size_t unique_workspace_offset_;
 
-  size_t unique_workspace_bytes_;
+  int64_t unique_workspace_bytes_;
+  size_t total_buffer_size_;
+  void* ptr_;
 };
 
 class IndexedSlicesUpdateOpKernelState final : public user_op::OpKernelState {
@@ -143,16 +158,8 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn() {
     const user_op::TensorDesc* values = ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
     const int64_t num_indices = indices->shape().elem_cnt();
     const int64_t num_values = values->shape().elem_cnt();
-    const size_t unique_diff_indices_bytes = GetCudaAlignedSize(num_indices * sizeof(K));
-    const size_t unique_diff_values_bytes = GetCudaAlignedSize(num_values * sizeof(T));
-    const size_t num_unique_diff_indices_bytes = GetCudaAlignedSize(1 * sizeof(int32_t));
-    int64_t unique_workspace_size = 0;
-    IndexedSlicesReduceSumKernelUtil<device_type, K, T, int64_t>::GetReduceSumWorkspaceSizeInBytes(
-        nullptr, num_indices, values->shape().Count(indices->shape().NumAxes()),
-        &unique_workspace_size);
-
-    return unique_diff_indices_bytes + unique_diff_values_bytes + num_unique_diff_indices_bytes
-           + static_cast<size_t>(unique_workspace_size);
+    TmpBufferManager<device_type, T, K> buffer_manager(nullptr, num_indices, num_values);
+    return buffer_manager.GetTotalBufferSize();
   };
 }
 
@@ -182,12 +189,14 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     const int64_t num_values = model_diff_values->shape().elem_cnt();
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
+    CHECK_EQ(feature_size, model_diff_values->shape().Count(model_diff_indices->shape().NumAxes()));
     auto* kernel_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
     CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    TmpBufferManager<T, K> buffer_manager(tmp_buffer->shape().elem_cnt(),
-                                          tmp_buffer->mut_dptr<void>(), num_indices, num_values);
+    TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
+                                                       num_values);
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
     ReduceSumUtilT::ReduceSum(
         ctx->device_ctx(), num_indices, feature_size, model_diff_indices->dptr<K>(),
         model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
@@ -259,9 +268,12 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     const int64_t num_values = model_diff_values->shape().elem_cnt();
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
+    CHECK_EQ(feature_size, model_diff_values->shape().Count(model_diff_indices->shape().NumAxes()));
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    TmpBufferManager<T, K> buffer_manager(tmp_buffer->shape().elem_cnt(),
-                                          tmp_buffer->mut_dptr<void>(), num_indices, num_values);
+    TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
+                                                       num_values);
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
+
     ReduceSumUtilT::ReduceSum(
         ctx->device_ctx(), num_indices, feature_size, model_diff_indices->dptr<K>(),
         model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
