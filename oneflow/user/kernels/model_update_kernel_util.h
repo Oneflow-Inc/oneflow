@@ -48,6 +48,13 @@ struct SGDUpdateKernelUtil {
                      const float* learning_rate, const G* model_diff, T* model);
 };
 
+template<DeviceType device_type, typename T, typename K>
+struct IndexedSlicesSGDUpdateKernelUtil final {
+  static void Update(DeviceCtx* ctx, int64_t num_indices, int64_t num_features,
+                     int64_t feature_size, int64_t feature_id_offset, const float* learning_rate,
+                     const K* indices, const T* values, T* model);
+};
+
 template<typename T, typename G>
 struct MomentumUpdateFunctor {
   OF_DEVICE_FUNC
@@ -88,12 +95,29 @@ struct MomentumUpdateKernelUtil {
                      T* momentum);
 };
 
+template<DeviceType device_type, typename T, typename K, typename IDX>
+struct IndexedSlicesMomentumMdUpdateKernelUtil {
+  static void Update(DeviceCtx* ctx, T beta, int64_t num_instance, int64_t feature_size,
+                     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
+                     const float* learning_rate, const K* indices, const T* values, T* model,
+                     T* momentum);
+};
+
 template<DeviceType device_type, typename T, typename G>
 struct AdamUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, bool do_bias_correction, float weight_decay,
                      const float* learning_rate, const G* model_diff, T* model, T* m, T* v,
                      T* beta1_t, T* beta2_t);
+};
+
+template<DeviceType device_type, typename T, typename K, typename IDX>
+struct IndexedSlicesAdamMdUpdateKernelUtil {
+  static void Update(DeviceCtx* ctx, float beta1, float beta2, float epsilon,
+                     bool do_bias_correction, int64_t num_instance, int64_t feature_size,
+                     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
+                     const float* learning_rate, const K* indices, const T* values, T* model, T* m,
+                     T* v, T* beta1_t, T* beta2_t);
 };
 
 #endif
