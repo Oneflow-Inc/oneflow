@@ -57,10 +57,12 @@ class Transport {
 
  private:
   void PollMsgChannel();
-  void HandlerReceiveSendMsgFromSrcMachine(const TransportMsg& msg);
-  void HandlerReceiveAckMsgFromDstMachine(const TransportMsg& msg);
+  void HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg& msg);
+  void HandlerAchievedTransportAckMsgFromDstMachine(const TransportMsg& msg);
   void DoRead(uint64_t token);
 
+  // TODO(chengcheng)
+  // Global<Transport> has a dependency on Global<CommNet> which should be initialized first.
   friend class Global<Transport>;
   Transport();
   std::mutex status_lock_;

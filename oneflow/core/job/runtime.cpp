@@ -100,6 +100,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
       && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
+  // TODO(chengcheng)
   // this code should be called before Runtime::NewAllGlobal, maybe after Eager ENV init
   // and should be called before Global<Transport>::New()
   if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {

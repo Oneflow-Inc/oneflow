@@ -56,11 +56,11 @@ void Transport::PollMsgChannel() {
               << "\n ----  type = " << msg.type << std::endl;
     switch (msg.type) {
       case TransportMsgType::kSend: {
-        HandlerReceiveSendMsgFromSrcMachine(msg);
+        HandlerAchievedTransportSendMsgFromSrcMachine(msg);
         break;
       }
       case TransportMsgType::kAck: {
-        HandlerReceiveAckMsgFromDstMachine(msg);
+        HandlerAchievedTransportAckMsgFromDstMachine(msg);
         break;
       }
       default: UNIMPLEMENTED(); break;
@@ -68,7 +68,7 @@ void Transport::PollMsgChannel() {
   }
 }
 
-void Transport::HandlerReceiveSendMsgFromSrcMachine(const TransportMsg& msg) {
+void Transport::HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg& msg) {
   // this handler means that:
   // this machine is dst machine, and receive Send msg from source machine
   CHECK_EQ(msg.type, TransportMsgType::kSend);
@@ -126,7 +126,7 @@ void Transport::HandlerReceiveSendMsgFromSrcMachine(const TransportMsg& msg) {
   }
 }
 
-void Transport::HandlerReceiveAckMsgFromDstMachine(const TransportMsg& msg) {
+void Transport::HandlerAchievedTransportAckMsgFromDstMachine(const TransportMsg& msg) {
   // this handler means that:
   // this machine is src machine, and receive Ack msg from dst machine
   // The Send/Receive is done.
