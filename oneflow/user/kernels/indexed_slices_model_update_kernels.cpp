@@ -22,6 +22,44 @@ namespace oneflow {
 
 namespace {
 
+template<typename T, typename K>
+class TmpBufferManager final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
+  TmpBufferManager(int64_t capacity, void* ptr, const int64_t num_indices,
+                   const int64_t num_values) {
+    const size_t unique_diff_indices_bytes = GetCudaAlignedSize(num_indices * sizeof(K));
+    const size_t unique_diff_values_bytes = GetCudaAlignedSize(num_values * sizeof(T));
+    const size_t num_unique_diff_indices_bytes = GetCudaAlignedSize(1 * sizeof(int32_t));
+    unique_diff_indices_ptr_ = reinterpret_cast<K*>(ptr);
+    unique_diff_values_ptr_ = reinterpret_cast<T*>(reinterpret_cast<char*>(unique_diff_indices_ptr_)
+                                                   + unique_diff_indices_bytes);
+    num_unique_diff_indices_ptr_ = reinterpret_cast<int32_t*>(
+        reinterpret_cast<char*>(unique_diff_values_ptr_) + unique_diff_values_bytes);
+    unique_workspace_ptr_ =
+        reinterpret_cast<char*>(num_unique_diff_indices_ptr_) + num_unique_diff_indices_bytes;
+    unique_workspace_bytes_ = capacity - unique_diff_indices_bytes - unique_diff_values_bytes
+                              - num_unique_diff_indices_bytes;
+    CHECK_GE(unique_workspace_bytes_, 0);
+  }
+  ~TmpBufferManager() = default;
+
+  K* UniqueDiffIndicesPtr() const { return unique_diff_indices_ptr_; }
+  T* UniqueDiffValuesPtr() const { return unique_diff_values_ptr_; }
+  int32_t* NumUniqueDiffIndicesPtr() const { return num_unique_diff_indices_ptr_; }
+  char* UniqueWorkspacePtr() const { return unique_workspace_ptr_; }
+
+  size_t UniqueWorkspaceBytes() const { return unique_workspace_bytes_; }
+
+ private:
+  K* unique_diff_indices_ptr_;
+  T* unique_diff_values_ptr_;
+  int32_t* num_unique_diff_indices_ptr_;
+  char* unique_workspace_ptr_;
+
+  size_t unique_workspace_bytes_;
+};
+
 class IndexedSlicesUpdateOpKernelState final : public user_op::OpKernelState {
  public:
   IndexedSlicesUpdateOpKernelState(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
@@ -147,30 +185,19 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     auto* kernel_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
     CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
-
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    K* unique_diff_indices_ptr = tmp_buffer->mut_dptr<K>();
-    const size_t unique_diff_indices_bytes = GetCudaAlignedSize(num_indices * sizeof(K));
-    T* unique_diff_values_ptr =
-        reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + unique_diff_indices_bytes);
-    const size_t unique_diff_values_bytes = GetCudaAlignedSize(num_values * sizeof(T));
-    int32_t* num_unique_diff_indices_ptr = reinterpret_cast<int32_t*>(
-        reinterpret_cast<char*>(unique_diff_values_ptr) + unique_diff_values_bytes);
-    const size_t num_unique_diff_indices_bytes = GetCudaAlignedSize(1 * sizeof(int32_t));
-    char* unique_workspace_ptr =
-        reinterpret_cast<char*>(num_unique_diff_indices_ptr) + num_unique_diff_indices_bytes;
-    const size_t unique_workspace_bytes = tmp_buffer->shape().elem_cnt() - unique_diff_indices_bytes
-                                          - unique_diff_values_bytes
-                                          - num_unique_diff_indices_bytes;
-
-    ReduceSumUtilT::ReduceSum(ctx->device_ctx(), num_indices, feature_size,
-                              model_diff_indices->dptr<K>(), model_diff_values->dptr<T>(),
-                              num_unique_diff_indices_ptr, unique_diff_indices_ptr,
-                              unique_diff_values_ptr, unique_workspace_ptr, unique_workspace_bytes);
+    TmpBufferManager<T, K> buffer_manager(tmp_buffer->shape().elem_cnt(),
+                                          tmp_buffer->mut_dptr<void>(), num_indices, num_values);
+    ReduceSumUtilT::ReduceSum(
+        ctx->device_ctx(), num_indices, feature_size, model_diff_indices->dptr<K>(),
+        model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
+        buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
+        buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
     MdUpdateUtilT::Update(ctx->device_ctx(), beta, num_indices, feature_size, kernel_state->lower(),
-                          kernel_state->upper(), num_unique_diff_indices_ptr,
-                          learning_rate->dptr<float>(), unique_diff_indices_ptr,
-                          unique_diff_values_ptr, model->mut_dptr<T>(), momentum->mut_dptr<T>());
+                          kernel_state->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
+                          learning_rate->dptr<float>(), buffer_manager.UniqueDiffIndicesPtr(),
+                          buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(),
+                          momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -232,31 +259,20 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     const int64_t num_values = model_diff_values->shape().elem_cnt();
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
-    // tmp buffer
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    K* unique_diff_indices_ptr = tmp_buffer->mut_dptr<K>();
-    const size_t unique_diff_indices_bytes = GetCudaAlignedSize(num_indices * sizeof(K));
-    T* unique_diff_values_ptr =
-        reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + unique_diff_indices_bytes);
-    const size_t unique_diff_values_bytes = GetCudaAlignedSize(num_values * sizeof(T));
-    int32_t* num_unique_diff_indices_ptr = reinterpret_cast<int32_t*>(
-        reinterpret_cast<char*>(unique_diff_values_ptr) + unique_diff_values_bytes);
-    const size_t num_unique_diff_indices_bytes = GetCudaAlignedSize(1 * sizeof(int32_t));
-    char* unique_workspace_ptr =
-        reinterpret_cast<char*>(num_unique_diff_indices_ptr) + num_unique_diff_indices_bytes;
-    const size_t unique_workspace_bytes = tmp_buffer->shape().elem_cnt() - unique_diff_indices_bytes
-                                          - unique_diff_values_bytes
-                                          - num_unique_diff_indices_bytes;
-
-    ReduceSumUtilT::ReduceSum(ctx->device_ctx(), num_indices, feature_size,
-                              model_diff_indices->dptr<K>(), model_diff_values->dptr<T>(),
-                              num_unique_diff_indices_ptr, unique_diff_indices_ptr,
-                              unique_diff_values_ptr, unique_workspace_ptr, unique_workspace_bytes);
+    TmpBufferManager<T, K> buffer_manager(tmp_buffer->shape().elem_cnt(),
+                                          tmp_buffer->mut_dptr<void>(), num_indices, num_values);
+    ReduceSumUtilT::ReduceSum(
+        ctx->device_ctx(), num_indices, feature_size, model_diff_indices->dptr<K>(),
+        model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
+        buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
+        buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
 
     MdUpdateUtilT::Update(ctx->device_ctx(), beta1, beta2, epsilon, do_bias_correction, num_indices,
                           feature_size, kernel_state->lower(), kernel_state->upper(),
-                          num_unique_diff_indices_ptr, learning_rate->dptr<float>(),
-                          unique_diff_indices_ptr, unique_diff_values_ptr, model->mut_dptr<T>(),
+                          buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate->dptr<float>(),
+                          buffer_manager.UniqueDiffIndicesPtr(),
+                          buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(),
                           m->mut_dptr<T>(), v->mut_dptr<T>(), beta1_t_ptr, beta2_t_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
