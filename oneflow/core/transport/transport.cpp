@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/networker/networker.h"
+#include "oneflow/core/transport/transport.h"
 #include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
-Networker::Networker() {
+Transport::Transport() {
   comm_net_ = Global<EpollCommNet>::Get();
   this_machine_id_ = Global<MachineCtx>::Get()->this_machine_id();
   CHECK(comm_net_ != nullptr);
@@ -33,7 +33,7 @@ Networker::Networker() {
   */
 }
 
-Networker::~Networker() {
+Transport::~Transport() {
   msg_channel_.Close();
   msg_poller_.join();
   // callback_poller_.join();
@@ -42,10 +42,10 @@ Networker::~Networker() {
   comm_net_->DeleteActorReadId(read_id_);
 }
 
-void Networker::EnqueueNetworkerMsg(const NetworkerMsg& msg) { msg_channel_.Send(msg); }
+void Transport::EnqueueTransportMsg(const TransportMsg& msg) { msg_channel_.Send(msg); }
 
-void Networker::PollMsgChannel() {
-  NetworkerMsg msg;
+void Transport::PollMsgChannel() {
+  TransportMsg msg;
   while (msg_channel_.Receive(&msg) == kChannelStatusSuccess) {
     std::cout << " cclog: Oh! I got one message : "
               << "\n ----  token = " << msg.token
@@ -55,11 +55,11 @@ void Networker::PollMsgChannel() {
               << "\n ----  dst_machine_id = " << msg.dst_machine_id
               << "\n ----  type = " << msg.type << std::endl;
     switch (msg.type) {
-      case NetworkerMsgType::kSend: {
+      case TransportMsgType::kSend: {
         HandlerReceiveSendMsgFromSrcMachine(msg);
         break;
       }
-      case NetworkerMsgType::kAck: {
+      case TransportMsgType::kAck: {
         HandlerReceiveAckMsgFromDstMachine(msg);
         break;
       }
@@ -68,26 +68,26 @@ void Networker::PollMsgChannel() {
   }
 }
 
-void Networker::HandlerReceiveSendMsgFromSrcMachine(const NetworkerMsg& msg) {
+void Transport::HandlerReceiveSendMsgFromSrcMachine(const TransportMsg& msg) {
   // this handler means that:
   // this machine is dst machine, and receive Send msg from source machine
-  CHECK_EQ(msg.type, NetworkerMsgType::kSend);
+  CHECK_EQ(msg.type, TransportMsgType::kSend);
   CHECK(msg.src_mem_token != nullptr);
   CHECK(msg.dst_mem_token == nullptr);
   uint64_t token = msg.token;
   CHECK(token != -1);
 
-  // There are two ways to trigger the creation of NetworkerStatus:
+  // There are two ways to trigger the creation of TransportStatus:
   //   1. the dst machine receives SendMsg from src machine
   //   2. time the dst machine calls the Receive() method.
-  // The early party is responsible for creating the NetworkerStatus,
+  // The early party is responsible for creating the TransportStatus,
   // and the late party is responsible for checking the state and calling the DoRead() operation.
   // Early arrival and late arrival are within the protection scope of lock(status_lock_),
   // so there will be no early or late arrival at the same time.
 
-  // prepare networker status for this token.
+  // prepare transport status for this token.
   // store callback.
-  NetworkerStatus* stat = nullptr;
+  TransportStatus* stat = nullptr;
 
   // if recv_before_send is ture, it means the Receive() method has been called before this handler
   bool recv_before_send = false;
@@ -95,7 +95,7 @@ void Networker::HandlerReceiveSendMsgFromSrcMachine(const NetworkerMsg& msg) {
     std::unique_lock<std::mutex> lock(status_lock_);
     auto it = token2status_.find(token);
     if (it == token2status_.end()) {
-      token2status_.emplace(token, NetworkerStatus(token));
+      token2status_.emplace(token, TransportStatus(token));
       stat = &(token2status_.at(token));
 
       // init stat
@@ -115,7 +115,7 @@ void Networker::HandlerReceiveSendMsgFromSrcMachine(const NetworkerMsg& msg) {
   stat->src_mem_token = msg.src_mem_token;
 
   if (recv_before_send) {
-    // it means the local machine has call Networker::Receive() before this handler
+    // it means the local machine has call Transport::Receive() before this handler
     // check status
     CHECK_EQ(stat->size, msg.size);
     CHECK_EQ(stat->src_machine_id, msg.src_machine_id);
@@ -126,13 +126,13 @@ void Networker::HandlerReceiveSendMsgFromSrcMachine(const NetworkerMsg& msg) {
   }
 }
 
-void Networker::HandlerReceiveAckMsgFromDstMachine(const NetworkerMsg& msg) {
+void Transport::HandlerReceiveAckMsgFromDstMachine(const TransportMsg& msg) {
   // this handler means that:
   // this machine is src machine, and receive Ack msg from dst machine
   // The Send/Receive is done.
   std::cout << "cclog: Recv ACK msg from dst machine, the src_mem_token is " << msg.src_mem_token
             << std::endl;
-  CHECK_EQ(msg.type, NetworkerMsgType::kAck);
+  CHECK_EQ(msg.type, TransportMsgType::kAck);
   CHECK(msg.src_mem_token != nullptr);
   CHECK(msg.dst_mem_token != nullptr);
   uint64_t token = msg.token;
@@ -141,7 +141,7 @@ void Networker::HandlerReceiveAckMsgFromDstMachine(const NetworkerMsg& msg) {
   std::function<void()> callback;
 
   // get status from map
-  NetworkerStatus* stat = nullptr;
+  TransportStatus* stat = nullptr;
   {
     std::unique_lock<std::mutex> lock(status_lock_);
     auto it = token2status_.find(token);
@@ -165,16 +165,16 @@ void Networker::HandlerReceiveAckMsgFromDstMachine(const NetworkerMsg& msg) {
   callback();
 }
 
-void Networker::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, std::size_t size,
+void Transport::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, std::size_t size,
                      std::function<void()> callback) {
-  // prepare networker status for this token.
+  // prepare transport status for this token.
   // store callback.
-  NetworkerStatus* stat = nullptr;
+  TransportStatus* stat = nullptr;
   {
     std::unique_lock<std::mutex> lock(status_lock_);
     CHECK(token2status_.find(token)
           == token2status_.end());  // this token must be first add to status
-    token2status_.emplace(token, NetworkerStatus(token));
+    token2status_.emplace(token, TransportStatus(token));
     stat = &(token2status_.at(token));
   }
   void* mut_ptr = const_cast<void*>(ptr);
@@ -188,21 +188,21 @@ void Networker::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, st
   stat->dst_machine_id = dst_machine_id;
 
   // Send msg to dst machine
-  NetworkerMsg msg;
+  TransportMsg msg;
   msg.token = token;
   msg.src_machine_id = stat->src_machine_id;
   msg.dst_machine_id = stat->dst_machine_id;
   msg.size = size;
   msg.src_mem_token = stat->src_mem_token;
-  msg.type = NetworkerMsgType::kSend;
-  comm_net_->SendNetworkerMsg(msg.dst_machine_id, msg);
+  msg.type = TransportMsgType::kSend;
+  comm_net_->SendTransportMsg(msg.dst_machine_id, msg);
 }
 
-void Networker::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::size_t size,
+void Transport::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::size_t size,
                         std::function<void()> callback) {
-  // prepare networker status for this token.
+  // prepare transport status for this token.
   // store callback.
-  NetworkerStatus* stat = nullptr;
+  TransportStatus* stat = nullptr;
 
   // if recv_before_send is ture, it means the SendMsg has been handled before this Receive called.
   bool send_before_recv = false;
@@ -210,7 +210,7 @@ void Networker::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::
     std::unique_lock<std::mutex> lock(status_lock_);
     auto it = token2status_.find(token);
     if (it == token2status_.end()) {
-      token2status_.emplace(token, NetworkerStatus(token));
+      token2status_.emplace(token, TransportStatus(token));
       stat = &(token2status_.at(token));
 
       // init stat
@@ -242,8 +242,8 @@ void Networker::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::
   }
 }
 
-void Networker::DoRead(uint64_t token) {
-  NetworkerStatus* stat = nullptr;
+void Transport::DoRead(uint64_t token) {
+  TransportStatus* stat = nullptr;
   {
     std::unique_lock<std::mutex> lock(status_lock_);
     auto it = token2status_.find(token);
@@ -263,20 +263,20 @@ void Networker::DoRead(uint64_t token) {
     CHECK(stat != nullptr);
 
     // Send ack message to source machine
-    NetworkerMsg msg;
+    TransportMsg msg;
     msg.token = stat->token;
     msg.src_machine_id = stat->src_machine_id;
     msg.dst_machine_id = stat->dst_machine_id;
     msg.size = stat->size;
     msg.src_mem_token = stat->src_mem_token;
     msg.dst_mem_token = stat->dst_mem_token;
-    msg.type = NetworkerMsgType::kAck;
+    msg.type = TransportMsgType::kAck;
     std::cout << "cclog: this_machine_id is " << this_machine_id_ << std::endl;
     std::cout << "cclog: Send ACK msg to src machine, the src_mem_token is " << msg.src_mem_token
               << " dst mem token is " << msg.dst_mem_token << std::endl;
     std::cout << "cclog: Send ACK msg to src machine id is " << msg.src_machine_id
               << " dst machine id is " << msg.dst_machine_id << std::endl;
-    comm_net_->SendNetworkerMsg(msg.src_machine_id, msg);
+    comm_net_->SendTransportMsg(msg.src_machine_id, msg);
 
     // Do Recive callback
     stat->callback();

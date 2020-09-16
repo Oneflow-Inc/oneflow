@@ -140,7 +140,7 @@ void SocketWriteHelper::SetStatusWhenActorMsgHeadDone() {
   cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
 }
 
-void SocketWriteHelper::SetStatusWhenNetworkerMsgHeadDone() {
+void SocketWriteHelper::SetStatusWhenTransportMsgHeadDone() {
   cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
 }
 

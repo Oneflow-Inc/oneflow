@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_NETWORKER_NETWORKER_MESSAGE_H_
-#define ONEFLOW_CORE_NETWORKER_NETWORKER_MESSAGE_H_
+#ifndef ONEFLOW_CORE_TRANSPORT_TRANSPORT_MESSAGE_H_
+#define ONEFLOW_CORE_TRANSPORT_TRANSPORT_MESSAGE_H_
 
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/util.h"
@@ -23,24 +23,24 @@ limitations under the License.
 
 namespace oneflow {
 
-enum class NetworkerMsgType {
+enum class TransportMsgType {
   kInvalid = 0,
-  kSend = 1,  // send msg from local to remote networker
+  kSend = 1,  // send msg from local to remote transport
   kAck = 2,   // this token transmission task is down
 };
 
-struct NetworkerMsg {
+struct TransportMsg {
   uint64_t token;
   void* src_mem_token;
   void* dst_mem_token;
   std::size_t size;
   int64_t src_machine_id;
   int64_t dst_machine_id;
-  NetworkerMsgType type;
+  TransportMsgType type;
 };
 
 }  // namespace oneflow
 
 #endif  // PLATFORM_POSIX
 
-#endif  // ONEFLOW_CORE_NETWORKER_NETWORKER_MESSAGE_H_
+#endif  // ONEFLOW_CORE_TRANSPORT_TRANSPORT_MESSAGE_H_

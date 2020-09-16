@@ -37,7 +37,7 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
   void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
-  void SendNetworkerMsg(int64_t dst_machine_id, const NetworkerMsg& msg);
+  void SendTransportMsg(int64_t dst_machine_id, const TransportMsg& msg);
 
  private:
   SocketMemDesc* NewMemDesc(void* ptr, size_t byte_size) override;

@@ -13,16 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_NETWORKER_NETWORKER_H_
-#define ONEFLOW_CORE_NETWORKER_NETWORKER_H_
+#ifndef ONEFLOW_CORE_TRANSPORT_TRANSPORT_H_
+#define ONEFLOW_CORE_TRANSPORT_TRANSPORT_H_
 
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
-#include "oneflow/core/networker/networker_message.h"
+#include "oneflow/core/transport/transport_message.h"
 
 namespace oneflow {
 
-struct NetworkerStatus {
+struct TransportStatus {
   const uint64_t token;
   std::function<void()> callback;
   bool is_send_ready;
@@ -32,7 +32,7 @@ struct NetworkerStatus {
   std::size_t size;
   int64_t src_machine_id;
   int64_t dst_machine_id;
-  NetworkerStatus(uint64_t tk)
+  TransportStatus(uint64_t tk)
       : token(tk),
         callback(nullptr),
         is_send_ready(false),
@@ -44,33 +44,33 @@ struct NetworkerStatus {
         dst_machine_id(-1) {}
 };
 
-class Networker {
+class Transport {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Networker);
-  virtual ~Networker();
+  OF_DISALLOW_COPY_AND_MOVE(Transport);
+  virtual ~Transport();
 
   void Send(uint64_t token, int64_t dst_machine_id, const void* ptr, std::size_t size,
             std::function<void()> callback);
   void Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::size_t size,
                std::function<void()> callback);
-  void EnqueueNetworkerMsg(const NetworkerMsg& msg);
+  void EnqueueTransportMsg(const TransportMsg& msg);
 
  private:
   void PollMsgChannel();
-  void HandlerReceiveSendMsgFromSrcMachine(const NetworkerMsg& msg);
-  void HandlerReceiveAckMsgFromDstMachine(const NetworkerMsg& msg);
+  void HandlerReceiveSendMsgFromSrcMachine(const TransportMsg& msg);
+  void HandlerReceiveAckMsgFromDstMachine(const TransportMsg& msg);
   void DoRead(uint64_t token);
 
-  friend class Global<Networker>;
-  Networker();
+  friend class Global<Transport>;
+  Transport();
   std::mutex status_lock_;
-  HashMap<uint64_t, NetworkerStatus> token2status_;
+  HashMap<uint64_t, TransportStatus> token2status_;
 
   int64_t this_machine_id_;
   void* read_id_;
   EpollCommNet* comm_net_;
 
-  Channel<NetworkerMsg> msg_channel_;
+  Channel<TransportMsg> msg_channel_;
   std::thread msg_poller_;
 
   // unused now
@@ -80,4 +80,4 @@ class Networker {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NETWORKER_NETWORKER_H_
+#endif  // ONEFLOW_CORE_TRANSPORT_TRANSPORT_H_

@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/networker/networker.h"
+#include "oneflow/core/transport/transport.h"
 
 namespace oneflow {
 
@@ -53,12 +53,12 @@ Resource GetResource() {
 }
 
 void DeleteAll() {
-  Global<Networker>::Delete();
+  Global<Transport>::Delete();
   Global<EpollCommNet>::Delete();
   Global<EnvGlobalObjectsScope>::Delete();
 }
 
-Maybe<void> TestNetworkerOn2Machine(const std::string& first_machine_ip,
+Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
                                     const std::string& second_machine_ip) {
   CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
@@ -67,9 +67,9 @@ Maybe<void> TestNetworkerOn2Machine(const std::string& first_machine_ip,
   JUST(
       Global<EnvGlobalObjectsScope>::Get()->Init(GetEnvProto(first_machine_ip, second_machine_ip)));
 
-  // do networker test
+  // do transport test
   Global<EpollCommNet>::New();
-  Global<Networker>::New();
+  Global<Transport>::New();
 
   std::cout << "New All Global" << std::endl;
   OF_BARRIER();
@@ -86,7 +86,7 @@ Maybe<void> TestNetworkerOn2Machine(const std::string& first_machine_ip,
 
     // send
     BlockingCounter bc(1);
-    Global<Networker>::Get()->Send(23330, 1, malloc_ptr, 1024, [malloc_ptr, &bc]() {
+    Global<Transport>::Get()->Send(23330, 1, malloc_ptr, 1024, [malloc_ptr, &bc]() {
       std::cout << "Yes! I have send 1024 bytes to machine 1" << std::endl;
       bc.Decrease();
     });
@@ -100,7 +100,7 @@ Maybe<void> TestNetworkerOn2Machine(const std::string& first_machine_ip,
 
     // receive
     BlockingCounter bc(1);
-    Global<Networker>::Get()->Receive(23330, 0, malloc_ptr, 1024, [malloc_ptr, &bc]() {
+    Global<Transport>::Get()->Receive(23330, 0, malloc_ptr, 1024, [malloc_ptr, &bc]() {
       int32_t* data = static_cast<int32_t*>(malloc_ptr);
       for (int i = 0; i < 1024 / 4; ++i) { CHECK_EQ(*(data + i), i); }
       std::cout << "Yes! I have recv 1024 bytes from machine 0" << std::endl;
@@ -126,7 +126,7 @@ Maybe<void> TestNetworkerOn2Machine(const std::string& first_machine_ip,
 
 /*
  * Try run this test exe by :
- *     ./oneflow_test_networker first_machine_ip="192.168.1.15" \
+ *     ./oneflow_test_transport first_machine_ip="192.168.1.15" \
  *          second_machine_ip = "192.168.1.16"
  */
 DEFINE_string(first_machine_ip, "192.168.1.15", "IP address for first machine");
@@ -135,6 +135,6 @@ DEFINE_string(second_machine_ip, "192.168.1.16", "IP address for second machine"
 int main(int argc, char* argv[]) {
   using namespace oneflow;
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  CHECK_JUST(TestNetworkerOn2Machine(FLAGS_first_machine_ip, FLAGS_second_machine_ip));
+  CHECK_JUST(TestTransportOn2Machine(FLAGS_first_machine_ip, FLAGS_second_machine_ip));
   return 0;
 }
