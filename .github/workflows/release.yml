@@ -1,4 +1,4 @@
-name: Rlease
+name: Release
 
 on:
   push:
@@ -33,4 +33,4 @@ jobs:
         $HOME/ $HOME/ci-tmp/wheelhouse
         git_hash=$(git rev-parse --short "$GITHUB_SHA")
         git_branch=${GITHUB_REF##*/}
-        $HOME/ossutil64 cp -r $HOME/ci-tmp/wheelhouse oss://oneflow-static/${git_branch}/${git_hash}
+        $HOME/ossutil64 cp --update -r $HOME/ci-tmp/wheelhouse oss://oneflow-static/${git_branch}/${git_hash}
