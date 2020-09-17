@@ -1,8 +1,6 @@
-set(CFG_GEN_PATH cfg)
-include_directories(${PROJECT_BINARY_DIR}/${CFG_GEN_PATH})
 include_directories(${PROJECT_SOURCE_DIR}/tools/cfg/include)
 
-function(RELATIVE_PYBIND11_GENERATE_CPP SRCS HDRS PYBIND_SRC CFG_REL_DIR ROOT_DIR)
+function(RELATIVE_PYBIND11_GENERATE_CPP SRCS HDRS PYBIND_SRC ROOT_DIR)
   set(${SRCS})
   set(${HDRS})
   set(${PYBIND_SRC})
@@ -17,9 +15,9 @@ function(RELATIVE_PYBIND11_GENERATE_CPP SRCS HDRS PYBIND_SRC CFG_REL_DIR ROOT_DI
     file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
     set(PY_REL_FIL ${of_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2.py)
     set(PY_REL_MOD ${of_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2)
-    set(CFG_HPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${CFG_REL_DIR}/${REL_DIR}/${FIL_WE}.cfg.h)
-    set(CFG_CPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${CFG_REL_DIR}/${REL_DIR}/${FIL_WE}.cfg.cpp)
-    set(CFG_PYBIND_FIL ${CMAKE_CURRENT_BINARY_DIR}/${CFG_REL_DIR}/${REL_DIR}/${FIL_WE}.pybind.cpp)
+    set(CFG_HPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.h)
+    set(CFG_CPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.cpp)
+    set(CFG_PYBIND_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pybind.cpp)
 
     add_custom_command(
       OUTPUT "${CFG_HPP_FIL}"
