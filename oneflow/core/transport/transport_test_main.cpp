@@ -22,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/transport/transport.h"
 
 #include <chrono>
@@ -227,9 +229,18 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
-  Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
-  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(
-      GetEnvProto(first_machine_ip, second_machine_ip, ctrl_port)));
+  // Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
+  // JUST(Global<EnvGlobalObjectsScope>::Get()->Init(
+  //    GetEnvProto(first_machine_ip, second_machine_ip, ctrl_port)));
+  EnvProto env_proto = GetEnvProto(first_machine_ip, second_machine_ip, ctrl_port);
+  Global<EnvDesc>::New(env_proto);
+  Global<CtrlServer>::New();
+  Global<CtrlClient>::New();
+  int64_t this_mchn_id =
+      Global<EnvDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
+  Global<MachineCtx>::New(this_mchn_id);
+  Global<ResourceDesc, ForEnv>::New(GetResource());
+  Global<ResourceDesc, ForSession>::New(GetResource());
 
   // do transport test
   // The Global<EpollCommNet> must new first before Global<Transport> new.
@@ -253,9 +264,21 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   Global<CtrlClient>::Get()->Clear();
   OF_BARRIER_ALL();
   std::cout << "Deleting all global..." << std::endl;
+  if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
+    Global<ResourceDesc, ForSession>::Delete();
+  }
+  Global<ResourceDesc, ForEnv>::Delete();
+  CHECK_NOTNULL(Global<MachineCtx>::Get());
+  CHECK_NOTNULL(Global<CtrlClient>::Get());
+  CHECK_NOTNULL(Global<CtrlServer>::Get());
+  CHECK_NOTNULL(Global<EnvDesc>::Get());
+  Global<MachineCtx>::Delete();
+  Global<CtrlClient>::Delete();
+  Global<CtrlServer>::Delete();
+  Global<EnvDesc>::Delete();
   // Global<Transport>::Delete();
   // Global<EpollCommNet>::Delete();
-  Global<EnvGlobalObjectsScope>::Delete();
+  // Global<EnvGlobalObjectsScope>::Delete();
   std::cout << "All Done!" << std::endl;
   return Maybe<void>::Ok();
 }
