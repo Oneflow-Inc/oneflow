@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/transport/transport.h"
 
 #include <chrono>
+#include <iomanip>
 
 namespace oneflow {
 
@@ -114,7 +115,7 @@ void HandlerOfSecondMachine(uint64_t first_token, size_t test_num,
 }
 
 void TestCorrectness() {
-  std::cout << "Test for correctness. Begin. \nEach machine will send and receive 100 messages (50 "
+  std::cout << "Test for correctness. Start. \nEach machine will send and receive 100 messages (50 "
                "send and 50 recv) alternately. The first address and the last address of each "
                "transport are written with data for correctness verification.\n";
   uint64_t first_token = 2333;
@@ -167,7 +168,64 @@ void TestCorrectness() {
     CHECK(malloc_ptr_list.at(i) != nullptr);
     free(malloc_ptr_list.at(i));
   }
-  std::cout << "Test for correctness. Done.\n";
+  std::cout << "Test for correctness. Done.\n\n";
+}
+
+void TestThroughputWithBytes(uint64_t bytes, uint64_t first_token) {
+  int32_t total_iteration = 1000;
+  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  std::vector<std::chrono::steady_clock::time_point> time_points(1010,
+                                                                 std::chrono::steady_clock::now());
+  std::size_t size = bytes;
+  void* ptr = malloc(size);
+  BlockingCounter bc(total_iteration);
+  time_points.at(0) = std::chrono::steady_clock::now();
+  if (this_machine_id == 0) {
+    for (int i = 0; i < total_iteration; ++i) {
+      Global<Transport>::Get()->Send(first_token + i, 1, ptr, size, [&bc, &time_points, i]() {
+        time_points.at(i + 1) = std::chrono::steady_clock::now();
+        bc.Decrease();
+      });
+    }
+  } else if (this_machine_id == 1) {
+    for (int i = 0; i < total_iteration; ++i) {
+      Global<Transport>::Get()->Receive(first_token + i, 0, ptr, size, [&bc, &time_points, i]() {
+        time_points.at(i + 1) = std::chrono::steady_clock::now();
+        bc.Decrease();
+      });
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+  bc.WaitUntilCntEqualZero();
+
+  double throughput_peak = 0;
+  double total_bytes = bytes * 1000;
+  for (int i = 1; i <= total_iteration; ++i) {
+    double duration_micro_sec = std::chrono::duration_cast<std::chrono::microseconds>(
+                                    time_points.at(i) - time_points.at(i - 1))
+                                    .count();
+    throughput_peak = std::max(throughput_peak, bytes * 1.0 / duration_micro_sec);  // MiB/s
+  }
+  double throughput_average = total_bytes
+                              / (std::chrono::duration_cast<std::chrono::microseconds>(
+                                     time_points.at(1000) - time_points.at(0))
+                                     .count());
+  std::cout << std::setw(25) << std::left << bytes << std::setw(25) << std::left << 1000
+            << std::setw(25) << std::left << throughput_peak << std::setw(25) << std::left
+            << throughput_average << std::endl;
+}
+
+void TestThroughput() {
+  std::cout << "Test for throughput. Start.\n";
+  std::cout << "-------------------------------------------------------------------------------\n";
+  std::cout << std::setw(25) << std::left << "#bytes" << std::setw(25) << std::left << "#iterations"
+            << std::setw(25) << std::left << "#throughput peek[MiB/s]" << std::setw(25) << std::left
+            << "#throughput average[MiB/s]" << std::endl;
+  uint64_t bytes = 2;
+  for (int i = 0; i < 24; ++i) { TestThroughputWithBytes(bytes << i, 10000 * (i + 1)); }
+  std::cout << "-------------------------------------------------------------------------------\n";
+  std::cout << "Test for throughput. Done.\n\n";
 }
 
 Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
@@ -195,6 +253,9 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   // are written with data for correctness verification.
   TestCorrectness();
 
+  TestThroughput();
+
+  OF_BARRIER();
   std::cout << "Deleting all global..." << std::endl;
   DeleteAll();
   std::cout << "All Done!" << std::endl;
