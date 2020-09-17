@@ -230,6 +230,7 @@ RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
 include(cfg)
 RELATIVE_PYBIND11_GENERATE_CPP(CFG_SRCS CFG_HRCS PYBIND11_SRCS ${CFG_GEN_PATH} ${PROJECT_SOURCE_DIR} ${of_all_rel_pybinds})
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
+add_dependencies(of_cfgobj of_protoobj)
 add_dependencies(of_ccobj of_cfgobj)
 set(pybind_registry_cc "${PROJECT_SOURCE_DIR}/tools/cfg/pybind_module_registry.cpp")
 # PYBIND11_SRCS must be put before oneflow/api/python/init.cpp, and pybind_registry_cc must be the last arg
