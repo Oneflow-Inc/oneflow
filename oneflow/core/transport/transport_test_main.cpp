@@ -223,7 +223,7 @@ void TestThroughput() {
             << std::setw(25) << std::left << "#throughput peek[MiB/s]" << std::setw(25) << std::left
             << "#throughput average[MiB/s]" << std::endl;
   uint64_t bytes = 2;
-  for (int i = 0; i < 24; ++i) { TestThroughputWithBytes(bytes << i, 10000 * (i + 1)); }
+  for (int i = 0; i < 23; ++i) { TestThroughputWithBytes(bytes << i, 10000 * (i + 1)); }
   std::cout << "-------------------------------------------------------------------------------\n";
   std::cout << "Test for throughput. Done.\n\n";
 }
