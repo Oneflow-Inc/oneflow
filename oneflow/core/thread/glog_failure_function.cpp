@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace {
 
-void PyFailureFunction() {
+void FailureFunction() {
   const int ret = Global<GlogFailureFunction>::Get()->RunCallback("panic in C++");
   const bool is_main_thread = Global<GlogFailureFunction>::Get()->IsMainThread();
   if (ret == kMainThreadPanic && is_main_thread) {
@@ -42,7 +42,7 @@ void GlogFailureFunction::SetCallback(const py_failure_callback& f) {
 }
 
 void GlogFailureFunction::UpdateThreadLocal() {
-  if (is_function_set_) { google::InstallFailureFunction(&PyFailureFunction); }
+  if (is_function_set_) { google::InstallFailureFunction(&FailureFunction); }
 }
 
 }  // namespace oneflow
