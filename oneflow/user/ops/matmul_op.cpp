@@ -54,6 +54,11 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   }
   out->mut_shape()->Set(num_axes - 2, m);
   out->mut_shape()->Set(num_axes - 1, n);
+  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
+    CHECK_EQ_OR_RETURN(add_to_output->data_type(), out->data_type());
+    CHECK_EQ_OR_RETURN(add_to_output->shape(), out->shape());
+  }
   return Maybe<void>::Ok();
 }
 
@@ -124,6 +129,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
 REGISTER_USER_OP("matmul")
     .Input("a")
     .Input("b")
+    .OptionalInput("_add_to_output")
     .Output("out")
     .Attr<bool>("transpose_a", UserOpAttrType::kAtBool, false)
     .Attr<bool>("transpose_b", UserOpAttrType::kAtBool, false)
@@ -169,30 +175,35 @@ REGISTER_USER_OP("matmul")
         k_b_axis = 0;
         n_axis = 1;
       }
+      std::vector<user_op::OpArg> out_and_add_to_output_args;
+      out_and_add_to_output_args.emplace_back("out", 0);
+      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+        out_and_add_to_output_args.emplace_back("_add_to_output", 0);
+      }
       ctx->NewBuilder()
           .Split(user_op::OpArg("a", 0), m_axis)
           .Broadcast(user_op::OpArg("b", 0))
-          .Split(ctx->outputs(), 0)
+          .Split(out_and_add_to_output_args, 0)
           .Build();
       ctx->NewBuilder()
           .Broadcast(user_op::OpArg("a", 0))
           .Split(user_op::OpArg("b", 0), n_axis)
-          .Split(ctx->outputs(), 1)
+          .Split(out_and_add_to_output_args, 1)
           .Build();
       ctx->NewBuilder()
           .Split(user_op::OpArg("a", 0), k_a_axis)
           .Split(user_op::OpArg("b", 0), k_b_axis)
-          .PartialSum(ctx->outputs())
+          .PartialSum(out_and_add_to_output_args)
           .Build();
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("a", 0))
           .Broadcast(user_op::OpArg("b", 0))
-          .PartialSum(ctx->outputs())
+          .PartialSum(out_and_add_to_output_args)
           .Build();
       ctx->NewBuilder()
           .Broadcast(user_op::OpArg("a", 0))
           .PartialSum(user_op::OpArg("b", 0))
-          .PartialSum(ctx->outputs())
+          .PartialSum(out_and_add_to_output_args)
           .Build();
       return Maybe<void>::Ok();
     });
@@ -205,6 +216,7 @@ REGISTER_USER_OP_GRAD("matmul").SetGenBackwardOpConfFn([](const user_op::UserOpW
 REGISTER_USER_OP("batch_matmul")
     .Input("a")
     .Input("b")
+    .OptionalInput("_add_to_output")
     .Output("out")
     .Attr<bool>("transpose_a", UserOpAttrType::kAtBool, false)
     .Attr<bool>("transpose_b", UserOpAttrType::kAtBool, false)
@@ -224,8 +236,13 @@ REGISTER_USER_OP("batch_matmul")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& a_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0);
+      std::vector<user_op::OpArg> out_and_add_to_output_args;
+      out_and_add_to_output_args.emplace_back("out", 0);
+      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+        out_and_add_to_output_args.emplace_back("_add_to_output", 0);
+      }
       FOR_RANGE(int64_t, i, 0, a_tensor.shape().NumAxes() - 2) {
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(out_and_add_to_output_args, i).Build();
       }
       return Maybe<void>::Ok();
     });
