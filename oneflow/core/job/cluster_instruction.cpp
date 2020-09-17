@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <mutex>
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/cluster_instruction.pb.h"
 #include "oneflow/core/control/ctrl_server.h"
@@ -35,25 +36,60 @@ std::string GetClusterInstructionKey() {
   return "ClusterInstructionKey/" + std::to_string(seq++);
 }
 
-void OccasionallyClearCtrlKV() {
-  static int64_t seq = 0;
+class ObsoleteCtrlKeys {
+ public:
+  ObsoleteCtrlKeys() = default;
+  ~ObsoleteCtrlKeys() = default;
+
+  template<typename CallbackT>
+  void ForEach(const CallbackT& Callback) const {
+    std::unique_lock<std::mutex> lck(mutex_);
+    for (const std::string& k : keys_) { Callback(k); }
+  }
+
+  void Clear() {
+    std::unique_lock<std::mutex> lck(mutex_);
+    keys_.clear();
+  }
+  void Add(const std::string& key) {
+    std::unique_lock<std::mutex> lck(mutex_);
+    keys_.push_back(key);
+  }
+
+ private:
+  mutable std::mutex mutex_;
+  std::vector<std::string> keys_;
+};
+
+COMMAND(Global<ObsoleteCtrlKeys>::SetAllocated(new ObsoleteCtrlKeys()));
+
+void OccasionallyClearCtrlKV(const std::string& key) {
+  static std::atomic<int64_t> seq(0LL);
   const static int64_t interval = 65536;
+  Global<ObsoleteCtrlKeys>::Get()->Add(key);
   // 1 instead of 0 is better for avoid clearing no ctrl kv
   if ((seq++) % interval == 1) {
     OF_BARRIER_ALL();
-    Global<CtrlClient>::Get()->Clear();
+    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+      Global<ObsoleteCtrlKeys>::Get()->ForEach([](const std::string& k) {
+        Global<CtrlClient>::Get()->ClearMasterKV(k);
+      });
+    }
+    Global<ObsoleteCtrlKeys>::Get()->Clear();
     OF_BARRIER_ALL();
   }
 }
 
 void PushClusterInstruction(const ClusterInstructionProto& cluster_instruction) {
-  OccasionallyClearCtrlKV();
-  Global<CtrlClient>::Get()->PushKV(GetClusterInstructionKey(), cluster_instruction);
+  const std::string& key = GetClusterInstructionKey();
+  Global<CtrlClient>::Get()->PushMasterKV(key, cluster_instruction);
+  OccasionallyClearCtrlKV(key);
 }
 
 void PullClusterInstruction(ClusterInstructionProto* cluster_instruction) {
-  OccasionallyClearCtrlKV();
-  Global<CtrlClient>::Get()->PullKV(GetClusterInstructionKey(), cluster_instruction);
+  const std::string& key = GetClusterInstructionKey();
+  Global<CtrlClient>::Get()->PullMasterKV(key, cluster_instruction);
+  OccasionallyClearCtrlKV(key);
 }
 
 }  // namespace
@@ -61,6 +97,7 @@ void PullClusterInstruction(ClusterInstructionProto* cluster_instruction) {
 void ClusterInstruction::NewSessionBarrier() {
   OF_BARRIER_ALL();
   Global<CtrlClient>::Get()->Clear();
+  Global<ObsoleteCtrlKeys>::Get()->Clear();
   OF_BARRIER_ALL();
 }
 
