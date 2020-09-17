@@ -105,7 +105,7 @@
 
 2. #### Clone Source Code
 
-    - #### Option 1: Download From Aliyun
+    - #### Option 1: Download from Aliyun
 
       If you are in China, please download OneFlow source code and all submodules from: https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip
 
