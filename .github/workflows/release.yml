@@ -13,33 +13,8 @@ on:
         description: 'placeholder, no effect'
         required: false
 jobs:
-
-  cuda_release:
-    name: CUDA Release
-    runs-on: [self-hosted, linux]
-    steps:
-    - name: Fix permissions
-      run: |
-        docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
-        docker run --rm -v $HOME/ci-tmp/:$HOME/ci-tmp/ busybox rm -rf $HOME/ci-tmp/wheelhouse
-    - uses: actions/checkout@v2
-    - name: Setup submodule
-      uses: ./.github/actions/setup
-    - name: Build OneFlow
-      run: |
-        ONEFLOW_CI_PACKAGE_SUFFIX="_cu102" \
-        ONEFLOW_CI_PYTHON_VERSION_ARGS=" " \
-        bash ci/build/make.sh
-    - name: Upload
-      run: |
-        git_hash=$(git rev-parse --short "$GITHUB_SHA")
-        git_branch=${GITHUB_REF##*/}
-        for filename in $ONEFLOW_CI_TMP_DIR/*.whl; do
-            $HOME/ossutil64 cp $filename oss://oneflow-static/staging/${git_branch}/${git_hash}/`basename $filename`
-        done
-
-  xla_release:
-    name: XLA Release
+  staging_release:
+    name: Staging Release
     runs-on: [self-hosted, linux]
     steps:
     - name: Fix permissions
@@ -53,14 +28,10 @@ jobs:
       run: |
         export ONEFLOW_CI_PYTHON_VERSION_ARGS=" "
         export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DWITH_XLA=ON"
-        export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-xla
-        export ONEFLOW_CI_CUDA_VERSION=10.1
-        export ONEFLOW_CI_PACKAGE_SUFFIX="_cu101_xla"
+        export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-xla-102
+        export ONEFLOW_CI_PACKAGE_SUFFIX="_cu102"
         bash ci/build/make.sh
-    - name: Upload
-      run: |
+
         git_hash=$(git rev-parse --short "$GITHUB_SHA")
         git_branch=${GITHUB_REF##*/}
-        for filename in $ONEFLOW_CI_TMP_DIR/*.whl; do
-            $HOME/ossutil64 cp $filename oss://oneflow-static/staging/${git_branch}/${git_hash}/`basename $filename`
-        done
+        $HOME/ossutil64 cp --update -r $ONEFLOW_CI_TMP_DIR/wheelhouse oss://oneflow-static/staging/${git_branch}/${git_hash}
