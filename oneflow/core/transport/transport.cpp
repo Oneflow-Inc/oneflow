@@ -110,11 +110,12 @@ void Transport::HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg
       recv_before_send = true;
       stat = &(it->second);
     }
-  }
 
-  stat->is_send_ready = true;
-  CHECK(stat->src_mem_token == nullptr);
-  stat->src_mem_token = msg.src_mem_token;
+    stat->is_send_ready = true;
+    CHECK(stat->src_mem_token == nullptr);
+    // src_mem_token MUST init in the block protected by lock
+    stat->src_mem_token = msg.src_mem_token;
+  }
 
   if (recv_before_send) {
     // it means the local machine has call Transport::Receive() before this handler
@@ -224,12 +225,13 @@ void Transport::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::
       send_before_recv = true;
       stat = &(it->second);
     }
-  }
 
-  stat->callback = callback;
-  stat->is_recv_ready = true;
-  CHECK(stat->dst_mem_token == nullptr);
-  stat->dst_mem_token = comm_net_->RegisterMemory(ptr, size);
+    stat->callback = callback;
+    stat->is_recv_ready = true;
+    CHECK(stat->dst_mem_token == nullptr);
+    // dst_mem_token MUST init in the block protected by lock
+    stat->dst_mem_token = comm_net_->RegisterMemory(ptr, size);
+  }
 
   if (send_before_recv) {
     // it means the source machine has send message to this machine
