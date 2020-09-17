@@ -250,6 +250,8 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   // TestThroughput();
 
   OF_BARRIER_ALL();
+  Global<CtrlClient>::Get()->Clear();
+  OF_BARRIER_ALL();
   std::cout << "Deleting all global..." << std::endl;
   Global<Transport>::Delete();
   Global<EpollCommNet>::Delete();
