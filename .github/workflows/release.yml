@@ -31,11 +31,11 @@ jobs:
         export ONEFLOW_CI_PYTHON_VERSION_ARGS=" "
         export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DWITH_XLA=ON"
         export ONEFLOW_CI_PACKAGE_SUFFIX="_cu102"
-        bash ci/build/make.sh
         if [ -d $ONEFLOW_CI_TMP_DIR/wheelhouse ]; then
             echo "existing wheelhouse found"
             exit 1
         fi
+        bash ci/build/make.sh
         git_hash=$(git rev-parse --short "$GITHUB_SHA")
         git_branch=${GITHUB_REF##*/}
         dir=${GITHUB_RUN_ID}-${git_branch}/${git_hash}
