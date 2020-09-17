@@ -1,7 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
-#include "tools/cfg/pybind_module_registry.h"
-#include "{{ util.module_cfg_tools_header_name(module) }}"
+#include "cfg/pybind_module_registry.h"
+#include "{{ util.module_cfg_header_name(module) }}"
 
 ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
 {% if util.module_has_package(module) %}

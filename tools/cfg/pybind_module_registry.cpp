@@ -1,4 +1,4 @@
-#include "tools/cfg/pybind_module_registry.h"
+#include "cfg/pybind_module_registry.h"
 
 namespace oneflow {
 

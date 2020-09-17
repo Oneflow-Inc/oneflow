@@ -10,7 +10,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-dst_hpp", "--dst_hpp_path", type=str, required=True)
 parser.add_argument("-dst_cpp", "--dst_cpp_path", type=str, required=True)
 parser.add_argument("-dst_pybind", "--dst_pybind_path", type=str, required=True)
-parser.add_argument("-loader", "--loader_path", type=str, required=True)
 parser.add_argument("-proto_py", "--proto_py_path", type=str, required=True)
 args = parser.parse_args()
 

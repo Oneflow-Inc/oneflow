@@ -14,9 +14,6 @@ class ProtoReflectionUtil:
     def module_package_list(self, module):
         return filter(lambda x: len(x) > 0, module.package.split("."))
 
-    def module_cfg_tools_header_name(self, module):
-        return "oneflow/cfg/" + module.name.split('/')[-1][0:-5] + "cfg.h"
-
     def module_cfg_header_name(self, module):
         return module.name[0:-5] + "cfg.h"
 

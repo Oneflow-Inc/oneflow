@@ -6,9 +6,9 @@
 {% for dependency in util.module_dependencies(module) %}
 #include "{{ util.module_cfg_header_name(dependency) }}"
 {% endfor %}
-#include "tools/cfg/include/repeated_field.h"
-#include "tools/cfg//include/map_field.h"
-#include "tools/cfg//include/shared_pair_iterator.h"
+#include "cfg/repeated_field.h"
+#include "cfg/map_field.h"
+#include "cfg/shared_pair_iterator.h"
 
 {% for package in util.module_package_list(module) %}
 namespace {{ package }} {
