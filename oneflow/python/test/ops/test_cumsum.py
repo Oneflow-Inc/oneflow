@@ -30,6 +30,8 @@ for gpu in gpus:
 
 def compare_with_tensorflow(test_case, device_type, data_type, shape, axis, reverse, exclusive):
     assert device_type in ["gpu", "cpu"]
+    assert axis >= 0 and axis < len(shape)
+
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)

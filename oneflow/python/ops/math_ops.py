@@ -1877,11 +1877,42 @@ def invert_permutation(
 
 
 @oneflow_export("math.cumsum")
-def cumsum(input, axis=0, exclusive=False, reverse=False, name=None):
-    if axis < 0:
-        axis < len(input.shape)
+def cumsum(
+    input: remote_blob_util.BlobDef,
+    axis: int = 0, 
+    exclusive: bool=False, 
+    reverse: bool=False, 
+    name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    """The op computes the cumulative sum of a Blob.
+    Args:
+        input (remote_blob_util.BlobDef): Input Blob.
+        axis (int): The axis of cumulative sum.
+        exclusive (bool): exlusive or not.
+        reverse (bool): reverse or not.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    Returns:
+        remote_blob_util.BlobDef: A Blob, has the same type of input.
+
+    For example:
+    .. code-block:: python
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def Cumsum_Job(x: tp.Numpy.Placeholder((5,), dtype=flow.float)
+        )->tp.Numpy:
+            with flow.scope.placement("cpu", "0:0"):
+                return flow.math.cumsum(x, axis=0, exclusive=False, reverse=False, name="xx_i_p")
+
+        x = np.array([3, 4, 0, 2, 1]).astype(np.float32)
+        out = Cumsum_Job(x)
+
+        # out [3 7 7 9 10]
+    """
     assert axis >= 0 and axis < len(input.shape)
-    y = (
+    return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("CumSum_"))
         .Op("cumsum")
         .Input("in", [input])
@@ -1893,4 +1924,3 @@ def cumsum(input, axis=0, exclusive=False, reverse=False, name=None):
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-    return y
