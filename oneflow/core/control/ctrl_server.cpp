@@ -194,7 +194,8 @@ void CtrlServer::Init() {
   Add([this](CtrlCall<CtrlMethod::kClear>* call) {
     name2lock_status_.clear();
     kv_.clear();
-    CHECK(pending_kv_calls_.empty());
+    CHECK(pending_kv_calls_.empty()) << "size(): " << pending_kv_calls_.size()
+                                     << ", begin()->key: " << pending_kv_calls_.begin()->first;
     call->SendResponse();
     EnqueueRequest<CtrlMethod::kClear>();
   });
