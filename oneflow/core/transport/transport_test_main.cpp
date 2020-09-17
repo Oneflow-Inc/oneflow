@@ -234,8 +234,8 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   // do transport test
   // The Global<EpollCommNet> must new first before Global<Transport> new.
   std::cout << "New All Global" << std::endl;
-  Global<EpollCommNet>::New();
-  Global<Transport>::New();
+  // Global<EpollCommNet>::New();
+  // Global<Transport>::New();
 
   // OF_BARRIER Must call before test,
   // to ensure that the Global<Transport> on each machine is created
@@ -253,8 +253,8 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   Global<CtrlClient>::Get()->Clear();
   OF_BARRIER_ALL();
   std::cout << "Deleting all global..." << std::endl;
-  Global<Transport>::Delete();
-  Global<EpollCommNet>::Delete();
+  // Global<Transport>::Delete();
+  // Global<EpollCommNet>::Delete();
   Global<EnvGlobalObjectsScope>::Delete();
   std::cout << "All Done!" << std::endl;
   return Maybe<void>::Ok();
