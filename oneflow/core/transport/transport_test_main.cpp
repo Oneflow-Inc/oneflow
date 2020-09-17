@@ -251,9 +251,9 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   // Each machine will send and receive 100 messages (50 send and 50 recv) alternately.
   // The first address and the last address of each transport
   // are written with data for correctness verification.
-  TestCorrectness();
+  // TestCorrectness();
 
-  TestThroughput();
+  // TestThroughput();
 
   OF_BARRIER();
   std::cout << "Deleting all global..." << std::endl;
