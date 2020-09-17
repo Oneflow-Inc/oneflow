@@ -51,7 +51,7 @@ jobs:
       uses: ./.github/actions/setup
     - name: Build OneFlow
       run: |
-        ONEFLOW_CI_PYTHON_VERSION_ARGS=" "
+        export ONEFLOW_CI_PYTHON_VERSION_ARGS=" "
         export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DWITH_XLA=ON"
         export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-xla
         export ONEFLOW_CI_CUDA_VERSION=10.1
