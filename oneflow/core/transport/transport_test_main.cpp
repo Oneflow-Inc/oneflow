@@ -53,12 +53,6 @@ Resource GetResource() {
   return ret;
 }
 
-void DeleteAll() {
-  Global<Transport>::Delete();
-  Global<EpollCommNet>::Delete();
-  Global<EnvGlobalObjectsScope>::Delete();
-}
-
 void HandlerOfFirstMachine(uint64_t first_token, size_t test_num,
                            const std::vector<uint64_t>& malloc_size_list,
                            const std::vector<void*>& malloc_ptr_list) {
@@ -245,7 +239,7 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
 
   // OF_BARRIER Must call before test,
   // to ensure that the Global<Transport> on each machine is created
-  OF_BARRIER();
+  OF_BARRIER_ALL();
 
   // Test for correctness
   // Each machine will send and receive 100 messages (50 send and 50 recv) alternately.
@@ -255,9 +249,11 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
 
   // TestThroughput();
 
-  OF_BARRIER();
+  OF_BARRIER_ALL();
   std::cout << "Deleting all global..." << std::endl;
-  DeleteAll();
+  Global<Transport>::Delete();
+  Global<EpollCommNet>::Delete();
+  Global<EnvGlobalObjectsScope>::Delete();
   std::cout << "All Done!" << std::endl;
   return Maybe<void>::Ok();
 }
