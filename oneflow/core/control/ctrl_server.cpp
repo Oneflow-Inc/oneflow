@@ -33,6 +33,14 @@ int ExtractPortFromAddr(const std::string& addr) {
 CtrlServer::~CtrlServer() {
   grpc::Alarm alarm(cq_.get(), gpr_now(GPR_CLOCK_MONOTONIC), nullptr);
   loop_thread_.join();
+  // clear cq before shutdown
+  {
+    void* tag = nullptr;
+    bool ok = false;
+    while (cq_->Next(&tag, &ok)) {
+      if (!ok) { break; }
+    }
+  }
   grpc_server_->Shutdown();
   cq_->Shutdown();
 }
