@@ -25,19 +25,21 @@ class AdamOptimizerOp : public OptimizerOp {
     xla::XlaOp weight = ctx->Input("model_0");
     xla::XlaOp m = ctx->Input("m_0");
     xla::XlaOp v = ctx->Input("v_0");
-    float scale = ctx->Attr<float>("scale");
-    float l1 = ctx->Attr<float>("l1");
-    float l2 = ctx->Attr<float>("l2");
+    float scale_val = ctx->Attr<float>("scale");
+    float l1_val = ctx->Attr<float>("l1");
+    float l2_val = ctx->Attr<float>("l2");
     float beta1_val = ctx->Attr<float>("beta1");
     float beta2_val = ctx->Attr<float>("beta2");
     float epsilon_val = ctx->Attr<float>("epsilon");
     bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
     float weight_decay_val = ctx->Attr<float>("weight_decay");
-    xla::XlaOp one = One(ctx->builder(), ctx->InputType("m"));
+    xla::XlaOp one = One(ctx->builder(), ctx->InputType("m_0"));
     xla::XlaOp lr;
+    xla::XlaOp beta1_t;
+    xla::XlaOp beta2_t;
     if (do_bias_correction) {
-      xla::XlaOp beta1_t = ctx->Input("beta1_t_0");
-      xla::XlaOp beta2_t = ctx->Input("beta2_t_0");
+      beta1_t = ctx->Input("beta1_t_0");
+      beta2_t = ctx->Input("beta2_t_0");
       lr = learning_rate * xla::Sqrt(one - beta2_t) / (one - beta1_t);
     } else {
       lr = learning_rate;
@@ -50,13 +52,26 @@ class AdamOptimizerOp : public OptimizerOp {
       }
       lr = xla::Broadcast(lr, bcast_sizes);
     }
-    //TODO: ScaleRegularizeGradient
+    //TODO: Gradient is float16
+    if(std::abs(scale_val) != 1) {
+      xla::XlaOp scale = xla::ScalarLike(gradient, scale_val);
+      gradient = gradient * scale;
+    }
+    if (std::abs(l1_val) != 0) {
+      xla::XlaOp l1 = xla::ScalarLike(gradient, l1_val);
+      gradient = gradient + l1 * xla::Sign(weight);
+    }
+    if (std::abs(l2_val) != 0) {
+      xla::XlaOp l2 = xla::ScalarLike(gradient, l2_val);
+      gradient = gradient + l2 * weight;
+    }
+
     xla::XlaOp beta1 = xla::ScalarLike(m, beta1_val);
     xla::XlaOp beta2 = xla::ScalarLike(v, beta2_val);
     m = beta1 * m + (one - beta1) * gradient;
     v = beta2 * v + (one - beta2) * gradient * gradient;
     xla::XlaOp epsilon = xla::ScalarLike(v, epsilon_val);
-    xla::XlaOp weight_decay = xla::ScalarLike(model, weight_decay_val);
+    xla::XlaOp weight_decay = xla::ScalarLike(weight, weight_decay_val);
     
     ctx->SetOutput("m_0", m);
     ctx->SetOutput("v_0", v);
@@ -72,7 +87,7 @@ class AdamOptimizerOp : public OptimizerOp {
 
 REGISTER_XLA_OP_KERNEL(AdamOptimizer, AdamOptimizerOp)
     .SetIsOptimizerOp(true)
-    .SetMutableVariables({"model_0", "m_0", "v_0"})
+    .SetMutableVariables({"model_0", "m_0", "v_0", "beta1_t_0", "beta2_t_0"})
     .Finalize();
 
 }  // namespace mola

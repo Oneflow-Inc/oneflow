@@ -66,7 +66,7 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     }
     float l1 = 0;
     float l2 = 0;
-    float scale = 0;
+    float scale = 1;
     bool fused = false;
     LogicalBlobId model_diff_lbi = GenLogicalBlobId(user_op_conf.input("model_diff", 0));
 
