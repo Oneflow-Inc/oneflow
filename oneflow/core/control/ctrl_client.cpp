@@ -138,7 +138,8 @@ void CtrlClient::PullKV(const std::string& k, std::function<void(const std::stri
   VGetter(call.response().val());
 }
 
-void CtrlClient::PullMasterKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
+void CtrlClient::PullMasterKV(const std::string& k,
+                              std::function<void(const std::string&)> VGetter) {
   ClientCall<CtrlMethod::kPullKV> call;
   call.mut_request()->set_key(k);
   call(GetMasterStub());

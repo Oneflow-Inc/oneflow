@@ -71,9 +71,8 @@ void OccasionallyClearCtrlKV(const std::string& key) {
   if ((seq++) % interval == 1) {
     OF_BARRIER_ALL();
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-      Global<ObsoleteCtrlKeys>::Get()->ForEach([](const std::string& k) {
-        Global<CtrlClient>::Get()->ClearMasterKV(k);
-      });
+      Global<ObsoleteCtrlKeys>::Get()->ForEach(
+          [](const std::string& k) { Global<CtrlClient>::Get()->ClearMasterKV(k); });
     }
     Global<ObsoleteCtrlKeys>::Get()->Clear();
     OF_BARRIER_ALL();
