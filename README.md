@@ -109,6 +109,11 @@
 
       If you are in China, please download OneFlow source code and all submodules from: https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip
 
+      ```
+      curl https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip -o oneflow-src.zip
+      unzip oneflow-src.zip
+      ```
+
     - #### Option 2: Clone source code and submodules
       ```
       git clone https://github.com/Oneflow-Inc/oneflow
