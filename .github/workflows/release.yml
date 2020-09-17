@@ -38,5 +38,6 @@ jobs:
         bash ci/build/make.sh
         git_hash=$(git rev-parse --short "$GITHUB_SHA")
         git_branch=${GITHUB_REF##*/}
-        dir=${GITHUB_RUN_ID}-${git_branch}/${git_hash}
+        timestamp=$(date '+%Y.%m.%d-%H.%M.%S')
+        dir=${git_branch}/${timestamp}-${git_hash}-${GITHUB_RUN_ID}
         $HOME/ossutil64 cp --update -r $ONEFLOW_CI_TMP_DIR/wheelhouse oss://oneflow-static/staging/${dir}
