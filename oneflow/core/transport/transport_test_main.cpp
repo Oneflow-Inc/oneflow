@@ -61,6 +61,7 @@ void DeleteAll() {
 void HandlerOfFirstMachine(uint64_t first_token, size_t test_num,
                            const std::vector<uint64_t>& malloc_size_list,
                            const std::vector<void*>& malloc_ptr_list) {
+  BlockingCounter bc(test_num);
   for (int i = 0; i < test_num; ++i) {
     void* ptr = malloc_ptr_list.at(i);
     size_t size = malloc_size_list.at(i);
@@ -70,50 +71,35 @@ void HandlerOfFirstMachine(uint64_t first_token, size_t test_num,
       int32_t* data = static_cast<int32_t*>(ptr);
       *data = i;
       *(data + (size / 4) - 1) = i + 10;
-      Global<Transport>::Get()->Send(token, 1, ptr, size, []() {});
+      Global<Transport>::Get()->Send(token, 1, ptr, size, [&bc]() { bc.Decrease(); });
     } else {
       // Recv
-      Global<Transport>::Get()->Receive(token, 1, ptr, size, [ptr, i, size]() {
+      Global<Transport>::Get()->Receive(token, 1, ptr, size, [ptr, i, size, &bc]() {
         int32_t* data = static_cast<int32_t*>(ptr);
         CHECK_EQ(*data, i);
         CHECK_EQ(*(data + (size / 4) - 1), i + 20);
+        bc.Decrease();
       });
     }
   }
-
-  // Last Send for sync
-  void* malloc_ptr = malloc(1024);
-
-  // init send data
-  int32_t* data = static_cast<int32_t*>(malloc_ptr);
-  for (int i = 0; i < 1024 / 4; ++i) { *(data + i) = i; }
-
-  // send
-  BlockingCounter bc(1);
-  Global<Transport>::Get()->Send(23330, 1, malloc_ptr, 1024, [malloc_ptr, &bc]() {
-    std::cout << "Yes! I have send 1024 bytes to machine 1" << std::endl;
-    bc.Decrease();
-  });
-  std::cout << "Last send post!" << std::endl;
-  std::cout << "wait for callback..." << std::endl;
   bc.WaitUntilCntEqualZero();
-  free(malloc_ptr);
-  std::cout << "Last send done!" << std::endl;
 }
 
 void HandlerOfSecondMachine(uint64_t first_token, size_t test_num,
                             const std::vector<uint64_t>& malloc_size_list,
                             const std::vector<void*>& malloc_ptr_list) {
+  BlockingCounter bc(test_num);
   for (int i = 0; i < test_num; ++i) {
     void* ptr = malloc_ptr_list.at(i);
     size_t size = malloc_size_list.at(i);
     uint64_t token = first_token + i;
     if (i % 2 == 0) {
       // Recv
-      Global<Transport>::Get()->Receive(token, 0, ptr, size, [ptr, i, size]() {
+      Global<Transport>::Get()->Receive(token, 0, ptr, size, [ptr, i, size, &bc]() {
         int32_t* data = static_cast<int32_t*>(ptr);
         CHECK_EQ(*data, i);
         CHECK_EQ(*(data + (size / 4) - 1), i + 10);
+        bc.Decrease();
       });
 
     } else {
@@ -121,65 +107,36 @@ void HandlerOfSecondMachine(uint64_t first_token, size_t test_num,
       int32_t* data = static_cast<int32_t*>(ptr);
       *data = i;
       *(data + (size / 4) - 1) = i + 20;
-      Global<Transport>::Get()->Send(token, 0, ptr, size, []() {});
+      Global<Transport>::Get()->Send(token, 0, ptr, size, [&bc]() { bc.Decrease(); });
     }
   }
-
-  // Last Recv for sync
-  void* malloc_ptr = malloc(1024);
-
-  // receive
-  BlockingCounter bc(1);
-  Global<Transport>::Get()->Receive(23330, 0, malloc_ptr, 1024, [malloc_ptr, &bc]() {
-    int32_t* data = static_cast<int32_t*>(malloc_ptr);
-    for (int i = 0; i < 1024 / 4; ++i) { CHECK_EQ(*(data + i), i); }
-    std::cout << "Yes! I have recv 1024 bytes from machine 0" << std::endl;
-    bc.Decrease();
-  });
-  std::cout << "Last recv post!" << std::endl;
-  std::cout << "wait for callback..." << std::endl;
   bc.WaitUntilCntEqualZero();
-  free(malloc_ptr);
-  std::cout << "Last recv done!" << std::endl;
 }
 
-Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
-                                    const std::string& second_machine_ip, int32_t ctrl_port) {
-  CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
-  // Global<T>::New is not allowed to be called here
-  // because glog is not constructed yet and LOG(INFO) has bad bahavior
-  Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
-  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(
-      GetEnvProto(first_machine_ip, second_machine_ip, ctrl_port)));
-
-  // do transport test
-  // The Global<EpollCommNet> must new first before Global<Transport> new.
-  Global<EpollCommNet>::New();
-  Global<Transport>::New();
-
-  std::cout << "New All Global" << std::endl;
-  OF_BARRIER();
-
+void TestCorrectness() {
+  std::cout << "Test for correctness. Begin. \nEach machine will send and receive 100 messages (50 "
+               "send and 50 recv) alternately. The first address and the last address of each "
+               "transport are written with data for correctness verification.\n";
   uint64_t first_token = 2333;
   size_t test_num = 100;
   // uint64_t min_bytes = 16;
   // uint64_t max_bytes = 16 << 20;  // 16 MB
-  uint64_t total_bytes = 1024;
+  uint64_t total_bytes = 0;
   double total_mib = -1;
   std::vector<uint64_t> malloc_size_list(test_num);
   std::vector<void*> malloc_ptr_list(test_num);
 
-  std::cout << "malloc list = [";
+  // std::cout << "malloc list = [";
   for (int i = 0; i < test_num; ++i) {
     malloc_size_list.at(i) = 16 << (i % 20);
-    std::cout << malloc_size_list.at(i) << ",";
+    // std::cout << malloc_size_list.at(i) << ",";
     total_bytes += malloc_size_list.at(i);
     // malloc data
     malloc_ptr_list.at(i) = malloc(malloc_size_list.at(i));
   }
-  std::cout << "]\n";
+  // std::cout << "]\n";
   total_mib = (total_bytes * 1.0 / 1000000.0);
-  std::cout << "totol transport bytes is " << total_mib << " MiB\n";
+  // std::cout << "totol transport bytes is " << total_mib << " MiB\n";
 
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   if (this_machine_id == 0) {
@@ -210,6 +167,34 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
     CHECK(malloc_ptr_list.at(i) != nullptr);
     free(malloc_ptr_list.at(i));
   }
+  std::cout << "Test for correctness. Done.\n";
+}
+
+Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
+                                    const std::string& second_machine_ip, int32_t ctrl_port) {
+  CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
+  // Global<T>::New is not allowed to be called here
+  // because glog is not constructed yet and LOG(INFO) has bad bahavior
+  Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
+  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(
+      GetEnvProto(first_machine_ip, second_machine_ip, ctrl_port)));
+
+  // do transport test
+  // The Global<EpollCommNet> must new first before Global<Transport> new.
+  std::cout << "New All Global" << std::endl;
+  Global<EpollCommNet>::New();
+  Global<Transport>::New();
+
+  // OF_BARRIER Must call before test,
+  // to ensure that the Global<Transport> on each machine is created
+  OF_BARRIER();
+
+  // Test for correctness
+  // Each machine will send and receive 100 messages (50 send and 50 recv) alternately.
+  // The first address and the last address of each transport
+  // are written with data for correctness verification.
+  TestCorrectness();
+
   std::cout << "Deleting all global..." << std::endl;
   DeleteAll();
   std::cout << "All Done!" << std::endl;
