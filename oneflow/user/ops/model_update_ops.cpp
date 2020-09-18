@@ -19,15 +19,28 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> CheckLearningRateTenserDesc(const user_op::TensorDesc* learning_rate) {
-  CHECK_EQ_OR_RETURN(learning_rate->shape(), Shape({1}));
-  CHECK_EQ_OR_RETURN(learning_rate->data_type(), DataType::kFloat);
+Maybe<void> CheckTensorDescLike(const user_op::TensorDesc* tensor_desc,
+                                const user_op::TensorDesc* like) {
+  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), like->data_type());
+  CHECK_EQ_OR_RETURN(tensor_desc->shape(), like->shape());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CheckModelDiffDesc(const user_op::TensorDesc* model,
-                               const user_op::TensorDesc* model_diff_indices,
-                               const user_op::TensorDesc* model_diff_values) {
+Maybe<void> CheckScalarTensorDesc(const user_op::TensorDesc* tensor_desc,
+                                  const DataType data_type) {
+  CHECK_EQ_OR_RETURN(tensor_desc->shape(), Shape({1}));
+  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), data_type);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CheckLearningRateTenserDesc(const user_op::TensorDesc* learning_rate) {
+  JUST(CheckScalarTensorDesc(learning_rate, DataType::kFloat));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CheckIndexedSlicesModelDiffDesc(const user_op::TensorDesc* model,
+                                            const user_op::TensorDesc* model_diff_indices,
+                                            const user_op::TensorDesc* model_diff_values) {
   CHECK_OR_RETURN(IsIndexDataType(model_diff_indices->data_type()));
   const int64_t num_indices_axes = model_diff_indices->shape().NumAxes();
   const int64_t num_values_axes = model_diff_values->shape().NumAxes();
@@ -61,7 +74,7 @@ Maybe<void> InferIndexedSlicesSGDUpdateTensorDesc(user_op::InferContext* ctx) {
       ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
   const user_op::TensorDesc* model_diff_values =
       ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-  JUST(CheckModelDiffDesc(model, model_diff_indices, model_diff_values));
+  JUST(CheckIndexedSlicesModelDiffDesc(model, model_diff_indices, model_diff_values));
   const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
   JUST(CheckLearningRateTenserDesc(learning_rate));
   return Maybe<void>::Ok();
@@ -69,13 +82,10 @@ Maybe<void> InferIndexedSlicesSGDUpdateTensorDesc(user_op::InferContext* ctx) {
 
 Maybe<void> InferMomentumUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const DataType data_type = model->data_type();
-  const Shape& shape = model->shape();
   const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
-  CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
+  CHECK_EQ_OR_RETURN(model_diff->shape(), model->shape());
   const user_op::TensorDesc* momentum = ctx->TensorDesc4ArgNameAndIndex("momentum", 0);
-  CHECK_EQ_OR_RETURN(momentum->data_type(), data_type);
-  CHECK_EQ_OR_RETURN(momentum->shape(), shape);
+  JUST(CheckTensorDescLike(momentum, model));
   const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
   JUST(CheckLearningRateTenserDesc(learning_rate));
   return Maybe<void>::Ok();
@@ -87,10 +97,9 @@ Maybe<void> InferIndexedSlicesMomentumUpdateTensorDesc(user_op::InferContext* ct
       ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
   const user_op::TensorDesc* model_diff_values =
       ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-  JUST(CheckModelDiffDesc(model, model_diff_indices, model_diff_values));
+  JUST(CheckIndexedSlicesModelDiffDesc(model, model_diff_indices, model_diff_values));
   const user_op::TensorDesc* momentum = ctx->TensorDesc4ArgNameAndIndex("momentum", 0);
-  CHECK_EQ_OR_RETURN(momentum->data_type(), model->data_type());
-  CHECK_EQ_OR_RETURN(momentum->shape(), model->shape());
+  JUST(CheckTensorDescLike(momentum, model));
   const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
   JUST(CheckLearningRateTenserDesc(learning_rate));
   return Maybe<void>::Ok();
@@ -103,22 +112,18 @@ Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
   CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
   const user_op::TensorDesc* m = ctx->TensorDesc4ArgNameAndIndex("m", 0);
-  CHECK_EQ_OR_RETURN(m->data_type(), data_type);
-  CHECK_EQ_OR_RETURN(m->shape(), shape);
+  JUST(CheckTensorDescLike(m, model));
   const user_op::TensorDesc* v = ctx->TensorDesc4ArgNameAndIndex("v", 0);
-  CHECK_EQ_OR_RETURN(v->data_type(), data_type);
-  CHECK_EQ_OR_RETURN(v->shape(), shape);
+  JUST(CheckTensorDescLike(v, model));
   const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
   JUST(CheckLearningRateTenserDesc(learning_rate));
   if (ctx->Attr<bool>("do_bias_correction")) {
     CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta1_t", 0));
     CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta2_t", 0));
     const user_op::TensorDesc* beta1_t = ctx->TensorDesc4ArgNameAndIndex("beta1_t", 0);
-    CHECK_EQ_OR_RETURN(beta1_t->shape(), Shape({1}));
-    CHECK_EQ_OR_RETURN(beta1_t->data_type(), data_type);
     const user_op::TensorDesc* beta2_t = ctx->TensorDesc4ArgNameAndIndex("beta2_t", 0);
-    CHECK_EQ_OR_RETURN(beta2_t->shape(), Shape({1}));
-    CHECK_EQ_OR_RETURN(beta2_t->data_type(), data_type);
+    JUST(CheckScalarTensorDesc(beta1_t, data_type));
+    JUST(CheckScalarTensorDesc(beta2_t, data_type));
   } else {
     CHECK_OR_RETURN(!ctx->user_op_conf().has_input("beta1_t", 0));
     CHECK_OR_RETURN(!ctx->user_op_conf().has_input("beta2_t", 0));
@@ -128,22 +133,21 @@ Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
 
 Maybe<void> InferIndexedSlicesAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  const DataType data_type = model->data_type();
   const user_op::TensorDesc* model_diff_indices =
       ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
   const user_op::TensorDesc* model_diff_values =
       ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-  JUST(CheckModelDiffDesc(model, model_diff_indices, model_diff_values));
+  JUST(CheckIndexedSlicesModelDiffDesc(model, model_diff_indices, model_diff_values));
   const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
   JUST(CheckLearningRateTenserDesc(learning_rate));
-
   if (ctx->Attr<bool>("do_bias_correction")) {
     CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta1_t", 0));
     CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta2_t", 0));
     const user_op::TensorDesc* beta1_t = ctx->TensorDesc4ArgNameAndIndex("beta1_t", 0);
-    CHECK_EQ_OR_RETURN(beta1_t->shape(), Shape({1}));
     const user_op::TensorDesc* beta2_t = ctx->TensorDesc4ArgNameAndIndex("beta2_t", 0);
-    CHECK_EQ_OR_RETURN(beta2_t->shape(), Shape({1}));
-    CHECK_EQ_OR_RETURN(beta1_t->data_type(), beta2_t->data_type());
+    JUST(CheckScalarTensorDesc(beta1_t, data_type));
+    JUST(CheckScalarTensorDesc(beta2_t, data_type));
   } else {
     CHECK_OR_RETURN(!ctx->user_op_conf().has_input("beta1_t", 0));
     CHECK_OR_RETURN(!ctx->user_op_conf().has_input("beta2_t", 0));
@@ -151,34 +155,21 @@ Maybe<void> InferIndexedSlicesAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void MomentumInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                              const user_op::UserOpConfWrapper& conf) {
-  user_op::InputArgModifier* model_modifier = GetInputArgModifierFn("model", 0);
-  CHECK_NOTNULL(model_modifier);
-  model_modifier->set_is_mutable(true);
-  user_op::InputArgModifier* momentum_modifier = GetInputArgModifierFn("momentum", 0);
-  CHECK_NOTNULL(momentum_modifier);
-  momentum_modifier->set_is_mutable(true);
+void SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                                const std::string& arg_name, int32_t arg_index) {
+  user_op::InputArgModifier* arg_modifier = GetInputArgModifierFn(arg_name, arg_index);
+  CHECK_NOTNULL(arg_modifier);
+  arg_modifier->set_is_mutable(true);
 }
 
 void AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                           const user_op::UserOpConfWrapper& conf) {
-  user_op::InputArgModifier* model_modifier = GetInputArgModifierFn("model", 0);
-  CHECK_NOTNULL(model_modifier);
-  model_modifier->set_is_mutable(true);
-  user_op::InputArgModifier* m_modifier = GetInputArgModifierFn("m", 0);
-  CHECK_NOTNULL(m_modifier);
-  m_modifier->set_is_mutable(true);
-  user_op::InputArgModifier* v_modifier = GetInputArgModifierFn("v", 0);
-  CHECK_NOTNULL(v_modifier);
-  v_modifier->set_is_mutable(true);
+  SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
+  SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0);
+  SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0);
   if (conf.attr<bool>("do_bias_correction")) {
-    user_op::InputArgModifier* beta1_t_modifier = GetInputArgModifierFn("beta1_t", 0);
-    CHECK_NOTNULL(beta1_t_modifier);
-    beta1_t_modifier->set_is_mutable(true);
-    user_op::InputArgModifier* beta2_t_modifier = GetInputArgModifierFn("beta2_t", 0);
-    CHECK_NOTNULL(beta2_t_modifier);
-    beta2_t_modifier->set_is_mutable(true);
+    SetInputArgModifierMutable(GetInputArgModifierFn, "beta1_t", 0);
+    SetInputArgModifierMutable(GetInputArgModifierFn, "beta2_t", 0);
   }
 }
 
@@ -204,9 +195,7 @@ REGISTER_USER_OP("sgd_update")
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) -> void {
-      user_op::InputArgModifier* model_modifier = GetInputArgModifierFn("model", 0);
-      CHECK_NOTNULL(model_modifier);
-      model_modifier->set_is_mutable(true);
+      SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
     });
 
 REGISTER_USER_OP("indexed_slices_sgd_update")
@@ -239,9 +228,7 @@ REGISTER_USER_OP("indexed_slices_sgd_update")
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) -> void {
-      user_op::InputArgModifier* model_modifier = GetInputArgModifierFn("model", 0);
-      CHECK_NOTNULL(model_modifier);
-      model_modifier->set_is_mutable(true);
+      SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
     });
 
 REGISTER_USER_OP("momentum_update")
@@ -266,7 +253,11 @@ REGISTER_USER_OP("momentum_update")
       }
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn(MomentumInputArgModifyFn);
+    .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper& conf) -> void {
+      SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
+      SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
+    });
 
 REGISTER_USER_OP("indexed_slices_momentum_update")
     .Input("model")
@@ -300,7 +291,11 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
       }
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn(MomentumInputArgModifyFn);
+    .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper& conf) -> void {
+      SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
+      SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
+    });
 
 REGISTER_USER_OP("adam_update")
     .Input("model")

@@ -53,7 +53,7 @@ class AdamOptimizerOp : public OptimizerOp {
       lr = xla::Broadcast(lr, bcast_sizes);
     }
     //TODO: Gradient is float16
-    if(std::abs(scale_val) != 1) {
+    if(scale_val != 1) {
       xla::XlaOp scale = xla::ScalarLike(gradient, scale_val);
       gradient = gradient * scale;
     }
