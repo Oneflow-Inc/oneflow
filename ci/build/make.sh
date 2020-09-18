@@ -3,7 +3,9 @@ set -ex
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
 tmp_dir=${ONEFLOW_CI_TMP_DIR:-"$HOME/ci-tmp"}
 extra_oneflow_cmake_args=${ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS:-""}
-package_appendix=${ONEFLOW_CI_PACKAGE_APPENDIX:-""}
+package_suffix=${ONEFLOW_CI_PACKAGE_SUFFIX:-""}
+cuda_version=${ONEFLOW_CI_CUDA_VERSION:-"10.2"}
+python_version_args=${ONEFLOW_CI_PYTHON_VERSION_ARGS:-"--python3.6"}
 mkdir -p $tmp_dir
 docker_tag=${ONEFLOW_CI_DOCKER_TAG:-"oneflow:ci-manylinux2014-cuda10.2"}
 
@@ -20,7 +22,7 @@ fi
 # build manylinux image
 cd $src_dir
 docker build -f $src_dir/docker/package/manylinux/Dockerfile \
-    --build-arg from=nvidia/cuda:10.2-cudnn7-devel-centos7 \
+    --build-arg from=nvidia/cuda:${cuda_version}-cudnn7-devel-centos7 \
     $docker_proxy_build_args -t $docker_tag .
 
 cd -
@@ -38,10 +40,10 @@ function build() {
         -v $tmp_dir:/ci-tmp \
         -w /ci-tmp \
         "$docker_tag" \
-        /oneflow-src/docker/package/manylinux/build_wheel.sh \
-            --python3.6 \
+        bash -l /oneflow-src/docker/package/manylinux/build_wheel.sh \
+            ${python_version_args} \
             --house-dir /ci-tmp/wheelhouse \
-            --package-name oneflow${package_appendix} \
+            --package-name oneflow${package_suffix} \
             $extra_oneflow_cmake_args
 }
 
