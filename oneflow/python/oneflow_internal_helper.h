@@ -84,6 +84,13 @@ Maybe<std::string> CurrentResource() {
   return PbMessage2TxtString(Global<ResourceDesc, ForSession>::Get()->resource());
 }
 
+Maybe<std::string> RequiredMemory() {
+  CHECK_NOTNULL_OR_RETURN((Global<MemoryRequirements>::Get()));
+  std::string ret;
+  google::protobuf::TextFormat::PrintToString(*Global<MemoryRequirements>::Get(), &ret);
+  return ret;
+}
+
 Maybe<std::string> EnvResource() {
   CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForEnv>::Get()));
   return PbMessage2TxtString(Global<ResourceDesc, ForEnv>::Get()->resource());

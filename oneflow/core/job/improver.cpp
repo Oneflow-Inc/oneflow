@@ -568,13 +568,22 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
       const uint64_t calc =
           CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii);
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
+      const auto* id_mgr = Global<IDMgr>::Get();
+      const char* device_tag = JUST(DeviceTag4DeviceType(
+          id_mgr->IsGpuMemZone(mem_zone_id) ? DeviceType::kGPU : DeviceType::kCPU));
       if (calc >= available) {
-        const auto* id_mgr = Global<IDMgr>::Get();
-        const char* device_tag = JUST(DeviceTag4DeviceType(
-            id_mgr->IsGpuMemZone(mem_zone_id) ? DeviceType::kGPU : DeviceType::kCPU));
         return Error::MemoryZoneOutOfMemoryError(machine_id, mem_zone_id, calc, available,
                                                  device_tag)
                << "OOM detected at compile time. ";
+      } else {
+        if (calc > 0) {
+          auto* device_memory_requirement =
+              Global<MemoryRequirements>::Get()->add_device_memory_requirement();
+          device_memory_requirement->set_machine_id(machine_id);
+          device_memory_requirement->set_mem_zone_id(mem_zone_id);
+          device_memory_requirement->set_device_tag(device_tag);
+          device_memory_requirement->set_required(calc);
+        }
       }
     }
   }

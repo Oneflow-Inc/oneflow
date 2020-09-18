@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 import socket
 from contextlib import closing
+from functools import reduce
 
 import oneflow.core.job.env_pb2 as env_pb
 import oneflow.python.framework.c_api_util as c_api_util
@@ -214,6 +215,27 @@ def api_logbuflevel(val: int) -> None:
 def logbuflevel(val):
     assert type(val) is int
     default_env_proto.cpp_logging_conf.logbuflevel = val
+
+
+@oneflow_export("query_required_memory")
+def api_query_required_memory():
+    return enable_if.unique([query_required_memory])()
+
+
+@enable_if.condition(hob.in_normal_mode & hob.session_initialized)
+def query_required_memory():
+    memory_requirements = c_api_util.RequiredMemory()
+    device_memory_requirement_list = []
+    for item in memory_requirements.device_memory_requirement:
+        device_memory_requirement_detail = {}
+        device_memory_requirement_detail["machine_id"] = item.machine_id
+        device_memory_requirement_detail["mem_zone_id"] = item.mem_zone_id
+        device_memory_requirement_detail["device_tag"] = item.device_tag
+        device_memory_requirement_detail["required"] = item.required
+        device_memory_requirement_list.append(device_memory_requirement_detail)
+    return reduce(
+        lambda x, y: x if y in x else x + [y], [[],] + device_memory_requirement_list
+    )
 
 
 @enable_if.condition(hob.in_normal_mode & hob.env_initialized)

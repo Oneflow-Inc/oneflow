@@ -39,3 +39,14 @@ message Resource {
   optional bool enable_debug_mode = 18 [default = false];
   optional CollectiveBoxingConf collective_boxing_conf = 19;
 }
+
+message DeviceMemoryRequirement {
+  required int32 machine_id = 1;
+  required int32 mem_zone_id = 2;
+  required string device_tag = 3;
+  required uint64 required = 4;
+}
+
+message MemoryRequirements {
+    repeated DeviceMemoryRequirement device_memory_requirement = 1;
+}
