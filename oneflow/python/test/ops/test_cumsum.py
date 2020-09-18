@@ -17,7 +17,7 @@ import os
 import numpy as np
 import tensorflow as tf
 import oneflow as flow
-from collections import OrderedDict 
+from collections import OrderedDict
 
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import test_global_storage
@@ -28,7 +28,9 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(test_case, device_type, data_type, shape, axis, reverse, exclusive):
+def compare_with_tensorflow(
+    test_case, device_type, data_type, shape, axis, reverse, exclusive
+):
     assert device_type in ["gpu", "cpu"]
     assert axis >= 0 and axis < len(shape)
 
@@ -73,8 +75,11 @@ def compare_with_tensorflow(test_case, device_type, data_type, shape, axis, reve
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
-    assert np.allclose(of_out.numpy(), tf_out.numpy(), atol=1e-03), np.max(np.abs(of_out.numpy() - tf_out.numpy()))
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), atol=1e-03), np.max(
+        np.abs(of_out.numpy() - tf_out.numpy())
+    )
     assert np.allclose(test_global_storage.Get("x_diff"), tf_x_diff.numpy(), atol=1e-03)
+
 
 def test_cumsum(test_case):
     arg_dict = OrderedDict()

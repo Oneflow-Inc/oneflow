@@ -1885,10 +1885,10 @@ def invert_permutation(
 @oneflow_export("math.cumsum")
 def cumsum(
     input: remote_blob_util.BlobDef,
-    axis: int = 0, 
-    exclusive: bool=False, 
-    reverse: bool=False, 
-    name: Optional[str] = None
+    axis: int = 0,
+    exclusive: bool = False,
+    reverse: bool = False,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """The op computes the cumulative sum of a Blob.
     Args:
