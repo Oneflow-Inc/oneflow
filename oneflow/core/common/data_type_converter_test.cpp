@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "util.h"
-#include "oneflow/core/common/converter.h"
-#include "oneflow/core/common/converter_test_static.h"
+#include "oneflow/core/common/data_type_converter.h"
+#include "oneflow/core/common/data_type_converter_test_static.h"
 #ifdef __CUDA_ARCH__
 #include <cuda_runtime.h>
 #else

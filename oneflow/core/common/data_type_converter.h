@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_CONVERTER_H_
-#define ONEFLOW_CORE_COMMON_CONVERTER_H_
+#ifndef ONEFLOW_CORE_COMMON_DATA_TYPE_CONVERTER_H_
+#define ONEFLOW_CORE_COMMON_DATA_TYPE_CONVERTER_H_
 
 #include <cuda_runtime.h>
 #include <cstdint>
@@ -38,6 +38,8 @@ template<typename From, typename To>
 struct NeedsClamp {
   static constexpr bool from_fp = IsFloatingOrHalf<From>::value;
   static constexpr bool to_fp = IsFloatingOrHalf<To>::value;
+  static constexpr bool from_fp16 = IsFloat16<From>::value;
+  static constexpr bool to_fp16 = IsFloat16<To>::value;
   static constexpr bool from_unsigned = std::is_unsigned<From>::value;
   static constexpr bool to_unsigned = std::is_unsigned<To>::value;
   static constexpr bool value =
@@ -48,7 +50,9 @@ struct NeedsClamp {
       // converting to unsigned requires clamping negatives to zero
       (!from_unsigned && to_unsigned) ||
       // zero-extending signed unsigned integers requires more bits
-      (from_unsigned && !to_unsigned && sizeof(To) <= sizeof(From));
+      (from_unsigned && !to_unsigned && sizeof(To) <= sizeof(From)) ||
+      // float16
+      (to_fp16 && sizeof(To) <= sizeof(From));
 };
 
 template<typename To>
@@ -56,66 +60,71 @@ struct NeedsClamp<bool, To> {
   static constexpr bool value = false;
 };
 
-template<typename T>
-struct ret_type {
-  constexpr ret_type() = default;
-};
+template<typename T, typename U, typename Enabled = void>
+struct ClampHelper {};
 
 // floating-point and signed integer -> floating-point and signed integer
 template<typename T, typename U>
-OF_DEVICE_FUNC constexpr std::enable_if_t<
-    NeedsClamp<U, T>::value && std::is_signed<U>::value && std::is_signed<T>::value, T>
-Clamp(U value, ret_type<T>) {
-  return value <= GetMinVal<T>() ? GetMinVal<T>()
-                                 : value >= GetMaxVal<T>() ? GetMaxVal<T>() : static_cast<T>(value);
-}
+struct ClampHelper<
+    T, U,
+    std::enable_if_t<
+        NeedsClamp<U, T>::value && std::is_signed<U>::value && std::is_signed<T>::value, void>> {
+  static constexpr T Call(U value) {
+    return value <= GetMinVal<T>()
+               ? GetMinVal<T>()
+               : value >= GetMaxVal<T>() ? GetMaxVal<T>() : static_cast<T>(value);
+  }
+};
 
 // floating-point -> unsigned types
 template<typename T, typename U>
-OF_DEVICE_FUNC constexpr std::enable_if_t<NeedsClamp<U, T>::value && std::is_signed<U>::value
-                                              && IsFloatingOrHalf<U>::value
-                                              && std::is_unsigned<T>::value,
-                                          T>
-Clamp(U value, ret_type<T>) {
-  return value <= GetMinVal<T>() ? GetMinVal<T>()
-                                 : value >= GetMaxVal<T>() ? GetMaxVal<T>() : static_cast<T>(value);
-}
+struct ClampHelper<T, U,
+                   std::enable_if_t<NeedsClamp<U, T>::value && std::is_signed<U>::value
+                                        && IsFloatingOrHalf<U>::value && std::is_unsigned<T>::value,
+                                    void>> {
+  static constexpr T Call(U value) {
+    return value <= GetMinVal<T>()
+               ? GetMinVal<T>()
+               : value >= GetMaxVal<T>() ? GetMaxVal<T>() : static_cast<T>(value);
+  }
+};
 
 // signed integer types -> unsigned types
 template<typename T, typename U>
-OF_DEVICE_FUNC constexpr std::enable_if_t<NeedsClamp<U, T>::value && std::is_signed<U>::value
-                                              && std::is_integral<U>::value
-                                              && std::is_unsigned<T>::value,
-                                          T>
-Clamp(U value, ret_type<T>) {
-  return value <= 0 ? 0
-                    : static_cast<std::make_unsigned_t<U>>(value) >= GetMaxVal<T>()
-                          ? GetMaxVal<T>()
-                          : static_cast<T>(value);
-}
+struct ClampHelper<T, U,
+                   std::enable_if_t<NeedsClamp<U, T>::value && std::is_signed<U>::value
+                                        && std::is_integral<U>::value && std::is_unsigned<T>::value,
+                                    void>> {
+  static constexpr T Call(U value) {
+    return value <= 0 ? 0
+                      : static_cast<std::make_unsigned_t<U>>(value) >= GetMaxVal<T>()
+                            ? GetMaxVal<T>()
+                            : static_cast<T>(value);
+  }
+};
 
 // unsigned types -> any types
 template<typename T, typename U>
-OF_DEVICE_FUNC constexpr std::enable_if_t<NeedsClamp<U, T>::value && std::is_unsigned<U>::value, T>
-Clamp(U value, ret_type<T>) {
-  return value >= GetMaxVal<T>() ? GetMaxVal<T>() : static_cast<T>(value);
-}
+struct ClampHelper<T, U,
+                   std::enable_if_t<NeedsClamp<U, T>::value && std::is_unsigned<U>::value, void>> {
+  static constexpr T Call(U value) {
+    return value >= GetMaxVal<T>() ? GetMaxVal<T>() : static_cast<T>(value);
+  }
+};
 
 // not clamp
 template<typename T, typename U>
-OF_DEVICE_FUNC constexpr std::enable_if_t<!NeedsClamp<U, T>::value, T> Clamp(U value, ret_type<T>) {
-  return value;
-}
+struct ClampHelper<T, U, std::enable_if_t<!NeedsClamp<U, T>::value, void>> {
+  static constexpr T Call(U value) { return value; }
+};
 
-OF_DEVICE_FUNC constexpr int32_t Clamp(uint32_t value, ret_type<int32_t>) {
+OF_DEVICE_FUNC constexpr int32_t Clamp(uint32_t value) {
   return value & 0x80000000u ? 0x7fffffff : value;
 }
 
-OF_DEVICE_FUNC constexpr uint32_t Clamp(int32_t value, ret_type<uint32_t>) {
-  return value < 0 ? 0u : value;
-}
+OF_DEVICE_FUNC constexpr uint32_t Clamp(int32_t value) { return value < 0 ? 0u : value; }
 
-OF_DEVICE_FUNC constexpr int32_t Clamp(int64_t value, ret_type<int32_t>) {
+OF_DEVICE_FUNC constexpr int32_t Clamp(int64_t value) {
   return value < static_cast<int64_t>(GetMinVal<int32_t>())
              ? GetMinVal<int32_t>()
              : value > static_cast<int64_t>(GetMaxVal<int32_t>()) ? GetMaxVal<int32_t>()
@@ -123,49 +132,59 @@ OF_DEVICE_FUNC constexpr int32_t Clamp(int64_t value, ret_type<int32_t>) {
 }
 
 template<>
-OF_DEVICE_FUNC constexpr int32_t Clamp(uint64_t value, ret_type<int32_t>) {
-  return value > static_cast<uint64_t>(GetMaxVal<int32_t>()) ? GetMaxVal<int32_t>()
-                                                             : static_cast<int32_t>(value);
-}
+struct ClampHelper<int32_t, uint64_t> {
+  static constexpr int32_t Call(uint64_t value) {
+    return value > static_cast<uint64_t>(GetMaxVal<int32_t>()) ? GetMaxVal<int32_t>()
+                                                               : static_cast<int32_t>(value);
+  }
+};
 
 template<>
-OF_DEVICE_FUNC constexpr uint32_t Clamp(int64_t value, ret_type<uint32_t>) {
-  return value < 0
-             ? 0
-             : value > static_cast<int64_t>(GetMaxVal<uint32_t>()) ? GetMaxVal<uint32_t>()
-                                                                   : static_cast<uint32_t>(value);
-}
+struct ClampHelper<uint32_t, int64_t> {
+  static constexpr uint32_t Call(int64_t value) {
+    return value < 0
+               ? 0
+               : value > static_cast<int64_t>(GetMaxVal<uint32_t>()) ? GetMaxVal<uint32_t>()
+                                                                     : static_cast<uint32_t>(value);
+  }
+};
 
 template<>
-OF_DEVICE_FUNC constexpr uint32_t Clamp(uint64_t value, ret_type<uint32_t>) {
-  return value > static_cast<uint64_t>(GetMaxVal<uint32_t>()) ? GetMaxVal<uint32_t>()
-                                                              : static_cast<uint32_t>(value);
-}
+struct ClampHelper<uint32_t, uint64_t> {
+  static constexpr uint32_t Call(uint64_t value) {
+    return value > static_cast<uint64_t>(GetMaxVal<uint32_t>()) ? GetMaxVal<uint32_t>()
+                                                                : static_cast<uint32_t>(value);
+  }
+};
 
 template<typename T>
-OF_DEVICE_FUNC constexpr bool Clamp(T value, ret_type<bool>) {
-  return static_cast<bool>(value);
-}
+struct ClampHelper<bool, T> {
+  static constexpr bool Call(T value) { return static_cast<bool>(value); }
+};
 
 template<typename T>
-OF_DEVICE_FUNC constexpr float16 Clamp(T value, ret_type<float16>) {
-  return static_cast<float16>(Clamp(value, ret_type<float>()) < GetMinVal<float16>()
-                                  ? GetMinVal<float16>()
-                                  : Clamp(value, ret_type<float>()) > GetMaxVal<float16>()
-                                        ? GetMaxVal<float16>()
-                                        : Clamp(value, ret_type<float>()));
-}
+struct ClampHelper<float16, T> {
+  static constexpr float16 Call(T value) {
+    return static_cast<float16>(ClampHelper<T, float>::Call(value) < GetMinVal<float16>()
+                                    ? GetMinVal<float16>()
+                                    : ClampHelper<T, float>::Call(value) > GetMaxVal<float16>()
+                                          ? GetMaxVal<float16>()
+                                          : ClampHelper<T, float>::Call(value));
+  }
+};
 
 template<typename T>
-OF_DEVICE_FUNC constexpr T Clamp(float16 value, ret_type<T>) {
-  return Clamp(static_cast<float>(value), ret_type<T>());
-}
+struct ClampHelper<T, float16> {
+  static constexpr T Call(float16 value) {
+    return ClampHelper<T, float>::Call(static_cast<float>(value));
+  }
+};
 
-OF_DEVICE_FUNC constexpr float16 Clamp(float16 value, ret_type<float16>) { return value; }
+OF_DEVICE_FUNC constexpr float16 Clamp(float16 value) { return value; }
 
 template<typename T, typename U>
 OF_DEVICE_FUNC constexpr T Clamp(U value) {
-  return Clamp(value, ret_type<T>());
+  return ClampHelper<T, U>::Call(value);
 }
 
 namespace {
@@ -381,4 +400,4 @@ OF_DEVICE_FUNC constexpr Out ConvertSatNorm(In value) {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_CONVERTER_H_
+#endif  // ONEFLOW_CORE_COMMON_DATA_TYPE_CONVERTER_H_

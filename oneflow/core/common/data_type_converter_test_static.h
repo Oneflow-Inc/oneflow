@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_CONVERTER_TEST_STATIC_H_
-#define ONEFLOW_CORE_COMMON_CONVERTER_TEST_STATIC_H_
+#ifndef ONEFLOW_CORE_COMMON_DATA_TYPE_CONVERTER_TEST_STATIC_H_
+#define ONEFLOW_CORE_COMMON_DATA_TYPE_CONVERTER_TEST_STATIC_H_
 
-#include "oneflow/core/common/converter.h"
+#include "oneflow/core/common/data_type_converter.h"
 
 namespace oneflow {
 
@@ -140,4 +140,4 @@ static_assert(Clamp<uint64_t>(-1.0e+200) == 0, "Unexpected clamp result");
 }  // namespace
 }  // namespace oneflow
 
-#endif
+#endif  // ONEFLOW_CORE_COMMON_DATA_TYPE_CONVERTER_TEST_STATIC_H_
