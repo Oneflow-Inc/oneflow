@@ -98,11 +98,17 @@ TEST(ConvertNorm, int2float) {
   EXPECT_NEAR((ConvertNorm<float, int8_t>(64)), 1.0f * 64 / 127, 1e-7f);
 }
 
-TEST(Clamp, int64_2_float16) {
+TEST(Clamp1, int64_2_float16) {
   int64_t big_num = 0x0FFFFFFFFFFFFFFF;
   EXPECT_EQ(static_cast<float>(Clamp<float16>(big_num)), Clamp<float16>(Clamp<float>(big_num)));
   EXPECT_EQ(65504.0f, Clamp<float16>(big_num));
   EXPECT_EQ(-65504.0f, Clamp<float16>(-big_num));
+}
+
+TEST(Clamp2, float16_2_int64) {
+  float16 fp16 = static_cast<float16>(65504.0f);
+  EXPECT_EQ(65504, Clamp<int64_t>(fp16));
+  EXPECT_EQ(-65504, Clamp<int64_t>(-fp16));
 }
 
 }  // namespace oneflow
