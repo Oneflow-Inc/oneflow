@@ -24,7 +24,7 @@ def scan_urls(dir_path):
     for cmake_path in cmakes:
         with open(cmake_path) as f:
             content = f.read()
-            urls += re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', content)
+            urls += re.findall(r'https?://[^\s<>"\)]+|www\.[^\s<>"]+', content)
     return urls
 
 
