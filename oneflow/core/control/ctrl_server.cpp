@@ -31,11 +31,11 @@ int ExtractPortFromAddr(const std::string& addr) {
 }  // namespace
 
 CtrlServer::~CtrlServer() {
+  grpc_server_->Shutdown();
   // NOTE(chengcheng): This enqueues a special event (with a null tag) that causes
   // the completion queue to be shut down on the polling thread.
   grpc::Alarm alarm(cq_.get(), gpr_now(GPR_CLOCK_MONOTONIC), nullptr);
   loop_thread_.join();
-  grpc_server_->Shutdown();
 }
 
 CtrlServer::CtrlServer() : is_first_connect_(true), this_machine_addr_("") {
