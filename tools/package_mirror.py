@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 import requests
 import hashlib
 import base64
+import tempfile
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--src_path", type=str, required=False)
@@ -91,8 +92,16 @@ def upload_one_to_aliyun(url):
         print("exists: ", key)
     else:
         content = requests.get(url).content
-        encode_md5 = calculate_data_md5(content)
-        bucket.put_object(key, content, headers={"Content-MD5": str(encode_md5)})
+        with requests.get(url, stream=True) as r:
+            r.raise_for_status()
+            with tempfile.NamedTemporaryFile() as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+                encode_md5 = calculate_data_md5(f.read())
+                os.system("md5sum " + f.name)
+                headers = {}
+                # headers = {"Content-MD5": encode_md5.decode("utf-8")}
+                bucket.put_object_from_file(key, f.name, headers=headers)
 
 
 def upload_to_aliyun(dir_path):
