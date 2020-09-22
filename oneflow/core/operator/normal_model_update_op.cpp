@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/operator/naive_model_update_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/operator/normal_model_update_op.h"
 
 namespace oneflow {
 

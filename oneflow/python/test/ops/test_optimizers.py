@@ -257,9 +257,7 @@ def compare_with_numpy_lazy_adam(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(type="train", function_config=func_config)
-    def testLazyAdam(
-        mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
-    ) -> flow.typing.Numpy:
+    def testLazyAdam() -> flow.typing.Numpy:
         with flow.scope.placement(device_type, "0:0-0"):
             x = flow.get_variable(
                 name="x",
@@ -268,7 +266,7 @@ def compare_with_numpy_lazy_adam(
                 initializer=flow.random_uniform_initializer(minval=0, maxval=100),
                 trainable=True,
             )
-            loss = flow.math.reduce_mean(x * mask)
+            loss = flow.math.reduce_mean(x)
 
             flow.optimizer.LazyAdam(
                 flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
@@ -282,26 +280,14 @@ def compare_with_numpy_lazy_adam(
     checkpoint = flow.train.CheckPoint()
     checkpoint.init()
 
-    mask = np.random.randint(2, size=x_shape)
-    mask_float = mask.astype(np.float32)
-
     init_value = None
     for i in range(train_iters + 1):
-        x = testLazyAdam(mask_float)
+        x = testLazyAdam()
         if i == 0:
             init_value = np.copy(x)
 
     def lazy_adam_update_numpy(
-        param,
-        mask,
-        gradient,
-        iter,
-        m,
-        v,
-        lr=0.001,
-        beta1=0.9,
-        beta2=0.999,
-        epsilon=1e-7,
+        param, gradient, iter, m, v, lr=0.001, beta1=0.9, beta2=0.999, epsilon=1e-7,
     ):
 
         lr_t = lr * np.sqrt(1 - beta2 ** (iter + 1)) / (1 - beta1 ** (iter + 1))
@@ -312,14 +298,14 @@ def compare_with_numpy_lazy_adam(
         m_t_o = beta1 * m + (1 - beta1) * gradient
         v_t_o = beta2 * v + (1 - beta2) * gradient * gradient
 
-        m_t[mask == 1] = m_t_o[mask == 1]
-        v_t[mask == 1] = v_t_o[mask == 1]
+        m_t = m_t_o
+        v_t = v_t_o
 
         param_t = np.copy(param)
 
         param_t_o = param - lr_t * m_t / (np.sqrt(v_t) + epsilon)
 
-        param_t[mask == 1] = param_t_o[mask == 1]
+        param_t = param_t_o
 
         return param_t, m_t, v_t
 
@@ -330,7 +316,7 @@ def compare_with_numpy_lazy_adam(
 
     for i in range(train_iters):
         param, m, v = lazy_adam_update_numpy(
-            param, mask, gradient, i, m, v, learning_rate, beta1, beta2, epsilon
+            param, gradient, i, m, v, learning_rate, beta1, beta2, epsilon
         )
 
     assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
