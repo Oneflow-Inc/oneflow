@@ -30,7 +30,6 @@ def scan_urls(dir_path):
 
 def convert_url_to_oss_key(url):
     parsed = urlparse(url)
-    assert parsed.port == None
     # parsed.scheme = ""
     return parsed.geturl()
 
@@ -63,24 +62,32 @@ def upload_one_to_aliyun(file_path, oss_url):
     bucket = oss2.Bucket(auth, endpoint, "oneflow-static")
 
 
-def is_ignored(url: str):
-    return url.endswith(("gz", "tar", "zip")) == False
+def already_exists(url):
+    return False
+
+
+def should_be_mirrored(url: str):
+    parsed = urlparse(url)
+    return (
+        not parsed.port
+        and not parsed.query
+        and not parsed.params
+        and url.endswith(("gz", "tar", "zip"))
+        and already_exists(url) == False
+    )
 
 
 def upload_to_aliyun(dir_path):
     urls = scan_urls(dir_path)
     for url in urls:
-        if is_ignored(url):
-            print("to be ignored: ", url)
-            continue
-        elif is_mirrored(url):
-            print("already mirrored: ", url)
-            continue
-        else:
+        if should_be_mirrored(url):
             print("to be mirrored: ", url)
             file_path = download_file(url)
             oss_url = convert_url_to_oss_url(url)
             upload_one_to_aliyun(file_path, oss_url)
+        else:
+            print("skipped: ", url)
+            continue
 
 
 if __name__ == "__main__":
