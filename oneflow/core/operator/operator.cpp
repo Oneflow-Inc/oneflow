@@ -277,6 +277,7 @@ Maybe<void> Operator::InferSbpSignature(
     return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());
   };
   SbpSignatureList sbp_sig_list;
+  
   JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_list));
   // filter out suitable sbp signatures from sbp_sig_list by sbp signature configure
   SbpSignatureList filtered_sbp_sigs_by_conf;
@@ -827,6 +828,7 @@ Maybe<void> InferOpSbpSignature(
   } else {
     CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
   }
+  // Removing this from Infering steps for now
   // Get SBP signature for current op
   JUST(op->InferSbpSignatureIf(sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
                                parallel_desc));
