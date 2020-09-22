@@ -89,7 +89,28 @@ def test_1n2c_mirror_dynamic_ccrelu(test_case):
 
 
 @flow.unittest.num_nodes_required(2)
-def test_ccrelu_2n1c(test_case):
+def test_ccrelu_2n1c_0(test_case):
+    func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.consistent_view())
+    fixed_tensor_def_test(test_case, func_config)
+
+
+@flow.unittest.num_nodes_required(2)
+def test_ccrelu_2n1c_1(test_case):
+    func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.consistent_view())
+    fixed_tensor_def_test(test_case, func_config)
+
+
+@flow.unittest.num_nodes_required(2)
+def test_ccrelu_2n1c_2(test_case):
+    func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.consistent_view())
+    fixed_tensor_def_test(test_case, func_config)
+
+
+@flow.unittest.num_nodes_required(2)
+def test_ccrelu_2n1c_3(test_case):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.consistent_view())
     fixed_tensor_def_test(test_case, func_config)

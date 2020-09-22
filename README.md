@@ -105,19 +105,28 @@
 
 2. #### Clone Source Code
 
-    Clone source code and submodules (faster, recommended)
+    - #### Option 1: Download from Aliyun
 
-    ```
-    git clone https://github.com/Oneflow-Inc/oneflow
-    cd oneflow
-    git submodule update --init --recursive
-    ```
+      If you are in China, please download OneFlow source code and all submodules from: https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip
 
-    Or you could also clone the repo with `--recursive` flag to clone third_party submodules together
+      ```bash
+      curl https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip -o oneflow-src.zip
+      unzip oneflow-src.zip
+      ```
 
-    ```
-    git clone https://github.com/Oneflow-Inc/oneflow --recursive
-    ```
+    - #### Option 2: Clone source code and submodules
+
+      ```bash
+      git clone https://github.com/Oneflow-Inc/oneflow
+      cd oneflow
+      git submodule update --init --recursive
+      ```
+
+    - #### Option 3: Clone the repo with `--recursive` flag to clone third_party submodules together
+
+      ```bash
+      git clone https://github.com/Oneflow-Inc/oneflow --recursive
+      ```
 
 3. #### Build and Install OneFlow
 
