@@ -4,6 +4,7 @@ import os
 import re
 import oss2
 from urllib.parse import urlparse
+import requests
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--src_path", type=str, required=False)
@@ -30,14 +31,14 @@ def scan_urls(dir_path):
 
 def convert_url_to_oss_key(url):
     parsed = urlparse(url)
-    # parsed.scheme = ""
-    return parsed.geturl()
-
-
-# oss://oneflow-static/...
-def convert_url_to_oss_url(url):
-    key = convert_url_to_oss_key(url)
-    return os.path.join("oss://oneflow-static", key)
+    assert parsed.scheme == "https"
+    assert not parsed.params
+    assert not parsed.query
+    assert not parsed.port
+    assert not parsed.fragment
+    assert parsed.path.startswith("/")
+    path = parsed.path[1:-1]
+    return os.path.join("third_party_mirror", parsed.scheme, parsed.netloc, path)
 
 
 # https://oneflow-static.oss-cn-beijing.aliyuncs.com/...
@@ -52,14 +53,6 @@ def download_file(url):
 
 def is_mirrored(url):
     return False
-
-
-def upload_one_to_aliyun(file_path, oss_url):
-    ki = os.getenv("OSS_ACCESS_KEY_ID")
-    ks = os.getenv("OSS_ACCESS_KEY_SECRET")
-    auth = oss2.Auth(ki, ks)
-    endpoint = "oss-cn-beijing.aliyuncs.com"
-    bucket = oss2.Bucket(auth, endpoint, "oneflow-static")
 
 
 def already_exists(url):
@@ -77,14 +70,22 @@ def should_be_mirrored(url: str):
     )
 
 
+def upload_one_to_aliyun(url):
+    ki = os.getenv("OSS_ACCESS_KEY_ID")
+    ks = os.getenv("OSS_ACCESS_KEY_SECRET")
+    auth = oss2.Auth(ki, ks)
+    endpoint = "oss-cn-beijing.aliyuncs.com"
+    bucket = oss2.Bucket(auth, endpoint, "oneflow-static")
+    key = convert_url_to_oss_key(url)
+    bucket.put_object(key, requests.get(url).raw.read())
+
+
 def upload_to_aliyun(dir_path):
     urls = scan_urls(dir_path)
     for url in urls:
         if should_be_mirrored(url):
-            print("to be mirrored: ", url)
-            file_path = download_file(url)
-            oss_url = convert_url_to_oss_url(url)
-            upload_one_to_aliyun(file_path, oss_url)
+            print("mirroring: ", url)
+            upload_one_to_aliyun(url)
         else:
             print("skipped: ", url)
             continue
