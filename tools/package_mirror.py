@@ -5,6 +5,8 @@ import re
 import oss2
 from urllib.parse import urlparse
 import requests
+import hashlib
+import base64
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--src_path", type=str, required=False)
@@ -37,7 +39,7 @@ def convert_url_to_oss_key(url):
     assert not parsed.port
     assert not parsed.fragment
     assert parsed.path.startswith("/")
-    path = parsed.path[1:-1]
+    path = parsed.path[1::]
     return os.path.join("third_party_mirror", parsed.scheme, parsed.netloc, path)
 
 
@@ -70,6 +72,13 @@ def should_be_mirrored(url: str):
     )
 
 
+def calculate_data_md5(data):
+    md5 = hashlib.md5()
+    md5.update(data)
+    digest = md5.digest()
+    return base64.b64encode(digest)
+
+
 def upload_one_to_aliyun(url):
     ki = os.getenv("OSS_ACCESS_KEY_ID")
     ks = os.getenv("OSS_ACCESS_KEY_SECRET")
@@ -77,7 +86,13 @@ def upload_one_to_aliyun(url):
     endpoint = "oss-cn-beijing.aliyuncs.com"
     bucket = oss2.Bucket(auth, endpoint, "oneflow-static")
     key = convert_url_to_oss_key(url)
-    bucket.put_object(key, requests.get(url).raw.read())
+
+    if bucket.object_exists(key):
+        print("exists: ", key)
+    else:
+        content = requests.get(url).content
+        encode_md5 = calculate_data_md5(content)
+        bucket.put_object(key, content, headers={"Content-MD5": str(encode_md5)})
 
 
 def upload_to_aliyun(dir_path):
