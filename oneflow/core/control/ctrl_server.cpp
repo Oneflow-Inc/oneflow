@@ -61,15 +61,16 @@ void CtrlServer::HandleRpcs() {
 
   void* tag = nullptr;
   bool ok = false;
-  while (true) {
-    CHECK(cq_->Next(&tag, &ok));
-    CHECK(ok);
+  while (cq_->Next(&tag, &ok)) {
     auto call = static_cast<CtrlCallIf*>(tag);
     if (call) {
       call->Process();
     } else {
       // NOTE(chengcheng): A null `call` indicates that this is the shutdown alarm.
+      LOG(INFO) << "cclog: CQ shutdown! Before";
       cq_->Shutdown();
+      LOG(INFO) << "cclog: CQ shutdown! End";
+      break;
     }
   }
 }
