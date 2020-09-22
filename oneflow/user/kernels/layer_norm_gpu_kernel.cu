@@ -208,16 +208,17 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_LAYER_NORM_GPU_KERNEL(dtype, bn_param_dtype)                         \
-  REGISTER_USER_KERNEL("layer_norm")                                                  \
-      .SetCreateFn<LayerNormGpuKernel<dtype, bn_param_dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                    \
-        user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);       \
-        const DataType& data_type = mean->data_type();                                \
-        const int64_t elem_cnt = mean->shape().elem_cnt();                            \
-        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 2;       \
+#define REGISTER_LAYER_NORM_GPU_KERNEL(dtype, bn_param_dtype)                        \
+  REGISTER_USER_KERNEL("layer_norm")                                                 \
+      .SetCreateFn<LayerNormGpuKernel<dtype, bn_param_dtype>>()                      \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                            \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value) \
+                       & (user_op::HobAttr<bool>("for_test") == false))              \
+      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                   \
+        user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);      \
+        const DataType& data_type = mean->data_type();                               \
+        const int64_t elem_cnt = mean->shape().elem_cnt();                           \
+        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 2;      \
       });
 
 REGISTER_LAYER_NORM_GPU_KERNEL(float, float)

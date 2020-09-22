@@ -105,6 +105,7 @@ def test_layer_norm(_):
                     begin_params_axis=begin_params_axis,
                     center=center,
                     scale=scale,
+                    for_test=True,
                 )
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0

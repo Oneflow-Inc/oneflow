@@ -764,6 +764,7 @@ def layer_norm(
     begin_norm_axis: int = 1,
     begin_params_axis: int = -1,
     epsilon: float = 1e-5,
+    for_test: bool = False,
     name: str = "LayerNorm",
 ) -> remote_blob_util.BlobDef:
     r"""Layer Normalization. 
@@ -889,6 +890,7 @@ def layer_norm(
         op_builder.Attr("begin_norm_axis", begin_norm_axis)
         op_builder.Attr("begin_params_axis", begin_params_axis)
         op_builder.Attr("epsilon", epsilon)
+        op_builder.Attr("for_test", for_test)
 
         return op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
     else:
