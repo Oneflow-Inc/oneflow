@@ -9,6 +9,7 @@
 #include "oneflow/cfg/repeated_field.h"
 #include "oneflow/cfg/map_field.h"
 #include "oneflow/cfg/shared_pair_iterator.h"
+#include "{{ util.module_proto_header_name(module) }}"
 
 {% for package in util.module_package_list(module) %}
 namespace {{ package }} {
@@ -30,6 +31,14 @@ inline ::std::string {{ util.enum_name(enm) }}_Name({{ util.enum_name(enm) }} va
   default:
     return "";
   }
+}
+
+inline {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }} Cfg{{ util.enum_name(enm) }}ToProto{{ util.enum_name(enm) }}(const {{ util.module_package_namespace(module) }}::cfg::{{ util.enum_name(enm) }}& cfg_enum) {
+  return {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }}(int(cfg_enum));
+}
+
+inline {{ util.module_package_namespace(module) }}::cfg::{{ util.enum_name(enm) }} Proto{{ util.enum_name(enm) }}ToCfg{{ util.enum_name(enm) }}(const {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }}& proto_enum) {
+  return {{ util.module_package_namespace(module) }}::cfg::{{ util.enum_name(enm) }}(int(proto_enum));
 }
 {% endfor %}{# enm #}
 
@@ -179,7 +188,161 @@ class _{{ cls.name }}_ {
   _{{ cls.name }}_() { Clear(); }
   explicit _{{ cls.name }}_(const _{{ cls.name }}_& other) { CopyFrom(other); }
   explicit _{{ cls.name }}_(_{{ cls.name }}_&& other) = default;
+  _{{ cls.name }}_(const {{ util.module_package_namespace(module) }}::{{ cls.name }}& proto_{{ cls.name.lower() }}) { 
+{% for field in util.message_type_fields(cls) %}
+{% if util.field_has_required_or_optional_label(field) %}
+    // required_or_optional field: {{ util.field_name(field) }}
+    if (proto_{{ cls.name.lower() }}.has_{{ util.field_name(field) }}()) {
+{% if util.field_is_message_type(field)%}
+      *mutable_{{ util.field_name(field) }}() = {{ util.module_package_namespace(module) }}::cfg::{{ util.field_type_name(field) }}(proto_{{ cls.name.lower() }}.{{ util.field_name(field) }}());
+{% elif util.field_is_enum_type(field) %}
+      set_{{ util.field_name(field) }}(Proto{{ util.field_enum_name(field) }}ToCfg{{ util.field_enum_name(field) }}(proto_{{ cls.name.lower() }}.{{ util.field_name(field) }}()));
+{% else %}
+      set_{{ util.field_name(field) }}(proto_{{ cls.name.lower() }}.{{ util.field_name(field) }}());
+{% endif %}{# message_type #}
+    }
+{% elif util.field_has_repeated_label(field) %}
+    // repeated field: {{ util.field_name(field) }}
+    if (!proto_{{ cls.name.lower() }}.{{ util.field_name(field) }}().empty()) {
+{% if util.field_is_message_type(field)%}
+      for (const {{ util.module_package_namespace(module) }}::{{ util.field_type_name(field) }}& elem : proto_{{ cls.name.lower() }}.{{ util.field_name(field) }}() ) {
+        *mutable_{{ util.field_name(field) }}()->Add() = {{ util.module_package_namespace(module) }}::cfg::{{ util.field_type_name(field) }}(elem);
+      }
+{% elif util.field_is_enum_type(field) %}
+      for (const int& elem : proto_{{ cls.name.lower() }}.{{ util.field_name(field) }}() ) {
+        add_{{ util.field_name(field) }}({{ util.module_package_namespace(module) }}::cfg::{{ util.field_enum_name(field) }}(elem));
+      }
+{% else %}
+      for (const {{ util.field_type_name(field) }}& elem : proto_{{ cls.name.lower() }}.{{ util.field_name(field) }}()) {
+        add_{{ util.field_name(field) }}(elem);
+      }
+{% endif %}{# field_type #}
+    }
+{% elif util.field_is_map(field) %}
+    // map field : {{ util.field_name(field) }}
+    if (!proto_{{ cls.name.lower() }}.{{ util.field_name(field) }}().empty()) {
+      {{ util.field_map_container_name(field) }}&  mut_{{ util.field_name(field) }} = *mutable_{{ util.field_name(field) }}();
+      for (const auto& pair : proto_{{ cls.name.lower() }}.{{ util.field_name(field) }}()) {
+{% if util.field_map_value_type_is_message(field) %}
+        mut_{{ util.field_name(field) }}[pair.first] = {{ util.module_package_namespace(module) }}::cfg::{{ util.field_map_value_type_name(field) }}(pair.second);
+{% elif util.field_map_value_type_is_enum(field) %}
+        mut_{{ util.field_name(field) }}[pair.first] = Proto{{ util.field_map_value_type_enum_name(field) }}ToCfg{{ util.field_map_value_type_enum_name(field) }}(pair.second);
+{% else %}
+        mut_{{ util.field_name(field) }}[pair.first] = pair.second;
+{% endif %}{# map_value_type #}
+      }
+    }
+{% endif %}{# field_label #}
+{% endfor %}{# field #}
+{% for oneof in util.message_type_oneofs(cls) %}
+    // oneof field: {{ util.oneof_name(oneof) }}
+    {{ util.oneof_enum_name(oneof) }} {{ util.oneof_name(oneof) }}_case = {{ util.oneof_enum_name(oneof) }}(int(proto_{{ cls.name.lower() }}.{{ util.oneof_name(oneof) }}_case()));
+    switch ({{ util.oneof_name(oneof) }}_case) {
+{% for field in util.oneof_type_fields(oneof) %}
+      case {{ util.oneof_type_field_enum_value_name(field) }}: {
+{% if util.field_is_message_type(field) %}
+        *mutable_{{ util.field_name(field) }}() = {{ util.module_package_namespace(module) }}::cfg::{{ util.field_type_name(field) }}(proto_{{ cls.name.lower() }}.{{ util.field_name(field) }}());;
+{% elif util.field_is_enum_type(field) %}
+        set_{{ util.field_name(field) }}(Proto{{ util.field_enum_name(field) }}ToCfg{{ util.field_enum_name(field) }}(proto_{{ cls.name.lower() }}.{{ util.field_name(field) }}()));
+{% else %}
+        set_{{ util.field_name(field) }}(proto_{{ cls.name.lower() }}.{{ util.field_name(field) }}());
+{% endif %}{# message_type #}
+        break;
+      }
+{% endfor %}{# oneof_field #}
+      case {{ util.oneof_name(oneof).upper() }}_NOT_SET: {
+        break;
+      }
+    }
+{% endfor %}{# oneofs #}
+  }
   ~_{{ cls.name }}_() = default;
+
+  void ToProto({{ util.module_package_namespace(module) }}::{{ cls.name }}* proto_{{ cls.name.lower() }}) const {
+{% for field in util.message_type_fields(cls) %}
+{% if util.field_has_required_or_optional_label(field) %}
+    // required_or_optional field: {{ util.field_name(field) }}
+    if (this->has_{{ util.field_name(field) }}()) {
+{% if util.field_is_message_type(field)%}
+      {{ util.module_package_namespace(module) }}::{{ util.field_type_name(field) }} proto_{{ util.field_name(field).lower() }};
+      {{ util.field_name(field) }}().ToProto(&proto_{{ util.field_name(field).lower() }});
+      proto_{{ cls.name.lower() }}->mutable_{{ util.field_name(field) }}()->CopyFrom(proto_{{ util.field_name(field).lower() }});
+{% elif util.field_is_enum_type(field) %}
+      proto_{{ cls.name.lower() }}->set_{{ util.field_name(field) }}(Cfg{{ util.field_enum_name(field) }}ToProto{{ util.field_enum_name(field) }}({{ util.field_name(field) }}()));
+{% else %}
+      proto_{{ cls.name.lower() }}->set_{{ util.field_name(field) }}({{ util.field_name(field) }}());
+{% endif %}{# message_type #}
+      }
+{% elif util.field_has_repeated_label(field) %}
+    // repeated field: {{ util.field_name(field) }}
+    if (!{{ util.field_name(field) }}().empty()) {
+{% if util.field_is_message_type(field)%}
+      for (const cfg::{{ util.field_type_name(field) }}& elem : {{ util.field_name(field) }}() ) {
+        {{ util.module_package_namespace(module) }}::{{ util.field_type_name(field) }} proto_{{ util.field_name(field).lower() }}_elem;
+        elem.ToProto(&proto_{{ util.field_name(field).lower() }}_elem);
+        *proto_{{ cls.name.lower() }}->mutable_{{ util.field_name(field) }}()->Add() = proto_{{ util.field_name(field).lower() }}_elem;
+      }
+{% elif util.field_is_enum_type(field) %}
+      for (const int& elem : {{ util.field_name(field) }}() ) {
+        proto_{{ cls.name.lower() }}->add_{{ util.field_name(field) }}(::oneflow::{{ util.field_enum_name(field) }}(elem));
+      }
+{% else %}
+      for (const {{ util.field_type_name(field) }}& elem : {{ util.field_name(field) }}()) {
+        proto_{{ cls.name.lower() }}->add_{{ util.field_name(field) }}(elem);
+      }
+{% endif %}{# message_type #}
+    }
+{% elif util.field_is_map(field) %}
+    // map field : {{ util.field_name(field) }}
+    if (!{{ util.field_name(field) }}().empty()) {
+      auto& mut_{{ util.field_name(field) }} = *(proto_{{ cls.name.lower() }}->mutable_{{ util.field_name(field) }}());
+      for (const auto& pair : {{ util.field_name(field) }}()) {
+{% if util.field_map_value_type_is_message(field) %}
+        {{ util.module_package_namespace(module) }}::{{ util.field_map_value_type_name(field) }} proto_{{ util.field_name(field).lower() }}_value;
+        pair.second.ToProto(&proto_{{ util.field_name(field).lower() }}_value);
+        mut_{{ util.field_name(field) }}[pair.first] = proto_{{ util.field_name(field).lower() }}_value;
+{% elif util.field_map_value_type_is_enum(field) %}
+        mut_{{ util.field_name(field) }}[pair.first] = Cfg{{ util.field_map_value_type_enum_name(field) }}ToProto{{ util.field_map_value_type_enum_name(field) }}(pair.second);
+{% else %}
+        mut_{{ util.field_name(field) }}[pair.first] = pair.second;
+{% endif %}{# map_value_type #}
+      }
+    }
+{% endif %}{# field_type #}
+{% endfor %}{# field #}
+
+{% for oneof in util.message_type_oneofs(cls) %}
+  // oneof field: {{ util.oneof_name(oneof) }}
+    {{ util.module_package_namespace(module) }}::{{ cls.name }}::{{ util.oneof_enum_name(oneof) }} {{ util.oneof_name(oneof) }}_case = {{ util.module_package_namespace(module) }}::{{ cls.name }}::{{ util.oneof_enum_name(oneof) }}(int(this->{{ util.oneof_name(oneof) }}_case()));
+    switch ({{ util.oneof_name(oneof) }}_case) {
+{% for field in util.oneof_type_fields(oneof) %}
+      case {{ util.module_package_namespace(module) }}::{{ cls.name }}::{{ util.oneof_type_field_enum_value_name(field) }}: {
+{% if util.field_is_message_type(field) %}
+        {{ util.module_package_namespace(module) }}::{{ util.field_type_name(field) }} of_proto_{{ util.field_name(field).lower() }};
+        {{ util.field_name(field) }}().ToProto(&of_proto_{{ util.field_name(field).lower() }});
+        proto_{{ cls.name.lower() }}->mutable_{{ util.field_name(field) }}()->CopyFrom(of_proto_{{ util.field_name(field).lower() }});
+{% elif util.field_is_enum_type(field) %}
+        proto_{{ cls.name.lower() }}->set_{{ util.field_name(field) }}(Cfg{{ util.field_enum_name(field) }}ToProto{{ util.field_enum_name(field) }}({{ util.field_name(field) }}()));
+{% else %}
+        proto_{{ cls.name.lower() }}->set_{{ util.field_name(field) }}({{ util.field_name(field) }}());
+{% endif %}{# message_type #}
+        break;
+      }
+{% endfor %}{# oneof_field #}
+      case {{ util.module_package_namespace(module) }}::{{ cls.name }}::{{ util.oneof_name(oneof).upper() }}_NOT_SET: {
+        break;
+      }
+    }
+{% endfor %}{# oneofs #}
+  }
+
+  ::std::string DebugString() {
+    {{ util.module_package_namespace(module) }}::{{ cls.name }} proto_{{ cls.name.lower() }};
+    this->ToProto(&proto_{{ cls.name.lower() }});
+    return proto_{{ cls.name.lower() }}.DebugString();
+    // return "hahaha";
+  }
+
 {% for oneof in util.message_type_oneofs(cls) %}
 
  // oneof enum {{ util.oneof_name(oneof) }}
@@ -521,7 +684,18 @@ class Const{{ cls.name }} {
   Const{{ cls.name }}(const Const{{ cls.name }}&) = default;
   Const{{ cls.name }}(Const{{ cls.name }}&&) noexcept = default;
   Const{{ cls.name }}(): data_(::std::make_shared<::std::unique_ptr<_{{ cls.name }}_>>()) {}
+  Const{{ cls.name }}(const {{ util.module_package_namespace(module) }}::{{ cls.name }}& proto_{{ cls.name.lower() }}) {
+    data_->reset(new _{{ cls.name }}_(proto_{{ cls.name.lower() }}));
+  }
   ~Const{{ cls.name }}() = default;
+
+  void ToProto({{ util.module_package_namespace(module) }}::{{ cls.name }}* proto_{{ cls.name.lower() }}) const {
+    __SharedPtrOrDefault__()->ToProto(proto_{{ cls.name.lower() }});
+  }
+  
+  ::std::string DebugString() {
+    return __SharedPtrOrDefault__()->DebugString();
+  }
 
   bool __Empty__() const {
     return !*data_;
@@ -645,6 +819,9 @@ class {{ cls.name }} final : public Const{{ cls.name }} {
   // enable nothrow for std::vector<{{ cls.name }}> resize 
   {{ cls.name }}({{ cls.name }}&&) noexcept = default;
   {{ cls.name }}() = default;
+    {{ cls.name }}(const {{ util.module_package_namespace(module) }}::{{ cls.name }}& proto_{{ cls.name.lower() }})
+    : Const{{ cls.name }}(proto_{{ cls.name.lower() }}) {}
+
   ~{{ cls.name }}() = default;
 
   bool operator==(const {{ cls.name }}& other) const {
@@ -784,6 +961,6 @@ inline ::std::shared_ptr<{{ cls.name }}> Const{{ cls.name }}::__Move__() {
 {% endfor %}{# cls #}
 }
 {% for package in util.module_package_list(module) %}
-}
+} // namespace {{ package }}
 {% endfor %}{# package #}
 #endif  // {{ util.module_header_macro_lock(module) }}

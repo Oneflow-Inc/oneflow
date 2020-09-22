@@ -111,6 +111,7 @@ ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
     registry.def("__id__", &{{ cls.name }}::__Id__);
     registry.def(pybind11::self == pybind11:: self);
     registry.def(pybind11::self < pybind11:: self);
+    registry.def("__str__", &Const{{ cls.name }}::DebugString);
 {% for field in util.message_type_fields(cls) %}
 
 {% if util.field_has_required_or_optional_label(field) %}
@@ -162,6 +163,7 @@ ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
     registry.def("__id__", &{{ cls.name }}::__Id__);
     registry.def(pybind11::self == pybind11:: self);
     registry.def(pybind11::self < pybind11:: self);
+    registry.def("__str__", &{{ cls.name }}::DebugString);
 
 {% for oneof in util.message_type_oneofs(cls) %}
     registry.def_property_readonly_static("{{ util.oneof_name(oneof).upper() }}_NOT_SET",

@@ -15,6 +15,13 @@ class ProtoReflectionUtil:
     def module_package_list(self, module):
         return filter(lambda x: len(x) > 0, module.package.split("."))
 
+    def module_package_namespace(self, module):
+        package_list = self.module_package_list(module)
+        namespace_str = str()
+        for elem in package_list:
+            namespace_str = namespace_str + '::' + elem
+        return namespace_str
+    
     def module_cfg_header_name(self, module):
         return module.name[0:-5] + "cfg.h"
 
