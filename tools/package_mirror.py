@@ -49,19 +49,6 @@ def convert_url_to_oss_https_url(url):
     raise NotImplemented
 
 
-def download_file(url):
-    path = None
-    return path
-
-
-def is_mirrored(url):
-    return False
-
-
-def already_exists(url):
-    return False
-
-
 def should_be_mirrored(url: str):
     parsed = urlparse(url)
     return (
@@ -69,7 +56,6 @@ def should_be_mirrored(url: str):
         and not parsed.query
         and not parsed.params
         and url.endswith(("gz", "tar", "zip"))
-        and already_exists(url) == False
     )
 
 
