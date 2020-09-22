@@ -24,13 +24,13 @@ def scan_urls(dir_path):
     for cmake_path in cmakes:
         with open(cmake_path) as f:
             content = f.read()
-            urls += re.findall("https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+", content)
+            urls += re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', content)
     return urls
 
 
 def convert_url_to_oss_key(url):
     parsed = urlparse(url)
-    print(parsed.port)
+    assert parsed.port == None
     # parsed.scheme = ""
     return parsed.geturl()
 
@@ -63,10 +63,17 @@ def upload_one_to_aliyun(file_path, oss_url):
     bucket = oss2.Bucket(auth, endpoint, "oneflow-static")
 
 
+def is_ignored(url: str):
+    return url.endswith(("gz", "tar", "zip")) == False
+
+
 def upload_to_aliyun(dir_path):
     urls = scan_urls(dir_path)
     for url in urls:
-        if is_mirrored(url):
+        if is_ignored(url):
+            print("to be ignored: ", url)
+            continue
+        elif is_mirrored(url):
             print("already mirrored: ", url)
             continue
         else:
