@@ -2,6 +2,8 @@ import glob
 import argparse
 import os
 import re
+import oss2
+from urllib.parse import urlparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--src_path", type=str, required=False)
@@ -26,9 +28,17 @@ def scan_urls(dir_path):
     return urls
 
 
+def convert_url_to_oss_key(url):
+    parsed = urlparse(url)
+    print(parsed.port)
+    # parsed.scheme = ""
+    return parsed.geturl()
+
+
 # oss://oneflow-static/...
-def convert_url_to_oss_url():
-    raise NotImplemented
+def convert_url_to_oss_url(url):
+    key = convert_url_to_oss_key(url)
+    return os.path.join("oss://oneflow-static", key)
 
 
 # https://oneflow-static.oss-cn-beijing.aliyuncs.com/...
@@ -36,11 +46,34 @@ def convert_url_to_oss_https_url(url):
     raise NotImplemented
 
 
+def download_file(url):
+    path = None
+    return path
+
+
+def is_mirrored(url):
+    return False
+
+
+def upload_one_to_aliyun(file_path, oss_url):
+    ki = os.getenv("OSS_ACCESS_KEY_ID")
+    ks = os.getenv("OSS_ACCESS_KEY_SECRET")
+    auth = oss2.Auth(ki, ks)
+    endpoint = "oss-cn-beijing.aliyuncs.com"
+    bucket = oss2.Bucket(auth, endpoint, "oneflow-static")
+
+
 def upload_to_aliyun(dir_path):
     urls = scan_urls(dir_path)
     for url in urls:
-        oss_url = convert_url_to_oss_url(url)
-    raise NotImplemented
+        if is_mirrored(url):
+            print("already mirrored: ", url)
+            continue
+        else:
+            print("to be mirrored: ", url)
+            file_path = download_file(url)
+            oss_url = convert_url_to_oss_url(url)
+            upload_one_to_aliyun(file_path, oss_url)
 
 
 if __name__ == "__main__":
