@@ -22,6 +22,7 @@ namespace {
 REGISTER_USER_OP("dropout")
     .Input("in")
     .Input("mask")
+    .OptionalInput("_add_to_output")
     .Output("out")
     .Attr("scale", UserOpAttrType::kAtFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -43,11 +44,7 @@ REGISTER_USER_OP("dropout")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       FOR_RANGE(int64_t, axis, 0, in_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("in", 0), axis)
-            .Split(user_op::OpArg("mask", 0), axis)
-            .Split(user_op::OpArg("out", 0), axis)
-            .Build();
+        ctx->NewBuilder().Split(ctx->inputs(), axis).Split(ctx->outputs(), axis).Build();
       }
       return Maybe<void>::Ok();
     })

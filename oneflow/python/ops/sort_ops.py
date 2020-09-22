@@ -29,6 +29,37 @@ def sort(
     direction: str = "ASCENDING",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """This operator sorts the input Blob. 
+
+    Args:
+        input (remote_blob_util.BlobDef): A Blob
+        direction (str, optional): The direction in which to sort the Blob values. If the direction is "ASCENDING", The order of input will be sorted as ascending, else, the order of input will be sorted as descending. Defaults to "ASCENDING".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The sorted Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def sort_Job(x: tp.Numpy.Placeholder((5, ))
+        ) -> tp.Numpy:
+            return flow.sort(input=x, 
+                            direction='ASCENDING')
+
+        x = np.array([10, 2, 9, 3, 7]).astype("float32")
+        out = sort_Job(x)
+
+        # out [ 2.  3.  7.  9. 10.]
+
+    """
     assert direction in ["ASCENDING", "DESCENDING"]
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Sort_"))
@@ -48,6 +79,37 @@ def argsort(
     direction: str = "ASCENDING",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """This operator sorts the input Blob and return the indices of sorted Blob. 
+
+    Args:
+        input (remote_blob_util.BlobDef): A Blob
+        direction (str, optional): The direction in which to sort the Blob values. If the direction is "ASCENDING", The order of input will be sorted as ascending, else, the order of input will be sorted as descending. Defaults to "ASCENDING".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The indices of sorted Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def argsort_Job(x: tp.Numpy.Placeholder((5, ))
+        ) -> tp.Numpy:
+            return flow.argsort(input=x, 
+                                direction='ASCENDING')
+
+        x = np.array([10, 2, 9, 3, 7]).astype("float32")
+        out = argsort_Job(x)
+
+        # out [1 3 4 2 0]
+
+    """
     assert direction in ["ASCENDING", "DESCENDING"]
     return (
         flow.user_op_builder(

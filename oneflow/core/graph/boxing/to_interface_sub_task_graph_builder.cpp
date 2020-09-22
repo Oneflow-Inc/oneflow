@@ -26,10 +26,10 @@ Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
   const LogicalNode* dst_logical_node = sorted_dst_comp_tasks.front()->logical_node();
-  if (dst_logical_node->op_vec().size() != 1) { return Error::BoxingNotSupported(); }
+  if (dst_logical_node->op_vec().size() != 1) { return Error::BoxingNotSupportedError(); }
   if (!IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(
           dst_logical_node->SoleOp()->op_conf().op_type_case())) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
       && (dst_parallel_desc.parallel_num() == 1 || dst_sbp_parallel.has_broadcast_parallel())) {
@@ -86,7 +86,7 @@ Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
         dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
         "ToInterfaceSubTskGphBuilder", "BuildSubTaskGphB2S"));
   } else {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
 }
 

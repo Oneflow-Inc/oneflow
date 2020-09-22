@@ -14,16 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import oneflow.typing as tp
 from util import convert_to_onnx_and_check
 
 
-func_config = flow.FunctionConfig()
-func_config.default_data_type(flow.float)
-
-
 def test_relu(test_case):
-    @flow.global_function(func_config)
-    def relu(x=flow.FixedTensorDef((3, 4, 2, 5))):
+    @flow.global_function()
+    def relu(x: tp.Numpy.Placeholder((3, 4, 2, 5))):
         return flow.math.relu(x)
 
     convert_to_onnx_and_check(relu)

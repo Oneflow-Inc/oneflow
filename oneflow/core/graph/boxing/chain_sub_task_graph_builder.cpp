@@ -35,7 +35,7 @@ Maybe<SubTskGphBuilderStatus> ChainSubTskGphBuilder::Build(
       return boxing_builder_status;
     }
   }
-  return Error::BoxingNotSupported();
+  return Error::BoxingNotSupportedError();
 }
 
 }  // namespace oneflow

@@ -13,20 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EAGER_EAGER_UTIL_H_
-#define ONEFLOW_CORE_EAGER_EAGER_UTIL_H_
+#ifndef ONEFLOW_CORE_JOB_CLUSTER_CONTROL_H_
+#define ONEFLOW_CORE_JOB_CLUSTER_CONTROL_H_
 
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/job/cluster_instruction.pb.h"
 
 namespace oneflow {
-namespace eager {
 
-Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_proto_str,
-                                   const std::string& eager_symbol_list_str);
-Maybe<void> RunLogicalInstruction(const std::string& instruction_list_proto_str,
-                                  const std::string& eager_symbol_list_str);
+struct ClusterInstruction final {
+  static void MasterSendSessionStart();
+  static void MasterSendHalt();
+  static void MasterSendEagerInstruction(const ClusterInstructionProto& cluster_instruction);
+  static void WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction);
+  static void NewSessionBarrier();
+  static void HaltBarrier();
+};
 
-}  // namespace eager
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EAGER_EAGER_UTIL_H_
+#endif  // ONEFLOW_CORE_JOB_CLUSTER_CONTROL_H_

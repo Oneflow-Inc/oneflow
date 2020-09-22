@@ -304,7 +304,50 @@ def ofrecord_reader(
         name (Optional[str], optional): Optional name. Defaults to None.
         
     Returns:
-        remote_blob_util.BlobDef: [description]
+        remote_blob_util.BlobDef: The result Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        from typing import Tuple
+
+
+        @flow.global_function(type="predict")
+        def ofrecord_reader_job() -> Tuple[tp.Numpy, tp.Numpy]:
+            batch_size = 16
+            with flow.scope.placement("cpu", "0:0"):
+                # our ofrecord file path is "./dataset/part-0"
+                ofrecord = flow.data.ofrecord_reader(
+                    "./dataset/",
+                    batch_size=batch_size,
+                    data_part_num=1,
+                    part_name_suffix_length=-1,
+                    part_name_prefix='part-', 
+                    random_shuffle=True,
+                    shuffle_after_epoch=True,
+                )
+                # image shape is (28*28, )
+                image = flow.data.OFRecordRawDecoder(
+                    ofrecord, "images", shape=(784, ), dtype=flow.int32
+                )
+                # label shape is (1, )
+                label = flow.data.OFRecordRawDecoder(
+                    ofrecord, "labels", shape=(1, ), dtype=flow.int32
+                )
+                
+                return image, label
+
+        if __name__ == "__main__":
+            images, labels = ofrecord_reader_job()
+            print("In per batch, images shape is", images.shape)
+            print("In per batch, labels shape is", labels.shape)
+
+            # In per batch, images shape is (16, 784)
+            # In per batch, labels shape is (16, 1)
+
     """
     if name is None:
         name = id_util.UniqueStr("OFRecord_Reader_")

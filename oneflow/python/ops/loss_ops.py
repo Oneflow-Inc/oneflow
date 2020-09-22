@@ -70,7 +70,7 @@ def smooth_l1_loss(
         label = np.array([0.3, 0.9, 2.5, 0.4, 0.3]).astype(np.float32)
         out = smooth_l1_loss_Job(prediction, label)
 
-        # output [0.02       0.12499999 1.7        0.005      0.17999998]
+        # out [0.02       0.12499999 1.7        0.005      0.17999998]
 
     """
     op = (

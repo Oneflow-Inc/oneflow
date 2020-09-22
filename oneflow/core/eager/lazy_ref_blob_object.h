@@ -16,10 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_LAZY_REF_BLOB_OBJECT_H_
 #define ONEFLOW_CORE_EAGER_LAZY_REF_BLOB_OBJECT_H_
 
-#include "oneflow/core/vm/object.h"
-#include "oneflow/core/register/blob_desc.h"
-#include "oneflow/core/register/blob.h"
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/eager/blob_object.h"
 
 namespace oneflow {
@@ -31,17 +27,23 @@ class LazyRefBlobObject : public BlobObject {
   LazyRefBlobObject(LazyRefBlobObject&&) = delete;
   LazyRefBlobObject(Blob* blob)
       : BlobObject(std::make_shared<MemoryCase>(blob->mem_case()), blob->data_type()) {
-    rt_blob_desc_.reset(new RtBlobDesc(blob_desc()));
+    const auto& rt_blob_desc = blob->blob_desc();
+    blob_desc_ = BlobDesc(rt_blob_desc.body(), rt_blob_desc.is_tensor_list(),
+                          rt_blob_desc.is_body_disabled(), rt_blob_desc.is_dynamic());
     ref_blob_ = blob;
   }
   virtual ~LazyRefBlobObject() override = default;
 
+  virtual BlobDesc* mut_blob_desc() override { UNIMPLEMENTED(); }
+
   virtual const Blob& blob() const override { return *ref_blob_; }
   virtual Blob* mut_blob() override { return ref_blob_; }
 
-  // TODO(daquexian): Separate LazyBlobObject and EagerBlobObject,
-  // remove "virtual xxx override { Unimplemented }"
-  virtual Maybe<void> TryInitBlob() override { return Error::Unimplemented(); };
+  virtual void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override{
+      // do nothing
+  };
+
+  virtual Maybe<void> TryInitBlob() override { return Maybe<void>::Ok(); }
 
  private:
   Blob* ref_blob_ = nullptr;
