@@ -35,6 +35,7 @@ jobs:
         OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
         OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       run: |
+        python3 -m pip install oss2
         python3 tools/package_mirror.py -i cmake
 
   build_and_test:
