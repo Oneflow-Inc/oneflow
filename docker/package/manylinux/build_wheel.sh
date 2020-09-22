@@ -11,6 +11,7 @@ PY_VERS=()
 while [[ "$#" > 0 ]]; do
     case $1 in
         --skip-third-party) SKIP_THIRD_PARTY=1; ;;
+        --skip-wheel) SKIP_WHEEL=1; ;;
         --cache-dir) CACHE_DIR=$2; shift ;;
         --house-dir) HOUSE_DIR=$2; shift ;;
         --package-name) PACKAGE_NAME=$2; shift ;;
@@ -48,6 +49,14 @@ fi
 
 cd $ONEFLOW_SRC_DIR
 
+# TF requires py3 to build
+export PATH=/opt/python/cp37-cp37m/bin:$PATH
+python --version
+gcc --version
+
+# specify a mounted dir as bazel cache dir
+export TEST_TMPDIR=$CACHE_DIR/bazel_cache
+
 THIRD_PARTY_BUILD_DIR=$CACHE_DIR/build-third-party
 THIRD_PARTY_INSTALL_DIR=$CACHE_DIR/build-third-party-install
 COMMON_CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release -DBUILD_RDMA=ON -DTHIRD_PARTY_DIR=$THIRD_PARTY_INSTALL_DIR"
@@ -69,7 +78,10 @@ ONEFLOW_BUILD_DIR=$CACHE_DIR/build-oneflow
 
 function cleanup {
   set -x
-  rm  -rf tmp_wheel
+  rm -rf $ONEFLOW_BUILD_DIR/python_scripts/oneflow/*.so
+  rm -rf build/bdist.linux-x86_64
+  rm -rf build/lib
+  rm -rf tmp_wheel
 }
 
 for PY_VER in ${PY_VERS[@]}
@@ -83,16 +95,20 @@ do
     fi
     PY_ROOT=/opt/python/${PY_ABI}
     PY_BIN=${PY_ROOT}/bin/python
-    cmake -DTHIRD_PARTY=OFF -DONEFLOW=ON\
+    cleanup
+    cmake -DTHIRD_PARTY=OFF -DONEFLOW=ON \
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
         $COMMON_CMAKE_ARGS \
-        -DPython3_ROOT_DIR=$PY_ROOT \
+        -DPython3_EXECUTABLE=${PY_BIN} \
         $EXTRA_ONEFLOW_CMAKE_ARGS \
         $ONEFLOW_SRC_DIR
     cmake --build . -j `nproc`
     popd
     trap cleanup EXIT
-    rm -rf $ONEFLOW_BUILD_DIR/python_scripts/*.egg-info
-    $PY_BIN setup.py bdist_wheel -d tmp_wheel --build_dir $ONEFLOW_BUILD_DIR --package_name $PACKAGE_NAME
-    auditwheel repair tmp_wheel/*.whl --wheel-dir $HOUSE_DIR
+    if [[ $SKIP_WHEEL != 1 ]]; then
+        rm -rf $ONEFLOW_BUILD_DIR/python_scripts/*.egg-info
+        $PY_BIN setup.py bdist_wheel -d tmp_wheel --build_dir $ONEFLOW_BUILD_DIR --package_name $PACKAGE_NAME
+        auditwheel repair tmp_wheel/*.whl --wheel-dir $HOUSE_DIR
+    fi
     cleanup
 done

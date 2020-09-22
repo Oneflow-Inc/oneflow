@@ -301,7 +301,6 @@ def main(args):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    flow.env.grpc_use_no_signal()
     flow.env.log_dir("./log")
     if args.multinode:
         flow.env.ctrl_port(12138)

@@ -68,4 +68,8 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_SUM_LIKE_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ)
 
+#if defined(WITH_CUDA)
+REGISTER_REDUCE_SUM_LIKE_KERNEL(DeviceType::kGPU, (float16, DataType::kFloat16))
+#endif
+
 }  // namespace oneflow

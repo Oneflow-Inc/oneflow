@@ -39,7 +39,6 @@ CtrlServer::~CtrlServer() {
 
 CtrlServer::CtrlServer() : is_first_connect_(true), this_machine_addr_("") {
   Init();
-  if (Global<EnvDesc>::Get()->grpc_use_no_signal()) { grpc_use_signal(-1); }
   int port = Global<EnvDesc>::Get()->ctrl_port();
   grpc::ServerBuilder server_builder;
   server_builder.SetMaxMessageSize(INT_MAX);
@@ -195,7 +194,8 @@ void CtrlServer::Init() {
   Add([this](CtrlCall<CtrlMethod::kClear>* call) {
     name2lock_status_.clear();
     kv_.clear();
-    CHECK(pending_kv_calls_.empty());
+    CHECK(pending_kv_calls_.empty()) << "size(): " << pending_kv_calls_.size()
+                                     << ", begin()->key: " << pending_kv_calls_.begin()->first;
     call->SendResponse();
     EnqueueRequest<CtrlMethod::kClear>();
   });

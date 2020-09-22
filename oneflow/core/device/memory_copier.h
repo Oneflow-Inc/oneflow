@@ -82,6 +82,8 @@ class CudaAsyncMemoryCopier final : public MemoryCopier {
   ~CudaAsyncMemoryCopier() override = default;
 
  private:
+  void Copy(DeviceCtx* ctx, void* dst, const void* src,
+            const MemoryCopyNdDesc& desc) const override;
   void Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const override;
   void Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src, size_t src_pitch,
               size_t width, size_t height) const override;

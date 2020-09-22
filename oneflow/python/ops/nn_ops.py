@@ -272,7 +272,7 @@ def conv1d(
         x = np.random.randn(1, 64, 32).astype(np.float32)
         out = conv1d_Job(x)
 
-        # output.shape (1, 32, 32)
+        # out.shape (1, 32, 32)
 
     """
     assert len(input.shape) == 3
@@ -445,7 +445,7 @@ def conv2d(
         x = np.random.randn(1, 64, 32, 32).astype(np.float32)
         out = conv2d_Job(x)
 
-        # output.shape (1, 128, 16, 16)
+        # out.shape (1, 128, 16, 16)
 
     """
     assert len(input.shape) == 4
@@ -662,7 +662,7 @@ def conv3d(
         x = np.random.randn(1, 64, 10, 16, 16).astype(np.float32)
         out = conv3d_Job(x)
 
-        # output.shape (1, 128, 10, 16, 16)
+        # out.shape (1, 128, 10, 16, 16)
 
     """
 
@@ -858,7 +858,7 @@ def batch_normalization(
         x = np.array([[1, 2, 3, 4, 5]]).astype(np.float32)
         out = batch_norm_Job(x)
 
-        # output [[-1.41421  -0.707105  0.        0.707105  1.41421 ]]
+        # out [[-1.41421  -0.707105  0.        0.707105  1.41421 ]]
 
     """
 
@@ -1003,7 +1003,7 @@ def tf_conv2d(
         x = np.random.randn(1, 64, 32, 32).astype(np.float32)
         out = conv2d_Job(x)
 
-        # output.shape (1, 128, 16, 16)
+        # out.shape (1, 128, 16, 16)
 
     """
     if padding.upper() == "SAME":
@@ -1061,7 +1061,7 @@ def bias_add(
         x = np.random.randn(1, 64, 128, 128).astype(np.float32)
         out = bias_add_Job(x)
 
-        # output.shape (1, 64, 128, 128)
+        # out.shape (1, 64, 128, 128)
 
     """
     # TODO: name unused, fix it
@@ -1212,7 +1212,7 @@ def max_pool2d(
         x = np.random.randn(1, 32, 128, 128).astype(np.float32)
         out = maxpool2d_Job(x)
 
-        # output.shape (1, 32, 64, 64)
+        # out.shape (1, 32, 64, 64)
 
     """
     op = (
@@ -1289,7 +1289,7 @@ def avg_pool2d(
         x = np.random.randn(1, 32, 128, 128).astype(np.float32)
         out = avgpool2d_Job(x)
 
-        # output.shape (1, 32, 64, 64)
+        # out.shape (1, 32, 64, 64)
 
     """
     op = (
@@ -1367,7 +1367,7 @@ def max_pool3d(
         x = np.random.randn(1, 32, 10, 128, 128).astype(np.float32)
         out = maxpool3d_Job(x)
 
-        # output.shape (1, 32, 5, 64, 64)
+        # out.shape (1, 32, 5, 64, 64)
 
     """
     op = (
@@ -1445,7 +1445,7 @@ def avg_pool3d(
         x = np.random.randn(1, 32, 10, 128, 128).astype(np.float32)
         out = avgpool3d_Job(x)
 
-        # output.shape (1, 32, 5, 64, 64)
+        # out.shape (1, 32, 5, 64, 64)
 
     """
     op = (
@@ -1536,7 +1536,7 @@ def softmax(
         x = np.array([[1, 2, 1, 5, 4]]).astype(np.float32)
         out = softmax_Job(x)
 
-        # output [[0.01259415 0.03423444 0.01259415 0.68761706 0.2529602 ]]
+        # out [[0.01259415 0.03423444 0.01259415 0.68761706 0.2529602 ]]
 
     """
     if axis is None:
@@ -1653,7 +1653,7 @@ def sparse_cross_entropy(
         labels = np.array([0, 1, 1, 0, 1]).astype(np.int32)
         loss = sparse_cross_entropy_Job(x, labels)
 
-        # output [1.2039728  0.5108256  0.6931472  2.3025851  0.22314353]
+        # out [1.2039728  0.5108256  0.6931472  2.3025851  0.22314353]
 
     """
     assert labels is not None
@@ -1724,7 +1724,6 @@ def softmax_cross_entropy_with_logits(
         def softmax_cross_entropy_Job(input: tp.Numpy.Placeholder((3, 3), dtype=flow.float32),
                                     labels: tp.Numpy.Placeholder((3, 3), dtype=flow.float32)
         ) -> tp.Numpy:
-            input = flow.nn.softmax(input)
             loss = flow.nn.softmax_cross_entropy_with_logits(labels=labels,
                                                             logits=input)
             return loss
@@ -1738,7 +1737,7 @@ def softmax_cross_entropy_with_logits(
                         [0.8, 0.1, 0.1]]).astype(np.float32)
         loss = softmax_cross_entropy_Job(x, labels)
 
-        # output [0.73441553 1.1240788  1.4488925 ]
+        # out [0.73441553 1.1240788  1.4488925 ]
 
     """
 
@@ -1800,7 +1799,6 @@ def sparse_softmax_cross_entropy_with_logits(
         def sparse_softmax_cross_entropy_Job(input: tp.Numpy.Placeholder((3, 3), dtype=flow.float32),
                                              labels: tp.Numpy.Placeholder((3, ), dtype=flow.int32)
         ) -> tp.Numpy:
-            input = flow.nn.softmax(input)
             loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,
                                                                     logits=input)
             return loss
@@ -1812,7 +1810,7 @@ def sparse_softmax_cross_entropy_with_logits(
         labels = np.array([0, 1, 2]).astype(np.int32)
         loss = sparse_softmax_cross_entropy_Job(x, labels)
 
-        # output [0.65784633 1.2842525  0.5557927 ]
+        # out [0.65784633 1.2842525  0.5557927 ]
 
     """
     assert labels is not None
@@ -1893,7 +1891,6 @@ def sigmoid_cross_entropy_with_logits(
         def sigmoid_cross_entropy_Job(input: tp.Numpy.Placeholder((3, 2), dtype=flow.float32),
                                     labels: tp.Numpy.Placeholder((3, 2), dtype=flow.float32)
         ) -> tp.Numpy:
-            input = flow.math.sigmoid(input)
             loss = flow.nn.sigmoid_cross_entropy_with_logits(labels=labels,
                                                             logits=input)
             return loss
@@ -1907,9 +1904,9 @@ def sigmoid_cross_entropy_with_logits(
                         [0.2, 0.8]]).astype(np.float32)
         loss = sigmoid_cross_entropy_Job(x, labels)
 
-        # output [[0.612735   0.90472794]
-        #         [0.89778364 0.6990613 ]
-        #         [0.97783387 0.51372755]]
+        # out [[0.612735   0.90472794]
+        #      [0.89778364 0.6990613 ]
+        #      [0.97783387 0.51372755]]
 
 
     """
@@ -1993,11 +1990,11 @@ def random_mask_like(
         like = np.ones(shape=(5, 5)).astype(np.float32)
         random_mask = random_mask_like_Job(like)
 
-        # output [[0 0 0 0 0]
-        #         [1 1 1 0 0]
-        #         [1 0 1 1 0]
-        #         [0 0 0 0 1]
-        #         [1 0 1 1 1]]
+        # out [[0 0 0 0 0]
+        #      [1 1 1 0 0]
+        #      [1 0 1 1 0]
+        #      [0 0 0 0 1]
+        #      [1 0 1 1 1]]
 
     """
     assert rate is not None and rate >= 0.0 and rate < 1.0
@@ -2234,7 +2231,7 @@ def deconv2d(
         x = np.random.randn(1, 32, 32, 32).astype(np.float32)
         out = deconv2d_Job(x)
 
-        # output.shape (1, 32, 64, 64)
+        # out.shape (1, 32, 64, 64)
 
     """
     assert (value is not None) ^ (
@@ -2519,7 +2516,7 @@ def leaky_relu(
         x = np.array([-10, -5, 0, 5, 10]).astype(np.float32)
         out = leaky_relu_Job(x)
 
-        # output [-2. -1.  0.  5. 10.]
+        # out [-2. -1.  0.  5. 10.]
 
     """
     return (
