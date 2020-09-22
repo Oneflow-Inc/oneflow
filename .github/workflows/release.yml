@@ -53,7 +53,8 @@ jobs:
     - uses: actions/checkout@v2
     - name: Setup submodule
       uses: ./.github/actions/setup
-    - name: Build OneFlow
+    - name: Pack OneFlow source code
+      if: github.ref == 'refs/heads/master'
       run: |
         git reset --hard
         git clean -f
