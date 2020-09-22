@@ -52,7 +52,12 @@ class AdamOptimizerOp : public OptimizerOp {
       }
       lr = xla::Broadcast(lr, bcast_sizes);
     }
-    //TODO: Gradient is float16
+    DataType model_dtype = ctx->InputType("model_0");
+    DataType gradient_dtype = ctx->InputType("model_diff_0");
+    if (model_dtype != gradient_dtype) {
+      xla::PrimitiveType data_type = DataTypeToPrimitiveType(model_dtype);
+      gradient = xla::ConvertElementType(gradient, data_type);
+    }
     if(scale_val != 1) {
       xla::XlaOp scale = xla::ScalarLike(gradient, scale_val);
       gradient = gradient * scale;
