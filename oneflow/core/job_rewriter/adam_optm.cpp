@@ -54,17 +54,34 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
   job_builder->AddOps(parallel_conf, {m_var, v_var});
 
   user_op::UserOpConfWrapperBuilder adam_update_op_builder(op.op_name() + "_optimizer");
-  const AdamModelUpdateConf& adam_conf = model_update_conf.adam_conf();
-  const bool do_bias_correction = adam_conf.do_bias_correction();
+  float beta1;
+  float beta2;
+  float epsilon;
+  bool do_bias_correction;
+  if (model_update_conf.has_adam_conf()) {
+    const AdamModelUpdateConf& adam_conf = model_update_conf.adam_conf();
+    beta1 = adam_conf.beta1();
+    beta2 = adam_conf.beta2();
+    epsilon = adam_conf.epsilon();
+    do_bias_correction = adam_conf.do_bias_correction();
+  } else if (model_update_conf.has_lazy_adam_conf()) {
+    const LazyAdamModelUpdateConf& lazy_adam_conf = model_update_conf.lazy_adam_conf();
+    beta1 = lazy_adam_conf.beta1();
+    beta2 = lazy_adam_conf.beta2();
+    epsilon = lazy_adam_conf.epsilon();
+    do_bias_correction = true;
+  } else {
+    UNIMPLEMENTED();
+  }
   adam_update_op_builder.OpTypeName("adam_update")
       .Input("model", GenLogicalBlobName(op.BnInOp2Lbi("out")))
       .Input("model_diff", GenLogicalBlobName(diff_lbi_of_var_out))
       .Input("learning_rate", train_conf.primary_lr_lbn())
       .Input("m", GenVariableOutputLbn(m_var))
       .Input("v", GenVariableOutputLbn(v_var))
-      .Attr<float>("beta1", adam_conf.beta1())
-      .Attr<float>("beta2", adam_conf.beta2())
-      .Attr<float>("epsilon", adam_conf.epsilon())
+      .Attr<float>("beta1", beta1)
+      .Attr<float>("beta2", beta2)
+      .Attr<float>("epsilon", epsilon)
       .Attr<bool>("do_bias_correction", do_bias_correction)
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
@@ -72,9 +89,9 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
   if (do_bias_correction) {
     OperatorConf beta1_t_var;
     OperatorConf beta2_t_var;
-    beta1_t_var = GenerateAdamHelperVariableOpConf(op, "beta1_t", adam_conf.beta1());
+    beta1_t_var = GenerateAdamHelperVariableOpConf(op, "beta1_t", beta1);
     SetScalarShapeAndSbpConf(&beta1_t_var);
-    beta2_t_var = GenerateAdamHelperVariableOpConf(op, "beta2_t", adam_conf.beta2());
+    beta2_t_var = GenerateAdamHelperVariableOpConf(op, "beta2_t", beta2);
     SetScalarShapeAndSbpConf(&beta2_t_var);
     job_builder->AddOps(parallel_conf, {beta1_t_var, beta2_t_var});
     adam_update_op_builder.Input("beta1_t", GenVariableOutputLbn(beta1_t_var));
@@ -88,5 +105,6 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
 }  // namespace
 
 REGISTER_OPTIMIZER(NormalModelUpdateOpUserConf::kAdamConf, &GenerateOptimizerOpConf);
+REGISTER_OPTIMIZER(NormalModelUpdateOpUserConf::kLazyAdamConf, &GenerateOptimizerOpConf);
 
 }  // namespace oneflow
