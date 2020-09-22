@@ -100,6 +100,7 @@ def upload_one_to_aliyun(url):
                 encode_md5 = calculate_data_md5(f.read())
                 os.system("md5sum " + f.name)
                 headers = {}
+                # TODO: md5 check doesn't work. check it in cmake
                 # headers = {"Content-MD5": encode_md5.decode("utf-8")}
                 bucket.put_object_from_file(key, f.name, headers=headers)
 
