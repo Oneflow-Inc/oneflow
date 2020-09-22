@@ -240,18 +240,21 @@ class Operator {
   virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
     // UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
     // std::cout << " GetSbpSignatures implemented, op name: " << op_name() << std::endl;
+    // S(0)->B and B->S(0) might not be supported.
+    /*
     SbpSignatureBuilder()
-      .Split(input_bns(), 0)
-      .Broadcast(output_bns())
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-      SbpSignatureBuilder()
-      .Split(input_bns(), 0)
-      .Split(output_bns(), 0)
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-      SbpSignatureBuilder()
-      .Broadcast(input_bns())
-      .Split(output_bns(), 0)
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+        .Split(input_bns(), 0)
+        .Broadcast(output_bns())
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    SbpSignatureBuilder()
+        .Broadcast(input_bns())
+        .Split(output_bns(), 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+        */
+    SbpSignatureBuilder()
+        .Split(input_bns(), 0)
+        .Split(output_bns(), 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
   virtual Maybe<void> InferMirroredSignature(

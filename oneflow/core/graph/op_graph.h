@@ -58,6 +58,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
  private:
   friend class OpGraph;
   friend class OpEdge;
+  friend class SbpConstructor;
   // Getters
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
 
@@ -184,6 +185,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   Maybe<void> Init(const Job& job);
 
  private:
+ friend class SbpConstructor;
+ 
   void InitNodes(const Job& job);
   void InitEdges();
   void InitProducerOpName2CtrlConsumerOpNames(const Job& job);
