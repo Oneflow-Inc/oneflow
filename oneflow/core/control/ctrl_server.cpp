@@ -61,7 +61,7 @@ void CtrlServer::HandleRpcs() {
   void* tag = nullptr;
   bool ok = false;
   while (cq_->Next(&tag, &ok)) {
-    if (!ok) { break; }
+    if (!ok) { continue; }
     auto call = static_cast<CtrlCallIf*>(tag);
     if (call) {
       call->Process();
@@ -73,7 +73,6 @@ void CtrlServer::HandleRpcs() {
       LOG(INFO) << "cclog: Server shutdown! Before";
       grpc_server_->Shutdown();
       LOG(INFO) << "cclog: Server shutdown! End";
-      break;
     }
   }
 }
