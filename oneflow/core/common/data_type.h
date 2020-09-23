@@ -102,20 +102,20 @@ using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataTyp
 #endif
 
 template<typename T>
-OF_DEVICE_FUNC constexpr T GetZeroVal() {
+OF_DEVICE_FUNC T GetZeroVal() {
   return static_cast<T>(0);
 }
 
 template<typename T>
-OF_DEVICE_FUNC constexpr T GetOneVal() {
+OF_DEVICE_FUNC T GetOneVal() {
   return static_cast<T>(1);
 }
 
 template<typename T>
-OF_DEVICE_FUNC constexpr T GetMinVal();
+OF_DEVICE_FUNC T GetMinVal();
 
 template<typename T>
-OF_DEVICE_FUNC constexpr T GetMaxVal();
+OF_DEVICE_FUNC T GetMaxVal();
 
 #define MAX_VAL_SEQ                          \
   OF_PP_MAKE_TUPLE_SEQ(int8_t, CHAR_MAX)     \
@@ -143,7 +143,7 @@ OF_DEVICE_FUNC constexpr T GetMaxVal();
 
 #define SPECIALIZE_MAX_VAL(T, limit_value)    \
   template<>                                  \
-  OF_DEVICE_FUNC constexpr T GetMaxVal<T>() { \
+  OF_DEVICE_FUNC T GetMaxVal<T>() { \
     return limit_value;                       \
   }
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_MAX_VAL, MAX_VAL_SEQ);
@@ -151,19 +151,19 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_MAX_VAL, MAX_VAL_SEQ);
 
 #define SPECIALIZE_MIN_VAL(T, limit_value)    \
   template<>                                  \
-  OF_DEVICE_FUNC constexpr T GetMinVal<T>() { \
+  OF_DEVICE_FUNC T GetMinVal<T>() { \
     return limit_value;                       \
   }
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_MIN_VAL, MIN_VAL_SEQ);
 #undef SPECIALIZE_MIN_VAL
 
 template<>
-inline constexpr float16 GetMaxVal<float16>() {
+inline float16 GetMaxVal<float16>() {
   return std::numeric_limits<float16>::max();
 }
 
 template<>
-inline constexpr float16 GetMinVal<float16>() {
+inline float16 GetMinVal<float16>() {
   return std::numeric_limits<float16>::lowest();
 }
 
