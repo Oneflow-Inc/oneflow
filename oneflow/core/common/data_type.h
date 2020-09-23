@@ -85,6 +85,13 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
+#ifdef WITH_CUDA
+
+template<>
+struct GetDataType<half> : std::integral_constant<DataType, DataType::kFloat16> {};
+
+#endif  // WITH_CUDA
+
 template<DataType type>
 using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataType, type>{}));
 
