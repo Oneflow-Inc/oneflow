@@ -63,7 +63,7 @@ class Tensor final {
   void CheckDataType() const {
     LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
                    && data_type_ != DataType::kChar && data_type_ != GetDataType<T>::value))
-        << "tensor data_type dismatched. value: " << DataType_Name(data_type_)
+        << "tensor data_type mismatched. value: " << DataType_Name(data_type_)
         << ", template T:" << DataType_Name(GetDataType<T>::value);
   }
 
