@@ -1,4 +1,3 @@
-
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
@@ -19,6 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
 template<typename T>
 void MakePyInputs(user_op::KernelComputeContext* ctx, PyObject** py_inputs) {
   size_t in_num = ctx->inputs().size();
@@ -61,6 +61,50 @@ void GetPyOutputs(user_op::KernelComputeContext* ctx, PyObject* py_outputs) {
 }
 
 template<typename T>
+void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_name) {
+  // if (!PyEval_ThreadsInitialized()) { PyEval_InitThreads(); }
+  PyGILState_STATE py_gil_st;
+  py_gil_st = PyGILState_Ensure();
+  if (PyArray_API == nullptr) { _import_array(); }
+
+  PyObject *py_file, *py_module, *py_func;
+  PyObject *py_inputs, *py_outputs;
+
+  // load python kernel
+  const std::string& py_file_name = ctx->Attr<std::string>("py_file");
+  py_file = PyUnicode_DecodeFSDefault(py_file_name.c_str());
+  // Error checking of pName left out
+  py_module = PyImport_Import(py_file);
+  Py_DECREF(py_file);
+  if (py_module == nullptr) { PyErr_Print(); }
+
+  // get forward func
+  py_func = PyObject_GetAttrString(py_module, py_func_name.c_str());
+  if (py_func == nullptr || !PyCallable_Check(py_func)) {
+    Py_DECREF(py_module);
+    PyErr_Print();
+  }
+
+  // input
+  MakePyInputs<T>(ctx, &py_inputs);
+
+  // call func
+  py_outputs = PyEval_CallObject(py_func, py_inputs);
+  Py_DECREF(py_inputs);
+
+  // output
+  GetPyOutputs<T>(ctx, py_outputs);
+
+  Py_DECREF(py_outputs);
+  Py_XDECREF(py_func);
+  Py_DECREF(py_module);
+
+  PyGILState_Release(py_gil_st);
+}
+
+}  // namespace
+
+template<typename T>
 class PyKernel : public user_op::OpKernel {
  public:
   PyKernel() = default;
@@ -69,45 +113,7 @@ class PyKernel : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    // if (!PyEval_ThreadsInitialized()) { PyEval_InitThreads(); }
-    PyGILState_STATE py_gil_st;
-    py_gil_st = PyGILState_Ensure();
-    if (PyArray_API == nullptr) { _import_array(); }
-
-    PyObject *py_file, *py_module, *py_func;
-    PyObject *py_inputs, *py_outputs;
-
-    // load python kernel
-    py_file = PyUnicode_DecodeFSDefault("pyk_sigmoid");
-    // Error checking of pName left out
-    py_module = PyImport_Import(py_file);
-    Py_DECREF(py_file);
-    if (py_module == nullptr) { PyErr_Print(); }
-
-    // get forward func
-    py_func = PyObject_GetAttrString(py_module, "forward");
-    if (py_func == nullptr || !PyCallable_Check(py_func)) {
-      Py_DECREF(py_module);
-      PyErr_Print();
-    }
-
-    // input
-    MakePyInputs<T>(ctx, &py_inputs);
-
-    // call func
-    py_outputs = PyEval_CallObject(py_func, py_inputs);
-    Py_DECREF(py_inputs);
-
-    // output
-    GetPyOutputs<T>(ctx, py_outputs);
-
-    Py_DECREF(py_outputs);
-    Py_XDECREF(py_func);
-    Py_DECREF(py_module);
-
-    PyGILState_Release(py_gil_st);
-  }
+  void Compute(user_op::KernelComputeContext* ctx) const override { PyCompute<T>(ctx, "forward"); }
 };  // namespace oneflow
 
 #define REGISTER_PY_KERNEL(cpp_type, dtype)                                     \
@@ -123,18 +129,12 @@ class PyGradKernel final : public user_op::OpKernel {
   ~PyGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    // TODO(strint) : compute backward with py
-  }
+  void Compute(user_op::KernelComputeContext* ctx) const override { PyCompute<T>(ctx, "backward"); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_PY_GRAD_KERNEL(cpp_type, dtype)                                         \
-  REGISTER_USER_KERNEL("py_grad").SetCreateFn<PyGradKernel<cpp_type>>().SetIsMatchedHob( \
+#define REGISTER_PY_GRAD_KERNEL(cpp_type, dtype)                                     \
+  REGISTER_USER_KERNEL("pyg").SetCreateFn<PyGradKernel<cpp_type>>().SetIsMatchedHob( \
       (user_op::HobDeviceTag() == "cpu") & (user_op::HobDataType("dx", 0) == dtype));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_PY_GRAD_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);

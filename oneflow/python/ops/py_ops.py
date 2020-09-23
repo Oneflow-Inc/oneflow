@@ -1,4 +1,3 @@
-
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
@@ -30,22 +29,26 @@ import oneflow.python.framework.module as module_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export("PyOp")
-class PyOp(object):
-    @staticmethod
-    def Forward():
-        raise NotImplementedError
+@oneflow_export("py.sigmoid")
+def py_sigmoid(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Computes sigmoid of `x` element-wise by python kernel.
 
-    @staticmethod
-    def Backward():
-        raise NotImplementedError
-
-
-@oneflow_export("py_op")
-def py_op(op_class_name=None, input=None, op_name=None):
-    op = (
-        flow.user_op_builder(op_name)
-        .Op(op_class_name)
+    Args:
+        x: Input `Blob`.
+    Returns:
+        A `Blob`
+    """
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Sigmoid_")
+        )
+        .Op("py_sigmoid")
+        .Input("in", [x])
+        .Output("out")
+        .Attr("py_file", "py_sigmoid")
         .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    return op.InferAndTryRun().RemoteBlobList()

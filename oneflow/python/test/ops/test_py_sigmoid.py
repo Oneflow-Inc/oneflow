@@ -1,4 +1,3 @@
-
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
@@ -28,47 +27,8 @@ func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 
-class sigmoid_py(flow.PyOp):
-    @staticmethod
-    def Forward(x):
-        return 1/(1 + np.exp(-x))
-
-    @staticmethod
-    def ForwardOpConf():
-        return (
-            flow.py_op_builder("sigmoid_py")
-            .Input("in", in_shape)
-            .Output("out", out_shape)
-            .Build())
-
-    @staticmethod
-    def Backward(y, dy):
-        return y * (1 - y) * dy
-
-    @staticmethod
-    def BackwardOpConf():
-        return (
-            flow.py_op_builder("sigmoid_py_grad")
-            .Input("y", y_shape)
-            .Input("dy", dy_shape)
-            .Output("dx", dx_shape)
-            .Build())
-
-    @staticmethod
-    def BPConf():
-        return (
-            flow.bp_conf_builder("sigmoid_py_grad")
-            .InputBind("y", "out")
-            .InputBind("dy", grad("out"))
-            .OutputBind("dx", "in")
-            .Build())
-
-
-func_config.add_py_op(sigmoid_py)
-
-
 def numpy_sigmoid(x):
-    return 1/(1 + np.exp(-x))
+    return 1 / (1 + np.exp(-x))
 
 
 def make_job(input_shape, dtype=flow.float32):
@@ -83,7 +43,7 @@ def make_py_job(input_shape, dtype=flow.float32):
     @flow.global_function(function_config=func_config)
     def py_sigmoid_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
         with flow.scope.placement("cpu", "0:0"):
-            return flow.py_op("sigmoid_py", x)
+            return flow.py.sigmoid(x)
 
     return py_sigmoid_job
 
@@ -101,7 +61,5 @@ def test_py_sigmoid(test_case):
     print("py_sig : ", py_sig)
     print("numpy_sig : ", numpy_sig)
 
-    test_case.assertTrue(np.allclose(
-        sig, py_sig, rtol=1e-03, atol=1e-05))
-    test_case.assertTrue(np.allclose(
-        py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
+    test_case.assertTrue(np.allclose(sig, py_sig, rtol=1e-03, atol=1e-05))
+    test_case.assertTrue(np.allclose(py_sig, numpy_sig, rtol=1e-03, atol=1e-05))

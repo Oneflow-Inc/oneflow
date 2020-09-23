@@ -1,4 +1,3 @@
-
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
@@ -18,43 +17,42 @@ limitations under the License.
 
 namespace oneflow {
 
-// py op is a general op which using python compute as kernel
-REGISTER_USER_OP("py")
+REGISTER_USER_OP("py_sigmoid")
     .Input("in")
     .Output("out")
+    .Attr("py_file", UserOpAttrType::kAtString)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      // TODO(strint) : out tensor infer
-      const auto* in_0 = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_NOTNULL_OR_RETURN(in_0);
-      CHECK_NOTNULL_OR_RETURN(out);
-      *out = *in_0;
+      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      *out_shape = *in_shape;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      return user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis(ctx);
+      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) {
-      int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
-      for (int64_t i = 0; i < num_axes; ++i) {
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(user_op::OpArg("out", 0), i).Build();
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("in", 0), i)
+            .Split(user_op::OpArg("out", 0), i)
+            .Build();
       }
-      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(user_op::OpArg("out", 0)).Build();
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("py_grad")
-    .Input("x")
+REGISTER_USER_OP("pyg_sigmoid")
     .Input("y")
     .Input("dy")
     .Output("dx")
+    .Attr("py_file", UserOpAttrType::kAtString)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
       CHECK(*dy_shape == *y_shape);
-      // TODO(strint) : *dx_shape = *dy_shape;
+      *dx_shape = *dy_shape;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -73,20 +71,22 @@ REGISTER_USER_OP("py_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("py").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("py_sigmoid").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
   const auto py_grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(py_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("py_grad")
-        .InputBind("x", ctx->FwOp().input("in", 0))
+  const auto& py_grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("pyg_sigmoid")
         .InputBind("y", ctx->FwOp().output("out", 0))
         .InputBind("dy", ctx->FwOp().output_grad("out", 0))
+        .Attr<std::string>("py_file", "py_sigmoid")
         .Output("dx")
         .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                            [&ctx, &py_grad_op_name]() -> const std::string& {
-                              return ctx->GetOp(py_grad_op_name).output("dx", 0);
-                            });
+  };
+  ctx->DefineOp(py_grad_op_name, py_grad_op_func);
+
+  const auto& dx_get_func = [&ctx, &py_grad_op_name]() -> const std::string& {
+    return ctx->GetOp(py_grad_op_name).output("dx", 0);
+  };
+  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), dx_get_func);
 });
 
 }  // namespace oneflow

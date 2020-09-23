@@ -75,7 +75,6 @@ void TensorToNumpy(const user_op::Tensor* tensor, PyObject** arg_ptr) {
   void* data = static_cast<void*>(const_cast<T*>(tensor->dptr<T>()));
   auto* np_array =
       reinterpret_cast<PyArrayObject*>(PyArray_SimpleNewFromData(dim_size, dims, type_num, data));
-  void* ptr = PyArray_DATA(np_array);
   // Numpy will not release the data
   PyArray_CLEARFLAGS(np_array, NPY_ARRAY_OWNDATA);
   *arg_ptr = reinterpret_cast<PyObject*>(np_array);
