@@ -7,6 +7,7 @@ import requests
 import hashlib
 import base64
 import tempfile
+
 try:
     import oss2
 except:
