@@ -141,18 +141,18 @@ OF_DEVICE_FUNC T GetMaxVal();
   OF_PP_MAKE_TUPLE_SEQ(float, -FLT_MAX)    \
   OF_PP_MAKE_TUPLE_SEQ(double, -DBL_MAX)
 
-#define SPECIALIZE_MAX_VAL(T, limit_value)    \
-  template<>                                  \
-  OF_DEVICE_FUNC T GetMaxVal<T>() { \
-    return limit_value;                       \
+#define SPECIALIZE_MAX_VAL(T, limit_value) \
+  template<>                               \
+  OF_DEVICE_FUNC T GetMaxVal<T>() {        \
+    return limit_value;                    \
   }
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_MAX_VAL, MAX_VAL_SEQ);
 #undef SPECIALIZE_MAX_VAL
 
-#define SPECIALIZE_MIN_VAL(T, limit_value)    \
-  template<>                                  \
-  OF_DEVICE_FUNC T GetMinVal<T>() { \
-    return limit_value;                       \
+#define SPECIALIZE_MIN_VAL(T, limit_value) \
+  template<>                               \
+  OF_DEVICE_FUNC T GetMinVal<T>() {        \
+    return limit_value;                    \
   }
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_MIN_VAL, MIN_VAL_SEQ);
 #undef SPECIALIZE_MIN_VAL
