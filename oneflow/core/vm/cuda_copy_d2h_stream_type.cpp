@@ -21,42 +21,32 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-// Initializes CudaCopyD2HDeviceCtx by stream, CudaCopyD2HDeviceCtx contains CudaStreamHandle object and CallbackMsgListPtr object, 
-// the relative istructions will be send to this DeviceCtx
-// inputs_0: stream
-// outputs_0: device_ctx 
+// Initialize CudaCopyD2HDeviceCtx which contains CudaStreamHandle object and CallbackMsgListPtr object, 
+// The related istructions will be handled with CudaCopyD2HDeviceCtx
 void CudaCopyD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
   device_ctx->reset(new CudaCopyD2HDeviceCtx(stream->mut_callback_list()));
 }
 
-// Initializes instruction status by stream, the instruction status should be true or false,
-// it will new a CudaInstrStatusQuerier object and puts it into status_buffer
-// inputs_0: stream
-// outputs_0: status_buffer
+// Reinterpret status_buffer as CudaInstrStatusQuerier
 void CudaCopyD2HStreamType::InitInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
   CudaInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(), stream.device_id());
 }
 
-// Delete instruction status by stream
-// inputs_0: stream
-// outputs_0: status_buffer
 void CudaCopyD2HStreamType::DeleteInstructionStatus(const Stream& stream,
                                                     InstructionStatusBuffer* status_buffer) const {
   // do nothing
 }
 
-// Returns both of the instruction is laungched and event is completed or not
+// Return true if the instruction launched and the cuda event completed.
 bool CudaCopyD2HStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-// Execs instruction by instruction type, puts stream callback_list into instruction callback_list, 
-// and then set instruction laungched
-// inputs: instruction
+// Launch a cuda kernel
 void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
   auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
@@ -71,9 +61,7 @@ void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
-// Initializes stream desc
-// inputs_0: resource
-// inputs_1: this_machine_id
+// Specify copy_d2h stream description of the virtual machine to be used.
 ObjectMsgPtr<StreamDesc> CudaCopyD2HStreamType::MakeStreamDesc(const Resource& resource,
                                                                int64_t this_machine_id) const {
   if (!resource.has_gpu_device_num()) { return ObjectMsgPtr<StreamDesc>(); }
