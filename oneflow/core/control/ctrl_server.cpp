@@ -60,17 +60,21 @@ void CtrlServer::HandleRpcs() {
 
   void* tag = nullptr;
   bool ok = false;
+  // NOTE(chengcheng): The is_shutdown bool flag make sure that 'ok = false' occurs ONLY after
+  // cq_->Shutdown() for security check.
   bool is_shutdown = false;
-  // NOTE(chengcheng): The final end is cq_->Next() get false (cq_ items is empty).
+  // NOTE(chengcheng): The final end is that cq_->Next() get false and cq_ is empty with no item.
   while (cq_->Next(&tag, &ok)) {
+    auto call = static_cast<CtrlCallIf*>(tag);
     if (!ok) {
-      // NOTE(chengcheng): when call grpc_server_->Shutdown() and cq_->Shutdown(),
-      // there will trigger some cancel on each RPC. so cq_->Next() can get these tag
-      // with ok = false. so just continue.
+      // NOTE(chengcheng): After call grpc_server_->Shutdown() and cq_->Shutdown(),
+      // there will trigger some cancel tag items on each RPC. And cq_->Next() can get these tag
+      // with ok = false. Then delete the tag with CtrlCallIf pointer for recovery.
       CHECK(is_shutdown);
+      CHECK(call);
+      delete call;
       continue;
     }
-    auto call = static_cast<CtrlCallIf*>(tag);
     if (call) {
       call->Process();
     } else {
@@ -81,8 +85,8 @@ void CtrlServer::HandleRpcs() {
       cq_->Shutdown();
 
       // NOTE(chengcheng): You CANNOT use code 'break;' in this block because that
-      //   there may still be items in the cq_.
-      // break;
+      // there still be items in the cq_.
+      // 'break;'
     }
   }
 }
