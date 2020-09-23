@@ -70,6 +70,7 @@ class ParallelDesc final {
   int64_t MachineIdForParallelId(int64_t parallel_id) const;
   int64_t DeviceIdForParallelId(int64_t parallel_id) const;
   bool Containing(int64_t machine_id, int64_t device_id) const;
+  bool ContainingMachineId(int64_t machine_id) const;
 
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);

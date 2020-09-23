@@ -48,6 +48,8 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   OF_PUBLIC const MirroredObject* GetMirroredObject(int64_t logical_object_id,
                                                  int64_t global_device_id);
 
+  OF_PUBLIC int64_t this_machine_id() const;
+
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);
   OBJECT_MSG_DEFINE_STRUCT(Range, machine_id_range);
