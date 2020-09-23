@@ -20,7 +20,8 @@ ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
 {% endfor %}{# enum_values #}
   }
 {% endfor %}{# enum_types #}
-{% for cls in util.module_message_types(module) %}
+{% for cls in util.module_nest_message_types(module) %}
+{% if not util.class_is_map_entry(cls) %}
 {% for field in util.message_type_fields(cls) %}
 {# no duplicated python class registered for each repeated field type #}
 {% if util.field_has_repeated_label(field) and util.add_visited_repeated_field_type_name(field) %}
@@ -102,8 +103,10 @@ ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
 
 {% endif %}{# field type #}
 {% endfor %}{# field #}
+{% endif %}{# cls is not entry #}
 {% endfor %}{# cls #}
-{% for cls in util.module_message_types(module) %}
+{% for cls in util.module_nest_message_types(module) %}
+{% if not util.class_is_map_entry(cls) %}
   {
     pybind11::class_<Const{{ util.class_name(cls) }}, std::shared_ptr<Const{{ util.class_name(cls) }}>> registry(m, "Const{{ util.class_name(cls) }}");
     // the data of `self` will be moved to the result which is always mutable
@@ -231,5 +234,6 @@ ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
     registry.def("{{ util.oneof_name(oneof) }}_case",  &{{ util.class_name(cls) }}::{{ util.oneof_name(oneof) }}_case);
 {% endfor %}{# oneofs #}
   }
+{% endif %}{# cls is not entry #}
 {% endfor %}{# cls #}
 }

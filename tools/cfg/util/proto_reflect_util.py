@@ -47,9 +47,27 @@ class ProtoReflectionUtil:
 
     def module_message_types(self, module):
         return module.message_types_by_name.values()
+    
+    def module_nest_message_types(self, module):
+        def FlattenMessageTypes(message_types):
+            for msg_type in message_types:
+                for nested_msg_type in FlattenMessageTypes(msg_type.nested_types):
+                    yield nested_msg_type
+                yield msg_type
+        return [msg_type for msg_type in FlattenMessageTypes(module.message_types_by_name.values())]
 
     def class_name(self, cls):
-        return cls.name
+        package = cls.file.package
+        return (cls.full_name)[len(package) + 1 :].replace('.', '_')
+    
+    def class_name_under_line(self, cls):
+        return '_' + self.class_name(cls) + '_'
+
+    def class_name_const(self, cls):
+        return 'Const' + self.class_name(cls)
+
+    def class_is_map_entry(self, cls):
+        return self.class_name(cls).endswith('Entry')
     
     def enum_name(self, enum):
         return enum.name
@@ -156,6 +174,9 @@ class ProtoReflectionUtil:
 
     def field_map_value_type_name(self, field):
         return self.field_type_name(field.message_type.fields_by_name["value"])
+    
+    def field_map_value_type_name_with_cfg_namespace(self, field):
+        return self.field_type_name_with_cfg_namespace(field.message_type.fields_by_name["value"])
 
     def field_map_value_type_is_message(self, field):
         return self.field_is_message_type(field.message_type.fields_by_name["value"])
@@ -172,19 +193,23 @@ class ProtoReflectionUtil:
     def field_map_pair_type_name(self, field):
         return f"{self.field_map_key_type_name(field)}, {self.field_map_value_type_name(field)}"
 
+    def field_map_pair_type_name_with_cfg_namespace(self, field):
+        return f"{self.field_map_key_type_name(field)}, {self.field_map_value_type_name_with_cfg_namespace(field)}"
+
     def field_is_message_type(self, field):
         return field.message_type is not None
 
     def field_message_type_name(self, field):
-        return field.message_type.name
+        package = field.file.package
+        return (field.message_type.full_name)[len(package) + 1 :].replace('.', '_')
     
     def field_message_type_name_with_cfg_namespace(self, field):
-        message_type_name = field.message_type.full_name.replace(field.message_type.name,
-                            'cfg.' + field.message_type.name)
-        return '::' + message_type_name.replace('.', '::')
+        package = field.file.package
+        return '::' + package.replace('.', '::') + '::cfg::' + (field.message_type.full_name)[len(package) + 1 :].replace('.', '_')
 
     def field_message_type_name_with_proto_namespace(self, field):
-        return '::' + field.message_type.full_name.replace('.', '::')
+        package = field.file.package
+        return '::' + package.replace('.', '::') + '::' + (field.message_type.full_name)[len(package) + 1 :].replace('.', '_')
 
     def field_repeated_container_name(self, field):
         module_prefix = self.module_header_macro_lock(field.containing_type.file)
@@ -267,6 +292,15 @@ class ProtoReflectionUtil:
         camel_name = ""
         for sub_name in sub_name_list:
             camel_name = camel_name + sub_name[0].upper() + sub_name[1:]
+        
+        flag = False
+        length = len(camel_name)
+        for i in range(length):
+            if flag and camel_name[i].isalpha():
+                camel_name = camel_name[0 : i] + camel_name[i].upper() + camel_name[i + 1 : ]
+                flag = False
+            if camel_name[i].isdigit():
+                flag = True
         return camel_name
 
 

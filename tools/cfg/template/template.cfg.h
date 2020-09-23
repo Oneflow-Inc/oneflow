@@ -42,16 +42,17 @@ inline {{ util.module_package_namespace(module) }}::cfg::{{ util.enum_name(enm) 
 }
 {% endfor %}{# enm #}
 
-{% for cls in util.module_message_types(module) %}
+{% for cls in util.module_nest_message_types(module) %}
+{% if not util.class_is_map_entry(cls) %}
 {% for field in util.message_type_fields(cls) %}
 {# no duplicated class defined for each repeated field type #}
 {% if util.field_has_repeated_label(field) and util.add_visited_repeated_field_type_name(field) %}
 
 class {{ util.field_repeated_container_name(field) }};
 // inheritance is helpful for avoid container iterator boilerplate 
-class Const{{ util.field_repeated_container_name(field) }} : public ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name(field) }}> {
+class Const{{ util.field_repeated_container_name(field) }} : public ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}> {
  public:
-  Const{{ util.field_repeated_container_name(field) }}(const ::std::shared_ptr<::std::vector<{{ util.field_type_name(field) }}>>& data): ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name(field) }}>(data) {}
+  Const{{ util.field_repeated_container_name(field) }}(const ::std::shared_ptr<::std::vector<{{ util.field_type_name_with_cfg_namespace(field) }}>>& data): ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>(data) {}
   Const{{ util.field_repeated_container_name(field) }}() = default;
   ~Const{{ util.field_repeated_container_name(field) }}() = default;
 
@@ -73,14 +74,14 @@ class Const{{ util.field_repeated_container_name(field) }} : public ::oneflow::c
 };
 class {{ util.field_repeated_container_name(field) }} final : public Const{{ util.field_repeated_container_name(field) }} {
  public:
-  {{ util.field_repeated_container_name(field) }}(const ::std::shared_ptr<::std::vector<{{ util.field_type_name(field) }}>>& data): Const{{ util.field_repeated_container_name(field) }}(data) {}
+  {{ util.field_repeated_container_name(field) }}(const ::std::shared_ptr<::std::vector<{{ util.field_type_name_with_cfg_namespace(field) }}>>& data): Const{{ util.field_repeated_container_name(field) }}(data) {}
   {{ util.field_repeated_container_name(field) }}() = default;
   ~{{ util.field_repeated_container_name(field) }}() = default;
   void CopyFrom(const Const{{ util.field_repeated_container_name(field) }}& other) {
-    ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name(field) }}>::CopyFrom(other);
+    ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::CopyFrom(other);
   }
   void CopyFrom(const {{ util.field_repeated_container_name(field) }}& other) {
-    ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name(field) }}>::CopyFrom(other);
+    ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::CopyFrom(other);
   }
   bool operator==(const {{ util.field_repeated_container_name(field) }}& other) const {
     return *__SharedPtr__() == *other.__SharedPtr__();
@@ -93,10 +94,10 @@ class {{ util.field_repeated_container_name(field) }} final : public Const{{ uti
     return ::std::make_shared<{{ util.field_repeated_container_name(field) }}>(__SharedPtr__());
   }
 {% if util.field_is_message_type(field) %}
-  ::std::shared_ptr<{{ util.field_type_name(field) }}> __SharedAdd__() {
+  ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}> __SharedAdd__() {
     return Add()->__SharedMutable__();
   }
-  ::std::shared_ptr<{{ util.field_type_name(field) }}> __SharedMutable__(::std::size_t index) {
+  ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}> __SharedMutable__(::std::size_t index) {
     return Mutable(index)->__SharedMutable__();
   }
 {% endif %}{# message_type #}
@@ -107,9 +108,9 @@ class {{ util.field_repeated_container_name(field) }} final : public Const{{ uti
 
 class {{ util.field_map_container_name(field) }};
 // inheritance is helpful for avoid container iterator boilerplate 
-class Const{{ util.field_map_container_name(field) }} : public ::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name(field) }}> {
+class Const{{ util.field_map_container_name(field) }} : public ::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}> {
  public:
-  Const{{ util.field_map_container_name(field) }}(const ::std::shared_ptr<::std::map<{{ util.field_map_pair_type_name(field) }}>>& data): ::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name(field) }}>(data) {}
+  Const{{ util.field_map_container_name(field) }}(const ::std::shared_ptr<::std::map<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}>>& data): ::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}>(data) {}
   Const{{ util.field_map_container_name(field) }}() = default;
   ~Const{{ util.field_map_container_name(field) }}() = default;
 
@@ -120,7 +121,7 @@ class Const{{ util.field_map_container_name(field) }} : public ::oneflow::cfg::_
     return *__SharedPtr__() < *other.__SharedPtr__();
   }
   // used by pybind11 only
-  const {{ util.field_map_value_type_name(field) }}& Get(const {{ util.field_map_key_type_name(field) }}& key) const {
+  const {{ util.field_map_value_type_name_with_cfg_namespace(field) }}& Get(const {{ util.field_map_key_type_name(field) }}& key) const {
     return at(key);
   }
 
@@ -143,14 +144,14 @@ class Const{{ util.field_map_container_name(field) }} : public ::oneflow::cfg::_
 };
 class {{ util.field_map_container_name(field) }} final : public Const{{ util.field_map_container_name(field) }} {
  public:
-  {{ util.field_map_container_name(field) }}(const ::std::shared_ptr<::std::map<{{ util.field_map_pair_type_name(field) }}>>& data): Const{{ util.field_map_container_name(field) }}(data) {}
+  {{ util.field_map_container_name(field) }}(const ::std::shared_ptr<::std::map<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}>>& data): Const{{ util.field_map_container_name(field) }}(data) {}
   {{ util.field_map_container_name(field) }}() = default;
   ~{{ util.field_map_container_name(field) }}() = default;
   void CopyFrom(const Const{{ util.field_map_container_name(field) }}& other) {
-    ::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name(field) }}>::CopyFrom(other);
+    ::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}>::CopyFrom(other);
   }
   void CopyFrom(const {{ util.field_map_container_name(field) }}& other) {
-    ::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name(field) }}>::CopyFrom(other);
+    ::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}>::CopyFrom(other);
   }
   bool operator==(const {{ util.field_map_container_name(field) }}& other) const {
     return *__SharedPtr__() == *other.__SharedPtr__();
@@ -164,17 +165,17 @@ class {{ util.field_map_container_name(field) }} final : public Const{{ util.fie
   }
 
 {% if util.field_is_message_type(util.field_map_value_type(field)) %}
-  ::std::shared_ptr<{{ util.field_map_value_type_name(field) }}> __SharedMutable__(const {{ util.field_map_key_type_name(field) }}& key) {
+  ::std::shared_ptr<{{ util.field_map_value_type_name_with_cfg_namespace(field) }}> __SharedMutable__(const {{ util.field_map_key_type_name(field) }}& key) {
     return (*this)[key].__SharedMutable__();
   }
   // used by pybind11 only
-  using shared_mut_iterator = ::oneflow::cfg::_SharedMutPairIterator_<{{ util.field_map_container_name(field) }}, {{ util.field_map_value_type_name(field) }}>;
+  using shared_mut_iterator = ::oneflow::cfg::_SharedMutPairIterator_<{{ util.field_map_container_name(field) }}, {{ util.field_map_value_type_name_with_cfg_namespace(field) }}>;
   // ensuring mapped data's lifetime safety
   shared_mut_iterator shared_mut_begin() { return begin(); }
   // ensuring mapped data's lifetime safety
   shared_mut_iterator shared_mut_end() { return end(); }
 {% else %}
-  void Set(const {{ util.field_map_key_type_name(field) }}& key, const {{ util.field_map_value_type_name(field) }}& value) {
+  void Set(const {{ util.field_map_key_type_name(field) }}& key, const {{ util.field_map_value_type_name_with_cfg_namespace(field) }}& value) {
     (*this)[key] = value;
   }
 {% endif %}{# message_type #}
@@ -194,7 +195,6 @@ class _{{ util.class_name(cls) }}_ {
     // required_or_optional field: {{ util.field_name(field) }}
     if (proto_{{ util.class_name(cls).lower() }}.has_{{ util.field_name(field) }}()) {
 {% if util.field_is_message_type(field)%}
-      // *mutable_{{ util.field_name(field) }}() = {{ util.module_package_namespace(module) }}::cfg::{{ util.field_type_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}());
       *mutable_{{ util.field_name(field) }}() = {{ util.field_message_type_name_with_cfg_namespace(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}());      
 {% elif util.field_is_enum_type(field) %}
       set_{{ util.field_name(field) }}(Proto{{ util.field_enum_name(field) }}ToCfg{{ util.field_enum_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()));
@@ -206,9 +206,7 @@ class _{{ util.class_name(cls) }}_ {
     // repeated field: {{ util.field_name(field) }}
     if (!proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}().empty()) {
 {% if util.field_is_message_type(field)%}
-      // for (const {{ util.module_package_namespace(module) }}::{{ util.field_type_name(field) }}& elem : proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}() ) {
       for (const {{ util.field_message_type_name_with_proto_namespace(field) }}& elem : proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}() ) {
-        // *mutable_{{ util.field_name(field) }}()->Add() = {{ util.module_package_namespace(module) }}::cfg::{{ util.field_type_name(field) }}(elem);
         *mutable_{{ util.field_name(field) }}()->Add() = {{ util.field_message_type_name_with_cfg_namespace(field) }}(elem);
       }
 {% elif util.field_is_enum_type(field) %}
@@ -216,7 +214,7 @@ class _{{ util.class_name(cls) }}_ {
         add_{{ util.field_name(field) }}({{ util.module_package_namespace(module) }}::cfg::{{ util.field_enum_name(field) }}(elem));
       }
 {% else %}
-      for (const {{ util.field_type_name(field) }}& elem : proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()) {
+      for (const {{ util.field_type_name_with_cfg_namespace(field) }}& elem : proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()) {
         add_{{ util.field_name(field) }}(elem);
       }
 {% endif %}{# field_type #}
@@ -227,7 +225,7 @@ class _{{ util.class_name(cls) }}_ {
       {{ util.field_map_container_name(field) }}&  mut_{{ util.field_name(field) }} = *mutable_{{ util.field_name(field) }}();
       for (const auto& pair : proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()) {
 {% if util.field_map_value_type_is_message(field) %}
-        mut_{{ util.field_name(field) }}[pair.first] = {{ util.module_package_namespace(module) }}::cfg::{{ util.field_map_value_type_name(field) }}(pair.second);
+        mut_{{ util.field_name(field) }}[pair.first] = {{ util.field_map_value_type_name_with_cfg_namespace(field) }}(pair.second);
 {% elif util.field_map_value_type_is_enum(field) %}
         mut_{{ util.field_name(field) }}[pair.first] = Proto{{ util.field_map_value_type_enum_name(field) }}ToCfg{{ util.field_map_value_type_enum_name(field) }}(pair.second);
 {% else %}
@@ -268,7 +266,6 @@ class _{{ util.class_name(cls) }}_ {
     // required_or_optional field: {{ util.field_name(field) }}
     if (this->has_{{ util.field_name(field) }}()) {
 {% if util.field_is_message_type(field)%}
-      // {{ util.module_package_namespace(module) }}::{{ util.field_type_name(field) }} proto_{{ util.field_name(field).lower() }};
       {{ util.field_message_type_name_with_proto_namespace(field) }} proto_{{ util.field_name(field).lower() }};
       {{ util.field_name(field) }}().ToProto(&proto_{{ util.field_name(field).lower() }});
       proto_{{ util.class_name(cls).lower() }}->mutable_{{ util.field_name(field) }}()->CopyFrom(proto_{{ util.field_name(field).lower() }});
@@ -282,9 +279,7 @@ class _{{ util.class_name(cls) }}_ {
     // repeated field: {{ util.field_name(field) }}
     if (!{{ util.field_name(field) }}().empty()) {
 {% if util.field_is_message_type(field)%}
-      // for (const cfg::{{ util.field_type_name(field) }}& elem : {{ util.field_name(field) }}() ) {
       for (const {{ util.field_message_type_name_with_cfg_namespace(field) }}& elem : {{ util.field_name(field) }}() ) {
-        // {{ util.module_package_namespace(module) }}::{{ util.field_type_name(field) }} proto_{{ util.field_name(field).lower() }}_elem;
         {{ util.field_message_type_name_with_proto_namespace(field) }} proto_{{ util.field_name(field).lower() }}_elem;
         elem.ToProto(&proto_{{ util.field_name(field).lower() }}_elem);
         *proto_{{ util.class_name(cls).lower() }}->mutable_{{ util.field_name(field) }}()->Add() = proto_{{ util.field_name(field).lower() }}_elem;
@@ -294,7 +289,7 @@ class _{{ util.class_name(cls) }}_ {
         proto_{{ util.class_name(cls).lower() }}->add_{{ util.field_name(field) }}(::oneflow::{{ util.field_enum_name(field) }}(elem));
       }
 {% else %}
-      for (const {{ util.field_type_name(field) }}& elem : {{ util.field_name(field) }}()) {
+      for (const {{ util.field_type_name_with_cfg_namespace(field) }}& elem : {{ util.field_name(field) }}()) {
         proto_{{ util.class_name(cls).lower() }}->add_{{ util.field_name(field) }}(elem);
       }
 {% endif %}{# message_type #}
@@ -325,7 +320,6 @@ class _{{ util.class_name(cls) }}_ {
 {% for field in util.oneof_type_fields(oneof) %}
       case {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}::{{ util.oneof_type_field_enum_value_name(field) }}: {
 {% if util.field_is_message_type(field) %}
-        // {{ util.module_package_namespace(module) }}::{{ util.field_type_name(field) }} of_proto_{{ util.field_name(field).lower() }};
         {{ util.field_message_type_name_with_proto_namespace(field) }} of_proto_{{ util.field_name(field).lower() }};
         {{ util.field_name(field) }}().ToProto(&of_proto_{{ util.field_name(field).lower() }});
         proto_{{ util.class_name(cls).lower() }}->mutable_{{ util.field_name(field) }}()->CopyFrom(of_proto_{{ util.field_name(field).lower() }});
@@ -402,14 +396,14 @@ class _{{ util.class_name(cls) }}_ {
   bool has_{{ util.field_name(field) }}() const {
     return has_{{ util.field_name(field) }}_;
   }
-  const {{ util.field_type_name(field) }}& {{ util.field_name(field) }}() const {
+  const {{ util.field_type_name_with_cfg_namespace(field) }}& {{ util.field_name(field) }}() const {
     return {{ util.field_name(field) }}_;
   }
   void clear_{{ util.field_name(field) }}() {
     {{ util.field_name(field) }}_.Clear();
     has_{{ util.field_name(field) }}_ = false;
   }
-  {{ util.field_type_name(field) }}* mutable_{{ util.field_name(field) }}() {
+  {{ util.field_type_name_with_cfg_namespace(field) }}* mutable_{{ util.field_name(field) }}() {
     has_{{ util.field_name(field) }}_ = true;
     return &{{ util.field_name(field) }}_;
   }
@@ -417,24 +411,24 @@ class _{{ util.class_name(cls) }}_ {
   bool has_{{ util.field_name(field) }}() const {
     return has_{{ util.field_name(field) }}_;
   }
-  const {{ util.field_type_name(field) }}& {{ util.field_name(field) }}() const {
+  const {{ util.field_type_name_with_cfg_namespace(field) }}& {{ util.field_name(field) }}() const {
     if (has_{{ util.field_name(field) }}_) { return {{ util.field_name(field) }}_; }
 {% if util.field_has_default_value(field) %}
-    static const {{ util.field_type_name(field) }} default_static_value =
+    static const {{ util.field_type_name_with_cfg_namespace(field) }} default_static_value =
       {{ util.field_default_value_literal(field) }};
 {% else %}
-    static const {{ util.field_type_name(field) }} default_static_value = {{ util.field_type_name(field) }}();
+    static const {{ util.field_type_name_with_cfg_namespace(field) }} default_static_value = {{ util.field_type_name_with_cfg_namespace(field) }}();
 {% endif %}
     return default_static_value;
   }
   void clear_{{ util.field_name(field) }}() {
     has_{{ util.field_name(field) }}_ = false;
   }
-  void set_{{ util.field_name(field) }}(const {{ util.field_type_name(field) }}& value) {
+  void set_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
     {{ util.field_name(field) }}_ = value;
     has_{{ util.field_name(field) }}_ = true;
   }
-{% if util.field_type_name(field) == "::std::string" %}
+{% if util.field_type_name_with_cfg_namespace(field) == "::std::string" %}
   ::std::string* mutable_{{ util.field_name(field) }}() {
     has_{{ util.field_name(field) }}_ = true;
     return &{{ util.field_name(field) }}_;
@@ -443,7 +437,7 @@ class _{{ util.class_name(cls) }}_ {
 {% endif %}{# field_type #}
  protected:
   bool has_{{ util.field_name(field) }}_;
-  {{ util.field_type_name(field) }} {{ util.field_name(field) }}_;
+  {{ util.field_type_name_with_cfg_namespace(field) }} {{ util.field_name(field) }}_;
 {% elif util.field_has_repeated_label(field) %}
   // repeated field {{ util.field_name(field) }}
  public:
@@ -453,7 +447,7 @@ class _{{ util.class_name(cls) }}_ {
   const {{ util.field_repeated_container_name(field) }}& {{ util.field_name(field) }}() const {
     return {{ util.field_name(field) }}_;
   }
-  const {{ util.field_type_name(field) }}& {{ util.field_name(field) }}(::std::size_t index) const {
+  const {{ util.field_type_name_with_cfg_namespace(field) }}& {{ util.field_name(field) }}(::std::size_t index) const {
     return {{ util.field_name(field) }}_.Get(index);
   }
   void clear_{{ util.field_name(field) }}() {
@@ -462,12 +456,12 @@ class _{{ util.class_name(cls) }}_ {
   {{ util.field_repeated_container_name(field) }}* mutable_{{ util.field_name(field) }}() {
     return  &{{ util.field_name(field) }}_;
   }
-  {{ util.field_type_name(field) }}* mutable_{{ util.field_name(field) }}(::std::size_t index) {
+  {{ util.field_type_name_with_cfg_namespace(field) }}* mutable_{{ util.field_name(field) }}(::std::size_t index) {
     return  {{ util.field_name(field) }}_.Mutable(index);
   }
 {% if util.field_is_message_type(field) %}
 {% else %}
-  void add_{{ util.field_name(field) }}(const {{ util.field_type_name(field) }}& value) {
+  void add_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
     return {{ util.field_name(field) }}_.Add(value);
   }
 {% endif %}{# field message type #}
@@ -489,16 +483,16 @@ class _{{ util.class_name(cls) }}_ {
       {{ util.field_oneof_name(field) }}_case_ = {{ util.field_oneof_name(field).upper() }}_NOT_SET;
     }
   }
-  const {{ util.field_type_name(field) }}& {{ util.field_name(field) }}() const {
+  const {{ util.field_type_name_with_cfg_namespace(field) }}& {{ util.field_name(field) }}() const {
     if (has_{{ util.field_name(field) }}()) {
       return {{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_;
     } else {
-      static const {{ util.field_type_name(field) }} default_static_value = {{ util.field_type_name(field) }}();
+      static const {{ util.field_type_name_with_cfg_namespace(field) }} default_static_value = {{ util.field_type_name_with_cfg_namespace(field) }}();
       return default_static_value;
     }
   }
 {% if util.field_is_message_type(field) %}
-  {{ util.field_type_name(field) }}* mutable_{{ util.field_name(field) }}() {
+  {{ util.field_type_name_with_cfg_namespace(field) }}* mutable_{{ util.field_name(field) }}() {
     if(!has_{{ util.field_name(field) }}()) {
       clear_{{ util.field_oneof_name(field) }}();
     }
@@ -506,14 +500,14 @@ class _{{ util.class_name(cls) }}_ {
     return  &{{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_;
   }
 {% else %}
-  void set_{{ util.field_name(field) }}(const {{util.field_type_name(field) }}& value) {
+  void set_{{ util.field_name(field) }}(const {{util.field_type_name_with_cfg_namespace(field) }}& value) {
     if(!has_{{ util.field_name(field) }}()) {
       clear_{{ util.field_oneof_name(field) }}();
     }
     {{ util.field_oneof_name(field) }}_case_ = {{ util.oneof_type_field_enum_value_name(field) }};
     {{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_ = value;
   }
-{% if util.field_type_name(field) == "::std::string" %}
+{% if util.field_type_name_with_cfg_namespace(field) == "::std::string" %}
   ::std::string* mutable_{{ util.field_name(field) }}() {
     if(!has_{{ util.field_name(field) }}()) {
       clear_{{ util.field_oneof_name(field) }}();
@@ -537,7 +531,7 @@ class _{{ util.class_name(cls) }}_ {
     return p;
   }
 
-  const {{ util.field_map_value_type_name(field) }}& {{ util.field_name(field) }}({{ util.field_map_key_type_name(field) }} key) const {
+  const {{ util.field_map_value_type_name_with_cfg_namespace(field) }}& {{ util.field_name(field) }}({{ util.field_map_key_type_name(field) }} key) const {
     return {{ util.field_name(field) }}_.at(key);
   }
 
@@ -547,7 +541,7 @@ class _{{ util.class_name(cls) }}_ {
 
 {% if util.field_is_message_type(field) %}
 {% else %}
-  void add_{{ util.field_name(field) }}(const {{ util.field_type_name(field) }}& value) {
+  void add_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
     return {{ util.field_name(field) }}_.Add(value);
   }
 {% endif %}{# field message type #}
@@ -750,7 +744,7 @@ class Const{{ util.class_name(cls) }} {
   bool has_{{ util.field_name(field) }}() const {
     return __SharedPtrOrDefault__()->has_{{ util.field_name(field) }}();
   }
-  const {{ util.field_type_name(field) }}& {{ util.field_name(field) }}() const {
+  const {{ util.field_type_name_with_cfg_namespace(field) }}& {{ util.field_name(field) }}() const {
     return __SharedPtrOrDefault__()->{{ util.field_name(field) }}();
   }
   // used by pybind11 only
@@ -768,7 +762,7 @@ class Const{{ util.class_name(cls) }} {
   const {{ util.field_repeated_container_name(field) }}& {{ util.field_name(field) }}() const {
     return __SharedPtrOrDefault__()->{{ util.field_name(field) }}();
   }
-  const {{ util.field_type_name(field) }}& {{ util.field_name(field) }}(::std::size_t index) const {
+  const {{ util.field_type_name_with_cfg_namespace(field) }}& {{ util.field_name(field) }}(::std::size_t index) const {
     return __SharedPtrOrDefault__()->{{ util.field_name(field) }}(index);
   }
   // used by pybind11 only
@@ -787,7 +781,7 @@ class Const{{ util.class_name(cls) }} {
   bool has_{{ util.field_name(field) }}() const {
     return __SharedPtrOrDefault__()->has_{{ util.field_name(field) }}();
   }
-  const {{ util.field_type_name(field) }}& {{ util.field_name(field) }}() const {
+  const {{ util.field_type_name_with_cfg_namespace(field) }}& {{ util.field_name(field) }}() const {
     return __SharedPtrOrDefault__()->{{ util.field_name(field) }}();
   }
   // used by pybind11 only
@@ -897,18 +891,18 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
     return __SharedPtr__()->clear_{{ util.field_name(field) }}();
   }
 {% if util.field_is_message_type(field) %}
-  {{ util.field_type_name(field) }}* mutable_{{ util.field_name(field) }}() {
+  {{ util.field_type_name_with_cfg_namespace(field) }}* mutable_{{ util.field_name(field) }}() {
     return __SharedPtr__()->mutable_{{ util.field_name(field) }}();
   }
   // used by pybind11 only
-  ::std::shared_ptr<{{ util.field_type_name(field) }}> shared_mutable_{{ util.field_name(field) }}() {
+  ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}> shared_mutable_{{ util.field_name(field) }}() {
     return mutable_{{ util.field_name(field) }}()->__SharedMutable__();
   }
 {% else %}
-  void set_{{ util.field_name(field) }}(const {{ util.field_type_name(field) }}& value) {
+  void set_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
     return __SharedPtr__()->set_{{ util.field_name(field) }}(value);
   }
-{% if util.field_type_name(field) == "::std::string" %}
+{% if util.field_type_name_with_cfg_namespace(field) == "::std::string" %}
   ::std::string* mutable_{{ util.field_name(field) }}() {
     return  __SharedPtr__()->mutable_{{ util.field_name(field) }}();
   }
@@ -923,7 +917,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   {{ util.field_repeated_container_name(field) }}* mutable_{{ util.field_name(field) }}() {
     return __SharedPtr__()->mutable_{{ util.field_name(field) }}();
   }
-  {{ util.field_type_name(field) }}* mutable_{{ util.field_name(field) }}(::std::size_t index) {
+  {{ util.field_type_name_with_cfg_namespace(field) }}* mutable_{{ util.field_name(field) }}(::std::size_t index) {
     return __SharedPtr__()->mutable_{{ util.field_name(field) }}(index);
   }
 {% if util.field_is_message_type(field) %}
@@ -931,11 +925,11 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   ::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> shared_mutable_{{ util.field_name(field) }}() {
     return mutable_{{ util.field_name(field) }}()->__SharedMutable__();
   }
-  ::std::shared_ptr<{{ util.field_type_name(field) }}> shared_mutable_{{ util.field_name(field) }}(::std::size_t index) {
+  ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}> shared_mutable_{{ util.field_name(field) }}(::std::size_t index) {
     return mutable_{{ util.field_name(field) }}(index)->__SharedMutable__();
   }
 {% else %}
-  void add_{{ util.field_name(field) }}(const {{ util.field_type_name(field) }}& value) {
+  void add_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
     return __SharedPtr__()->add_{{ util.field_name(field) }}(value);
   }
   // used by pybind11 only
@@ -948,18 +942,18 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
     return __SharedPtr__()->clear_{{ util.field_name(field) }}();
   }
 {% if util.field_is_message_type(field) %}
-  {{ util.field_type_name(field) }}* mutable_{{ util.field_name(field) }}() {
+  {{ util.field_type_name_with_cfg_namespace(field) }}* mutable_{{ util.field_name(field) }}() {
     return __SharedPtr__()->mutable_{{ util.field_name(field) }}();
   }
   // used by pybind11 only
-  ::std::shared_ptr<{{ util.field_type_name(field) }}> shared_mutable_{{ util.field_name(field) }}() {
+  ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}> shared_mutable_{{ util.field_name(field) }}() {
     return mutable_{{ util.field_name(field) }}()->__SharedMutable__();
   }
 {% else %}
-  void set_{{ util.field_name(field) }}(const {{ util.field_type_name(field) }}& value) {
+  void set_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
     return __SharedPtr__()->set_{{ util.field_name(field) }}(value);
   }
-{% if util.field_type_name(field) == "::std::string" %}
+{% if util.field_type_name_with_cfg_namespace(field) == "::std::string" %}
   ::std::string* mutable_{{ util.field_name(field) }}() {
     return  __SharedPtr__()->mutable_{{ util.field_name(field) }}();
   }
@@ -1000,7 +994,7 @@ inline ::std::shared_ptr<{{ util.class_name(cls) }}> Const{{ util.class_name(cls
   *data = std::move(*data_);
   return ::std::make_shared<{{ util.class_name(cls) }}>(data);
 }
-
+{% endif %}{# cls is not entry #}
 {% endfor %}{# cls #}
 }
 {% for package in util.module_package_list(module) %}
