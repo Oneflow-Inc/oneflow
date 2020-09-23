@@ -26,23 +26,23 @@ namespace oneflow {
 
 template<typename T>
 struct IsFloatingOrHalf {
-  static constexpr bool value = IsFloating<T>::value || IsFloat16<T>::value;
+  static const bool value = IsFloating<T>::value || IsFloat16<T>::value;
 };
 
 template<typename T>
 struct IsArithmeticOrHalf {
-  static constexpr bool value = std::is_arithmetic<T>::value || IsFloat16<T>::value;
+  static const bool value = std::is_arithmetic<T>::value || IsFloat16<T>::value;
 };
 
 template<typename From, typename To>
 struct NeedsClamp {
-  static constexpr bool from_fp = IsFloatingOrHalf<From>::value;
-  static constexpr bool to_fp = IsFloatingOrHalf<To>::value;
-  static constexpr bool from_fp16 = IsFloat16<From>::value;
-  static constexpr bool to_fp16 = IsFloat16<To>::value;
-  static constexpr bool from_unsigned = std::is_unsigned<From>::value;
-  static constexpr bool to_unsigned = std::is_unsigned<To>::value;
-  static constexpr bool value =
+  static const bool from_fp = IsFloatingOrHalf<From>::value;
+  static const bool to_fp = IsFloatingOrHalf<To>::value;
+  static const bool from_fp16 = IsFloat16<From>::value;
+  static const bool to_fp16 = IsFloat16<To>::value;
+  static const bool from_unsigned = std::is_unsigned<From>::value;
+  static const bool to_unsigned = std::is_unsigned<To>::value;
+  static const bool value =
       // to smaller type of same kind (fp, int)
       (from_fp == to_fp && sizeof(To) < sizeof(From)) ||
       // fp32 has range in excess of (u)int64
@@ -57,7 +57,7 @@ struct NeedsClamp {
 
 template<typename To>
 struct NeedsClamp<bool, To> {
-  static constexpr bool value = false;
+  static const bool value = false;
 };
 
 template<typename T, typename U, typename Enabled = void>
@@ -69,7 +69,7 @@ struct ClampHelper<
     T, U,
     std::enable_if_t<
         NeedsClamp<U, T>::value && std::is_signed<U>::value && std::is_signed<T>::value, void>> {
-  OF_DEVICE_FUNC static constexpr T Call(U value) {
+  OF_DEVICE_FUNC static const T Call(U value) {
     return value <= GetMinVal<T>()
                ? GetMinVal<T>()
                : value >= GetMaxVal<T>() ? GetMaxVal<T>() : static_cast<T>(value);
@@ -82,7 +82,7 @@ struct ClampHelper<T, U,
                    std::enable_if_t<NeedsClamp<U, T>::value && std::is_signed<U>::value
                                         && IsFloatingOrHalf<U>::value && std::is_unsigned<T>::value,
                                     void>> {
-  OF_DEVICE_FUNC static constexpr T Call(U value) {
+  OF_DEVICE_FUNC static const T Call(U value) {
     return value <= GetMinVal<T>()
                ? GetMinVal<T>()
                : value >= GetMaxVal<T>() ? GetMaxVal<T>() : static_cast<T>(value);
@@ -95,7 +95,7 @@ struct ClampHelper<T, U,
                    std::enable_if_t<NeedsClamp<U, T>::value && std::is_signed<U>::value
                                         && std::is_integral<U>::value && std::is_unsigned<T>::value,
                                     void>> {
-  OF_DEVICE_FUNC static constexpr T Call(U value) {
+  OF_DEVICE_FUNC static const T Call(U value) {
     return value <= 0 ? 0
                       : static_cast<std::make_unsigned_t<U>>(value) >= GetMaxVal<T>()
                             ? GetMaxVal<T>()
@@ -107,7 +107,7 @@ struct ClampHelper<T, U,
 template<typename T, typename U>
 struct ClampHelper<T, U,
                    std::enable_if_t<NeedsClamp<U, T>::value && std::is_unsigned<U>::value, void>> {
-  OF_DEVICE_FUNC static constexpr T Call(U value) {
+  OF_DEVICE_FUNC static const T Call(U value) {
     return value >= GetMaxVal<T>() ? GetMaxVal<T>() : static_cast<T>(value);
   }
 };
@@ -115,16 +115,16 @@ struct ClampHelper<T, U,
 // not clamp
 template<typename T, typename U>
 struct ClampHelper<T, U, std::enable_if_t<!NeedsClamp<U, T>::value, void>> {
-  OF_DEVICE_FUNC static constexpr T Call(U value) { return value; }
+  OF_DEVICE_FUNC static const T Call(U value) { return value; }
 };
 
-OF_DEVICE_FUNC constexpr int32_t Clamp(uint32_t value) {
+OF_DEVICE_FUNC const int32_t Clamp(uint32_t value) {
   return value & 0x80000000u ? 0x7fffffff : value;
 }
 
-OF_DEVICE_FUNC constexpr uint32_t Clamp(int32_t value) { return value < 0 ? 0u : value; }
+OF_DEVICE_FUNC const uint32_t Clamp(int32_t value) { return value < 0 ? 0u : value; }
 
-OF_DEVICE_FUNC constexpr int32_t Clamp(int64_t value) {
+OF_DEVICE_FUNC const int32_t Clamp(int64_t value) {
   return value < static_cast<int64_t>(GetMinVal<int32_t>())
              ? GetMinVal<int32_t>()
              : value > static_cast<int64_t>(GetMaxVal<int32_t>()) ? GetMaxVal<int32_t>()
@@ -133,7 +133,7 @@ OF_DEVICE_FUNC constexpr int32_t Clamp(int64_t value) {
 
 template<>
 struct ClampHelper<int32_t, uint64_t> {
-  OF_DEVICE_FUNC static constexpr int32_t Call(uint64_t value) {
+  OF_DEVICE_FUNC static const int32_t Call(uint64_t value) {
     return value > static_cast<uint64_t>(GetMaxVal<int32_t>()) ? GetMaxVal<int32_t>()
                                                                : static_cast<int32_t>(value);
   }
@@ -141,7 +141,7 @@ struct ClampHelper<int32_t, uint64_t> {
 
 template<>
 struct ClampHelper<uint32_t, int64_t> {
-  OF_DEVICE_FUNC static constexpr uint32_t Call(int64_t value) {
+  OF_DEVICE_FUNC static const uint32_t Call(int64_t value) {
     return value < 0
                ? 0
                : value > static_cast<int64_t>(GetMaxVal<uint32_t>()) ? GetMaxVal<uint32_t>()
@@ -151,7 +151,7 @@ struct ClampHelper<uint32_t, int64_t> {
 
 template<>
 struct ClampHelper<uint32_t, uint64_t> {
-  OF_DEVICE_FUNC static constexpr uint32_t Call(uint64_t value) {
+  OF_DEVICE_FUNC static const uint32_t Call(uint64_t value) {
     return value > static_cast<uint64_t>(GetMaxVal<uint32_t>()) ? GetMaxVal<uint32_t>()
                                                                 : static_cast<uint32_t>(value);
   }
@@ -159,12 +159,12 @@ struct ClampHelper<uint32_t, uint64_t> {
 
 template<typename T>
 struct ClampHelper<bool, T> {
-  OF_DEVICE_FUNC static constexpr bool Call(T value) { return static_cast<bool>(value); }
+  OF_DEVICE_FUNC static const bool Call(T value) { return static_cast<bool>(value); }
 };
 
 template<typename T>
 struct ClampHelper<float16, T> {
-  static constexpr float16 Call(T value) {
+  static const float16 Call(T value) {
     return static_cast<float16>(ClampHelper<T, float>::Call(value) < GetMinVal<float16>()
                                     ? GetMinVal<float16>()
                                     : ClampHelper<T, float>::Call(value) > GetMaxVal<float16>()
@@ -175,15 +175,15 @@ struct ClampHelper<float16, T> {
 
 template<typename T>
 struct ClampHelper<T, float16> {
-  static constexpr T Call(float16 value) {
+  static const T Call(float16 value) {
     return ClampHelper<T, float>::Call(static_cast<float>(value));
   }
 };
 
-constexpr float16 Clamp(float16 value) { return value; }
+const float16 Clamp(float16 value) { return value; }
 
 template<typename T, typename U>
-OF_DEVICE_FUNC constexpr T Clamp(U value) {
+OF_DEVICE_FUNC const T Clamp(U value) {
   return ClampHelper<T, U>::Call(value);
 }
 
@@ -246,21 +246,21 @@ struct Converter : ConverterBase<Out, In> {
 // Converts between two FP types
 template<typename Out, typename In>
 struct ConverterBase<Out, In, true, true> {
-  OF_DEVICE_FUNC static constexpr Out Convert(In value) { return value; }
-  OF_DEVICE_FUNC static constexpr Out ConvertNorm(In value) { return value; }
-  OF_DEVICE_FUNC static constexpr Out ConvertSat(In value) { return value; }
-  OF_DEVICE_FUNC static constexpr Out ConvertSatNorm(In value) { return value; }
+  OF_DEVICE_FUNC static const Out Convert(In value) { return value; }
+  OF_DEVICE_FUNC static const Out ConvertNorm(In value) { return value; }
+  OF_DEVICE_FUNC static const Out ConvertSat(In value) { return value; }
+  OF_DEVICE_FUNC static const Out ConvertSatNorm(In value) { return value; }
 };
 
 // Converts integral to FP type
 template<typename Out, typename In>
 struct ConverterBase<Out, In, true, false> {
-  OF_DEVICE_FUNC static constexpr Out Convert(In value) { return value; }
-  OF_DEVICE_FUNC static constexpr Out ConvertSat(In value) { return value; }
-  OF_DEVICE_FUNC static constexpr Out ConvertNorm(In value) {
+  OF_DEVICE_FUNC static const Out Convert(In value) { return value; }
+  OF_DEVICE_FUNC static const Out ConvertSat(In value) { return value; }
+  OF_DEVICE_FUNC static const Out ConvertNorm(In value) {
     return value * (Out(1) / (GetMaxVal<In>()));
   }
-  OF_DEVICE_FUNC static constexpr Out ConvertSatNorm(In value) {
+  OF_DEVICE_FUNC static const Out ConvertSatNorm(In value) {
     return value * (Out(1) / (GetMaxVal<In>()));
   }
 };
@@ -268,22 +268,22 @@ struct ConverterBase<Out, In, true, false> {
 // Converts integral to float16
 template<typename In>
 struct ConverterBase<float16, In, true, false> {
-  OF_DEVICE_FUNC static constexpr float16 Convert(In value) {
+  OF_DEVICE_FUNC static const float16 Convert(In value) {
     auto out = ConverterBase<float, In, true, false>::Convert(value);
     return static_cast<float16>(out);
   }
 
-  OF_DEVICE_FUNC static constexpr float16 ConvertSat(In value) {
+  OF_DEVICE_FUNC static const float16 ConvertSat(In value) {
     auto out = ConverterBase<float, In, true, false>::ConvertSat(value);
     return static_cast<float16>(out);
   }
 
-  OF_DEVICE_FUNC static constexpr float16 ConvertNorm(In value) {
+  OF_DEVICE_FUNC static const float16 ConvertNorm(In value) {
     auto out = ConverterBase<float, In, true, false>::ConvertNorm(value);
     return static_cast<float16>(out);
   }
 
-  OF_DEVICE_FUNC static constexpr float16 ConvertSatNorm(In value) {
+  OF_DEVICE_FUNC static const float16 ConvertSatNorm(In value) {
     auto out = ConverterBase<float, In, true, false>::ConvertSatNorm(value);
     return static_cast<float16>(out);
   }
@@ -292,7 +292,7 @@ struct ConverterBase<float16, In, true, false> {
 // Converts FP to integral type
 template<typename Out, typename In>
 struct ConverterBase<Out, In, false, true> {
-  OF_DEVICE_FUNC static constexpr Out Convert(In value) {
+  OF_DEVICE_FUNC static const Out Convert(In value) {
 #ifdef __CUDA_ARCH__
     return Clamp<Out>(cuda_round_helper(value, Out()));
 #else
@@ -300,7 +300,7 @@ struct ConverterBase<Out, In, false, true> {
 #endif
   }
 
-  OF_DEVICE_FUNC static constexpr Out ConvertSat(In value) {
+  OF_DEVICE_FUNC static const Out ConvertSat(In value) {
 #ifdef __CUDA_ARCH__
     return Clamp<Out>(cuda_round_helper(value, Out()));
 #else
@@ -308,7 +308,7 @@ struct ConverterBase<Out, In, false, true> {
 #endif
   }
 
-  OF_DEVICE_FUNC static constexpr Out ConvertNorm(In value) {
+  OF_DEVICE_FUNC static const Out ConvertNorm(In value) {
 #ifdef __CUDA_ARCH__
     return Clamp<Out>(cuda_round_helper(value * GetMaxVal<Out>(), Out()));
 #else
@@ -316,7 +316,7 @@ struct ConverterBase<Out, In, false, true> {
 #endif
   }
 
-  OF_DEVICE_FUNC static constexpr Out ConvertSatNorm(In value) {
+  OF_DEVICE_FUNC static const Out ConvertSatNorm(In value) {
 #ifdef __CUDA_ARCH__
     return std::is_signed<Out>::value
                ? Clamp<Out>(cuda_round_helper(value * GetMaxVal<Out>(), Out()))
@@ -331,23 +331,23 @@ struct ConverterBase<Out, In, false, true> {
 template<typename Out, typename In, bool IsOutSigned = std::is_signed<Out>::value,
          bool IsInSigned = std::is_signed<In>::value>
 struct ConvertIntInt {
-  OF_DEVICE_FUNC static constexpr Out Convert(In value) { return value; }
-  OF_DEVICE_FUNC static constexpr Out ConvertNorm(In value) {
+  OF_DEVICE_FUNC static const Out Convert(In value) { return value; }
+  OF_DEVICE_FUNC static const Out ConvertNorm(In value) {
     return Converter<Out, float>::Convert(value * (1.0f * GetMaxVal<Out>() / GetMaxVal<In>()));
   }
-  OF_DEVICE_FUNC static constexpr Out ConvertSat(In value) { return Clamp<Out>(value); }
-  OF_DEVICE_FUNC static constexpr Out ConvertSatNorm(In value) { return ConvertNorm(value); }
+  OF_DEVICE_FUNC static const Out ConvertSat(In value) { return Clamp<Out>(value); }
+  OF_DEVICE_FUNC static const Out ConvertSatNorm(In value) { return ConvertNorm(value); }
 };
 
 // Converts signed to unsigned integer
 template<typename Out, typename In>
 struct ConvertIntInt<Out, In, false, true> {
-  OF_DEVICE_FUNC static constexpr Out Convert(In value) { return value; }
-  OF_DEVICE_FUNC static constexpr Out ConvertNorm(In value) {
+  OF_DEVICE_FUNC static const Out Convert(In value) { return value; }
+  OF_DEVICE_FUNC static const Out ConvertNorm(In value) {
     return Converter<Out, float>::Convert(value * (1.0f * GetMaxVal<Out>() / GetMaxVal<In>()));
   }
-  OF_DEVICE_FUNC static constexpr Out ConvertSat(In value) { return Clamp<Out>(value); }
-  OF_DEVICE_FUNC static constexpr Out ConvertSatNorm(In value) {
+  OF_DEVICE_FUNC static const Out ConvertSat(In value) { return Clamp<Out>(value); }
+  OF_DEVICE_FUNC static const Out ConvertSatNorm(In value) {
 #ifdef __CUDA_ARCH__
     return cuda_round_helper(__saturatef(value * (1.0f / GetMaxVal<In>())) * GetMaxVal<Out>());
 #else
@@ -366,10 +366,10 @@ struct ConvertIntInt<Out, In, false, true> {
   // Pass-through conversion
   template<typename T>
   struct Converter<T, T> {
-    static OF_DEVICE_FUNC constexpr T Convert(T value) { return value; }
-    static OF_DEVICE_FUNC constexpr T ConvertSat(T value) { return value; }
-    static OF_DEVICE_FUNC constexpr T ConvertNorm(T value) { return value; }
-    static OF_DEVICE_FUNC constexpr T ConvertSatNorm(T value) { return value; }
+    static OF_DEVICE_FUNC const T Convert(T value) { return value; }
+    static OF_DEVICE_FUNC const T ConvertSat(T value) { return value; }
+    static OF_DEVICE_FUNC const T ConvertNorm(T value) { return value; }
+    static OF_DEVICE_FUNC const T ConvertSatNorm(T value) { return value; }
   };
 
   template<typename raw_out, typename raw_in>
@@ -379,22 +379,22 @@ struct ConvertIntInt<Out, In, false, true> {
 }  // namespace
 
 template<typename Out, typename In>
-OF_DEVICE_FUNC constexpr Out Convert(In value) {
+OF_DEVICE_FUNC const Out Convert(In value) {
   return converter_t<Out, In>::Convert(value);
 }
 
 template<typename Out, typename In>
-OF_DEVICE_FUNC constexpr Out ConvertNorm(In value) {
+OF_DEVICE_FUNC const Out ConvertNorm(In value) {
   return converter_t<Out, In>::ConvertNorm(value);
 }
 
 template<typename Out, typename In>
-OF_DEVICE_FUNC constexpr Out ConvertSat(In value) {
+OF_DEVICE_FUNC const Out ConvertSat(In value) {
   return converter_t<Out, In>::ConvertSat(value);
 }
 
 template<typename Out, typename In>
-OF_DEVICE_FUNC constexpr Out ConvertSatNorm(In value) {
+OF_DEVICE_FUNC const Out ConvertSatNorm(In value) {
   return converter_t<Out, In>::ConvertSatNorm(value);
 }
 
