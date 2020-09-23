@@ -2,12 +2,16 @@ import glob
 import argparse
 import os
 import re
-import oss2
 from urllib.parse import urlparse
 import requests
 import hashlib
 import base64
 import tempfile
+
+all_packages = os.popen("pip list").read()
+if "oss2" in all_packages:
+    import oss2
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--src_path", type=str, required=False)

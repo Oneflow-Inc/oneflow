@@ -89,7 +89,7 @@ function(use_mirror)
   endif(NOT PARSED_ARGS_URL)
   if((DEFINED THIRD_PARTY_MIRROR) AND (THIRD_PARTY_MIRROR STREQUAL "aliyun"))
     execute_process( 
-      COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL} 
+      COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL} 
       OUTPUT_VARIABLE temp_url)
     set(${PARSED_ARGS_NAME} ${temp_url} PARENT_SCOPE)
   endif()

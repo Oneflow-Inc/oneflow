@@ -61,7 +61,6 @@ set(THIRD_PARTY_SUBMODULE_DIR "${PROJECT_SOURCE_DIR}/build/third_party"
 # Modules
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
-include(python)
 include(util)
 include(proto2cpp)
 include(swig)

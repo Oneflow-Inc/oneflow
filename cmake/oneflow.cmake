@@ -1,3 +1,4 @@
+include(python)
 # main cpp
 # TODO(tsai): skip for now, fail to link when building CPU only
 if (BUILD_CUDA)
