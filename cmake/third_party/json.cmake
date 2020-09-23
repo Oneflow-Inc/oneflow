@@ -1,6 +1,7 @@
 include(ExternalProject)
 
 SET(JSON_URL https://github.com/nlohmann/json/releases/download/v3.7.3/include.zip)
+use_mirror(NAME JSON_URL URL ${JSON_URL})
 set(JSON_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR}/json/src/json)
 SET(JSON_INSTALL_DIR ${THIRD_PARTY_DIR}/json)
 SET(JSON_INCLUDE_DIR ${JSON_INSTALL_DIR}/include CACHE PATH "" FORCE)

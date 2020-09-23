@@ -72,3 +72,25 @@ function(add_copy_headers_target)
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PARSED_ARGS_SRC}/${header_file}" "${PARSED_ARGS_DST}/${header_file}")
   endforeach()
 endfunction()
+
+function(use_mirror)
+  cmake_parse_arguments(
+    PARSED_ARGS
+    ""
+    "NAME;URL"
+    ""
+    ${ARGN}
+  )
+  if(NOT PARSED_ARGS_NAME)
+    message(FATAL_ERROR "name required")
+  endif(NOT PARSED_ARGS_NAME)
+  if(NOT PARSED_ARGS_URL)
+    message(FATAL_ERROR "url required")
+  endif(NOT PARSED_ARGS_URL)
+  if(CN)
+    execute_process( 
+      COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL} 
+      OUTPUT_VARIABLE temp_url)
+    set(${PARSED_ARGS_NAME} ${temp_url} PARENT_SCOPE)
+  endif()
+endfunction()

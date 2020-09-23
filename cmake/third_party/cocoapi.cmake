@@ -4,6 +4,7 @@ set(COCOAPI_INCLUDE_DIR ${THIRD_PARTY_DIR}/cocoapi/include)
 set(COCOAPI_LIBRARY_DIR ${THIRD_PARTY_DIR}/cocoapi/lib)
 
 set(COCOAPI_URL https://github.com/Oneflow-Inc/cocoapi/archive/ed842bf.tar.gz)
+use_mirror(NAME COCOAPI_URL URL ${COCOAPI_URL})
 set(COCOAPI_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR}/cocoapi/src/cocoapi)
 set(COCOAPI_LIBRARY_NAME libcocoapi_static.a)
 

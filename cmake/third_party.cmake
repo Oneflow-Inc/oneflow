@@ -18,6 +18,7 @@ include(absl)
 include(cares)
 include(openssl)
 include(grpc)
+include(pybind11)
 
 if (WITH_XLA)
   include(tensorflow)
