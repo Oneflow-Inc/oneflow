@@ -87,7 +87,7 @@ function(use_mirror)
   if(NOT PARSED_ARGS_URL)
     message(FATAL_ERROR "url required")
   endif(NOT PARSED_ARGS_URL)
-  if(CN)
+  if((DEFINED THIRD_PARTY_MIRROR) AND (THIRD_PARTY_MIRROR STREQUAL "aliyun"))
     execute_process( 
       COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL} 
       OUTPUT_VARIABLE temp_url)
