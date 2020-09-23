@@ -53,7 +53,8 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
   }
   void Compute(vm::Instruction* instruction) const override {
     FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
-    auto* blob = instruction->mut_operand_type(args->blob())->Mut<BlobObject>()->mut_blob();
+    auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
+    auto* blob = blob_obj->mut_blob();
     CHECK(blob->mem_case().has_host_mem());
     if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
     void* dptr = blob->mut_dptr();
@@ -78,7 +79,8 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
   }
   void Compute(vm::Instruction* instruction) const override {
     FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
-    auto* blob = instruction->mut_operand_type(args->blob())->Mut<BlobObject>()->mut_blob();
+    auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
+    auto* blob = blob_obj->mut_blob();
     CHECK(blob->mem_case().has_host_mem());
     if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
     void* dptr = blob->mut_dptr();

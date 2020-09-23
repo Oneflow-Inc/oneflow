@@ -133,6 +133,7 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+    const auto& parallel_desc = vm->GetInstructionParallelDesc(*instr_msg);
     FlatMsgView<BroadcastObjectReferenceInstruction> args(instr_msg->operand());
     const RwMutexedObject* sole_rw_mutexed_object = nullptr;
     {
@@ -143,7 +144,6 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
       sole_rw_mutexed_object = &map->Begin()->rw_mutexed_object();
       CHECK_NOTNULL(sole_rw_mutexed_object);
     }
-    std::shared_ptr<ParallelDesc> parallel_desc = vm->GetInstructionParallelDesc(*instr_msg);
     CHECK(static_cast<bool>(parallel_desc));
     const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(parallel_desc->device_type()));
     int64_t new_object = GetLogicalObjectId(args->new_object());

@@ -72,10 +72,18 @@ void VirtualMachine::FilterAndRunSourceInstructions(TmpPendingInstrMsgList* inst
     const auto& instr_type_id = instr_msg->instr_type_id();
     const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
     if (stream_type.SharingVirtualMachineThread() && IsSourceInstruction(*instr_msg)) {
-      stream_type.Run(this, instr_msg);
+      const auto& parallel_desc = GetInstructionParallelDesc(*instr_msg);
+      if (!parallel_desc || parallel_desc->ContainingMachineId(this_machine_id())) {
+        stream_type.Run(this, instr_msg);
+      }
       instr_msg_list->Erase(instr_msg);
     }
   }
+}
+
+int64_t VirtualMachine::this_machine_id() const {
+  CHECK_EQ(machine_id_range().size(), 1);
+  return machine_id_range().begin();
 }
 
 void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
@@ -87,7 +95,10 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
     auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
-    CHECK_NOTNULL(stream_rt_desc);
+    if (stream_rt_desc == nullptr) {
+      LOG(FATAL) << typeid(instr_msg->instr_type_id().instruction_type()).name() << " "
+                 << typeid(stream_type_id.stream_type()).name();
+    }
     const auto& parallel_desc = GetInstructionParallelDesc(*instr_msg);
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
       if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }

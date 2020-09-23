@@ -172,6 +172,10 @@ int64_t ParallelDesc::DeviceIdForParallelId(int64_t parallel_id) const {
   return parallel_id2device_id_.at(parallel_id);
 }
 
+bool ParallelDesc::ContainingMachineId(int64_t machine_id) const {
+  return machine_id2sorted_dev_phy_ids_.find(machine_id) != machine_id2sorted_dev_phy_ids_.end();
+}
+
 bool ParallelDesc::Containing(int64_t machine_id, int64_t device_id) const {
   const auto& machine_iter = machine_id2sorted_dev_phy_ids_.find(machine_id);
   if (machine_iter == machine_id2sorted_dev_phy_ids_.end()) { return false; }

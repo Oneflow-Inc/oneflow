@@ -141,7 +141,7 @@ Maybe<void> ForEachMutInputBnAndBlobObject(vm::Instruction* instruction, const T
     CHECK_NOTNULL_OR_RETURN(operand_input_blob)
         << "bn_in_op: " << bn_in_op
         << ", object_id: " << args.mut_input_blob(i).logical_object_id();
-    auto* blob_object = operand_input_blob->template Mut<BlobObject>();
+    auto* blob_object = JUST(operand_input_blob->template Mut<BlobObject>());
     JUST(Callback(bn_in_op, blob_object));
   }
   return Maybe<void>::Ok();
@@ -157,7 +157,7 @@ Maybe<void> ForEachOutputBnAndBlobObject(vm::Instruction* instruction, const T& 
     const std::string& bn_in_op = JUST(operand_obn->template Get<vm::StringObject>())->str();
     auto* operand_output_blob = instruction->mut_operand_type(args.output_blob(i));
     CHECK_NOTNULL_OR_RETURN(operand_output_blob) << "obn: " << bn_in_op;
-    auto* blob_object = operand_output_blob->template Mut<BlobObject>();
+    auto* blob_object = JUST(operand_output_blob->template Mut<BlobObject>());
     JUST(Callback(bn_in_op, blob_object));
   }
   CHECK_EQ_OR_RETURN(args.mut2_obn_size(), args.mut2_output_blob_size());
@@ -167,7 +167,7 @@ Maybe<void> ForEachOutputBnAndBlobObject(vm::Instruction* instruction, const T& 
     const std::string& bn_in_op = JUST(operand_obn->template Get<vm::StringObject>())->str();
     auto* operand_output_blob = instruction->mut_operand_type(args.mut2_output_blob(i));
     CHECK_NOTNULL_OR_RETURN(operand_output_blob) << "obn: " << bn_in_op;
-    auto* blob_object = operand_output_blob->template Mut<BlobObject>();
+    auto* blob_object = JUST(operand_output_blob->template Mut<BlobObject>());
     JUST(Callback(bn_in_op, blob_object));
   }
   return Maybe<void>::Ok();
@@ -448,7 +448,7 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 
 Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction,
                                                     const CallOpKernelInstrOperand& args) const {
-  auto* opkernel_obj = instruction->mut_operand_type(args.opkernel())->Mut<OpKernelObject>();
+  auto* opkernel_obj = JUST(instruction->mut_operand_type(args.opkernel())->Mut<OpKernelObject>());
   DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
   int64_t device_id = instruction->stream().device_id();
   const auto& mem_case = MakeMemCase(device_type, device_id);
@@ -467,7 +467,7 @@ void CallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
 
 Maybe<void> CallOpKernelInstructionType::MaybeCompute(vm::Instruction* instruction,
                                                       const CallOpKernelInstrOperand& args) const {
-  auto* opkernel_obj = instruction->mut_operand_type(args.opkernel())->Mut<OpKernelObject>();
+  auto* opkernel_obj = JUST(instruction->mut_operand_type(args.opkernel())->Mut<OpKernelObject>());
   JUST(OpKernelCompute(opkernel_obj, instruction, args));
   return Maybe<void>::Ok();
 }
@@ -511,7 +511,8 @@ void UserStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instructio
 
 Maybe<void> UserStatelessCallOpKernelInstructionType::Compute(
     vm::Instruction* instruction, const StatelessCallOpKernelInstrOperand& args) const {
-  auto* opkernel_obj = instruction->mut_operand_type(args.shared_opkernel())->Mut<OpKernelObject>();
+  auto* opkernel_obj =
+      JUST(instruction->mut_operand_type(args.shared_opkernel())->Mut<OpKernelObject>());
   JUST(OpKernelCompute(opkernel_obj, instruction, args));
   return Maybe<void>::Ok();
 }
@@ -556,7 +557,7 @@ void SystemStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruct
 Maybe<void> SystemStatelessCallOpKernelInstructionType::Compute(
     vm::Instruction* instruction, const StatelessCallOpKernelInstrOperand& args) const {
   auto* opkernel_obj =
-      instruction->mut_operand_type(args.shared_opkernel())->Mut<SystemOpKernelObject>();
+      JUST(instruction->mut_operand_type(args.shared_opkernel())->Mut<SystemOpKernelObject>());
   JUST(OpKernelCompute(opkernel_obj, instruction, args));
   return Maybe<void>::Ok();
 }
@@ -577,7 +578,7 @@ void FeedOrFetchBlob(vm::Instruction* instruction) {
   FlatMsgView<T> args(instruction->instr_msg().operand());
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   auto* rw_mutext_blob = instruction->mut_operand_type(args->blob());
-  auto* blob_object = rw_mutext_blob->template Mut<BlobObject>();
+  auto* blob_object = CHECK_JUST(rw_mutext_blob->template Mut<BlobObject>());
   OfBlob of_blob(device_ctx, blob_object->mut_blob());
   int64_t of_blob_ptr = reinterpret_cast<int64_t>(&of_blob);
   Global<ForeignCallback>::Get()->OfBlobCall(args->unique_callback_id(), of_blob_ptr);
