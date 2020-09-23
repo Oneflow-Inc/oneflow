@@ -138,9 +138,11 @@ class SGDUpdateKernel final : public user_op::OpKernel {
 
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
+#ifdef WITH_CUDA
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, float, float);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+#endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename K>
 class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
@@ -232,9 +234,11 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
 
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
+#ifdef WITH_CUDA
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kGPU, float, float);
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+#endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename K>
 class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
@@ -347,9 +351,11 @@ class AdamUpdateKernel final : public user_op::OpKernel {
 
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
+#ifdef WITH_CUDA
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, float, float);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+#endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename K>
 class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
