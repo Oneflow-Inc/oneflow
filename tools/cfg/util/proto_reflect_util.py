@@ -48,6 +48,9 @@ class ProtoReflectionUtil:
     def module_message_types(self, module):
         return module.message_types_by_name.values()
 
+    def class_name(self, cls):
+        return cls.name
+    
     def enum_name(self, enum):
         return enum.name
 
@@ -131,6 +134,8 @@ class ProtoReflectionUtil:
     def field_default_value_literal(self, field):
         if field.cpp_type == field.CPPTYPE_STRING:
             return '"%s"' % field.default_value
+        if field.cpp_type == field.CPPTYPE_BOOL:
+            return ("%s" % field.default_value).lower()
         return field.default_value
 
     def field_name(self, field):
@@ -139,6 +144,11 @@ class ProtoReflectionUtil:
     def field_type_name(self, field):
         if self.field_is_message_type(field):
             return self.field_message_type_name(field)
+        return self.field_scalar_type_name(field)
+
+    def field_type_name_with_cfg_namespace(self, field):
+        if self.field_is_message_type(field):
+            return self.field_message_type_name_with_cfg_namespace(field)
         return self.field_scalar_type_name(field)
 
     def field_map_key_type_name(self, field):
@@ -167,6 +177,14 @@ class ProtoReflectionUtil:
 
     def field_message_type_name(self, field):
         return field.message_type.name
+    
+    def field_message_type_name_with_cfg_namespace(self, field):
+        message_type_name = field.message_type.full_name.replace(field.message_type.name,
+                            'cfg.' + field.message_type.name)
+        return '::' + message_type_name.replace('.', '::')
+
+    def field_message_type_name_with_proto_namespace(self, field):
+        return '::' + field.message_type.full_name.replace('.', '::')
 
     def field_repeated_container_name(self, field):
         module_prefix = self.module_header_macro_lock(field.containing_type.file)

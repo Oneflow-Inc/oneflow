@@ -17,9 +17,9 @@ cfg::{{ util.enum_name(enm) }} Proto{{ util.enum_name(enm) }}ToCfg{{ util.enum_n
 
 {% for cls in util.module_message_types(module) %}
 
-cfg::{{ cls.name }} FromProto(const ::oneflow::{{ cls.name }}& proto_{{ cls.name.lower() }});
+cfg::{{ util.class_name(cls) }} FromProto(const ::oneflow::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
 
-::oneflow::{{ cls.name }} ToProto(const cfg::{{ cls.name }}& cfg_{{ cls.name.lower() }});
+::oneflow::{{ util.class_name(cls) }} ToProto(const cfg::{{ util.class_name(cls) }}& cfg_{{ util.class_name(cls).lower() }});
 {% endfor %}{# cls #}
 
 } // namespace oneflow
