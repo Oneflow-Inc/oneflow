@@ -7,10 +7,10 @@ import requests
 import hashlib
 import base64
 import tempfile
-
-all_packages = os.popen("pip list").read()
-if "oss2" in all_packages:
+try:
     import oss2
+except:
+    pass
 
 
 parser = argparse.ArgumentParser()
