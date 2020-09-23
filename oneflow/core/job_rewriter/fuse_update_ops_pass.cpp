@@ -46,7 +46,9 @@ class FuseUpdateOpsPass final : public OpGraphPass {
   FuseUpdateOpsPass() = default;
   ~FuseUpdateOpsPass() override = default;
 
-  bool IsEnabled() const override { return true; }
+  bool IsEnabled() const override {
+    return GlobalJobDesc().job_conf().enable_fuse_model_update_ops();
+  }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 
