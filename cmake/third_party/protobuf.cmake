@@ -6,7 +6,7 @@ set(PROTOBUF_BINARY_DIR ${THIRD_PARTY_DIR}/protobuf/bin)
 
 set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
 if(WITH_XLA)
-  set(PROTOBUF_URL "https://storage.googleapis.com/mirror.tensorflow.org/github.com/protocolbuffers/protobuf/archive/310ba5ee72661c081129eb878c1bbcec936b20f0.tar.gz")
+  set(PROTOBUF_URL "https://github.com/protocolbuffers/protobuf/archive/v3.9.2.zip")
 else()
   set(PROTOBUF_URL ${THIRD_PARTY_SUBMODULE_DIR}/protobuf/src/protobuf)
 endif()
@@ -59,13 +59,12 @@ ExternalProject_Add(protobuf
 )
 
 # put protobuf includes in the 'THIRD_PARTY_DIR'
-add_custom_target(protobuf_create_header_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTOBUF_INCLUDE_DIR}
-  DEPENDS protobuf)
+if(WITH_XLA)
+  add_copy_headers_target(NAME protobuf SRC ${PROTOBUF_SRC_DIR} DST ${PROTOBUF_INCLUDE_DIR} DEPS protobuf INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/protobuf_xla_headers.txt")
+else()
+  add_copy_headers_target(NAME protobuf SRC ${PROTOBUF_SRC_DIR} DST ${PROTOBUF_INCLUDE_DIR} DEPS protobuf INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/protobuf_headers.txt")
+endif()
 
-add_custom_target(protobuf_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROTOBUF_SRC_DIR} ${PROTOBUF_INCLUDE_DIR}
-  DEPENDS protobuf_create_header_dir)
 
 # put protobuf librarys in the 'THIRD_PARTY_DIR'
 add_custom_target(protobuf_create_library_dir

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/xrt/xla/ops/op_context.h"
 #include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
@@ -25,7 +40,7 @@ class LayerNormOp : public XlaOpKernel {
 
 void LayerNormOp::Compile(XlaOpContext *ctx) {
   // input layout [N, C, H, W]
-  Shape input_shape = ctx->InputShape("in");
+  Shape input_shape = ctx->InputShape("x_0");
 
   int begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
   int begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
@@ -33,8 +48,8 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
   CHECK_LT(begin_params_axis, input_shape.NumAxes());
   while (begin_norm_axis < 0) { begin_norm_axis += input_shape.NumAxes(); }
 
-  DataType data_type = ctx->InputType("in");
-  if (ctx->HasOutput("mean")) { data_type = ctx->OutputType("mean"); }
+  DataType data_type = ctx->InputType("x_0");
+  if (ctx->HasOutput("mean_0")) { data_type = ctx->OutputType("mean_0"); }
   int64_t batch_dims = input_shape.Count(0, begin_norm_axis);
   int64_t norm_dims = input_shape.Count(begin_norm_axis);
   Shape bn_shape = Shape({1, batch_dims, 1, norm_dims});
@@ -43,10 +58,10 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp ones = Ones(ctx->builder(), scale_shape, data_type);
   xla::XlaOp zeros = Zeros(ctx->builder(), scale_shape, data_type);
   // input layout [1, N, 1, CHW]
-  xla::XlaOp input = Reshape(ctx->Input("in"), bn_shape);
+  xla::XlaOp input = Reshape(ctx->Input("x_0"), bn_shape);
 
   // FP16 batch normalization (cudnn style) has not been supported by XLA.
-  if (ctx->InputType("in") != data_type) {
+  if (ctx->InputType("x_0") != data_type) {
     input = xla::ConvertElementType(input, DataTypeToPrimitiveType(data_type));
   }
 
@@ -60,32 +75,32 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp inv_variance = xla::Rsqrt(xla::Add(variance, xla::ScalarLike(variance, epsilon)));
 
   Shape mean_shape = SliceShape(input_shape, 0, begin_norm_axis);
-  if (ctx->HasOutput("mean")) { ctx->SetOutput("mean", Reshape(mean, mean_shape)); }
-  if (ctx->HasOutput("inv_variance")) {
-    ctx->SetOutput("inv_variance", Reshape(inv_variance, mean_shape));
+  if (ctx->HasOutput("mean_0")) { ctx->SetOutput("mean_0", Reshape(mean, mean_shape)); }
+  if (ctx->HasOutput("inv_variance_0")) {
+    ctx->SetOutput("inv_variance_0", Reshape(inv_variance, mean_shape));
   }
 
-  if (ctx->OutputType("out") != data_type) {
-    DataType output_type = ctx->OutputType("out");
+  if (ctx->OutputType("y_0") != data_type) {
+    DataType output_type = ctx->OutputType("y_0");
     output = xla::ConvertElementType(output, DataTypeToPrimitiveType(output_type));
   }
 
-  if (ctx->Attr<bool>("scale") && ctx->HasOutput("normalized")) {
-    ctx->SetOutput("normalized", Reshape(output, input_shape));
+  if (ctx->Attr<bool>("scale") && ctx->HasOutput("normalized_0")) {
+    ctx->SetOutput("normalized_0", Reshape(output, input_shape));
   }
 
   Shape gamma_shape = Shape({norm_dims});
   // output = Reshape(output, Shape({batch_dims, norm_dims}));
   if (ctx->Attr<bool>("scale")) {
-    CHECK_EQ(gamma_shape, ctx->InputShape("gamma"));
-    output = xla::Mul(output, ctx->Input("gamma"), {3} /*broadcast dim*/);
+    CHECK_EQ(gamma_shape, ctx->InputShape("gamma_0"));
+    output = xla::Mul(output, ctx->Input("gamma_0"), {3} /*broadcast dim*/);
   }
   if (ctx->Attr<bool>("center")) {
-    CHECK_EQ(gamma_shape, ctx->InputShape("beta"));
-    output = xla::Add(output, ctx->Input("beta"), {3} /*broadcast dim*/);
+    CHECK_EQ(gamma_shape, ctx->InputShape("beta_0"));
+    output = xla::Add(output, ctx->Input("beta_0"), {3} /*broadcast dim*/);
   }
 
-  ctx->SetOutput("out", Reshape(output, input_shape));
+  ctx->SetOutput("y_0", Reshape(output, input_shape));
 }
 
 class LayerNormGradOp : public XlaOpKernel {
@@ -103,12 +118,12 @@ class LayerNormGradOp : public XlaOpKernel {
 };
 
 void LayerNormGradOp::Compile(XlaOpContext *ctx) {
-  xla::XlaOp output_grad = ctx->Input("dy");
-  xla::XlaOp activation = ctx->Input("x");
-  xla::XlaOp mean = ctx->Input("mean");
-  xla::XlaOp inv_variance = ctx->Input("inv_variance");
+  xla::XlaOp output_grad = ctx->Input("dy_0");
+  xla::XlaOp activation = ctx->Input("x_0");
+  xla::XlaOp mean = ctx->Input("mean_0");
+  xla::XlaOp inv_variance = ctx->Input("inv_variance_0");
 
-  Shape activation_shape = ctx->InputShape("x");
+  Shape activation_shape = ctx->InputShape("x_0");
   int begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
   CHECK_LT(begin_norm_axis, activation_shape.NumAxes());
   while (begin_norm_axis < 0) { begin_norm_axis += activation_shape.NumAxes(); }
@@ -128,8 +143,8 @@ void LayerNormGradOp::Compile(XlaOpContext *ctx) {
   variance = Reshape(variance, scale_shape);
   output_grad = Reshape(output_grad, bn_shape);
 
-  if (ctx->InputType("mean") != ctx->InputType("x")) {
-    DataType data_type = ctx->InputType("mean");
+  if (ctx->InputType("mean_0") != ctx->InputType("x_0")) {
+    DataType data_type = ctx->InputType("mean_0");
     activation = xla::ConvertElementType(activation, DataTypeToPrimitiveType(data_type));
     output_grad = xla::ConvertElementType(output_grad, DataTypeToPrimitiveType(data_type));
   }
@@ -138,11 +153,11 @@ void LayerNormGradOp::Compile(XlaOpContext *ctx) {
                               output_grad, epsilon);
   xla::XlaOp activation_grad = xla::GetTupleElement(output, 0);
 
-  if (ctx->InputType("mean") != ctx->InputType("x")) {
-    DataType data_type = ctx->InputType("x");
+  if (ctx->InputType("mean_0") != ctx->InputType("x_0")) {
+    DataType data_type = ctx->InputType("x_0");
     activation_grad = xla::ConvertElementType(activation_grad, DataTypeToPrimitiveType(data_type));
   }
-  ctx->SetOutput("dx", Reshape(activation_grad, activation_shape));
+  ctx->SetOutput("dx_0", Reshape(activation_grad, activation_shape));
 }
 
 class LayerNormParamGradOp : public XlaOpKernel {
@@ -151,8 +166,8 @@ class LayerNormParamGradOp : public XlaOpKernel {
 };
 
 void LayerNormParamGradOp::Compile(XlaOpContext *ctx) {
-  xla::XlaOp output_grad = ctx->Input("dy");
-  Shape output_shape = ctx->InputShape("dy");
+  xla::XlaOp output_grad = ctx->Input("dy_0");
+  Shape output_shape = ctx->InputShape("dy_0");
 
   int begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
   while (begin_params_axis < 0) { begin_params_axis += output_shape.NumAxes(); }
@@ -163,27 +178,27 @@ void LayerNormParamGradOp::Compile(XlaOpContext *ctx) {
   std::iota(norm_dims.begin(), norm_dims.end(), begin_params_axis);
 
   xla::XlaBuilder *builder = ctx->builder();
-  DataType data_type = ctx->InputType("dy");
+  DataType data_type = ctx->InputType("dy_0");
   xla::XlaComputation add_func = CreateAddFunc(data_type);
-  if (ctx->HasAttr("beta_diff")) {
+  if (ctx->HasOutput("beta_diff_0")) {
     xla::XlaOp beta_grad = xla::Reduce(output_grad, Zero(builder, data_type), add_func, batch_dims);
-    ctx->SetOutput("beta_diff", beta_grad);
+    ctx->SetOutput("beta_diff_0", beta_grad);
   }
-  if (ctx->HasAttr("gamma_diff")) {
-    xla::XlaOp normalized = ctx->Input("normalized");
+  if (ctx->HasOutput("gamma_diff_0")) {
+    xla::XlaOp normalized = ctx->Input("normalized_0");
     xla::XlaOp gamma_grad = normalized * output_grad;
     gamma_grad = xla::Reduce(gamma_grad, Zero(builder, data_type), add_func, batch_dims);
-    ctx->SetOutput("gamma_diff", gamma_grad);
+    ctx->SetOutput("gamma_diff_0", gamma_grad);
   }
-  if (ctx->HasAttr("normalized_diff")) {
+  if (ctx->HasOutput("normalized_diff_0")) {
     xla::XlaOp normalized_grad;
-    if (ctx->HasAttr("gamma")) {
-      xla::XlaOp gamma = ctx->Input("gamma");
+    if (ctx->HasInput("gamma_0")) {
+      xla::XlaOp gamma = ctx->Input("gamma_0");
       normalized_grad = xla::Mul(output_grad, gamma, norm_dims);
     } else {
       normalized_grad = output_grad;
     }
-    ctx->SetOutput("normalized_diff", normalized_grad);
+    ctx->SetOutput("normalized_diff_0", normalized_grad);
   }
 }
 

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/momentum_model_update_kernel.h"
 
 namespace oneflow {
@@ -37,7 +52,7 @@ class MomentumMdUpdateKernelUtil<DeviceType::kCPU, T> final {
                           const float* learning_rate, T weight_decay, const T* model_diff, T* model,
                           T* momentum) {
     for (int64_t i = 0; i != n; ++i) {
-      T next_momentum = momentum[i] = beta * momentum[i] - *learning_rate * model_diff[i];
+      T next_momentum = beta * momentum[i] - *learning_rate * model_diff[i];
       momentum[i] = next_momentum;
       model[i] = model[i] + next_momentum - *learning_rate * weight_decay * model[i];
     }

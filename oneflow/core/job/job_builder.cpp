@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/operator/operator.h"
@@ -61,7 +76,9 @@ const OperatorConf& JobBuilder::OpConf4OpName(const std::string& op_name) const 
 }
 
 const ParallelConf& JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const {
-  return *lbi2blob_parallel_conf_.at(lbi);
+  const auto& iter = lbi2blob_parallel_conf_.find(lbi);
+  if (iter != lbi2blob_parallel_conf_.end()) { return *iter->second; }
+  return ParallelConf4OpName(lbi.op_name());
 }
 
 void JobBuilder::AddOps(const ParallelConf& parallel_conf,
@@ -203,7 +220,9 @@ void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Han
 }
 
 const ParallelConf& JobBuilder::ParallelConf4OpName(const std::string& op_name) const {
-  return *op_name2parallel_conf_.at(op_name);
+  const auto& iter = op_name2parallel_conf_.find(op_name);
+  CHECK(iter != op_name2parallel_conf_.end());
+  return *iter->second;
 }
 
 void JobBuilder::AddParallelConf4OpName(const std::string& op_name,

@@ -1,6 +1,7 @@
 include (ExternalProject)
 
 set(OPENCV_INCLUDE_DIR ${THIRD_PARTY_DIR}/opencv/include)
+set(LIBPNG_INCLUDE_DIR ${THIRD_PARTY_DIR}/libpng/include)
 set(OPENCV_LIBRARY_DIR ${THIRD_PARTY_DIR}/opencv/lib)
 set(OPENCV_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build/install)
 
@@ -107,13 +108,9 @@ ExternalProject_Add(opencv
 )
 
 # put opencv includes in the 'THIRD_PARTY_DIR'
-add_custom_target(opencv_create_header_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${OPENCV_INCLUDE_DIR}
-  DEPENDS opencv)
+add_copy_headers_target(NAME opencv SRC ${OPENCV_BUILD_INCLUDE_DIR} DST ${OPENCV_INCLUDE_DIR} DEPS opencv INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/opencv_headers.txt")
 
-add_custom_target(opencv_copy_headers_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${OPENCV_BUILD_INCLUDE_DIR} ${OPENCV_INCLUDE_DIR}
-  DEPENDS opencv_create_header_dir)
+add_copy_headers_target(NAME libpng SRC ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng DST ${LIBPNG_INCLUDE_DIR} DEPS opencv INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/libpng_headers.txt")
 
 # put opencv librarys in the 'THIRD_PARTY_DIR'
 add_custom_target(opencv_create_library_dir

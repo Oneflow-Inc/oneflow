@@ -1,5 +1,8 @@
 **/.git
 /build
+/build-*
+/docs/build/
+/cmake-build-*
 /third_party/
 /examples/**/oneflow
 /benchmark/**/oneflow
@@ -25,3 +28,8 @@ dist
 **/core.9*
 
 build/third_party/re2/src/re2-*
+
+/wheelhouse*
+/.DS_Store
+/tmp_wheel
+/manylinux*

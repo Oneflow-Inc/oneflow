@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_EAGER_CALL_OPKERNEL_INSTRUCTION_H_
 #define ONEFLOW_CORE_EAGER_CALL_OPKERNEL_INSTRUCTION_H_
 
@@ -18,6 +33,9 @@ class CallOpKernelInstructionType : public vm::InstructionType {
   virtual ~CallOpKernelInstructionType() = default;
 
  private:
+  Maybe<void> MaybeInfer(vm::Instruction* instruction, const CallOpKernelInstrOperand& args) const;
+  Maybe<void> MaybeCompute(vm::Instruction* instruction,
+                           const CallOpKernelInstrOperand& args) const;
   virtual const char* device_tag() const = 0;
 };
 
@@ -31,6 +49,10 @@ class UserStatelessCallOpKernelInstructionType : public vm::InstructionType {
   virtual ~UserStatelessCallOpKernelInstructionType() = default;
 
  private:
+  Maybe<void> Infer(vm::Instruction* instruction,
+                    const StatelessCallOpKernelInstrOperand& args) const;
+  Maybe<void> Compute(vm::Instruction* instruction,
+                      const StatelessCallOpKernelInstrOperand& args) const;
   virtual const char* device_tag() const = 0;
 };
 
@@ -47,10 +69,14 @@ class SystemStatelessCallOpKernelInstructionType : public vm::InstructionType {
   virtual ~SystemStatelessCallOpKernelInstructionType() = default;
 
  private:
+  Maybe<void> Infer(vm::Instruction* instruction,
+                    const StatelessCallOpKernelInstrOperand& args) const;
+  Maybe<void> Compute(vm::Instruction* instruction,
+                      const StatelessCallOpKernelInstrOperand& args) const;
   virtual const char* device_tag() const = 0;
 };
 
-class WatchBlobHeaderInstructionType : public vm::InstructionType {
+class FetchBlobHeaderInstructionType : public vm::InstructionType {
  public:
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override {
@@ -58,14 +84,14 @@ class WatchBlobHeaderInstructionType : public vm::InstructionType {
   }
 
  protected:
-  WatchBlobHeaderInstructionType() = default;
-  virtual ~WatchBlobHeaderInstructionType() = default;
+  FetchBlobHeaderInstructionType() = default;
+  virtual ~FetchBlobHeaderInstructionType() = default;
 
  private:
   virtual const char* device_tag() const = 0;
 };
 
-class WatchBlobBodyInstructionType : public vm::InstructionType {
+class FetchBlobBodyInstructionType : public vm::InstructionType {
  public:
   void Infer(vm::Instruction* instruction) const override {
     // do nothing
@@ -73,8 +99,23 @@ class WatchBlobBodyInstructionType : public vm::InstructionType {
   void Compute(vm::Instruction* instruction) const override;
 
  protected:
-  WatchBlobBodyInstructionType() = default;
-  virtual ~WatchBlobBodyInstructionType() = default;
+  FetchBlobBodyInstructionType() = default;
+  virtual ~FetchBlobBodyInstructionType() = default;
+
+ private:
+  virtual const char* device_tag() const = 0;
+};
+
+class FeedBlobInstructionType : public vm::InstructionType {
+ public:
+  void Infer(vm::Instruction* instruction) const override {
+    // do nothing
+  }
+  void Compute(vm::Instruction* instruction) const override;
+
+ protected:
+  FeedBlobInstructionType() = default;
+  virtual ~FeedBlobInstructionType() = default;
 
  private:
   virtual const char* device_tag() const = 0;

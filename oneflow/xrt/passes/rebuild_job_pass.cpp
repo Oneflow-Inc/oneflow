@@ -1,11 +1,19 @@
-#include "oneflow/xrt/passes/pass.h"
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
 
-#include <string>
-#include <vector>
-#include "absl/strings/str_cat.h"
-#include "absl/strings/str_split.h"
-#include "glog/logging.h"
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/xrt/api.h"
@@ -13,8 +21,16 @@
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/kernel/op_kernel.h"
 #include "oneflow/xrt/node_util.h"
+#include "oneflow/xrt/passes/pass.h"
 #include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/stl.h"
+
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_split.h"
+#include "glog/logging.h"
+
+#include <string>
+#include <vector>
 
 namespace oneflow {
 namespace xrt {
@@ -35,11 +51,6 @@ void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
                         const std::string &blob_name, const std::string &fixed_blob_name) {
   auto *spec_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
   switch (op_conf->op_type_case()) {
-    case OperatorConf::kPrintConf: {
-      int index = GetRepeatedIndex(input);
-      *(op_conf->mutable_print_conf()->mutable_in(index)->mutable_lbn()) = fixed_blob_name;
-      break;
-    }
     case OperatorConf::kUserConf: {
       std::pair<std::string, int32_t> pair = GetFieldNameAndIndex4StrVal(input);
       auto it = op_conf->user_conf().input().find(pair.first);
@@ -212,7 +223,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
     OperatorConf op_conf;
     op_conf.set_name(node->name());
     DeviceType device_type = XrtDeviceToDeviceType(node->device());
-    op_conf.set_device_type(device_type);
+    op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type)));
 
     XrtLaunchOpConf *launch_conf = op_conf.mutable_xrt_launch_conf();
     // Add inputs and outputs in launch_conf

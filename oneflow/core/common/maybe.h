@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_COMMON_MAYBE_H_
 #define ONEFLOW_CORE_COMMON_MAYBE_H_
 
@@ -14,11 +29,9 @@ template<typename T, typename Enabled = void>
 class Maybe;
 
 template<typename T>
-class Maybe<
-    T, typename std::enable_if<!(std::is_same<T, void>::value || std::is_scalar<T>::value)>::type>
+class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || std::is_scalar<T>::value)
+                                       && !std::is_reference<T>::value>::type>
     final {
-  static_assert(!std::is_reference<T>::value, "reference type not supported");
-
  public:
   Maybe(const T& data) : data_or_error_(std::make_shared<T>(data)) {}
   Maybe(const Error& error) : data_or_error_(error.error_proto()) {}
@@ -40,7 +53,9 @@ class Maybe<
     return str;
   }
 
-  T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const {
+  template<typename Type = T>
+  Type GetDataAndSerializedErrorProto(std::string* error_str, const Type& default_for_error) const {
+    static_assert(std::is_same<T, Type>::value, "error type for argument 1");
     if (IsOk()) {
       google::protobuf::TextFormat::PrintToString(ErrorProto(), error_str);
       return *Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
@@ -131,44 +146,82 @@ class Maybe<T, typename std::enable_if<std::is_scalar<T>::value>::type> final {
 };
 
 template<typename T>
-inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
-  return maybe;
+class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || std::is_scalar<T>::value)
+                                       && std::is_reference<T>::value>::type>
+    final {
+  using ValueT = typename std::remove_reference<T>::type;
+  using PtrT = ValueT*;
+
+ public:
+  Maybe(T data) : maybe_ptr_(&data) {}
+  Maybe(const Error& error) : maybe_ptr_(error) {}
+  Maybe(const std::shared_ptr<ErrorProto>& error) : maybe_ptr_(error) {}
+  Maybe(const Maybe&) = default;
+  Maybe(Maybe&&) = default;
+  ~Maybe() = default;
+
+  bool IsOk() const { return maybe_ptr_.IsOk(); }
+  T Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
+    return *maybe_ptr_.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+  }
+  std::shared_ptr<ErrorProto> error() const { return maybe_ptr_.error(); }
+
+  std::string GetSerializedError() const { return maybe_ptr_.GetSerializedError(); }
+
+  T GetDataAndSerializedErrorProto(std::string* error_str) const {
+    return *maybe_ptr_.GetDataAndSerializedErrorProto(error_str, static_cast<PtrT>(nullptr));
+  }
+
+ private:
+  Maybe<PtrT> maybe_ptr_;
+};
+
+#define __MaybeErrorStackCheckWrapper__(...) __VA_ARGS__
+
+inline bool MaybeIsOk(Maybe<void>&& maybe) {
+  if (!maybe.IsOk()) { LOG(ERROR) << "\n" << maybe.GetSerializedError(); }
+  return maybe.IsOk();
 }
 
 #define MAYBE_FAILED_LOC __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
 
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
-#define TRY(...) MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__))
-#define JUST(...)                                                         \
-  ({                                                                      \
-    const auto& maybe = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
-    if (!maybe.IsOk()) {                                                  \
-      auto* stack_frame = maybe.error()->add_stack_frame();               \
-      stack_frame->set_location(MAYBE_FAILED_LOC);                        \
-      stack_frame->set_function(__FUNCTION__);                            \
-      return maybe.error();                                               \
-    }                                                                     \
-    maybe.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();           \
-  })
-#define CHECK_JUST(...)                                                   \
-  ({                                                                      \
-    const auto& maybe = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
-    if (!maybe.IsOk()) {                                                  \
-      auto* stack_frame = maybe.error()->add_stack_frame();               \
-      stack_frame->set_location(MAYBE_FAILED_LOC);                        \
-      stack_frame->set_function(__FUNCTION__);                            \
-      LOG(FATAL) << maybe.GetSerializedError();                           \
-    }                                                                     \
-    maybe.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();           \
-  })
-#define OF_RETURN_IF_ERROR(...)                                                    \
-  const auto& maybe_##__LINE__ = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
-  if (!maybe_##__LINE__.IsOk()) {                                                  \
-    auto* stack_frame = maybe_##__LINE__.error()->add_stack_frame();               \
-    stack_frame->set_location(MAYBE_FAILED_LOC);                                   \
-    stack_frame->set_function(__FUNCTION__);                                       \
-    return maybe_##__LINE__.error();                                               \
+#define TRY(...) __MaybeErrorStackCheckWrapper__(__VA_ARGS__)
+#define JUST(...)                                                     \
+  ({                                                                  \
+    const auto& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
+    if (!maybe.IsOk()) {                                              \
+      auto* stack_frame = maybe.error()->add_stack_frame();           \
+      stack_frame->set_location(MAYBE_FAILED_LOC);                    \
+      stack_frame->set_function(__FUNCTION__);                        \
+      return maybe.error();                                           \
+    }                                                                 \
+    maybe;                                                            \
+  })                                                                  \
+      .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+#define CHECK_JUST(...)                                               \
+  ({                                                                  \
+    const auto& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
+    if (!maybe.IsOk()) {                                              \
+      auto* stack_frame = maybe.error()->add_stack_frame();           \
+      stack_frame->set_location(MAYBE_FAILED_LOC);                    \
+      stack_frame->set_function(__FUNCTION__);                        \
+      LOG(FATAL) << maybe.GetSerializedError();                       \
+    }                                                                 \
+    maybe;                                                            \
+  })                                                                  \
+      .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+
+#define CHECK_OK(...) CHECK(MaybeIsOk(std::move(__VA_ARGS__)))
+
+#define OF_RETURN_IF_ERROR(...)                                                \
+  const auto& maybe_##__LINE__ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
+  if (!maybe_##__LINE__.IsOk()) {                                              \
+    auto* stack_frame = maybe_##__LINE__.error()->add_stack_frame();           \
+    stack_frame->set_location(MAYBE_FAILED_LOC);                               \
+    stack_frame->set_function(__FUNCTION__);                                   \
+    return maybe_##__LINE__.error();                                           \
   }
 
 #else
@@ -186,7 +239,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #define CHECK_OR_RETURN(expr)                                                \
   if (!(expr))                                                               \
   return std::pair<std::string, std::string>(MAYBE_FAILED_LOC, __FUNCTION__) \
-         <= Error::CheckFailed() << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
+         <= Error::CheckFailedError() << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
 
 #define CHECK_EQ_OR_RETURN(lhs, rhs) \
   CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "

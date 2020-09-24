@@ -1,13 +1,13 @@
 #!/bin/bash
 set -xe
 
-chmod +x ./ci_tmp/oneflow_testexe
-./ci_tmp/oneflow_testexe
+src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
+test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"/test_tmp_dir"}
 
-pip3 install --user ci_tmp/*.whl
 
-cp -r oneflow/python/test /test_dir_user_op
-cp -r oneflow/python/test /test_dir
+rm -rf $test_tmp_dir
+mkdir -p $test_tmp_dir
+cp -r $src_dir/oneflow/python/test $test_tmp_dir
+cd $test_tmp_dir
 
-cd /test_dir_user_op && ENABLE_USER_OP=True python3 ops/1node_test.py &
-cd /test_dir && ENABLE_USER_OP=False python3 ops/1node_test.py
+python3 test/ops/1node_test.py

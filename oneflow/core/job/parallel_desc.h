@@ -1,24 +1,40 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_JOB_PARALLEL_DESC_H_
 #define ONEFLOW_CORE_JOB_PARALLEL_DESC_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 
+class ResourceDesc;
+
 Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
 
 Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
-                                std::string* device_tag, std::string* device_id_str);
+                                std::string* device_id_str);
+
+class ParallelContext;
 
 class ParallelDesc final {
  public:
-  // OF_DISALLOW_COPY_AND_MOVE(ParallelDesc);
   ~ParallelDesc() = default;
 
   ParallelDesc(const ParallelDesc&) = default;
@@ -37,6 +53,9 @@ class ParallelDesc final {
   int64_t parallel_num() const { return parallel_num_; }
   int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
   const ParallelConf& parallel_conf() const { return parallel_conf_; }
+
+  Maybe<void> GetParallelContext(ParallelContext* parallel_ctx, int64_t machine_id,
+                                 int64_t device_id) const;
 
   // Setters
   void set_device_type(DeviceType device_type);
@@ -57,6 +76,7 @@ class ParallelDesc final {
   ParallelDesc() = default;
   void ClearUp();
   Maybe<void> SanityCheck();
+  Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
 
   DeviceType device_type_;
   ParallelConf parallel_conf_;
@@ -66,6 +86,7 @@ class ParallelDesc final {
   int64_t device_num_of_each_machine_;
   HashMap<int64_t, int64_t> parallel_id2machine_id_;
   HashMap<int64_t, int64_t> parallel_id2device_id_;
+  HashMap<int64_t, HashMap<int64_t, int64_t>> machine_id2device_id2parallel_id_;
 };
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {

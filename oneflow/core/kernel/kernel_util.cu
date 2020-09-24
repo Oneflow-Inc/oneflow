@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include <cub/cub.cuh>
 #include <math.h>
 #include "oneflow/core/device/cuda_util.h"
@@ -364,12 +379,12 @@ size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num) {
 
 KU_IF_METHOD Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr, T* temp_storage,
                  size_t temp_storage_bytes) {
-  CudaCheck(
+  OF_CUDA_CHECK(
       cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, x, max_ptr, n, ctx->cuda_stream()));
 }
 KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr, T* temp_storage,
                  size_t temp_storage_bytes) {
-  CudaCheck(
+  OF_CUDA_CHECK(
       cub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, x, sum_ptr, n, ctx->cuda_stream()));
 }
 KU_IF_METHOD CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
@@ -649,6 +664,11 @@ KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, 
       n, alpha, x, incx, y, incy);
 }
 
+KU_INTEGRAL_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  MulGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
+}
+
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                                \
   template struct GpuKernelUtilIf<type_cpp, KernelUtil<DeviceType::kGPU, type_cpp>>; \
   template struct KernelUtil<DeviceType::kGPU, type_cpp>;
@@ -673,6 +693,9 @@ __device__ half gpu_atomic_add(half* address, half val) {
 
 template<>
 __device__ double gpu_atomic_add(double* address, const double val) {
+#if __CUDA_ARCH__ >= 600
+  return atomicAdd(address, val);
+#else
   auto address_as_ull = reinterpret_cast<unsigned long long int*>(address);
   unsigned long long int old = *address_as_ull;
   unsigned long long int assumed = 0;
@@ -682,6 +705,7 @@ __device__ double gpu_atomic_add(double* address, const double val) {
                     __double_as_longlong(val + __longlong_as_double(assumed)));
   } while (assumed != old);
   return __longlong_as_double(old);
+#endif
 }
 
 template<>
@@ -704,7 +728,7 @@ __device__ double gpu_atomic_max(double* address, const double val) {
   do {
     assumed = old;
     old = atomicCAS(address_as_i, assumed,
-                    __double_as_longlong(fmaxf(val, __longlong_as_double(assumed))));
+                    __double_as_longlong(fmax(val, __longlong_as_double(assumed))));
   } while (assumed != old);
   return __longlong_as_double(old);
 }

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_REGISTER_OFBLOB_H_
 #define ONEFLOW_CORE_REGISTER_OFBLOB_H_
 
@@ -44,6 +59,8 @@ class OfBlob final {
   void CurMutTensorCopyShapeFrom(const int64_t* ptr, int64_t num_axis) const;
   template<typename T>
   void CurMutTensorAutoMemCopyFrom(const T* ptr, int64_t len) const;
+  template<typename T>
+  void StaticTensorAutoMemCopyFrom(const T* ptr, int64_t len) const;
 
  private:
   void ClearShape(FullyMutTensorView* tensor) const;
@@ -129,6 +146,15 @@ void OfBlob::CurMutTensorAutoMemCopyFrom(const T* ptr, int64_t len) const {
   CHECK(tensor_back_inserter_->cur_mut_tensor()->data_type() == GetDataType<T>::value);
   SyncAutoMemcpy(device_ctx_, tensor_back_inserter_->cur_mut_tensor()->mut_dptr(), ptr,
                  len * sizeof(T), blob_->mem_case(), mem_case_);
+}
+
+template<typename T>
+void OfBlob::StaticTensorAutoMemCopyFrom(const T* ptr, int64_t len) const {
+  blob_->blob_access_checker()->CheckBodyMutable();
+  CHECK_EQ(blob_->sole_tensor().shape().elem_cnt(), len);
+  CHECK(blob_->sole_tensor().data_type() == GetDataType<T>::value);
+  SyncAutoMemcpy(device_ctx_, blob_->sole_mut_tensor().mut_dptr(), ptr, len * sizeof(T),
+                 blob_->mem_case(), mem_case_);
 }
 
 }  // namespace oneflow

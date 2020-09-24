@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 from collections import OrderedDict
 
@@ -11,6 +26,7 @@ from test_util import (
     type_name_to_flow_type,
     type_name_to_np_type,
 )
+import oneflow.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -21,17 +37,15 @@ def RunOneflowOp(device_type, flow_op, x, y, data_type):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
     flow_type = type_name_to_flow_type[data_type]
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def FlowJob(
-        x=flow.FixedTensorDef(x.shape, dtype=flow_type),
-        y=flow.FixedTensorDef(y.shape, dtype=flow_type),
+        x: oft.Numpy.Placeholder(x.shape, dtype=flow_type),
+        y: oft.Numpy.Placeholder(y.shape, dtype=flow_type),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
                 name="x",
                 shape=x.shape,
@@ -47,7 +61,9 @@ def RunOneflowOp(device_type, flow_op, x, y, data_type):
                 trainable=True,
             )
             loss = flow_op(x, y)
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
             flow.watch_diff(y, test_global_storage.Setter("y_diff"))
 
@@ -56,7 +72,7 @@ def RunOneflowOp(device_type, flow_op, x, y, data_type):
     # Oneflow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    out = FlowJob(x, y).get().ndarray()
+    out = FlowJob(x, y).get().numpy()
     x_diff = test_global_storage.Get("x_diff")
     y_diff = test_global_storage.Get("y_diff")
     return out, x_diff, y_diff
@@ -102,9 +118,13 @@ def compare_with_tensorflow_grad(
     of_out, of_x_diff, of_y_diff, = RunOneflowOp(device_type, flow_op, x, y, data_type)
     tf_out, tf_x_diff, tf_y_diff = RunTensorFlowOp(tf_op, x, y)
 
-    assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol)
-    assert np.allclose(of_x_diff, tf_x_diff, rtol=diff_rtol, atol=diff_atol)
-    assert np.allclose(of_y_diff, tf_y_diff, rtol=diff_rtol, atol=diff_atol)
+    assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol, equal_nan=True)
+    assert np.allclose(
+        of_x_diff, tf_x_diff, rtol=diff_rtol, atol=diff_atol, equal_nan=True
+    )
+    assert np.allclose(
+        of_y_diff, tf_y_diff, rtol=diff_rtol, atol=diff_atol, equal_nan=True
+    )
     flow.clear_default_session()
 
 
@@ -127,12 +147,12 @@ def compare_with_tensorflow(
 
     flow_type = type_name_to_flow_type[data_type]
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def FlowJob(
-        x=flow.FixedTensorDef(x_shape, dtype=flow_type),
-        y=flow.FixedTensorDef(y_shape, dtype=flow_type),
+        x: oft.Numpy.Placeholder(x_shape, dtype=flow_type),
+        y: oft.Numpy.Placeholder(y_shape, dtype=flow_type),
     ):
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             return flow_op(x, y)
 
     np_type = type_name_to_np_type[data_type]
@@ -154,10 +174,10 @@ def compare_with_tensorflow(
         y[np.where(y == 0)] += 1
 
     # Oneflow
-    of_out = FlowJob(x, y).get().ndarray()
+    of_out = FlowJob(x, y).get().numpy()
     # Tensorflow
     tf_out = tf_op(x, y).numpy()
-    assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol)
+    assert np.allclose(of_out, tf_out, rtol=out_rtol, atol=out_atol, equal_nan=True)
     flow.clear_default_session()
 
 

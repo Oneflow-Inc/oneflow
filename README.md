@@ -1,158 +1,205 @@
-# Oneflow
-![Build and Test CI](https://github.com/Oneflow-Inc/oneflow/workflows/Build%20and%20Test%20CI/badge.svg?branch=develop)
+**OneFlow is a performance-centered and open-source deep learning framework.**
 
-### Build OneFlow from Source
-- #### System Requirements
-  Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable. 
+- [Install OneFlow](#install-oneflow)
+  - [System Requirements](#system-requirements)
+  - [Install with Pip Package](#install-with-pip-package)
+  - [Build from Source](#build-from-source)
+  - [Troubleshooting](#troubleshooting)
+  - [Advanced features](#advanced-features)
+- [Getting Started](#getting-started)
+- [Documentation](#documentation)
+    - [Usage & Design Docs](#usage--design-docs)
+    - [API Reference](#api-reference)
+    - [OneFlow System Design](#oneflow-system-design)
+- [Model Zoo and Benchmark](#model-zoo-and-benchmark)
+  - [CNNs(ResNet-50, VGG-16, Inception-V3, AlexNet)](#cnnsresnet-50-vgg-16-inception-v3-alexnet)
+  - [Wide&Deep](#widedeep)
+  - [BERT](#bert)
+- [Communication](#communication)
+- [Contributing](#contributing)
+- [The Team](#the-team)
+- [License](#license)
 
-  ```
-  export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
-  ```
+## Install OneFlow
 
-  Or you can install OpenBLAS and other tools through:
+  ### System Requirements
 
-  ```
-  sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
-  ```
+  - Python >= 3.5
+  - CUDA Toolkit Linux x86_64 Driver
+    | OneFlow |CUDA Driver Version|
+    |---|---|
+    | oneflow_cu110  | >= 450.36.06  |
+    | oneflow_cu102  | >= 440.33  |
+    | oneflow_cu101  | >= 418.39  |
+    | oneflow_cu100  | >= 410.48  |
+    | oneflow_cu92  | >= 396.26  |
+    | oneflow_cu91  | >= 390.46  |
+    | oneflow_cu90  | >= 384.81  |
+    | oneflow_cpu  | N/A  |
 
-  If installed CMake doesn't support https scheme, please install a release with support for it. For instance:
-  ```
-  https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz
-  ```
+    - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
-- #### Common Questions
+    - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver to version 440.33 or above and install `oneflow_cu102` if possible.
 
-  [Troubleshooting](docs/source/troubleshooting.md)
+    - We are sorry that due to limits on bandwidth and other resources, we could only guarantee the efficiency and stability of `oneflow_cu102`. We will improve it ASAP.
 
-- #### Clone Source Code
+  ### Install with Pip Package
 
-  Clone source code and submodules (faster, recommended)
+  - To install latest release of OneFlow with CUDA support:
 
-  ```
-  git clone https://github.com/Oneflow-Inc/oneflow
-  git submodule update --init --recursive
-  ```
+    ```
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu102 --user
+    ```
 
-  or you can also clone the repo with `--recursive` flag to clone third_party submodules together
+  - To install latest release of CPU-only OneFlow:
 
-  ```
-  git clone https://github.com/Oneflow-Inc/oneflow --recursive
-  ```
+    ```
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cpu --user
+    ```
 
-- #### Install Python Dev Requirements
+  - To install OneFlow with legacy CUDA support, run one of:
+    ```
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu101 --user
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu100 --user
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu92 --user
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu91 --user
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu90 --user
+    ```
 
-  To install development dependencies and linter tools, run:
-  ```
-  pip3 install -r dev-requirements.txt --user
-  ```
+  - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
+    ```
+    python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+    ```
+    For more information on this, please refer to [pypi 镜像使用帮助](https://mirror.tuna.tsinghua.edu.cn/help/pypi/)
 
-- #### Enter Build Directory
+  - Releases are built with G++/GCC 4.8.5, cuDNN 7 and MKL 2020.0-088.
 
-  ```
-  cd build
-  ```
+### Build from Source
 
-- #### Build Third Party from Source
+1. #### System Requirements to Build OneFlow
 
-  Inside directory `build`, run:
-  ```
-  cmake -DTHIRD_PARTY=ON .. 
-  make -j$(nproc)
-  ```
+    - Please use a newer version of CMake to build OneFlow. You could download cmake release from [here](https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz).
 
-- #### Build OneFlow
+    - Please make sure you have G++ and GCC >= 4.8.5 installed. Clang is not supported for now.
 
-  Inside directory `build`, run:
-  ```
-  cmake .. -DTHIRD_PARTY=OFF
+    - To install dependencies, run:
 
-  make -j$(nproc)
-  ```
+      ```
+      yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
+      rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
+      yum update -y && yum install -y epel-release && \
+      yum install -y intel-mkl-64bit-2020.0-088 nasm swig rdma-core-devel
+      ```
 
-- #### Install OneFlow
+      On CentOS, if you have MKL installed, please update the environment variable:
 
-  In the root path of OneFlow repo, run:
-  ```
-  pip3 install -e . --user
-  ```
+      ```
+      export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
+      ```
 
-  Alternatively, you can also install OneFlow by adding `build/python_scripts` to your `PYTHONPATH`
+      If you don't want to build OneFlow with MKL, you could install OpenBLAS:
 
-  For example:
-  ```
-  export PYTHONPATH=$HOME/oneflow/build/python_scripts:$PYTHONPATH
-  ```
+      ```
+      sudo yum -y install openblas-devel
+      ```
 
-- #### Generate Pip Package
-  Please make sure pip package `wheel` is installed:
-  ```
-  pip3 install wheel --user
-  ```
+2. #### Clone Source Code
 
-  In the root path of OneFlow repo, run:
-  ```
-  python3 setup.py bdist_wheel
-  ```
-  Your should find a `.whl` package in `dist`.
+    - #### Option 1: Download from Aliyun
 
-### Build with XLA
+      If you are in China, please download OneFlow source code and all submodules from: https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip
 
-- #### Install Bazel
+      ```bash
+      curl https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip -o oneflow-src.zip
+      unzip oneflow-src.zip
+      ```
 
-  Download and install bazel from [here](https://docs.bazel.build/versions/1.0.0/bazel-overview.html) , and version 0.24.1 is recommended. You can confirm bazel is installed successfully by running the following command:
+    - #### Option 2: Clone source code and submodules
 
-  ```shell
-  bazel version
-  ```
+      ```bash
+      git clone https://github.com/Oneflow-Inc/oneflow
+      cd oneflow
+      git submodule update --init --recursive
+      ```
 
-- #### Build Third Parties
+    - #### Option 3: Clone the repo with `--recursive` flag to clone third_party submodules together
 
-  Inside directory `build`, run:
+      ```bash
+      git clone https://github.com/Oneflow-Inc/oneflow --recursive
+      ```
 
-  ```shell
-  cmake -DWITH_XLA=ON -DTHIRD_PARTY=ON ..
-  make -j$(nproc)
-  ```
+3. #### Build and Install OneFlow
 
-  If the downloading error occurred, you should go back to the previous step to reinstall the cmake, then clean the file CMakeCache.txt and build the third-parties once again.
+    ```
+    cd build
+    cmake ..
+    make -j$(nproc)
+    make pip_install
+    ```
 
-- #### Build OneFlow
+    - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
 
-  Inside directory `build`, run:
-  ```shell
-  cmake .. \
-  -DWITH_XLA=ON \
-  -DTHIRD_PARTY=OFF
-  
-  make -j$(nproc)
-  ```
+### Troubleshooting
 
-### Build with TensorRT
+Please refer to [troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling and running OneFlow.
 
-- #### Build Third Parties
+### Advanced features
 
-  1. Download TensorRT(>=6.0) .tgz and unzip the package.
-  
-  2. Inside directory `build`, run:
-  
-  ```shell
-  cmake -DWITH_TENSORRT=ON -DTENSORRT_ROOT=your_tensorrt_path -DTHIRD_PARTY=ON ..
-  make -j$(nproc)
-  ```
-- #### Build OneFlow
+- #### XRT
 
-  Inside directory `build`, run:
-  ```shell
-  cmake .. \
-  -DWITH_TENSORRT=ON \
-  -DTENSORRT_ROOT=your_tensorrt_path \
-  -DTHIRD_PARTY=OFF
+  You can check this [doc](oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
 
-  make -j$(nproc)
-  ```
+## Getting Started
+3 minutes to run MNIST.
+1. Clone the demo code from OneFlow documentation
+```
+git clone https://github.com/Oneflow-Inc/oneflow-documentation.git
+cd oneflow-documentation/cn/docs/code/quick_start/
+```
+2. Run it in Python
+```
+python mlp_mnist.py
+```
 
-### Documents
+3. Oneflow is running and you got the training loss
+```
+2.7290366
+0.81281316
+0.50629824
+0.35949975
+0.35245502
+...
+```
+More info on this demo, please refer to [doc on quick start](http://docs.oneflow.org/quick_start/quickstart_in_3_min.html).
 
- - #### XRT Documents
+## Documentation
+#### Usage & Design Docs
+* [link](http://docs.oneflow.org/)
+#### API Reference
+* [link](https://oneflow-api.readthedocs.io/en/latest/)
+#### OneFlow System Design
+For those who would like to understand the OneFlow internals, please read the document below:
+* [link](https://github.com/Oneflow-Inc/oneflow-documentation/blob/master/en/docs/basics_topics/essentials_of_oneflow.md)
 
-   You can check this [doc](./oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
+## Model Zoo and Benchmark
+* [link](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
+### CNNs(ResNet-50, VGG-16, Inception-V3, AlexNet)
+* [CNNs](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/Classification/cnns)
+
+### Wide&Deep
+* [OneFlow-WDL](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/ClickThroughRate/WideDeepLearning)
+### BERT
+* [BERT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/BERT)
+
+## Communication
+* Github issues : any install, bug, feature issues.
+* [www.oneflow.org](http://www.oneflow.org) : brand related information.
+
+## Contributing
+*  [link](http://docs.oneflow.org/contribute/intro.html)
+
+## The Team
+OneFlow was originally developed by [OneFlow Inc](http://www.oneflow.org) and [Zhejiang Lab](http://www.zhejianglab.com/).
+
+## License
+[Apache License 2.0](LICENSE)

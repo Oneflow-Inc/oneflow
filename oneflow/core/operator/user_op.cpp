@@ -1,10 +1,25 @@
-#include "oneflow/core/operator/user_op.h"
-#include "oneflow/core/operator/user_op_util.h"
-#include "oneflow/core/framework/kernel_registration.h"
-#include "oneflow/core/framework/tensor_desc.h"
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/core/framework/batch_axis_context.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/sbp_context.h"
-#include "oneflow/core/framework/batch_axis_context.h"
+#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/operator/user_op.h"
+#include "oneflow/core/operator/user_op_util.h"
 
 namespace oneflow {
 
@@ -39,7 +54,8 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
     const auto& op_conf = user_op->op_conf();
     CHECK(op_conf.has_user_conf());
 
-    device_type_ = op_conf.device_type();
+    device_tag_ = op_conf.device_tag();
+    device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
     parallel_ctx_ = parallel_ctx;
 
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
@@ -71,6 +87,7 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   ~UserOpKernelRegContext() = default;
 
   DeviceType device_type() const override { return device_type_; }
+  const std::string& device_tag() const override { return device_tag_; }
   const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
@@ -85,6 +102,7 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   ArgVec inputs_;
   ArgVec outputs_;
   DeviceType device_type_;
+  std::string device_tag_;
   const ParallelContext* parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
 };
@@ -171,14 +189,14 @@ class UserOpSbpContext : public user_op::SbpContext {
 
   UserOpSbpContext(const OperatorConf& op_conf, SbpSignatureList* sbp_sig_list,
                    DeviceType device_type, int64_t parallel_num,
-                   std::function<Maybe<const BlobDesc*>(const std::string&)> LogicalBlobDesc4Ibn)
+                   std::function<Maybe<const BlobDesc&>(const std::string&)> LogicalBlobDesc4Ibn)
       : user_op::SbpContext(user_op::UserOpConfWrapper(op_conf), sbp_sig_list, device_type,
                             parallel_num) {
     const auto& user_op_conf = op_conf.user_conf();
     for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
       const std::string& arg_name = it->first;
       for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        const BlobDesc* blob = CHECK_JUST(LogicalBlobDesc4Ibn(GenRepeatedBn(arg_name, i)));
+        const BlobDesc* blob = &CHECK_JUST(LogicalBlobDesc4Ibn(GenRepeatedBn(arg_name, i)));
         arg2tensor_desc_.emplace(std::make_pair(arg_name, i), GenTensorDescFromBlobDesc(blob));
         inputs_.emplace_back(std::make_pair(arg_name, i));
       }
@@ -262,7 +280,8 @@ void UserOp::InitFromOpConf() {
     EnrollRepeatedOutputBn(pair.first, pair.second.s_size());
   }
   EnrollTmpBn(GenRepeatedBn("tmp_buffer", 0));
-  val_ = user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
+  val_ =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf().user_conf().op_type_name());
   if (val_ != nullptr) {
     user_op::UserOpConfWrapper user_conf_wrapper(op_conf());
     user_op::GetInputArgModifier GetInputArgModifierFn =
@@ -274,6 +293,16 @@ void UserOp::InitFromOpConf() {
       return nullptr;
     };
     val_->input_arg_modify_fn(GetInputArgModifierFn, user_conf_wrapper);
+
+    user_op::GetOutputArgModifier GetOutputArgModifierFn =
+        [&](const std::string& out_arg_name, int32_t out_arg_index) -> user_op::OutputArgModifier* {
+      std::string obn = GenRepeatedBn(out_arg_name, out_arg_index);
+      if (std::find(output_bns().begin(), output_bns().end(), obn) != output_bns().end()) {
+        return MutOutputBlobModifier4Obn(obn);
+      }
+      return nullptr;
+    };
+    val_->output_arg_modify_fn(GetOutputArgModifierFn, user_conf_wrapper);
   }
 }
 
@@ -285,16 +314,17 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   // tmp buffer size must be inferred after out shape/dtype
   UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
                                GetBlobDesc4BnInOp);
-  const user_op::KernelRegistrationVal* kernel_reg_val = JUST(user_op::LookUpInKernelRegistry(
-      op_conf().user_conf().op_type_name(),
-      UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx)));
+  const user_op::OpKernelRegistryResult* kernel_reg_val =
+      JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+          op_conf().user_conf().op_type_name(),
+          UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx)));
   CHECK_OR_RETURN(kernel_reg_val != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry !";
 
   size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(&infer_ctx);
   if (tmp_size > 0) {
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
-    CHECK(tmp_buffer_blob != nullptr);
+    CHECK_NOTNULL_OR_RETURN(tmp_buffer_blob);
     tmp_buffer_blob->set_data_type(DataType::kChar);
     tmp_buffer_blob->mut_shape() = Shape({static_cast<int64_t>(tmp_size)});
   }
@@ -390,7 +420,7 @@ Maybe<void> UserOp::InferBatchAxis(
 }
 
 Maybe<void> UserOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
@@ -454,8 +484,10 @@ Symbol<OperatorConf> UserOp::GetOpConfWithoutOpNameAndLbn() const {
 void UserOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
-    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
-  const UserOpCtx* user_op_ctx = static_cast<const UserOpCtx*>(op_ctx);
+    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
+    const ParallelDesc* parallel_desc) const {
+  const auto* user_op_ctx = dynamic_cast<const UserOpCtx*>(op_ctx);
+  CHECK_NOTNULL(user_op_ctx);
   auto user_conf = kernel_conf->mutable_user_conf();
   *(user_conf->mutable_parallel_ctx()) = *parallel_ctx;
   *(user_conf->mutable_sbp_sig()) = user_op_ctx->sbp_sig;
@@ -473,6 +505,8 @@ void UserOp::VirtualGenKernelConf(
   BLOB_DESCS_TO_PROTO(tmp, false)
 
 #undef BLOB_DESCS_TO_PROTO
+  CHECK_NOTNULL(parallel_desc);
+  *user_conf->mutable_parallel_conf() = parallel_desc->parallel_conf();
 }
 
 REGISTER_OP(OperatorConf::kUserConf, UserOp);

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/infer_stream_type.h"
@@ -91,7 +106,7 @@ const std::shared_ptr<ParallelDesc>& VirtualMachine::GetInstructionParallelDesc(
   CHECK_NOTNULL(logical_object);
   auto* map = logical_object->mut_global_device_id2mirrored_object();
   CHECK_EQ(map->size(), 1);
-  return map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>().GetPtr();
+  return CHECK_JUST(map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>())->GetPtr();
 }
 
 MirroredObject* VirtualMachine::MutMirroredObject(int64_t logical_object_id,
@@ -342,6 +357,7 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocat
   *mutable_machine_id_range() = vm_desc.machine_id_range();
   set_vm_thread_only_allocator(allocator);
   OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(&vm_desc.stream_type_id2desc(), stream_desc) {
+    if (stream_desc->num_threads() == 0) { continue; }
     auto stream_rt_desc = ObjectMsgPtr<StreamRtDesc>::NewFrom(allocator, stream_desc);
     mut_stream_type_id2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
     BalancedSplitter bs(stream_desc->parallel_num(), stream_desc->num_threads());
@@ -382,7 +398,7 @@ void VirtualMachine::Schedule() {
   OBJECT_MSG_LIST_FOR_EACH_PTR(active_stream_list, stream) {
     TryReleaseFinishedInstructions(stream, /*out*/ ready_instruction_list);
     if (stream->running_instruction_list().empty()) { active_stream_list->Erase(stream); }
-  };
+  }
   auto* waiting_instruction_list = mut_waiting_instruction_list();
   if (pending_msg_list().size() > 0) {
     TmpPendingInstrMsgList tmp_pending_msg_list;

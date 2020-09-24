@@ -1,71 +1,129 @@
-from __future__ import absolute_import
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
 
-import oneflow.python.framework.hob as hob
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+from __future__ import absolute_import
+import re
 import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.hob as hob
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.python.lib.core.enable_if as enable_if
-from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.eager.device_scope_stack as device_scope_stack
+import oneflow
+import traceback
 
 
 @oneflow_export("placement.current_scope")
-def api_placement_current_scope():
-    return enable_if.unique([placement_current_scope])()
+def api_current_placement_scope() -> placement_ctx.PlacementScope:
+    r"""Get current placement scope object.
+
+    For instance:
+
+        if "cpu" == flow.placement.current_scope().default_device_tag:
+            print("ops shall run in the cpu mode only")
+
+    Returns:
+        placement_ctx.PlacementScope: [description]
+    """
+    print(
+        "WARNING: oneflow.placement.current_scope has been deprecated. "
+        "Please use oneflow.current_scope.device_parallel_desc_symbol instead."
+    )
+    print(traceback.format_stack()[-2])
+    api = enable_if.unique(
+        [global_mode_cur_placement_scope, normal_mode_cur_placement_scope]
+    )
+    return api()
 
 
 @enable_if.condition(hob.in_global_mode & hob.in_placement_scope)
-def placement_current_scope():
+def global_mode_cur_placement_scope():
     return placement_ctx.PlacementScopeStackTop()
 
 
-@oneflow_export("fixed_placement")
-def api_fixed_placement_scope(device_tag, machine_device_ids):
-    return enable_if.unique([GetFixedPlacementScope])(device_tag, machine_device_ids)
+@enable_if.condition(hob.in_normal_mode)
+def normal_mode_cur_placement_scope():
+    return device_scope_stack.CurrentPlacement()
 
 
-@enable_if.condition(
-    hob.in_global_mode
-    | (hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized)
-)
-def GetFixedPlacementScope(device_tag, machine_device_ids):
-    return placement_ctx.FixedPlacementScope(device_tag, machine_device_ids)
-
-
-@oneflow_export("device_prior_placement")
-def api_device_prior_placement(device_tag, machine_device_ids):
-    return enable_if.unique([GetDevicePriorPlacementScope])(
-        device_tag, machine_device_ids
+@oneflow_export("device_prior_placement", "fixed_placement")
+@oneflow_deprecate()
+def deprecated_placement(*args, **kwargs):
+    print(
+        "WARNING:",
+        "oneflow.device_prior_placement/oneflow.fixed_placement",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.placement"
+        ),
     )
+    print(traceback.format_stack()[-2])
+    return api_placement(*args, **kwargs)
+
+
+@oneflow_export("scope.placement")
+def api_placement(
+    device_tag: str, machine_device_ids: str
+) -> placement_ctx.PlacementScope:
+    r"""Create a scope. All ops within the scope will run on specified device that placed by  "device_tag" and "machine_device_ids".
+
+    Args:
+        device_tag (str): Device tag, "cpu" or "gpu" only
+        machine_device_ids (str): String that specifies what device(s) to use in the format "<NODE INDEX (RANGE)>:<DEVICE INDEX (RANGE)>". For example, "0:0" means use the device 0 of machine 0, and "1:4-6" means use device 4, 5, 6 of machine 1.
+
+    Returns:
+        placement_ctx.DevicePriorPlacementScope:  Placement scope
+
+    For instance::
+
+        with flow.fixed_placement("gpu", "0:0"):
+            logits = lenet(images, train=False)
+            loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels, logits, name="softmax_loss")
+            flow.losses.add_loss(loss)
+
+    """
+    from oneflow.python_gen.compatibility import with_cuda
+
+    if with_cuda == False:
+        device_tag = "cpu"
+    func = enable_if.unique([GetPlacementScope, GetNormalModePlacementScope])
+    return func(device_tag, machine_device_ids)
 
 
 @enable_if.condition(
     hob.in_global_mode
     | (hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized)
 )
-def GetDevicePriorPlacementScope(device_tag, machine_device_ids):
-    return placement_ctx.DevicePriorPlacementScope(device_tag, machine_device_ids)
+def GetPlacementScope(device_tag, machine_device_ids):
+    return placement_ctx.PlacementScope(device_tag, machine_device_ids)
+
+
+@enable_if.condition(hob.in_normal_mode & hob.session_initialized)
+def GetNormalModePlacementScope(device_tag, machine_device_ids):
+    sess = session_ctx.GetDefaultSession()
+    scope = sess.MakeScope(
+        lambda old_scope, builder: old_scope.BuildWithNewParallelDesc(
+            builder, device_tag, machine_device_ids
+        )
+    )
+    return sess.NewCurrentScope(scope)
 
 
 def GetDefaultMachineDeviceIds(resource):
-    if resource.HasField("gpu_device_num"):
-        return "gpu", _GetGpuDefaultMachineDeviceIds(resource)
+    if resource.HasField("gpu_device_num") and resource.gpu_device_num > 0:
+        return "gpu", placement_ctx.GetGpuMachineDeviceIds(resource)
     elif resource.HasField("cpu_device_num"):
-        return "cpu", _GetCpuDefaultMachineDeviceIds(resource)
+        return "cpu", placement_ctx.GetCpuMachineDeviceIds(resource)
     else:
         raise NotImplementedError
-
-
-def _GetGpuDefaultMachineDeviceIds(resource):
-    assert resource.machine_num > 0
-    assert resource.HasField("gpu_device_num")
-    return [
-        "%s:0-%s" % (m_id, resource.gpu_device_num - 1)
-        for m_id in range(resource.machine_num)
-    ]
-
-
-def _GetCpuDefaultMachineDeviceIds(resource):
-    assert resource.machine_num > 0
-    assert resource.HasField("cpu_device_num")
-    return [
-        "%s:0-%s" % (m_id, resource.gpu_device_num - 1)
-        for m_id in range(resource.machine_num)
-    ]

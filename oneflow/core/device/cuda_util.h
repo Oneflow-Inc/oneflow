@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 #define ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 
@@ -15,6 +30,38 @@
 #include <device_launch_parameters.h>
 
 namespace oneflow {
+
+const char* CublasGetErrorString(cublasStatus_t error);
+
+const char* CurandGetErrorString(curandStatus_t error);
+
+#define OF_CUDA_CHECK(condition)                                                               \
+  for (cudaError_t _of_cuda_check_status = (condition); _of_cuda_check_status != cudaSuccess;) \
+  LOG(FATAL) << "Check failed: " #condition " : " << cudaGetErrorString(_of_cuda_check_status) \
+             << " (" << _of_cuda_check_status << ") "
+
+#define OF_CUDNN_CHECK(condition)                                                                \
+  for (cudnnStatus_t _of_cudnn_check_status = (condition);                                       \
+       _of_cudnn_check_status != CUDNN_STATUS_SUCCESS;)                                          \
+  LOG(FATAL) << "Check failed: " #condition " : " << cudnnGetErrorString(_of_cudnn_check_status) \
+             << " (" << _of_cudnn_check_status << ") "
+
+#define OF_CUBLAS_CHECK(condition)                                                                 \
+  for (cublasStatus_t _of_cublas_check_status = (condition);                                       \
+       _of_cublas_check_status != CUBLAS_STATUS_SUCCESS;)                                          \
+  LOG(FATAL) << "Check failed: " #condition " : " << CublasGetErrorString(_of_cublas_check_status) \
+             << " (" << _of_cublas_check_status << ") "
+
+#define OF_CURAND_CHECK(condition)                                                                 \
+  for (curandStatus_t _of_curand_check_status = (condition);                                       \
+       _of_curand_check_status != CURAND_STATUS_SUCCESS;)                                          \
+  LOG(FATAL) << "Check failed: " #condition " : " << CurandGetErrorString(_of_curand_check_status) \
+             << " (" << _of_curand_check_status << ") "
+
+#define OF_NCCL_CHECK(condition)                                                                \
+  for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;) \
+  LOG(FATAL) << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status)  \
+             << " (" << _of_nccl_check_status << ") "
 
 template<typename T>
 void CudaCheck(T error);
@@ -57,13 +104,12 @@ inline int32_t SMBlocksNum4ThreadsNum(const int32_t n) {
 
 size_t GetAvailableGpuMemSize(int dev_id);
 
-#define CUDA_WORK_TYPE_SEQ          \
-  OF_PP_MAKE_TUPLE_SEQ(kCompute)    \
-  OF_PP_MAKE_TUPLE_SEQ(kCopyH2D)    \
-  OF_PP_MAKE_TUPLE_SEQ(kCopyD2H)    \
-  OF_PP_MAKE_TUPLE_SEQ(kNccl)       \
-  OF_PP_MAKE_TUPLE_SEQ(kMix)        \
-  OF_PP_MAKE_TUPLE_SEQ(kReduceCtrl) \
+#define CUDA_WORK_TYPE_SEQ       \
+  OF_PP_MAKE_TUPLE_SEQ(kCompute) \
+  OF_PP_MAKE_TUPLE_SEQ(kCopyH2D) \
+  OF_PP_MAKE_TUPLE_SEQ(kCopyD2H) \
+  OF_PP_MAKE_TUPLE_SEQ(kNccl)    \
+  OF_PP_MAKE_TUPLE_SEQ(kMix)     \
   OF_PP_MAKE_TUPLE_SEQ(kMdUpdt)
 
 enum class CudaWorkType {
@@ -106,6 +152,16 @@ class CudaCurrentDeviceGuard final {
  private:
   int32_t saved_dev_id_ = -1;
 };
+
+}  // namespace oneflow
+
+#else
+
+namespace oneflow {
+
+enum class CudaWorkType {};
+
+inline size_t GetCudaWorkTypeSize() { return 0; }
 
 }  // namespace oneflow
 

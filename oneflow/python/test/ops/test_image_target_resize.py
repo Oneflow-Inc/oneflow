@@ -1,24 +1,43 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import cv2
 import numpy as np
 import oneflow as flow
 from PIL import Image
+import oneflow.typing as oft
 
 
 def _of_image_target_resize(images, image_static_shape, target_size, max_size):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def image_target_resize_job(
-        images_def=flow.MirroredTensorListDef(
+        images_def: oft.ListListNumpy.Placeholder(
             shape=image_static_shape, dtype=flow.float
         )
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
         resized_images_buffer, size, scale = flow.image_target_resize(
-            images_buffer, target_size, max_size
+            images_buffer,
+            target_size=target_size,
+            max_size=max_size,
+            resize_side="shorter",
         )
         resized_images = flow.tensor_buffer_to_tensor_list(
             resized_images_buffer,
@@ -28,9 +47,9 @@ def _of_image_target_resize(images, image_static_shape, target_size, max_size):
         return resized_images, size, scale
 
     resized_images, size, scale = image_target_resize_job([images]).get()
-    resized_images = resized_images.ndarray_lists()[0]
-    size = size.ndarray_list()[0]
-    scale = scale.ndarray_list()[0]
+    resized_images = resized_images.numpy_lists()[0]
+    size = size.numpy_list()[0]
+    scale = scale.numpy_list()[0]
     return resized_images, size, scale
 
 
@@ -64,14 +83,18 @@ def _get_images_static_shape(images):
 
 def _target_resize_by_cv(images, target_size, max_size):
     resized_images = []
+    resized_sizes = []
+    resized_scales = []
     for image in images:
         squeeze_image = image.squeeze()
-        w, h = _get_target_resize_size(
+        resized_size, resized_scale = _get_target_resize_size(
             squeeze_image.shape[1], squeeze_image.shape[0], target_size, max_size
         )
-        resized_images.append(cv2.resize(squeeze_image, (w, h)))
+        resized_images.append(cv2.resize(squeeze_image, resized_size))
+        resized_sizes.append(resized_size)
+        resized_scales.append(resized_scale)
 
-    return resized_images
+    return resized_images, resized_sizes, resized_scales
 
 
 def _get_target_resize_size(w, h, target_size, max_size):
@@ -82,17 +105,22 @@ def _get_target_resize_size(w, h, target_size, max_size):
     max_resized_size = int(
         round(max_original_size / min_original_size * min_resized_size)
     )
-    if max_resized_size > max_size:
+    if max_size > 0 and max_resized_size > max_size:
         max_resized_size = max_size
         min_resized_size = int(
             round(max_resized_size * min_original_size / max_original_size)
         )
 
-    return (
-        (min_resized_size, max_resized_size)
-        if w < h
-        else (max_resized_size, min_resized_size)
-    )
+    if w < h:
+        res_w = min_resized_size
+        res_h = max_resized_size
+    else:
+        res_w = max_resized_size
+        res_h = min_resized_size
+
+    scale_w = res_w / w
+    scale_h = res_h / h
+    return (res_w, res_h), (scale_w, scale_h)
 
 
 def _compare_image_target_resize_with_cv(
@@ -105,18 +133,34 @@ def _compare_image_target_resize_with_cv(
         images, tuple(image_static_shape), target_size, max_size
     )
 
-    cv_resized_images = _target_resize_by_cv(images, target_size, max_size)
+    cv_resized_images, cv_resized_sizes, cv_resized_scales = _target_resize_by_cv(
+        images, target_size, max_size
+    )
 
-    for resized_image, cv_resized_image, image_size, image_scale in zip(
-        resized_images, cv_resized_images, size, scale
+    for (
+        resized_image,
+        cv_resized_image,
+        image_size,
+        image_scale,
+        resized_size,
+        resized_scale,
+    ) in zip(
+        resized_images,
+        cv_resized_images,
+        size,
+        scale,
+        cv_resized_sizes,
+        cv_resized_scales,
     ):
         if print_debug_info:
             print("resized_image shape:", resized_image.shape)
             print("cv_resized_image shape:", cv_resized_image.shape)
-            print("resized h & w:", image_size)
-            print("resize h_scale & w_scale:", image_scale)
+            print("resized w & h:", image_size, resized_size)
+            print("resize w_scale & h_scale:", image_scale, resized_scale)
 
         test_case.assertTrue(np.allclose(resized_image, cv_resized_image))
+        test_case.assertTrue(np.allclose(image_size, resized_size))
+        test_case.assertTrue(np.allclose(image_scale, resized_scale))
 
 
 def test_image_target_resize(test_case):

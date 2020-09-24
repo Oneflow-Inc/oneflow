@@ -4,20 +4,14 @@ package oneflow;
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 
-message RankContext {
-  required int64 rank_set_id = 1;
-  required int64 rank_id = 2;
-  required int64 rank_num = 3;
-}
-
 message ParallelContext {
   required int64 parallel_id = 1;
   required int64 parallel_num = 2;
-  optional RankContext rank_ctx = 3;
 }
 
 message ParallelConf {
   repeated string device_name = 1;
+  required string device_tag = 2;
 }
 
 message PlacementGroup {

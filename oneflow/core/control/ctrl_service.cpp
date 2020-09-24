@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/control/ctrl_service.h"
 
 namespace oneflow {
@@ -5,13 +20,13 @@ namespace oneflow {
 namespace {
 
 template<size_t method_index>
-const grpc::RpcMethod BuildOneRpcMethod(std::shared_ptr<grpc::ChannelInterface> channel) {
-  return grpc::RpcMethod(GetMethodName(static_cast<CtrlMethod>(method_index)),
-                         grpc::RpcMethod::NORMAL_RPC, channel);
+const grpc::internal::RpcMethod BuildOneRpcMethod(std::shared_ptr<grpc::ChannelInterface> channel) {
+  return grpc::internal::RpcMethod(GetMethodName(static_cast<CtrlMethod>(method_index)),
+                                   grpc::internal::RpcMethod::NORMAL_RPC, channel);
 }
 
 template<size_t... method_indices>
-std::array<const grpc::RpcMethod, kCtrlMethodNum> BuildRpcMethods(
+std::array<const grpc::internal::RpcMethod, kCtrlMethodNum> BuildRpcMethods(
     std::index_sequence<method_indices...>, std::shared_ptr<grpc::ChannelInterface> channel) {
   return {BuildOneRpcMethod<method_indices>(channel)...};
 }
@@ -31,8 +46,8 @@ std::unique_ptr<CtrlService::Stub> CtrlService::NewStub(const std::string& addr)
 
 CtrlService::AsyncService::AsyncService() {
   for (int32_t i = 0; i < kCtrlMethodNum; ++i) {
-    AddMethod(new grpc::RpcServiceMethod(GetMethodName(static_cast<CtrlMethod>(i)),
-                                         grpc::RpcMethod::NORMAL_RPC, nullptr));
+    AddMethod(new grpc::internal::RpcServiceMethod(GetMethodName(static_cast<CtrlMethod>(i)),
+                                                   grpc::internal::RpcMethod::NORMAL_RPC, nullptr));
     grpc::Service::MarkMethodAsync(i);
   }
 }

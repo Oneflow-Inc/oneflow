@@ -1,24 +1,50 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
+
+from google.protobuf import text_format
 
 import oneflow.core.common.data_type_pb2 as dtype_util
 import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.job.env_pb2 as env_pb2
 import oneflow.core.job.job_set_pb2 as job_set_pb
-import oneflow.core.job.placement_pb2 as placment_util
+import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.record.record_pb2 as record_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.oneflow_internal as oneflow_internal
-from google.protobuf import text_format
 from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 from oneflow.python.framework.job_build_and_infer_error import JobBuildAndInferError
+import oneflow
+
+oneflow_api = oneflow.oneflow_api
 
 
 def RegisterWatcherOnlyOnce(watcher):
     error_str = oneflow_internal.RegisterWatcherOnlyOnce(watcher)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+
+
+def RegisterForeignCallbackOnlyOnce(callback):
+    error_str = oneflow_internal.RegisterForeignCallbackOnlyOnce(callback)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
@@ -48,12 +74,20 @@ def CurrentResource():
     return text_format.Parse(resource, resource_util.Resource())
 
 
-def EnableEagerExecution(enable_eager_execution):
-    return oneflow_internal.EnableEagerExecution(enable_eager_execution)
+def EnvResource():
+    resource, error_str = oneflow_internal.EnvResource()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return text_format.Parse(resource, resource_util.Resource())
+
+
+def EnableEagerEnvironment(enable_eager_execution):
+    return oneflow_internal.EnableEagerEnvironment(enable_eager_execution)
 
 
 def EagerExecutionEnabled():
-    return oneflow_internal.EagerExecutionEnabled()
+    return oneflow_api.EagerExecutionEnabled()
 
 
 def IsEnvInited():
@@ -153,11 +187,58 @@ def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
         raise JobBuildAndInferError(error)
 
 
+def CurJobBuildAndInferCtx_SetTrainConf(train_config_proto):
+    serialized_train_conf = str(text_format.MessageToString(train_config_proto))
+    error_str = oneflow_internal.CurJobBuildAndInferCtx_SetTrainConf(
+        serialized_train_conf
+    )
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+
+
 def CurJobBuildAndInferCtx_Complete():
     error_str = oneflow_internal.CurJobBuildAndInferCtx_Complete()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
+
+
+def InferOpConf(op_conf_proto, upstream_signature):
+    serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
+    serialized_upstream_sig = str(text_format.MessageToString(upstream_signature))
+    op_attribute_str, error_str = oneflow_internal.InferOpConf(
+        serialized_op_conf, serialized_upstream_sig,
+    )
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
+
+
+def IsInterfaceOpConf(op_conf):
+    op_type_field = op_conf.WhichOneof("op_type")
+    field_number = op_conf_util.OperatorConf.DESCRIPTOR.fields_by_name[
+        op_type_field
+    ].number
+    return oneflow_internal.IsInterfaceOpTypeCase(field_number)
+
+
+def GetOpParallelSymbolId(op_conf_proto):
+    serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
+    symbol_id, error_str = oneflow_internal.GetOpParallelSymbolId(serialized_op_conf)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return symbol_id
+
+
+def GetUserOpAttrType(op_type_name, attr_name):
+    attr_type, error_str = oneflow_internal.GetUserOpAttrType(op_type_name, attr_name)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return attr_type
 
 
 def CheckAndCompleteUserOpConf(op_conf_proto):
@@ -171,26 +252,20 @@ def CheckAndCompleteUserOpConf(op_conf_proto):
     return text_format.Parse(new_op_conf, op_conf_util.OperatorConf())
 
 
-def CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf_proto, parallel_conf_proto):
+def CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    serialized_parallel_conf = str(text_format.MessageToString(parallel_conf_proto))
     add_and_infer = oneflow_internal.CurJobBuildAndInferCtx_AddAndInferConsistentOp
-    op_attribute_str, error_str = add_and_infer(
-        serialized_op_conf, serialized_parallel_conf
-    )
+    op_attribute_str, error_str = add_and_infer(serialized_op_conf)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 
-def CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf_proto, parallel_conf_proto):
+def CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    serialized_parallel_conf = str(text_format.MessageToString(parallel_conf_proto))
     add_and_infer = oneflow_internal.CurJobBuildAndInferCtx_AddAndInferMirroredOp
-    op_attribute_str, error_str = add_and_infer(
-        serialized_op_conf, serialized_parallel_conf
-    )
+    op_attribute_str, error_str = add_and_infer(serialized_op_conf)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
@@ -369,11 +444,11 @@ def JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(job_name, lb
     GetParallelConf = (
         oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView
     )
-    parallel_conf, error_str = GetParallelConf(job_name, lbn)
+    parallel_conf_str, error_str = GetParallelConf(job_name, lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
-    return text_format.Parse(parallel_conf, placment_util.ParallelConf())
+    return text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
 
 
 def JobBuildAndInferCtx_GetStaticShape(job_name, lbn):
@@ -473,7 +548,7 @@ def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
-    return text_format.Parse(parallel_conf, placment_util.ParallelConf())
+    return text_format.Parse(parallel_conf, placement_pb.ParallelConf())
 
 
 def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
@@ -490,21 +565,30 @@ def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
     return text_format.Parse(ofrecord, record_util.OFRecord())
 
 
-def DeviceType4DeviceTag(device_tag):
-    device_tag = str(device_tag)
-    device_type, error_str = oneflow_internal.DeviceType4DeviceTag(device_tag)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
-    return device_type
-
-
 def GetFunctionConfigDef():
     func_config_def, error_str = oneflow_internal.GetFunctionConfigDef()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     return text_format.Parse(func_config_def, ConfigDef())
+
+
+def RunLogicalInstruction(vm_instruction_list, eager_symbol_list):
+    instructions = str(text_format.MessageToString(vm_instruction_list))
+    symbols = str(text_format.MessageToString(eager_symbol_list))
+    error_str = oneflow_internal.RunLogicalInstruction(instructions, symbols)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+
+
+def RunPhysicalInstruction(vm_instruction_list, eager_symbol_list):
+    instructions = str(text_format.MessageToString(vm_instruction_list))
+    symbols = str(text_format.MessageToString(eager_symbol_list))
+    error_str = oneflow_internal.RunPhysicalInstruction(instructions, symbols)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
 
 
 def CurrentMachineId():
@@ -515,9 +599,49 @@ def CurrentMachineId():
     return machine_id
 
 
+def NewLogicalObjectId():
+    object_id, error_str = oneflow_internal.NewLogicalObjectId()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return object_id
+
+
+def NewLogicalSymbolId():
+    object_id, error_str = oneflow_internal.NewLogicalSymbolId()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return object_id
+
+
+def NewPhysicalObjectId():
+    object_id, error_str = oneflow_internal.NewPhysicalObjectId()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return object_id
+
+
+def NewPhysicalSymbolId():
+    object_id, error_str = oneflow_internal.NewPhysicalSymbolId()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return object_id
+
+
 def GetJobSet():
     job_set, error_str = oneflow_internal.GetSerializedJobSet()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     return text_format.Parse(job_set, job_set_pb.JobSet())
+
+
+def GetStructureGraph():
+    structure_graph, error_str = oneflow_internal.GetSerializedStructureGraph()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return structure_graph

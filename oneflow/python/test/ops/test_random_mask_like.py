@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 import shutil
 import tempfile
@@ -6,6 +21,7 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type
+import oneflow.typing as oft
 
 
 def of_run(device_type, x_shape, rate, seed):
@@ -13,15 +29,15 @@ def of_run(device_type, x_shape, rate, seed):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
 
-    @flow.global_function(func_config)
-    def RandomMaskLikeJob(x=flow.FixedTensorDef(x_shape)):
-        with flow.device_prior_placement(device_type, "0:0"):
-            mask = flow.nn.random_mask_like(x, rate=rate, seed=seed)
+    @flow.global_function(function_config=func_config)
+    def RandomMaskLikeJob(x: oft.Numpy.Placeholder(x_shape)):
+        with flow.scope.placement(device_type, "0:0"):
+            mask = flow.nn.random_mask_like(x, rate=rate, seed=seed, name="random_mask")
             return mask
 
     # OneFlow
     x = np.random.rand(*x_shape).astype(np.float32)
-    of_out = RandomMaskLikeJob(x).get().ndarray()
+    of_out = RandomMaskLikeJob(x).get().numpy()
     assert np.allclose(
         [1 - np.count_nonzero(of_out) / of_out.size], [rate], atol=rate / 5
     )

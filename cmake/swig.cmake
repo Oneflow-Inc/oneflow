@@ -3,7 +3,7 @@ function(RELATIVE_SWIG_GENERATE_CPP SRCS HDRS ROOT_DIR)
     message(SEND_ERROR "Error: RELATIVE_SWIG_GENERATE_CPP() called without any .i files")
     return()
   endif()
-  
+
   set(${SRCS})
   set(${HDRS})
   find_package(SWIG REQUIRED)
@@ -24,11 +24,9 @@ function(RELATIVE_SWIG_GENERATE_CPP SRCS HDRS ROOT_DIR)
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/python_scripts")
     list(APPEND ${SRCS} ${GENERATED_CPP})
     list(APPEND ${HDRS} ${GENERATED_H})
-    if (PY3)
-      set(PY3_ARG "-py3")
-    endif()
+    set(PY3_ARG "-py3")
     add_custom_command(
-      OUTPUT ${GENERATED_CPP} 
+      OUTPUT ${GENERATED_CPP}
              ${GENERATED_H}
              ${GENERATED_PY}
       COMMAND ${SWIG_EXECUTABLE}
@@ -36,7 +34,7 @@ function(RELATIVE_SWIG_GENERATE_CPP SRCS HDRS ROOT_DIR)
            -module ${FIL_WE}
            -I${ROOT_DIR}
            -outdir "${CMAKE_CURRENT_BINARY_DIR}/python_scripts/oneflow"
-           -o ${GENERATED_CPP} 
+           -o ${GENERATED_CPP}
            ${ABS_FIL}
       DEPENDS ${ABS_FIL} ${of_python_obj_cc} ${of_all_obj_cc} ${of_all_swig} ${oneflow_all_hdr_expanded}
       COMMENT "Running SWIG on ${FIL}"

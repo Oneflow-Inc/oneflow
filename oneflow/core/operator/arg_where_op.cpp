@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/arg_where_op_util.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
@@ -45,6 +60,7 @@ class ArgWhereOp final : public Operator {
     const BlobDesc* in_desc = GetBlobDesc4BnInOp("in");
     const BlobDesc* out_desc = GetBlobDesc4BnInOp("out");
     BlobDesc* tmp_desc = GetBlobDesc4BnInOp("tmp");
+    CHECK_NOTNULL_OR_RETURN(tmp_desc);
     int64_t tmp_bytes = 0;
     InferArgWhereWorkspaceSizeInBytes(device_type(), in_desc->data_type(), out_desc->data_type(),
                                       in_desc->shape().NumAxes(), in_desc->shape().elem_cnt(),

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_PYTHON_JOB_BUILD_AND_INFER_HELPER_H_
 #define ONEFLOW_PYTHON_JOB_BUILD_AND_INFER_HELPER_H_
 
@@ -9,10 +24,16 @@
 
 namespace oneflow {
 
+bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
+
 namespace {
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+  if (EagerExecutionEnabled()) {
+    return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
+  } else {
+    return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+  }
 }
 
 Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {
@@ -39,7 +60,7 @@ Maybe<std::string> JobBuildAndInferCtx_GetCurrentJobName() {
 
 Maybe<void> JobBuildAndInferCtx_Close() {
   auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
-  mgr->CloseCurrentJobBuildAndInferCtx();
+  JUST(mgr->CloseCurrentJobBuildAndInferCtx());
   return Maybe<void>::Ok();
 }
 
@@ -52,31 +73,29 @@ Maybe<void> CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_
   return JUST(GetCurInferCtx())->SetJobConf(job_conf);
 }
 
+Maybe<void> CurJobBuildAndInferCtx_SetTrainConf(const std::string& train_conf_str) {
+  TrainConf train_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(train_conf_str, &train_conf)) << "train conf parse failed";
+  return JUST(GetCurInferCtx())->SetTrainConf(train_conf);
+}
+
 Maybe<void> CurJobBuildAndInferCtx_Complete() { return JUST(GetCurInferCtx())->Complete(); }
 
 Maybe<bool> CurJobBuildAndInferCtx_HasJobConf() { return JUST(GetCurInferCtx())->HasJobConf(); }
 
-Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferMirroredOp(
-    const std::string& op_conf_str, const std::string& parallel_conf_str) {
+Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferMirroredOp(const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
-  ParallelConf parallel_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
-      << "parallel conf parse failed";
   auto* ctx = JUST(GetCurInferCtx());
-  const auto& op_attribute = JUST(ctx->AddAndInferMirroredOp(op_conf, parallel_conf));
+  const auto& op_attribute = JUST(ctx->AddAndInferMirroredOp(op_conf));
   return PbMessage2TxtString(*op_attribute);
 }
 
-Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferConsistentOp(
-    const std::string& op_conf_str, const std::string& parallel_conf_str) {
+Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferConsistentOp(const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
-  ParallelConf parallel_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
-      << "parallel conf parse failed";
   auto* ctx = JUST(GetCurInferCtx());
-  const auto& op_attribute = JUST(ctx->AddAndInferConsistentOp(op_conf, parallel_conf));
+  const auto& op_attribute = JUST(ctx->AddAndInferConsistentOp(op_conf));
   return PbMessage2TxtString(*op_attribute);
 }
 

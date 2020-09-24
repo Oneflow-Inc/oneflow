@@ -1,16 +1,32 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_H_
 
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
+#include "oneflow/core/kernel/kernel_registration.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/operator/op_conf_util.h"
-#include "oneflow/core/kernel/kernel_registration.h"
 
 namespace oneflow {
 
@@ -51,6 +67,13 @@ class Kernel {
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
+  void SetOutputBlobProducerInferAccessChecker(
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void SetOutputBlobProducerComputeAccessChecker(
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void SetOutputBlobConsumerAccessChecker(
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
  protected:
   Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
   void InitBase(const JobDesc* job_desc, const KernelConf&);
@@ -60,6 +83,36 @@ class Kernel {
 
   virtual void InitConstBufBlobs(DeviceCtx* ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+
+  template<typename HandlerT>
+  void ForEachObnAndIsHeaderInferedBeforeCompute(
+      std::function<Blob*(const std::string&)> BnInOp2Blob, const HandlerT& Handler) const {
+    const auto& modifier_map =
+        this->kernel_conf_.op_attribute().arg_modifier_signature().obn2output_blob_modifier();
+    for (const std::string& obn : this->op_attribute().output_bns()) {
+      Blob* blob = BnInOp2Blob(obn);
+      if (blob) {
+        bool is_header_infered_before_compute =
+            modifier_map.at(obn).header_infered_before_compute();
+        Handler(obn, is_header_infered_before_compute);
+      }
+    }
+  }
+
+  template<typename HandlerT>
+  void ForEachObnAndIsMutableByConsumer(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                                        const HandlerT& Handler) const {
+    const auto& modifier_map =
+        this->kernel_conf_.op_attribute().arg_modifier_signature().obn2output_blob_modifier();
+    for (const std::string& obn : this->op_attribute().output_bns()) {
+      Blob* blob = BnInOp2Blob(obn);
+      if (blob) {
+        bool is_mutable_by_consumer = modifier_map.at(obn).is_mutable();
+        Handler(obn, is_mutable_by_consumer);
+      }
+    }
+  }
+
   virtual void ForwardHeader(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardShape(const KernelCtx& ctx,
@@ -113,15 +166,34 @@ class KernelIf : public Kernel {
   KernelIf() = default;
 
   virtual void ForwardPackedHeader(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
+              &Blob::CopyHeaderFrom);
+  }
   void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const Blob* from_blob, const PbRpf<std::string>& to_bns,
-                 void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
+                 void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
+    for (const std::string& to_bn : to_bns) { (BnInOp2Blob(to_bn)->*Copy)(ctx, from_blob); }
+  }
   void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
-                 void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
-
-  bool EnableCudnn() const { return op_conf().enable_cudnn(); }
+                 void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
+    if (from_bns.size() == 1) {
+      const Blob* in_blob = BnInOp2Blob(from_bns[0]);
+      CopyField(ctx, BnInOp2Blob, in_blob, to_bns, Copy);
+    } else if (to_bns.size() == 1) {
+      Blob* in_blob = BnInOp2Blob(from_bns[0]);
+      Blob* out_blob = BnInOp2Blob(to_bns[0]);
+      (out_blob->*Copy)(ctx, in_blob);
+    } else {
+      CHECK_EQ(from_bns.size(), to_bns.size());
+      FOR_RANGE(size_t, i, 0, from_bns.size()) {
+        Blob* in_blob = BnInOp2Blob(from_bns[i]);
+        Blob* out_blob = BnInOp2Blob(to_bns[i]);
+        (out_blob->*Copy)(ctx, in_blob);
+      }
+    }
+  }
 };
 
 #define REGISTER_KERNEL(k, KernelType) \
@@ -137,18 +209,19 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
   {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)),               \
    []() { return new kernel_class<device_type, OF_PP_PAIR_FIRST(data_type_pair)>(); }},
 
-#define ADD_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq)         \
-  namespace {                                                                         \
-                                                                                      \
-  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {          \
-    static const HashMap<std::string, std::function<Kernel*()>> creators = {          \
-        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (kernel_class),   \
-                                         DEVICE_TYPE_SEQ, data_type_seq)};            \
-    return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(), \
-                                  kernel_conf.data_type()))();                        \
-  }                                                                                   \
-                                                                                      \
-  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));           \
+#define ADD_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq)                \
+  namespace {                                                                                \
+                                                                                             \
+  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {                 \
+    static const HashMap<std::string, std::function<Kernel*()>> creators = {                 \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (kernel_class),          \
+                                         DEVICE_TYPE_SEQ, data_type_seq)};                   \
+    DeviceType device_type =                                                                 \
+        CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag())); \
+    return creators.at(GetHashKey(device_type, kernel_conf.data_type()))();                  \
+  }                                                                                          \
+                                                                                             \
+  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                  \
   }
 
 #define MAKE_DEVICE_TYPE_KERNEL_CREATOR_ENTRY(kernel_class, device_type) \
@@ -161,7 +234,9 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
     static const HashMap<int, std::function<Kernel*()>> creators = {                            \
         OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_DEVICE_TYPE_KERNEL_CREATOR_ENTRY, (kernel_class), \
                                          DEVICE_TYPE_SEQ)};                                     \
-    return creators.at(kernel_conf.op_attribute().op_conf().device_type())();                   \
+    DeviceType device_type =                                                                    \
+        CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag()));    \
+    return creators.at(device_type)();                                                          \
   }                                                                                             \
                                                                                                 \
   REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                     \
@@ -184,20 +259,21 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
   REGISTER_KERNEL_CREATOR(op_type_case, CreateKernel);                                  \
   }
 
-#define ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(op_type_case, kernel_class, data_type_seq) \
-  namespace {                                                                               \
-                                                                                            \
-  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {                \
-    static const HashMap<std::string, std::function<Kernel*()>> creators = {                \
-        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (kernel_class),         \
-                                         DEVICE_TYPE_SEQ, data_type_seq)                    \
-            MAKE_KERNEL_CREATOR_ENTRY(kernel_class, DeviceType::kGPU,                       \
-                                      (float16, DataType::kFloat16))};                      \
-    return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),       \
-                                  kernel_conf.data_type()))();                              \
-  }                                                                                         \
-                                                                                            \
-  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                 \
+#define ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(op_type_case, kernel_class, data_type_seq)  \
+  namespace {                                                                                \
+                                                                                             \
+  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {                 \
+    static const HashMap<std::string, std::function<Kernel*()>> creators = {                 \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (kernel_class),          \
+                                         DEVICE_TYPE_SEQ, data_type_seq)                     \
+            MAKE_KERNEL_CREATOR_ENTRY(kernel_class, DeviceType::kGPU,                        \
+                                      (float16, DataType::kFloat16))};                       \
+    DeviceType device_type =                                                                 \
+        CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag())); \
+    return creators.at(GetHashKey(device_type, kernel_conf.data_type()))();                  \
+  }                                                                                          \
+                                                                                             \
+  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                  \
   }
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_H_

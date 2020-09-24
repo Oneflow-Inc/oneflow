@@ -1,9 +1,25 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 import random
 
 import cv2
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 coco_dict = dict()
 
@@ -84,7 +100,8 @@ def _get_check_image_size(coco, image_ids, images):
         img_w = coco.imgs[img_id]["width"]
         assert img_h == images[i].shape[0]
         assert img_w == images[i].shape[1]
-        image_size_list.append([img_h, img_w])
+        image_size_list.append([img_w, img_h])
+
     return image_size_list
 
 
@@ -153,21 +170,24 @@ def _of_poly_to_mask_pipline(
 
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def poly_to_mask_job(
-        image_def=flow.MirroredTensorListDef(
+        image_def: oft.ListListNumpy.Placeholder(
             shape=tuple(image_shape), dtype=flow.float
         ),
-        poly_def=flow.MirroredTensorListDef(shape=tuple(poly_shape), dtype=flow.float),
-        poly_index_def=flow.MirroredTensorListDef(
+        poly_def: oft.ListListNumpy.Placeholder(
+            shape=tuple(poly_shape), dtype=flow.float
+        ),
+        poly_index_def: oft.ListListNumpy.Placeholder(
             shape=tuple(poly_index_shape), dtype=flow.int32
         ),
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(image_def)
         resized_images_buffer, new_size, scale = flow.image_target_resize(
-            images_buffer, target_size, max_size
+            images_buffer, target_size=target_size, max_size=max_size
         )
         poly_buffer = flow.tensor_list_to_tensor_buffer(poly_def)
         poly_index_buffer = flow.tensor_list_to_tensor_buffer(poly_index_def)
@@ -192,11 +212,11 @@ def _of_poly_to_mask_pipline(
         [input_image_list], [input_poly_list], [input_poly_index_list]
     ).get()
 
-    return output_mask_list.ndarray_lists()[0], output_poly_list.ndarray_lists()[0]
+    return output_mask_list.numpy_lists()[0], output_poly_list.numpy_lists()[0]
 
 
 def _get_target_resize_scale(size, target_size, max_size):
-    h, w = size
+    w, h = size
     min_ori_size = float(min((w, h)))
     max_ori_size = float(max((w, h)))
 
@@ -213,13 +233,13 @@ def _get_target_resize_scale(size, target_size, max_size):
         res_w = max_res_size
         res_h = min_res_size
 
-    return [res_h, res_w], [res_h / h, res_w / w]
+    return [res_w, res_h], [res_w / w, res_h / h]
 
 
 def _scale_poly_list(img_segm_poly_list, scale_list):
     assert len(img_segm_poly_list) == len(scale_list)
     for img_idx, segm_poly_list in enumerate(img_segm_poly_list):
-        scale_h, scale_w = scale_list[img_idx]
+        scale_w, scale_h = scale_list[img_idx]
         for poly_list in segm_poly_list:
             for poly in poly_list:
                 for pt_idx in range(len(poly)):
@@ -227,6 +247,7 @@ def _scale_poly_list(img_segm_poly_list, scale_list):
                         poly[pt_idx] *= scale_w
                     else:
                         poly[pt_idx] *= scale_h
+
     return img_segm_poly_list
 
 
@@ -237,13 +258,14 @@ def _poly_to_mask_with_cv(img_segm_poly_list, image_size_list):
     for segm_poly_list, size in zip(img_segm_poly_list, image_size_list):
         segm_mask_list = []
         for poly_list in segm_poly_list:
-            segm_mask = np.zeros(size, dtype=np.int8)
+            segm_mask = np.zeros(shape=size[::-1], dtype=np.int8)
             poly_array_list = [
                 np.int32(np.round(np.asarray(poly)).reshape(-1, 2))
                 for poly in poly_list
             ]
             cv2.fillPoly(segm_mask, poly_array_list, 1, lineType=8)
             segm_mask_list.append(segm_mask)
+
         segm_mask_array = np.asarray(segm_mask_list)
         img_segm_mask_list.append(segm_mask_array)
 
@@ -286,6 +308,7 @@ def _poly_to_mask_with_of_and_cv(
         mask_array.reshape(-1, mask_array.shape[-2], mask_array.shape[-1])
         for mask_array in of_mask_list
     ]
+
     if print_debug_info:
         print("of_mask_list shapes:", [of_mask.shape for of_mask in of_mask_list])
 
@@ -296,6 +319,10 @@ def _poly_to_mask_with_of_and_cv(
         new_size, scale = _get_target_resize_scale(image_size, target_size, max_size)
         new_image_size_list.append(new_size)
         scale_list.append(scale)
+
+    if print_debug_info:
+        print("resized size: {}, scale: {}".format(new_image_size_list, scale_list))
+
     scaled_img_segm_poly_list = _scale_poly_list(img_segm_poly_list, scale_list)
     scaled_poly_list, scaled_poly_index_list = _segm_poly_to_tensor(
         scaled_img_segm_poly_list
@@ -312,10 +339,26 @@ def _poly_to_mask_with_of_and_cv(
             poly_index_list,
             scaled_poly_index_list,
         ):
+            if print_debug_info:
+                print(
+                    "compare scaled poly: shape {} vs {}\n\tmax_abs_diff: {}".format(
+                        of_scaled_poly.shape,
+                        scaled_poly.shape,
+                        np.max(np.absolute(of_scaled_poly - scaled_poly)),
+                    )
+                )
+
             test_case.assertTrue(np.allclose(of_scaled_poly, scaled_poly))
             test_case.assertTrue(np.array_equal(poly_index, scaled_poly_index))
 
         for of_mask, gt_mask in zip(of_mask_list, img_segm_mask_list):
+            if print_debug_info:
+                print(
+                    "compare segm mask: shape {} vs {}".format(
+                        of_mask.shape, gt_mask.shape
+                    )
+                )
+
             test_case.assertTrue(np.array_equal(of_mask.shape, gt_mask.shape))
 
     return of_mask_list, img_segm_mask_list
@@ -398,6 +441,7 @@ def test_poly_to_mask(test_case):
         4,
         800,
         1333,
+        # print_debug_info=True,
     )
 
 
@@ -409,6 +453,7 @@ def _check_empty_anno_img_ids(anno_file):
         anno_ids = coco.getAnnIds(imgIds=[img_id])
         if len(anno_ids) == 0:
             empty_anno_img_ids.append(img_id)
+
     print("empty_anno_img_ids:", empty_anno_img_ids)
 
 

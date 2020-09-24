@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/record/ofrecord_decoder.h"
 #include "oneflow/core/record/ofrecord_raw_decoder.h"
 #include "oneflow/core/record/ofrecord_jpeg_decoder.h"
@@ -111,7 +126,7 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
   RecordBlob<OFRecord> record_blob(in_blob);
   int64_t one_col_elem_num = out_blob->shape().Count(1);
   int32_t random_seed = NextRandomInt();
-  ThreadPool* thread_pool = Global<ThreadMgr>::Get()->compute_thread_pool();
+  ThreadPool* thread_pool = Global<ThreadPool>::Get();
   int32_t thread_num = thread_pool->thread_num();
   int32_t part_num = std::min(record_blob.record_num(), thread_num);
   if (part_num >= 2) {
