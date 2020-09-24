@@ -100,6 +100,13 @@ void CtrlClient::PushKV(const std::string& k, std::function<void(std::string*)> 
   call(GetResponsibleStub(k));
 }
 
+void CtrlClient::PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter) {
+  ClientCall<CtrlMethod::kPushKV> call;
+  call.mut_request()->set_key(k);
+  VSetter(call.mut_request()->mutable_val());
+  call(GetMasterStub());
+}
+
 void CtrlClient::PushKV(const std::string& k, const std::string& v) {
   PushKV(k, [&](std::string* o) { *o = v; });
 }
@@ -108,10 +115,20 @@ void CtrlClient::PushKV(const std::string& k, const PbMessage& msg) {
   PushKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
 
+void CtrlClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
+  PushMasterKV(k, [&](std::string* o) { msg.SerializeToString(o); });
+}
+
 void CtrlClient::ClearKV(const std::string& k) {
   ClientCall<CtrlMethod::kClearKV> call;
   call.mut_request()->set_key(k);
   call(GetResponsibleStub(k));
+}
+
+void CtrlClient::ClearMasterKV(const std::string& k) {
+  ClientCall<CtrlMethod::kClearKV> call;
+  call.mut_request()->set_key(k);
+  call(GetMasterStub());
 }
 
 void CtrlClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
@@ -121,12 +138,24 @@ void CtrlClient::PullKV(const std::string& k, std::function<void(const std::stri
   VGetter(call.response().val());
 }
 
+void CtrlClient::PullMasterKV(const std::string& k,
+                              std::function<void(const std::string&)> VGetter) {
+  ClientCall<CtrlMethod::kPullKV> call;
+  call.mut_request()->set_key(k);
+  call(GetMasterStub());
+  VGetter(call.response().val());
+}
+
 void CtrlClient::PullKV(const std::string& k, std::string* v) {
   PullKV(k, [&](const std::string& i) { *v = i; });
 }
 
 void CtrlClient::PullKV(const std::string& k, PbMessage* msg) {
   PullKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
+}
+
+void CtrlClient::PullMasterKV(const std::string& k, PbMessage* msg) {
+  PullMasterKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
 void CtrlClient::PushActEvent(const ActEvent& act_event) {
