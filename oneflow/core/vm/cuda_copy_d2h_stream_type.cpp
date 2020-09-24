@@ -21,8 +21,8 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-// Initialize CudaCopyD2HDeviceCtx which contains CudaStreamHandle object and CallbackMsgListPtr object, 
-// The related istructions will be handled with CudaCopyD2HDeviceCtx
+// Initialize CudaCopyD2HDeviceCtx which contains CudaStreamHandle object and CallbackMsgListPtr
+// object, The related istructions will be handled with CudaCopyD2HDeviceCtx
 void CudaCopyD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
   device_ctx->reset(new CudaCopyD2HDeviceCtx(stream->mut_callback_list()));
