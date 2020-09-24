@@ -34,6 +34,89 @@ constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
 
 }  // namespace
 
+TEST(ClampTest, Clamp) {
+  ASSERT_TRUE(Clamp<uint8_t>(0) == 0);
+  ASSERT_TRUE(Clamp<uint8_t>(255) == 255);
+  ASSERT_TRUE(Clamp<uint8_t>(100) == 100);
+  ASSERT_TRUE(Clamp<uint8_t>(100.3) == 100);
+  ASSERT_TRUE(Clamp<uint8_t>(256) == 255);
+  ASSERT_TRUE(Clamp<uint8_t>(-4) == 0);
+  ASSERT_TRUE(Clamp<uint8_t>(-4.0f) == 0);
+  ASSERT_TRUE(Clamp<uint8_t>(1e+20f) == 255);
+  ASSERT_TRUE(Clamp<uint8_t>(-1e+20f) == 0);
+  ASSERT_TRUE(Clamp<uint8_t>(1e+200) == 255);
+  ASSERT_TRUE(Clamp<uint8_t>(-1e+200) == 0);
+
+  ASSERT_TRUE(Clamp<int8_t>(-4) == -4);
+  ASSERT_TRUE(Clamp<int8_t>(-4.2) == -4);
+  ASSERT_TRUE(Clamp<int8_t>(4.2) == 4);
+  ASSERT_TRUE(Clamp<int8_t>(127) == 127);
+  ASSERT_TRUE(Clamp<int8_t>(128) == 127);
+  ASSERT_TRUE(Clamp<int8_t>(256) == 127);
+  ASSERT_TRUE(Clamp<int8_t>(-128) == -128);
+  ASSERT_TRUE(Clamp<int8_t>(-256) == -128);
+  ASSERT_TRUE(Clamp<int8_t>(1e+20f) == 127);
+  ASSERT_TRUE(Clamp<int8_t>(-1e+20f) == -128);
+  ASSERT_TRUE(Clamp<int8_t>(1e+200) == 127);
+  ASSERT_TRUE(Clamp<int8_t>(-1e+200) == -128);
+
+  ASSERT_TRUE(Clamp<uint16_t>(0) == 0);
+  ASSERT_TRUE(Clamp<uint16_t>(0xffff) == 0xffff);
+  ASSERT_TRUE(Clamp<uint16_t>(100) == 100);
+  ASSERT_TRUE(Clamp<uint16_t>(100.3) == 100);
+  ASSERT_TRUE(Clamp<uint16_t>(0x10000) == 0xffff);
+  ASSERT_TRUE(Clamp<uint16_t>(-4) == 0);
+  ASSERT_TRUE(Clamp<uint16_t>(-4.0f) == 0);
+  ASSERT_TRUE(Clamp<uint16_t>(1e+20f) == 0xffff);
+  ASSERT_TRUE(Clamp<uint16_t>(-1e+20f) == 0);
+  ASSERT_TRUE(Clamp<uint16_t>(1e+200) == 0xffff);
+  ASSERT_TRUE(Clamp<uint16_t>(-1e+200) == 0);
+
+  ASSERT_TRUE(Clamp<int16_t>(-4) == -4);
+  ASSERT_TRUE(Clamp<int16_t>(-4.2) == -4);
+  ASSERT_TRUE(Clamp<int16_t>(4.2) == 4);
+  ASSERT_TRUE(Clamp<int16_t>(0x7fff) == 0x7fff);
+  ASSERT_TRUE(Clamp<int16_t>(0x8000) == 0x7fff);
+  ASSERT_TRUE(Clamp<int16_t>(0x10000) == 0x7fff);
+  ASSERT_TRUE(Clamp<int16_t>(-0x8000) == -0x8000);
+  ASSERT_TRUE(Clamp<int16_t>(-0x10000) == -0x8000);
+  ASSERT_TRUE(Clamp<int16_t>(1e+20f) == 0x7fff);
+  ASSERT_TRUE(Clamp<int16_t>(-1e+20f) == -0x8000);
+  ASSERT_TRUE(Clamp<int16_t>(1e+200) == 0x7fff);
+  ASSERT_TRUE(Clamp<int16_t>(-1e+200) == -0x8000);
+
+  ASSERT_TRUE(Clamp<uint32_t>(0) == 0);
+  ASSERT_TRUE(Clamp<uint32_t>(0xffffffffLL) == 0xffffffffLL);
+  ASSERT_TRUE(Clamp<uint32_t>(100) == 100);
+  ASSERT_TRUE(Clamp<uint32_t>(100.3) == 100);
+  ASSERT_TRUE(Clamp<uint32_t>(0x100000000LL) == 0xffffffffLL);
+  ASSERT_TRUE(Clamp<uint32_t>(-4) == 0);
+  ASSERT_TRUE(Clamp<uint32_t>(-4.0f) == 0);
+  ASSERT_TRUE(Clamp<uint32_t>(1e+20f) == 0xffffffffu);
+  ASSERT_TRUE(Clamp<uint32_t>(-1.0e+20f) == 0);
+  ASSERT_TRUE(Clamp<uint32_t>(1e+200) == 0xffffffffu);
+  ASSERT_TRUE(Clamp<uint32_t>(-1.0e+200) == 0);
+
+  ASSERT_TRUE(Clamp<int32_t>(-4) == -4);
+  ASSERT_TRUE(Clamp<int32_t>(-4LL) == -4);
+  ASSERT_TRUE(Clamp<int32_t>(-4.2) == -4);
+  ASSERT_TRUE(Clamp<int32_t>(4.2) == 4);
+  ASSERT_TRUE(Clamp<int32_t>(0x7fffffff) == 0x7fffffff);
+  ASSERT_TRUE(Clamp<int32_t>(0x80000000L) == 0x7fffffff);
+  ASSERT_TRUE(Clamp<int32_t>(0x100000000L) == 0x7fffffff);
+  ASSERT_TRUE(Clamp<int32_t>(-0x80000000LL) == -0x7fffffff - 1);
+  ASSERT_TRUE(Clamp<int32_t>(-0x100000000LL) == -0x7fffffff - 1);
+  ASSERT_TRUE(Clamp<int32_t>(1.0e+20f) == 0x7fffffff);
+  ASSERT_TRUE(Clamp<int32_t>(-1.0e+20f) == -0x80000000L);
+  ASSERT_TRUE(Clamp<int32_t>(1.0e+200) == 0x7fffffff);
+  ASSERT_TRUE(Clamp<int32_t>(-1.0e+200) == -0x80000000L);
+
+  ASSERT_TRUE(Clamp<int64_t>(1.0e+200) == 0x7fffffffffffffffLL);
+  ASSERT_TRUE(Clamp<int64_t>(-1.0e+200) == -0x7fffffffffffffffLL - 1);
+  ASSERT_TRUE(Clamp<uint64_t>(1.0e+200) == 0xffffffffffffffffULL);
+  ASSERT_TRUE(Clamp<uint64_t>(-1.0e+200) == 0);
+}
+
 TEST(ConvertSat, float2int) {
   FOR_RANGE(int32_t, exp, -10, 100) {
     FOR_RANGE(float, sig, -256, 257) {
