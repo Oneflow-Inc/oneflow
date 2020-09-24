@@ -230,9 +230,11 @@ void MakeSendReceiveInstruction(InstructionMsgList* list, uint64_t header_token,
   }
   list->EmplaceBack(vm::NewInstruction("TestSendBlob")
                         ->add_parallel_desc(src_parallel_desc_id)
+                        ->add_const_operand(src_obj_id)
+                        ->add_separator()
                         ->add_uint64_operand(header_token)
-                        ->add_uint64_operand(body_token)
-                        ->add_const_operand(src_obj_id));
+                        ->add_separator()
+                        ->add_uint64_operand(body_token));
   int64_t dst_parallel_desc_id = 0;
   int64_t dst_obj_id = vm::IdUtil::NewLogicalObjectId();
   {
@@ -246,9 +248,11 @@ void MakeSendReceiveInstruction(InstructionMsgList* list, uint64_t header_token,
   }
   list->EmplaceBack(vm::NewInstruction("TestReceiveBlob")
                         ->add_parallel_desc(dst_parallel_desc_id)
+                        ->add_mut2_operand(dst_obj_id)
+                        ->add_separator()
                         ->add_uint64_operand(header_token)
-                        ->add_uint64_operand(body_token)
-                        ->add_mut2_operand(dst_obj_id));
+                        ->add_separator()
+                        ->add_uint64_operand(body_token));
 }
 
 }  // namespace

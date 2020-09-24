@@ -26,15 +26,19 @@ namespace {
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(SendBlobInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, header_token);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, body_token);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstOperand, src_blob);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::ConstOperand, src_blob);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, header_token_sep);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(uint64_t, header_token);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, body_token_sep);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(uint64_t, body_token);
 FLAT_MSG_VIEW_END(SendBlobInstruction);
 
 FLAT_MSG_VIEW_BEGIN(ReceiveBlobInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, header_token);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(uint64_t, body_token);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::Mut2Operand, dst_blob);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::Mut2Operand, dst_blob);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, header_token_sep);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(uint64_t, header_token);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, body_token_sep);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(uint64_t, body_token);
 FLAT_MSG_VIEW_END(ReceiveBlobInstruction);
 // clang-format on
 
@@ -65,10 +69,10 @@ Maybe<void> SendBlobInstructionType::Send(vm::Instruction* instruction) const {
   const char* body_mem_ptr = nullptr;
   std::size_t body_size = 0;
   {
-    const auto* src_blob_operand = instruction->operand_type(args->src_blob());
+    const auto* src_blob_operand = instruction->operand_type(args->src_blob(0));
     CHECK_NOTNULL_OR_RETURN(src_blob_operand)
         << Error::RwMutexedObjectNotFoundError()
-        << "src_blob: " << args->src_blob().logical_object_id() << ". "
+        << "src_blob: " << args->src_blob(0).logical_object_id() << ". "
         << "Did you forget broadcast the src_blob?";
     const auto& blob = JUST(src_blob_operand->template Get<BlobObject>())->blob();
     header_mem_ptr = blob.header_ptr();
@@ -79,10 +83,10 @@ Maybe<void> SendBlobInstructionType::Send(vm::Instruction* instruction) const {
   }
   // `ref_cnt` is safe to be captured before `Callback` finished.
   auto Callback = [ref_cnt] { CHECK_GE(--*ref_cnt, 0); };
-  JUST(Send(this_machine_id, dst_machine_id, args->header_token(), header_mem_ptr, header_size,
+  JUST(Send(this_machine_id, dst_machine_id, args->header_token(0), header_mem_ptr, header_size,
             Callback));
-  JUST(
-      Send(this_machine_id, dst_machine_id, args->body_token(), body_mem_ptr, body_size, Callback));
+  JUST(Send(this_machine_id, dst_machine_id, args->body_token(0), body_mem_ptr, body_size,
+            Callback));
   return Maybe<void>::Ok();
 }
 
@@ -103,10 +107,10 @@ Maybe<void> ReceiveBlobInstructionType::Receive(vm::Instruction* instruction) co
   char* body_mem_ptr = nullptr;
   std::size_t body_size = 0;
   {
-    auto* dst_blob_operand = instruction->mut_operand_type(args->dst_blob());
+    auto* dst_blob_operand = instruction->mut_operand_type(args->dst_blob(0));
     CHECK_NOTNULL_OR_RETURN(dst_blob_operand)
         << Error::RwMutexedObjectNotFoundError()
-        << "dst_blob: " << args->dst_blob().logical_object_id() << ". "
+        << "dst_blob: " << args->dst_blob(0).logical_object_id() << ". "
         << "Did you forget broadcast the dst_blob?";
     auto* blob = JUST(dst_blob_operand->template Mut<BlobObject>())->mut_blob();
     header_mem_ptr = blob->mut_header_ptr();
@@ -117,9 +121,9 @@ Maybe<void> ReceiveBlobInstructionType::Receive(vm::Instruction* instruction) co
   }
   // `ref_cnt` is safe to be captured before `Callback` finished.
   auto Callback = [ref_cnt] { CHECK_GE(--*ref_cnt, 0); };
-  JUST(Receive(src_machine_id, this_machine_id, args->header_token(), header_mem_ptr, header_size,
+  JUST(Receive(src_machine_id, this_machine_id, args->header_token(0), header_mem_ptr, header_size,
                Callback));
-  JUST(Receive(src_machine_id, this_machine_id, args->body_token(), body_mem_ptr, body_size,
+  JUST(Receive(src_machine_id, this_machine_id, args->body_token(0), body_mem_ptr, body_size,
                Callback));
   return Maybe<void>::Ok();
 }
