@@ -231,7 +231,8 @@ void CtrlClient::LoadServer(const std::string& server_addr, CtrlService::Stub* s
       LOG(INFO) << "LoadServer " << server_addr << " Successful at " << retry_idx << " times";
       break;
     } else if (st.error_code() == grpc::StatusCode::UNAVAILABLE) {
-      LOG(INFO) << "LoadServer " << server_addr << " Failed at " << retry_idx << " times";
+      LOG(INFO) << "LoadServer " << server_addr << " Failed at " << retry_idx << " times"
+                << " error_code " << st.error_code() << " error_message " << st.error_message();
       std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
       continue;
     } else {
