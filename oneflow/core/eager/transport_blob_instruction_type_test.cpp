@@ -70,7 +70,8 @@ class TestSendBlobInstructionType : public SendBlobInstructionType {
   ~TestSendBlobInstructionType() override = default;
 
  private:
-  Maybe<void> Send(int64_t dst_machine_id, uint64_t token, const char* mem_ptr, std::size_t size,
+  Maybe<void> Send(int64_t this_machine_id, int64_t dst_machine_id, uint64_t token,
+                   const char* mem_ptr, std::size_t size,
                    const std::function<void()>& Callback) const override {
     SendRequest send_request{
         .dst_machine_id = dst_machine_id,
@@ -99,7 +100,8 @@ class TestReceiveBlobInstructionType : public ReceiveBlobInstructionType {
   ~TestReceiveBlobInstructionType() override = default;
 
  private:
-  Maybe<void> Receive(int64_t src_machine_id, uint64_t token, char* mem_ptr, std::size_t size,
+  Maybe<void> Receive(int64_t src_machine_id, int64_t this_machine_id, uint64_t token,
+                      char* mem_ptr, std::size_t size,
                       const std::function<void()>& Callback) const override {
     ReceiveRequest recv_request{
         .src_machine_id = src_machine_id,

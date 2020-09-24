@@ -59,6 +59,7 @@ Maybe<void> SendBlobInstructionType::Send(vm::Instruction* instruction) const {
   // Streams each take responsibility for destination machines.
   // See TransportStreamType::MakeTransportStreamType for more details.
   int64_t dst_machine_id = instruction->stream().device_id();
+  int64_t this_machine_id = instruction->stream().machine_id();
   const char* header_mem_ptr = nullptr;
   std::size_t header_size = 0;
   const char* body_mem_ptr = nullptr;
@@ -78,8 +79,10 @@ Maybe<void> SendBlobInstructionType::Send(vm::Instruction* instruction) const {
   }
   // `ref_cnt` is safe to be captured before `Callback` finished.
   auto Callback = [ref_cnt] { CHECK_GE(--*ref_cnt, 0); };
-  JUST(Send(dst_machine_id, args->header_token(), header_mem_ptr, header_size, Callback));
-  JUST(Send(dst_machine_id, args->body_token(), body_mem_ptr, body_size, Callback));
+  JUST(Send(this_machine_id, dst_machine_id, args->header_token(), header_mem_ptr, header_size,
+            Callback));
+  JUST(
+      Send(this_machine_id, dst_machine_id, args->body_token(), body_mem_ptr, body_size, Callback));
   return Maybe<void>::Ok();
 }
 
@@ -94,6 +97,7 @@ Maybe<void> ReceiveBlobInstructionType::Receive(vm::Instruction* instruction) co
   // Streams each take responsibility for source machines.
   // See TransportStreamType::MakeTransportStreamType for more details.
   int64_t src_machine_id = instruction->stream().device_id();
+  int64_t this_machine_id = instruction->stream().machine_id();
   char* header_mem_ptr = nullptr;
   std::size_t header_size = 0;
   char* body_mem_ptr = nullptr;
@@ -113,20 +117,24 @@ Maybe<void> ReceiveBlobInstructionType::Receive(vm::Instruction* instruction) co
   }
   // `ref_cnt` is safe to be captured before `Callback` finished.
   auto Callback = [ref_cnt] { CHECK_GE(--*ref_cnt, 0); };
-  JUST(Receive(src_machine_id, args->header_token(), header_mem_ptr, header_size, Callback));
-  JUST(Receive(src_machine_id, args->body_token(), body_mem_ptr, body_size, Callback));
+  JUST(Receive(src_machine_id, this_machine_id, args->header_token(), header_mem_ptr, header_size,
+               Callback));
+  JUST(Receive(src_machine_id, this_machine_id, args->body_token(), body_mem_ptr, body_size,
+               Callback));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SendBlobInstructionType::Send(int64_t dst_machine_id, uint64_t body_token,
-                                          const char* mem_ptr, std::size_t size,
+Maybe<void> SendBlobInstructionType::Send(int64_t this_machine_id, int64_t dst_machine_id,
+                                          uint64_t body_token, const char* mem_ptr,
+                                          std::size_t size,
                                           const std::function<void()>& Callback) const {
   TODO();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReceiveBlobInstructionType::Receive(int64_t src_machine_id, uint64_t body_token,
-                                                char* mem_ptr, std::size_t size,
+Maybe<void> ReceiveBlobInstructionType::Receive(int64_t src_machine_id, int64_t this_machine_id,
+                                                uint64_t body_token, char* mem_ptr,
+                                                std::size_t size,
                                                 const std::function<void()>& Callback) const {
   TODO();
   return Maybe<void>::Ok();
