@@ -71,7 +71,7 @@ void HandlerOfFirstMachine(uint64_t first_token, size_t test_num,
       Global<Transport>::Get()->Send(token, 1, ptr, size, [&bc]() { bc.Decrease(); });
     } else {
       // Recv
-      Global<Transport>::Get()->Receive(token, 1, ptr, size, [ptr, i, size, &bc]() {
+      Global<Transport>::Get()->Receive(token, 1, ptr, size + 20, [ptr, i, size, &bc]() {
         int32_t* data = static_cast<int32_t*>(ptr);
         CHECK_EQ(*data, i);
         CHECK_EQ(*(data + (size / 4) - 1), i + 20);
@@ -92,7 +92,7 @@ void HandlerOfSecondMachine(uint64_t first_token, size_t test_num,
     uint64_t token = first_token + i;
     if (i % 2 == 0) {
       // Recv
-      Global<Transport>::Get()->Receive(token, 0, ptr, size, [ptr, i, size, &bc]() {
+      Global<Transport>::Get()->Receive(token, 0, ptr, size + 10, [ptr, i, size, &bc]() {
         int32_t* data = static_cast<int32_t*>(ptr);
         CHECK_EQ(*data, i);
         CHECK_EQ(*(data + (size / 4) - 1), i + 10);
@@ -123,17 +123,13 @@ void TestCorrectness() {
   std::vector<uint64_t> malloc_size_list(test_num);
   std::vector<void*> malloc_ptr_list(test_num);
 
-  // std::cout << "malloc list = [";
   for (int i = 0; i < test_num; ++i) {
     malloc_size_list.at(i) = 16 << (i % 20);
-    // std::cout << malloc_size_list.at(i) << ",";
     total_bytes += malloc_size_list.at(i);
     // malloc data
     malloc_ptr_list.at(i) = malloc(malloc_size_list.at(i));
   }
-  // std::cout << "]\n";
   total_mib = (total_bytes * 1.0 / 1000000.0);
-  // std::cout << "totol transport bytes is " << total_mib << " MiB\n";
 
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   if (this_machine_id == 0) {
@@ -165,6 +161,75 @@ void TestCorrectness() {
     free(malloc_ptr_list.at(i));
   }
   std::cout << "Test for correctness. Done.\n\n";
+}
+
+void TestCorrectnessOnLocalMachine() {
+  std::cout << "Test for local send/recv transport correctness. Start. \n"
+               "Machine will send and receive 100 messages alternately. "
+               "The first address and the last address of each "
+               "transport are written with data for correctness verification.\n";
+  uint64_t first_token = 3456;
+  size_t test_num = 100;
+  uint64_t total_bytes = 0;
+  double total_mib = -1;
+  std::vector<uint64_t> send_malloc_size_list(test_num);
+  std::vector<void*> send_malloc_ptr_list(test_num);
+  std::vector<uint64_t> recv_malloc_size_list(test_num);
+  std::vector<void*> recv_malloc_ptr_list(test_num);
+
+  for (int i = 0; i < test_num; ++i) {
+    send_malloc_size_list.at(i) = 16 << (i % 20);
+    recv_malloc_size_list.at(i) = send_malloc_size_list.at(i) + 100;
+    total_bytes += send_malloc_size_list.at(i);
+    // malloc data
+    send_malloc_ptr_list.at(i) = malloc(send_malloc_size_list.at(i));
+    recv_malloc_ptr_list.at(i) = malloc(recv_malloc_size_list.at(i));
+  }
+  total_mib = (total_bytes * 1.0 / 1000000.0);
+
+  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+
+  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+  BlockingCounter bc(test_num * 2);
+  for (int i = 0; i < test_num; ++i) {
+    // Send
+    void* ptr = send_malloc_ptr_list.at(i);
+    size_t size = send_malloc_size_list.at(i);
+    uint64_t token = first_token + i;
+    int32_t* data = static_cast<int32_t*>(ptr);
+    *data = i;
+    *(data + (size / 4) - 1) = i + 10;
+    Global<Transport>::Get()->Send(token, this_machine_id, ptr, size, [&bc]() { bc.Decrease(); });
+  }
+
+  for (int i = test_num - 1; i >= 0; --i) {
+    void* ptr = recv_malloc_ptr_list.at(i);
+    size_t size = recv_malloc_size_list.at(i);
+    CHECK(size > 100);
+    uint64_t token = first_token + i;
+    // Recv
+    Global<Transport>::Get()->Receive(token, this_machine_id, ptr, size, [ptr, i, size, &bc]() {
+      int32_t* data = static_cast<int32_t*>(ptr);
+      CHECK_EQ(*data, i);
+      CHECK_EQ(*(data + ((size - 100) / 4) - 1), i + 10);
+      bc.Decrease();
+    });
+  }
+  bc.WaitUntilCntEqualZero();
+  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+  double duration_sec =
+      std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.0;
+  std::cout << "the latency is : " << duration_sec
+            << " s, the throughput is : " << total_mib / duration_sec << " MiB/s \n";
+
+  // free ptr
+  for (int i = 0; i < test_num; ++i) {
+    CHECK(send_malloc_ptr_list.at(i) != nullptr);
+    free(send_malloc_ptr_list.at(i));
+    CHECK(recv_malloc_ptr_list.at(i) != nullptr);
+    free(recv_malloc_ptr_list.at(i));
+  }
+  std::cout << "Test for local send/recv transport correctness. Done.\n\n";
 }
 
 void TestThroughputWithBytes(uint64_t bytes, uint64_t first_token) {
@@ -226,12 +291,6 @@ void TestThroughput() {
 
 Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
                                     const std::string& second_machine_ip, int32_t ctrl_port) {
-  CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
-  // Global<T>::New is not allowed to be called here
-  // because glog is not constructed yet and LOG(INFO) has bad bahavior
-  // Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
-  // JUST(Global<EnvGlobalObjectsScope>::Get()->Init(
-  //    GetEnvProto(first_machine_ip, second_machine_ip, ctrl_port)));
   EnvProto env_proto = GetEnvProto(first_machine_ip, second_machine_ip, ctrl_port);
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
@@ -245,8 +304,8 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   // do transport test
   // The Global<EpollCommNet> must new first before Global<Transport> new.
   std::cout << "New All Global" << std::endl;
-  // Global<EpollCommNet>::New();
-  // Global<Transport>::New();
+  Global<EpollCommNet>::New();
+  Global<Transport>::New();
 
   // OF_BARRIER Must call before test,
   // to ensure that the Global<Transport> on each machine is created
@@ -256,29 +315,21 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   // Each machine will send and receive 100 messages (50 send and 50 recv) alternately.
   // The first address and the last address of each transport
   // are written with data for correctness verification.
-  // TestCorrectness();
+  TestCorrectness();
+  TestCorrectnessOnLocalMachine();
 
-  // TestThroughput();
+  TestThroughput();
 
-  OF_BARRIER_ALL();
-  Global<CtrlClient>::Get()->Clear();
   OF_BARRIER_ALL();
   std::cout << "Deleting all global..." << std::endl;
-  if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
-    Global<ResourceDesc, ForSession>::Delete();
-  }
+  Global<Transport>::Delete();
+  Global<EpollCommNet>::Delete();
+  Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForEnv>::Delete();
-  CHECK_NOTNULL(Global<MachineCtx>::Get());
-  CHECK_NOTNULL(Global<CtrlClient>::Get());
-  CHECK_NOTNULL(Global<CtrlServer>::Get());
-  CHECK_NOTNULL(Global<EnvDesc>::Get());
   Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
   Global<CtrlServer>::Delete();
   Global<EnvDesc>::Delete();
-  // Global<Transport>::Delete();
-  // Global<EpollCommNet>::Delete();
-  // Global<EnvGlobalObjectsScope>::Delete();
   std::cout << "All Done!" << std::endl;
   return Maybe<void>::Ok();
 }

@@ -105,6 +105,11 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   // and should be called before Global<Transport>::New()
   if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
 #ifdef PLATFORM_POSIX
+    // NOTE(chengcheng): Global<EpollCommNet> will new in any case.
+    // if use RDMA,
+    //   The Global<CommNet> is set allocated by new Global<IBVerbsCommNet>
+    // else,
+    //   The Global<CommNet> is set allocated by Global<EpollCommNet>
     Global<EpollCommNet>::New();
     if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
@@ -136,19 +141,21 @@ void Runtime::DeleteAllGlobal() {
   Global<RegstMgr>::Delete();
   Global<MemoryAllocator>::Delete();
   Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
+#ifdef PLATFORM_POSIX
   // should be called after Global<Transport>::Delete()
   if (Global<EpollCommNet>::Get() == static_cast<EpollCommNet*>(Global<CommNet>::Get())) {
-    // it means that Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get())
+    // NOTE(chengcheng): it means that Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get())
     // so the Global<CommNet> and Global<EpollCommNet> are same global object
     // then only need delete once.
     Global<EpollCommNet>::Delete();
   } else {
-    // it means that Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get())
+    // NOTE(chengcheng): it means that Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get())
     // so the Global<CommNet> and Global<EpollCommNet> are NOT same global object
     // then need delete both.
     Global<EpollCommNet>::Delete();
     Global<CommNet>::Delete();
   }
+#endif
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
   Global<summary::EventsWriter>::Delete();
